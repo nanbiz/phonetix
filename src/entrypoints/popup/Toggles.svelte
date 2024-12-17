@@ -23,6 +23,10 @@
       }
     });
   }
+
+  $effect(() => {
+    chrome.runtime.sendMessage({type: "enabled", payload: extension_enabled && website_enabled})
+  })
 </script>
 
 <div class="grid grid-cols-5 gap-2 place-items-center min-w-full">
