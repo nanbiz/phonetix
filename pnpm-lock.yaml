@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+dependencies:
+  '@yutengjing/eld':
+    specifier: ^0.0.2
+    version: 0.0.2
+
 devDependencies:
   '@tsconfig/svelte':
     specifier: ^5.0.4
@@ -966,6 +971,10 @@ packages:
       async-mutex: 0.5.0
       dequal: 2.0.3
     dev: true
+
+  /@yutengjing/eld@0.0.2:
+    resolution: {integrity: sha512-UjqwCIOycGylX2clSppb/gXMdcyyvQYevV9sWfDd31Z36HJRoVp/5uIa062dm8I/3Jdx1eN84B9qNND2/zyiDw==}
+    dev: false
 
   /acorn-typescript@1.4.13(acorn@8.14.0):
     resolution: {integrity: sha512-xsc9Xv0xlVfwp2o7sQ+GCQ1PgbkdcpWdTzrwXxO3xDMTAywVS3oXVOcOHuRjAPkS4P9b+yc/qNF15460v+jp4Q==}

@@ -1,8 +1,8 @@
-let enabled = $state(false)
+let enabled = false
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === "enabled") {
       enabled = Boolean(message.payload)
-      //sendResponse({ reply: "Hello from background" });
+      console.log(enabled)
   } 
 });
 

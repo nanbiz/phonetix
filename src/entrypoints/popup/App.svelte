@@ -8,16 +8,9 @@
     german: "German",
   };
 
-  var detectLanguage = $state(false)
   var detectedLanguage = $state("");
   var selectedLanguage = $state(Languages.english);
-  $effect(() => {
-    if (selectedLanguage == Languages.detect) {
-      detectLanguage = true;
-    } else {
-      detectLanguage = false;
-    }
-  });
+  var detectLanguage = $derived(selectedLanguage === Languages.detect)
 
   $effect(() => {
     storage.setItem<string>(`local:selectedLanguage`, selectedLanguage);
@@ -55,9 +48,6 @@
     modeExpanded = !modeExpanded;
     console.log(modeExpanded);
   }
-
-
-
 </script>
 
 <main class="flex flex-col items-center gap-2">
