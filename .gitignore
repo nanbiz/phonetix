@@ -1,3 +1,6 @@
 node_modules
 .output
 .wxt
+
+notes/languages_with_audio
+notes/languages_without_audio

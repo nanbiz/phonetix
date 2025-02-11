@@ -20,10 +20,12 @@
                 "audios" : (map(.sounds[] | select(has("ogg_url") or has("mp3_url"))) | unique),
                 "rest" : (map(.sounds[] | select((has("ogg_url") or has("mp3_url") or has("ipa")) | not)) | unique),
               } | with_entries(select(.value | length > 0))
-            })
-          | add
+            }) 
+            | add | with_entries(select(.value | length > 0))
         )
       })
-    ) }
-)
-| add
+      | add | with_entries(select(.value | length > 0))
+    ) 
+  })
+| add | with_entries(select(.value | length > 0))
+
