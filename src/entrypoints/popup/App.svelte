@@ -48,6 +48,10 @@
     modeExpanded = !modeExpanded;
     console.log(modeExpanded);
   }
+
+  let languageHover = false;
+  let modeHover = false;
+
 </script>
 
 <main class="flex flex-col items-center gap-2">
