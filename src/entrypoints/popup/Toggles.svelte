@@ -1,4 +1,5 @@
 <script lang="ts">
+
   let extension_enabled = $state(true);
   let website_enabled = $state(true);
   let hostname = $state("");
@@ -25,27 +26,32 @@
   }
 
   $effect(() => {
-    chrome.runtime.sendMessage({type: "enabled", payload: extension_enabled && website_enabled})
-  })
+    chrome.runtime.sendMessage({ type: "enabled", payload: extension_enabled && website_enabled });
+  });
 </script>
 
-<div class="grid grid-cols-5 gap-2 place-items-center min-w-full">
-
-<h1 class="text-6xl m-5 col-span-4">Phonetix</h1>
-<input type="checkbox" class="toggle toggle-primary toggle-lg" bind:checked={extension_enabled} />
-{#if hostname}
-  <img
-    class="object-contain h-10 justify-self-end"
-    src={faviconUrl}
-    alt="website icon"
-    onerror={function (this: HTMLImageElement) {
-      this.style.visibility = "hidden";
-    }}
-  />
-
-  <h1 class="text-xl text-ellipsis overflow-hidden max-w-[50vw] justify-self-stretch col-span-3" style="font-size: 2">{hostname}</h1>
-
-  <input type="checkbox" class="toggle toggle-primary toggle-m" disabled={!extension_enabled} bind:checked={website_enabled} />
-  <div class="website_toggle"></div>
-{/if}
+<div class="flex flex-col gap-4 items-start w-full px-4 py-2">
+  <div class="flex justify-between items-center w-full">
+    <h1 class="text-4xl font-bold">Phonetix</h1>
+    <input type="checkbox" class="toggle toggle-primary toggle-lg" bind:checked={extension_enabled} />
   </div>
+
+  {#if hostname}
+    <div class="flex items-center gap-4 w-full">
+      <img
+        class="w-8 h-8 object-contain flex-none"
+        src={faviconUrl}
+        alt="website icon"
+        onerror={function (this: HTMLImageElement) {
+          this.style.visibility = "hidden";
+        }}
+      />
+
+      <span class="text-lg font-medium flex-1 min-w-0 truncate">
+        {hostname}
+      </span>
+
+      <input type="checkbox" class="toggle toggle-primary toggle-md flex-none" disabled={!extension_enabled} bind:checked={website_enabled} />
+    </div>
+  {/if}
+</div>
