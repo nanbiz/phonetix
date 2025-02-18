@@ -25,7 +25,6 @@
       <span class="truncate">
         {headEntry}
       </span>
-
       <Chevron class="h-5 w-5 transform transition-transform {expanded ? '' : 'rotate-180'}" />
     </button>
 

@@ -51,7 +51,7 @@
 
   let modeExpanded = $state(false);
 </script>
-
+ 
 <main class="flex flex-col items-center gap-6">
   <Toggles />
   <div class="w-full space-y-4">

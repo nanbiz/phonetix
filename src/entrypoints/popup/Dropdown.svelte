@@ -1,8 +1,6 @@
 <script lang="ts">
-
-  
   let {Options, specialElement} = $props();
-
+  
   var selectedOption = $state(Object.values(Options)[0]);
   var autoSelected = $state(false);
   

@@ -1,39 +1,75 @@
 <script lang="ts">
-
-  let extension_enabled = $state(true);
-  let website_enabled = $state(true);
   let hostname = $state("");
   let faviconUrl = $state("");
+  let extension_enabled = $state(false);
+  let current_website_enabled = $state(false);
+  let stateInitialized = $state(false);
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", fetchTabDetails);
-  } else {
-    fetchTabDetails();
-  }
+  (async () => {
+    try {
+      const extState = await storage.getItem<string>('local:extension_enabled');
+      extension_enabled = extState ? JSON.parse(extState) : true;
 
-  function fetchTabDetails() {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
-        const url = tabs[0].url || "";
-        try {
-          hostname = new URL(url).hostname;
-        } catch (e) {
-          hostname = "";
-        }
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]?.url) {
+        const url = new URL(tabs[0].url);
+        hostname = url.hostname;
         faviconUrl = tabs[0].favIconUrl || "";
+
+        const websiteState = await storage.getItem<string>('local:websites_enabled');
+        const parsedWebsites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
+        current_website_enabled = hostname in parsedWebsites ? parsedWebsites[hostname] : true;
       }
-    });
-  }
+    } catch (error) {
+      console.error("Initialization error:", error);
+      extension_enabled = true;
+      current_website_enabled = true;
+    }
+    stateInitialized = true;
+  })();
 
   $effect(() => {
-    chrome.runtime.sendMessage({ type: "enabled", payload: extension_enabled && website_enabled });
+    const saveExtensionState = async (extension_enabled: boolean, current_website_enabled: boolean) => {
+      try {
+        await storage.setItem('local:extension_enabled', JSON.stringify(extension_enabled));
+        await chrome.runtime.sendMessage({
+          type: "enabled",
+          payload: extension_enabled && current_website_enabled
+        });
+      } catch (error) {
+        console.error("Error saving extension state:", error);
+      }
+    };
+    saveExtensionState(extension_enabled, current_website_enabled);
+  });
+
+  $effect(() => {
+    const saveWebsiteState = async (current_website_enabled: boolean) => {
+      if (!hostname) return;
+
+      try {
+        const websites = await storage.getItem<string>('local:websites_enabled');
+        const parsedWebsites: Record<string, boolean> = websites ? JSON.parse(websites) : {};
+        parsedWebsites[hostname] = current_website_enabled;
+        await storage.setItem('local:websites_enabled', JSON.stringify(parsedWebsites));
+      } catch (error) {
+        console.error("Error saving website state:", error);
+      }
+    };
+    saveWebsiteState(current_website_enabled);
   });
 </script>
 
 <div class="flex flex-col gap-4 items-start w-full px-4 py-2">
   <div class="flex justify-between items-center w-full">
     <h1 class="text-4xl font-bold">Phonetix</h1>
-    <input type="checkbox" class="toggle toggle-primary toggle-lg" bind:checked={extension_enabled} />
+    {#if stateInitialized}
+    <input 
+      type="checkbox" 
+      class="toggle toggle-primary toggle-lg" 
+      bind:checked={extension_enabled} 
+    />
+    {/if}
   </div>
 
   {#if hostname}
@@ -44,14 +80,20 @@
         alt="website icon"
         onerror={function (this: HTMLImageElement) {
           this.style.visibility = "hidden";
-        }}
+          }}
       />
 
       <span class="text-lg font-medium flex-1 min-w-0 truncate">
         {hostname}
       </span>
-
-      <input type="checkbox" class="toggle toggle-primary toggle-md flex-none" disabled={!extension_enabled} bind:checked={website_enabled} />
+      {#if stateInitialized}
+      <input 
+        type="checkbox" 
+        class="toggle toggle-primary toggle-md flex-none" 
+        disabled={!extension_enabled} 
+        bind:checked={current_website_enabled} 
+      />
+      {/if}
     </div>
   {/if}
 </div>
