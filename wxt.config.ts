@@ -1,13 +1,11 @@
 import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite'
 import Icons from 'unplugin-icons/vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 
 export default defineConfig({
   vite: () => ({
     plugins: [
-      //svelte(),
       tailwindcss(),
       Icons({ 
         autoInstall: true,
@@ -21,6 +19,7 @@ export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   manifest: {
     permissions: ['storage'],
+    host_permissions: ['<all_urls>']
   },
   
 });

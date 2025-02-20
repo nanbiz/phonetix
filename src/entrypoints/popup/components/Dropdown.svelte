@@ -31,16 +31,16 @@
     {#if expanded}
       <div
         class="absolute z-10 w-full mt-2 origin-top rounded-lg shadow-lg border border-gray-200 overflow-hidden">
-        {#each Object.values(elements) as element}
+        {#each Object.entries(elements) as [element_key, element_value]}
           <button
             class="w-full px-4 py-3 text-left hover:bg-gray-700 transition-colors
-                     {selectedElement === element ? 'bg-gray-700 ' : 'bg-gray-800'}"
+                     {selectedElement === element_key ? 'bg-gray-700 ' : 'bg-gray-800'}"
             onclick={() => {
-              onElementChange(element);
+              onElementChange(element_key);
               expanded = false;
             }}
           >
-            {element}
+            {element_value}
           </button>
         {/each}
       </div>

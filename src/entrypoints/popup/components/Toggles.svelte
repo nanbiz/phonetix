@@ -1,4 +1,6 @@
 <script lang="ts">
+  import {getCurrentTabId, sendMessage} from "@/lib/messaging"
+
   let hostname = $state("");
   let faviconUrl = $state("");
   let extension_enabled = $state(false);
@@ -32,10 +34,6 @@
     const saveExtensionState = async (extension_enabled: boolean, current_website_enabled: boolean) => {
       try {
         await storage.setItem('local:extension_enabled', JSON.stringify(extension_enabled));
-        await chrome.runtime.sendMessage({
-          type: "enabled",
-          payload: extension_enabled && current_website_enabled
-        });
       } catch (error) {
         console.error("Error saving extension state:", error);
       }
@@ -58,6 +56,10 @@
     };
     saveWebsiteState(current_website_enabled);
   });
+
+  $effect(() => {
+    (async () => sendMessage('extensionToggled', extension_enabled && current_website_enabled, await getCurrentTabId()))();
+  })
 </script>
 
 <div class="flex flex-col gap-4 items-start w-full px-4 py-2">
