@@ -5,8 +5,8 @@
 
   import { Languages, Modes } from "@/lib/types"
 
-  let detectedLanguage = $state<keyof typeof Languages>("english");
-  let selectedLanguage = $state<keyof typeof Languages>("english");
+  let detectedLanguage = $state<keyof typeof Languages>("en");
+  let selectedLanguage = $state<keyof typeof Languages>("en");
   let detectLanguage = $derived(selectedLanguage === Languages.detect);
 
   $effect(() => {

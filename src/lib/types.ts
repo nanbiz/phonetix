@@ -1,8 +1,8 @@
 export const Languages = {
   detect: "Detect Language",
-  english: "English",
-  german: "German",
-  spanish: "Spanish",
+  en: "English",
+  de: "German",
+  es: "Spanish",
 };
 
 export const Modes = {
@@ -11,3 +11,8 @@ export const Modes = {
   showOriginalOnHover: "Show Original on Hover",
 };
 
+export type TransformConfig = {
+  mode: keyof typeof Modes;
+  language: keyof typeof Languages;
+  isEnabled: boolean;
+};
