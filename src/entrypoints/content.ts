@@ -1,4 +1,4 @@
-import { onMessage } from "@/lib/messaging";
+import { onMessage, sendMessage } from "@/lib/messaging";
 import { Languages, Modes } from "@/lib/types";
 import type { TransformConfig } from "@/lib/types";
 import { z } from "zod";
@@ -9,10 +9,16 @@ export default defineContentScript({
   allFrames: true,
   main() {
     const config = initializeConfig();
-    processTree(document.documentElement, config);
-    observeTree(document.documentElement, config);
+    sendMessage('getIpaMap', undefined).then((map) => {
+      if (map) {
+        config.ipaMap = map;
+        processTree(document.documentElement, config);
+        observeTree(document.documentElement, config);
+      }
+    })
+
     listenForMessages(config);
-    return cleanupContentScript;
+    //return cleanupContentScript;
   },
 });
 
@@ -22,7 +28,8 @@ const ModeSchema = z.enum(Object.keys(Modes) as [keyof typeof Modes, ...Array<ke
 const DEFAULT_CONFIG: TransformConfig = {
   mode: "wholePage",
   language: "en",
-  isEnabled: true
+  isEnabled: true,
+  ipaMap: {}
 };
 
 const BLOCKED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
@@ -59,8 +66,43 @@ function transformNodeText(node: Text, config: TransformConfig): void {
   }
   switch (config.mode) {
     case "wholePage":
-      node.nodeValue = node.nodeValue.toUpperCase()
-    break;
+      node.nodeValue = node.nodeValue.split(/([.,\-"'“„'‘’()[\]{}\s!?:;&*#@\$_%\/\\|~^–—…°©®™€£§]+)/).map((token) => {
+        if (/[a-zA-Z]/.test(token)) {
+          const cleanWord = token.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const specialChars = token.replace(/[a-z0-9]/gi, '');
+          // TODO: somehow mark that element has already been replaced or it will be replaced multiple times, adding a lot of signs everytime the dom is updated and observer is triggered
+          // TODO: have json with lowercase letters only
+          // TODO: deal with order, e.g. here, mɐ was chosen even though standard would be viːɐ̯ - note? tags?
+          /*
+            Pronunciation
+            (standard) IPA(key): /viːɐ̯/
+            Rhymes: -iːɐ̯
+            Audio:	
+
+            Replay
+
+            Mute
+
+
+            More information
+            Audio:	
+
+            Replay
+
+            Mute
+
+
+            More information
+            (colloquially in unstressed position) IPA(key): /vɐ/, /mɐ/
+
+          */
+          return config.ipaMap[cleanWord] && config.ipaMap[cleanWord].length > 0
+            ? config.ipaMap[cleanWord][0].substring(1, config.ipaMap[cleanWord][0].length - 1) + specialChars
+            : token;
+        }
+        return token;
+      }).join("");
+      break;
     case "onHover":
     case "showOriginalOnHover":
     default:

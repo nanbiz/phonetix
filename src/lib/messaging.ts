@@ -5,6 +5,7 @@ interface ProtocolMap {
   extensionToggled(isEnabled: boolean): void;
   languageChanged(language: keyof typeof Languages): void;
   modeChanged(mode: keyof typeof Modes): void;
+  getIpaMap():  {[key:string] : string[]};
 }
 
 

@@ -43,6 +43,8 @@
     "@tailwindcss/vite": "^4.0.6",
     "@webext-core/messaging": "^2.2.0",
     "@yutengjing/eld": "^0.0.2",
+    "msgpackr": "^1.11.2",
+    "superjson": "^2.2.2",
     "tailwindcss": "^4.0.6"
   }
 }

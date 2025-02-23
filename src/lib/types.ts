@@ -15,4 +15,6 @@ export type TransformConfig = {
   mode: keyof typeof Modes;
   language: keyof typeof Languages;
   isEnabled: boolean;
+  ipaMap: {[key: string]: string[]};
 };
+
