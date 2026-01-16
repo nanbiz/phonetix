@@ -13,7 +13,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "install:browsers": "node scripts/install-browsers.mjs",
-    "postinstall": "wxt prepare && pnpm run install:chrome"
+    "postinstall": "pnpm run install:browsers && wxt prepare"
   },
   "devDependencies": {
     "@iconify-json/emojione-v1": "^1.2.3",
@@ -33,7 +33,6 @@
     "daisyui": "5.5.14",
     "eslint": "^9.39.2",
     "eslint-plugin-svelte": "^3.13.1",
-    "line-md:chevron-up": "link:@iconify-json/line-md:chevron-up",
     "svelte": "^5.46.0",
     "svelte-check": "^4.3.5",
     "tslib": "^2.8.1",
