@@ -1,188 +1,801 @@
-import { onMessage, sendMessage } from "@/lib/messaging";
-import { Languages, Modes } from "@/lib/types";
-import type { TransformConfig } from "@/lib/types";
-import { z } from "zod";
+import { sendMessage, onMessage } from '@/lib/messaging';
+import {
+  BLOCKED_TAGS,
+  PHONETIX_CLASS,
+  ORIG_CLASS,
+  IPA_CLASS,
+  MODE_CLASSES,
+  WORD_RE,
+  MAX_WORD_LENGTH,
+  TECHNICAL_RE,
+  PHONETIX_CSS,
+  TOOLTIP_CSS,
+} from '@/lib/constants';
+import { DefaultAccents, Languages, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
+import type { LanguageOption, Mode } from '@/lib/types';
+
+type Language = string;
+import { IPA_SYMBOLS, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
+
+// =====================================================================
+//  Module state
+// =====================================================================
+
+let isEnabled = true;
+let languageOption: LanguageOption = 'auto';
+let pageLang: Language = 'en';
+let accent = 'en';
+let mode: Mode = 'wholePage';
+
+// =====================================================================
+//  Pure helpers (no side effects, no DOM)
+// =====================================================================
+
+/** Strip espeak language-switch markers like (en), (de) from IPA. */
+function cleanIPA(raw: string): string {
+  return raw.replace(/\([a-z]{2}\)/g, '');
+}
+
+/** Extract language from espeak markers. First marker wins. */
+function extractIPALang(raw: string): Language | null {
+  const m = raw.match(/\(([a-z]{2})\)/);
+  if (!m) return null;
+  return m[1] in Languages ? (m[1] as Language) : null;
+}
+
+function wiktionaryURL(lang: Language, title: string): string {
+  return `https://${lang}.wiktionary.org/wiki/${encodeURIComponent(title)}#${WiktionaryAnchors[lang] || 'Pronunciation'}`;
+}
+
+/** Symbol type → short CSS class. */
+const TYPE_CLASS: Record<string, string> = {
+  consonant: 'C', vowel: 'V', suprasegmental: 'S', diacritic: 'D',
+};
+
+// =====================================================================
+//  SVG icons (inline, no external deps)
+// =====================================================================
+
+const ICO_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+const ICO_SPEAKER_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+const ICO_WIKT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M2.22 18.6v.01c-.35-.21-.61-.5-.71-.84l-.07-.37L.21 3.36c-.03-.45.17-.9.57-1.25c.39-.36.97-.6 1.62-.66L15.35.22a2.8 2.8 0 0 1 1.7.35a1.5 1.5 0 0 1 .77 1.13l1.23 14.12c.03.45-.17.9-.57 1.25a2.85 2.85 0 0 1-1.62.67L3.92 18.95a2.75 2.75 0 0 1-1.7-.35m-1-1.1c.02.18.07.35.15.5l.02.25c.05.56.4 1.03.9 1.34c.51.3 1.19.46 1.9.4l13.34-1.27a3.15 3.15 0 0 0 1.8-.74c.45-.4.71-.93.66-1.49L18.73 1.87a1.77 1.77 0 0 0-.9-1.33a2.9 2.9 0 0 0-1.24-.4a3.2 3.2 0 0 0-1.27-.12L2.4 1.23a3.1 3.1 0 0 0-1.74.72c-.44.39-.7.9-.64 1.44l1.22 14.1zm1.2 1.9a1.6 1.6 0 0 1-.78-1a2 2 0 0 0 .47.39c.49.3 1.14.44 1.84.38l12.93-1.22c.7-.06 1.31-.33 1.74-.72c.44-.38.7-.9.64-1.43L18.04 1.69a1.62 1.62 0 0 0-.62-1.11c.1.04.2.09.29.15c.46.28.76.7.8 1.16l1.26 14.62c.04.48-.18.94-.59 1.3c-.4.37-1 .63-1.67.7L4.17 19.75a2.9 2.9 0 0 1-1.76-.36ZM1.21 5.3l4.34-.5l.06.47l-.28.04c-.28.03-.48.12-.6.26a.57.57 0 0 0-.15.46a12 12 0 0 0 .53 1.33l2.91 6.12l1.15-5.56l-.8-1.68c-.16-.27-.31-.5-.48-.7a1 1 0 0 0-.28-.23a1.4 1.4 0 0 0-.42-.17c-.1-.02-.25-.02-.48 0l-.08.02l-.06-.48l4.56-.53l.06.48l-.38.04c-.3.04-.5.13-.6.26a.67.67 0 0 0-.13.53c0 .02 0 .06.03.15l.15.4l3.2 6.84l1.32-6.48c.16-.75.22-1.25.18-1.51a.57.57 0 0 0-.14-.32a.57.57 0 0 0-.3-.18c-.2-.05-.47-.06-.8-.02h-.08l-.06-.48l3.53-.4l.06.48h-.08c-.29.04-.5.12-.66.24c-.15.12-.3.33-.42.64c-.08.2-.2.7-.35 1.5l-2.01 9.9l-.45.05l-3.4-7.06l-1.61 7.64l-.42.04l-4.56-9.42q-.51-1.05-.63-1.23a1 1 0 0 0-.47-.4a1.6 1.6 0 0 0-.76-.07h-.08Z"/></svg>';
+
+// =====================================================================
+//  Audio playback
+// =====================================================================
+
+let currentAudio: HTMLAudioElement | null = null;
+
+function stopAudio(): void {
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+}
+
+/** Play audio from a direct URL (Wiktionary/Wikimedia). */
+function playUrl(url: string): void {
+  stopAudio();
+  currentAudio = new Audio(url);
+  currentAudio.volume = 0.8;
+  currentAudio.play().catch(() => {});
+}
+
+/** Play IPA symbol audio from Wikimedia Commons. */
+function playSymbol(filename: string): void {
+  playUrl(wikimediaAudioURL(filename));
+}
+
+/**
+ * Speak a word via espeak-ng synthesis in the offscreen document.
+ * Uses the actual espeak voice engine — pronounces IPA, not just
+ * reading raw text like speechSynthesis would.
+ */
+function speakWord(word: string, lang: Language): void {
+  stopAudio();
+  sendMessage('speakWord', { word, voice: DefaultAccents[lang] || lang });
+}
+
+// =====================================================================
+//  Tooltip – DOM references
+// =====================================================================
+
+let ttHost: HTMLDivElement | null = null;
+let ttEl: HTMLDivElement | null = null;
+let ttDetail: HTMLDivElement | null = null;
+let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+let hideTimer: ReturnType<typeof setTimeout> | null = null;
+let curTarget: HTMLElement | null = null;
+let highlightedEl: HTMLElement | null = null;
+let curTargetRect: DOMRect | null = null;
+let ttAbove = false;
+let ttVisible = false;
+
+// =====================================================================
+//  Tooltip – lifecycle
+// =====================================================================
+
+function initTooltip(): void {
+  if (ttHost) return;
+  ttHost = document.createElement('div');
+  ttHost.id = 'phonetix-tooltip-host';
+  ttHost.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;overflow:visible;';
+  document.body.appendChild(ttHost);
+
+  const shadow = ttHost.attachShadow({ mode: 'closed' });
+  const style = document.createElement('style');
+  style.textContent = TOOLTIP_CSS;
+  shadow.appendChild(style);
+
+  ttEl = document.createElement('div');
+  ttEl.className = 'px-tt';
+  shadow.appendChild(ttEl);
+}
+
+/**
+ * Is (x, y) inside the tooltip's safe zone?
+ * The zone covers the tooltip + padding on sides/top, and extends
+ * through the arrow gap down to the word's top edge (above case)
+ * or up to the word's bottom edge (below case). It does NOT extend
+ * past the word line, so neighboring words can trigger an immediate switch.
+ */
+function isInSafeZone(x: number, y: number): boolean {
+  if (!ttEl || !curTargetRect) return false;
+  const r = ttEl.getBoundingClientRect();
+  if (r.width === 0) return false;
+
+  const mx = 30, my = 15;
+  const left = r.left - mx;
+  const right = r.right + mx;
+  let top: number, bottom: number;
+
+  if (ttAbove) {
+    top = r.top - my;
+    bottom = curTargetRect.top; // stop at word's top edge
+  } else {
+    top = curTargetRect.bottom; // stop at word's bottom edge
+    bottom = r.bottom + my;
+  }
+
+  return x >= left && x <= right && y >= top && y <= bottom;
+}
+
+function setupTooltipEvents(): void {
+  // Hover on phonetix spans
+  document.addEventListener('mouseover', (e) => {
+    const t = (e.target as HTMLElement).closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
+    if (!t || t === curTarget) return;
+    // Don't switch words if mouse is in the tooltip's safe zone
+    if (ttVisible && isInSafeZone(e.clientX, e.clientY)) return;
+    clearTimers();
+    curTarget = t;
+    if (ttVisible) { showTooltip(t); } else { hoverTimer = setTimeout(() => showTooltip(t), 700); }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const t = (e.target as HTMLElement).closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
+    if (t !== curTarget) return;
+    // Ignore child-to-child transitions within the same span (e.g. CSS visibility swap in hover modes)
+    const related = (e as MouseEvent).relatedTarget as HTMLElement | null;
+    if (related?.closest(`.${PHONETIX_CLASS}`) === t) return;
+    clearTimers();
+    hideTimer = setTimeout(() => { hideTooltip(); curTarget = null; }, 350);
+  });
+
+  // Dismiss on click/scroll
+  document.addEventListener('click', () => { if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } });
+  window.addEventListener('scroll', () => { if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } }, { passive: true });
+
+  // Keep tooltip alive when hovered
+  if (ttEl) {
+    ttEl.addEventListener('mouseenter', () => { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } });
+    ttEl.addEventListener('mouseleave', () => { hideTimer = setTimeout(() => { hideTooltip(); curTarget = null; }, 200); });
+  }
+
+  // Buffer zone: cancel hide timer when mouse is in the safe zone
+  document.addEventListener('mousemove', (e) => {
+    if (!hideTimer) return;
+    if (isInSafeZone(e.clientX, e.clientY)) {
+      clearTimeout(hideTimer); hideTimer = null;
+    }
+  });
+}
+
+function clearTimers(): void {
+  if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+  if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+}
+
+// =====================================================================
+//  Tooltip – show / hide / position
+// =====================================================================
+
+function showTooltip(target: HTMLElement): void {
+  if (!ttEl || !ttHost) return;
+
+  // Read final data from span (already clean — set by createPhoneticSpan)
+  const word = target.dataset.original || '';
+  const lang = (target.dataset.lang as Language) || pageLang;
+  const ipaSpan = target.querySelector(`.${IPA_CLASS}`);
+  const ipa = ipaSpan?.textContent || '';
+  if (!word || !ipa) return;
+
+  // Update highlight
+  if (highlightedEl && highlightedEl !== target) highlightedEl.classList.remove('px-active');
+  target.classList.add('px-active');
+  highlightedEl = target;
+
+  renderTooltip(word, ipa, lang);
+
+  ttEl.style.display = 'block';
+  ttEl.classList.remove('visible', 'above', 'below');
+  ttHost.style.pointerEvents = 'auto';
+
+  // Position
+  const rect = target.getBoundingClientRect();
+  curTargetRect = rect;
+  const th = ttEl.offsetHeight;
+  const tw = ttEl.offsetWidth;
+  let top: number;
+  if (rect.top > th + 12) {
+    top = rect.top - th - 8;
+    ttAbove = true;
+    ttEl.classList.add('above');
+  } else {
+    top = rect.bottom + 8;
+    ttAbove = false;
+    ttEl.classList.add('below');
+  }
+  const cx = rect.left + rect.width / 2;
+  let left = Math.max(8, Math.min(cx - tw / 2, window.innerWidth - tw - 8));
+  ttEl.style.setProperty('--arrow-left', `${Math.max(12, Math.min(cx - left, tw - 12))}px`);
+  ttEl.style.top = `${top}px`;
+  ttEl.style.left = `${left}px`;
+
+  ttVisible = true;
+  requestAnimationFrame(() => ttEl?.classList.add('visible'));
+}
+
+function hideTooltip(): void {
+  if (!ttEl || !ttHost) return;
+  if (highlightedEl) { highlightedEl.classList.remove('px-active'); highlightedEl = null; }
+  curTargetRect = null;
+  ttVisible = false;
+  ttEl.classList.remove('visible');
+  ttHost.style.pointerEvents = 'none';
+  stopAudio();
+  setTimeout(() => { if (ttEl && !ttEl.classList.contains('visible')) ttEl.style.display = 'none'; }, 150);
+}
+
+// =====================================================================
+//  Tooltip – render (pure display, no data transforms)
+// =====================================================================
+
+function renderTooltip(word: string, ipa: string, lang: Language): void {
+  if (!ttEl) return;
+  ttEl.innerHTML = '';
+
+  // ── Row 1: word · lang ··· [W] [🔊] ──
+  const r1 = el('div', 'px-r1');
+  r1.appendChild(txt('span', 'px-word', word));
+  r1.appendChild(txt('span', 'px-lang', lang.toUpperCase()));
+  r1.appendChild(el('div', 'px-spacer'));
+
+  const wiktBtn = el('a', 'px-btn disabled') as HTMLAnchorElement;
+  wiktBtn.innerHTML = ICO_WIKT;
+  wiktBtn.title = 'Wiktionary';
+  wiktBtn.target = '_blank';
+  wiktBtn.rel = 'noopener noreferrer';
+  wiktBtn.href = wiktionaryURL(lang, word);
+  r1.appendChild(wiktBtn);
+
+  // Wiktionary audio button — starts disabled, enables only if audio exists
+  const audioBtn = btn('px-btn disabled', ICO_SPEAKER, 'Loading…');
+  r1.appendChild(audioBtn);
+  ttEl.appendChild(r1);
+
+  // ── Row 2: /ipa/ [🗣] ──
+  const r2 = el('div', 'px-r2');
+  r2.appendChild(txt('span', 'px-ipa-text', `/${ipa}/`));
+  const ttsBtn = btn('px-btn px-btn-sm', ICO_SPEAKER_SM, `espeak: ${word} [${DefaultAccents[lang]}]`);
+  ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
+  r2.appendChild(ttsBtn);
+  ttEl.appendChild(r2);
+
+  // ── Symbol breakdown + footer ──
+  const symbolsContainer = el('div', 'px-symbols-wrap');
+  ttEl.appendChild(symbolsContainer);
+  renderSymbols(symbolsContainer, ipa);
+
+  // Async: Wiktionary check via background (no fetch in content script)
+  sendMessage('checkWiktionary', { lang, word }).then((info) => {
+    const displayLang = info.wordLang || (info.foundLang as string) || lang;
+    const linkLang = info.foundLang || lang;
+
+    if (info.exists && info.matchedTitle) {
+      wiktBtn.classList.remove('disabled');
+      wiktBtn.href = wiktionaryURL(linkLang, info.matchedTitle);
+
+      const wordEl = r1.querySelector('.px-word');
+      if (wordEl) wordEl.textContent = info.matchedTitle;
+      const langEl = r1.querySelector('.px-lang');
+      if (langEl) langEl.textContent = displayLang.toUpperCase();
+    }
+
+    if (info.wiktIpa && info.wiktIpa !== ipa) {
+      // Show Wiktionary IPA in the tooltip only — don't update page spans
+      const ipaText = r2.querySelector('.px-ipa-text');
+      if (ipaText) ipaText.textContent = `/${info.wiktIpa}/`;
+      renderSymbols(symbolsContainer, info.wiktIpa);
+    }
+
+    if (info.audioUrl) {
+      audioBtn.classList.remove('disabled');
+      audioBtn.title = 'Wiktionary audio';
+      audioBtn.addEventListener('click', (e) => { e.stopPropagation(); playUrl(info.audioUrl!); });
+    } else {
+      audioBtn.title = 'No Wiktionary audio available';
+    }
+  }).catch(() => { audioBtn.title = 'No Wiktionary audio available'; });
+}
+
+/** Build (or rebuild) the IPA symbol grid + detail + legend into a container. */
+function renderSymbols(container: HTMLElement, ipa: string): void {
+  container.innerHTML = '';
+  const tokens = tokenizeIPA(ipa);
+  if (tokens.length > 0) {
+    const grid = el('div', 'px-symbols');
+    const detail = el('div', 'px-detail');
+    detail.appendChild(txt('div', 'px-detail-empty', 'Hover a symbol for details'));
+    ttDetail = detail;
+
+    for (const tok of tokens) {
+      if (!tok.trim()) continue;
+      const info = IPA_SYMBOLS[tok] || IPA_SYMBOLS[tok[0]];
+      const cls = info ? TYPE_CLASS[info.type] || '' : '';
+      const hasAudio = !!info?.audio;
+
+      const sym = el('div', `px-sym ${cls} ${hasAudio ? 'clickable' : ''}`);
+      sym.appendChild(txt('span', 'px-sym-ch', tok));
+
+      if (hasAudio) {
+        const spk = el('span', 'px-sym-spk');
+        spk.innerHTML = ICO_SPEAKER_SM;
+        sym.appendChild(spk);
+        const file = info!.audio!;
+        sym.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
+      }
+
+      sym.addEventListener('mouseenter', () => {
+        if (!info || !ttDetail) return;
+        ttDetail.innerHTML = '';
+        ttDetail.appendChild(txt('div', 'px-detail-name', info.name));
+        ttDetail.appendChild(txt('div', 'px-detail-eg', info.example));
+      });
+      sym.addEventListener('mouseleave', () => {
+        if (!ttDetail) return;
+        ttDetail.innerHTML = '';
+        ttDetail.appendChild(txt('div', 'px-detail-empty', 'Hover a symbol for details'));
+      });
+
+      grid.appendChild(sym);
+    }
+    container.appendChild(grid);
+    container.appendChild(detail);
+  }
+
+  const footer = el('div', 'px-footer');
+  for (const [c, label] of [['C', 'consonant'], ['V', 'vowel'], ['S', 'stress']] as const) {
+    const leg = el('span', 'px-leg');
+    leg.appendChild(el('span', `px-dot ${c}`));
+    leg.appendChild(document.createTextNode(label));
+    footer.appendChild(leg);
+  }
+  footer.appendChild(el('div', 'px-spacer'));
+  container.appendChild(footer);
+}
+
+// DOM helpers
+function el(tag: string, cls: string): HTMLElement {
+  const e = document.createElement(tag);
+  e.className = cls;
+  return e;
+}
+function txt(tag: string, cls: string, text: string): HTMLElement {
+  const e = el(tag, cls);
+  e.textContent = text;
+  return e;
+}
+function btn(cls: string, svg: string, title: string): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.className = cls;
+  b.innerHTML = svg;
+  b.title = title;
+  return b;
+}
+
+// =====================================================================
+//  DOM Processing — span creation (data is finalized HERE, not later)
+// =====================================================================
+
+/**
+ * Create a phonetix span with all data finalized:
+ * - IPA is cleaned (no espeak markers)
+ * - Language is resolved (espeak markers override block detection)
+ * The tooltip just reads these values — no re-processing.
+ */
+function createPhoneticSpan(original: string, rawIpa: string, blockLang: Language): HTMLSpanElement {
+  const finalLang = extractIPALang(rawIpa) || blockLang;
+  const finalIpa = cleanIPA(rawIpa);
+
+  const span = document.createElement('span');
+  span.className = PHONETIX_CLASS;
+  span.dataset.original = original;
+  span.dataset.lang = finalLang;
+
+  const origSpan = document.createElement('span');
+  origSpan.className = ORIG_CLASS;
+  origSpan.textContent = original;
+
+  const ipaSpan = document.createElement('span');
+  ipaSpan.className = IPA_CLASS;
+  ipaSpan.textContent = finalIpa; // CLEAN — tooltip reads this directly
+
+  span.appendChild(origSpan);
+  span.appendChild(ipaSpan);
+  return span;
+}
+
+// =====================================================================
+//  Page processing
+// =====================================================================
+
+interface TextBlock { blockElement: Element; textNodes: Text[]; text: string; }
+
+async function processPage(): Promise<void> {
+  if (languageOption === 'auto') {
+    await processMultilingual();
+  } else {
+    const nodes = collectTextNodes(document.body);
+    const words = uniqueWords(nodes);
+    if (words.length === 0) return;
+
+    const ipaMap = await sendMessage('phonemize', { words, voice: accent, lang: pageLang });
+    applyTransforms(nodes, ipaMap, pageLang);
+  }
+}
+
+async function processMultilingual(): Promise<void> {
+  const blocks = groupByBlock(document.body);
+  if (blocks.length === 0) return;
+
+  const blockLangs = await detectBlockLanguages(blocks);
+
+  // Track most common language for popup display
+  const counts = new Map<Language, number>();
+  for (const l of blockLangs) counts.set(l, (counts.get(l) || 0) + 1);
+  let best = pageLang, bestN = 0;
+  for (const [l, n] of counts) { if (n > bestN) { best = l; bestN = n; } }
+  pageLang = best;
+  await storage.setItem('local:detectedLanguage', pageLang);
+
+  // Group by voice → phonemize + Wiktionary batch in parallel
+  const byVoice = new Map<string, { nodes: Text[]; words: Set<string>; lang: Language }>();
+  for (let i = 0; i < blocks.length; i++) {
+    const lang = blockLangs[i];
+    const voice = DefaultAccents[lang];
+    if (!byVoice.has(voice)) byVoice.set(voice, { nodes: [], words: new Set(), lang });
+    const g = byVoice.get(voice)!;
+    for (const tn of blocks[i].textNodes) {
+      g.nodes.push(tn);
+      for (const m of (tn.nodeValue || '').matchAll(WORD_RE))
+          if (m[0].length <= MAX_WORD_LENGTH) g.words.add(m[0].toLowerCase());
+    }
+  }
+
+  await Promise.all([...byVoice.entries()].map(async ([voice, g]) => {
+    const words = [...g.words];
+    if (words.length === 0) return;
+
+    const ipaMap = await sendMessage('phonemize', { words, voice, lang: g.lang });
+    applyTransforms(g.nodes, ipaMap, g.lang);
+  }));
+}
+
+// =====================================================================
+//  DOM helpers for processing
+// =====================================================================
+
+function groupByBlock(root: Node): TextBlock[] {
+  const nodes = collectTextNodes(root);
+  const map = new Map<Element, Text[]>();
+  for (const n of nodes) {
+    const block = findBlock(n);
+    if (!map.has(block)) map.set(block, []);
+    map.get(block)!.push(n);
+  }
+  return [...map.entries()].map(([blockElement, textNodes]) => ({
+    blockElement,
+    textNodes,
+    text: textNodes.map(n => n.nodeValue?.trim() || '').join(' '),
+  }));
+}
+
+function findBlock(node: Node): Element {
+  let el = node.parentElement;
+  while (el && el !== document.body) {
+    if (BLOCK_TAGS.has(el.tagName)) return el;
+    el = el.parentElement;
+  }
+  return document.body;
+}
+
+function findExplicitLang(el: Element): Language | null {
+  let cur: Element | null = el;
+  while (cur && cur !== document.documentElement) {
+    const l = cur.getAttribute('lang')?.split('-')[0]?.toLowerCase();
+    if (l && l in Languages) return l as Language;
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
+async function detectBlockLanguages(blocks: TextBlock[]): Promise<Language[]> {
+  const results: Language[] = new Array(blocks.length).fill(pageLang);
+  const toDetect: string[] = [];
+  const indices: number[] = [];
+
+  for (let i = 0; i < blocks.length; i++) {
+    const explicit = findExplicitLang(blocks[i].blockElement);
+    if (explicit) { results[i] = explicit; continue; }
+    if (blocks[i].text.length < 40) continue;
+    toDetect.push(blocks[i].text);
+    indices.push(i);
+  }
+
+  if (toDetect.length > 0) {
+    try {
+      const detected = await sendMessage('detectLanguages', { texts: toDetect });
+      for (let j = 0; j < detected.length; j++) {
+        if (detected[j] !== null) results[indices[j]] = detected[j] as Language;
+      }
+    } catch (e) {
+      console.warn('[Phonetix] Block language detection failed:', e);
+    }
+  }
+  return results;
+}
+
+function collectTextNodes(root: Node): Text[] {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const p = node.parentElement;
+      if (!p) return NodeFilter.FILTER_SKIP;
+      if (BLOCKED_TAGS.has(p.tagName)) return NodeFilter.FILTER_SKIP;
+      if (p.closest(`.${PHONETIX_CLASS}`)) return NodeFilter.FILTER_SKIP;
+      const v = node.nodeValue?.trim();
+      if (!v) return NodeFilter.FILTER_SKIP;
+      // Skip text nodes that contain URLs, IP addresses, or ISO timestamps
+      if (TECHNICAL_RE.test(v)) return NodeFilter.FILTER_SKIP;
+      // Skip bare domains/filenames (no spaces, contains word.word pattern)
+      if (!/\s/.test(v) && /\w\.\w/.test(v)) return NodeFilter.FILTER_SKIP;
+      // Skip URL-like link text inside <a> tags (e.g. "geko.com")
+      const a = p.closest('a');
+      if (a && /^\S+\.\S+$/.test(a.textContent?.trim() || '')) return NodeFilter.FILTER_SKIP;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  let n: Node | null;
+  while ((n = walker.nextNode())) nodes.push(n as Text);
+  return nodes;
+}
+
+function uniqueWords(nodes: Text[]): string[] {
+  const s = new Set<string>();
+  for (const n of nodes)
+    for (const m of (n.nodeValue || '').matchAll(WORD_RE))
+      if (m[0].length <= MAX_WORD_LENGTH) s.add(m[0].toLowerCase());
+  return [...s];
+}
+
+function applyTransforms(nodes: Text[], ipaMap: Record<string, string>, lang: Language) {
+  for (const node of nodes) transformNode(node, ipaMap, lang);
+}
+
+function transformNode(node: Text, ipaMap: Record<string, string>, lang: Language) {
+  const text = node.nodeValue;
+  if (!text) return;
+
+  const parts = text.split(new RegExp(`(${WORD_RE.source})`));
+  if (parts.length <= 1) return;
+
+  const wordRe = new RegExp(`^${WORD_RE.source}$`);
+  let hasAny = false;
+  for (const p of parts) { if (wordRe.test(p) && ipaMap[p.toLowerCase()]) { hasAny = true; break; } }
+  if (!hasAny) return;
+
+  const frag = document.createDocumentFragment();
+  for (const p of parts) {
+    if (wordRe.test(p)) {
+      const ipa = ipaMap[p.toLowerCase()];
+      frag.appendChild(ipa ? createPhoneticSpan(p, ipa, lang) : document.createTextNode(p));
+    } else if (p) {
+      frag.appendChild(document.createTextNode(p));
+    }
+  }
+  node.parentNode?.replaceChild(frag, node);
+}
+
+// =====================================================================
+//  Language detection
+// =====================================================================
+
+async function detectPageLanguage(): Promise<Language> {
+  const htmlLang = document.documentElement.lang?.split('-')[0]?.toLowerCase();
+  if (htmlLang && htmlLang in Languages) return htmlLang as Language;
+
+  const sample = extractTextSample();
+  if (sample.length < 20) return 'en';
+  try { return await sendMessage('detectLanguage', sample); }
+  catch { return 'en'; }
+}
+
+function extractTextSample(): string {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const p = node.parentElement;
+      if (!p) return NodeFilter.FILTER_SKIP;
+      if (BLOCKED_TAGS.has(p.tagName)) return NodeFilter.FILTER_SKIP;
+      if (!node.nodeValue?.trim()) return NodeFilter.FILTER_SKIP;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  let text = '', n: Node | null;
+  while ((n = walker.nextNode()) && text.length < 1000) text += ' ' + (n.nodeValue?.trim() || '');
+  return text.trim();
+}
+
+// =====================================================================
+//  Style injection & mode switching
+// =====================================================================
+
+function injectStyles() {
+  if (document.getElementById('phonetix-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'phonetix-styles';
+  s.textContent = PHONETIX_CSS;
+  document.head.appendChild(s);
+}
+
+function setMode(m: Mode) {
+  const html = document.documentElement;
+  for (const c of Object.values(MODE_CLASSES)) html.classList.remove(c);
+  html.classList.add(MODE_CLASSES[m]);
+}
+
+function clearMode() {
+  for (const c of Object.values(MODE_CLASSES)) document.documentElement.classList.remove(c);
+}
+
+// =====================================================================
+//  Revert
+// =====================================================================
+
+function revertAll() {
+  hideTooltip();
+  for (const span of document.querySelectorAll(`.${PHONETIX_CLASS}`)) {
+    const orig = (span as HTMLElement).dataset.original || '';
+    span.parentNode?.replaceChild(document.createTextNode(orig), span);
+  }
+  document.body.normalize();
+}
+
+// =====================================================================
+//  MutationObserver
+// =====================================================================
+
+let observer: MutationObserver | null = null;
+
+function observeDOM() {
+  if (observer) return;
+  let pending = false;
+  observer = new MutationObserver((muts) => {
+    if (pending) return;
+    let found = false;
+    for (const m of muts) {
+      for (const n of m.addedNodes) {
+        if ((n instanceof Element && !n.classList?.contains(PHONETIX_CLASS)) ||
+            (n instanceof Text && n.nodeValue?.trim())) {
+          found = true; break;
+        }
+      }
+      if (found) break;
+    }
+    if (!found) return;
+    pending = true;
+    setTimeout(async () => {
+      try { await processPage(); } catch (e) { console.warn('[Phonetix] DOM observer error:', e); }
+      pending = false;
+    }, 300);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function stopObserver() {
+  if (observer) { observer.disconnect(); observer = null; }
+}
+
+// =====================================================================
+//  Entry point
+// =====================================================================
 
 export default defineContentScript({
   matches: ['<all_urls>'],
-  runAt: "document_start",
-  allFrames: true,
-  main() {
-    const config = initializeConfig();
-    sendMessage('getIpaMap', undefined).then((map) => {
-      if (map) {
-        config.ipaMap = map;
-        processTree(document.documentElement, config);
-        observeTree(document.documentElement, config);
-      }
-    })
+  runAt: 'document_idle',
 
-    listenForMessages(config);
-    //return cleanupContentScript;
+  async main() {
+    // Load saved state
+    try {
+      const extState = await storage.getItem<string>('local:extension_enabled');
+      isEnabled = extState ? JSON.parse(extState) : true;
+
+      const hostname = window.location.hostname;
+      const websiteState = await storage.getItem<string>('local:websites_enabled');
+      const websites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
+      if (hostname in websites && !websites[hostname]) isEnabled = false;
+
+      const savedLang = await storage.getItem<string>('local:selectedLanguage');
+      if (savedLang) languageOption = savedLang as LanguageOption;
+
+      const savedAccent = await storage.getItem<string>('local:selectedAccent');
+      const savedMode = await storage.getItem<string>('local:selectedMode');
+      if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
+
+      if (languageOption === 'auto') {
+        pageLang = await detectPageLanguage();
+        accent = DefaultAccents[pageLang];
+        await storage.setItem('local:detectedLanguage', pageLang);
+      } else {
+        pageLang = languageOption as Language;
+        accent = savedAccent || DefaultAccents[pageLang];
+      }
+    } catch (e) {
+      console.warn('[Phonetix] Failed to load settings:', e);
+    }
+
+    injectStyles();
+    initTooltip();
+    setupTooltipEvents();
+
+    if (isEnabled) {
+      setMode(mode);
+      await processPage();
+      observeDOM();
+    }
+
+    // Popup messages
+    onMessage('extensionToggled', async (msg) => {
+      const on = msg.data;
+      if (on && !isEnabled) { isEnabled = true; setMode(mode); await processPage(); observeDOM(); }
+      else if (!on && isEnabled) { isEnabled = false; revertAll(); clearMode(); stopObserver(); }
+    });
+
+    onMessage('modeChanged', (msg) => { mode = msg.data; if (isEnabled) setMode(mode); });
+
+    onMessage('languageChanged', async (msg) => {
+      languageOption = msg.data;
+      if (languageOption === 'auto') {
+        pageLang = await detectPageLanguage();
+        accent = DefaultAccents[pageLang];
+        await storage.setItem('local:detectedLanguage', pageLang);
+      } else {
+        pageLang = languageOption as Language;
+        accent = DefaultAccents[pageLang];
+      }
+      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
+    });
+
+    onMessage('accentChanged', async (msg) => {
+      accent = msg.data;
+      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
+    });
   },
 });
-
-const LanguageSchema = z.enum(Object.keys(Languages) as [keyof typeof Languages, ...Array<keyof typeof Languages>]);
-const ModeSchema = z.enum(Object.keys(Modes) as [keyof typeof Modes, ...Array<keyof typeof Modes>]);
-
-const DEFAULT_CONFIG: TransformConfig = {
-  mode: "wholePage",
-  language: "en",
-  isEnabled: true,
-  ipaMap: {}
-};
-
-const BLOCKED_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT']);
-
-let currentConfig: TransformConfig = { ...DEFAULT_CONFIG };
-let mutationObservers: Map<Node, MutationObserver> = new Map();
-
-function initializeConfig(): TransformConfig {
-  const config = { ...DEFAULT_CONFIG };
-  currentConfig = validateConfig(config);
-  return currentConfig;
-}
-
-function processTree(root: Node, config: TransformConfig): void {
-  const walker = createTextWalker(root);
-  let node: Node | null = walker.nextNode();
-  while (node) {
-    transformNodeText(node as Text, config);
-    if (node.parentElement && node.parentElement.shadowRoot) {
-      processTree(node.parentElement.shadowRoot, config);
-      observeTree(node.parentElement.shadowRoot, config);
-    }
-    node = walker.nextNode();
-  }
-  if (root instanceof Element && root.shadowRoot) {
-    processTree(root.shadowRoot, config);
-    observeTree(root.shadowRoot, config);
-  }
-}
-
-function transformNodeText(node: Text, config: TransformConfig): void {
-  if (!config.isEnabled || !node.nodeValue?.trim()) {
-    return;
-  }
-  switch (config.mode) {
-    case "wholePage":
-      node.nodeValue = node.nodeValue.split(/([.,\-"'“„'‘’()[\]{}\s!?:;&*#@\$_%\/\\|~^–—…°©®™€£§]+)/).map((token) => {
-        if (/[a-zA-Z]/.test(token)) {
-          const cleanWord = token.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const specialChars = token.replace(/[a-z0-9]/gi, '');
-          // TODO: somehow mark that element has already been replaced or it will be replaced multiple times, adding a lot of signs everytime the dom is updated and observer is triggered
-          // TODO: have json with lowercase letters only
-          // TODO: deal with order, e.g. here, mɐ was chosen even though standard would be viːɐ̯ - note? tags?
-          /*
-            Pronunciation
-            (standard) IPA(key): /viːɐ̯/
-            Rhymes: -iːɐ̯
-            Audio:	
-
-            Replay
-
-            Mute
-
-
-            More information
-            Audio:	
-
-            Replay
-
-            Mute
-
-
-            More information
-            (colloquially in unstressed position) IPA(key): /vɐ/, /mɐ/
-
-          */
-          return config.ipaMap[cleanWord] && config.ipaMap[cleanWord].length > 0
-            ? config.ipaMap[cleanWord][0].substring(1, config.ipaMap[cleanWord][0].length - 1) + specialChars
-            : token;
-        }
-        return token;
-      }).join("");
-      break;
-    case "onHover":
-    case "showOriginalOnHover":
-    default:
-      break;
-  }
-}
-
-function observeTree(root: Node, config: TransformConfig): void {
-  if (mutationObservers.has(root)) {
-    return;
-  }
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      const affectedNodes = Array.from(mutation.addedNodes);
-      affectedNodes.forEach((node) => {
-        processTree(node, config);
-        if (node instanceof Element && node.shadowRoot) {
-          processTree(node.shadowRoot, config);
-          observeTree(node.shadowRoot, config);
-        }
-      });
-      if (mutation.target instanceof Element) {
-        processTree(mutation.target, config);
-      }
-    });
-  });
-  observer.observe(root, {
-    childList: true,
-    subtree: true
-  });
-  mutationObservers.set(root, observer);
-}
-
-function listenForMessages(config: TransformConfig): void {
-  onMessage("modeChanged", (m) => {
-    config.mode = validateMode(m.data);
-    processTree(document.documentElement, config);
-  });
-  onMessage("languageChanged", (m) => {
-    config.language = validateLanguage(m.data);
-    processTree(document.documentElement, config);
-  });
-  onMessage("extensionToggled", (m) => {
-    config.isEnabled = m.data;
-    validateConfig(config);
-    processTree(document.documentElement, config);
-  });
-}
-
-function createTextWalker(root: Node): TreeWalker {
-  const filterFunction = (node: Node): number => {
-    const parent = node.parentElement;
-    const isValid = parent && !BLOCKED_TAGS.has(parent.tagName);
-    return isValid ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-  };
-  return document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: filterFunction });
-}
-
-function validateConfig(config: TransformConfig): TransformConfig {
-  const validatedMode = ModeSchema.safeParse(config.mode);
-  const validatedLanguage = LanguageSchema.safeParse(config.language);
-  config.mode = validatedMode.success ? validatedMode.data : DEFAULT_CONFIG.mode;
-  config.language = validatedLanguage.success ? validatedLanguage.data : DEFAULT_CONFIG.language;
-  return config;
-}
-
-function validateMode(mode: keyof typeof Modes): keyof typeof Modes {
-  const result = ModeSchema.safeParse(mode);
-  return result.success ? result.data : DEFAULT_CONFIG.mode;
-}
-
-function validateLanguage(language: keyof typeof Languages): keyof typeof Languages {
-  const result = LanguageSchema.safeParse(language);
-  return result.success ? result.data : DEFAULT_CONFIG.language;
-}
-
-function cleanupContentScript(): void {
-  mutationObservers.forEach((observer) => {
-    observer.disconnect();
-  });
-  mutationObservers.clear();
-  currentConfig.isEnabled = false;
-}

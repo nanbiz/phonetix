@@ -31,14 +31,14 @@
   })();
 
   $effect(() => {
-    const saveExtensionState = async (extension_enabled: boolean, current_website_enabled: boolean) => {
+    const saveExtensionState = async (enabled: boolean) => {
       try {
-        await storage.setItem('local:extension_enabled', JSON.stringify(extension_enabled));
+        await storage.setItem('local:extension_enabled', JSON.stringify(enabled));
       } catch (error) {
         console.error("Error saving extension state:", error);
       }
     };
-    saveExtensionState(extension_enabled, current_website_enabled);
+    saveExtensionState(extension_enabled);
   });
 
   $effect(() => {

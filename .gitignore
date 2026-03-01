@@ -1,8 +1,15 @@
 node_modules
 .output
 .wxt
-
-notes/languages_with_audio
-notes/languages_without_audio
-
 .cache
+
+# Copied from node_modules at postinstall (23 MB)
+public/espeak/
+
+# Built from kaikki.org data (run: pnpm build:dict)
+public/dictionaries/
+
+# Large data files (research/build artifacts, not extension runtime)
+scripts/data/
+src/public/languages_with_audio/
+src/public/languages_without_audio/
