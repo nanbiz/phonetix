@@ -1,0 +1,25 @@
+# Diverse real pages: multilingual, mixed-language, chrome-heavy, long-form.
+# English news / long-form
+https://www.bbc.com/news
+https://www.theguardian.com/international
+https://text.npr.org/
+https://en.wikipedia.org/wiki/Germany
+https://www.gutenberg.org/cache/epub/1342/pg1342-images.html
+# German (foreign words / loanwords common)
+https://www.spiegel.de/
+https://www.tagesschau.de/
+https://de.wikipedia.org/wiki/Deutschland
+https://www.zeit.de/index
+# French
+https://www.lemonde.fr/
+https://fr.wikipedia.org/wiki/France
+# Spanish / Italian
+https://elpais.com/
+https://www.corriere.it/
+# Mixed-language / chrome-heavy / social / video
+https://www.youtube.com/
+https://www.reddit.com/r/programming/
+https://news.ycombinator.com/
+https://github.com/trending
+https://stackoverflow.com/questions
+https://www.wikipedia.org/
