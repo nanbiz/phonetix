@@ -2,7 +2,7 @@
   "name": "phonetix",
   "description": "Browser extension that shows IPA pronunciations on web pages",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",
@@ -12,6 +12,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "node --experimental-strip-types scripts/test-homograph.ts && node --experimental-strip-types scripts/test-resolution.ts",
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:dict": "node scripts/build-dictionaries.mjs",
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare"
