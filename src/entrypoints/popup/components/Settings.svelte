@@ -116,9 +116,30 @@
   let totalDictLangs = $derived(Object.keys(dictManifest).length);
   let totalWords = $derived(Object.values(dictManifest).reduce((s, d) => s + d.entries, 0));
   let effectiveHasDict = $derived(effectiveLanguage in dictManifest);
+
+  // Subsystem health — surfaces a silently-failed engine (as eld once was) here
+  // in the popup, on whichever browser the user is running.
+  let health = $state<{ eld: boolean; dict: boolean; espeak: boolean; errors: string[] } | null>(null);
+  (async () => {
+    try { health = await sendMessage('getHealth', {}); }
+    catch (e) { health = { eld: false, dict: false, espeak: false, errors: [String(e)] }; }
+  })();
+  let unhealthy = $derived(!!health && !(health.eld && health.dict && health.espeak));
+  let downList = $derived(
+    !health ? '' : [
+      health.eld ? '' : 'language detection',
+      health.dict ? '' : 'dictionaries',
+      health.espeak ? '' : 'espeak',
+    ].filter(Boolean).join(', '),
+  );
 </script>
 
 <div class="w-full space-y-4">
+  {#if unhealthy}
+    <div class="text-xs text-red-300 bg-red-950/50 border border-red-900/60 rounded px-2 py-1.5">
+      ⚠ {downList} unavailable — reload the page or reinstall.
+    </div>
+  {/if}
   <!-- Language selector -->
   <div class="flex flex-col gap-2">
     <h1 class="text-lg font-medium text-white">Language</h1>

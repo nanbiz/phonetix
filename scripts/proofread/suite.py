@@ -45,6 +45,20 @@ FIXTURES = {
   # Non-Latin content must actually translate (was zero before Intl.Segmenter).
   "/nonlatin.html": """<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>x</title></head><body><main>
    <p>Кошка это домашнее животное которое живёт рядом с человеком очень давно.</p></main></body></html>""",
+
+  # A feed that appends foreign-language titles after load (the YouTube shape):
+  # the MutationObserver must process the new subtree and language it correctly.
+  "/dynamic.html": """<!doctype html><html lang="de"><head><meta charset="utf-8"><title>x</title></head><body><main id="feed">
+   <div class="t" data-exp="de">Die aktuelle Nachrichtenlage in Deutschland und der Welt heute</div>
+  </main><script>
+   setTimeout(() => {
+     const feed=document.getElementById('feed');
+     const add=(lang,txt)=>{const d=document.createElement('div');d.className='t';d.dataset.exp=lang;d.textContent=txt;feed.appendChild(d);};
+     add('en','Breaking News Live Coverage Of The Election Results Tonight');
+     add('fr','Les meilleures recettes de cuisine française pour le dîner');
+     add('es','El resumen completo del partido de fútbol de anoche aquí');
+   }, 2000);
+  </script></body></html>""",
 }
 
 def serve(port):
@@ -122,6 +136,15 @@ def integration(d):
     d.load(f"http://127.0.0.1:{PORT}/nonlatin.html")
     nl = d.js(f"{SPANS_BY}('main')")[0]
     expect("non-Latin translated (ru)", nl["n"] > 5 and nl["lang"] == "ru", f"n={nl['n']} lang={nl['lang']}")
+    d.close_tab()
+
+    # dynamically-added titles (feed) get processed and languaged correctly
+    d.load(f"http://127.0.0.1:{PORT}/dynamic.html", settle=6)
+    time.sleep(6)  # titles append at 2s, observer debounces + processes
+    dyn = d.js(f"{SPANS_BY}('div.t')")
+    right = sum(1 for r in dyn if r["lang"] == r["exp"])
+    expect("dynamic feed: all titles added + languaged", len(dyn) == 4 and right == 4,
+           f"{right}/{len(dyn)} " + str([(r['exp'], r['lang']) for r in dyn]))
     d.close_tab()
 
 
