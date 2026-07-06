@@ -127,7 +127,7 @@
       selected={[selectedLangOption]}
       maxSelect={1}
       placeholder="Search languages..."
-      on:change={(e: any) => onLanguageSelect(e.detail.option)}
+      onchange={(data) => { if (data.option) onLanguageSelect(data.option as LangOption); }}
       --sms-border="1px solid #374151"
       --sms-bg="transparent"
       --sms-text-color="white"
