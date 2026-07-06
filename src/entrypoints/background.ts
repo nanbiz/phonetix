@@ -4,10 +4,6 @@ import { getCachedBatch, setCachedBatch } from '@/lib/cache';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
 import type { Language, PhonemeResult } from '@/lib/types';
 
-/** Dictionaries tried (in order) when a word misses its block-language dict.
- *  English carries the most loanwords/brand names/proper nouns. */
-const FALLBACK_LANGS = ['en'];
-
 /** Each language's script, derived from its own dictionary's keys on load. */
 const dictScript = new Map<string, string>();
 import { parseClassifier, disambiguate, type HomographEntry } from '@/lib/homograph';
@@ -503,7 +499,7 @@ export default defineBackground(() => {
   console.log('[Phonetix] Background service worker started');
 
   onMessage('phonemize', async ({ data }) => {
-    const { words, voice, lang } = data;
+    const { words, voice, lang, fallbacks = [] } = data;
     const result: PhonemeResult = {};
     const srcLang = lang || voice.split('-')[0];
 
@@ -518,11 +514,12 @@ export default defineBackground(() => {
       }
     }
 
-    // Tier 2 — cross-language dictionary fallback. Loanwords, brand names and
-    // proper nouns (Renault, Mount Everest, Javier) miss the page dictionary but
-    // live in another. Trying these before espeak stops the wrong-language
-    // butchering. English first (widest name/loanword coverage).
-    for (const fb of FALLBACK_LANGS) {
+    // Tier 2 — cross-language dictionary fallback. A loanword or proper noun
+    // (Renault, Mount Everest, Javier) misses the block's dictionary but lives in
+    // another language present on the page. Trying those before espeak stops the
+    // wrong-language butchering. The candidates are the page's own languages
+    // (passed by the content script), not a fixed list.
+    for (const fb of fallbacks) {
       if (remaining.length === 0) break;
       if (fb === lang) continue;
       const dict = await loadDictionary(fb);

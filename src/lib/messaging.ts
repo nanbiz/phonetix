@@ -16,7 +16,7 @@ export interface WiktionaryInfo {
 }
 
 interface ProtocolMap {
-  phonemize(data: { words: string[]; voice: string; lang?: string }): PhonemeResult;
+  phonemize(data: { words: string[]; voice: string; lang?: string; fallbacks?: string[] }): PhonemeResult;
   detectLanguage(text: string): Language;
   /** Decide each block's language from eld's ranked guesses plus which language's
    *  dictionary best covers its words. Handles short mixed-language elements (an

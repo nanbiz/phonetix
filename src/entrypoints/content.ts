@@ -510,11 +510,16 @@ async function processMultilingual(root: Element = document.body): Promise<void>
     }
   }
 
+  // The page's own languages are the cross-dictionary fallback for loanwords and
+  // proper nouns (a lone English name in a German sentence), derived from what was
+  // detected, not a fixed list.
+  const pageLangs = [...new Set([...byVoice.values()].map((g) => g.lang))];
+
   await Promise.all([...byVoice.entries()].map(async ([voice, g]) => {
     const words = [...g.words];
     if (words.length === 0) return;
 
-    const ipaMap = await sendMessage('phonemize', { words, voice, lang: g.lang });
+    const ipaMap = await sendMessage('phonemize', { words, voice, lang: g.lang, fallbacks: pageLangs });
     await applyTransforms(g.nodes, ipaMap, g.lang, voice);
   }));
 }
