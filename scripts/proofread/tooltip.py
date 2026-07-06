@@ -44,12 +44,20 @@ def hover_shot(cdp, url, word):
     if not info:
         print(f"  no span for {word} on {url}"); cdp.send("Target.closeTarget", {"targetId": tgt}); return
     x, y = info["x"], info["y"]
-    # move over the word to trigger the hover tooltip (700ms timer)
-    for _ in range(3):
-        cdp.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": x, "y": y}, session=sess)
-        time.sleep(0.05)
-    time.sleep(1.2)
-    img = cdp.send("Page.captureScreenshot", {"format": "png"}, session=sess)["data"]
+    # Fire a real mouseover on the span; the content script's document-level
+    # listener then arms its 700ms hover timer and shows the tooltip.
+    cdp.send("Runtime.evaluate", {"expression": f"""
+      (() => {{
+        const spans=[...document.querySelectorAll('.phonetix')];
+        const t=spans.find(s=>(s.dataset.original||'').toLowerCase()==={json.dumps(word)}.toLowerCase())||spans[0];
+        const r=t.getBoundingClientRect();
+        t.dispatchEvent(new MouseEvent('mouseover',{{bubbles:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2}}));
+      }})()
+    """}, session=sess)
+    time.sleep(1.1)
+    img = cdp.send("Page.captureScreenshot", {"format": "png", "clip": {
+        "x": max(0, x - 240), "y": max(0, y - 260), "width": 480, "height": 300, "scale": 2}},
+        session=sess)["data"]
     name = f"tooltip_{word}.png"
     with open(os.path.join(OUT, name), "wb") as f:
         f.write(base64.b64decode(img))

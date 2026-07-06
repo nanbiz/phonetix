@@ -67,8 +67,23 @@ pnpm build:dict       # rebuild IPA dictionaries from the kaikki dump
 
 ## Testing
 
-- `node --experimental-strip-types scripts/test-homograph.ts` — homograph unit test.
-- `scripts/proofread/` — drives the built extension in headless chromium over a
-  corpus of real pages (CDP over `--remote-debugging-pipe`), extracts every
-  rendered IPA span, and quantifies failure classes (`analyze.py`). This is how
-  the resolution cascade is regression-checked against real content.
+Three layers, all runnable from `package.json`:
+
+```sh
+pnpm test              # unit: segmenter, script gating, homographs, language decision
+pnpm test:integration  # behavioral: controlled fixtures via CDP, hard assertions
+pnpm test:e2e          # behavioral: a few real sites, invariants
+pnpm test:all          # all three
+```
+
+- **Unit** (`scripts/test-*.ts`, node `--experimental-strip-types`): pure logic —
+  `homograph`, `resolution` (segmentation + espeak script gating), `langdetect`
+  (per-block language decision).
+- **Integration / e2e** (`scripts/proofread/suite.py`): builds must exist
+  (`pnpm build`); drives the extension in headless chromium over CDP (a
+  `--remote-debugging-pipe`, since a debug port is killed by the sandbox on some
+  hosts). Asserts a subsystem **health check** (language detection, dictionary and
+  espeak are actually alive, not silently degraded), per-title language on mixed
+  pages, no letter-name garbage, and non-Latin coverage.
+- **Proofreading** (`scripts/proofread/harness.py` + `analyze.py`): sweeps a large
+  corpus and quantifies failure classes for exploratory regression checking.
