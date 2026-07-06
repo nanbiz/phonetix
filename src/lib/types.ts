@@ -206,7 +206,19 @@ export const Modes = {
 
 export type Mode = keyof typeof Modes;
 
-export type PhonemeResult = Record<string, string>;
+export interface ResolvedIpa {
+  ipa: string;
+  /** Language the IPA was resolved from. May differ from the block language for
+   *  loanwords/proper nouns found via cross-dictionary fallback (e.g. "Renault"
+   *  in a German page resolved from the English/French dict). */
+  lang: string;
+  /** Which tier produced it — drives the tooltip source label + audio voice. */
+  src: 'dict' | 'espeak';
+}
+
+/** word → resolved pronunciation. Same object drives the page span, the tooltip
+ *  headline, and the audio voice, so all three always agree. */
+export type PhonemeResult = Record<string, ResolvedIpa>;
 
 /** Block-level HTML tags used to group text nodes for per-block language detection */
 export const BLOCK_TAGS = new Set([

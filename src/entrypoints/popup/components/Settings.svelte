@@ -30,6 +30,7 @@
     label: string;
     value: string;
     dictEntries?: number;
+    [key: string]: unknown;  // satisfy svelte-multiselect's ObjectOption
   }
 
   let languageOptionsList = $derived<LangOption[]>([
@@ -126,7 +127,7 @@
       selected={[selectedLangOption]}
       maxSelect={1}
       placeholder="Search languages..."
-      on:change={(e) => onLanguageSelect(e.detail.option)}
+      on:change={(e: any) => onLanguageSelect(e.detail.option)}
       --sms-border="1px solid #374151"
       --sms-bg="transparent"
       --sms-text-color="white"

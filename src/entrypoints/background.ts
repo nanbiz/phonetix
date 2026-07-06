@@ -2,7 +2,17 @@ import { onMessage } from '@/lib/messaging';
 import type { WiktionaryInfo } from '@/lib/messaging';
 import { getCachedBatch, setCachedBatch } from '@/lib/cache';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
-import type { Language } from '@/lib/types';
+import type { Language, PhonemeResult } from '@/lib/types';
+
+/** Dictionaries tried (in order) when a word misses its block-language dict.
+ *  English carries the most loanwords/brand names/proper nouns. */
+const FALLBACK_LANGS = ['en'];
+
+/** Each language's script, derived from its own dictionary's keys on load. */
+const dictScript = new Map<string, string>();
+import { parseClassifier, disambiguate, type HomographEntry } from '@/lib/homograph';
+import { applyRegion } from '@/lib/regions';
+import { dominantScript, isLetterSpelling, espeakAllowed } from '@/lib/segment';
 
 // ─── Offscreen document management ──────────────────────────────────
 
@@ -67,6 +77,21 @@ async function phonemizeViaOffscreen(
   });
 }
 
+// ─── espeak host (browser-specific) ─────────────────────────────────
+// Chrome MV3 background is a service worker (no DOM/AudioContext), so espeak
+// runs in an offscreen document. Firefox MV3 background is an event page with
+// DOM, so it runs the engine directly. The dead branch is tree-shaken per build.
+
+const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
+
+async function phonemizeHost(words: string[], voice: string): Promise<Record<string, string>> {
+  if (IS_FIREFOX) {
+    const { phonemizeBatch } = await import('@/lib/espeak-engine');
+    return phonemizeBatch(words, voice);
+  }
+  return phonemizeViaOffscreen(words, voice);
+}
+
 // ─── Dictionary loading ─────────────────────────────────────────────
 
 const dictCache = new Map<string, Map<string, string>>();
@@ -99,7 +124,8 @@ async function loadDictionary(lang: string): Promise<Map<string, string>> {
       }
 
       dictCache.set(lang, map);
-      console.log(`[Phonetix] Loaded ${lang} dictionary: ${map.size.toLocaleString()} entries`);
+      dictScript.set(lang, dominantScript([...map.keys()]));  // the language's script, from its own data
+      console.log(`[Phonetix] Loaded ${lang} dictionary: ${map.size.toLocaleString()} entries (${dictScript.get(lang)})`);
       return map;
     } catch (e) {
       console.warn(`[Phonetix] Failed to load dictionary for ${lang}:`, e);
@@ -129,6 +155,44 @@ function lookupDictionary(words: string[], dict: Map<string, string>): { found: 
   }
 
   return { found, notFound };
+}
+
+// ─── Homograph classifiers ──────────────────────────────────────────
+
+const homographCache = new Map<string, Map<string, HomographEntry>>();
+const homographLoading = new Map<string, Promise<Map<string, HomographEntry>>>();
+
+async function loadHomographs(lang: string): Promise<Map<string, HomographEntry>> {
+  if (homographCache.has(lang)) return homographCache.get(lang)!;
+  if (homographLoading.has(lang)) return homographLoading.get(lang)!;
+
+  const promise = (async () => {
+    try {
+      const url = chrome.runtime.getURL(`homographs/${lang}.json.gz`);
+      const res = await fetch(url);
+      if (!res.ok) {
+        const empty = new Map<string, HomographEntry>();
+        homographCache.set(lang, empty);
+        return empty;
+      }
+      const ds = new DecompressionStream('gzip');
+      const text = await new Response(res.body!.pipeThrough(ds)).text();
+      const map = parseClassifier(JSON.parse(text));
+      homographCache.set(lang, map);
+      console.log(`[Phonetix] Loaded ${lang} homographs: ${map.size} entries`);
+      return map;
+    } catch (e) {
+      console.warn(`[Phonetix] Failed to load homographs for ${lang}:`, e);
+      const empty = new Map<string, HomographEntry>();
+      homographCache.set(lang, empty);
+      return empty;
+    } finally {
+      homographLoading.delete(lang);
+    }
+  })();
+
+  homographLoading.set(lang, promise);
+  return promise;
 }
 
 // ─── Language detection via eld ──────────────────────────────────────
@@ -416,37 +480,83 @@ export default defineBackground(() => {
 
   onMessage('phonemize', async ({ data }) => {
     const { words, voice, lang } = data;
+    const result: PhonemeResult = {};
+    const srcLang = lang || voice.split('-')[0];
 
-    // Step 1: Check dictionary (if lang is known)
-    let dictFound: Record<string, string> = {};
+    // Tier 1 — block-language dictionary (the expected language of the text).
     let remaining = words;
-
     if (lang) {
       const dict = await loadDictionary(lang);
       if (dict.size > 0) {
-        const result = lookupDictionary(words, dict);
-        dictFound = result.found;
-        remaining = result.notFound;
+        const { found, notFound } = lookupDictionary(remaining, dict);
+        for (const w in found) result[w] = { ipa: applyRegion(found[w], voice), lang, src: 'dict' };
+        remaining = notFound;
       }
     }
 
-    // Step 2: Check IDB cache for remaining words
-    const { cached, uncached } = await getCachedBatch(remaining, voice);
+    // Tier 2 — cross-language dictionary fallback. Loanwords, brand names and
+    // proper nouns (Renault, Mount Everest, Javier) miss the page dictionary but
+    // live in another. Trying these before espeak stops the wrong-language
+    // butchering. English first (widest name/loanword coverage).
+    for (const fb of FALLBACK_LANGS) {
+      if (remaining.length === 0) break;
+      if (fb === lang) continue;
+      const dict = await loadDictionary(fb);
+      if (dict.size === 0) continue;
+      const { found, notFound } = lookupDictionary(remaining, dict);
+      for (const w in found) result[w] = { ipa: found[w], lang: fb, src: 'dict' };
+      remaining = notFound;
+    }
 
-    // Step 3: Phonemize uncached words via espeak
-    let espeakResults: Record<string, string> = {};
+    // Tiers 3–4 (espeak) only for words whose script matches the block language's
+    // script (derived from its dictionary). A foreign-script word (a Cyrillic name
+    // in a Japanese page, say) would just make espeak spell out letter names, so it
+    // stays untranslated and the page shows the original.
+    const expectScript = dictScript.get(srcLang) ?? '';
+    const espeakable = remaining.filter((w) => espeakAllowed(w, expectScript));
+
+    // Tier 3 — IDB cache of prior espeak output for the block voice.
+    const { cached, uncached } = await getCachedBatch(espeakable, voice);
+    for (const w in cached) {
+      if (isLetterSpelling(cached[w])) continue;
+      result[w] = { ipa: applyRegion(cached[w], voice), lang: srcLang, src: 'espeak' };
+    }
+
+    // Tier 4 — espeak grapheme-to-phoneme, the last-resort coverage net.
     if (uncached.length > 0) {
+      let espeakResults: Record<string, string> = {};
       try {
-        espeakResults = await phonemizeViaOffscreen(uncached, voice);
+        espeakResults = await phonemizeHost(uncached, voice);
+        // Drop letter-name garbage before caching so it never resurfaces.
+        for (const w of Object.keys(espeakResults)) {
+          if (isLetterSpelling(espeakResults[w])) delete espeakResults[w];
+        }
         await setCachedBatch(espeakResults, voice);
       } catch (error) {
         console.error('[Phonetix] Phonemization error:', error);
         for (const w of uncached) espeakResults[w] = w;
       }
+      for (const w in espeakResults) result[w] = { ipa: applyRegion(espeakResults[w], voice), lang: srcLang, src: 'espeak' };
     }
 
-    // Merge: dictionary > IDB cache > espeak
-    return { ...espeakResults, ...cached, ...dictFound };
+    return result;
+  });
+
+  onMessage('getHomographWords', async ({ data }) => {
+    const clf = await loadHomographs(data.lang);
+    const words: string[] = [];
+    for (const [word, entry] of clf) if (entry.classes.length > 1) words.push(word);
+    return words;
+  });
+
+  onMessage('disambiguate', async ({ data }) => {
+    const clf = await loadHomographs(data.lang);
+    if (clf.size === 0) return data.items.map(() => null);
+    return data.items.map((it) => {
+      const entry = clf.get(it.word);
+      if (!entry || entry.classes.length <= 1) return null;
+      return applyRegion(disambiguate(entry, it.tokens, it.index), data.voice);
+    });
   });
 
   onMessage('detectLanguage', async ({ data: text }) => {
@@ -471,6 +581,7 @@ export default defineBackground(() => {
     return lookupWiktionary(data.lang, data.word);
   });
 
+  // Chrome: synthesize + play inside the offscreen document.
   onMessage('speakWord', async ({ data }) => {
     await ensureOffscreen();
     chrome.runtime.sendMessage({
@@ -478,5 +589,14 @@ export default defineBackground(() => {
       type: 'speak-word',
       data,
     });
+  });
+
+  // Firefox: synthesize to WAV here; the content script plays it (it has the
+  // user gesture a background-page AudioContext lacks).
+  onMessage('synthesizeAudio', async ({ data }) => {
+    if (!IS_FIREFOX) return [];
+    const { synthesizeWav } = await import('@/lib/espeak-engine');
+    const wav = await synthesizeWav(data.word, data.voice);
+    return Array.from(wav);
   });
 });

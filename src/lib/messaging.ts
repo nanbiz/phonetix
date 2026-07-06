@@ -20,7 +20,13 @@ interface ProtocolMap {
   detectLanguage(text: string): Language;
   detectLanguages(data: { texts: string[] }): (Language | null)[];
   checkWiktionary(data: { lang: string; word: string }): WiktionaryInfo;
+  /** Homograph words (>1 pronunciation class) for a language, for context-aware override. */
+  getHomographWords(data: { lang: string }): string[];
+  /** Resolve homograph occurrences to context-appropriate IPA (null = not a homograph). */
+  disambiguate(data: { lang: string; voice: string; items: { word: string; tokens: string[]; index: number }[] }): (string | null)[];
   speakWord(data: { word: string; voice: string }): void;
+  /** Synthesize a word to WAV bytes (Firefox: played in the content script). */
+  synthesizeAudio(data: { word: string; voice: string }): number[];
   extensionToggled(isEnabled: boolean): void;
   languageChanged(language: LanguageOption): void;
   modeChanged(mode: Mode): void;

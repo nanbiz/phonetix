@@ -4,6 +4,15 @@ export const BLOCKED_TAGS = new Set([
   'VIDEO', 'AUDIO', 'IFRAME', 'OBJECT', 'EMBED',
 ]);
 
+/** Structural UI chrome to skip: navigation, controls, and boilerplate landmarks.
+ *  Rule-based (semantic tags + ARIA roles), never a word list. Article body,
+ *  headings and <main> are deliberately kept. */
+export const CHROME_SELECTOR =
+  'nav,footer,button,select,summary,' +
+  '[role="navigation"],[role="menu"],[role="menubar"],[role="toolbar"],' +
+  '[role="tablist"],[role="tab"],[role="banner"],[role="contentinfo"],' +
+  '[role="search"],[role="button"],[aria-hidden="true"]';
+
 export const PHONETIX_CLASS = 'phonetix';
 export const ORIG_CLASS = 'px-orig';
 export const IPA_CLASS = 'px-ipa';
@@ -117,7 +126,29 @@ export const TOOLTIP_CSS = `
   text-transform: uppercase;
   letter-spacing: .5px;
 }
+.px-src {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 999px;
+  text-transform: lowercase;
+  letter-spacing: .3px;
+}
+.px-src-dict { color: #7fd7a8; background: rgba(93,232,176,.12); }
+.px-src-espeak { color: #e0b978; background: rgba(224,185,120,.12); }
 .px-spacer { flex: 1; }
+
+/* Wiktionary alternative row (labeled addition, never replaces the primary) */
+.px-alt {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 2px 0 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #2f2f33;
+}
+.px-alt-tag { font-size: 9px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: .3px; }
+.px-alt-ipa { font: 13px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif; color: #9aa7b8; }
 
 /* Buttons */
 .px-btn {

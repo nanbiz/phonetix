@@ -5,6 +5,7 @@ import {
   ORIG_CLASS,
   IPA_CLASS,
   MODE_CLASSES,
+  CHROME_SELECTOR,
   WORD_RE,
   MAX_WORD_LENGTH,
   TECHNICAL_RE,
@@ -12,10 +13,11 @@ import {
   TOOLTIP_CSS,
 } from '@/lib/constants';
 import { DefaultAccents, Languages, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
-import type { LanguageOption, Mode } from '@/lib/types';
+import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
 import { IPA_SYMBOLS, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
+import { segment, words as wordsOf } from '@/lib/segment';
 
 // =====================================================================
 //  Module state
@@ -90,7 +92,21 @@ function playSymbol(filename: string): void {
  */
 function speakWord(word: string, lang: Language): void {
   stopAudio();
-  sendMessage('speakWord', { word, voice: DefaultAccents[lang] || lang });
+  const voice = DefaultAccents[lang] || lang;
+  if (import.meta.env.BROWSER === 'firefox') {
+    // Firefox background can't play audio (no user gesture); play the WAV here.
+    sendMessage('synthesizeAudio', { word, voice })
+      .then((bytes) => {
+        if (!bytes.length) return;
+        const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }));
+        playUrl(url);
+        // playUrl replaces currentAudio; revoke once it can start.
+        currentAudio?.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
+      })
+      .catch((e) => console.warn('[Phonetix] synthesizeAudio failed:', e));
+  } else {
+    sendMessage('speakWord', { word, voice });
+  }
 }
 
 // =====================================================================
@@ -99,7 +115,7 @@ function speakWord(word: string, lang: Language): void {
 
 let ttHost: HTMLDivElement | null = null;
 let ttEl: HTMLDivElement | null = null;
-let ttDetail: HTMLDivElement | null = null;
+let ttDetail: HTMLElement | null = null;
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
 let curTarget: HTMLElement | null = null;
@@ -215,6 +231,7 @@ function showTooltip(target: HTMLElement): void {
   const lang = (target.dataset.lang as Language) || pageLang;
   const ipaSpan = target.querySelector(`.${IPA_CLASS}`);
   const ipa = ipaSpan?.textContent || '';
+  const src = target.dataset.src || 'dict';
   if (!word || !ipa) return;
 
   // Update highlight
@@ -222,7 +239,7 @@ function showTooltip(target: HTMLElement): void {
   target.classList.add('px-active');
   highlightedEl = target;
 
-  renderTooltip(word, ipa, lang);
+  renderTooltip(word, ipa, lang, src);
 
   ttEl.style.display = 'block';
   ttEl.classList.remove('visible', 'above', 'below');
@@ -268,14 +285,15 @@ function hideTooltip(): void {
 //  Tooltip – render (pure display, no data transforms)
 // =====================================================================
 
-function renderTooltip(word: string, ipa: string, lang: Language): void {
+function renderTooltip(word: string, ipa: string, lang: Language, src: string): void {
   if (!ttEl) return;
   ttEl.innerHTML = '';
 
-  // ── Row 1: word · lang ··· [W] [🔊] ──
+  // ── Row 1: word · lang · source ··· [W] [recording] ──
   const r1 = el('div', 'px-r1');
   r1.appendChild(txt('span', 'px-word', word));
   r1.appendChild(txt('span', 'px-lang', lang.toUpperCase()));
+  r1.appendChild(txt('span', `px-src px-src-${src}`, src === 'espeak' ? 'espeak' : 'dict'));
   r1.appendChild(el('div', 'px-spacer'));
 
   const wiktBtn = el('a', 'px-btn disabled') as HTMLAnchorElement;
@@ -286,25 +304,30 @@ function renderTooltip(word: string, ipa: string, lang: Language): void {
   wiktBtn.href = wiktionaryURL(lang, word);
   r1.appendChild(wiktBtn);
 
-  // Wiktionary audio button — starts disabled, enables only if audio exists
+  // Wiktionary recording button — enables only if a recording exists.
   const audioBtn = btn('px-btn disabled', ICO_SPEAKER, 'Loading…');
   r1.appendChild(audioBtn);
   ttEl.appendChild(r1);
 
-  // ── Row 2: /ipa/ [🗣] ──
+  // ── Row 2: primary /ipa/ (matches the page) + speak in the source language ──
   const r2 = el('div', 'px-r2');
   r2.appendChild(txt('span', 'px-ipa-text', `/${ipa}/`));
-  const ttsBtn = btn('px-btn px-btn-sm', ICO_SPEAKER_SM, `espeak: ${word} [${DefaultAccents[lang]}]`);
+  const ttsBtn = btn('px-btn px-btn-sm', ICO_SPEAKER_SM, `Speak (${DefaultAccents[lang] || lang})`);
   ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
   r2.appendChild(ttsBtn);
   ttEl.appendChild(r2);
 
-  // ── Symbol breakdown + footer ──
+  // ── Symbol breakdown (of the primary IPA; never re-rendered by async data) ──
   const symbolsContainer = el('div', 'px-symbols-wrap');
   ttEl.appendChild(symbolsContainer);
   renderSymbols(symbolsContainer, ipa);
 
-  // Async: Wiktionary check via background (no fetch in content script)
+  // Reserved row for a Wiktionary alternative — a labeled addition, never a
+  // silent replacement of the primary shown on the page.
+  const altRow = el('div', 'px-alt');
+  altRow.style.display = 'none';
+  ttEl.appendChild(altRow);
+
   sendMessage('checkWiktionary', { lang, word }).then((info) => {
     const displayLang = info.wordLang || (info.foundLang as string) || lang;
     const linkLang = info.foundLang || lang;
@@ -312,28 +335,22 @@ function renderTooltip(word: string, ipa: string, lang: Language): void {
     if (info.exists && info.matchedTitle) {
       wiktBtn.classList.remove('disabled');
       wiktBtn.href = wiktionaryURL(linkLang, info.matchedTitle);
-
-      const wordEl = r1.querySelector('.px-word');
-      if (wordEl) wordEl.textContent = info.matchedTitle;
-      const langEl = r1.querySelector('.px-lang');
-      if (langEl) langEl.textContent = displayLang.toUpperCase();
     }
 
     if (info.wiktIpa && info.wiktIpa !== ipa) {
-      // Show Wiktionary IPA in the tooltip only — don't update page spans
-      const ipaText = r2.querySelector('.px-ipa-text');
-      if (ipaText) ipaText.textContent = `/${info.wiktIpa}/`;
-      renderSymbols(symbolsContainer, info.wiktIpa);
+      altRow.style.display = '';
+      altRow.appendChild(txt('span', 'px-alt-tag', `Wiktionary ${displayLang.toUpperCase()}`));
+      altRow.appendChild(txt('span', 'px-alt-ipa', `/${info.wiktIpa}/`));
     }
 
     if (info.audioUrl) {
       audioBtn.classList.remove('disabled');
-      audioBtn.title = 'Wiktionary audio';
+      audioBtn.title = 'Wiktionary recording';
       audioBtn.addEventListener('click', (e) => { e.stopPropagation(); playUrl(info.audioUrl!); });
     } else {
-      audioBtn.title = 'No Wiktionary audio available';
+      audioBtn.title = 'No Wiktionary recording';
     }
-  }).catch(() => { audioBtn.title = 'No Wiktionary audio available'; });
+  }).catch(() => { audioBtn.title = 'No Wiktionary recording'; });
 }
 
 /** Build (or rebuild) the IPA symbol grid + detail + legend into a container. */
@@ -421,14 +438,15 @@ function btn(cls: string, svg: string, title: string): HTMLButtonElement {
  * - Language is resolved (espeak markers override block detection)
  * The tooltip just reads these values — no re-processing.
  */
-function createPhoneticSpan(original: string, rawIpa: string, blockLang: Language): HTMLSpanElement {
-  const finalLang = extractIPALang(rawIpa) || blockLang;
-  const finalIpa = cleanIPA(rawIpa);
+function createPhoneticSpan(original: string, r: ResolvedIpa): HTMLSpanElement {
+  const finalLang = extractIPALang(r.ipa) || r.lang;
+  const finalIpa = cleanIPA(r.ipa);
 
   const span = document.createElement('span');
   span.className = PHONETIX_CLASS;
   span.dataset.original = original;
-  span.dataset.lang = finalLang;
+  span.dataset.lang = finalLang;   // resolution language (may differ from block for loanwords)
+  span.dataset.src = r.src;        // 'dict' | 'espeak' — drives the tooltip source label
 
   const origSpan = document.createElement('span');
   origSpan.className = ORIG_CLASS;
@@ -454,11 +472,11 @@ async function processPage(): Promise<void> {
     await processMultilingual();
   } else {
     const nodes = collectTextNodes(document.body);
-    const words = uniqueWords(nodes);
+    const words = uniqueWords(nodes, pageLang);
     if (words.length === 0) return;
 
     const ipaMap = await sendMessage('phonemize', { words, voice: accent, lang: pageLang });
-    applyTransforms(nodes, ipaMap, pageLang);
+    await applyTransforms(nodes, ipaMap, pageLang, accent);
   }
 }
 
@@ -485,8 +503,7 @@ async function processMultilingual(): Promise<void> {
     const g = byVoice.get(voice)!;
     for (const tn of blocks[i].textNodes) {
       g.nodes.push(tn);
-      for (const m of (tn.nodeValue || '').matchAll(WORD_RE))
-          if (m[0].length <= MAX_WORD_LENGTH) g.words.add(m[0].toLowerCase());
+      for (const w of wordsOf(tn.nodeValue || '', lang, MAX_WORD_LENGTH)) g.words.add(w);
     }
   }
 
@@ -495,7 +512,7 @@ async function processMultilingual(): Promise<void> {
     if (words.length === 0) return;
 
     const ipaMap = await sendMessage('phonemize', { words, voice, lang: g.lang });
-    applyTransforms(g.nodes, ipaMap, g.lang);
+    await applyTransforms(g.nodes, ipaMap, g.lang, voice);
   }));
 }
 
@@ -571,6 +588,8 @@ function collectTextNodes(root: Node): Text[] {
       if (!p) return NodeFilter.FILTER_SKIP;
       if (BLOCKED_TAGS.has(p.tagName)) return NodeFilter.FILTER_SKIP;
       if (p.closest(`.${PHONETIX_CLASS}`)) return NodeFilter.FILTER_SKIP;
+      // Skip UI chrome (nav, footer, buttons, ARIA landmarks) — not reading content.
+      if (p.closest(CHROME_SELECTOR)) return NodeFilter.FILTER_SKIP;
       const v = node.nodeValue?.trim();
       if (!v) return NodeFilter.FILTER_SKIP;
       // Skip text nodes that contain URLs, IP addresses, or ISO timestamps
@@ -588,37 +607,103 @@ function collectTextNodes(root: Node): Text[] {
   return nodes;
 }
 
-function uniqueWords(nodes: Text[]): string[] {
+function uniqueWords(nodes: Text[], lang: Language): string[] {
   const s = new Set<string>();
   for (const n of nodes)
-    for (const m of (n.nodeValue || '').matchAll(WORD_RE))
-      if (m[0].length <= MAX_WORD_LENGTH) s.add(m[0].toLowerCase());
+    for (const w of wordsOf(n.nodeValue || '', lang, MAX_WORD_LENGTH)) s.add(w);
   return [...s];
 }
 
-function applyTransforms(nodes: Text[], ipaMap: Record<string, string>, lang: Language) {
-  for (const node of nodes) transformNode(node, ipaMap, lang);
+// Homograph word sets per language (words with >1 pronunciation), lazily fetched.
+const homographSets = new Map<Language, Set<string>>();
+
+async function getHomographSet(lang: Language): Promise<Set<string>> {
+  const cached = homographSets.get(lang);
+  if (cached) return cached;
+  let set = new Set<string>();
+  try {
+    set = new Set(await sendMessage('getHomographWords', { lang }));
+  } catch (e) {
+    console.warn('[Phonetix] getHomographWords failed:', e);
+  }
+  homographSets.set(lang, set);
+  return set;
 }
 
-function transformNode(node: Text, ipaMap: Record<string, string>, lang: Language) {
+/**
+ * For every homograph occurrence, resolve its context-appropriate IPA using the
+ * word's node-local neighbours. Returns per-node overrides keyed by word index.
+ */
+async function computeHomographOverrides(
+  nodes: Text[], lang: Language, voice: string
+): Promise<Map<Text, Map<number, ResolvedIpa>>> {
+  const out = new Map<Text, Map<number, ResolvedIpa>>();
+  const set = await getHomographSet(lang);
+  if (set.size === 0) return out;
+
+  const items: { word: string; tokens: string[]; index: number }[] = [];
+  const locs: { node: Text; wordIdx: number }[] = [];
+
+  for (const node of nodes) {
+    const tokens = wordsOf(node.nodeValue || '', lang);
+    for (let i = 0; i < tokens.length; i++) {
+      if (set.has(tokens[i])) {
+        items.push({ word: tokens[i], tokens, index: i });
+        locs.push({ node, wordIdx: i });
+      }
+    }
+  }
+  if (items.length === 0) return out;
+
+  try {
+    const results = await sendMessage('disambiguate', { lang, voice, items });
+    for (let k = 0; k < results.length; k++) {
+      const ipa = results[k];
+      if (!ipa) continue;
+      const { node, wordIdx } = locs[k];
+      if (!out.has(node)) out.set(node, new Map());
+      out.get(node)!.set(wordIdx, { ipa, lang, src: 'dict' });
+    }
+  } catch (e) {
+    console.warn('[Phonetix] disambiguate failed:', e);
+  }
+  return out;
+}
+
+async function applyTransforms(nodes: Text[], ipaMap: PhonemeResult, lang: Language, voice: string) {
+  const overrides = await computeHomographOverrides(nodes, lang, voice);
+  // Transform in batches, yielding between them, so a huge page (100k+ nodes)
+  // stays responsive instead of freezing the tab in one synchronous pass.
+  const BATCH = 400;
+  for (let i = 0; i < nodes.length; i += BATCH) {
+    const end = Math.min(i + BATCH, nodes.length);
+    for (let j = i; j < end; j++) transformNode(nodes[j], ipaMap, lang, overrides.get(nodes[j]));
+    if (end < nodes.length) await new Promise((r) => setTimeout(r, 0));
+  }
+}
+
+function transformNode(node: Text, ipaMap: PhonemeResult, lang: Language, override?: Map<number, ResolvedIpa>) {
   const text = node.nodeValue;
   if (!text) return;
 
-  const parts = text.split(new RegExp(`(${WORD_RE.source})`));
-  if (parts.length <= 1) return;
+  const segs = segment(text, lang, MAX_WORD_LENGTH);
 
-  const wordRe = new RegExp(`^${WORD_RE.source}$`);
-  let hasAny = false;
-  for (const p of parts) { if (wordRe.test(p) && ipaMap[p.toLowerCase()]) { hasAny = true; break; } }
+  let hasAny = !!(override && override.size > 0);
+  if (!hasAny) {
+    for (const s of segs) { if (s.isWord && ipaMap[s.text.toLowerCase()]) { hasAny = true; break; } }
+  }
   if (!hasAny) return;
 
   const frag = document.createDocumentFragment();
-  for (const p of parts) {
-    if (wordRe.test(p)) {
-      const ipa = ipaMap[p.toLowerCase()];
-      frag.appendChild(ipa ? createPhoneticSpan(p, ipa, lang) : document.createTextNode(p));
-    } else if (p) {
-      frag.appendChild(document.createTextNode(p));
+  let wordIdx = 0;
+  for (const s of segs) {
+    if (s.isWord) {
+      // Homograph override (context-resolved) wins over the context-free dict/espeak result.
+      const r = override?.get(wordIdx) ?? ipaMap[s.text.toLowerCase()];
+      wordIdx++;
+      frag.appendChild(r ? createPhoneticSpan(s.text, r) : document.createTextNode(s.text));
+    } else if (s.text) {
+      frag.appendChild(document.createTextNode(s.text));
     }
   }
   node.parentNode?.replaceChild(frag, node);
