@@ -18,12 +18,18 @@ export interface WiktionaryInfo {
 interface ProtocolMap {
   phonemize(data: { words: string[]; voice: string; lang?: string }): PhonemeResult;
   detectLanguage(text: string): Language;
-  detectLanguages(data: { texts: string[] }): (Language | null)[];
+  /** Decide each block's language from eld's ranked guesses plus which language's
+   *  dictionary best covers its words. Handles short mixed-language elements (an
+   *  English video title on a German page) that whole-page detection gets wrong. */
+  detectBlocks(data: { pageLang: string; blocks: { text: string; words: string[] }[] }): string[];
   checkWiktionary(data: { lang: string; word: string }): WiktionaryInfo;
   /** Homograph words (>1 pronunciation class) for a language, for context-aware override. */
   getHomographWords(data: { lang: string }): string[];
   /** Resolve homograph occurrences to context-appropriate IPA (null = not a homograph). */
   disambiguate(data: { lang: string; voice: string; items: { word: string; tokens: string[]; index: number }[] }): (string | null)[];
+  /** Actively probe each subsystem (language detection, dictionary, espeak) so a
+   *  test can assert none silently degraded. */
+  getHealth(data: Record<string, never>): { eld: boolean; dict: boolean; espeak: boolean; errors: string[] };
   speakWord(data: { word: string; voice: string }): void;
   /** Synthesize a word to WAV bytes (Firefox: played in the content script). */
   synthesizeAudio(data: { word: string; voice: string }): number[];

@@ -467,11 +467,11 @@ function createPhoneticSpan(original: string, r: ResolvedIpa): HTMLSpanElement {
 
 interface TextBlock { blockElement: Element; textNodes: Text[]; text: string; }
 
-async function processPage(): Promise<void> {
+async function processPage(root: Element = document.body): Promise<void> {
   if (languageOption === 'auto') {
-    await processMultilingual();
+    await processMultilingual(root);
   } else {
-    const nodes = collectTextNodes(document.body);
+    const nodes = collectTextNodes(root);
     const words = uniqueWords(nodes, pageLang);
     if (words.length === 0) return;
 
@@ -480,19 +480,22 @@ async function processPage(): Promise<void> {
   }
 }
 
-async function processMultilingual(): Promise<void> {
-  const blocks = groupByBlock(document.body);
+async function processMultilingual(root: Element = document.body): Promise<void> {
+  const blocks = groupByBlock(root);
   if (blocks.length === 0) return;
 
   const blockLangs = await detectBlockLanguages(blocks);
 
-  // Track most common language for popup display
-  const counts = new Map<Language, number>();
-  for (const l of blockLangs) counts.set(l, (counts.get(l) || 0) + 1);
-  let best = pageLang, bestN = 0;
-  for (const [l, n] of counts) { if (n > bestN) { best = l; bestN = n; } }
-  pageLang = best;
-  await storage.setItem('local:detectedLanguage', pageLang);
+  // The most common language is the page language, tracked for the popup — but
+  // only from a full-page pass, not from an incremental subtree the observer adds.
+  if (root === document.body) {
+    const counts = new Map<Language, number>();
+    for (const l of blockLangs) counts.set(l, (counts.get(l) || 0) + 1);
+    let best = pageLang, bestN = 0;
+    for (const [l, n] of counts) { if (n > bestN) { best = l; bestN = n; } }
+    pageLang = best;
+    await storage.setItem('local:detectedLanguage', pageLang);
+  }
 
   // Group by voice → phonemize + Wiktionary batch in parallel
   const byVoice = new Map<string, { nodes: Text[]; words: Set<string>; lang: Language }>();
@@ -556,26 +559,22 @@ function findExplicitLang(el: Element): Language | null {
 
 async function detectBlockLanguages(blocks: TextBlock[]): Promise<Language[]> {
   const results: Language[] = new Array(blocks.length).fill(pageLang);
-  const toDetect: string[] = [];
-  const indices: number[] = [];
+  // An explicit lang attribute is authoritative; those blocks skip detection.
+  const explicit: (Language | null)[] = blocks.map((b) => findExplicitLang(b.blockElement));
 
-  for (let i = 0; i < blocks.length; i++) {
-    const explicit = findExplicitLang(blocks[i].blockElement);
-    if (explicit) { results[i] = explicit; continue; }
-    if (blocks[i].text.length < 40) continue;
-    toDetect.push(blocks[i].text);
-    indices.push(i);
-  }
+  const payload = blocks.map((b) => ({
+    text: b.text,
+    words: wordsOf(b.text, pageLang, MAX_WORD_LENGTH).slice(0, 30),
+  }));
 
-  if (toDetect.length > 0) {
-    try {
-      const detected = await sendMessage('detectLanguages', { texts: toDetect });
-      for (let j = 0; j < detected.length; j++) {
-        if (detected[j] !== null) results[indices[j]] = detected[j] as Language;
-      }
-    } catch (e) {
-      console.warn('[Phonetix] Block language detection failed:', e);
+  try {
+    const detected = await sendMessage('detectBlocks', { pageLang, blocks: payload });
+    for (let i = 0; i < blocks.length; i++) {
+      results[i] = explicit[i] || (detected[i] as Language) || pageLang;
     }
+  } catch (e) {
+    console.warn('[Phonetix] Block language detection failed:', e);
+    for (let i = 0; i < blocks.length; i++) results[i] = explicit[i] || pageLang;
   }
   return results;
 }
@@ -779,29 +778,36 @@ function revertAll() {
 
 let observer: MutationObserver | null = null;
 
+const pendingRoots = new Set<Element>();
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
 function observeDOM() {
   if (observer) return;
-  let pending = false;
   observer = new MutationObserver((muts) => {
-    if (pending) return;
-    let found = false;
     for (const m of muts) {
       for (const n of m.addedNodes) {
-        if ((n instanceof Element && !n.classList?.contains(PHONETIX_CLASS)) ||
-            (n instanceof Text && n.nodeValue?.trim())) {
-          found = true; break;
-        }
+        const el = n instanceof Element ? n : (n instanceof Text ? n.parentElement : null);
+        if (el && !el.closest(`.${PHONETIX_CLASS}`)) pendingRoots.add(el);
       }
-      if (found) break;
     }
-    if (!found) return;
-    pending = true;
-    setTimeout(async () => {
-      try { await processPage(); } catch (e) { console.warn('[Phonetix] DOM observer error:', e); }
-      pending = false;
-    }, 300);
+    if (pendingRoots.size > 0 && !flushTimer) {
+      flushTimer = setTimeout(flushRoots, 300);
+    }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+// Process only the added subtrees, not the whole page — dynamic pages (feeds,
+// infinite scroll) add nodes constantly, and re-scanning the full document each
+// time would make scrolling janky.
+async function flushRoots() {
+  flushTimer = null;
+  const roots = [...pendingRoots];
+  pendingRoots.clear();
+  const tops = roots.filter((r) => r.isConnected && !roots.some((o) => o !== r && o.contains(r)));
+  for (const r of tops) {
+    try { await processPage(r); } catch (e) { console.warn('[Phonetix] DOM observer error:', e); }
+  }
 }
 
 function stopObserver() {
@@ -854,6 +860,14 @@ export default defineContentScript({
       setMode(mode);
       await processPage();
       observeDOM();
+    }
+
+    // Test hook: on ?pxhealth pages, publish a subsystem probe to the DOM so the
+    // integration suite can assert nothing silently degraded (as eld once had).
+    if (location.search.includes('pxhealth')) {
+      sendMessage('getHealth', {})
+        .then((h) => { document.documentElement.dataset.pxhealth = JSON.stringify(h); })
+        .catch((e) => { document.documentElement.dataset.pxhealth = JSON.stringify({ error: String(e) }); });
     }
 
     // Popup messages

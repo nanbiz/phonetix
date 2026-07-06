@@ -13,6 +13,8 @@ const dictScript = new Map<string, string>();
 import { parseClassifier, disambiguate, type HomographEntry } from '@/lib/homograph';
 import { applyRegion } from '@/lib/regions';
 import { dominantScript, isLetterSpelling, espeakAllowed } from '@/lib/segment';
+import { pickLanguage } from '@/lib/langdetect';
+import { scoreTexts } from '@/lib/eld-engine';
 
 // ─── Offscreen document management ──────────────────────────────────
 
@@ -196,26 +198,45 @@ async function loadHomographs(lang: string): Promise<Map<string, HomographEntry>
 }
 
 // ─── Language detection via eld ──────────────────────────────────────
+// eld runs in-process (its ngram model is injected statically, see eld-engine).
 
-let eldInstance: any = null;
-let eldInitPromise: Promise<void> | null = null;
-
-async function initEld() {
-  if (eldInstance) return;
-  const { eld } = await import('@yutengjing/eld');
-  await eld.init('S'); // 'S' = small ngram database, fast + lightweight
-  eldInstance = eld;
+function detectLang(text: string): Language {
+  const [s] = scoreTexts([text]);
+  return (s?.ranked[0] as Language) || 'en';
 }
 
-async function detectLang(text: string): Promise<Language> {
-  if (!eldInitPromise) eldInitPromise = initEld();
-  await eldInitPromise;
+async function detectBlocks(
+  pageLang: string,
+  blocks: { text: string; words: string[] }[],
+): Promise<string[]> {
+  const scores = scoreTexts(blocks.map((b) => b.text));
+  const analyzed = blocks.map((b, i) => ({
+    words: b.words,
+    ranked: scores[i]?.ranked ?? [],
+    reliable: scores[i]?.reliable ?? false,
+  }));
 
-  const result = eldInstance.detect(text);
-  if (result.language && result.language in Languages) {
-    return result.language as Language;
-  }
-  return 'en'; // fallback
+  // Page-wide candidate pool: any language eld proposed for any block is a
+  // candidate for every block, so a short English title becomes English once
+  // another block on the page looked English to eld.
+  const pool = new Set<string>([pageLang]);
+  for (const a of analyzed) for (const c of a.ranked) pool.add(c);
+  const candidates = [...pool];
+
+  const dicts = new Map<string, Map<string, string>>();
+  for (const c of pool) dicts.set(c, await loadDictionary(c));
+
+  const coverageOf = (lang: string, words: string[]): number => {
+    const d = dicts.get(lang);
+    if (!d || d.size === 0 || words.length === 0) return 0;
+    let hit = 0;
+    for (const w of words) if (d.has(w) || d.has(w.toLowerCase())) hit++;
+    return hit / words.length;
+  };
+
+  return analyzed.map((a) =>
+    pickLanguage(pageLang, candidates, a.reliable, a.ranked[0], (l) => coverageOf(l, a.words)),
+  );
 }
 
 // ─── Wiktionary lookup ──────────────────────────────────────────────
@@ -563,18 +584,27 @@ export default defineBackground(() => {
     return detectLang(text);
   });
 
-  onMessage('detectLanguages', async ({ data }) => {
-    if (!eldInitPromise) eldInitPromise = initEld();
-    await eldInitPromise;
+  onMessage('detectBlocks', async ({ data }) => {
+    return detectBlocks(data.pageLang, data.blocks);
+  });
 
-    return data.texts.map((text) => {
-      if (text.length < 40) return null;
-      const result = eldInstance.detect(text);
-      if (result.language && result.language in Languages) {
-        return result.language as Language;
-      }
-      return null;
-    });
+  onMessage('getHealth', async () => {
+    const errors: string[] = [];
+    let eld = false, dict = false, espeak = false;
+    try {
+      eld = scoreTexts(['This is plainly an English sentence for detection.'])[0]?.ranked[0] === 'en';
+      if (!eld) errors.push('eld: wrong or empty detection');
+    } catch (e) { errors.push(`eld: ${e}`); }
+    try {
+      dict = (await loadDictionary('en')).size > 1000;
+      if (!dict) errors.push('dict: en dictionary empty');
+    } catch (e) { errors.push(`dict: ${e}`); }
+    try {
+      const r = await phonemizeHost(['hello'], 'en');
+      espeak = typeof r['hello'] === 'string' && r['hello'].length > 0 && r['hello'] !== 'hello';
+      if (!espeak) errors.push('espeak: no phonemes produced');
+    } catch (e) { errors.push(`espeak: ${e}`); }
+    return { eld, dict, espeak, errors };
   });
 
   onMessage('checkWiktionary', async ({ data }) => {
