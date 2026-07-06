@@ -33,3 +33,16 @@ export async function setCachedBatch(
     await set(key, ipa, ipaStore);
   }
 }
+
+// ─── Downloaded dictionary packs ──────────────────────────────────────
+// Dictionaries fetched from a remote pack host are cached here so a language is
+// downloaded once, then works offline like a bundled one.
+const dictStore = createStore('phonetix-dicts', 'lang-dict');
+
+export function getCachedDict(lang: string): Promise<Record<string, string> | undefined> {
+  return get<Record<string, string>>(lang, dictStore);
+}
+
+export function setCachedDict(lang: string, obj: Record<string, string>): Promise<void> {
+  return set(lang, obj, dictStore);
+}

@@ -1,6 +1,6 @@
 import { onMessage } from '@/lib/messaging';
 import type { WiktionaryInfo } from '@/lib/messaging';
-import { getCachedBatch, setCachedBatch } from '@/lib/cache';
+import { getCachedBatch, setCachedBatch, getCachedDict, setCachedDict } from '@/lib/cache';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
 import type { Language, PhonemeResult } from '@/lib/types';
 
@@ -95,32 +95,39 @@ async function phonemizeHost(words: string[], voice: string): Promise<Record<str
 const dictCache = new Map<string, Map<string, string>>();
 const dictLoading = new Map<string, Promise<Map<string, string>>>();
 
+async function decompressGz(res: Response): Promise<Record<string, string>> {
+  if (!res.ok) throw new Error(`fetch ${res.status}`);
+  const stream = res.body!.pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+/** A language's dictionary object. Prefers a downloaded pack (cached in IndexedDB
+ *  after the first fetch) from the user-configured host, and otherwise the copy
+ *  bundled with the extension. The host lives only in runtime storage. */
+async function fetchDictObject(lang: string): Promise<Record<string, string>> {
+  const base = (await storage.getItem<string>('local:packBaseUrl'))?.replace(/\/+$/, '');
+  if (base) {
+    const cached = await getCachedDict(lang);
+    if (cached) return cached;
+    try {
+      const obj = await decompressGz(await fetch(`${base}/dictionaries/${lang}.json.gz`));
+      await setCachedDict(lang, obj);
+      return obj;
+    } catch (e) {
+      console.warn(`[Phonetix] Pack fetch failed for ${lang}, using bundled:`, e);
+    }
+  }
+  return decompressGz(await fetch(chrome.runtime.getURL(`dictionaries/${lang}.json.gz`)));
+}
+
 async function loadDictionary(lang: string): Promise<Map<string, string>> {
   if (dictCache.has(lang)) return dictCache.get(lang)!;
   if (dictLoading.has(lang)) return dictLoading.get(lang)!;
 
   const promise = (async () => {
     try {
-      const url = chrome.runtime.getURL(`dictionaries/${lang}.json.gz`);
-      const res = await fetch(url);
-      if (!res.ok) {
-        console.warn(`[Phonetix] No dictionary for ${lang}`);
-        const empty = new Map<string, string>();
-        dictCache.set(lang, empty);
-        return empty;
-      }
-
-      // Decompress gzip using browser's built-in DecompressionStream
-      const ds = new DecompressionStream('gzip');
-      const decompressed = res.body!.pipeThrough(ds);
-      const text = await new Response(decompressed).text();
-      const obj = JSON.parse(text) as Record<string, string>;
-
-      const map = new Map<string, string>();
-      for (const [word, ipa] of Object.entries(obj)) {
-        map.set(word, ipa);
-      }
-
+      const obj = await fetchDictObject(lang);
+      const map = new Map<string, string>(Object.entries(obj));
       dictCache.set(lang, map);
       dictScript.set(lang, dominantScript([...map.keys()]));  // the language's script, from its own data
       console.log(`[Phonetix] Loaded ${lang} dictionary: ${map.size.toLocaleString()} entries (${dictScript.get(lang)})`);

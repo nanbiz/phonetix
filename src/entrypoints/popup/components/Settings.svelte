@@ -125,6 +125,11 @@
     catch (e) { health = { eld: false, dict: false, espeak: false, errors: [String(e)] }; }
   })();
   let unhealthy = $derived(!!health && !(health.eld && health.dict && health.espeak));
+
+  // Optional remote dictionary pack host. Stored at runtime only; never in source.
+  let packUrl = $state<string>('');
+  (async () => { packUrl = (await storage.getItem<string>('local:packBaseUrl')) || ''; })();
+  function savePackUrl() { storage.setItem('local:packBaseUrl', packUrl.trim() || (null as any)); }
   let downList = $derived(
     !health ? '' : [
       health.eld ? '' : 'language detection',
@@ -202,6 +207,24 @@
       }
     }}
   />
+
+  <details class="mt-2 px-1">
+    <summary class="text-xs text-gray-500 cursor-pointer select-none">Advanced</summary>
+    <label class="block mt-2 text-xs text-gray-400">
+      Dictionary pack host (optional)
+      <input
+        type="url"
+        bind:value={packUrl}
+        onchange={savePackUrl}
+        placeholder="https://…"
+        class="mt-1 w-full text-xs bg-transparent border border-gray-700 rounded px-2 py-1 text-white"
+      />
+    </label>
+    <p class="mt-1 text-[10px] text-gray-500">
+      Fetch dictionaries from a remote host (cached offline after first use). Empty
+      uses the bundled dictionaries.
+    </p>
+  </details>
 
   <!-- IPA source info -->
   <div class="mt-3 px-1">
