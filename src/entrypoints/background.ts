@@ -218,9 +218,12 @@ async function detectBlocks(
 
   // Page-wide candidate pool: any language eld proposed for any block is a
   // candidate for every block, so a short English title becomes English once
-  // another block on the page looked English to eld.
-  const pool = new Set<string>([pageLang]);
-  for (const a of analyzed) for (const c of a.ranked) pool.add(c);
+  // another block on the page looked English to eld. Bounded to the most-proposed
+  // languages so a genuinely multilingual page doesn't load dozens of dictionaries.
+  const freq = new Map<string, number>();
+  for (const a of analyzed) for (const c of a.ranked) freq.set(c, (freq.get(c) ?? 0) + 1);
+  const top = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([l]) => l);
+  const pool = new Set<string>([pageLang, ...top]);
   const candidates = [...pool];
 
   const dicts = new Map<string, Map<string, string>>();
