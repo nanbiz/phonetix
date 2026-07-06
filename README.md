@@ -85,5 +85,9 @@ pnpm test:all          # all three
   hosts). Asserts a subsystem **health check** (language detection, dictionary and
   espeak are actually alive, not silently degraded), per-title language on mixed
   pages, no letter-name garbage, and non-Latin coverage.
+- **Firefox** (`pnpm test:firefox`): the CDP suite drives Chrome, so this drives
+  the real Firefox build headless via Marionette and asserts the health probe —
+  espeak runs in the background page there, a different path than Chrome's
+  offscreen document. Needs a built + signed Firefox xpi in `.output/signed/`.
 - **Proofreading** (`scripts/proofread/harness.py` + `analyze.py`): sweeps a large
   corpus and quantifies failure classes for exploratory regression checking.

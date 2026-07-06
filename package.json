@@ -15,6 +15,7 @@
     "test": "node --experimental-strip-types scripts/test-homograph.ts && node --experimental-strip-types scripts/test-resolution.ts && node --experimental-strip-types scripts/test-langdetect.ts",
     "test:integration": "uv run python scripts/proofread/suite.py integration",
     "test:e2e": "uv run python scripts/proofread/suite.py e2e",
+    "test:firefox": "uv run --with marionette_driver python scripts/proofread/firefox_check.py",
     "test:all": "pnpm test && pnpm test:integration && pnpm test:e2e",
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:dict": "node scripts/build-dictionaries.mjs",
