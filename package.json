@@ -49,5 +49,6 @@
     "@yutengjing/eld": "^0.0.2",
     "idb-keyval": "^6.2.2",
     "tailwindcss": "^4.2.1"
-  }
+  },
+  "packageManager": "pnpm@11.11.0"
 }
