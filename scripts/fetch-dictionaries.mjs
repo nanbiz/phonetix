@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
+const REPO = "nanbiz/phonetix";
 const TAG = "data-v1";
 const ASSET = "dictionaries.tar.gz";
 const URL = `https://github.com/nanbiz/phonetix/releases/download/${TAG}/${ASSET}`;
@@ -22,13 +23,25 @@ if (!force && fs.existsSync(outDir) && fs.readdirSync(outDir).some((f) => f.ends
     process.exit(0);
 }
 
-console.log(`downloading ${URL}`);
-const res = await fetch(URL, { redirect: "follow" });
-if (!res.ok) throw new Error(`download failed: ${res.status} ${res.statusText}`);
-
 const tmp = path.join(process.cwd(), ".cache", ASSET);
 fs.mkdirSync(path.dirname(tmp), { recursive: true });
-fs.writeFileSync(tmp, Buffer.from(await res.arrayBuffer()));
+
+// The release asset needs authentication while the repository is private, so
+// prefer the GitHub CLI (it carries the token in CI and locally) and fall back
+// to a plain download.
+try {
+    console.log(`downloading ${ASSET} from release ${TAG}`);
+    execFileSync(
+        "gh",
+        ["release", "download", TAG, "--repo", REPO, "--pattern", ASSET, "--output", tmp, "--clobber"],
+        { stdio: "inherit" },
+    );
+} catch {
+    console.log(`gh unavailable, downloading ${URL}`);
+    const res = await fetch(URL, { redirect: "follow" });
+    if (!res.ok) throw new Error(`download failed: ${res.status} ${res.statusText}`);
+    fs.writeFileSync(tmp, Buffer.from(await res.arrayBuffer()));
+}
 
 fs.mkdirSync(path.join(process.cwd(), "public"), { recursive: true });
 execFileSync("tar", ["xzf", tmp, "-C", path.join(process.cwd(), "public")], { stdio: "inherit" });

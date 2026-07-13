@@ -18,6 +18,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Fetch dictionaries
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: pnpm fetch:dict
       - name: Typecheck
         run: pnpm check
@@ -54,6 +56,8 @@ jobs:
           chrome-version: '149'
       - run: pnpm install --frozen-lockfile
       - name: Fetch dictionaries
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: pnpm fetch:dict
       - run: pnpm build
       - name: Integration suite
