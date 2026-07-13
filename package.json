@@ -21,7 +21,8 @@
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:dict": "node scripts/build-dictionaries.mjs",
     "fetch:dict": "node scripts/fetch-dictionaries.mjs",
-    "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare"
+    "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare",
+    "test:voices": "uv run python scripts/proofread/voice_check.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",

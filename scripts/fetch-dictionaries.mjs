@@ -11,7 +11,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const REPO = "nanbiz/phonetix";
-const TAG = "data-v1";
+const TAG = "data-v2";
 const ASSET = "dictionaries.tar.gz";
 const URL = `https://github.com/nanbiz/phonetix/releases/download/${TAG}/${ASSET}`;
 
@@ -46,6 +46,17 @@ try {
 fs.mkdirSync(path.join(process.cwd(), "public"), { recursive: true });
 execFileSync("tar", ["xzf", tmp, "-C", path.join(process.cwd(), "public")], { stdio: "inherit" });
 fs.rmSync(tmp, { force: true });
+
+const accentDir = path.join(outDir, "accents");
+const accents = fs.existsSync(accentDir)
+    ? fs.readdirSync(accentDir).filter((f) => f.endsWith(".json.gz")).length
+    : 0;
+if (!accents) {
+    throw new Error(
+        "the asset carries no accent overlays; choosing an accent would leave the page unchanged",
+    );
+}
+console.log(`${accents} accent overlays`);
 
 const n = fs.readdirSync(outDir).filter((f) => f.endsWith(".json.gz")).length;
 console.log(`extracted ${n} dictionaries into public/dictionaries`);

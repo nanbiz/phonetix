@@ -81,6 +81,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:integration
+      - name: Accents and espeak voices
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:voices
       - name: Dictionary pack fetching
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}

@@ -1,6 +1,8 @@
 // ─── Language configuration (single source of truth) ─────────────────
 // To add a new language: just add an entry here. Everything else derives.
 
+import { ACCENTS } from './accents';
+
 export interface LanguageConfig {
   name: string;
   /** Default espeak-ng voice ID */
@@ -127,8 +129,24 @@ export const DefaultAccents: Record<string, string> = Object.fromEntries(
   Object.entries(Languages).map(([k, v]) => [k, v.defaultAccent])
 );
 
+/**
+ * The accents offered per language: every accent the dictionary has real data
+ * for, plus the language's standard as the first choice. A language with no
+ * accent data keeps whatever its own config declares (Spanish, whose accents are
+ * a rule applied to every word rather than a list of tagged ones).
+ */
 export const AccentsByLanguage: Record<string, Record<string, string>> = Object.fromEntries(
-  Object.entries(Languages).map(([k, v]) => [k, v.accents])
+  Object.entries(Languages).map(([lang, cfg]) => {
+    const dataAccents = ACCENTS[lang];
+    if (!dataAccents) return [lang, cfg.accents];
+
+    const options: Record<string, string> = { [lang]: 'Standard' };
+    for (const accent of dataAccents) {
+      if (accent.id === lang) continue;   // the standard is already the first entry
+      options[accent.id] = accent.label;
+    }
+    return [lang, options];
+  }),
 );
 
 export const WiktionaryAnchors: Record<string, string> = Object.fromEntries(

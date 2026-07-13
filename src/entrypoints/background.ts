@@ -2,6 +2,7 @@ import { onMessage } from '@/lib/messaging';
 import type { WiktionaryInfo } from '@/lib/messaging';
 import { getCachedBatch, setCachedBatch, getCachedDict, setCachedDict } from '@/lib/cache';
 import { normalizeIpa } from '@/lib/ipa-normalize';
+import { ACCENTS, voiceForAccent } from '@/lib/accents';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
 import type { Language, PhonemeResult } from '@/lib/types';
 
@@ -125,6 +126,46 @@ async function fetchDictObject(lang: string): Promise<Record<string, string>> {
     }
   }
   return decompressGz(await fetch(chrome.runtime.getURL(`dictionaries/${lang}.json.gz`)));
+}
+
+/** Accent overlays, keyed "<lang>.<accentId>". */
+const overlayCache = new Map<string, Map<string, string>>();
+const overlayLoading = new Map<string, Promise<Map<string, string>>>();
+
+/**
+ * The words an accent pronounces differently from the language's standard.
+ * Empty for the standard accent, and for any accent with no data behind it: the
+ * page then shows the base dictionary, which is the standard pronunciation.
+ */
+async function loadOverlay(lang: string, accentId: string): Promise<Map<string, string>> {
+  if (!accentId || accentId === lang) return new Map();
+  if (!ACCENTS[lang]?.some(a => a.id === accentId)) return new Map();
+
+  const key = `${lang}.${accentId}`;
+  if (overlayCache.has(key)) return overlayCache.get(key)!;
+  if (overlayLoading.has(key)) return overlayLoading.get(key)!;
+
+  const promise = (async () => {
+    try {
+      const obj = await decompressGz(await fetch(chrome.runtime.getURL(`dictionaries/accents/${key}.json.gz`)));
+      const map = new Map<string, string>();
+      for (const [word, raw] of Object.entries(obj)) {
+        const ipa = normalizeIpa(word, raw as string);
+        if (ipa) map.set(word, ipa);
+      }
+      overlayCache.set(key, map);
+      console.log(`[Phonetix] Loaded ${key} accent: ${map.size.toLocaleString()} words`);
+      return map;
+    } catch (e) {
+      console.warn(`[Phonetix] No accent overlay for ${key}:`, e);
+      return new Map<string, string>();
+    } finally {
+      overlayLoading.delete(key);
+    }
+  })();
+
+  overlayLoading.set(key, promise);
+  return promise;
 }
 
 async function loadDictionary(lang: string): Promise<Map<string, string>> {
@@ -520,17 +561,24 @@ export default defineBackground(() => {
   console.log('[Phonetix] Background service worker started');
 
   onMessage('phonemize', async ({ data }) => {
-    const { words, voice, lang, fallbacks = [] } = data;
+    // `voice` carries the chosen accent. Which words it changes comes from the
+    // dictionary overlay; which voice espeak speaks in comes from voiceForAccent,
+    // because espeak has no voice for every accent and invents one when asked.
+    const { words, voice: accent, lang, fallbacks = [] } = data;
     const result: PhonemeResult = {};
-    const srcLang = lang || voice.split('-')[0];
+    const srcLang = lang || accent.split('-')[0];
+    const voice = voiceForAccent(srcLang, accent);
 
-    // Tier 1 — block-language dictionary (the expected language of the text).
+    // Tier 1 — block-language dictionary, with the chosen accent laid over it.
     let remaining = words;
     if (lang) {
-      const dict = await loadDictionary(lang);
+      const [dict, overlay] = await Promise.all([loadDictionary(lang), loadOverlay(lang, accent)]);
       if (dict.size > 0) {
         const { found, notFound } = lookupDictionary(remaining, dict);
-        for (const w in found) result[w] = { ipa: applyRegion(found[w], voice), lang, src: 'dict' };
+        for (const w in found) {
+          const accented = overlay.get(w) ?? overlay.get(w.toLowerCase());
+          result[w] = { ipa: applyRegion(accented ?? found[w], accent), lang, src: 'dict' };
+        }
         remaining = notFound;
       }
     }
@@ -561,7 +609,7 @@ export default defineBackground(() => {
     const { cached, uncached } = await getCachedBatch(espeakable, voice);
     for (const w in cached) {
       if (isLetterSpelling(cached[w])) continue;
-      result[w] = { ipa: applyRegion(cached[w], voice), lang: srcLang, src: 'espeak' };
+      result[w] = { ipa: applyRegion(cached[w], accent), lang: srcLang, src: 'espeak' };
     }
 
     // Tier 4 — espeak grapheme-to-phoneme, the last-resort coverage net.
@@ -578,7 +626,7 @@ export default defineBackground(() => {
         console.error('[Phonetix] Phonemization error:', error);
         for (const w of uncached) espeakResults[w] = w;
       }
-      for (const w in espeakResults) result[w] = { ipa: applyRegion(espeakResults[w], voice), lang: srcLang, src: 'espeak' };
+      for (const w in espeakResults) result[w] = { ipa: applyRegion(espeakResults[w], accent), lang: srcLang, src: 'espeak' };
     }
 
     return result;
@@ -646,7 +694,9 @@ export default defineBackground(() => {
     chrome.runtime.sendMessage({
       target: 'offscreen',
       type: 'speak-word',
-      data,
+      // The accent is not always a voice espeak has; asked for one it lacks it
+      // speaks nonsense, so it is resolved to a voice espeak really owns.
+      data: { ...data, voice: voiceForAccent(data.voice.split('-')[0], data.voice) },
     });
   });
 
@@ -655,7 +705,7 @@ export default defineBackground(() => {
   onMessage('synthesizeAudio', async ({ data }) => {
     if (!IS_FIREFOX) return [];
     const { synthesizeWav } = await import('@/lib/espeak-engine');
-    const wav = await synthesizeWav(data.word, data.voice);
+    const wav = await synthesizeWav(data.word, voiceForAccent(data.voice.split('-')[0], data.voice));
     return Array.from(wav);
   });
 });
