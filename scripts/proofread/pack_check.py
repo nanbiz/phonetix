@@ -32,19 +32,35 @@ def serve(port):
 def main():
     port = 8921; serve(port)
     base = f"http://127.0.0.1:{port}"
-    cdp = PipeCDP(); cdp.send("Target.setDiscoverTargets", {"discover": True}); time.sleep(2)
-    extid = next((t["url"].split("/")[2] for t in cdp.send("Target.getTargets")["targetInfos"]
-                  if t["url"].startswith("chrome-extension://")), None)
+    cdp = PipeCDP(); cdp.send("Target.setDiscoverTargets", {"discover": True})
+    # Wait for the extension rather than sniffing targets once: on a cold runner
+    # the worker is not up yet, and a missing id would silently leave the pack
+    # host unset, letting the bundled dictionary pass this test.
+    extid = cdp.ensure_extension()
     def tab(url):
         tid = cdp.send("Target.createTarget", {"url": "about:blank"})["targetId"]
         s = cdp.send("Target.attachToTarget", {"targetId": tid, "flatten": True})["sessionId"]
         cdp.send("Page.enable", session=s); cdp.send("Runtime.enable", session=s)
         cdp.send("Page.navigate", {"url": url}, session=s); return s, tid
     try:
-        # configure the pack host in extension storage (as the popup would)
+        # configure the pack host in extension storage (as the popup would), then
+        # read it back: a write that silently failed would leave the bundled
+        # dictionary serving the page and this test passing for the wrong reason.
         s, tid = tab(f"chrome-extension://{extid}/popup.html"); time.sleep(3)
-        cdp.send("Runtime.evaluate", {"expression":
-            f"chrome.storage.local.set({{packBaseUrl:'{base}'}})", "awaitPromise": True}, session=s)
+        stored = None
+        for _ in range(10):
+            r = cdp.send("Runtime.evaluate", {"expression":
+                f"chrome.storage.local.set({{packBaseUrl:'{base}'}})"
+                f".then(() => chrome.storage.local.get('packBaseUrl'))"
+                f".then(v => JSON.stringify(v))",
+                "awaitPromise": True, "returnByValue": True}, session=s)
+            stored = r.get("result", {}).get("value")
+            if stored and base in stored:
+                break
+            time.sleep(1)
+        if not stored or base not in stored:
+            print(f"FAIL - could not configure the pack host (storage={stored})")
+            cdp.close(); sys.exit(1)
         cdp.send("Target.closeTarget", {"targetId": tid}); time.sleep(1)
 
         # load a French page — fr dict should be fetched from the mock host

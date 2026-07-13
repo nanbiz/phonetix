@@ -91,7 +91,13 @@ class PipeCDP:
         raise TimeoutError(method)
 
     def ensure_extension(self) -> str:
-        """Make sure the extension is actually loaded, and return its id.
+        """Make sure our extension is actually loaded, and return its id.
+
+        Chrome ships component extensions of its own (Google Hangouts has a
+        background page), so a target is ours only if it runs the background
+        script named in our built manifest. Taking the first chrome-extension://
+        target would hand back Chrome's and let every assertion run against a
+        browser without Phonetix.
 
         `--load-extension` is being removed from Chrome, so fall back to the CDP
         Extensions domain. Raises if it could not be loaded — a suite that runs
@@ -101,23 +107,38 @@ class PipeCDP:
             ver = self.send("Browser.getVersion").get("product", "?")
         except Exception:
             ver = "?"
-        for _ in range(15):
+
+        with open(os.path.join(EXT, "manifest.json")) as f:
+            manifest = json.load(f)
+        script = (manifest.get("background") or {}).get("service_worker")
+        if not script:
+            raise RuntimeError("built manifest declares no background service worker")
+        suffix = "/" + script.lstrip("/")
+
+        def find():
             for t in self.send("Target.getTargets")["targetInfos"]:
-                if t["url"].startswith("chrome-extension://"):
-                    self.how = f"--load-extension ({ver})"
-                    return t["url"].split("/")[2]
+                url = t["url"]
+                if url.startswith("chrome-extension://") and url.split("?")[0].endswith(suffix):
+                    return url.split("/")[2]
+            return None
+
+        for _ in range(15):
+            extid = find()
+            if extid:
+                self.how = f"--load-extension ({ver})"
+                return extid
             time.sleep(1)
         try:
             self.send("Extensions.loadUnpacked", {"path": EXT})
         except Exception as e:
             raise RuntimeError(f"extension not loaded; Extensions.loadUnpacked failed on {ver}: {e}")
         for _ in range(15):
-            for t in self.send("Target.getTargets")["targetInfos"]:
-                if t["url"].startswith("chrome-extension://"):
-                    self.how = f"Extensions.loadUnpacked ({ver})"
-                    return t["url"].split("/")[2]
+            extid = find()
+            if extid:
+                self.how = f"Extensions.loadUnpacked ({ver})"
+                return extid
             time.sleep(1)
-        raise RuntimeError(f"extension did not load on {ver}")
+        raise RuntimeError(f"{manifest.get('name')} did not load on {ver}")
 
     def close(self):
         try:
