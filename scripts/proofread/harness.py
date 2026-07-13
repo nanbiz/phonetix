@@ -54,6 +54,7 @@ class PipeCDP:
         os.close(self.tc_r); os.close(self.fc_w)
         self.buf = b""
         self._id = 0
+        self.events: list = []   # CDP events seen while waiting for replies
 
     def _dup(self):
         os.dup2(self.tc_r, 3)
@@ -84,7 +85,9 @@ class PipeCDP:
                 if "error" in m:
                     raise RuntimeError(f"{method}: {m['error']}")
                 return m.get("result", {})
-            # else: event or other id — drop
+            if m.get("method") in ("Runtime.consoleAPICalled", "Runtime.exceptionThrown", "Log.entryAdded"):
+                self.events.append(m)
+                del self.events[:-200]
         raise TimeoutError(method)
 
     def ensure_extension(self) -> str:

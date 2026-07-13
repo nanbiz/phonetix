@@ -132,6 +132,19 @@ def integration(d):
     expect("health.eld (language detection alive)", health.get("eld") is True, str(health.get("errors")))
     expect("health.dict (dictionary loaded)", health.get("dict") is True, str(health.get("errors")))
     expect("health.espeak (espeak alive)", health.get("espeak") is True, str(health.get("errors")))
+    if health.get("eld") is not True:
+        diag = d.js("JSON.stringify({styles: !!document.getElementById('phonetix-styles'),"
+                    " spans: document.querySelectorAll('.phonetix').length, ready: document.readyState})")
+        print("  DIAG:", diag, flush=True)
+        for e in d.cdp.events[-20:]:
+            p = e.get("params", {})
+            if e["method"] == "Runtime.exceptionThrown":
+                ex = p.get("exceptionDetails", {})
+                print("  EXC:", str(ex.get("text"))[:120],
+                      str(ex.get("exception", {}).get("description"))[:200], flush=True)
+            else:
+                args = " ".join(str(a.get("value"))[:100] for a in p.get("args", []))
+                print("  LOG:", p.get("type"), args[:200], flush=True)
     # per-title language
     rows = d.poll(f"{SPANS_BY}('div.t')", ok=lambda r: bool(r) and all(x["n"] > 0 for x in r)) or []
     right = sum(1 for r in rows if r["lang"] == r["exp"])
