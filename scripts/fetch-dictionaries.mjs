@@ -11,7 +11,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 
 const REPO = "nanbiz/phonetix";
-const TAG = "data-v2";
+const TAG = "data-v3";
 const ASSET = "dictionaries.tar.gz";
 const URL = `https://github.com/nanbiz/phonetix/releases/download/${TAG}/${ASSET}`;
 

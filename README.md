@@ -27,8 +27,28 @@ On top of the cascade:
 - **Homograph disambiguation** — context classifiers (Yarowsky decision rules +
   keyword scoring, `src/lib/homograph.ts`, data in `public/homographs/`) pick the
   right pronunciation of *read*, *live*, *record*, … from surrounding words.
-- **Regional variants** — data-driven IPA transforms (`src/lib/regions.ts`) for
-  accents like Latin-American Spanish (seseo, yeísmo) and Brazilian Portuguese.
+- **Accents** — an accent is the same words pronounced differently, and it is
+  built from whichever of two sources actually carries it (`src/lib/accents.ts`):
+
+  - **Tagged data**, where the source has it. Wiktionary labels pronunciations by
+    accent, so `scripts/build-accents.mjs` extracts them into overlays holding
+    the words an accent says differently from the standard, which the background
+    lays over the base dictionary. English has 27k American and 12k British
+    words; Portuguese, Catalan, Cantonese, Persian, Armenian, Welsh, Irish,
+    Basque and Vietnamese have their own.
+  - **Rules**, where it does not. Wiktionary tags almost no Spanish word for
+    accent, and only a few hundred German ones, while the shifts that define
+    those accents hold for the whole vocabulary: seseo and yeísmo for Latin
+    America, žeísmo for Rioplatense, and for Swiss Standard German no ich-Laut,
+    a trilled `r`, no glottal stop (`src/lib/regions.ts`). Rules also reach the
+    words no dictionary knows, since they apply to espeak's output too. The
+    popup says when an accent is rule-derived.
+
+  A *dialect* (Swabian, Saxon, Swiss German proper) is not an accent: it has its
+  own words and grammar, so it would need its own dictionary as its own language,
+  and none is shipped. espeak has no voice for many accents and answers with
+  nonsense when asked for one it lacks, so voices are declared only where
+  `scripts/proofread/voice_check.py` proves they exist.
 - **Segmentation** — `Intl.Segmenter` (`src/lib/segment.ts`) tokenizes every
   script (Latin, Cyrillic, Greek, Arabic, CJK, Thai, …), not just Latin.
 - **Language detection** — per-block via `eld`, plus the page `lang` attribute.

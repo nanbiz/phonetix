@@ -26,6 +26,19 @@ export interface Accent {
   label: string;
   /** Source-dictionary tags carrying this accent's pronunciation, best first. */
   tags: string[];
+  /**
+   * Substrings identifying the accent in a source that labels pronunciations in
+   * prose rather than with a fixed vocabulary. The German Wiktionary writes
+   * "schweizerisch", "standardsprachlich (Schweiz)" and "Schweiz vorwiegend"
+   * where the English one would tag "Switzerland".
+   */
+  match?: string[];
+  /**
+   * The accent is a rule applied to every word (see regions.ts) rather than a
+   * list of tagged ones. Its overlay, if any, only adds the words the rules
+   * cannot derive.
+   */
+  ruleBased?: boolean;
   /** espeak voice, when espeak has a real one. Otherwise the base language voice. */
   voice?: string;
 }
@@ -42,6 +55,25 @@ export const ACCENTS: Record<string, Accent[]> = {
     { id: 'en-nz', label: 'New Zealand', tags: ['New-Zealand'] },
     { id: 'en-ie', label: 'Irish', tags: ['Ireland', 'Northern-Ireland'] },
     { id: 'en-in', label: 'Indian', tags: ['India', 'South-Asia'] },
+  ],
+  // Spanish: Wiktionary tags almost no Spanish word for accent, but the splits
+  // that define these accents are categorical, so rules reach every word where
+  // data would reach almost none.
+  es: [
+    { id: 'es', label: 'Castilian', tags: [] },
+    { id: 'es-419', label: 'Latin American', tags: [], voice: 'es-419', ruleBased: true },
+    { id: 'es-ar', label: 'Rioplatense', tags: [], voice: 'es-419', ruleBased: true },
+  ],
+
+  // German: the source tags a few hundred words for Switzerland or Austria, far
+  // too few to carry an accent on their own. What carries it is the rules in
+  // regions.ts, which hold for the whole vocabulary; the tagged words are laid
+  // over them where the source is explicit. espeak has neither a Swiss nor an
+  // Austrian voice (it answers with nonsense), so both speak in the base voice.
+  de: [
+    { id: 'de', label: 'Standard', tags: [] },
+    { id: 'de-ch', label: 'Swiss', tags: ['Switzerland', 'Swiss Standard German'], match: ['schweiz'], ruleBased: true },
+    { id: 'de-at', label: 'Austrian', tags: ['Austria', 'Austrian German'], match: ['österreich', 'oesterreich'], ruleBased: true },
   ],
   pt: [
     { id: 'pt', label: 'European', tags: ['Portugal'] },

@@ -7,6 +7,7 @@
   import { getCurrentTabId, sendMessage } from "@/lib/messaging"
 
   import { Languages, LanguageNames, Modes, ModeLabels, AccentsByLanguage, DefaultAccents } from "@/lib/types"
+  import { ACCENTS } from "@/lib/accents"
   import type { LanguageOption, Mode } from "@/lib/types"
 
   let selectedLanguage = $state<LanguageOption>("auto");
@@ -41,6 +42,14 @@
       : null,
   );
   let otherAccentChoices = $derived(accentChoices.filter(([lang]) => lang !== effectiveLanguage));
+
+  // An accent with no per-word data behind it is derived from pronunciation rules.
+  // Say so, rather than let it look like the same kind of thing as the others.
+  let ruleBasedNote = $derived.by(() => {
+    const chosen = ACCENTS[effectiveLanguage]?.find(a => a.id === accentOf(effectiveLanguage));
+    if (!chosen?.ruleBased) return '';
+    return 'No per-word dictionary exists for this accent — it is derived from its pronunciation rules, applied to every word.';
+  });
 
   // Language options: auto first, then every language with the size of the
   // dictionary behind it, so the choice says what it will actually get you.
@@ -159,42 +168,43 @@
       ⚠ {downList} unavailable — reload the page or reinstall.
     </div>
   {/if}
-  <!-- Language selector -->
-  <div class="flex flex-col gap-1">
-    <Dropdown
-      topic="Language"
-      elements={languageOptions}
-      selectedElement={selectedLanguage}
-      onElementChange={(lang) => (selectedLanguage = lang as LanguageOption)}
-    />
+  <!-- What the page is being read as. Detection decides this on its own; the
+       override lives in Advanced, for the page it gets wrong. -->
+  <div class="flex flex-col gap-1 px-1">
+    <h2 class="text-sm font-medium text-gray-300">Language</h2>
     {#if selectedLanguage === 'auto'}
-      <p class="px-1 text-xs text-gray-500">
-        Detected: <strong class="text-gray-400">{LanguageNames[detectedLanguage] || detectedLanguage}</strong>
-        {#if effectiveHasDict}
-          — using Wiktionary dictionary
-        {:else}
-          — using espeak synthesis
-        {/if}
-      </p>
-    {:else if effectiveHasDict}
-      <p class="px-1 text-xs text-gray-500">
-        Using Wiktionary dictionary ({(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words)
+      <p class="text-sm text-white">
+        {LanguageNames[detectedLanguage] || detectedLanguage}
+        <span class="text-xs text-gray-500">(detected)</span>
       </p>
     {:else}
-      <p class="px-1 text-xs text-gray-500">
-        No dictionary available — using espeak synthesis only
+      <p class="text-sm text-white">
+        {LanguageNames[effectiveLanguage] || effectiveLanguage}
+        <span class="text-xs text-gray-500">(set by you)</span>
       </p>
     {/if}
+    <p class="text-xs text-gray-500">
+      {#if effectiveHasDict}
+        Wiktionary dictionary, {(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words
+      {:else}
+        No dictionary — espeak synthesis only
+      {/if}
+    </p>
   </div>
 
   <!-- The page's own language first, the rest only if asked for. -->
   {#if pageAccent}
-    <Segmented
-      topic={`${LanguageNames[effectiveLanguage] || effectiveLanguage} accent`}
-      selectedElement={accentOf(effectiveLanguage)}
-      elements={pageAccent}
-      onElementChange={(accent) => setAccent(effectiveLanguage, accent)}
-    />
+    <div class="flex flex-col gap-1">
+      <Dropdown
+        topic={`${LanguageNames[effectiveLanguage] || effectiveLanguage} accent`}
+        selectedElement={accentOf(effectiveLanguage)}
+        elements={pageAccent}
+        onElementChange={(accent) => setAccent(effectiveLanguage, accent)}
+      />
+      {#if ruleBasedNote}
+        <p class="px-1 text-xs text-gray-500">{ruleBasedNote}</p>
+      {/if}
+    </div>
   {/if}
 
   {#if otherAccentChoices.length}
@@ -204,7 +214,7 @@
       </summary>
       <div class="mt-2 flex flex-col gap-2">
         {#each otherAccentChoices as [lang, options] (lang)}
-          <Segmented
+          <Dropdown
             topic={LanguageNames[lang] || lang}
             selectedElement={accentOf(lang)}
             elements={options}
@@ -239,6 +249,20 @@
 
   <details class="mt-2 px-1">
     <summary class="text-xs text-gray-500 cursor-pointer select-none">Advanced</summary>
+
+    <div class="mt-2">
+      <Dropdown
+        topic="Force a language"
+        selectedElement={selectedLanguage}
+        elements={languageOptions}
+        onElementChange={(lang) => (selectedLanguage = lang as LanguageOption)}
+      />
+      <p class="mt-1 text-[10px] text-gray-500">
+        Each block of the page is detected on its own, so a page in several languages
+        already reads correctly. Set this only for a page detection gets wrong.
+      </p>
+    </div>
+
     <label class="block mt-2 text-xs text-gray-400">
       Dictionary pack host (optional)
       <input

@@ -577,7 +577,7 @@ export default defineBackground(() => {
         const { found, notFound } = lookupDictionary(remaining, dict);
         for (const w in found) {
           const accented = overlay.get(w) ?? overlay.get(w.toLowerCase());
-          result[w] = { ipa: applyRegion(accented ?? found[w], accent), lang, src: 'dict' };
+          result[w] = { ipa: applyRegion(accented ?? found[w], accent, w), lang, src: 'dict' };
         }
         remaining = notFound;
       }
@@ -609,7 +609,7 @@ export default defineBackground(() => {
     const { cached, uncached } = await getCachedBatch(espeakable, voice);
     for (const w in cached) {
       if (isLetterSpelling(cached[w])) continue;
-      result[w] = { ipa: applyRegion(cached[w], accent), lang: srcLang, src: 'espeak' };
+      result[w] = { ipa: applyRegion(cached[w], accent, w), lang: srcLang, src: 'espeak' };
     }
 
     // Tier 4 — espeak grapheme-to-phoneme, the last-resort coverage net.
@@ -626,7 +626,7 @@ export default defineBackground(() => {
         console.error('[Phonetix] Phonemization error:', error);
         for (const w of uncached) espeakResults[w] = w;
       }
-      for (const w in espeakResults) result[w] = { ipa: applyRegion(espeakResults[w], accent), lang: srcLang, src: 'espeak' };
+      for (const w in espeakResults) result[w] = { ipa: applyRegion(espeakResults[w], accent, w), lang: srcLang, src: 'espeak' };
     }
 
     return result;
@@ -645,7 +645,7 @@ export default defineBackground(() => {
     return data.items.map((it) => {
       const entry = clf.get(it.word);
       if (!entry || entry.classes.length <= 1) return null;
-      return applyRegion(disambiguate(entry, it.tokens, it.index), data.voice);
+      return applyRegion(disambiguate(entry, it.tokens, it.index), data.voice, it.word);
     });
   });
 

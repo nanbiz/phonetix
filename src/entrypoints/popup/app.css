@@ -4,8 +4,10 @@
    inside it. */
 html,
 body {
-  width: 24em;
-  height: 34em;
+  /* rem, not em: an em on the body resolves against the body's own font size, so
+     the body came out narrower than the page and every control was squeezed. */
+  width: 24rem;
+  height: 34rem;
   margin: 0;
   overflow: hidden;
 }
