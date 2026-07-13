@@ -36,7 +36,7 @@ interface ProtocolMap {
   extensionToggled(isEnabled: boolean): void;
   languageChanged(language: LanguageOption): void;
   modeChanged(mode: Mode): void;
-  accentChanged(accent: string): void;
+  accentChanged(accents: Record<string, string>): void;
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

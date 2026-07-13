@@ -48,6 +48,10 @@ FIXTURES = {
 
   # Text the user is editing must never be rewritten: rich editors are
   # contenteditable elements, not <textarea>, and transforming them corrupts typing.
+  "/hidden.html": """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>x</title></head><body><main>
+    <p id="prose">The quick brown fox jumps over the lazy dog while the river runs quietly past the old stone bridge.</p>
+    <div id="panel" style="visibility:hidden"><p id="secret">Collapsed panel text that the page keeps hidden from the reader.</p></div>
+  </main></body></html>""",
   "/editable.html": """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>x</title></head><body><main>
    <p id="prose">This is ordinary readable prose that should be transcribed normally.</p>
    <div id="editor" contenteditable="true">I am typing a private message here right now</div>
@@ -187,6 +191,46 @@ def integration(d):
     expect("nested contenteditable untouched", e.get("nested") == 0, str(e))
     expect("editable text unchanged",
            e.get("editorText") == "I am typing a private message here right now", str(e.get("editorText")))
+    d.close_tab()
+
+    # tooltip lifecycle: a press inside pins it, so dragging out a selection to
+    # copy the IPA cannot dismiss it; a press outside still does.
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    VISIBLE = "(document.getElementById('phonetix-tooltip-host')||{style:{}}).style.pointerEvents === 'auto'"
+    d.js("(() => { const s = document.querySelector('#prose .phonetix');"
+         " s.dispatchEvent(new MouseEvent('mouseover', {bubbles:true, composed:true})); return 1; })()")
+    expect("tooltip opens on hover", d.poll(VISIBLE, ok=lambda v: v is True) is True, "never appeared")
+
+    # press inside the tooltip (a selection drag starting), then leave the word
+    d.js("(() => { const h = document.getElementById('phonetix-tooltip-host');"
+         " h.dispatchEvent(new MouseEvent('mousedown', {bubbles:true, composed:true}));"
+         " const s = document.querySelector('#prose .phonetix');"
+         " s.dispatchEvent(new MouseEvent('mouseout', {bubbles:true, composed:true, relatedTarget: document.body}));"
+         " return 1; })()")
+    time.sleep(1.0)  # longer than the 350ms hide timer
+    still = d.js(VISIBLE)
+    expect("pinned tooltip survives a selection drag", still is True, f"visible={still}")
+
+    d.js("(() => { document.body.dispatchEvent(new MouseEvent('mousedown', {bubbles:true, composed:true})); return 1; })()")
+    time.sleep(0.4)
+    gone = d.js(VISIBLE)
+    expect("press outside dismisses the tooltip", gone is False, f"visible={gone}")
+    d.close_tab()
+
+    # text the page hides must stay hidden in every display mode: our spans may
+    # not override an ancestor's visibility.
+    d.load(f"http://127.0.0.1:{PORT}/hidden.html", settle=3)
+    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
+    HIDDEN = ("(() => { const s = document.querySelector('#secret .phonetix .px-orig')"
+              "  || document.querySelector('#secret .phonetix');"
+              " if (!s) return 'no-span';"
+              " return getComputedStyle(s).visibility; })()")
+    for mode in ("px-mode-whole", "px-mode-hover", "px-mode-reveal"):
+        d.js(f"(() => {{ const h = document.documentElement;"
+             f" h.classList.remove('px-mode-whole','px-mode-hover','px-mode-reveal');"
+             f" h.classList.add('{mode}'); return 1; }})()")
+        vis = d.js(HIDDEN)
+        expect(f"hidden panel stays hidden ({mode})", vis == "hidden", f"visibility={vis}")
     d.close_tab()
 
     # dynamically-added titles (feed) get processed and languaged correctly

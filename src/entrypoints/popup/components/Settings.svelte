@@ -11,7 +11,9 @@
 
   let selectedLanguage = $state<LanguageOption>("auto");
   let detectedLanguage = $state<string>("en");
-  let selectedAccent = $state<string>("en");
+  /** Voice per language. A page can carry several languages at once, so an
+   *  accent is only meaningful relative to one of them. */
+  let accents = $state<Record<string, string>>({});
   let selectedMode = $state<Mode>("wholePage");
   let initialized = $state(false);
   let dictManifest = $state<Record<string, { entries: number; sizeKB: number }>>({});
@@ -21,8 +23,11 @@
     selectedLanguage === 'auto' ? detectedLanguage : selectedLanguage as string
   );
 
-  // Available accents for the effective language
+  // Available accents for the effective language, and the one in force for it
   let currentAccents = $derived(AccentsByLanguage[effectiveLanguage] || {});
+  let selectedAccent = $derived<string>(
+    accents[effectiveLanguage] || DefaultAccents[effectiveLanguage] || effectiveLanguage
+  );
   let currentAccentLabel = $derived(currentAccents[selectedAccent] || selectedAccent);
 
   // Build language options for MultiSelect
@@ -66,8 +71,8 @@
       detectedLanguage = detected as string;
     }
 
-    const savedAccent = await storage.getItem<string>('local:selectedAccent');
-    selectedAccent = savedAccent || DefaultAccents[effectiveLanguage];
+    const savedAccents = await storage.getItem<string>('local:accents');
+    if (savedAccents) accents = JSON.parse(savedAccents);
 
     const savedMode = await storage.getItem<string>('local:selectedMode');
     if (savedMode && savedMode in Modes) {
@@ -89,20 +94,20 @@
     selectedLanguage = opt.value as LanguageOption;
   }
 
-  // Persist + notify on language change
+  // Persist + notify on language change. The accent map is keyed by language and
+  // survives this: switching language reveals that language's accent, it does not
+  // overwrite anything.
   $effect(() => {
     if (!initialized) return;
     storage.setItem<string>('local:selectedLanguage', selectedLanguage);
-    selectedAccent = DefaultAccents[effectiveLanguage];
-    storage.setItem<string>('local:selectedAccent', selectedAccent);
     (async () => sendMessage('languageChanged', selectedLanguage, await getCurrentTabId()))();
   });
 
-  $effect(() => {
-    if (!initialized) return;
-    storage.setItem<string>('local:selectedAccent', selectedAccent);
-    (async () => sendMessage('accentChanged', selectedAccent, await getCurrentTabId()))();
-  });
+  async function setAccent(accent: string) {
+    accents = { ...accents, [effectiveLanguage]: accent };
+    await storage.setItem<string>('local:accents', JSON.stringify(accents));
+    sendMessage('accentChanged', accents, await getCurrentTabId());
+  }
 
   $effect(() => {
     if (!initialized) return;
@@ -186,13 +191,11 @@
 
   {#if Object.keys(currentAccents).length > 1}
     <Dropdown
-      topic="Accent"
+      topic={`Accent (${LanguageNames[effectiveLanguage] || effectiveLanguage})`}
       headEntry={currentAccentLabel}
       selectedElement={selectedAccent}
       elements={currentAccents}
-      onElementChange={(accent) => {
-        selectedAccent = accent;
-      }}
+      onElementChange={setAccent}
     />
   {/if}
 
@@ -237,8 +240,7 @@
     </button>
 
     {#if showInfo}
-      <!-- Bounded and scrollable, so opening it does not resize the popup window. -->
-      <div class="mt-2 max-h-40 overflow-y-auto text-xs text-gray-500 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
+      <div class="mt-2 text-xs text-gray-500 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
         <div class="flex items-start gap-2">
           <span class="text-blue-400 mt-0.5 flex-shrink-0">1.</span>
           <p>

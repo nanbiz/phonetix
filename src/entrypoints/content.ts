@@ -26,7 +26,14 @@ import { segment, words as wordsOf } from '@/lib/segment';
 let isEnabled = true;
 let languageOption: LanguageOption = 'auto';
 let pageLang: Language = 'en';
-let accent = 'en';
+/** Chosen voice per language. A page can hold several languages at once, so an
+ *  accent only means anything relative to one of them. Unset languages use their
+ *  default voice. */
+let accents: Record<string, string> = {};
+
+function voiceFor(lang: Language): string {
+  return accents[lang] || DefaultAccents[lang] || lang;
+}
 let mode: Mode = 'wholePage';
 
 // =====================================================================
@@ -60,6 +67,10 @@ const TYPE_CLASS: Record<string, string> = {
 
 const ICO_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
 const ICO_SPEAKER_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+/** Human recording (Wiktionary): a microphone. */
+const ICO_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>';
+/** Synthesized speech (espeak): a robot head. */
+const ICO_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M9 17h6"/><path d="M1 12v3"/><path d="M23 12v3"/></svg>';
 const ICO_WIKT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M2.22 18.6v.01c-.35-.21-.61-.5-.71-.84l-.07-.37L.21 3.36c-.03-.45.17-.9.57-1.25c.39-.36.97-.6 1.62-.66L15.35.22a2.8 2.8 0 0 1 1.7.35a1.5 1.5 0 0 1 .77 1.13l1.23 14.12c.03.45-.17.9-.57 1.25a2.85 2.85 0 0 1-1.62.67L3.92 18.95a2.75 2.75 0 0 1-1.7-.35m-1-1.1c.02.18.07.35.15.5l.02.25c.05.56.4 1.03.9 1.34c.51.3 1.19.46 1.9.4l13.34-1.27a3.15 3.15 0 0 0 1.8-.74c.45-.4.71-.93.66-1.49L18.73 1.87a1.77 1.77 0 0 0-.9-1.33a2.9 2.9 0 0 0-1.24-.4a3.2 3.2 0 0 0-1.27-.12L2.4 1.23a3.1 3.1 0 0 0-1.74.72c-.44.39-.7.9-.64 1.44l1.22 14.1zm1.2 1.9a1.6 1.6 0 0 1-.78-1a2 2 0 0 0 .47.39c.49.3 1.14.44 1.84.38l12.93-1.22c.7-.06 1.31-.33 1.74-.72c.44-.38.7-.9.64-1.43L18.04 1.69a1.62 1.62 0 0 0-.62-1.11c.1.04.2.09.29.15c.46.28.76.7.8 1.16l1.26 14.62c.04.48-.18.94-.59 1.3c-.4.37-1 .63-1.67.7L4.17 19.75a2.9 2.9 0 0 1-1.76-.36ZM1.21 5.3l4.34-.5l.06.47l-.28.04c-.28.03-.48.12-.6.26a.57.57 0 0 0-.15.46a12 12 0 0 0 .53 1.33l2.91 6.12l1.15-5.56l-.8-1.68c-.16-.27-.31-.5-.48-.7a1 1 0 0 0-.28-.23a1.4 1.4 0 0 0-.42-.17c-.1-.02-.25-.02-.48 0l-.08.02l-.06-.48l4.56-.53l.06.48l-.38.04c-.3.04-.5.13-.6.26a.67.67 0 0 0-.13.53c0 .02 0 .06.03.15l.15.4l3.2 6.84l1.32-6.48c.16-.75.22-1.25.18-1.51a.57.57 0 0 0-.14-.32a.57.57 0 0 0-.3-.18c-.2-.05-.47-.06-.8-.02h-.08l-.06-.48l3.53-.4l.06.48h-.08c-.29.04-.5.12-.66.24c-.15.12-.3.33-.42.64c-.08.2-.2.7-.35 1.5l-2.01 9.9l-.45.05l-3.4-7.06l-1.61 7.64l-.42.04l-4.56-9.42q-.51-1.05-.63-1.23a1 1 0 0 0-.47-.4a1.6 1.6 0 0 0-.76-.07h-.08Z"/></svg>';
 
 // =====================================================================
@@ -92,7 +103,7 @@ function playSymbol(filename: string): void {
  */
 function speakWord(word: string, lang: Language): void {
   stopAudio();
-  const voice = DefaultAccents[lang] || lang;
+  const voice = voiceFor(lang);
   if (import.meta.env.BROWSER === 'firefox') {
     // Firefox background can't play audio (no user gesture); play the WAV here.
     sendMessage('synthesizeAudio', { word, voice })
@@ -123,6 +134,16 @@ let highlightedEl: HTMLElement | null = null;
 let curTargetRect: DOMRect | null = null;
 let ttAbove = false;
 let ttVisible = false;
+/** Pinned = the user pressed inside the tooltip (to select or click). Hover
+ *  timers cannot dismiss it while pinned. */
+let ttPinned = false;
+
+/** True when the event happened inside the tooltip, shadow root included. */
+function inTooltip(e: Event): boolean {
+  if (!ttHost) return false;
+  const path = (e as MouseEvent).composedPath?.() ?? [];
+  return e.target === ttHost || path.includes(ttHost);
+}
 
 // =====================================================================
 //  Tooltip – lifecycle
@@ -178,6 +199,8 @@ function setupTooltipEvents(): void {
   document.addEventListener('mouseover', (e) => {
     const t = (e.target as HTMLElement).closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
     if (!t || t === curTarget) return;
+    // A pinned tooltip is never replaced by hovering another word.
+    if (ttPinned) return;
     // Don't switch words if mouse is in the tooltip's safe zone
     if (ttVisible && isInSafeZone(e.clientX, e.clientY)) return;
     clearTimers();
@@ -195,8 +218,20 @@ function setupTooltipEvents(): void {
     hideTimer = setTimeout(() => { hideTooltip(); curTarget = null; }, 350);
   });
 
-  // Dismiss on click/scroll
-  document.addEventListener('click', () => { if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } });
+  // Pressing the mouse inside the tooltip pins it: a drag to select the IPA
+  // leaves the tooltip's box and would otherwise trip mouseout/mouseleave and
+  // dismiss it mid-selection, before the copy. A pinned tooltip is dismissed
+  // only by pressing outside it, or by Escape.
+  document.addEventListener('mousedown', (e) => {
+    if (!ttVisible) return;
+    if (inTooltip(e as MouseEvent)) { clearTimers(); ttPinned = true; return; }
+    clearTimers(); hideTooltip(true); curTarget = null;
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Escape' && ttVisible) { clearTimers(); hideTooltip(true); curTarget = null; }
+  });
+
   window.addEventListener('scroll', () => { if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } }, { passive: true });
 
   // Keep tooltip alive when hovered
@@ -273,7 +308,9 @@ function showTooltip(target: HTMLElement): void {
   requestAnimationFrame(() => ttEl?.classList.add('visible'));
 }
 
-function hideTooltip(): void {
+function hideTooltip(force = false): void {
+  if (ttPinned && !force) return;
+  ttPinned = false;
   if (!ttEl || !ttHost) return;
   if (highlightedEl) { highlightedEl.classList.remove('px-active'); highlightedEl = null; }
   curTargetRect = null;
@@ -307,15 +344,15 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   wiktBtn.href = wiktionaryURL(lang, word);
   r1.appendChild(wiktBtn);
 
-  // Wiktionary recording button — enables only if a recording exists.
-  const audioBtn = btn('px-btn disabled', ICO_SPEAKER, 'Loading…');
+  // Wiktionary recording: a real human saying the word. Enabled only if one exists.
+  const audioBtn = btn('px-btn disabled', ICO_MIC, 'Human recording (Wiktionary) — checking…');
   r1.appendChild(audioBtn);
   ttEl.appendChild(r1);
 
   // ── Row 2: primary /ipa/ (matches the page) + speak in the source language ──
   const r2 = el('div', 'px-r2');
   r2.appendChild(txt('span', 'px-ipa-text', `/${ipa}/`));
-  const ttsBtn = btn('px-btn px-btn-sm', ICO_SPEAKER_SM, `Speak (${DefaultAccents[lang] || lang})`);
+  const ttsBtn = btn('px-btn px-btn-sm', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
   ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
   r2.appendChild(ttsBtn);
   ttEl.appendChild(r2);
@@ -325,14 +362,10 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   ttEl.appendChild(symbolsContainer);
   renderSymbols(symbolsContainer, ipa);
 
-  // Reserved row for a Wiktionary alternative — a labeled addition, never a
-  // silent replacement of the primary shown on the page.
-  const altRow = el('div', 'px-alt');
-  altRow.style.display = 'none';
-  ttEl.appendChild(altRow);
-
+  // Wiktionary is looked up only to enrich the row-1 controls: it enables the
+  // link and the recording. The IPA and its source tag stay exactly what the
+  // page shows — one pronunciation, one source, no second opinion.
   sendMessage('checkWiktionary', { lang, word }).then((info) => {
-    const displayLang = info.wordLang || (info.foundLang as string) || lang;
     const linkLang = info.foundLang || lang;
 
     if (info.exists && info.matchedTitle) {
@@ -340,20 +373,14 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
       wiktBtn.href = wiktionaryURL(linkLang, info.matchedTitle);
     }
 
-    if (info.wiktIpa && info.wiktIpa !== ipa) {
-      altRow.style.display = '';
-      altRow.appendChild(txt('span', 'px-alt-tag', `Wiktionary ${displayLang.toUpperCase()}`));
-      altRow.appendChild(txt('span', 'px-alt-ipa', `/${info.wiktIpa}/`));
-    }
-
     if (info.audioUrl) {
       audioBtn.classList.remove('disabled');
-      audioBtn.title = 'Wiktionary recording';
+      audioBtn.title = 'Human recording (Wiktionary)';
       audioBtn.addEventListener('click', (e) => { e.stopPropagation(); playUrl(info.audioUrl!); });
     } else {
-      audioBtn.title = 'No Wiktionary recording';
+      audioBtn.title = 'No human recording on Wiktionary';
     }
-  }).catch(() => { audioBtn.title = 'No Wiktionary recording'; });
+  }).catch(() => { audioBtn.title = 'No human recording on Wiktionary'; });
 }
 
 /** Build (or rebuild) the IPA symbol grid + detail + legend into a container. */
@@ -478,8 +505,9 @@ async function processPage(root: Element = document.body): Promise<void> {
     const words = uniqueWords(nodes, pageLang);
     if (words.length === 0) return;
 
-    const ipaMap = await sendMessage('phonemize', { words, voice: accent, lang: pageLang });
-    await applyTransforms(nodes, ipaMap, pageLang, accent);
+    const voice = voiceFor(pageLang);
+    const ipaMap = await sendMessage('phonemize', { words, voice, lang: pageLang });
+    await applyTransforms(nodes, ipaMap, pageLang, voice);
   }
 }
 
@@ -504,7 +532,7 @@ async function processMultilingual(root: Element = document.body): Promise<void>
   const byVoice = new Map<string, { nodes: Text[]; words: Set<string>; lang: Language }>();
   for (let i = 0; i < blocks.length; i++) {
     const lang = blockLangs[i];
-    const voice = DefaultAccents[lang];
+    const voice = voiceFor(lang);
     if (!byVoice.has(voice)) byVoice.set(voice, { nodes: [], words: new Set(), lang });
     const g = byVoice.get(voice)!;
     for (const tn of blocks[i].textNodes) {
@@ -776,7 +804,7 @@ function clearMode() {
 // =====================================================================
 
 function revertAll() {
-  hideTooltip();
+  hideTooltip(true);
   for (const span of document.querySelectorAll(`.${PHONETIX_CLASS}`)) {
     const orig = (span as HTMLElement).dataset.original || '';
     span.parentNode?.replaceChild(document.createTextNode(orig), span);
@@ -848,17 +876,17 @@ export default defineContentScript({
       const savedLang = await storage.getItem<string>('local:selectedLanguage');
       if (savedLang) languageOption = savedLang as LanguageOption;
 
-      const savedAccent = await storage.getItem<string>('local:selectedAccent');
+      const savedAccents = await storage.getItem<string>('local:accents');
+      if (savedAccents) accents = JSON.parse(savedAccents);
+
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
 
       if (languageOption === 'auto') {
         pageLang = await detectPageLanguage();
-        accent = DefaultAccents[pageLang];
         await storage.setItem('local:detectedLanguage', pageLang);
       } else {
         pageLang = languageOption as Language;
-        accent = savedAccent || DefaultAccents[pageLang];
       }
     } catch (e) {
       console.warn('[Phonetix] Failed to load settings:', e);
@@ -895,17 +923,15 @@ export default defineContentScript({
       languageOption = msg.data;
       if (languageOption === 'auto') {
         pageLang = await detectPageLanguage();
-        accent = DefaultAccents[pageLang];
         await storage.setItem('local:detectedLanguage', pageLang);
       } else {
         pageLang = languageOption as Language;
-        accent = DefaultAccents[pageLang];
       }
       if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
     });
 
     onMessage('accentChanged', async (msg) => {
-      accent = msg.data;
+      accents = msg.data;
       if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
     });
   },

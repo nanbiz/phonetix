@@ -12,7 +12,9 @@
       const extState = await storage.getItem<string>('local:extension_enabled');
       extension_enabled = extState ? JSON.parse(extState) : true;
 
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      // Use the promise-based `browser` API: Firefox's `chrome.*` is callback-only,
+      // so awaiting it yields nothing and the per-site row would never render.
+      const tabs = await browser.tabs.query({ active: true, currentWindow: true });
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url);
         hostname = url.hostname;

@@ -58,17 +58,22 @@ export const PHONETIX_CSS = `
   grid-area: 1 / 1;
 }
 
+/* Hover modes swap the two spans with visibility, which is an inherited property:
+   a span set to "visible" overrides a hidden ancestor and exposes text the page
+   keeps hidden (a collapsed panel, an offscreen card). "inherit" shows the span
+   exactly when its context is shown. */
+
 /* onHover: show original, IPA hidden but reserving space */
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { visibility: visible; }
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { visibility: inherit; }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: hidden; }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: visible; }
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: inherit; }
 
 /* showOriginalOnHover: show IPA, original hidden but reserving space */
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; visibility: hidden; }
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: visible; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: inherit; }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: visible; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: inherit; }
 `.trim();
 
 /** CSS for the tooltip (injected into Shadow DOM) */
@@ -137,18 +142,6 @@ export const TOOLTIP_CSS = `
 .px-src-dict { color: #7fd7a8; background: rgba(93,232,176,.12); }
 .px-src-espeak { color: #e0b978; background: rgba(224,185,120,.12); }
 .px-spacer { flex: 1; }
-
-/* Wiktionary alternative row (labeled addition, never replaces the primary) */
-.px-alt {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 2px 0 8px;
-  padding-top: 6px;
-  border-top: 1px dashed #2f2f33;
-}
-.px-alt-tag { font-size: 9px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: .3px; }
-.px-alt-ipa { font: 13px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif; color: #9aa7b8; }
 
 /* Buttons */
 .px-btn {
