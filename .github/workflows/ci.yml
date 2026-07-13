@@ -46,17 +46,18 @@ jobs:
   # subsystem health check, so an engine that silently stops working (as the
   # language detector once did) fails CI instead of degrading unnoticed.
   #
-  # It runs the artifact the build job produced: no install, no second build. The
-  # dictionaries are still needed on disk because the pack test serves them from
-  # a local host.
+  # It builds its own extension rather than waiting on the build job: the two run
+  # in parallel, which is the shorter wall clock even though it costs a second
+  # build. The dictionaries come from the shared cache.
   behavior:
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
@@ -66,10 +67,7 @@ jobs:
           # Pinned: Chrome 150 loads the extension but stops injecting its content
           # scripts in headless, which would make the suite pass against nothing.
           chrome-version: '149'
-      - uses: actions/download-artifact@v4
-        with:
-          name: chrome-mv3
-          path: .output/chrome-mv3
+      - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         with:
           path: public/dictionaries
@@ -77,12 +75,13 @@ jobs:
       - name: Fetch dictionaries
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/fetch-dictionaries.mjs
+        run: pnpm fetch:dict
+      - run: pnpm build
       - name: Integration suite
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: uv run python scripts/proofread/suite.py integration
+        run: pnpm test:integration
       - name: Dictionary pack fetching
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: uv run python scripts/proofread/pack_check.py
+        run: pnpm test:packs
