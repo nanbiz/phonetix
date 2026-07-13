@@ -96,6 +96,7 @@ const dictCache = new Map<string, Map<string, string>>();
 const dictLoading = new Map<string, Promise<Map<string, string>>>();
 
 async function decompressGz(res: Response): Promise<Record<string, string>> {
+  if (res.status === 404) return {};   // this language simply has no dictionary
   if (!res.ok) throw new Error(`fetch ${res.status}`);
   const stream = res.body!.pipeThrough(new DecompressionStream('gzip'));
   return JSON.parse(await new Response(stream).text());
@@ -133,10 +134,11 @@ async function loadDictionary(lang: string): Promise<Map<string, string>> {
       console.log(`[Phonetix] Loaded ${lang} dictionary: ${map.size.toLocaleString()} entries (${dictScript.get(lang)})`);
       return map;
     } catch (e) {
-      console.warn(`[Phonetix] Failed to load dictionary for ${lang}:`, e);
-      const empty = new Map<string, string>();
-      dictCache.set(lang, empty);
-      return empty;
+      // Do not cache the failure: a transient fetch error would otherwise leave
+      // the language permanently empty for the rest of the session. A language
+      // with genuinely no dictionary returns {} above and is cached as empty.
+      console.error(`[Phonetix] Failed to load dictionary for ${lang}:`, e);
+      return new Map<string, string>();
     } finally {
       dictLoading.delete(lang);
     }
