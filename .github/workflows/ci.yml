@@ -17,6 +17,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Fetch dictionaries
+        run: pnpm fetch:dict
       - name: Typecheck
         run: pnpm check
       - name: Unit tests
@@ -51,6 +53,8 @@ jobs:
           # scripts in headless, which would make the suite pass against nothing.
           chrome-version: '149'
       - run: pnpm install --frozen-lockfile
+      - name: Fetch dictionaries
+        run: pnpm fetch:dict
       - run: pnpm build
       - name: Integration suite
         env:

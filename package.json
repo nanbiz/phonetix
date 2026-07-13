@@ -20,6 +20,7 @@
     "test:all": "pnpm test && pnpm test:integration && pnpm test:e2e",
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:dict": "node scripts/build-dictionaries.mjs",
+    "fetch:dict": "node scripts/fetch-dictionaries.mjs",
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare"
   },
   "devDependencies": {

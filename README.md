@@ -57,13 +57,19 @@ scripts/          build-dictionaries.mjs · evaluate-ipa.mjs · proofread/
 ## Develop
 
 ```sh
+pnpm install
+pnpm fetch:dict       # required once: download the prebuilt IPA dictionaries
 pnpm dev              # Chrome
 pnpm dev:firefox      # Firefox
 pnpm build            # + build:firefox
 pnpm zip:firefox      # distributable; sign unlisted with web-ext for install
 pnpm check            # svelte-check
-pnpm build:dict       # rebuild IPA dictionaries from the kaikki dump
+pnpm build:dict       # rebuild the dictionaries from the ~2.3GB kaikki dump
 ```
+
+The dictionaries are large binary data and are not committed. `fetch:dict` pulls
+the prebuilt set from a release asset; `build:dict` regenerates them from the
+kaikki dump. Without them the extension falls back to espeak for every word.
 
 ## Testing
 
