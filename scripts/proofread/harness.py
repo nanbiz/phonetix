@@ -44,6 +44,8 @@ class PipeCDP:
             "--disable-dev-shm-usage", "--remote-debugging-pipe",
             "--no-first-run", "--no-default-browser-check",
             "--window-size=1280,2000", "--force-device-scale-factor=1",
+            # Recent Chrome ignores --load-extension unless this kill switch is off.
+            "--disable-features=DisableLoadExtensionCommandLineSwitch",
             f"--load-extension={EXT}", f"--disable-extensions-except={EXT}",
         ] + (extra_args or []) + ["about:blank"]
         self.proc = subprocess.Popen(

@@ -91,6 +91,16 @@ class Driver:
     def js(self, expr):
         r = self.cdp.send("Runtime.evaluate", {"expression": expr, "returnByValue": True}, session=self.s)
         return r.get("result", {}).get("value")
+    def poll(self, expr, ok, tries=25, delay=2.0):
+        """Wait for the extension to finish; a cold start loads the ngram model,
+           espeak and dictionaries, which is slow on a CI runner."""
+        v = None
+        for _ in range(tries):
+            v = self.js(expr)
+            if ok(v):
+                return v
+            time.sleep(delay)
+        return v
     def close_tab(self):
         try: self.cdp.send("Target.closeTarget", {"targetId": self.tid})
         except Exception: pass
@@ -112,14 +122,14 @@ SPANS_BY = """(sel => [...document.querySelectorAll(sel)].map(d => {
 def integration(d):
     print("[integration]")
     # health: subsystems alive
-    d.load(f"http://127.0.0.1:{PORT}/mixed.html?pxhealth=1")
-    h = d.js("document.documentElement.dataset.pxhealth||'{}'")
+    d.load(f"http://127.0.0.1:{PORT}/mixed.html?pxhealth=1", settle=3)
+    h = d.poll("document.documentElement.dataset.pxhealth||''", ok=lambda v: bool(v)) or "{}"
     health = json.loads(h)
     expect("health.eld (language detection alive)", health.get("eld") is True, str(health.get("errors")))
     expect("health.dict (dictionary loaded)", health.get("dict") is True, str(health.get("errors")))
     expect("health.espeak (espeak alive)", health.get("espeak") is True, str(health.get("errors")))
     # per-title language
-    rows = d.js(f"{SPANS_BY}('div.t')")
+    rows = d.poll(f"{SPANS_BY}('div.t')", ok=lambda r: bool(r) and all(x["n"] > 0 for x in r)) or []
     right = sum(1 for r in rows if r["lang"] == r["exp"])
     for r in rows:
         expect(f"lang {r['exp']}: '{'' }'", r["lang"] == r["exp"], f"got={r['lang']} langs={r['langs']}")
@@ -127,21 +137,21 @@ def integration(d):
     d.close_tab()
 
     # garbage gating: no espeak span may be letter-spelling (contain a space)
-    d.load(f"http://127.0.0.1:{PORT}/garbage.html")
-    g = d.js(f"{SPANS_BY}('main')")[0]
-    expect("no letter-name garbage", g["space"] == 0, f"space-spans={g['space']} srcs={g['srcs']}")
+    d.load(f"http://127.0.0.1:{PORT}/garbage.html", settle=3)
+    g = (d.poll(f"{SPANS_BY}('main')", ok=lambda r: bool(r) and r[0]["n"] > 0) or [{"space": 0, "srcs": {}, "n": 0}])[0]
+    expect("no letter-name garbage", g["n"] > 0 and g["space"] == 0, f"n={g['n']} space={g['space']} srcs={g['srcs']}")
     d.close_tab()
 
     # non-Latin actually translates
-    d.load(f"http://127.0.0.1:{PORT}/nonlatin.html")
-    nl = d.js(f"{SPANS_BY}('main')")[0]
+    d.load(f"http://127.0.0.1:{PORT}/nonlatin.html", settle=3)
+    nl = (d.poll(f"{SPANS_BY}('main')", ok=lambda r: bool(r) and r[0]["n"] > 5) or [{"n": 0, "lang": "none"}])[0]
     expect("non-Latin translated (ru)", nl["n"] > 5 and nl["lang"] == "ru", f"n={nl['n']} lang={nl['lang']}")
     d.close_tab()
 
     # dynamically-added titles (feed) get processed and languaged correctly
-    d.load(f"http://127.0.0.1:{PORT}/dynamic.html", settle=6)
-    time.sleep(6)  # titles append at 2s, observer debounces + processes
-    dyn = d.js(f"{SPANS_BY}('div.t')")
+    d.load(f"http://127.0.0.1:{PORT}/dynamic.html", settle=3)
+    dyn = d.poll(f"{SPANS_BY}('div.t')",
+                 ok=lambda r: bool(r) and len(r) == 4 and all(x["n"] > 0 for x in r)) or []
     right = sum(1 for r in dyn if r["lang"] == r["exp"])
     expect("dynamic feed: all titles added + languaged", len(dyn) == 4 and right == 4,
            f"{right}/{len(dyn)} " + str([(r['exp'], r['lang']) for r in dyn]))
