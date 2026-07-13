@@ -106,7 +106,12 @@ async function decompressGz(res: Response): Promise<Record<string, string>> {
  *  after the first fetch) from the user-configured host, and otherwise the copy
  *  bundled with the extension. The host lives only in runtime storage. */
 async function fetchDictObject(lang: string): Promise<Record<string, string>> {
-  const base = (await storage.getItem<string>('local:packBaseUrl'))?.replace(/\/+$/, '');
+  let base: string | undefined;
+  try {
+    base = (await storage.getItem<string>('local:packBaseUrl'))?.replace(/\/+$/, '');
+  } catch {
+    base = undefined;   // storage unavailable is not a reason to fail the dictionary
+  }
   if (base) {
     const cached = await getCachedDict(lang);
     if (cached) return cached;
@@ -604,10 +609,18 @@ export default defineBackground(() => {
       eld = scoreTexts(['This is plainly an English sentence for detection.'])[0]?.ranked[0] === 'en';
       if (!eld) errors.push('eld: wrong or empty detection');
     } catch (e) { errors.push(`eld: ${e}`); }
-    try {
-      dict = (await loadDictionary('en')).size > 1000;
-      if (!dict) errors.push('dict: en dictionary empty');
-    } catch (e) { errors.push(`dict: ${e}`); }
+    // The probe can land while the worker is cold and loading several
+    // dictionaries at once, so give a failed load a second chance before
+    // calling the subsystem broken.
+    for (let attempt = 0; attempt < 3 && !dict; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, 1500));
+      try {
+        dict = (await loadDictionary('en')).size > 1000;
+      } catch (e) {
+        if (attempt === 2) errors.push(`dict: ${e}`);
+      }
+    }
+    if (!dict && errors.every((e) => !e.startsWith('dict:'))) errors.push('dict: en dictionary empty');
     try {
       const r = await phonemizeHost(['hello'], 'en');
       espeak = typeof r['hello'] === 'string' && r['hello'].length > 0 && r['hello'] !== 'hello';
