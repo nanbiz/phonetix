@@ -79,6 +79,10 @@ def serve(port):
 class Driver:
     def __init__(self):
         self.cdp = PipeCDP(); self.cdp.send("Target.setDiscoverTargets", {"discover": True})
+        # Fail loudly if the extension is not actually loaded, rather than running
+        # every assertion against a browser with no extension and "passing".
+        self.extid = self.cdp.ensure_extension()
+        print(f"  (extension loaded: {self.extid})", flush=True)
     def load(self, url, settle=9):
         c = self.cdp
         tid = c.send("Target.createTarget", {"url": "about:blank"})["targetId"]

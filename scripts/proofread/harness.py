@@ -87,6 +87,29 @@ class PipeCDP:
             # else: event or other id — drop
         raise TimeoutError(method)
 
+    def ensure_extension(self) -> str:
+        """Make sure the extension is actually loaded, and return its id.
+
+        `--load-extension` is being removed from Chrome, so fall back to the CDP
+        Extensions domain. Raises if it could not be loaded — a suite that runs
+        against a browser with no extension would pass vacuously.
+        """
+        for _ in range(15):
+            for t in self.send("Target.getTargets")["targetInfos"]:
+                if t["url"].startswith("chrome-extension://"):
+                    return t["url"].split("/")[2]
+            time.sleep(1)
+        try:
+            self.send("Extensions.loadUnpacked", {"path": EXT})
+        except Exception as e:
+            raise RuntimeError(f"extension not loaded and Extensions.loadUnpacked failed: {e}")
+        for _ in range(15):
+            for t in self.send("Target.getTargets")["targetInfos"]:
+                if t["url"].startswith("chrome-extension://"):
+                    return t["url"].split("/")[2]
+            time.sleep(1)
+        raise RuntimeError("extension did not load")
+
     def close(self):
         try:
             self.proc.terminate(); self.proc.wait(timeout=5)
