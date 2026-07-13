@@ -39,7 +39,8 @@ class PipeCDP:
         for fd in (self.tc_r, self.fc_w):
             os.set_inheritable(fd, True)
         args = [
-            "chromium", "--headless=new", "--no-sandbox", "--disable-gpu",
+            os.environ.get("PHONETIX_CHROMIUM", "chromium"),
+            "--headless=new", "--no-sandbox", "--disable-gpu",
             "--disable-dev-shm-usage", "--remote-debugging-pipe",
             "--no-first-run", "--no-default-browser-check",
             "--window-size=1280,2000", "--force-device-scale-factor=1",

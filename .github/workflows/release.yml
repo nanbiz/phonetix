@@ -1,0 +1,49 @@
+name: Release
+
+# Tag a version to build, sign and publish it:
+#   pnpm version minor && git push --follow-tags
+# AMO rejects a version it has already seen, so the tag must be a new version.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build:firefox && pnpm build
+
+      - name: Sign (AMO, unlisted)
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.MOZ_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.MOZ_API_SECRET }}
+        run: |
+          pnpm dlx web-ext@latest sign \
+            --channel=unlisted \
+            --source-dir=.output/firefox-mv2 \
+            --artifacts-dir=.output/signed
+
+      - name: Package Chrome zip
+        run: pnpm zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            .output/signed/*.xpi .output/*-chrome.zip

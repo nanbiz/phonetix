@@ -4,12 +4,18 @@ import Icons from 'unplugin-icons/vite';
 import fs from 'fs';
 import path from 'path';
 
-const paths = JSON.parse(
-  fs.readFileSync(
-    path.join(process.cwd(), '.cache', 'browsers', 'paths.json'),
-    'utf-8'
-  )
-);
+// Browsers for `wxt dev` are downloaded by scripts/install-browsers.mjs. They are
+// absent on a clean checkout and in CI, where only a build is needed.
+function devBrowsers(): Record<string, string> | undefined {
+  try {
+    return JSON.parse(
+      fs.readFileSync(path.join(process.cwd(), '.cache', 'browsers', 'paths.json'), 'utf-8')
+    );
+  } catch {
+    return undefined;
+  }
+}
+const paths = devBrowsers();
 
 export default defineConfig({
   vite: () => ({
@@ -35,10 +41,7 @@ export default defineConfig({
       ? { browser_specific_settings: { gecko: { id: 'phonetix@nanbiz.github.io' } } }
       : {}),
   }),
-  webExt: {
-    binaries: {
-      chrome: paths['chrome'],
-      firefox: paths['firefox'],
-    },
-  },
+  ...(paths
+    ? { webExt: { binaries: { chrome: paths['chrome'], firefox: paths['firefox'] } } }
+    : {}),
 });

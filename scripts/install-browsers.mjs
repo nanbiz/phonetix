@@ -9,6 +9,12 @@ import {
     BrowserTag,
 } from "@puppeteer/browsers";
 
+// Browsers are only needed for `wxt dev`; CI builds and tests do not use them.
+if (process.env.CI) {
+    console.log("CI detected, skipping browser download");
+    process.exit(0);
+}
+
 const cacheDir = path.join(process.cwd(), ".cache", "browsers");
 fs.mkdirSync(cacheDir, { recursive: true });
 
