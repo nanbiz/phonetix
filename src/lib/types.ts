@@ -206,6 +206,13 @@ export const Modes = {
 
 export type Mode = keyof typeof Modes;
 
+/** Short labels, for controls that show every mode side by side. */
+export const ModeLabels: Record<Mode, string> = {
+  wholePage: 'Whole page',
+  onHover: 'IPA on hover',
+  showOriginalOnHover: 'Word on hover',
+};
+
 export interface ResolvedIpa {
   ipa: string;
   /** Language the IPA was resolved from. May differ from the block language for

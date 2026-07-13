@@ -37,6 +37,8 @@ interface ProtocolMap {
   languageChanged(language: LanguageOption): void;
   modeChanged(mode: Mode): void;
   accentChanged(accents: Record<string, string>): void;
+  /** Hide the stress marks in the rendered IPA (the tooltip still shows them). */
+  stressMarksChanged(hide: boolean): void;
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

@@ -1,6 +1,7 @@
 import { onMessage } from '@/lib/messaging';
 import type { WiktionaryInfo } from '@/lib/messaging';
 import { getCachedBatch, setCachedBatch, getCachedDict, setCachedDict } from '@/lib/cache';
+import { normalizeIpa } from '@/lib/ipa-normalize';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
 import type { Language, PhonemeResult } from '@/lib/types';
 
@@ -133,7 +134,13 @@ async function loadDictionary(lang: string): Promise<Map<string, string>> {
   const promise = (async () => {
     try {
       const obj = await fetchDictObject(lang);
-      const map = new Map<string, string>(Object.entries(obj));
+      // Entries can list variants or mark optional sounds; the page shows one
+      // pronunciation, so each value is reduced to one as it is loaded.
+      const map = new Map<string, string>();
+      for (const [word, raw] of Object.entries(obj)) {
+        const ipa = normalizeIpa(word, raw);
+        if (ipa) map.set(word, ipa);
+      }
       dictCache.set(lang, map);
       dictScript.set(lang, dominantScript([...map.keys()]));  // the language's script, from its own data
       console.log(`[Phonetix] Loaded ${lang} dictionary: ${map.size.toLocaleString()} entries (${dictScript.get(lang)})`);

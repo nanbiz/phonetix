@@ -243,6 +243,25 @@ def integration(d):
     d.close_tab()
 
 
+JUNK_PROBE = """(() => {
+  const bad = [];
+  for (const s of document.querySelectorAll('.phonetix .px-ipa')) {
+    const t = (s.textContent || '').trim();
+    if (/[,;~\\/()\\[\\]]/.test(t)) bad.push(t);
+  }
+  return JSON.stringify({n: document.querySelectorAll('.phonetix .px-ipa').length, bad: bad.slice(0, 5)});
+})()"""
+
+
+def no_variant_junk(d, label):
+    """A rendered IPA may never carry variant punctuation: dictionary entries list
+       alternatives ("the" -> "ðə, ði") and mark optional sounds, and those must be
+       reduced to one pronunciation before they reach the page."""
+    r = json.loads(d.js(JUNK_PROBE) or '{"n": 0, "bad": ["probe failed"]}')
+    expect(f"{label}: one pronunciation per word", r["n"] > 0 and not r["bad"],
+           f"n={r['n']} bad={r['bad']}")
+
+
 def e2e(d):
     print("[e2e]")
     cases = [

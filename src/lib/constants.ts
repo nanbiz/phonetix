@@ -229,26 +229,4 @@ export const TOOLTIP_CSS = `
 .px-detail-eg { font-size: 10px; color: #666; }
 .px-detail-empty { font-size: 10px; color: #555; font-style: italic; }
 
-/* ── Footer: legend + wiktionary ── */
-.px-footer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 4px;
-  border-top: 1px solid #2a2a2d;
-}
-.px-leg {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 9px;
-  color: #666;
-}
-.px-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-}
-.px-dot.C { background: #6d9fff; }
-.px-dot.V { background: #ff6d8f; }
-.px-dot.S { background: #b78dff; }
 `.trim();

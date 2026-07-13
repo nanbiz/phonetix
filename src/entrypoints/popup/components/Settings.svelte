@@ -1,12 +1,12 @@
 <script lang="ts">
   import Dropdown from "./Dropdown.svelte";
-  import MultiSelect from "svelte-multiselect";
+  import Segmented from "./Segmented.svelte";
   import Info from "virtual:icons/line-md/alert-circle";
   import Book from "virtual:icons/line-md/document";
 
   import { getCurrentTabId, sendMessage } from "@/lib/messaging"
 
-  import { Languages, LanguageNames, LanguageOptions, Modes, AccentsByLanguage, DefaultAccents } from "@/lib/types"
+  import { Languages, LanguageNames, Modes, ModeLabels, AccentsByLanguage, DefaultAccents } from "@/lib/types"
   import type { LanguageOption, Mode } from "@/lib/types"
 
   let selectedLanguage = $state<LanguageOption>("auto");
@@ -23,32 +23,38 @@
     selectedLanguage === 'auto' ? detectedLanguage : selectedLanguage as string
   );
 
-  // Available accents for the effective language, and the one in force for it
-  let currentAccents = $derived(AccentsByLanguage[effectiveLanguage] || {});
-  let selectedAccent = $derived<string>(
-    accents[effectiveLanguage] || DefaultAccents[effectiveLanguage] || effectiveLanguage
-  );
-  let currentAccentLabel = $derived(currentAccents[selectedAccent] || selectedAccent);
+  // Accents are a standing per-language preference, not a property of the page:
+  // only the languages that actually offer a choice get a row.
+  const accentChoices = Object.entries(AccentsByLanguage)
+    .filter(([, opts]) => Object.keys(opts).length > 1)
+    .sort(([a], [b]) => (LanguageNames[a] || a).localeCompare(LanguageNames[b] || b));
 
-  // Build language options for MultiSelect
-  interface LangOption {
-    label: string;
-    value: string;
-    dictEntries?: number;
-    [key: string]: unknown;  // satisfy svelte-multiselect's ObjectOption
+  function accentOf(lang: string): string {
+    return accents[lang] || DefaultAccents[lang] || lang;
   }
 
-  let languageOptionsList = $derived<LangOption[]>([
-    { label: 'Auto-detect', value: 'auto' },
-    ...Object.entries(Languages).map(([code, cfg]) => {
-      const dict = dictManifest[code];
-      const suffix = dict ? ` (${(dict.entries / 1000).toFixed(0)}k words)` : ' (espeak only)';
-      return { label: `${cfg.name}${suffix}`, value: code, dictEntries: dict?.entries };
-    }).sort((a, b) => a.label.localeCompare(b.label)),
-  ]);
+  // The accent for the language actually on screen is the one worth showing; the
+  // others are a standing preference you rarely revisit.
+  let pageAccent = $derived<Record<string, string> | null>(
+    Object.keys(AccentsByLanguage[effectiveLanguage] || {}).length > 1
+      ? AccentsByLanguage[effectiveLanguage]
+      : null,
+  );
+  let otherAccentChoices = $derived(accentChoices.filter(([lang]) => lang !== effectiveLanguage));
 
-  let selectedLangOption = $derived(
-    languageOptionsList.find(o => o.value === selectedLanguage) || languageOptionsList[0]
+  // Language options: auto first, then every language with the size of the
+  // dictionary behind it, so the choice says what it will actually get you.
+  let languageOptions = $derived<Record<string, string>>(
+    Object.fromEntries([
+      ['auto', 'Auto-detect'],
+      ...Object.entries(Languages)
+        .map(([code, cfg]) => {
+          const dict = dictManifest[code];
+          const suffix = dict ? ` (${(dict.entries / 1000).toFixed(0)}k words)` : ' (espeak only)';
+          return [code, `${cfg.name}${suffix}`] as [string, string];
+        })
+        .sort((a, b) => a[1].localeCompare(b[1])),
+    ]),
   );
 
   // Load manifest
@@ -88,12 +94,6 @@
     }
   });
 
-  function onLanguageSelect(selected: LangOption | LangOption[]) {
-    const opt = Array.isArray(selected) ? selected[0] : selected;
-    if (!opt) return;
-    selectedLanguage = opt.value as LanguageOption;
-  }
-
   // Persist + notify on language change. The accent map is keyed by language and
   // survives this: switching language reveals that language's accent, it does not
   // overwrite anything.
@@ -103,8 +103,17 @@
     (async () => sendMessage('languageChanged', selectedLanguage, await getCurrentTabId()))();
   });
 
-  async function setAccent(accent: string) {
-    accents = { ...accents, [effectiveLanguage]: accent };
+  let hideStress = $state(false);
+  (async () => { hideStress = (await storage.getItem<string>('local:hideStress')) === 'true'; })();
+
+  async function setHideStress(hide: boolean) {
+    hideStress = hide;
+    await storage.setItem<string>('local:hideStress', String(hide));
+    sendMessage('stressMarksChanged', hide, await getCurrentTabId());
+  }
+
+  async function setAccent(lang: string, accent: string) {
+    accents = { ...accents, [lang]: accent };
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
     sendMessage('accentChanged', accents, await getCurrentTabId());
   }
@@ -151,26 +160,15 @@
     </div>
   {/if}
   <!-- Language selector -->
-  <div class="flex flex-col gap-2">
-    <h1 class="text-lg font-medium text-white">Language</h1>
-    <MultiSelect
-      options={languageOptionsList}
-      selected={[selectedLangOption]}
-      maxSelect={1}
-      placeholder="Search languages..."
-      onchange={(data) => { if (data.option) onLanguageSelect(data.option as LangOption); }}
-      --sms-border="1px solid #374151"
-      --sms-bg="transparent"
-      --sms-text-color="white"
-      --sms-options-bg="#1f2937"
-      --sms-li-selected-bg="#374151"
-      --sms-li-active-bg="#374151"
-      --sms-font-size="0.95rem"
-      --sms-padding="0.6rem 0.8rem"
-      --sms-min-height="2.8rem"
+  <div class="flex flex-col gap-1">
+    <Dropdown
+      topic="Language"
+      elements={languageOptions}
+      selectedElement={selectedLanguage}
+      onElementChange={(lang) => (selectedLanguage = lang as LanguageOption)}
     />
     {#if selectedLanguage === 'auto'}
-      <p class="text-xs text-gray-500 px-1">
+      <p class="px-1 text-xs text-gray-500">
         Detected: <strong class="text-gray-400">{LanguageNames[detectedLanguage] || detectedLanguage}</strong>
         {#if effectiveHasDict}
           — using Wiktionary dictionary
@@ -179,37 +177,65 @@
         {/if}
       </p>
     {:else if effectiveHasDict}
-      <p class="text-xs text-gray-500 px-1">
+      <p class="px-1 text-xs text-gray-500">
         Using Wiktionary dictionary ({(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words)
       </p>
     {:else}
-      <p class="text-xs text-gray-500 px-1">
+      <p class="px-1 text-xs text-gray-500">
         No dictionary available — using espeak synthesis only
       </p>
     {/if}
   </div>
 
-  {#if Object.keys(currentAccents).length > 1}
-    <Dropdown
-      topic={`Accent (${LanguageNames[effectiveLanguage] || effectiveLanguage})`}
-      headEntry={currentAccentLabel}
-      selectedElement={selectedAccent}
-      elements={currentAccents}
-      onElementChange={setAccent}
+  <!-- The page's own language first, the rest only if asked for. -->
+  {#if pageAccent}
+    <Segmented
+      topic={`${LanguageNames[effectiveLanguage] || effectiveLanguage} accent`}
+      selectedElement={accentOf(effectiveLanguage)}
+      elements={pageAccent}
+      onElementChange={(accent) => setAccent(effectiveLanguage, accent)}
     />
   {/if}
 
-  <Dropdown
+  {#if otherAccentChoices.length}
+    <details class="px-1">
+      <summary class="cursor-pointer select-none text-xs text-gray-500">
+        Accents for other languages
+      </summary>
+      <div class="mt-2 flex flex-col gap-2">
+        {#each otherAccentChoices as [lang, options] (lang)}
+          <Segmented
+            topic={LanguageNames[lang] || lang}
+            selectedElement={accentOf(lang)}
+            elements={options}
+            onElementChange={(accent) => setAccent(lang, accent)}
+          />
+        {/each}
+      </div>
+    </details>
+  {/if}
+
+  <Segmented
     topic="Mode"
-    headEntry={Modes[selectedMode]}
     selectedElement={selectedMode}
-    elements={Modes}
+    elements={ModeLabels}
     onElementChange={(mode) => {
-      if (mode in Modes) {
-        selectedMode = mode as Mode;
-      }
+      if (mode in Modes) selectedMode = mode as Mode;
     }}
   />
+
+  <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
+    <span class="text-sm text-gray-300">
+      Hide stress marks
+      <span class="block text-xs text-gray-500">Leaves out ˈ and ˌ; the tooltip still shows them</span>
+    </span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary toggle-sm flex-none"
+      checked={hideStress}
+      onchange={(e) => setHideStress((e.currentTarget as HTMLInputElement).checked)}
+    />
+  </label>
 
   <details class="mt-2 px-1">
     <summary class="text-xs text-gray-500 cursor-pointer select-none">Advanced</summary>

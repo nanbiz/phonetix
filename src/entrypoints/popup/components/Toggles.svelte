@@ -1,19 +1,30 @@
 <script lang="ts">
   import {getCurrentTabId, sendMessage} from "@/lib/messaging"
 
+  /** The extension switch is the default for any site you have not decided on.
+   *  The site switch is a decision about this site, and it wins — so a site can
+   *  be on while the default is off, and the other way round. A site with no
+   *  decision simply follows the default, and toggling it back to the default
+   *  drops the decision again. */
   let hostname = $state("");
   let faviconUrl = $state("");
-  let extension_enabled = $state(false);
-  let current_website_enabled = $state(false);
+  let defaultEnabled = $state(true);
+  let siteOverride = $state<boolean | null>(null);
   let stateInitialized = $state(false);
+
+  let siteEnabled = $derived(siteOverride ?? defaultEnabled);
+
+  async function notify() {
+    sendMessage('extensionToggled', siteEnabled, await getCurrentTabId());
+  }
 
   (async () => {
     try {
       const extState = await storage.getItem<string>('local:extension_enabled');
-      extension_enabled = extState ? JSON.parse(extState) : true;
+      defaultEnabled = extState ? JSON.parse(extState) : true;
 
-      // Use the promise-based `browser` API: Firefox's `chrome.*` is callback-only,
-      // so awaiting it yields nothing and the per-site row would never render.
+      // Firefox's `chrome.*` is callback-only, so awaiting it yields nothing and
+      // the per-site row would never render. `browser.*` is the promise-based API.
       const tabs = await browser.tabs.query({ active: true, currentWindow: true });
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url);
@@ -21,82 +32,75 @@
         faviconUrl = tabs[0].favIconUrl || "";
 
         const websiteState = await storage.getItem<string>('local:websites_enabled');
-        const parsedWebsites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
-        current_website_enabled = hostname in parsedWebsites ? parsedWebsites[hostname] : true;
+        const sites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
+        siteOverride = hostname in sites ? sites[hostname] : null;
       }
     } catch (error) {
       console.error("Initialization error:", error);
-      extension_enabled = true;
-      current_website_enabled = true;
     }
     stateInitialized = true;
   })();
 
-  $effect(() => {
-    const saveExtensionState = async (enabled: boolean) => {
-      try {
-        await storage.setItem('local:extension_enabled', JSON.stringify(enabled));
-      } catch (error) {
-        console.error("Error saving extension state:", error);
-      }
-    };
-    saveExtensionState(extension_enabled);
-  });
+  async function setDefault(enabled: boolean) {
+    defaultEnabled = enabled;
+    await storage.setItem('local:extension_enabled', JSON.stringify(enabled));
+    await notify();
+  }
 
-  $effect(() => {
-    const saveWebsiteState = async (current_website_enabled: boolean) => {
-      if (!hostname) return;
+  async function setSite(enabled: boolean) {
+    // Matching the default is not a decision, it is the absence of one.
+    siteOverride = enabled === defaultEnabled ? null : enabled;
 
-      try {
-        const websites = await storage.getItem<string>('local:websites_enabled');
-        const parsedWebsites: Record<string, boolean> = websites ? JSON.parse(websites) : {};
-        parsedWebsites[hostname] = current_website_enabled;
-        await storage.setItem('local:websites_enabled', JSON.stringify(parsedWebsites));
-      } catch (error) {
-        console.error("Error saving website state:", error);
-      }
-    };
-    saveWebsiteState(current_website_enabled);
-  });
-
-  $effect(() => {
-    (async () => sendMessage('extensionToggled', extension_enabled && current_website_enabled, await getCurrentTabId()))();
-  })
+    const websiteState = await storage.getItem<string>('local:websites_enabled');
+    const sites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
+    if (siteOverride === null) delete sites[hostname];
+    else sites[hostname] = siteOverride;
+    await storage.setItem('local:websites_enabled', JSON.stringify(sites));
+    await notify();
+  }
 </script>
 
-<div class="flex flex-col gap-4 items-start w-full px-4 py-2">
-  <div class="flex justify-between items-center w-full">
-    <h1 class="text-4xl font-bold">Phonetix</h1>
+<div class="flex w-full flex-col gap-3 px-4 py-3">
+  <div class="flex w-full items-center justify-between">
+    <div class="min-w-0">
+      <h1 class="text-3xl font-bold">Phonetix</h1>
+      <p class="text-xs text-gray-500">Default for sites you have not set</p>
+    </div>
     {#if stateInitialized}
-    <input 
-      type="checkbox" 
-      class="toggle toggle-primary toggle-lg" 
-      bind:checked={extension_enabled} 
-    />
+      <input
+        type="checkbox"
+        class="toggle toggle-primary toggle-lg"
+        checked={defaultEnabled}
+        onchange={(e) => setDefault((e.currentTarget as HTMLInputElement).checked)}
+      />
     {/if}
   </div>
 
   {#if hostname}
-    <div class="flex items-center gap-4 w-full">
+    <div class="flex w-full items-center gap-3">
       <img
-        class="w-8 h-8 object-contain flex-none"
+        class="h-7 w-7 flex-none object-contain"
         src={faviconUrl}
-        alt="website icon"
+        alt=""
         onerror={function (this: HTMLImageElement) {
           this.style.visibility = "hidden";
-          }}
+        }}
       />
 
-      <span class="text-lg font-medium flex-1 min-w-0 truncate">
-        {hostname}
-      </span>
+      <div class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium">{hostname}</span>
+        <span class="text-xs text-gray-500">
+          {siteOverride === null ? 'following the default' : siteOverride ? 'always on here' : 'always off here'}
+        </span>
+      </div>
+
       {#if stateInitialized}
-      <input 
-        type="checkbox" 
-        class="toggle toggle-primary toggle-md flex-none" 
-        disabled={!extension_enabled} 
-        bind:checked={current_website_enabled} 
-      />
+        <input
+          type="checkbox"
+          class="toggle toggle-primary toggle-md flex-none"
+          checked={siteEnabled}
+          onchange={(e) => setSite((e.currentTarget as HTMLInputElement).checked)}
+        />
       {/if}
     </div>
   {/if}

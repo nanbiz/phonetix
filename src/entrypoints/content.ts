@@ -35,6 +35,15 @@ function voiceFor(lang: Language): string {
   return accents[lang] || DefaultAccents[lang] || lang;
 }
 let mode: Mode = 'wholePage';
+/** Stress marks read like stray apostrophes mid-sentence, so they can be left
+ *  out of the page. The tooltip always shows the full transcription. */
+let hideStress = false;
+
+const STRESS_MARKS = /[\u02C8\u02CC]/g;
+
+function displayIpa(ipa: string): string {
+  return hideStress ? ipa.replace(STRESS_MARKS, '') : ipa;
+}
 
 // =====================================================================
 //  Pure helpers (no side effects, no DOM)
@@ -264,8 +273,7 @@ function showTooltip(target: HTMLElement): void {
   // Read final data from span (already clean — set by createPhoneticSpan)
   const word = target.dataset.original || '';
   const lang = (target.dataset.lang as Language) || pageLang;
-  const ipaSpan = target.querySelector(`.${IPA_CLASS}`);
-  const ipa = ipaSpan?.textContent || '';
+  const ipa = target.dataset.ipa || '';
   const src = target.dataset.src || 'dict';
   if (!word || !ipa) return;
 
@@ -383,7 +391,7 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   }).catch(() => { audioBtn.title = 'No human recording on Wiktionary'; });
 }
 
-/** Build (or rebuild) the IPA symbol grid + detail + legend into a container. */
+/** Build (or rebuild) the IPA symbol grid and its detail line into a container. */
 function renderSymbols(container: HTMLElement, ipa: string): void {
   container.innerHTML = '';
   const tokens = tokenizeIPA(ipa);
@@ -427,16 +435,6 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
     container.appendChild(grid);
     container.appendChild(detail);
   }
-
-  const footer = el('div', 'px-footer');
-  for (const [c, label] of [['C', 'consonant'], ['V', 'vowel'], ['S', 'stress']] as const) {
-    const leg = el('span', 'px-leg');
-    leg.appendChild(el('span', `px-dot ${c}`));
-    leg.appendChild(document.createTextNode(label));
-    footer.appendChild(leg);
-  }
-  footer.appendChild(el('div', 'px-spacer'));
-  container.appendChild(footer);
 }
 
 // DOM helpers
@@ -468,28 +466,35 @@ function btn(cls: string, svg: string, title: string): HTMLButtonElement {
  * - Language is resolved (espeak markers override block detection)
  * The tooltip just reads these values — no re-processing.
  */
-function createPhoneticSpan(original: string, r: ResolvedIpa): HTMLSpanElement {
+function createPhoneticSpan(original: string, r: ResolvedIpa, trailing = ''): HTMLSpanElement {
   const finalLang = extractIPALang(r.ipa) || r.lang;
   const finalIpa = cleanIPA(r.ipa);
 
   const span = document.createElement('span');
   span.className = PHONETIX_CLASS;
   span.dataset.original = original;
+  span.dataset.ipa = finalIpa;     // the pronunciation alone, without the trailing mark
   span.dataset.lang = finalLang;   // resolution language (may differ from block for loanwords)
   span.dataset.src = r.src;        // 'dict' | 'espeak' — drives the tooltip source label
 
   const origSpan = document.createElement('span');
   origSpan.className = ORIG_CLASS;
-  origSpan.textContent = original;
+  origSpan.textContent = original + trailing;
 
   const ipaSpan = document.createElement('span');
   ipaSpan.className = IPA_CLASS;
-  ipaSpan.textContent = finalIpa; // CLEAN — tooltip reads this directly
+  ipaSpan.textContent = displayIpa(finalIpa) + trailing;
 
   span.appendChild(origSpan);
   span.appendChild(ipaSpan);
   return span;
 }
+
+/** Punctuation that closes a word rather than joining or opening one. The hover
+ *  modes stack the word and its IPA in one cell as wide as the wider of the two,
+ *  so a mark left outside the cell drifts away from the word it belongs to when
+ *  the word is the wider one. Carried inside both layers, it stays attached. */
+const TRAILING_MARK = /^[.,;:!?…)\]}»”’]+/u;
 
 // =====================================================================
 //  Page processing
@@ -735,14 +740,25 @@ function transformNode(node: Text, ipaMap: PhonemeResult, lang: Language, overri
 
   const frag = document.createDocumentFragment();
   let wordIdx = 0;
-  for (const s of segs) {
+  let carried = 0;   // characters of the next segment already taken as a trailing mark
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i];
     if (s.isWord) {
       // Homograph override (context-resolved) wins over the context-free dict/espeak result.
       const r = override?.get(wordIdx) ?? ipaMap[s.text.toLowerCase()];
       wordIdx++;
-      frag.appendChild(r ? createPhoneticSpan(s.text, r) : document.createTextNode(s.text));
+      if (!r) {
+        frag.appendChild(document.createTextNode(s.text));
+        continue;
+      }
+      const next = segs[i + 1];
+      const mark = next && !next.isWord ? (next.text.match(TRAILING_MARK)?.[0] ?? '') : '';
+      carried = mark.length;
+      frag.appendChild(createPhoneticSpan(s.text, r, mark));
     } else if (s.text) {
-      frag.appendChild(document.createTextNode(s.text));
+      const rest = s.text.slice(carried);
+      carried = 0;
+      if (rest) frag.appendChild(document.createTextNode(rest));
     }
   }
   node.parentNode?.replaceChild(frag, node);
@@ -879,6 +895,8 @@ export default defineContentScript({
       const savedAccents = await storage.getItem<string>('local:accents');
       if (savedAccents) accents = JSON.parse(savedAccents);
 
+      hideStress = (await storage.getItem<string>('local:hideStress')) === 'true';
+
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
 
@@ -927,6 +945,11 @@ export default defineContentScript({
       } else {
         pageLang = languageOption as Language;
       }
+      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
+    });
+
+    onMessage('stressMarksChanged', async (msg) => {
+      hideStress = msg.data;
       if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
     });
 
