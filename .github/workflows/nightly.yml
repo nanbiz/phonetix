@@ -1,0 +1,34 @@
+name: Nightly
+
+# Real websites change under us, so check them on a schedule rather than on every
+# push: a failure here means the world moved, not that the commit broke something.
+on:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: '149'
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch dictionaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm fetch:dict
+      - run: pnpm build
+      - name: End-to-end suite (real sites)
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:e2e

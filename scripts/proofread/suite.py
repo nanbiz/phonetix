@@ -46,6 +46,15 @@ FIXTURES = {
   "/nonlatin.html": """<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>x</title></head><body><main>
    <p>Кошка это домашнее животное которое живёт рядом с человеком очень давно.</p></main></body></html>""",
 
+  # Text the user is editing must never be rewritten: rich editors are
+  # contenteditable elements, not <textarea>, and transforming them corrupts typing.
+  "/editable.html": """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>x</title></head><body><main>
+   <p id="prose">This is ordinary readable prose that should be transcribed normally.</p>
+   <div id="editor" contenteditable="true">I am typing a private message here right now</div>
+   <div id="outer"><span id="nested">nested inside an editable region</span></div>
+   <textarea id="ta">Some textarea content that must stay untouched</textarea>
+  </main><script>document.getElementById('outer').contentEditable = 'true';</script></body></html>""",
+
   # A feed that appends foreign-language titles after load (the YouTube shape):
   # the MutationObserver must process the new subtree and language it correctly.
   "/dynamic.html": """<!doctype html><html lang="de"><head><meta charset="utf-8"><title>x</title></head><body><main id="feed">
@@ -163,6 +172,21 @@ def integration(d):
     d.load(f"http://127.0.0.1:{PORT}/nonlatin.html", settle=3)
     nl = (d.poll(f"{SPANS_BY}('main')", ok=lambda r: bool(r) and r[0]["n"] > 5) or [{"n": 0, "lang": "none"}])[0]
     expect("non-Latin translated (ru)", nl["n"] > 5 and nl["lang"] == "ru", f"n={nl['n']} lang={nl['lang']}")
+    d.close_tab()
+
+    # editable regions must never be transformed
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    ed = d.poll("JSON.stringify({prose: document.querySelectorAll('#prose .phonetix').length,"
+                " editor: document.querySelectorAll('#editor .phonetix').length,"
+                " nested: document.querySelectorAll('#outer .phonetix').length,"
+                " editorText: document.getElementById('editor').textContent.trim()})",
+                ok=lambda v: bool(v) and json.loads(v)["prose"] > 0)
+    e = json.loads(ed or "{}")
+    expect("prose is transcribed", e.get("prose", 0) > 0, str(e))
+    expect("contenteditable untouched", e.get("editor") == 0, str(e))
+    expect("nested contenteditable untouched", e.get("nested") == 0, str(e))
+    expect("editable text unchanged",
+           e.get("editorText") == "I am typing a private message here right now", str(e.get("editorText")))
     d.close_tab()
 
     # dynamically-added titles (feed) get processed and languaged correctly

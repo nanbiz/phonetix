@@ -7,7 +7,7 @@ import os, subprocess, tempfile, time, threading, http.server, functools, glob, 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 XPI = sorted(glob.glob(os.path.join(ROOT, ".output/signed/*.xpi")))[-1]
-FIREFOX = "/run/current-system/sw/bin/firefox"
+FIREFOX = os.environ.get("PHONETIX_FIREFOX", "firefox")
 HEALTH_HTML = b"<!doctype html><html lang='en'><meta charset='utf-8'><body><p>This is an English sentence so detection has something to work with.</p></body></html>"
 
 def serve(port):
@@ -23,8 +23,12 @@ def main():
     port = 8912; serve(port)
     prof = tempfile.mkdtemp(prefix="ff-phonetix-")
     os.makedirs(os.path.join(prof, "extensions"), exist_ok=True)
-    # sideload the signed xpi (auto-enabled), enable marionette
-    import shutil; shutil.copy(XPI, os.path.join(prof, "extensions", "phonetix@extension.xpi"))
+    # Sideload the signed xpi. Firefox requires the file to be named after the
+    # add-on id, so read it out of the manifest rather than assuming it.
+    import shutil, zipfile, json as _json
+    gecko_id = _json.loads(zipfile.ZipFile(XPI).read("manifest.json"))[
+        "browser_specific_settings"]["gecko"]["id"]
+    shutil.copy(XPI, os.path.join(prof, "extensions", f"{gecko_id}.xpi"))
     with open(os.path.join(prof, "user.js"), "w") as f:
         f.write('user_pref("extensions.autoDisableScopes", 0);\n')
         f.write('user_pref("marionette.port", 2828);\n')

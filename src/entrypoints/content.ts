@@ -250,20 +250,23 @@ function showTooltip(target: HTMLElement): void {
   curTargetRect = rect;
   const th = ttEl.offsetHeight;
   const tw = ttEl.offsetWidth;
-  let top: number;
+  // Anchor to the word's edge rather than a computed top: the Wiktionary row is
+  // filled in asynchronously, and a tooltip pinned by its top would grow downwards
+  // over the very word it describes.
   if (rect.top > th + 12) {
-    top = rect.top - th - 8;
     ttAbove = true;
     ttEl.classList.add('above');
+    ttEl.style.top = 'auto';
+    ttEl.style.bottom = `${window.innerHeight - rect.top + 8}px`;
   } else {
-    top = rect.bottom + 8;
     ttAbove = false;
     ttEl.classList.add('below');
+    ttEl.style.bottom = 'auto';
+    ttEl.style.top = `${rect.bottom + 8}px`;
   }
   const cx = rect.left + rect.width / 2;
   let left = Math.max(8, Math.min(cx - tw / 2, window.innerWidth - tw - 8));
   ttEl.style.setProperty('--arrow-left', `${Math.max(12, Math.min(cx - left, tw - 12))}px`);
-  ttEl.style.top = `${top}px`;
   ttEl.style.left = `${left}px`;
 
   ttVisible = true;
@@ -592,6 +595,10 @@ function collectTextNodes(root: Node): Text[] {
       if (!p) return NodeFilter.FILTER_SKIP;
       if (BLOCKED_TAGS.has(p.tagName)) return NodeFilter.FILTER_SKIP;
       if (p.closest(`.${PHONETIX_CLASS}`)) return NodeFilter.FILTER_SKIP;
+      // Never touch text the user is editing. Rich editors (claude.ai, Google Docs,
+      // most comment boxes) are contenteditable elements, not <textarea>, and
+      // rewriting them would corrupt what is being typed.
+      if (p.isContentEditable) return NodeFilter.FILTER_SKIP;
       // Skip UI chrome (nav, footer, buttons, ARIA landmarks) — not reading content.
       if (p.closest(CHROME_SELECTOR)) return NodeFilter.FILTER_SKIP;
       const v = node.nodeValue?.trim();

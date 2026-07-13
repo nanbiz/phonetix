@@ -41,6 +41,17 @@ jobs:
             --source-dir=.output/firefox-mv2 \
             --artifacts-dir=.output/signed
 
+      # The signed artifact is what users install, so verify it really works in
+      # Firefox (espeak runs in the background page there, not an offscreen doc)
+      # before publishing it.
+      - uses: astral-sh/setup-uv@v5
+      - uses: browser-actions/setup-firefox@v1
+        id: firefox
+      - name: Verify signed xpi in Firefox
+        env:
+          PHONETIX_FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
+        run: pnpm test:firefox
+
       - name: Package Chrome zip
         run: pnpm zip
 

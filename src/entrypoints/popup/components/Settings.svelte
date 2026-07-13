@@ -237,7 +237,8 @@
     </button>
 
     {#if showInfo}
-      <div class="mt-2 text-xs text-gray-500 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
+      <!-- Bounded and scrollable, so opening it does not resize the popup window. -->
+      <div class="mt-2 max-h-40 overflow-y-auto text-xs text-gray-500 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
         <div class="flex items-start gap-2">
           <span class="text-blue-400 mt-0.5 flex-shrink-0">1.</span>
           <p>
