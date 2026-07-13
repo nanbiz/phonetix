@@ -47,7 +47,9 @@ jobs:
       - uses: browser-actions/setup-chrome@v1
         id: chrome
         with:
-          chrome-version: stable
+          # Pinned: Chrome 150 loads the extension but stops injecting its content
+          # scripts in headless, which would make the suite pass against nothing.
+          chrome-version: '149'
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Integration suite
