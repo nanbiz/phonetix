@@ -44,36 +44,57 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.wholePage} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; }
 
 /*
- * Hover modes: use inline-grid to stack both spans in the same cell.
- * The cell is always as wide as the wider span, preventing reflow
- * twitching when the IPA and original text have different widths.
+ * Hover modes show one layer and keep the other for the hover. Only the visible
+ * layer may take up space: a box as wide as the wider of the two would pad every
+ * word in the running text with the difference, which reads as broken spacing
+ * ("is  a  branch of  linguistics"). The hidden layer is therefore taken out of
+ * the flow, and the visible one alone sets the width.
+ *
+ * On hover the two swap by visibility only, so the box never changes size and the
+ * line never reflows under the cursor. The revealed layer is allowed to overflow
+ * its box, and carries a background so it stays readable over its neighbours.
  */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS},
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} {
-  display: inline-grid;
-  vertical-align: baseline;
-}
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} > *,
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} > * {
-  grid-area: 1 / 1;
+  position: relative;
+  display: inline;
 }
 
-/* Hover modes swap the two spans with visibility, which is an inherited property:
-   a span set to "visible" overrides a hidden ancestor and exposes text the page
-   keeps hidden (a collapsed panel, an offscreen card). "inherit" shows the span
-   exactly when its context is shown. */
-
-/* onHover: show original, IPA hidden but reserving space */
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { visibility: inherit; }
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: hidden; }
+/* onHover: the original is the running text; the IPA overlays it on hover. */
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; visibility: inherit; }
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} {
+  display: inline;
+  visibility: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+}
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: inherit; }
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} {
+  visibility: inherit;
+  z-index: 1;
+  background: inherit;
+  box-shadow: 0 0 0 2px rgba(109,159,255,.12);
+}
 
-/* showOriginalOnHover: show IPA, original hidden but reserving space */
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; visibility: hidden; }
+/* showOriginalOnHover: the IPA is the running text; the original overlays it. */
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: inherit; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} {
+  display: inline;
+  visibility: hidden;
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+}
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: inherit; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
+  visibility: inherit;
+  z-index: 1;
+  background: inherit;
+  box-shadow: 0 0 0 2px rgba(109,159,255,.12);
+}
 `.trim();
 
 /** CSS for the tooltip (injected into Shadow DOM) */

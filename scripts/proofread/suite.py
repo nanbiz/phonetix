@@ -193,6 +193,34 @@ def integration(d):
            e.get("editorText") == "I am typing a private message here right now", str(e.get("editorText")))
     d.close_tab()
 
+    # In the hover modes the running text must lay out exactly as the page would
+    # without us: the layer that is hidden may not reserve width, or every word is
+    # padded by the difference and the text reads as broken ("is  a  branch of").
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
+    SPACING = """(() => {
+      const h = document.documentElement;
+      const out = {};
+      for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
+        h.classList.remove('px-mode-whole', 'px-mode-hover', 'px-mode-reveal');
+        h.classList.add(mode);
+        let worst = 0;
+        for (const span of document.querySelectorAll('#prose .phonetix')) {
+          const shown = [...span.children].find(c => getComputedStyle(c).visibility !== 'hidden');
+          if (!shown) continue;
+          // The span may be no wider than the layer it is showing.
+          const slack = span.getBoundingClientRect().width - shown.getBoundingClientRect().width;
+          worst = Math.max(worst, slack);
+        }
+        out[mode] = Math.round(worst);
+      }
+      return JSON.stringify(out);
+    })()"""
+    slack = json.loads(d.js(SPACING) or "{}")
+    for mode, worst in slack.items():
+        expect(f"no reserved width in {mode}", worst <= 1, f"words padded by up to {worst}px")
+    d.close_tab()
+
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to
     # copy the IPA cannot dismiss it; a press outside still does.
     d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
