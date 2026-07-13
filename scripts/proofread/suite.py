@@ -82,7 +82,7 @@ class Driver:
         # Fail loudly if the extension is not actually loaded, rather than running
         # every assertion against a browser with no extension and "passing".
         self.extid = self.cdp.ensure_extension()
-        print(f"  (extension loaded: {self.extid})", flush=True)
+        print(f"  (extension {self.extid} via {getattr(self.cdp, 'how', '?')})", flush=True)
     def load(self, url, settle=9):
         c = self.cdp
         tid = c.send("Target.createTarget", {"url": "about:blank"})["targetId"]

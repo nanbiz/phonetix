@@ -97,21 +97,27 @@ class PipeCDP:
         Extensions domain. Raises if it could not be loaded — a suite that runs
         against a browser with no extension would pass vacuously.
         """
+        try:
+            ver = self.send("Browser.getVersion").get("product", "?")
+        except Exception:
+            ver = "?"
         for _ in range(15):
             for t in self.send("Target.getTargets")["targetInfos"]:
                 if t["url"].startswith("chrome-extension://"):
+                    self.how = f"--load-extension ({ver})"
                     return t["url"].split("/")[2]
             time.sleep(1)
         try:
             self.send("Extensions.loadUnpacked", {"path": EXT})
         except Exception as e:
-            raise RuntimeError(f"extension not loaded and Extensions.loadUnpacked failed: {e}")
+            raise RuntimeError(f"extension not loaded; Extensions.loadUnpacked failed on {ver}: {e}")
         for _ in range(15):
             for t in self.send("Target.getTargets")["targetInfos"]:
                 if t["url"].startswith("chrome-extension://"):
+                    self.how = f"Extensions.loadUnpacked ({ver})"
                     return t["url"].split("/")[2]
             time.sleep(1)
-        raise RuntimeError("extension did not load")
+        raise RuntimeError(f"extension did not load on {ver}")
 
     def close(self):
         try:
