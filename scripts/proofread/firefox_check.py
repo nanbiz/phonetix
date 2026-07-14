@@ -112,15 +112,22 @@ def main():
         # Drive the popup's own control, so the extension's code does the work with
         # its own privileges: Marionette's sandbox has no extension APIs, and using
         # them from here would test the harness rather than the popup.
+        # Open the language row, then choose the accent from the view it opens. The
+        # popup is driven exactly as a person drives it, so a change to how the
+        # accent is chosen fails here rather than passing against a control that no
+        # longer exists.
+        client.execute_script(
+            "const row = [...document.querySelectorAll('button')]"
+            "  .find(b => /detected|set by you/.test(b.textContent));"
+            "if (row) row.click();",
+        )
+        time.sleep(1)
         picked = client.execute_script(
-            "for (const sel of document.querySelectorAll('select')) {"
-            "  const opt = [...sel.options].find(o => o.value === 'en-us');"
-            "  if (!opt) continue;"
-            "  sel.value = 'en-us';"
-            "  sel.dispatchEvent(new Event('change', {bubbles: true}));"
-            "  return 'picked en-us';"
-            "}"
-            "return 'no accent control offering en-us';",
+            "const btn = [...document.querySelectorAll('button')]"
+            "  .find(b => b.textContent.trim() === 'American');"
+            "if (!btn) return 'no American accent to choose';"
+            "btn.click();"
+            "return 'picked American';",
         )
         print("firefox popup:", picked)
         client.switch_to_window(page)
