@@ -57,7 +57,13 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS},
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} {
   position: relative;
-  display: inline;
+  /* inline-block, not inline: an absolutely positioned child of an inline box is
+     placed against the line box rather than the word, so the revealed layer sat
+     below its own word and looked like it had shifted and resized. */
+  display: inline-block;
+  vertical-align: baseline;
+  font: inherit;
+  line-height: inherit;
 }
 
 /* onHover: the original is the running text; the IPA overlays it on hover. */
@@ -272,6 +278,12 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.px-detail-spk { display: flex; margin-left: auto; color: #6d9fff; flex: none; }
-.px-detail-spk svg { width: 12px; height: 12px; display: block; }
+.px-detail-spk {
+  margin-left: auto;
+  color: #6d9fff;
+  flex: none;
+  padding: 6px;
+}
+.px-detail-spk:hover { color: #a9c8ff; background: rgba(109,159,255,.14); }
+.px-detail-spk svg { width: 20px; height: 20px; display: block; }
 `.trim();

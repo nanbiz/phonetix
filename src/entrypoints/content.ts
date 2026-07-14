@@ -438,7 +438,7 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
     if (info) {
       // The detail stays on the symbol it was asked about: leaving the symbol
       // must not blank it, or the description is gone the moment you look at it.
-      sym.addEventListener('mouseenter', () => showDetail(sym, tok, info, hasAudio));
+      sym.addEventListener('mouseenter', () => showDetail(sym, tok, info));
       if (!first) first = sym;
     }
 
@@ -450,7 +450,7 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
 }
 
 /** Describe one symbol, and mark it as the one being described. */
-function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo, hasAudio: boolean): void {
+function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
   if (!ttDetail) return;
   activeSym?.classList.remove('active');
   sym.classList.add('active');
@@ -464,9 +464,10 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo, hasAudio
   text.appendChild(txt('span', 'px-detail-eg', info.example));
   ttDetail.appendChild(text);
 
-  if (hasAudio) {
-    const spk = el('span', 'px-detail-spk');
-    spk.innerHTML = ICO_SPEAKER_SM;
+  if (info.audio) {
+    const file = info.audio;
+    const spk = btn('px-btn px-detail-spk', ICO_SPEAKER, `Hear ${info.name}`);
+    spk.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
     ttDetail.appendChild(spk);
   }
 }

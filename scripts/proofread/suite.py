@@ -233,7 +233,8 @@ def integration(d):
             " return JSON.stringify({w: Math.round(r.width), h: Math.round(r.height),"
             "   syms: h.shadowRoot.querySelectorAll('.px-sym').length,"
             "   detail: (h.shadowRoot.querySelector('.px-detail')||{}).textContent || '',"
-            "   tags: [...h.shadowRoot.querySelectorAll('.px-lang, .px-src')].every(e => !!e.title)}); })()")
+            "   tags: [...h.shadowRoot.querySelectorAll('.px-lang, .px-src')].every(e => !!e.title),"
+            "   speakable: !!h.shadowRoot.querySelector('button.px-detail-spk')}); })()")
     def rendered(v):
         try:
             return bool(v) and json.loads(v)["syms"] > 1
@@ -245,6 +246,7 @@ def integration(d):
     expect("tooltip has symbols to explore", card.get("syms", 0) > 1, str(card))
     expect("tooltip describes a symbol on open", len(card.get("detail", "")) > 3, str(card))
     expect("language and source tags explain themselves", card.get("tags") is True, str(card))
+    expect("the symbol can be heard from the detail line", card.get("speakable") is True, str(card))
 
     # hover every symbol in turn; the card may not change size, and the detail must
     # stay on the symbol asked about rather than blanking when the cursor leaves
@@ -270,6 +272,37 @@ def integration(d):
     expect("the description stays after the cursor leaves the symbol",
            bool(seen) and all(len(s["detail"]) > 3 for s in seen),
            str([s["detail"][:20] for s in seen][:3]))
+    d.close_tab()
+
+    # The layer revealed on hover must sit exactly where the word sat, at the same
+    # size: an absolutely positioned child of an inline box is placed against the
+    # line box rather than the word, which drops it below its own text and reads as
+    # the page moving and changing font under the cursor.
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
+    ALIGN = """(() => {
+      const h = document.documentElement;
+      const out = {};
+      for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
+        h.classList.remove('px-mode-whole', 'px-mode-hover', 'px-mode-reveal');
+        h.classList.add(mode);
+        let worstTop = 0, sizeMismatch = 0;
+        for (const span of document.querySelectorAll('#prose .phonetix')) {
+          const [a, b] = span.children;
+          if (!a || !b) continue;
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+          worstTop = Math.max(worstTop, Math.abs(ra.top - rb.top));
+          if (getComputedStyle(a).fontSize !== getComputedStyle(b).fontSize) sizeMismatch++;
+        }
+        out[mode] = {top: Math.round(worstTop), sizeMismatch};
+      }
+      return JSON.stringify(out);
+    })()"""
+    align = json.loads(d.js(ALIGN) or "{}")
+    for mode, r in align.items():
+        expect(f"revealed layer sits on the word in {mode}", r["top"] <= 1, f"off by {r['top']}px")
+        expect(f"revealed layer keeps the font size in {mode}", r["sizeMismatch"] == 0,
+               f"{r['sizeMismatch']} spans change size")
     d.close_tab()
 
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to
