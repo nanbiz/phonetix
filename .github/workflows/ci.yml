@@ -81,6 +81,8 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:integration
+      - name: IPA symbol names match the IPA
+        run: pnpm test:names
       - name: Popup layout
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}

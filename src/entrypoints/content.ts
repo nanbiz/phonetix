@@ -16,7 +16,7 @@ import { DefaultAccents, Languages, LanguageNames, WiktionaryAnchors, BLOCK_TAGS
 import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
-import { IPA_SYMBOLS, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
+import { IPA_SYMBOLS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
 import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
 
@@ -423,7 +423,7 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
 
   for (const tok of tokenizeIPA(ipa)) {
     if (!tok.trim()) continue;
-    const info = IPA_SYMBOLS[tok] || IPA_SYMBOLS[tok[0]];
+    const info = describeSymbol(tok);
     const cls = info ? TYPE_CLASS[info.type] || '' : '';
     const hasAudio = !!info?.audio;
 
@@ -460,8 +460,24 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
   ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
 
   const text = el('span', 'px-detail-text');
-  text.appendChild(txt('span', 'px-detail-name', info.name));
-  text.appendChild(txt('span', 'px-detail-eg', info.example));
+
+  // The name links to the article on that sound: what it is, which languages use
+  // it, and a recording of it. Wikipedia carries one article per sound, which is a
+  // better source for phonetics than a dictionary entry for a word.
+  if (info.wiki) {
+    const link = el('a', 'px-detail-name px-detail-link') as HTMLAnchorElement;
+    link.textContent = info.name;
+    link.href = `https://en.wikipedia.org/wiki/${info.wiki}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = `Read about the ${info.name} on Wikipedia`;
+    link.addEventListener('click', (e) => e.stopPropagation());
+    text.appendChild(link);
+  } else {
+    text.appendChild(txt('span', 'px-detail-name', info.name));
+  }
+
+  if (info.example) text.appendChild(txt('span', 'px-detail-eg', info.example));
   ttDetail.appendChild(text);
 
   if (info.audio) {

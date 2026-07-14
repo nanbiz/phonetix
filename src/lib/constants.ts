@@ -271,6 +271,12 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.px-detail-link {
+  color: #9fc0ff;
+  text-decoration: none;
+  cursor: pointer;
+}
+.px-detail-link:hover { color: #cfe0ff; text-decoration: underline; }
 .px-detail-eg {
   font-size: 11px;
   color: #7a7a82;

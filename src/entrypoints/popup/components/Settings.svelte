@@ -133,6 +133,13 @@
   });
 
   let showInfo = $state(false);
+  /** The popup is one screen at a time: the accent has too many choices to sit in
+   *  a menu, and a page in several languages has an accent for each. */
+  let view = $state<'main' | 'accent'>('main');
+
+  let accentLabel = $derived(
+    pageAccent ? pageAccent[accentOf(effectiveLanguage)] || '' : '',
+  );
 
   // Stats
   let totalDictLangs = $derived(Object.keys(dictManifest).length);
@@ -161,68 +168,89 @@
   );
 </script>
 
+{#if view === 'accent'}
+  <!-- Accent view: every accent for this language, and what is behind it. -->
+  <div class="w-full space-y-3">
+    <button
+      class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200"
+      onclick={() => (view = 'main')}
+    >
+      ‹ Back
+    </button>
+
+    <h2 class="text-base font-medium text-white">
+      {LanguageNames[effectiveLanguage] || effectiveLanguage} accent
+    </h2>
+
+    {#if pageAccent}
+      <div class="flex flex-col gap-1">
+        {#each Object.entries(pageAccent) as [id, label] (id)}
+          <button
+            class="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm
+                   {accentOf(effectiveLanguage) === id
+                     ? 'border-blue-500 bg-blue-600/15 text-white'
+                     : 'border-gray-700 text-gray-300 hover:border-gray-500'}"
+            onclick={() => setAccent(effectiveLanguage, id)}
+          >
+            <span>{label}</span>
+            {#if accentOf(effectiveLanguage) === id}<span class="text-blue-400">✓</span>{/if}
+          </button>
+        {/each}
+      </div>
+      {#if ruleBasedNote}
+        <p class="text-xs text-gray-500">{ruleBasedNote}</p>
+      {/if}
+    {:else}
+      <p class="text-sm text-gray-500">
+        This language has one pronunciation standard, so there is no accent to choose.
+      </p>
+    {/if}
+
+    {#if otherAccentChoices.length}
+      <details class="pt-1">
+        <summary class="cursor-pointer select-none text-xs text-gray-500">Other languages</summary>
+        <div class="mt-2 flex flex-col gap-2">
+          {#each otherAccentChoices as [lang, options] (lang)}
+            <Dropdown
+              topic={LanguageNames[lang] || lang}
+              selectedElement={accentOf(lang)}
+              elements={options}
+              onElementChange={(accent) => setAccent(lang, accent)}
+            />
+          {/each}
+        </div>
+      </details>
+    {/if}
+  </div>
+{:else}
 <div class="w-full space-y-4">
   {#if unhealthy}
     <div class="text-xs text-red-300 bg-red-950/50 border border-red-900/60 rounded px-2 py-1.5">
       ⚠ {downList} unavailable — reload the page or reinstall.
     </div>
   {/if}
-  <!-- What the page is being read as. Detection decides this on its own; the
-       override lives in Advanced, for the page it gets wrong. -->
-  <div class="flex flex-col gap-1 px-1">
-    <h2 class="text-sm font-medium text-gray-300">Language</h2>
-    {#if selectedLanguage === 'auto'}
-      <p class="text-sm text-white">
-        {LanguageNames[detectedLanguage] || detectedLanguage}
-        <span class="text-xs text-gray-500">(detected)</span>
-      </p>
-    {:else}
-      <p class="text-sm text-white">
+  <!-- The language and its accent are one thing: what this page is being read as.
+       Choosing the accent opens a view of its own rather than a menu. -->
+  <button
+    class="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2.5 text-left hover:border-blue-400"
+    onclick={() => (view = 'accent')}
+  >
+    <span class="min-w-0">
+      <span class="block truncate text-sm font-medium text-white">
         {LanguageNames[effectiveLanguage] || effectiveLanguage}
-        <span class="text-xs text-gray-500">(set by you)</span>
-      </p>
-    {/if}
-    <p class="text-xs text-gray-500">
-      {#if effectiveHasDict}
-        Wiktionary dictionary, {(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words
-      {:else}
-        No dictionary — espeak synthesis only
-      {/if}
-    </p>
-  </div>
-
-  <!-- The page's own language first, the rest only if asked for. -->
-  {#if pageAccent}
-    <div class="flex flex-col gap-1">
-      <Dropdown
-        topic={`${LanguageNames[effectiveLanguage] || effectiveLanguage} accent`}
-        selectedElement={accentOf(effectiveLanguage)}
-        elements={pageAccent}
-        onElementChange={(accent) => setAccent(effectiveLanguage, accent)}
-      />
-      {#if ruleBasedNote}
-        <p class="px-1 text-xs text-gray-500">{ruleBasedNote}</p>
-      {/if}
-    </div>
-  {/if}
-
-  {#if otherAccentChoices.length}
-    <details class="px-1">
-      <summary class="cursor-pointer select-none text-xs text-gray-500">
-        Accents for other languages
-      </summary>
-      <div class="mt-2 flex flex-col gap-2">
-        {#each otherAccentChoices as [lang, options] (lang)}
-          <Dropdown
-            topic={LanguageNames[lang] || lang}
-            selectedElement={accentOf(lang)}
-            elements={options}
-            onElementChange={(accent) => setAccent(lang, accent)}
-          />
-        {/each}
-      </div>
-    </details>
-  {/if}
+        {#if accentLabel}<span class="text-gray-400"> · {accentLabel}</span>{/if}
+      </span>
+      <span class="block truncate text-xs text-gray-500">
+        {selectedLanguage === 'auto' ? 'detected' : 'set by you'}
+        {#if effectiveHasDict}
+          · {(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words
+        {:else}
+          · espeak synthesis only
+        {/if}
+      </span>
+    </span>
+    <span class="flex-none text-gray-500">›</span>
+  </button>
 
   <Segmented
     topic="Mode"
@@ -318,3 +346,4 @@
     {/if}
   </div>
 </div>
+{/if}
