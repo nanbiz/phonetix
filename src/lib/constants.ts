@@ -35,11 +35,11 @@ export const PHONETIX_CSS = `
 /* Base styles */
 .${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; }
 /* Over a hovered word the pointer sits on top of the very IPA it reveals, hiding a
-   letter or two. It becomes a small dot instead: clearly visible, but far smaller
-   than an arrow or I-beam, so the transcription under it can be read. */
+   letter or two. It becomes a small hollow ring with a black-and-white outline:
+   visible on any background, and the transcription shows through the hole. */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
-  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.5%22 fill=%22rgba(80,80,90,0.55)%22 stroke=%22rgba(255,255,255,0.7)%22 stroke-width=%221%22/%3E%3C/svg%3E') 8 8, default;
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22black%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
 }
 
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
@@ -58,12 +58,12 @@ export const PHONETIX_CSS = `
  */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS},
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} {
+  /* Plain inline, so the span is part of the running text: an inline-block is an
+     atomic box that text-overflow ellipsis cannot break, so a truncated label
+     ("5-hour limit") swallowed its last word into the ellipsis. Position relative
+     on an inline element still makes it the containing block for the absolutely
+     positioned hidden layer, which keeps that layer on its own word not the page. */
   position: relative;
-  /* inline-block, not inline: an absolutely positioned child of an inline box is
-     placed against the line box rather than the word, so the revealed layer sat
-     below its own word and looked like it had shifted and resized. */
-  display: inline-block;
-  vertical-align: baseline;
   font: inherit;
   line-height: inherit;
 }
@@ -75,11 +75,12 @@ export const PHONETIX_CSS = `
   visibility: hidden;
   position: absolute;
   left: 50%;
-  top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
-  /* A truncated container (a clipped title) would otherwise cut the revealed layer
-     to an ellipsis; it shows in full regardless of where it sits. */
+  /* No top/bottom, so the layer keeps its inline static position vertically — the
+     text baseline — while left:50% centres it on the word. On an inline containing
+     block, top:0 would be the line-box top, dropping the layer below its own word.
+     A truncated ancestor must not clip it to an ellipsis. */
   max-width: none;
   overflow: visible;
   text-overflow: clip;
@@ -129,7 +130,6 @@ export const PHONETIX_CSS = `
   visibility: hidden;
   position: absolute;
   left: 50%;
-  top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
   max-width: none;
@@ -196,31 +196,28 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.px-accent {
-  font-size: 9px;
-  font-weight: 500;
-  color: #7fd7a8;
-  background: rgba(93,232,176,.12);
-  padding: 1px 5px;
-  border-radius: 999px;
-}
 .px-lang {
   font-size: 9px;
   font-weight: 500;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: .4px;
+  color: #b7b7c0;
+  background: rgba(255,255,255,.07);
+  padding: 2px 7px;
+  border-radius: 999px;
+  line-height: 1.5;
+  white-space: nowrap;
 }
 .px-src {
   font-size: 9px;
   font-weight: 500;
-  padding: 1px 5px;
+  padding: 2px 7px;
   border-radius: 999px;
+  line-height: 1.5;
   text-transform: lowercase;
   letter-spacing: .3px;
 }
-.px-src-dict { color: #7fd7a8; background: rgba(93,232,176,.12); }
-.px-src-espeak { color: #e0b978; background: rgba(224,185,120,.12); }
+.px-src-dict { color: #7fd7a8; background: rgba(93,232,176,.14); }
+.px-src-espeak { color: #e0b978; background: rgba(224,185,120,.14); }
 .px-spacer { flex: 1; }
 
 /* Buttons */

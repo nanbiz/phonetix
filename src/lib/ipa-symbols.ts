@@ -323,9 +323,17 @@ export function describeSymbol(token: string): IPASymbolInfo | null {
   const info = IPA_SYMBOLS[base];
   if (!info || !marks.length) return info ?? null;
 
+  // A voicing diacritic overrides the base sound's own voicing rather than adding to
+  // it: z̥ is voiceless, not "voiceless voiced". Drop the base's voicing word when a
+  // diacritic supplies one.
+  let baseName = info.name;
+  if (marks.includes('voiceless') || marks.includes('voiced')) {
+    baseName = baseName.replace(/^(voiceless|voiced) /, '');
+  }
+
   return {
     ...info,
-    name: `${marks.join(', ')} ${info.name}`,
+    name: `${marks.join(', ')} ${baseName}`,
     // The article is the base sound's: the diacritics modify that sound, and the
     // combination has no article of its own.
     // The example belongs to the plain sound, and the modifier is what makes this

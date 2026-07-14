@@ -52,6 +52,9 @@ FIXTURES = {
     <p id="prose">The quick brown fox jumps over the lazy dog while the river runs quietly past the old stone bridge.</p>
     <div id="panel" style="visibility:hidden"><p id="secret">Collapsed panel text that the page keeps hidden from the reader.</p></div>
   </main></body></html>""",
+  "/truncate.html": """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>x</title></head><body><main>
+    <div id="clip" style="width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:16px sans-serif">5-hour limit and Fable model here</div>
+  </main></body></html>""",
   "/editable.html": """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>x</title></head><body><main>
    <p id="prose">This is ordinary readable prose that should be transcribed normally.</p>
    <div id="editor" contenteditable="true">I am typing a private message here right now</div>
@@ -385,6 +388,22 @@ def integration(d):
 
         d.hover(5, 5)   # leave the word
 
+    d.close_tab()
+
+    # A truncated label (text-overflow: ellipsis) must keep its words: an inline-block
+    # span is an atomic box the ellipsis swallows whole, so "5-hour limit" lost "limit"
+    # to the "…". The word's characters must survive in the transformed spans.
+    d.load(f"http://127.0.0.1:{PORT}/truncate.html", settle=3)
+    d.js("(() => { const h = document.documentElement;"
+         " h.classList.remove('px-mode-reveal'); h.classList.add('px-mode-hover'); return 1; })()")
+    kept = d.poll(
+        "(() => { const t = [...document.querySelectorAll('#clip .phonetix')].map(s => s.dataset.original);"
+        " return JSON.stringify(t); })()",
+        ok=lambda v: bool(v) and 'hour' in v)
+    words = json.loads(kept or "[]")
+    # the first words fit and are transformed; none is collapsed into an ellipsis
+    expect("truncated label keeps its transformed words", 'hour' in words and 'limit' in words,
+           f"words present: {words}")
     d.close_tab()
 
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to
