@@ -52,10 +52,18 @@ PROBE = """(() => {
   const on = rev && getComputedStyle(rev).display !== 'none';
   const r = on ? gr(rev) : null;
   const box = shown.getBoundingClientRect();
+  // The background the word actually sits on, walked up to the page.
+  let pageBg = 'rgba(0, 0, 0, 0)';
+  for (let e = sp; e; e = e.parentElement) {
+    const bg = getComputedStyle(e).backgroundColor;
+    if (bg && bg !== 'transparent' && !bg.startsWith('rgba(0, 0, 0, 0)')) { pageBg = bg; break; }
+  }
   return JSON.stringify({
     x: box.left + box.width / 2, y: box.top + box.height / 2,
     wordTop: w.top, wordCentreX: w.left + w.width / 2,
     revealTop: r ? r.top : null, revealCentreX: r ? r.left + r.width / 2 : null,
+    revealBg: rev ? getComputedStyle(rev).backgroundColor : null,
+    pageBg,
     on: !!on, text: rev ? rev.textContent : null,
   });
 })()"""
@@ -104,10 +112,14 @@ def main():
             continue
         dx = abs(after["revealCentreX"] - after["wordCentreX"])
         dy = abs(after["revealTop"] - after["wordTop"])
-        ok = dx <= 1 and dy <= 0.6
-        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} glyphs off by ({dx:.1f}, {dy:.1f})px  [{after['text']}]")
-        if not ok:
+        bg_ok = after["revealBg"] == after["pageBg"]
+        ok = dx <= 1 and dy <= 0.6 and bg_ok
+        note = "" if bg_ok else f"  BG {after['revealBg']} != page {after['pageBg']}"
+        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} glyphs off by ({dx:.1f}, {dy:.1f})px{note}")
+        if dx > 1 or dy > 0.6:
             failures.append(f"{case}: reveal glyphs off the word by ({dx:.1f}, {dy:.1f})px")
+        if not bg_ok:
+            failures.append(f"{case}: reveal background {after['revealBg']} does not match the page {after['pageBg']}")
         d.hover(2, 2)
 
     d.close()

@@ -91,6 +91,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:popup
+      - name: The mouth diagram is visible
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:diagram
       - name: Accents and espeak voices
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
