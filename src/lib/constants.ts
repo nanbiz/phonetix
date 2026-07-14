@@ -35,11 +35,11 @@ export const PHONETIX_CSS = `
 /* Base styles */
 .${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; }
 /* Over a hovered word the pointer sits on top of the very IPA it reveals, hiding a
-   letter or two. It is replaced by a small faint dot: enough to see where the mouse
-   is, little enough to read the transcription under it. */
+   letter or two. It becomes a small dot instead: clearly visible, but far smaller
+   than an arrow or I-beam, so the transcription under it can be read. */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
-  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22%3E%3Ccircle cx=%227%22 cy=%227%22 r=%223%22 fill=%22rgba(130,130,140,0.35)%22/%3E%3C/svg%3E') 7 7, default;
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%223.5%22 fill=%22rgba(80,80,90,0.55)%22 stroke=%22rgba(255,255,255,0.7)%22 stroke-width=%221%22/%3E%3C/svg%3E') 8 8, default;
 }
 
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
@@ -78,6 +78,11 @@ export const PHONETIX_CSS = `
   top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
+  /* A truncated container (a clipped title) would otherwise cut the revealed layer
+     to an ellipsis; it shows in full regardless of where it sits. */
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: hidden; }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} {
@@ -127,6 +132,9 @@ export const PHONETIX_CSS = `
   top: 0;
   transform: translateX(-50%);
   white-space: nowrap;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: hidden; }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
@@ -187,6 +195,14 @@ export const TOOLTIP_CSS = `
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.px-accent {
+  font-size: 9px;
+  font-weight: 500;
+  color: #7fd7a8;
+  background: rgba(93,232,176,.12);
+  padding: 1px 5px;
+  border-radius: 999px;
 }
 .px-lang {
   font-size: 9px;
@@ -383,4 +399,28 @@ export const TOOLTIP_CSS = `
 }
 .px-detail-spk:hover { color: #a9c8ff; background: rgba(109,159,255,.14); }
 .px-detail-spk svg { width: 20px; height: 20px; display: block; }
+
+/* Light mode: the tooltip follows the reader's system theme. Only the surfaces and
+   ink flip; the type colours (blue links, coloured underlines, source tags) hold on
+   both grounds. The diagrams are drawn dark, so in light mode they are not inverted
+   and sit on a light card. */
+@media (prefers-color-scheme: light) {
+  .px-tt { background: #fff; border-color: #dcdce0; color: #33343a; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
+  .px-tt::before { background: #fff; border-color: #dcdce0; }
+  .px-word { color: #16171b; }
+  .px-lang { color: #6a6a72; }
+  .px-slash { color: #b8b8c0; }
+  .px-sym { color: #1c1d22; }
+  .px-sym:hover { background: rgba(0,0,0,.06); }
+  .px-sym.active { background: rgba(45,110,255,.14); color: #0b1c44; }
+  .px-detail { background: #f1f1f4; }
+  .px-detail-name { color: #33343a; }
+  .px-detail-eg { color: #8a8a92; }
+  .px-detail-empty { color: #9a9aa2; }
+  .px-detail-diagram { background: #ececef; }
+  .px-detail-diagram img { filter: none; }
+  .px-detail-diagram:hover img { background: #fff; }
+  .px-btn { color: #8a8a92; }
+  .px-btn:hover { color: #16171b; background: rgba(0,0,0,.06); }
+}
 `.trim();

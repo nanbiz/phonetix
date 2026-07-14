@@ -2,9 +2,32 @@
 
 Browser extension that overlays IPA pronunciations on web pages, for language
 learners. Reads any page, resolves each word to the International Phonetic
-Alphabet, and shows it inline or on hover, with a per-word tooltip (symbol
-breakdown, audio, Wiktionary link). Works in Chrome and Firefox from one
+Alphabet, and shows it inline or on hover. Works in Chrome and Firefox from one
 codebase (WXT + Svelte 5).
+
+![Phonetix overlaying IPA on a Wikipedia article, with the per-word tooltip open](docs/hero.png)
+
+## What it does
+
+- **IPA on the page.** Every word is transcribed and shown in place, either as
+  the running text (hover a word for the original) or hidden until you hover it.
+- **A tooltip that teaches the word.** Hover a word for its transcription, the
+  source (dictionary or synthesized), and a Wiktionary link. Each IPA symbol is
+  colour-coded by kind and, on hover, names itself — linking every term of the
+  description to its Wikipedia article, showing a sagittal section of the mouth
+  making the sound, and linking the MRI/ultrasound film of it on Seeing Speech.
+  Any symbol, the word, and single-symbol recordings can be played aloud.
+- **Accents.** American, British, Australian, Scottish and more for English, plus
+  Portuguese, Catalan, Chinese, Persian, German, Spanish and others — from tagged
+  dictionary data where it exists and pronunciation rules where it does not (see
+  below). The tooltip shows which accent produced the transcription.
+- **Per-block language detection.** A page in several languages (an English video
+  title on a German page) is read correctly, each block on its own.
+- **Follows your theme.** Light and dark, taken from the system setting.
+
+<p align="center">
+  <img src="docs/tooltip.png" width="420" alt="The tooltip in dark mode"> <img src="docs/tooltip-light.png" width="420" alt="The tooltip in light mode">
+</p>
 
 ## How a word is resolved
 
@@ -96,11 +119,24 @@ kaikki dump. Without them the extension falls back to espeak for every word.
 Three layers, all runnable from `package.json`:
 
 ```sh
-pnpm test              # unit: segmenter, script gating, homographs, language decision
+pnpm test              # unit: segmenter, script gating, homographs, language, accent rules, IPA symbols
 pnpm test:integration  # behavioral: controlled fixtures via CDP, hard assertions
+pnpm test:hover        # the hovered word must not move (measured in rendered pixels)
+pnpm test:popup        # every popup control shows its own label, nothing clipped
+pnpm test:voices       # every espeak voice speaks, and every accent changes real words
+pnpm test:names        # every IPA symbol name matches the IPA's own descriptors (ipapy)
+pnpm test:firefox      # the same behaviour on real Firefox, incl. switching accents
 pnpm test:e2e          # behavioral: a few real sites, invariants
 pnpm test:all          # all three
 ```
+
+Everything above runs in CI on every push, Chrome and Firefox in parallel. Some
+of these tests exist because the thing they check shipped broken once: `test:hover`
+measures the actual pixels because three earlier geometric checks were fooled by a
+box that grew without moving; `test:names` checks against a database because a name
+written from memory read as authoritative and was wrong; `test:voices` reads each
+voice twice because espeak silently keeps the previous one when asked for a voice
+it lacks.
 
 - **Unit** (`scripts/test-*.ts`, node `--experimental-strip-types`): pure logic —
   `homograph`, `resolution` (segmentation + espeak script gating), `langdetect`

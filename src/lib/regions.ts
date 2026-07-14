@@ -28,6 +28,26 @@ interface Rule {
 }
 
 const REGIONS: Record<string, Rule[]> = {
+  // General American, for words the 27k-word American overlay does not cover. The
+  // base dictionary is British-leaning (Wiktionary lists an RP pronunciation
+  // first), so an uncovered word came out British. These are the systematic shifts
+  // that separate the two accents, so they hold across the vocabulary: American is
+  // rhotic, so the RP "comma" vowel is r-coloured; the GOAT vowel is [oʊ] not [əʊ];
+  // and LOT is unrounded. They are an approximation, not the tagged data, so they
+  // apply only where the overlay is silent (see background.ts).
+  'en-us': [
+    { from: 'əʊ', to: 'oʊ' },
+    { from: 'ɐ', to: 'ɚ' },
+    { from: 'ɒ', to: 'ɑ' },
+  ],
+  // Canadian is rhotic and unrounds LOT like American; the overlay carries the
+  // features that differ from it (Canadian raising).
+  'en-ca': [
+    { from: 'əʊ', to: 'oʊ' },
+    { from: 'ɐ', to: 'ɚ' },
+    { from: 'ɒ', to: 'ɑ' },
+  ],
+
   // Latin-American Spanish: seseo (θ→s) and yeísmo (ʎ→ʝ).
   'es-419': [{ from: 'θ', to: 's' }, { from: 'ʎ', to: 'ʝ' }],
 

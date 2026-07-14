@@ -12,7 +12,7 @@ import {
   PHONETIX_CSS,
   TOOLTIP_CSS,
 } from '@/lib/constants';
-import { DefaultAccents, Languages, LanguageNames, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
+import { DefaultAccents, Languages, LanguageNames, AccentsByLanguage, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
 import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
@@ -79,7 +79,10 @@ const ICO_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const ICO_SPEAKER_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
 // A face speaking, with a sound wave leaving the mouth: a person saying the word.
 // The plain microphone read as a mute button, and head-and-shoulders was unclear.
-const ICO_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3a8 8 0 1 0 0 16"/><circle cx="8.5" cy="9" r="1"/><path d="M7 14c1.2 1 3 1 4.2 0"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 7a7 7 0 0 1 0 10"/></svg>';
+// The speaking-head emoji as an icon: a head in profile with speech lines. It
+// reads as "a person saying this", where the microphone looked like mute and the
+// face was unclear.
+const ICO_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a6 6 0 0 0-6-6c-3 0-5.4 2-5.9 4.8-.16 1-.6 1.7-1.2 2.3-.5.5-.9.9-.9 1.4 0 .5.4.9 1 1v1.5c0 .8.7 1.5 1.5 1.5H10v1.5c0 .6.5 1 1 1h1.6c.6 0 1-.5 1-1v-2.4a6 6 0 0 0 5.4-5.6Z"/><path d="M6 6.5 3.6 5M5 10.5H2.4M6 14.5l-2.4 1.5"/></svg>';
 /** Synthesized speech (espeak): a robot head. */
 const ICO_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M9 17h6"/><path d="M1 12v3"/><path d="M23 12v3"/></svg>';
 const ICO_WIKT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M2.22 18.6v.01c-.35-.21-.61-.5-.71-.84l-.07-.37L.21 3.36c-.03-.45.17-.9.57-1.25c.39-.36.97-.6 1.62-.66L15.35.22a2.8 2.8 0 0 1 1.7.35a1.5 1.5 0 0 1 .77 1.13l1.23 14.12c.03.45-.17.9-.57 1.25a2.85 2.85 0 0 1-1.62.67L3.92 18.95a2.75 2.75 0 0 1-1.7-.35m-1-1.1c.02.18.07.35.15.5l.02.25c.05.56.4 1.03.9 1.34c.51.3 1.19.46 1.9.4l13.34-1.27a3.15 3.15 0 0 0 1.8-.74c.45-.4.71-.93.66-1.49L18.73 1.87a1.77 1.77 0 0 0-.9-1.33a2.9 2.9 0 0 0-1.24-.4a3.2 3.2 0 0 0-1.27-.12L2.4 1.23a3.1 3.1 0 0 0-1.74.72c-.44.39-.7.9-.64 1.44l1.22 14.1zm1.2 1.9a1.6 1.6 0 0 1-.78-1a2 2 0 0 0 .47.39c.49.3 1.14.44 1.84.38l12.93-1.22c.7-.06 1.31-.33 1.74-.72c.44-.38.7-.9.64-1.43L18.04 1.69a1.62 1.62 0 0 0-.62-1.11c.1.04.2.09.29.15c.46.28.76.7.8 1.16l1.26 14.62c.04.48-.18.94-.59 1.3c-.4.37-1 .63-1.67.7L4.17 19.75a2.9 2.9 0 0 1-1.76-.36ZM1.21 5.3l4.34-.5l.06.47l-.28.04c-.28.03-.48.12-.6.26a.57.57 0 0 0-.15.46a12 12 0 0 0 .53 1.33l2.91 6.12l1.15-5.56l-.8-1.68c-.16-.27-.31-.5-.48-.7a1 1 0 0 0-.28-.23a1.4 1.4 0 0 0-.42-.17c-.1-.02-.25-.02-.48 0l-.08.02l-.06-.48l4.56-.53l.06.48l-.38.04c-.3.04-.5.13-.6.26a.67.67 0 0 0-.13.53c0 .02 0 .06.03.15l.15.4l3.2 6.84l1.32-6.48c.16-.75.22-1.25.18-1.51a.57.57 0 0 0-.14-.32a.57.57 0 0 0-.3-.18c-.2-.05-.47-.06-.8-.02h-.08l-.06-.48l3.53-.4l.06.48h-.08c-.29.04-.5.12-.66.24c-.15.12-.3.33-.42.64c-.08.2-.2.7-.35 1.5l-2.01 9.9l-.45.05l-3.4-7.06l-1.61 7.64l-.42.04l-4.56-9.42q-.51-1.05-.63-1.23a1 1 0 0 0-.47-.4a1.6 1.6 0 0 0-.76-.07h-.08Z"/></svg>';
@@ -363,6 +366,16 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   const langTag = txt('span', 'px-lang', lang.toUpperCase());
   langTag.title = `Read as ${LanguageNames[lang] || lang}`;
   r1.appendChild(langTag);
+
+  // The accent chosen for this language, so the reader can tell which one produced
+  // the transcription. Shown only when the language actually offers a choice.
+  const accentId = accents[lang] || DefaultAccents[lang] || lang;
+  const accentLabel = AccentsByLanguage[lang]?.[accentId];
+  if (accentLabel && Object.keys(AccentsByLanguage[lang] || {}).length > 1) {
+    const accentTag = txt('span', 'px-accent', accentLabel);
+    accentTag.title = `${accentLabel} accent — change it in the Phonetix popup`;
+    r1.appendChild(accentTag);
+  }
 
   const srcTag = txt('span', `px-src px-src-${src}`, src === 'espeak' ? 'espeak' : 'dict');
   srcTag.title = src === 'espeak'

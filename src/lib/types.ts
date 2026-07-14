@@ -223,10 +223,12 @@ export const Modes = {
 
 export type Mode = keyof typeof Modes;
 
-/** Short labels, for controls that show every mode side by side. */
+/** Short labels, for controls that show every mode side by side. Named for what a
+ *  hover brings up: the page shows IPA and a hover brings the text back, or the page
+ *  shows the text and a hover brings the IPA up. */
 export const ModeLabels: Record<Mode, string> = {
-  showOriginalOnHover: 'IPA, word on hover',
-  onHover: 'Word, IPA on hover',
+  showOriginalOnHover: 'Text on hover',
+  onHover: 'IPA on hover',
 };
 
 export interface ResolvedIpa {

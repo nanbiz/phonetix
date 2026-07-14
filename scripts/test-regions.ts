@@ -39,6 +39,12 @@ const CASES: [string, string, string, string][] = [
   ['es-ar', 'yo', 'ʝo', 'ʃo'],
   ['es-ar', 'cielo', 'θjelo', 'sjelo'],
 
+  // General American: rhotic 'comma' vowel, GOAT [oʊ], unrounded LOT — for words the
+  // overlay does not cover.
+  ['en-us', 'emulator', 'ˈɛmjʊlˌeɪtɐ', 'ˈɛmjʊlˌeɪtɚ'],
+  ['en-us', 'tomato', 'təmˈɑːtəʊ', 'təmˈɑːtoʊ'],
+  ['en-us', 'lot', 'lɒt', 'lɑt'],
+
   // The standard accents change nothing.
   ['de', 'ich', 'ɪç', 'ɪç'],
   ['es', 'cielo', 'θjelo', 'θjelo'],

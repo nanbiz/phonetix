@@ -576,8 +576,12 @@ export default defineBackground(() => {
       if (dict.size > 0) {
         const { found, notFound } = lookupDictionary(remaining, dict);
         for (const w in found) {
+          // An overlay entry is the accent's real, tagged pronunciation, so it is
+          // used as it stands. The rule transforms are an approximation for the
+          // words the overlay does not cover, so they apply only to the base.
           const accented = overlay.get(w) ?? overlay.get(w.toLowerCase());
-          result[w] = { ipa: applyRegion(accented ?? found[w], accent, w), lang, src: 'dict' };
+          const ipa = accented ?? applyRegion(found[w], accent, w);
+          result[w] = { ipa, lang, src: 'dict' };
         }
         remaining = notFound;
       }
