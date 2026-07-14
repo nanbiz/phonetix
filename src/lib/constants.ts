@@ -85,11 +85,31 @@ export const PHONETIX_CSS = `
      needs a surface of its own: Canvas is the page's own background colour, in
      whichever theme the page uses, and without it the two texts overlap into
      something unreadable. */
-  background: Canvas;
-  padding: 1px 4px;
-  margin: -1px -4px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.28);
+  /* The revealed layer lies over the words beside it. Rather than cover them with
+     a hard card, it blurs what is behind it: backdrop-filter acts on the backdrop,
+     never on the element's own text, so the transcription stays sharp while the
+     words under it recede. The surface is only mostly opaque, so the blur is
+     visible through it. */
+  background: color-mix(in srgb, Canvas 88%, transparent);
+  backdrop-filter: blur(3px);
+  padding: 1px 5px;
+  border-radius: 5px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.22);
+}
+
+/* The blur extends past the card and fades to nothing, so the effect has no edge
+   of its own. It sits behind the text and takes no clicks. */
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS}::before,
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS}::before {
+  content: '';
+  position: absolute;
+  inset: -2px -16px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
 }
 
 /* showOriginalOnHover: the IPA is the running text; the original overlays it. */
@@ -107,11 +127,16 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
   visibility: inherit;
   z-index: 2147483646;
-  background: Canvas;
-  padding: 1px 4px;
-  margin: -1px -4px;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.28);
+  /* The revealed layer lies over the words beside it. Rather than cover them with
+     a hard card, it blurs what is behind it: backdrop-filter acts on the backdrop,
+     never on the element's own text, so the transcription stays sharp while the
+     words under it recede. The surface is only mostly opaque, so the blur is
+     visible through it. */
+  background: color-mix(in srgb, Canvas 88%, transparent);
+  backdrop-filter: blur(3px);
+  padding: 1px 5px;
+  border-radius: 5px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.22);
 }
 `.trim();
 
@@ -271,6 +296,7 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.px-detail-name .px-detail-link { font-weight: 500; }
 .px-detail-link {
   color: #9fc0ff;
   text-decoration: none;
@@ -284,6 +310,20 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.px-detail-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 46px;
+  height: 34px;
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+.px-detail-diagram:empty { background: none; }
+.px-detail-diagram img { max-width: 100%; max-height: 100%; display: block; }
+
 .px-detail-spk {
   margin-left: auto;
   color: #6d9fff;

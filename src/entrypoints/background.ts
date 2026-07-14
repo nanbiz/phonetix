@@ -689,6 +689,36 @@ export default defineBackground(() => {
   });
 
   // Chrome: synthesize + play inside the offscreen document.
+  // The sagittal diagrams are fetched here and handed to the page as data URLs:
+  // a strict page CSP blocks an image from Wikimedia, and would leave the tooltip
+  // with a broken picture on exactly the sites that set one.
+  const diagrams = new Map<string, string>();
+  onMessage('symbolDiagram', async ({ data }) => {
+    const cached = diagrams.get(data.file);
+    if (cached !== undefined) return cached;
+
+    try {
+      const url = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(data.file)}?width=160`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      // Encoded by hand rather than with FileReader, which a Chrome service worker
+      // does not have.
+      const type = res.headers.get('content-type') || 'image/svg+xml';
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += 8192) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      }
+      const dataUrl = `data:${type};base64,${btoa(binary)}`;
+      diagrams.set(data.file, dataUrl);
+      return dataUrl;
+    } catch (e) {
+      console.warn(`[Phonetix] No diagram for ${data.file}:`, e);
+      diagrams.set(data.file, '');
+      return '';
+    }
+  });
+
   onMessage('speakWord', async ({ data }) => {
     await ensureOffscreen();
     chrome.runtime.sendMessage({

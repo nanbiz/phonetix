@@ -16,7 +16,7 @@ import { DefaultAccents, Languages, LanguageNames, WiktionaryAnchors, BLOCK_TAGS
 import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
-import { IPA_SYMBOLS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
+import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
 import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
 
@@ -449,6 +449,32 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
   if (first) first.dispatchEvent(new MouseEvent('mouseenter'));
 }
 
+/** Build a symbol's description with each phonetic term linked to its article. */
+function describedName(name: string): HTMLElement {
+  const line = el('span', 'px-detail-name');
+
+  // Split on the terms themselves, keeping the punctuation and spacing between them.
+  for (const part of name.split(/([\p{L}-]+)/u)) {
+    if (!part) continue;
+    const title = TERM_LINKS[part.toLowerCase()];
+    if (!title) {
+      line.appendChild(document.createTextNode(part));
+      continue;
+    }
+
+    const link = el('a', 'px-detail-link') as HTMLAnchorElement;
+    link.textContent = part;
+    link.href = `https://en.wikipedia.org/wiki/${title}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = `${part}: read about it on Wikipedia`;
+    link.addEventListener('click', (e) => e.stopPropagation());
+    line.appendChild(link);
+  }
+
+  return line;
+}
+
 /** Describe one symbol, and mark it as the one being described. */
 function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
   if (!ttDetail) return;
@@ -457,25 +483,29 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
   activeSym = sym;
 
   ttDetail.innerHTML = '';
-  ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
+
+  // The symbol itself links to the article on this sound as a whole: how it is
+  // articulated, which languages have it, and a recording of a speaker saying it.
+  if (info.wiki) {
+    const symLink = el('a', 'px-detail-sym px-detail-link') as HTMLAnchorElement;
+    symLink.textContent = tok;
+    symLink.href = `https://en.wikipedia.org/wiki/${info.wiki}`;
+    symLink.target = '_blank';
+    symLink.rel = 'noopener noreferrer';
+    symLink.title = `${info.name}: read about this sound on Wikipedia`;
+    symLink.addEventListener('click', (e) => e.stopPropagation());
+    ttDetail.appendChild(symLink);
+  } else {
+    ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
+  }
 
   const text = el('span', 'px-detail-text');
 
-  // The name links to the article on that sound: what it is, which languages use
-  // it, and a recording of it. Wikipedia carries one article per sound, which is a
-  // better source for phonetics than a dictionary entry for a word.
-  if (info.wiki) {
-    const link = el('a', 'px-detail-name px-detail-link') as HTMLAnchorElement;
-    link.textContent = info.name;
-    link.href = `https://en.wikipedia.org/wiki/${info.wiki}`;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.title = `Read about the ${info.name} on Wikipedia`;
-    link.addEventListener('click', (e) => e.stopPropagation());
-    text.appendChild(link);
-  } else {
-    text.appendChild(txt('span', 'px-detail-name', info.name));
-  }
+  // A description is a stack of independent facts — "r-colored open-mid central
+  // vowel" is r-colouring, and a height, and a backness, and a vowel — so each term
+  // links to the article on that term. Linking the phrase as a whole would send the
+  // reader to one of the four and hide the rest.
+  text.appendChild(describedName(info.name));
 
   if (info.example) text.appendChild(txt('span', 'px-detail-eg', info.example));
   ttDetail.appendChild(text);
@@ -485,6 +515,30 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
     const spk = btn('px-btn px-detail-spk', ICO_SPEAKER, `Hear ${info.name}`);
     spk.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
     ttDetail.appendChild(spk);
+  }
+
+  // The mouth making the sound: a section through the head with the tongue and lips
+  // where they have to be. It is a picture of the answer to "how do I say this".
+  if (info.diagram) {
+    const shown = tok;
+    const holder = el('a', 'px-detail-diagram') as HTMLAnchorElement;
+    holder.href = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(info.diagram)}`;
+    holder.target = '_blank';
+    holder.rel = 'noopener noreferrer';
+    holder.title = `How ${info.name} is articulated`;
+    holder.addEventListener('click', (e) => e.stopPropagation());
+    ttDetail.appendChild(holder);
+
+    sendMessage('symbolDiagram', { file: info.diagram })
+      .then((url) => {
+        // The reader may have moved on to another symbol while this was fetched.
+        if (!url || activeSym !== sym || sym.textContent !== shown) return;
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = `Articulation of ${info.name}`;
+        holder.appendChild(img);
+      })
+      .catch(() => {});
   }
 }
 

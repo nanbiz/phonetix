@@ -14,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-import { IPA_SYMBOLS, describeSymbol, tokenizeIPA } from '../src/lib/ipa-symbols.ts';
+import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA } from '../src/lib/ipa-symbols.ts';
 import { normalizeIpa } from '../src/lib/ipa-normalize.ts';
 
 /** Composed symbols: the description must carry the diacritic, not drop it. */
@@ -60,6 +60,30 @@ if (!badLinks.length) {
   console.log(`PASS  ${Object.values(IPA_SYMBOLS).filter(i => i.wiki).length} symbols link to an article`);
 } else {
   console.log(`FAIL  malformed article links: ${badLinks.join(', ')}`);
+}
+
+// A description is a stack of independent facts, and each must be followable on
+// its own: linking the phrase as a whole sends the reader to one of them.
+total++;
+const eachTermLinked = ['r-colored', 'open-mid', 'central', 'vowel']
+  .every(term => TERM_LINKS[term]);
+if (eachTermLinked) {
+  pass++;
+  console.log(`PASS  every term of "r-colored open-mid central vowel" links on its own`);
+} else {
+  console.log(`FAIL  some terms of a description have no article of their own`);
+}
+
+// A term's article must be a title, not a search or a guess.
+total++;
+const badTerms = Object.entries(TERM_LINKS)
+  .filter(([, title]) => /[ ?#]/.test(title))
+  .map(([term]) => term);
+if (!badTerms.length) {
+  pass++;
+  console.log(`PASS  ${Object.keys(TERM_LINKS).length} phonetic terms link to an article`);
+} else {
+  console.log(`FAIL  malformed term links: ${badTerms.join(', ')}`);
 }
 
 // Sweep the real data: what share of the symbols on screen have no description?

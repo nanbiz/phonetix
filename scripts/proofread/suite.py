@@ -286,15 +286,19 @@ def integration(d):
       for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
         h.classList.remove('px-mode-whole', 'px-mode-hover', 'px-mode-reveal');
         h.classList.add(mode);
-        let worstTop = 0, sizeMismatch = 0;
+        let worstTop = 0, sizeMismatch = 0, worstCentre = 0;
         for (const span of document.querySelectorAll('#prose .phonetix')) {
           const [a, b] = span.children;
           if (!a || !b) continue;
           const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
           worstTop = Math.max(worstTop, Math.abs(ra.top - rb.top));
+          // The revealed layer is centred on the word it replaces, so the two share
+          // a centre however much wider one of them is.
+          const ca = ra.left + ra.width / 2, cb = rb.left + rb.width / 2;
+          worstCentre = Math.max(worstCentre, Math.abs(ca - cb));
           if (getComputedStyle(a).fontSize !== getComputedStyle(b).fontSize) sizeMismatch++;
         }
-        out[mode] = {top: Math.round(worstTop), sizeMismatch};
+        out[mode] = {top: Math.round(worstTop), sizeMismatch, centre: Math.round(worstCentre)};
       }
       return JSON.stringify(out);
     })()"""
@@ -303,6 +307,8 @@ def integration(d):
         expect(f"revealed layer sits on the word in {mode}", r["top"] <= 1, f"off by {r['top']}px")
         expect(f"revealed layer keeps the font size in {mode}", r["sizeMismatch"] == 0,
                f"{r['sizeMismatch']} spans change size")
+        expect(f"revealed layer is centred on the word in {mode}", r["centre"] <= 1,
+               f"off centre by {r['centre']}px")
     d.close_tab()
 
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to

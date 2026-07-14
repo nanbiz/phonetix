@@ -30,6 +30,9 @@ interface ProtocolMap {
   /** Actively probe each subsystem (language detection, dictionary, espeak) so a
    *  test can assert none silently degraded. */
   getHealth(data: Record<string, never>): { eld: boolean; dict: boolean; espeak: boolean; errors: string[] };
+  /** A Commons file showing the sound being made, as a data URL. The page's own
+   *  CSP would block loading it straight into the page. */
+  symbolDiagram(data: { file: string }): string;
   speakWord(data: { word: string; voice: string }): void;
   /** Synthesize a word to WAV bytes (Firefox: played in the content script). */
   synthesizeAudio(data: { word: string; voice: string }): number[];
