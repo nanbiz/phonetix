@@ -221,6 +221,57 @@ def integration(d):
         expect(f"no reserved width in {mode}", worst <= 1, f"words padded by up to {worst}px")
     d.close_tab()
 
+    # The tooltip is a fixed box. Symbol descriptions differ in length, and a card
+    # that grew with them would move under the cursor exactly while being read —
+    # which is what shipped, twice.
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    d.js("(() => { const s = document.querySelector('#prose .phonetix');"
+         " s.dispatchEvent(new MouseEvent('mouseover', {bubbles:true, composed:true})); return 1; })()")
+    CARD = ("(() => { const h = document.getElementById('phonetix-tooltip-host');"
+            " const c = h && h.shadowRoot && h.shadowRoot.querySelector('.px-tt');"
+            " if (!c) return null; const r = c.getBoundingClientRect();"
+            " return JSON.stringify({w: Math.round(r.width), h: Math.round(r.height),"
+            "   syms: h.shadowRoot.querySelectorAll('.px-sym').length,"
+            "   detail: (h.shadowRoot.querySelector('.px-detail')||{}).textContent || '',"
+            "   tags: [...h.shadowRoot.querySelectorAll('.px-lang, .px-src')].every(e => !!e.title)}); })()")
+    def rendered(v):
+        try:
+            return bool(v) and json.loads(v)["syms"] > 1
+        except Exception:
+            return False
+
+    first = d.poll(CARD, ok=rendered)
+    card = json.loads(first or "{}")
+    expect("tooltip has symbols to explore", card.get("syms", 0) > 1, str(card))
+    expect("tooltip describes a symbol on open", len(card.get("detail", "")) > 3, str(card))
+    expect("language and source tags explain themselves", card.get("tags") is True, str(card))
+
+    # hover every symbol in turn; the card may not change size, and the detail must
+    # stay on the symbol asked about rather than blanking when the cursor leaves
+    sizes = d.js("""(() => {
+      const h = document.getElementById('phonetix-tooltip-host');
+      const root = h.shadowRoot;
+      const card = root.querySelector('.px-tt');
+      const seen = [];
+      for (const sym of root.querySelectorAll('.px-sym')) {
+        sym.dispatchEvent(new MouseEvent('mouseenter', {bubbles: true}));
+        sym.dispatchEvent(new MouseEvent('mouseleave', {bubbles: true}));
+        const r = card.getBoundingClientRect();
+        seen.push({w: Math.round(r.width), h: Math.round(r.height),
+                   detail: (root.querySelector('.px-detail')||{}).textContent || ''});
+      }
+      return JSON.stringify(seen);
+    })()""")
+    seen = json.loads(sizes or "[]")
+    widths = {s["w"] for s in seen}
+    heights = {s["h"] for s in seen}
+    expect("tooltip width is constant across symbols", len(widths) <= 1, f"widths={sorted(widths)}")
+    expect("tooltip height is constant across symbols", len(heights) <= 1, f"heights={sorted(heights)}")
+    expect("the description stays after the cursor leaves the symbol",
+           bool(seen) and all(len(s["detail"]) > 3 for s in seen),
+           str([s["detail"][:20] for s in seen][:3]))
+    d.close_tab()
+
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to
     # copy the IPA cannot dismiss it; a press outside still does.
     d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)

@@ -66,16 +66,24 @@ export const PHONETIX_CSS = `
   display: inline;
   visibility: hidden;
   position: absolute;
-  left: 0;
+  left: 50%;
   top: 0;
+  transform: translateX(-50%);
   white-space: nowrap;
 }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: hidden; }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} {
   visibility: inherit;
-  z-index: 1;
-  background: inherit;
-  box-shadow: 0 0 0 2px rgba(109,159,255,.12);
+  z-index: 2147483646;
+  /* The revealed layer overflows its box and lies over the words beside it, so it
+     needs a surface of its own: Canvas is the page's own background colour, in
+     whichever theme the page uses, and without it the two texts overlap into
+     something unreadable. */
+  background: Canvas;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.28);
 }
 
 /* showOriginalOnHover: the IPA is the running text; the original overlays it. */
@@ -84,16 +92,20 @@ export const PHONETIX_CSS = `
   display: inline;
   visibility: hidden;
   position: absolute;
-  left: 0;
+  left: 50%;
   top: 0;
+  transform: translateX(-50%);
   white-space: nowrap;
 }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: hidden; }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
   visibility: inherit;
-  z-index: 1;
-  background: inherit;
-  box-shadow: 0 0 0 2px rgba(109,159,255,.12);
+  z-index: 2147483646;
+  background: Canvas;
+  padding: 1px 4px;
+  margin: -1px -4px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.28);
 }
 `.trim();
 
@@ -104,9 +116,9 @@ export const TOOLTIP_CSS = `
 .px-tt {
   position: fixed;
   display: none;
-  width: max-content;
-  max-width: 460px;
-  min-width: 240px;
+  /* A fixed box. The symbol descriptions differ in length, and a tooltip that
+     grew with them would move under the cursor every time one is read. */
+  width: 340px;
   padding: 14px 16px;
   background: #1c1c1e;
   border: 1px solid #333;
@@ -144,6 +156,10 @@ export const TOOLTIP_CSS = `
   font-size: 16px;
   font-weight: 600;
   color: #f5f5f7;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .px-lang {
   font-size: 9px;
@@ -183,6 +199,9 @@ export const TOOLTIP_CSS = `
 .px-btn.disabled { opacity: .25; pointer-events: none; }
 .px-btn svg { width: 16px; height: 16px; display: block; }
 .px-btn-sm svg { width: 12px; height: 12px; }
+/* Beside the pronunciation it speaks, not across the card from it. */
+.px-btn-tts { margin-left: 6px; }
+.px-btn-tts svg { width: 18px; height: 18px; }
 
 /* ── The pronunciation, which is also the interactive part ── */
 .px-r2 {
@@ -213,6 +232,7 @@ export const TOOLTIP_CSS = `
   transition: background .08s, color .08s;
 }
 .px-sym:hover { background: rgba(255,255,255,.10); }
+.px-sym.active { background: rgba(109,159,255,.18); color: #fff; }
 .px-sym.clickable { cursor: pointer; }
 .px-sym.clickable:active { transform: scale(.94); }
 .px-sym.C { border-bottom-color: #6d9fff; }
@@ -225,20 +245,33 @@ export const TOOLTIP_CSS = `
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
+  height: 46px;
+  overflow: hidden;
   padding: 6px 8px;
   border-radius: 6px;
   background: #232327;
 }
-.px-detail-empty { font-size: 11px; color: #6a6a72; }
 .px-detail-sym {
   font: 500 16px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
   color: #6d9fff;
   flex: none;
 }
-.px-detail-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.px-detail-name { font-size: 11px; color: #d8d8de; font-weight: 500; }
-.px-detail-eg { font-size: 11px; color: #7a7a82; }
+.px-detail-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.px-detail-name {
+  font-size: 11px;
+  color: #d8d8de;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.px-detail-eg {
+  font-size: 11px;
+  color: #7a7a82;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .px-detail-spk { display: flex; margin-left: auto; color: #6d9fff; flex: none; }
 .px-detail-spk svg { width: 12px; height: 12px; display: block; }
 `.trim();

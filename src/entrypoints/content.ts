@@ -12,11 +12,12 @@ import {
   PHONETIX_CSS,
   TOOLTIP_CSS,
 } from '@/lib/constants';
-import { DefaultAccents, Languages, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
+import { DefaultAccents, Languages, LanguageNames, WiktionaryAnchors, BLOCK_TAGS } from '@/lib/types';
 import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
 import { IPA_SYMBOLS, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
+import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
 
 // =====================================================================
@@ -136,6 +137,7 @@ function speakWord(word: string, lang: Language): void {
 let ttHost: HTMLDivElement | null = null;
 let ttEl: HTMLDivElement | null = null;
 let ttDetail: HTMLElement | null = null;
+let activeSym: HTMLElement | null = null;
 let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
 let curTarget: HTMLElement | null = null;
@@ -165,7 +167,10 @@ function initTooltip(): void {
   ttHost.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;overflow:visible;';
   document.body.appendChild(ttHost);
 
-  const shadow = ttHost.attachShadow({ mode: 'closed' });
+  // Open, so a test can measure the card and read what it says. The boundary
+  // still keeps the page's CSS out either way; closed only hides it from the
+  // tests that have to prove it does not resize under the cursor.
+  const shadow = ttHost.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = TOOLTIP_CSS;
   shadow.appendChild(style);
@@ -340,8 +345,16 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   // ── Row 1: word · lang · source ··· [W] [recording] ──
   const r1 = el('div', 'px-r1');
   r1.appendChild(txt('span', 'px-word', word));
-  r1.appendChild(txt('span', 'px-lang', lang.toUpperCase()));
-  r1.appendChild(txt('span', `px-src px-src-${src}`, src === 'espeak' ? 'espeak' : 'dict'));
+
+  const langTag = txt('span', 'px-lang', lang.toUpperCase());
+  langTag.title = `Read as ${LanguageNames[lang] || lang}`;
+  r1.appendChild(langTag);
+
+  const srcTag = txt('span', `px-src px-src-${src}`, src === 'espeak' ? 'espeak' : 'dict');
+  srcTag.title = src === 'espeak'
+    ? 'Synthesized by espeak: no dictionary has this word'
+    : 'From the Wiktionary dictionary: a human wrote this pronunciation';
+  r1.appendChild(srcTag);
   r1.appendChild(el('div', 'px-spacer'));
 
   const wiktBtn = el('a', 'px-btn disabled') as HTMLAnchorElement;
@@ -365,9 +378,8 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   const line = el('span', 'px-ipa-line');
   r2.appendChild(line);
   r2.appendChild(txt('span', 'px-slash', '/'));
-  r2.appendChild(el('div', 'px-spacer'));
 
-  const ttsBtn = btn('px-btn', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
+  const ttsBtn = btn('px-btn px-btn-tts', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
   ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
   r2.appendChild(ttsBtn);
   ttEl.appendChild(r2);
@@ -405,7 +417,9 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
  */
 function renderSymbols(container: HTMLElement, ipa: string): void {
   container.innerHTML = '';
-  resetDetail();
+  activeSym = null;
+
+  let first: HTMLElement | null = null;
 
   for (const tok of tokenizeIPA(ipa)) {
     if (!tok.trim()) continue;
@@ -422,32 +436,39 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
     }
 
     if (info) {
-      sym.addEventListener('mouseenter', () => {
-        if (!ttDetail) return;
-        ttDetail.innerHTML = '';
-        ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
-        const text = el('span', 'px-detail-text');
-        text.appendChild(txt('span', 'px-detail-name', info.name));
-        text.appendChild(txt('span', 'px-detail-eg', info.example));
-        ttDetail.appendChild(text);
-        if (hasAudio) {
-          const spk = el('span', 'px-detail-spk');
-          spk.innerHTML = ICO_SPEAKER_SM;
-          ttDetail.appendChild(spk);
-        }
-      });
-      sym.addEventListener('mouseleave', resetDetail);
+      // The detail stays on the symbol it was asked about: leaving the symbol
+      // must not blank it, or the description is gone the moment you look at it.
+      sym.addEventListener('mouseenter', () => showDetail(sym, tok, info, hasAudio));
+      if (!first) first = sym;
     }
 
     container.appendChild(sym);
   }
+
+  // Something to read the moment the tooltip opens, rather than an instruction.
+  if (first) first.dispatchEvent(new MouseEvent('mouseenter'));
 }
 
-/** The detail line's resting state, so the tooltip never changes height. */
-function resetDetail(): void {
+/** Describe one symbol, and mark it as the one being described. */
+function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo, hasAudio: boolean): void {
   if (!ttDetail) return;
+  activeSym?.classList.remove('active');
+  sym.classList.add('active');
+  activeSym = sym;
+
   ttDetail.innerHTML = '';
-  ttDetail.appendChild(txt('span', 'px-detail-empty', 'Hover a symbol to hear and read it'));
+  ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
+
+  const text = el('span', 'px-detail-text');
+  text.appendChild(txt('span', 'px-detail-name', info.name));
+  text.appendChild(txt('span', 'px-detail-eg', info.example));
+  ttDetail.appendChild(text);
+
+  if (hasAudio) {
+    const spk = el('span', 'px-detail-spk');
+    spk.innerHTML = ICO_SPEAKER_SM;
+    ttDetail.appendChild(spk);
+  }
 }
 
 // DOM helpers
