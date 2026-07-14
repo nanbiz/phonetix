@@ -93,3 +93,39 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:packs
+
+  # The same behaviour on the other engine. Chrome cannot stand in for it: the two
+  # differ in exactly the places that break quietly — Firefox's chrome.* is
+  # callback-only, and delivering settings by messaging the active tab worked in
+  # Chrome while doing nothing here. This drives the real popup control in real
+  # Firefox and compares the words on the page.
+  firefox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: browser-actions/setup-firefox@v1
+        id: firefox
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: public/dictionaries
+          key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
+      - name: Fetch dictionaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm fetch:dict
+      - run: pnpm zip:firefox
+      - name: Firefox behaviour (health, accents)
+        env:
+          PHONETIX_FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
+        run: |
+          XPI=$(ls -t .output/*firefox*.zip | head -1)
+          PHONETIX_XPI="$XPI" pnpm test:firefox
