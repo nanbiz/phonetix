@@ -122,6 +122,14 @@
     await storage.setItem<string>('local:hideStress', String(hide));
   }
 
+  let narrow = $state(false);
+  (async () => { narrow = (await storage.getItem<string>('local:narrow')) === 'true'; })();
+
+  async function setNarrow(on: boolean) {
+    narrow = on;
+    await storage.setItem<string>('local:narrow', String(on));
+  }
+
   async function setAccent(lang: string, accent: string) {
     accents = { ...accents, [lang]: accent };
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
@@ -260,6 +268,19 @@
       if (mode in Modes) selectedMode = mode as Mode;
     }}
   />
+
+  <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
+    <span class="text-sm text-gray-300">
+      Narrow transcription
+      <span class="block text-xs text-gray-500">Keeps fine detail like aspiration and devoicing (kʰ, z̥); off shows the broad form</span>
+    </span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary toggle-sm flex-none"
+      checked={narrow}
+      onchange={(e) => setNarrow((e.currentTarget as HTMLInputElement).checked)}
+    />
+  </label>
 
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">

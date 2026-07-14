@@ -39,11 +39,26 @@ let mode: Mode = 'showOriginalOnHover';
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */
 let hideStress = false;
+/** Narrow transcription keeps the fine phonetic detail Wiktionary records:
+ *  aspiration, final devoicing, small vowel raisings. It is precise and noisy, so
+ *  a reader gets the broad form by default and turns this on for the detail. */
+let showNarrow = false;
 
 const STRESS_MARKS = /[\u02C8\u02CC]/g;
 
+/**
+ * Diacritics that mark narrow phonetic detail rather than which sound is meant.
+ * "cause" is /k\u0254\u02D0z/ broadly and [k\u02B0o\u02D0z\u0325] narrowly; stripping these turns the second
+ * back into the first. Length, nasalization, syllabicity and the non-syllabic mark
+ * of a diphthong are left in \u2014 they change the sound, not just its shade.
+ */
+const NARROW_DETAIL = /[\u02B0\u02B1\u0325\u032C\u030A\u031D\u031E\u031F\u0320\u032A\u033A\u033B\u031A\u0308\u02DE\u02E0\u0334\u0318\u0319\u0339\u031C]/g;
+
 function displayIpa(ipa: string): string {
-  return hideStress ? ipa.replace(STRESS_MARKS, '') : ipa;
+  let out = ipa;
+  if (!showNarrow) out = out.replace(NARROW_DETAIL, '');
+  if (hideStress) out = out.replace(STRESS_MARKS, '');
+  return out;
 }
 
 // =====================================================================
@@ -396,11 +411,21 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   // ── The pronunciation itself, and it is the interactive part ──
   // One IPA, shown large. Each symbol explains itself on hover and speaks when
   // clicked, so there is no second copy of the same transcription to read.
+  // Slashes for the broad form, brackets for the narrow one: /kɔːz/ is the word's
+  // distinct sounds (phonemic), [kʰoːz̥] is how they are actually said (phonetic).
+  // The delimiters carry that meaning, and say it on hover.
   const r2 = el('div', 'px-r2');
-  r2.appendChild(txt('span', 'px-slash', '/'));
+  const openDelim = txt('span', 'px-slash', showNarrow ? '[' : '/');
+  const closeDelim = txt('span', 'px-slash', showNarrow ? ']' : '/');
+  const delimTitle = showNarrow
+    ? 'Phonetic transcription [ ]: how the sounds are actually pronounced, with detail like aspiration and devoicing'
+    : 'Phonemic transcription / /: the distinct sounds that make up the word';
+  openDelim.title = delimTitle;
+  closeDelim.title = delimTitle;
+  r2.appendChild(openDelim);
   const line = el('span', 'px-ipa-line');
   r2.appendChild(line);
-  r2.appendChild(txt('span', 'px-slash', '/'));
+  r2.appendChild(closeDelim);
 
   const ttsBtn = btn('px-btn px-btn-tts', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
   ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
@@ -1054,6 +1079,7 @@ export default defineContentScript({
       if (savedAccents) accents = JSON.parse(savedAccents);
 
       hideStress = (await storage.getItem<string>('local:hideStress')) === 'true';
+      showNarrow = (await storage.getItem<string>('local:narrow')) === 'true';
 
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
@@ -1100,6 +1126,11 @@ export default defineContentScript({
 
     storage.watch<string>('local:hideStress', async (value) => {
       hideStress = value === 'true';
+      await reprocess();
+    });
+
+    storage.watch<string>('local:narrow', async (value) => {
+      showNarrow = value === 'true';
       await reprocess();
     });
 
