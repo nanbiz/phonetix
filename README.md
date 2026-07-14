@@ -1,29 +1,30 @@
 # phonetix
 
-Browser extension that overlays IPA pronunciations on web pages, for language
-learners. Reads any page, resolves each word to the International Phonetic
-Alphabet, and shows it inline or on hover. Works in Chrome and Firefox from one
-codebase (WXT + Svelte 5).
+A browser extension that writes the IPA pronunciation above the words on a page,
+so you can read a language you don't yet know how to say. It runs on Chrome and
+Firefox from one codebase (WXT + Svelte 5).
 
 ![Phonetix overlaying IPA on a Wikipedia article, with the per-word tooltip open](docs/hero.png)
 
 ## What it does
 
-- **IPA on the page.** Every word is transcribed and shown in place, either as
-  the running text (hover a word for the original) or hidden until you hover it.
-- **A tooltip that teaches the word.** Hover a word for its transcription, the
-  source (dictionary or synthesized), and a Wiktionary link. Each IPA symbol is
-  colour-coded by kind and, on hover, names itself — linking every term of the
-  description to its Wikipedia article, showing a sagittal section of the mouth
-  making the sound, and linking the MRI/ultrasound film of it on Seeing Speech.
-  Any symbol, the word, and single-symbol recordings can be played aloud.
-- **Accents.** American, British, Australian, Scottish and more for English, plus
-  Portuguese, Catalan, Chinese, Persian, German, Spanish and others — from tagged
-  dictionary data where it exists and pronunciation rules where it does not (see
-  below). The tooltip shows which accent produced the transcription.
-- **Per-block language detection.** A page in several languages (an English video
-  title on a German page) is read correctly, each block on its own.
-- **Follows your theme.** Light and dark, taken from the system setting.
+You pick one of two modes: the page shows IPA and a hover brings the original word
+back, or the page stays as it is and a hover brings the IPA up.
+
+Hovering a word opens a tooltip. It shows the transcription, where it came from
+(a dictionary or the synthesizer), and a link to the word on Wiktionary. The IPA
+in the tooltip is interactive: each symbol is coloured by kind, and hovering one
+tells you what it is. From there you can read the Wikipedia article on that sound,
+see a cross-section of the mouth making it, open the MRI and ultrasound film of it
+on [Seeing Speech](https://www.seeingspeech.ac.uk/), and hear the sound, the word,
+or a recording of a single symbol.
+
+English has American, British, Australian, Scottish and other accents; Portuguese,
+Catalan, Chinese, Persian, German, Spanish and more have their own. The tooltip
+says which one you're looking at. A page written in more than one language (an
+English video title on a German page) is read a block at a time, so each part is
+transcribed as its own language. The tooltip and popup follow your system's light
+or dark setting.
 
 <p align="center">
   <img src="docs/tooltip.png" width="420" alt="The tooltip in dark mode"> <img src="docs/tooltip-light.png" width="420" alt="The tooltip in light mode">
@@ -31,125 +32,106 @@ codebase (WXT + Svelte 5).
 
 ## How a word is resolved
 
-Every word goes through a quality-ordered cascade (`background.ts` `phonemize`).
-The first tier that answers wins; the same result drives the page span, the
-tooltip headline, and the spoken audio, so all three always agree.
+Every word runs through a cascade in `background.ts` (`phonemize`). The first tier
+that has an answer wins, and that one answer drives the span on the page, the
+tooltip, and the audio, so the three never disagree.
 
-1. **Block-language dictionary** — offline IPA dictionaries built from Wiktionary
-   (kaikki dump + per-language Wiktionary TSVs), one per language.
-2. **Cross-language fallback** — a word missing from the page's dictionary
-   (loanwords, brand names, proper nouns like *Renault*, *Mount Everest*) is
-   looked up in English before falling through, so it is not mispronounced in
-   the page language.
-3. **espeak-ng** — grapheme-to-phoneme WASM, the last-resort coverage net.
-   Skipped for abjads (Arabic/Hebrew) and Han, where espeak spells out letter
-   names; those dictionary-misses show the original word instead.
+1. The dictionary for the block's language. These are offline IPA dictionaries
+   built from Wiktionary (the kaikki dump, plus per-language Wiktionary data), one
+   per language.
+2. A cross-language lookup for what the block's dictionary missed. A loanword or a
+   proper noun (Renault, Mount Everest) is checked against English before falling
+   through, so it isn't mangled by the wrong language's rules.
+3. espeak-ng, a grapheme-to-phoneme synthesizer compiled to WASM, as the last
+   resort. It's skipped for Arabic, Hebrew and Han, where it just spells out the
+   names of the letters; those words are left as they are on the page.
 
-On top of the cascade:
+Around the cascade:
 
-- **Homograph disambiguation** — context classifiers (Yarowsky decision rules +
-  keyword scoring, `src/lib/homograph.ts`, data in `public/homographs/`) pick the
-  right pronunciation of *read*, *live*, *record*, … from surrounding words.
-- **Accents** — an accent is the same words pronounced differently, and it is
-  built from whichever of two sources actually carries it (`src/lib/accents.ts`):
+Homographs (*read*, *live*, *record*) are disambiguated from the surrounding words
+by context classifiers (`src/lib/homograph.ts`).
 
-  - **Tagged data**, where the source has it. Wiktionary labels pronunciations by
-    accent, so `scripts/build-accents.mjs` extracts them into overlays holding
-    the words an accent says differently from the standard, which the background
-    lays over the base dictionary. English has 27k American and 12k British
-    words; Portuguese, Catalan, Cantonese, Persian, Armenian, Welsh, Irish,
-    Basque and Vietnamese have their own.
-  - **Rules**, where it does not. Wiktionary tags almost no Spanish word for
-    accent, and only a few hundred German ones, while the shifts that define
-    those accents hold for the whole vocabulary: seseo and yeísmo for Latin
-    America, žeísmo for Rioplatense, and for Swiss Standard German no ich-Laut,
-    a trilled `r`, no glottal stop (`src/lib/regions.ts`). Rules also reach the
-    words no dictionary knows, since they apply to espeak's output too. The
-    popup says when an accent is rule-derived.
+Accents come from two places (`src/lib/accents.ts`). Where Wiktionary tags its
+pronunciations by accent, `build-accents.mjs` pulls those into an overlay of the
+words that accent says differently, and the background lays it over the base
+dictionary: 27k American and 12k British English words, and overlays for
+Portuguese, Catalan, Cantonese, Persian, Armenian, Welsh, Irish, Basque and
+Vietnamese. Where it doesn't tag them, a few rules stand in (`src/lib/regions.ts`):
+seseo and yeísmo for Latin-American Spanish, the ich-Laut merger and a trilled r
+for Swiss German, rhoticity for American words the overlay never reached. The rules
+run over the base dictionary and over espeak's output, so they cover words no
+dictionary has. A dialect (Swabian, Saxon, Swiss German proper) is a different
+matter: it has its own words and grammar, so it belongs in its own dictionary, and
+none is shipped as an accent.
 
-  A *dialect* (Swabian, Saxon, Swiss German proper) is not an accent: it has its
-  own words and grammar, so it would need its own dictionary as its own language,
-  and none is shipped. espeak has no voice for many accents and answers with
-  nonsense when asked for one it lacks, so voices are declared only where
-  `scripts/proofread/voice_check.py` proves they exist.
-- **Segmentation** — `Intl.Segmenter` (`src/lib/segment.ts`) tokenizes every
-  script (Latin, Cyrillic, Greek, Arabic, CJK, Thai, …), not just Latin.
-- **Language detection** — per-block via `eld`, plus the page `lang` attribute.
-- **Chrome filtering** — nav, footer, buttons and ARIA landmarks are skipped
-  (structural, `CHROME_SELECTOR`); article content is kept.
+Words are split with `Intl.Segmenter` (`src/lib/segment.ts`), which handles Latin,
+Cyrillic, Greek, Arabic, CJK, Thai and the rest, not only Latin. The language of
+each block is decided by `eld` together with the page's own `lang` attribute.
+Navigation, footers, buttons and ARIA landmarks are skipped by `CHROME_SELECTOR`;
+the article itself is kept.
 
 ## Cross-browser espeak
 
-espeak-ng needs a DOM/AudioContext. Chrome MV3's background is a service worker
-(neither), so it runs in an **offscreen document**. Firefox MV3's background is
-an event page with DOM, so it runs the **same engine directly** in the
-background (`src/lib/espeak-engine.ts`); the offscreen permission is Chrome-only
-(`wxt.config.ts` manifest function). Audio is synthesized where the engine runs
-and, on Firefox, played in the content script (which has the user gesture).
+espeak-ng needs a DOM and an AudioContext. Chrome's MV3 background is a service
+worker with neither, so espeak runs in an offscreen document there. Firefox's
+background has a DOM, so it runs the same engine directly (`src/lib/espeak-engine.ts`);
+the offscreen permission is added only on Chrome (`wxt.config.ts`). Either way the
+engine returns WAV bytes, which the content script plays through the Web Audio API.
+Playing decoded bytes rather than pointing an `<audio>` element at a URL is what
+keeps a page's `media-src` CSP from silently blocking the sound.
 
 ## Layout
 
 ```
 src/entrypoints/  background.ts · content.ts · offscreen/ · popup/
 src/lib/          types.ts (Languages, ResolvedIpa) · homograph.ts · regions.ts
-                  segment.ts · espeak-engine.ts · messaging.ts · cache.ts
+                  accents.ts · segment.ts · espeak-engine.ts · messaging.ts · cache.ts
 public/           dictionaries/*.json.gz · homographs/*.json.gz · espeak/
-scripts/          build-dictionaries.mjs · evaluate-ipa.mjs · proofread/
+scripts/          build-dictionaries.mjs · build-accents.mjs · link-*.mjs · proofread/
 ```
 
 ## Develop
 
 ```sh
 pnpm install
-pnpm fetch:dict       # required once: download the prebuilt IPA dictionaries
+pnpm fetch:dict       # once: download the prebuilt IPA dictionaries
 pnpm dev              # Chrome
 pnpm dev:firefox      # Firefox
 pnpm build            # + build:firefox
-pnpm zip:firefox      # distributable; sign unlisted with web-ext for install
+pnpm zip:firefox      # distributable; sign unlisted with web-ext to install
 pnpm check            # svelte-check
 pnpm build:dict       # rebuild the dictionaries from the ~2.3GB kaikki dump
 ```
 
-The dictionaries are large binary data and are not committed. `fetch:dict` pulls
-the prebuilt set from a release asset; `build:dict` regenerates them from the
-kaikki dump. Without them the extension falls back to espeak for every word.
+The dictionaries are ~30 MB of binary data and aren't committed. `fetch:dict` pulls
+the prebuilt set from a release asset; `build:dict` regenerates it from the kaikki
+dump. Without them the extension falls back to espeak for every word.
 
 ## Testing
 
-Three layers, all runnable from `package.json`:
-
 ```sh
-pnpm test              # unit: segmenter, script gating, homographs, language, accent rules, IPA symbols
-pnpm test:integration  # behavioral: controlled fixtures via CDP, hard assertions
-pnpm test:hover        # the hovered word must not move (measured in rendered pixels)
+pnpm test              # unit: segmenter, script gating, homographs, language, accent rules, symbols
+pnpm test:integration  # controlled fixtures driven through headless Chrome (CDP)
+pnpm test:hover        # the hovered word must not move, measured in rendered pixels
 pnpm test:popup        # every popup control shows its own label, nothing clipped
 pnpm test:voices       # every espeak voice speaks, and every accent changes real words
-pnpm test:names        # every IPA symbol name matches the IPA's own descriptors (ipapy)
-pnpm test:firefox      # the same behaviour on real Firefox, incl. switching accents
-pnpm test:e2e          # behavioral: a few real sites, invariants
-pnpm test:all          # all three
+pnpm test:names        # every IPA symbol name matches the IPA's own descriptor (ipapy)
+pnpm test:firefox      # the same behaviour on real Firefox, including switching accents
+pnpm test:e2e          # a handful of real sites, invariants only
 ```
 
-Everything above runs in CI on every push, Chrome and Firefox in parallel. Some
-of these tests exist because the thing they check shipped broken once: `test:hover`
-measures the actual pixels because three earlier geometric checks were fooled by a
-box that grew without moving; `test:names` checks against a database because a name
-written from memory read as authoritative and was wrong; `test:voices` reads each
-voice twice because espeak silently keeps the previous one when asked for a voice
-it lacks.
+CI runs all of this on every push, Chrome and Firefox in parallel. A few of the
+tests are here because what they check went out broken once. `test:hover` measures
+the rendered pixels because the word kept moving on hover while three checks of its
+box passed. `test:names` checks against a database because a symbol name written
+from memory was wrong and read as if it weren't. `test:voices` reads each voice
+twice because espeak, asked for a voice it doesn't have, keeps the last one and
+says nothing.
 
-- **Unit** (`scripts/test-*.ts`, node `--experimental-strip-types`): pure logic —
-  `homograph`, `resolution` (segmentation + espeak script gating), `langdetect`
-  (per-block language decision).
-- **Integration / e2e** (`scripts/proofread/suite.py`): builds must exist
-  (`pnpm build`); drives the extension in headless chromium over CDP (a
-  `--remote-debugging-pipe`, since a debug port is killed by the sandbox on some
-  hosts). Asserts a subsystem **health check** (language detection, dictionary and
-  espeak are actually alive, not silently degraded), per-title language on mixed
-  pages, no letter-name garbage, and non-Latin coverage.
-- **Firefox** (`pnpm test:firefox`): the CDP suite drives Chrome, so this drives
-  the real Firefox build headless via Marionette and asserts the health probe —
-  espeak runs in the background page there, a different path than Chrome's
-  offscreen document. Needs a built + signed Firefox xpi in `.output/signed/`.
-- **Proofreading** (`scripts/proofread/harness.py` + `analyze.py`): sweeps a large
-  corpus and quantifies failure classes for exploratory regression checking.
+The unit tests (`scripts/test-*.ts`, run with node `--experimental-strip-types`)
+are pure logic. The behavioural ones (`scripts/proofread/`) need a build present
+and drive the extension over CDP through a `--remote-debugging-pipe`, because a
+debug port gets killed by the sandbox on some machines. Among other things they
+assert a health probe: that language detection, the dictionaries and espeak are all
+actually working, not quietly degraded. The Firefox suite drives a real Firefox
+over Marionette, since its espeak path differs from Chrome's.
