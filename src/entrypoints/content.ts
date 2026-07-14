@@ -357,18 +357,25 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   r1.appendChild(audioBtn);
   ttEl.appendChild(r1);
 
-  // ── Row 2: primary /ipa/ (matches the page) + speak in the source language ──
+  // ── The pronunciation itself, and it is the interactive part ──
+  // One IPA, shown large. Each symbol explains itself on hover and speaks when
+  // clicked, so there is no second copy of the same transcription to read.
   const r2 = el('div', 'px-r2');
-  r2.appendChild(txt('span', 'px-ipa-text', `/${ipa}/`));
-  const ttsBtn = btn('px-btn px-btn-sm', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
+  r2.appendChild(txt('span', 'px-slash', '/'));
+  const line = el('span', 'px-ipa-line');
+  r2.appendChild(line);
+  r2.appendChild(txt('span', 'px-slash', '/'));
+  r2.appendChild(el('div', 'px-spacer'));
+
+  const ttsBtn = btn('px-btn', ICO_ROBOT, `Robot voice (espeak, ${voiceFor(lang)})`);
   ttsBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word, lang); });
   r2.appendChild(ttsBtn);
   ttEl.appendChild(r2);
 
-  // ── Symbol breakdown (of the primary IPA; never re-rendered by async data) ──
-  const symbolsContainer = el('div', 'px-symbols-wrap');
-  ttEl.appendChild(symbolsContainer);
-  renderSymbols(symbolsContainer, ipa);
+  const detail = el('div', 'px-detail');
+  ttEl.appendChild(detail);
+  ttDetail = detail;
+  renderSymbols(line, displayIpa(ipa));
 
   // Wiktionary is looked up only to enrich the row-1 controls: it enables the
   // link and the recording. The IPA and its source tag stay exactly what the
@@ -391,50 +398,56 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
   }).catch(() => { audioBtn.title = 'No human recording on Wiktionary'; });
 }
 
-/** Build (or rebuild) the IPA symbol grid and its detail line into a container. */
+/**
+ * Lay the IPA out as its own symbols: each one names itself on hover and speaks
+ * when clicked. The transcription a reader looks at and the thing they explore
+ * are one and the same, rather than a small line above a grid repeating it.
+ */
 function renderSymbols(container: HTMLElement, ipa: string): void {
   container.innerHTML = '';
-  const tokens = tokenizeIPA(ipa);
-  if (tokens.length > 0) {
-    const grid = el('div', 'px-symbols');
-    const detail = el('div', 'px-detail');
-    detail.appendChild(txt('div', 'px-detail-empty', 'Hover a symbol for details'));
-    ttDetail = detail;
+  resetDetail();
 
-    for (const tok of tokens) {
-      if (!tok.trim()) continue;
-      const info = IPA_SYMBOLS[tok] || IPA_SYMBOLS[tok[0]];
-      const cls = info ? TYPE_CLASS[info.type] || '' : '';
-      const hasAudio = !!info?.audio;
+  for (const tok of tokenizeIPA(ipa)) {
+    if (!tok.trim()) continue;
+    const info = IPA_SYMBOLS[tok] || IPA_SYMBOLS[tok[0]];
+    const cls = info ? TYPE_CLASS[info.type] || '' : '';
+    const hasAudio = !!info?.audio;
 
-      const sym = el('div', `px-sym ${cls} ${hasAudio ? 'clickable' : ''}`);
-      sym.appendChild(txt('span', 'px-sym-ch', tok));
+    const sym = el('span', `px-sym ${cls} ${hasAudio ? 'clickable' : ''}`);
+    sym.textContent = tok;
 
-      if (hasAudio) {
-        const spk = el('span', 'px-sym-spk');
-        spk.innerHTML = ICO_SPEAKER_SM;
-        sym.appendChild(spk);
-        const file = info!.audio!;
-        sym.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
-      }
+    if (hasAudio) {
+      const file = info!.audio!;
+      sym.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
+    }
 
+    if (info) {
       sym.addEventListener('mouseenter', () => {
-        if (!info || !ttDetail) return;
-        ttDetail.innerHTML = '';
-        ttDetail.appendChild(txt('div', 'px-detail-name', info.name));
-        ttDetail.appendChild(txt('div', 'px-detail-eg', info.example));
-      });
-      sym.addEventListener('mouseleave', () => {
         if (!ttDetail) return;
         ttDetail.innerHTML = '';
-        ttDetail.appendChild(txt('div', 'px-detail-empty', 'Hover a symbol for details'));
+        ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
+        const text = el('span', 'px-detail-text');
+        text.appendChild(txt('span', 'px-detail-name', info.name));
+        text.appendChild(txt('span', 'px-detail-eg', info.example));
+        ttDetail.appendChild(text);
+        if (hasAudio) {
+          const spk = el('span', 'px-detail-spk');
+          spk.innerHTML = ICO_SPEAKER_SM;
+          ttDetail.appendChild(spk);
+        }
       });
-
-      grid.appendChild(sym);
+      sym.addEventListener('mouseleave', resetDetail);
     }
-    container.appendChild(grid);
-    container.appendChild(detail);
+
+    container.appendChild(sym);
   }
+}
+
+/** The detail line's resting state, so the tooltip never changes height. */
+function resetDetail(): void {
+  if (!ttDetail) return;
+  ttDetail.innerHTML = '';
+  ttDetail.appendChild(txt('span', 'px-detail-empty', 'Hover a symbol to hear and read it'));
 }
 
 // DOM helpers
@@ -501,6 +514,29 @@ const TRAILING_MARK = /^[.,;:!?…)\]}»”’]+/u;
 // =====================================================================
 
 interface TextBlock { blockElement: Element; textNodes: Text[]; text: string; }
+
+/**
+ * Re-read the page under a changed setting.
+ *
+ * The page is stripped of its spans before it can be rewritten, so a failure
+ * here would otherwise leave it stripped for good: no spans, no observer, and no
+ * sign of why. The failure is recorded on the document (a test can read it, as it
+ * cannot see a content script's console) and the page is put back the way it was.
+ */
+async function reprocess(): Promise<void> {
+  if (!isEnabled) return;
+  stopObserver();
+  revertAll();
+  try {
+    await processPage();
+    delete document.documentElement.dataset.pxerror;
+  } catch (e) {
+    document.documentElement.dataset.pxerror = String(e);
+    console.error('[Phonetix] reprocessing the page failed:', e);
+  } finally {
+    observeDOM();
+  }
+}
 
 async function processPage(root: Element = document.body): Promise<void> {
   if (languageOption === 'auto') {
@@ -928,34 +964,66 @@ export default defineContentScript({
         .catch((e) => { document.documentElement.dataset.pxhealth = JSON.stringify({ error: String(e) }); });
     }
 
-    // Popup messages
-    onMessage('extensionToggled', async (msg) => {
-      const on = msg.data;
-      if (on && !isEnabled) { isEnabled = true; setMode(mode); await processPage(); observeDOM(); }
-      else if (!on && isEnabled) { isEnabled = false; revertAll(); clearMode(); stopObserver(); }
+    // Settings are watched, not delivered.
+    //
+    // The popup used to message the active tab. That reaches one tab, so every
+    // other open page kept the old setting, and it depends on the popup agreeing
+    // with the browser about which tab is active — which is exactly the kind of
+    // thing that works on one browser and quietly does nothing on another.
+    // Storage is the state; each page reacts to it changing, wherever it is.
+    storage.watch<string>('local:accents', async (value) => {
+      accents = value ? JSON.parse(value) : {};
+      await reprocess();
     });
 
-    onMessage('modeChanged', (msg) => { mode = msg.data; if (isEnabled) setMode(mode); });
+    storage.watch<string>('local:hideStress', async (value) => {
+      hideStress = value === 'true';
+      await reprocess();
+    });
 
-    onMessage('languageChanged', async (msg) => {
-      languageOption = msg.data;
+    storage.watch<string>('local:selectedMode', (value) => {
+      if (!value || !(value in MODE_CLASSES)) return;
+      mode = value as Mode;
+      if (isEnabled) setMode(mode);
+    });
+
+    storage.watch<string>('local:selectedLanguage', async (value) => {
+      languageOption = (value || 'auto') as LanguageOption;
       if (languageOption === 'auto') {
         pageLang = await detectPageLanguage();
         await storage.setItem('local:detectedLanguage', pageLang);
       } else {
         pageLang = languageOption as Language;
       }
-      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
+      await reprocess();
     });
 
-    onMessage('stressMarksChanged', async (msg) => {
-      hideStress = msg.data;
-      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
-    });
+    /** On for this page: the site's own setting if it has one, else the default. */
+    async function enabledHere(): Promise<boolean> {
+      const extState = await storage.getItem<string>('local:extension_enabled');
+      const byDefault = extState ? JSON.parse(extState) : true;
+      const websiteState = await storage.getItem<string>('local:websites_enabled');
+      const sites: Record<string, boolean> = websiteState ? JSON.parse(websiteState) : {};
+      const host = window.location.hostname;
+      return host in sites ? sites[host] : byDefault;
+    }
 
-    onMessage('accentChanged', async (msg) => {
-      accents = msg.data;
-      if (isEnabled) { stopObserver(); revertAll(); await processPage(); observeDOM(); }
-    });
+    async function applyEnabled(): Promise<void> {
+      const on = await enabledHere();
+      if (on === isEnabled) return;
+      isEnabled = on;
+      if (on) {
+        setMode(mode);
+        await processPage();
+        observeDOM();
+      } else {
+        revertAll();
+        clearMode();
+        stopObserver();
+      }
+    }
+
+    storage.watch<string>('local:extension_enabled', applyEnabled);
+    storage.watch<string>('local:websites_enabled', applyEnabled);
   },
 });

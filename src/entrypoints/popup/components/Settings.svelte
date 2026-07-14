@@ -4,7 +4,7 @@
   import Info from "virtual:icons/line-md/alert-circle";
   import Book from "virtual:icons/line-md/document";
 
-  import { getCurrentTabId, sendMessage } from "@/lib/messaging"
+  import { sendMessage } from "@/lib/messaging"
 
   import { Languages, LanguageNames, Modes, ModeLabels, AccentsByLanguage, DefaultAccents } from "@/lib/types"
   import { ACCENTS } from "@/lib/accents"
@@ -106,10 +106,12 @@
   // Persist + notify on language change. The accent map is keyed by language and
   // survives this: switching language reveals that language's accent, it does not
   // overwrite anything.
+  // Every page watches these keys, so writing them is all it takes: a message
+  // would reach only the active tab, and only if the popup agreed with the
+  // browser about which tab that is.
   $effect(() => {
     if (!initialized) return;
     storage.setItem<string>('local:selectedLanguage', selectedLanguage);
-    (async () => sendMessage('languageChanged', selectedLanguage, await getCurrentTabId()))();
   });
 
   let hideStress = $state(false);
@@ -118,19 +120,16 @@
   async function setHideStress(hide: boolean) {
     hideStress = hide;
     await storage.setItem<string>('local:hideStress', String(hide));
-    sendMessage('stressMarksChanged', hide, await getCurrentTabId());
   }
 
   async function setAccent(lang: string, accent: string) {
     accents = { ...accents, [lang]: accent };
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
-    sendMessage('accentChanged', accents, await getCurrentTabId());
   }
 
   $effect(() => {
     if (!initialized) return;
     storage.setItem<string>('local:selectedMode', selectedMode);
-    (async () => sendMessage('modeChanged', selectedMode, await getCurrentTabId()))();
   });
 
   let showInfo = $state(false);

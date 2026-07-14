@@ -105,8 +105,9 @@ export const TOOLTIP_CSS = `
   position: fixed;
   display: none;
   width: max-content;
-  max-width: 420px;
-  padding: 10px 12px;
+  max-width: 460px;
+  min-width: 240px;
+  padding: 14px 16px;
   background: #1c1c1e;
   border: 1px solid #333;
   border-radius: 10px;
@@ -137,11 +138,10 @@ export const TOOLTIP_CSS = `
 .px-r1 {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
+  gap: 8px;
 }
 .px-word {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #f5f5f7;
 }
@@ -184,70 +184,61 @@ export const TOOLTIP_CSS = `
 .px-btn svg { width: 16px; height: 16px; display: block; }
 .px-btn-sm svg { width: 12px; height: 12px; }
 
-/* ── Row 2: IPA ── */
+/* ── The pronunciation, which is also the interactive part ── */
 .px-r2 {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 8px;
+  margin: 10px 0 12px;
 }
-.px-ipa-text {
-  font: 14px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
-  color: #6d9fff;
+.px-slash {
+  font: 22px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
+  color: #4a4a52;
+}
+.px-ipa-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1px;
 }
 
-/* ── Symbol grid ── */
-.px-symbols {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  margin-bottom: 2px;
-}
+/* Each symbol is the text itself, not a box repeating it. */
 .px-sym {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 28px;
-  padding: 0 4px;
-  background: #252528;
+  font: 500 24px/1.25 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
+  color: #eaeaf0;
+  padding: 2px 2px 3px;
   border-radius: 4px;
   border-bottom: 2px solid transparent;
   cursor: default;
-  transition: background .08s;
-  position: relative;
+  transition: background .08s, color .08s;
 }
-.px-sym:hover { background: #303035; }
+.px-sym:hover { background: rgba(255,255,255,.10); }
 .px-sym.clickable { cursor: pointer; }
-.px-sym.clickable:active { transform: scale(.93); }
+.px-sym.clickable:active { transform: scale(.94); }
 .px-sym.C { border-bottom-color: #6d9fff; }
 .px-sym.V { border-bottom-color: #ff6d8f; }
 .px-sym.S { border-bottom-color: #b78dff; }
 .px-sym.D { border-bottom-color: #5de8b0; }
-.px-sym-ch {
-  font: 500 14px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
-  color: #e0e0e4;
-}
-.px-sym .px-sym-spk {
-  display: none;
-  position: absolute;
-  top: 0; right: 0;
-  width: 8px; height: 8px;
-  color: #6d9fff;
-}
-.px-sym.clickable:hover .px-sym-spk { display: block; }
 
-/* ── Detail line ── */
+/* ── Detail line: fixed height, so exploring never resizes the tooltip ── */
 .px-detail {
-  height: 36px;
-  overflow: hidden;
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: #222225;
-  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #232327;
 }
-.px-detail-name { font-size: 10px; color: #aaa; font-weight: 500; }
-.px-detail-eg { font-size: 10px; color: #666; }
-.px-detail-empty { font-size: 10px; color: #555; font-style: italic; }
-
+.px-detail-empty { font-size: 11px; color: #6a6a72; }
+.px-detail-sym {
+  font: 500 16px/1 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
+  color: #6d9fff;
+  flex: none;
+}
+.px-detail-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.px-detail-name { font-size: 11px; color: #d8d8de; font-weight: 500; }
+.px-detail-eg { font-size: 11px; color: #7a7a82; }
+.px-detail-spk { display: flex; margin-left: auto; color: #6d9fff; flex: none; }
+.px-detail-spk svg { width: 12px; height: 12px; display: block; }
 `.trim();

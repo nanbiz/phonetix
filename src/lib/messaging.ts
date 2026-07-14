@@ -1,5 +1,5 @@
 import { defineExtensionMessaging } from '@webext-core/messaging';
-import type { Language, LanguageOption, Mode, PhonemeResult } from './types';
+import type { Language, PhonemeResult } from './types';
 
 export interface WiktionaryInfo {
   exists: boolean;
@@ -33,12 +33,6 @@ interface ProtocolMap {
   speakWord(data: { word: string; voice: string }): void;
   /** Synthesize a word to WAV bytes (Firefox: played in the content script). */
   synthesizeAudio(data: { word: string; voice: string }): number[];
-  extensionToggled(isEnabled: boolean): void;
-  languageChanged(language: LanguageOption): void;
-  modeChanged(mode: Mode): void;
-  accentChanged(accents: Record<string, string>): void;
-  /** Hide the stress marks in the rendered IPA (the tooltip still shows them). */
-  stressMarksChanged(hide: boolean): void;
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

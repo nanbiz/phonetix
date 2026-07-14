@@ -6,9 +6,19 @@
 import os, subprocess, tempfile, time, threading, http.server, functools, glob, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-XPI = sorted(glob.glob(os.path.join(ROOT, ".output/signed/*.xpi")))[-1]
+XPI = os.environ.get("PHONETIX_XPI") or sorted(
+    glob.glob(os.path.join(ROOT, ".output/signed/*.xpi")),
+    key=os.path.getmtime,
+)[-1]
+# A fixed internal id, so the extension's own pages can be opened by URL. Firefox
+# otherwise assigns a random one per profile.
+EXT_UUID = "8f2b9a41-5c3d-4e7a-9b16-2d7f0c4e51aa"
 FIREFOX = os.environ.get("PHONETIX_FIREFOX", "firefox")
-HEALTH_HTML = b"<!doctype html><html lang='en'><meta charset='utf-8'><body><p>This is an English sentence so detection has something to work with.</p></body></html>"
+HEALTH_HTML = (
+    b"<!doctype html><html lang='en'><meta charset='utf-8'><body><p>"
+    b"They dance in the bath and drive a car on a tight schedule, which is an "
+    b"English sentence so detection has something to work with.</p></body></html>"
+)
 
 def serve(port):
     class H(http.server.BaseHTTPRequestHandler):
@@ -28,11 +38,20 @@ def main():
     import shutil, zipfile, json as _json
     gecko_id = _json.loads(zipfile.ZipFile(XPI).read("manifest.json"))[
         "browser_specific_settings"]["gecko"]["id"]
-    shutil.copy(XPI, os.path.join(prof, "extensions", f"{gecko_id}.xpi"))
+    # A signed build is sideloaded from the profile. An unsigned one (a local dev
+    # build) cannot be: release Firefox refuses it whatever the signature pref
+    # says, and installs it only as a temporary add-on, which Marionette can do
+    # once the session is up.
+    signed = "META-INF/mozilla.rsa" in zipfile.ZipFile(XPI).namelist()
+    if signed:
+        shutil.copy(XPI, os.path.join(prof, "extensions", f"{gecko_id}.xpi"))
+    print(f"{'signed' if signed else 'unsigned'}: {os.path.basename(XPI)}")
     with open(os.path.join(prof, "user.js"), "w") as f:
         f.write('user_pref("extensions.autoDisableScopes", 0);\n')
         f.write('user_pref("marionette.port", 2828);\n')
         f.write('user_pref("xpinstall.signatures.required", false);\n')
+        f.write('user_pref("extensions.webextensions.uuids", "{\\"%s\\": \\"%s\\"}");\n'
+                % (gecko_id, EXT_UUID))
 
     proc = subprocess.Popen(
         [FIREFOX, "--headless", "--marionette", "--profile", prof, "--no-remote"],
@@ -48,6 +67,10 @@ def main():
         if not client:
             print("could not connect to marionette"); return 2
         client.timeout.page_load = 30
+        if not signed:
+            from marionette_driver.addons import Addons
+            Addons(client).install(os.path.abspath(XPI), temp=True)
+            time.sleep(3)
         client.navigate(f"http://127.0.0.1:{port}/?pxhealth=1")
         health = None
         for _ in range(20):
@@ -55,8 +78,72 @@ def main():
             if health: break
             time.sleep(1.5)
         print("firefox health:", health)
+        ok = bool(health) and all(f'"{k}":true' in health for k in ("espeak", "eld", "dict"))
+
+        # Switching the accent must change the page, on Firefox too. The Chrome
+        # suite cannot see a Firefox-only break in this path (its messaging and
+        # storage APIs differ), and a dead accent switch looks exactly like a
+        # working one until the words are compared.
+        def ipa_of(word):
+            return client.execute_script(
+                "const w = arguments[0];"
+                "for (const s of document.querySelectorAll('.phonetix'))"
+                "  if ((s.dataset.original || '').toLowerCase() === w) return s.dataset.ipa;"
+                "return null;",
+                script_args=(word,),
+            )
+
+        before = {}
+        for _ in range(20):
+            before = {w: ipa_of(w) for w in ("dance", "bath", "car")}
+            if any(before.values()):
+                break
+            time.sleep(1.5)
+
+        # The popup opens in its own tab: navigating the page's tab to it would
+        # take the page away, and then nothing could be observed on it.
+        page = client.current_window_handle
+        client.execute_script("window.open('about:blank', '_blank');")
+        time.sleep(1)
+        popup_tab = [h for h in client.window_handles if h != page][-1]
+        client.switch_to_window(popup_tab)
+        client.navigate(f"moz-extension://{EXT_UUID}/popup.html")
+        time.sleep(3)
+        # Drive the popup's own control, so the extension's code does the work with
+        # its own privileges: Marionette's sandbox has no extension APIs, and using
+        # them from here would test the harness rather than the popup.
+        picked = client.execute_script(
+            "for (const sel of document.querySelectorAll('select')) {"
+            "  const opt = [...sel.options].find(o => o.value === 'en-us');"
+            "  if (!opt) continue;"
+            "  sel.value = 'en-us';"
+            "  sel.dispatchEvent(new Event('change', {bubbles: true}));"
+            "  return 'picked en-us';"
+            "}"
+            "return 'no accent control offering en-us';",
+        )
+        print("firefox popup:", picked)
+        client.switch_to_window(page)
+        after = {}
+        for _ in range(20):
+            time.sleep(1.5)
+            after = {w: ipa_of(w) for w in ("dance", "bath", "car")}
+            if any(after.values()) and after != before:
+                break
+
+        changed = [w for w in before if before[w] and after.get(w) and before[w] != after[w]]
+        print(f"firefox accent: before={before} after={after}")
+        err = client.execute_script("return document.documentElement.dataset.pxerror || null;")
+        if err:
+            print(f"firefox reprocess error: {err}")
+        if changed:
+            print(f"PASS - switching to en-us changed {', '.join(changed)}")
+        else:
+            print("FAIL - switching the accent changed nothing on the page")
+            ok = False
+
         client.delete_session()
-        return 0 if (health and '"espeak":true' in health and '"eld":true' in health and '"dict":true' in health) else 1
+        return 0 if ok else 1
     finally:
         proc.terminate()
         try: proc.wait(timeout=5)

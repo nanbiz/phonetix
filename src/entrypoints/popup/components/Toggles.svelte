@@ -1,5 +1,4 @@
 <script lang="ts">
-  import {getCurrentTabId, sendMessage} from "@/lib/messaging"
 
   /** The extension switch is the default for any site you have not decided on.
    *  The site switch is a decision about this site, and it wins — so a site can
@@ -13,10 +12,6 @@
   let stateInitialized = $state(false);
 
   let siteEnabled = $derived(siteOverride ?? defaultEnabled);
-
-  async function notify() {
-    sendMessage('extensionToggled', siteEnabled, await getCurrentTabId());
-  }
 
   (async () => {
     try {
@@ -44,7 +39,6 @@
   async function setDefault(enabled: boolean) {
     defaultEnabled = enabled;
     await storage.setItem('local:extension_enabled', JSON.stringify(enabled));
-    await notify();
   }
 
   async function setSite(enabled: boolean) {
@@ -56,7 +50,6 @@
     if (siteOverride === null) delete sites[hostname];
     else sites[hostname] = siteOverride;
     await storage.setItem('local:websites_enabled', JSON.stringify(sites));
-    await notify();
   }
 </script>
 
