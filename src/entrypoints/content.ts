@@ -228,11 +228,44 @@ function showReveal(span: HTMLElement): void {
   revealEl.style.fontWeight = cs.fontWeight;
   revealEl.style.fontStyle = cs.fontStyle;
   revealEl.style.letterSpacing = cs.letterSpacing;
+  revealEl.style.lineHeight = cs.lineHeight;
   revealEl.style.color = cs.color;
+  // The word's own background, so the reveal covers it and reads the same. NOT the
+  // CSS `Canvas` keyword, which is the OS theme's colour: on a dark-themed machine it
+  // painted a dark box over a light page and hid both the word and the reveal's text.
+  revealEl.style.background = pageBackground(span);
   revealEl.style.left = `${rect.left + rect.width / 2}px`;
-  revealEl.style.top = `${rect.top + rect.height / 2}px`;
-  revealEl.style.transform = 'translate(-50%, -50%)';
+  revealEl.style.top = `${rect.top}px`;
+  revealEl.style.transform = 'translateX(-50%)';
   revealEl.style.display = 'block';
+
+  // Aligning the boxes leaves the glyphs off by up to a pixel, because the reveal's
+  // font metrics are not identical to the word's. Measure the actual glyphs of both
+  // and correct, so the letters land exactly on the word's letters — the box top can
+  // read aligned while the text has moved, which is how a 1px drop slipped through.
+  const wordTop = glyphTop(layers.shown);
+  const revealTop = glyphTop(revealEl);
+  if (wordTop !== null && revealTop !== null) {
+    revealEl.style.top = `${rect.top + (wordTop - revealTop)}px`;
+  }
+}
+
+/** The top of an element's rendered glyphs (its text box), not its layout box. */
+function glyphTop(el: HTMLElement): number | null {
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const r = range.getBoundingClientRect();
+  return r.height === 0 ? null : r.top;
+}
+
+/** The nearest solid background behind an element, walking up to the page. */
+function pageBackground(el: HTMLElement | null): string {
+  for (let e = el; e; e = e.parentElement) {
+    const bg = getComputedStyle(e).backgroundColor;
+    if (bg && bg !== 'transparent' && !bg.startsWith('rgba(0, 0, 0, 0)')) return bg;
+  }
+  const body = getComputedStyle(document.body).backgroundColor;
+  return body && body !== 'transparent' && !body.startsWith('rgba(0, 0, 0, 0)') ? body : '#fff';
 }
 
 function hideReveal(): void {

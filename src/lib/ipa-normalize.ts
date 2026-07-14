@@ -48,6 +48,13 @@ export function normalizeIpa(key: string, raw: string): string {
   ipa = ipa.replace(/\s+/g, ' ').trim();
   if (!ipa) return '';
 
+  // A transcription that starts or ends with a hyphen is a fragment — a suffix or
+  // rhyme like "-ɪst", or the "-ɪt" that a British entry gave for "ultimate". It is
+  // a real pronunciation only for a word that is itself an affix; for a whole word
+  // it is garbage, so it is rejected and the caller falls back to the full form.
+  const affix = key.startsWith('-') || key.endsWith('-');
+  if (!affix && /^[-‿]|[-‿]$/u.test(ipa)) return '';
+
   // More parts than the key spells out means the separator was lost and the
   // remainder is another variant, not a continuation of this one.
   const parts = ipa.split(' ');

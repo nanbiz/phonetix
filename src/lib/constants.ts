@@ -39,7 +39,7 @@ export const PHONETIX_CSS = `
    visible on any background, and the transcription shows through the hole. */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
-  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(0,0,0,0.5)%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.55)%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(0,0,0,0.28)%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.32)%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
 }
 
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
@@ -71,7 +71,6 @@ export const PHONETIX_CSS = `
   white-space: nowrap;
   padding: 1px 6px;
   border-radius: 6px;
-  background: Canvas;
   box-shadow: 0 2px 12px rgba(0,0,0,.28);
   display: none;
 
@@ -283,10 +282,10 @@ export const TOOLTIP_CSS = `
 }
 .px-detail-mri:hover { color: #fff; background: #33436b; }
 
-/* The diagrams are dark line drawings on a transparent ground. Inverting them makes
-   the lines light so they sit on the tooltip's own dark background instead of a
-   white box: the picture blends into the panel, and there is no white ground to
-   flash through as it scales. */
+/* A sagittal section is dark ink drawn to be read on white, and some are filled
+   silhouettes rather than thin lines, so inverting them onto the dark panel turned
+   them into a near-invisible dark blob. They sit on a small white card instead,
+   which is how such a diagram is meant to be seen. */
 .px-detail-diagram {
   display: flex;
   align-items: center;
@@ -295,7 +294,7 @@ export const TOOLTIP_CSS = `
   width: 46px;
   height: 34px;
   border-radius: 4px;
-  background: #2c2c31;
+  background: #fff;
   overflow: visible;
 }
 .px-detail-diagram:empty { background: none; }
@@ -303,7 +302,6 @@ export const TOOLTIP_CSS = `
   max-width: 100%;
   max-height: 100%;
   display: block;
-  filter: invert(0.9) contrast(1.05);
   transition: transform .12s ease-out;
 }
 
@@ -317,7 +315,7 @@ export const TOOLTIP_CSS = `
 .px-detail-diagram:hover img {
   transform: scale(5);
   transform-origin: center center;
-  background: #1c1c1e;
+  background: #fff;
   border-radius: 2px;
   box-shadow: 0 4px 24px rgba(0,0,0,.45);
 }
@@ -348,9 +346,7 @@ export const TOOLTIP_CSS = `
   .px-detail-name { color: #33343a; }
   .px-detail-eg { color: #8a8a92; }
   .px-detail-empty { color: #9a9aa2; }
-  .px-detail-diagram { background: #ececef; }
-  .px-detail-diagram img { filter: none; }
-  .px-detail-diagram:hover img { background: #fff; }
+  .px-detail-diagram { background: #fff; }
   .px-btn { color: #8a8a92; }
   .px-btn:hover { color: #16171b; background: rgba(0,0,0,.06); }
 }

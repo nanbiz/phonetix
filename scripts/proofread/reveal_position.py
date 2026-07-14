@@ -44,13 +44,18 @@ PROBE = """(() => {
   const sp = [...ctx.querySelectorAll('.phonetix')].find(s => s.dataset.original === 'transparent');
   if (!sp) return JSON.stringify({error: 'no transparent span'});
   const shown = [...sp.children].find(c => getComputedStyle(c).display !== 'none') || sp;
-  const w = shown.getBoundingClientRect();
+  // Glyph boxes (Range), not layout boxes: a box centre stays put while the text
+  // inside it shifts, so the box hid a 1px drop of the letters themselves.
+  const gr = e => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); };
+  const w = gr(shown);
   const rev = document.querySelector('.px-reveal');
   const on = rev && getComputedStyle(rev).display !== 'none';
-  const r = on ? rev.getBoundingClientRect() : null;
+  const r = on ? gr(rev) : null;
+  const box = shown.getBoundingClientRect();
   return JSON.stringify({
-    x: w.left + w.width / 2, y: w.top + w.height / 2,
-    revealX: r ? r.left + r.width / 2 : null, revealY: r ? r.top + r.height / 2 : null,
+    x: box.left + box.width / 2, y: box.top + box.height / 2,
+    wordTop: w.top, wordCentreX: w.left + w.width / 2,
+    revealTop: r ? r.top : null, revealCentreX: r ? r.left + r.width / 2 : null,
     on: !!on, text: rev ? rev.textContent : null,
   });
 })()"""
@@ -97,11 +102,12 @@ def main():
         if not after.get("on"):
             failures.append(f"{case}: no reveal appeared on hover")
             continue
-        dx, dy = abs(after["revealX"] - after["x"]), abs(after["revealY"] - after["y"])
-        ok = dx <= 2 and dy <= 2
-        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} off by ({dx:.0f}, {dy:.0f})px  [{after['text']}]")
+        dx = abs(after["revealCentreX"] - after["wordCentreX"])
+        dy = abs(after["revealTop"] - after["wordTop"])
+        ok = dx <= 1 and dy <= 0.6
+        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} glyphs off by ({dx:.1f}, {dy:.1f})px  [{after['text']}]")
         if not ok:
-            failures.append(f"{case}: reveal off the word by ({dx:.0f}, {dy:.0f})px")
+            failures.append(f"{case}: reveal glyphs off the word by ({dx:.1f}, {dy:.1f})px")
         d.hover(2, 2)
 
     d.close()
