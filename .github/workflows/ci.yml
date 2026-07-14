@@ -83,10 +83,10 @@ jobs:
         run: pnpm test:integration
       - name: IPA symbol names match the IPA
         run: pnpm test:names
-      - name: Hovering a word may not move it
+      - name: Hover reveal lands on the word (all layouts)
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:hover
+        run: pnpm test:reveal
       - name: Popup layout
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
@@ -135,3 +135,4 @@ jobs:
         run: |
           XPI=$(ls -t .output/*firefox*.zip | head -1)
           PHONETIX_XPI="$XPI" pnpm test:firefox
+          PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/reveal_position.py firefox

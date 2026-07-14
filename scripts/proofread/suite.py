@@ -216,7 +216,7 @@ def integration(d):
         h.classList.add(mode);
         let worst = 0;
         for (const span of document.querySelectorAll('#prose .phonetix')) {
-          const shown = [...span.children].find(c => getComputedStyle(c).visibility !== 'hidden');
+          const shown = [...span.children].find(c => getComputedStyle(c).display !== 'none');
           if (!shown) continue;
           // The span may be no wider than the layer it is showing.
           const slack = span.getBoundingClientRect().width - shown.getBoundingClientRect().width;
@@ -284,111 +284,6 @@ def integration(d):
            str([s["detail"][:20] for s in seen][:3]))
     d.close_tab()
 
-    # The layer revealed on hover must sit exactly where the word sat, at the same
-    # size: an absolutely positioned child of an inline box is placed against the
-    # line box rather than the word, which drops it below its own text and reads as
-    # the page moving and changing font under the cursor.
-    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
-    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
-    ALIGN = """(() => {
-      const h = document.documentElement;
-      const out = {};
-      for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
-        h.classList.remove('px-mode-hover', 'px-mode-reveal');
-        h.classList.add(mode);
-        let worstTop = 0, sizeMismatch = 0, worstCentre = 0;
-        for (const span of document.querySelectorAll('#prose .phonetix')) {
-          const [a, b] = span.children;
-          if (!a || !b) continue;
-          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-          worstTop = Math.max(worstTop, Math.abs(ra.top - rb.top));
-          // The revealed layer is centred on the word it replaces, so the two share
-          // a centre however much wider one of them is.
-          const ca = ra.left + ra.width / 2, cb = rb.left + rb.width / 2;
-          worstCentre = Math.max(worstCentre, Math.abs(ca - cb));
-          if (getComputedStyle(a).fontSize !== getComputedStyle(b).fontSize) sizeMismatch++;
-        }
-        out[mode] = {top: Math.round(worstTop), sizeMismatch, centre: Math.round(worstCentre)};
-      }
-      return JSON.stringify(out);
-    })()"""
-    align = json.loads(d.js(ALIGN) or "{}")
-    for mode, r in align.items():
-        expect(f"revealed layer sits on the word in {mode}", r["top"] <= 1, f"off by {r['top']}px")
-        expect(f"revealed layer keeps the font size in {mode}", r["sizeMismatch"] == 0,
-               f"{r['sizeMismatch']} spans change size")
-        expect(f"revealed layer is centred on the word in {mode}", r["centre"] <= 1,
-               f"off centre by {r['centre']}px")
-    d.close_tab()
-
-    # Hovering a word may change what is painted and nothing else. The layer that
-    # appears must land exactly on the word it replaces — same top, same centre, same
-    # size — or the text jumps under the cursor at the moment of being read.
-    #
-    # This is measured while the browser really has the word hovered: a :hover rule
-    # does not apply otherwise, so the earlier check, which compared the two layers
-    # at rest, could not see any of it.
-    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
-    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
-
-    for mode, hidden, shown in [
-        ("px-mode-hover", ".px-orig", ".px-ipa"),
-        ("px-mode-reveal", ".px-ipa", ".px-orig"),
-    ]:
-        d.js(f"(() => {{ const h = document.documentElement;"
-             f" h.classList.remove('px-mode-hover','px-mode-reveal');"
-             f" h.classList.add('{mode}'); return 1; }})()")
-
-        # what the word looks like before anyone touches it
-        before = json.loads(d.js(f"""(() => {{
-          const span = [...document.querySelectorAll('#prose .phonetix')][3];
-          span.scrollIntoView({{block: 'center'}});
-          // The glyphs, not the box around them: padding grows the box without
-          // moving its edge, while the text inside it shifts — which is exactly what
-          // the reader sees and what an element rect cannot show.
-          const range = document.createRange();
-          range.selectNodeContents(span.querySelector('{hidden}'));
-          const at = range.getBoundingClientRect();
-          const box = span.getBoundingClientRect();
-          return JSON.stringify({{
-            top: at.top, height: at.height, centre: at.left + at.width / 2,
-            font: getComputedStyle(span.querySelector('{hidden}')).fontSize,
-            x: box.left + box.width / 2, y: box.top + box.height / 2,
-          }});
-        }})()""") or "{}")
-
-        d.hover(before["x"], before["y"])
-
-        after = json.loads(d.js(f"""(() => {{
-          const span = [...document.querySelectorAll('#prose .phonetix')][3];
-          const el = span.querySelector('{shown}');
-          const range = document.createRange();
-          range.selectNodeContents(el);
-          const r = range.getBoundingClientRect();
-          return JSON.stringify({{
-            hovered: span.matches(':hover'),
-            top: r.top, height: r.height, centre: r.left + r.width / 2,
-            font: getComputedStyle(el).fontSize,
-          }});
-        }})()""") or "{}")
-
-        expect(f"the word is really hovered in {mode}", after.get("hovered") is True,
-               "the browser never entered :hover, so nothing below was measured")
-        expect(f"revealed layer keeps the top in {mode}",
-               abs(after["top"] - before["top"]) <= 1,
-               f"moved {after['top'] - before['top']:.1f}px down")
-        expect(f"revealed layer keeps the height in {mode}",
-               abs(after["height"] - before["height"]) <= 1,
-               f"grew {after['height'] - before['height']:.1f}px")
-        expect(f"revealed layer keeps the centre in {mode}",
-               abs(after["centre"] - before["centre"]) <= 1,
-               f"moved {after['centre'] - before['centre']:.1f}px sideways")
-        expect(f"revealed layer keeps the font size in {mode}",
-               after["font"] == before["font"], f"{before['font']} -> {after['font']}")
-
-        d.hover(5, 5)   # leave the word
-
-    d.close_tab()
 
     # A truncated label (text-overflow: ellipsis) must keep its words: an inline-block
     # span is an atomic box the ellipsis swallows whole, so "5-hour limit" lost "limit"

@@ -39,107 +39,41 @@ export const PHONETIX_CSS = `
    visible on any background, and the transcription shows through the hole. */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
-  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22black%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(0,0,0,0.5)%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.55)%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
 }
 
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
 .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; }
 
 /*
- * Hover modes show one layer and keep the other for the hover. Only the visible
- * layer may take up space: a box as wide as the wider of the two would pad every
- * word in the running text with the difference, which reads as broken spacing
- * ("is  a  branch of  linguistics"). The hidden layer is therefore taken out of
- * the flow, and the visible one alone sets the width.
+ * Hover modes show one layer as ordinary inline text; the other is display:none, so
+ * the running text lays out exactly as the page would without us — no reserved
+ * width, no reflow, and text-overflow ellipsis works because the span is inline.
  *
- * On hover the two swap by visibility only, so the box never changes size and the
- * line never reflows under the cursor. The revealed layer is allowed to overflow
- * its box, and carries a background so it stays readable over its neighbours.
+ * The hidden layer is NOT positioned inside the word. Absolutely positioning it
+ * against a multi-line inline element lands it at the paragraph top in Firefox
+ * (aligned only in Chrome), so on hover it is drawn instead by a single overlay
+ * (the px-reveal element, content.ts) placed at the word's measured screen
+ * position, the same pixels in every browser.
  */
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS},
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} {
-  /* Plain inline, so the span is part of the running text: an inline-block is an
-     atomic box that text-overflow ellipsis cannot break, so a truncated label
-     ("5-hour limit") swallowed its last word into the ellipsis. Position relative
-     on an inline element still makes it the containing block for the absolutely
-     positioned hidden layer, which keeps that layer on its own word not the page. */
-  position: relative;
-  font: inherit;
-  line-height: inherit;
-}
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; }
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; }
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: none; }
 
-/* onHover: the original is the running text; the IPA overlays it on hover. */
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; visibility: inherit; }
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} {
-  display: inline;
-  visibility: hidden;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  /* No top/bottom, so the layer keeps its inline static position vertically — the
-     text baseline — while left:50% centres it on the word. On an inline containing
-     block, top:0 would be the line-box top, dropping the layer below its own word.
-     A truncated ancestor must not clip it to an ellipsis. */
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-}
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} {
-  visibility: inherit;
-  z-index: 2147483646;
-
-}
-
-/*
- * The revealed layer's surface is drawn behind the text, never on it.
- *
- * Padding or a border on the layer itself applies only while hovered, and a box that
- * gains padding on hover moves its own text: the word shifted down and sideways at
- * the moment of being read. Everything the surface needs — the backing colour, the
- * blur of what lies behind, the shadow — sits on a pseudo-element inset behind the
- * text, so hovering changes the paint and nothing about the box.
- *
- * backdrop-filter acts on the backdrop, never on the element's own text, so the
- * transcription stays sharp while the words under it recede. The blur reaches past
- * the text and fades out to both sides, so it has no edge of its own.
- */
-.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS}::before,
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS}::before {
-  content: '';
-  position: absolute;
-  /* Tight to the text: the surface widened by 14px a side reached onto the words
-     next to it even when the revealed layer was no wider than the word it replaced.
-     It now clears the glyphs and no more, and the blur fades out within that. */
-  inset: -1px -5px;
-  z-index: -1;
+/* The overlay that shows the other layer on hover. It is fixed, at the word's
+   measured position, over an opaque page-coloured surface that hides the word
+   beneath it. Its font and colour are copied from the word in content.ts. */
+.px-reveal {
+  position: fixed;
+  z-index: 2147483645;
   pointer-events: none;
-  border-radius: 6px;
-  background: color-mix(in srgb, Canvas 90%, transparent);
-  backdrop-filter: blur(3px);
-  box-shadow: 0 1px 6px rgba(0,0,0,.18);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 5px, black calc(100% - 5px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 5px, black calc(100% - 5px), transparent 100%);
-}
-
-/* showOriginalOnHover: the IPA is the running text; the original overlays it. */
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; visibility: inherit; }
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} {
-  display: inline;
-  visibility: hidden;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   white-space: nowrap;
-  max-width: none;
-  overflow: visible;
-  text-overflow: clip;
-}
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} { visibility: hidden; }
-.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
-  visibility: inherit;
-  z-index: 2147483646;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: Canvas;
+  box-shadow: 0 2px 12px rgba(0,0,0,.28);
+  display: none;
 
 }
 `.trim();

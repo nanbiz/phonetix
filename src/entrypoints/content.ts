@@ -187,6 +187,59 @@ function inTooltip(e: Event): boolean {
 }
 
 // =====================================================================
+//  In-page hover reveal (the other layer, over the word)
+// =====================================================================
+
+let revealEl: HTMLDivElement | null = null;
+
+/** In a hover mode, the word shows one layer inline and the other is hidden. */
+function hiddenLayer(span: HTMLElement): { shown: HTMLElement; hidden: HTMLElement } | null {
+  const orig = span.querySelector(`.${ORIG_CLASS}`) as HTMLElement | null;
+  const ipa = span.querySelector(`.${IPA_CLASS}`) as HTMLElement | null;
+  if (!orig || !ipa) return null;
+  return getComputedStyle(ipa).display === 'none'
+    ? { shown: orig, hidden: ipa }
+    : { shown: ipa, hidden: orig };
+}
+
+/**
+ * Draw the hidden layer over the word at its measured screen position.
+ *
+ * The overlay is a single fixed element positioned by the word's own
+ * getBoundingClientRect, so it lands on the word the same way in every browser —
+ * unlike an absolutely positioned child of a multi-line inline element, which
+ * Firefox places at the paragraph top. Its font and colour are copied from the
+ * word so the reveal reads as the word itself, one detail level over.
+ */
+function showReveal(span: HTMLElement): void {
+  if (!revealEl) return;
+  const layers = hiddenLayer(span);
+  if (!layers) return;
+  const text = layers.hidden.textContent || '';
+  if (!text) { hideReveal(); return; }
+
+  const rect = layers.shown.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) { hideReveal(); return; }
+
+  const cs = getComputedStyle(span);
+  revealEl.textContent = text;
+  revealEl.style.fontFamily = cs.fontFamily;
+  revealEl.style.fontSize = cs.fontSize;
+  revealEl.style.fontWeight = cs.fontWeight;
+  revealEl.style.fontStyle = cs.fontStyle;
+  revealEl.style.letterSpacing = cs.letterSpacing;
+  revealEl.style.color = cs.color;
+  revealEl.style.left = `${rect.left + rect.width / 2}px`;
+  revealEl.style.top = `${rect.top + rect.height / 2}px`;
+  revealEl.style.transform = 'translate(-50%, -50%)';
+  revealEl.style.display = 'block';
+}
+
+function hideReveal(): void {
+  if (revealEl) revealEl.style.display = 'none';
+}
+
+// =====================================================================
 //  Tooltip – lifecycle
 // =====================================================================
 
@@ -196,6 +249,12 @@ function initTooltip(): void {
   ttHost.id = 'phonetix-tooltip-host';
   ttHost.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;overflow:visible;';
   document.body.appendChild(ttHost);
+
+  // The hover reveal lives in the page (not the shadow root) so it inherits the
+  // page's own rendering context; its look comes from the injected .px-reveal rule.
+  revealEl = document.createElement('div');
+  revealEl.className = 'px-reveal';
+  document.body.appendChild(revealEl);
 
   // Open, so a test can measure the card and read what it says. The boundary
   // still keeps the page's CSS out either way; closed only hides it from the
@@ -249,15 +308,19 @@ function setupTooltipEvents(): void {
     if (ttVisible && isInSafeZone(e.clientX, e.clientY)) return;
     clearTimers();
     curTarget = t;
+    // The in-page reveal is instant (it is the mode, not the tooltip); the tooltip
+    // still waits so it does not flicker up on every passing word.
+    showReveal(t);
     if (ttVisible) { showTooltip(t); } else { hoverTimer = setTimeout(() => showTooltip(t), 700); }
   });
 
   document.addEventListener('mouseout', (e) => {
     const t = (e.target as HTMLElement).closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
     if (t !== curTarget) return;
-    // Ignore child-to-child transitions within the same span (e.g. CSS visibility swap in hover modes)
+    // Ignore child-to-child transitions within the same span (e.g. moving onto the reveal)
     const related = (e as MouseEvent).relatedTarget as HTMLElement | null;
     if (related?.closest(`.${PHONETIX_CLASS}`) === t) return;
+    hideReveal();
     clearTimers();
     hideTimer = setTimeout(() => { hideTooltip(); curTarget = null; }, 350);
   });
@@ -276,7 +339,7 @@ function setupTooltipEvents(): void {
     if ((e as KeyboardEvent).key === 'Escape' && ttVisible) { clearTimers(); hideTooltip(true); curTarget = null; }
   });
 
-  window.addEventListener('scroll', () => { if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } }, { passive: true });
+  window.addEventListener('scroll', () => { hideReveal(); if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } }, { passive: true });
 
   // Keep tooltip alive when hovered
   if (ttEl) {

@@ -25,7 +25,7 @@
     "test:voices": "uv run python scripts/proofread/voice_check.py",
     "test:popup": "uv run python scripts/proofread/popup_check.py",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
-    "test:hover": "uv run --with pillow python scripts/proofread/hover_pixels.py"
+    "test:reveal": "uv run python scripts/proofread/reveal_position.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
