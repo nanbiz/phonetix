@@ -77,8 +77,9 @@ const TYPE_CLASS: Record<string, string> = {
 
 const ICO_SPEAKER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
 const ICO_SPEAKER_SM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
-/** Human recording (Wiktionary): a microphone. */
-const ICO_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/><path d="M8 21h8"/></svg>';
+// A face speaking, with a sound wave leaving the mouth: a person saying the word.
+// The plain microphone read as a mute button, and head-and-shoulders was unclear.
+const ICO_MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3a8 8 0 1 0 0 16"/><circle cx="8.5" cy="9" r="1"/><path d="M7 14c1.2 1 3 1 4.2 0"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 7a7 7 0 0 1 0 10"/></svg>';
 /** Synthesized speech (espeak): a robot head. */
 const ICO_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M9 17h6"/><path d="M1 12v3"/><path d="M23 12v3"/></svg>';
 const ICO_WIKT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill="currentColor" d="M2.22 18.6v.01c-.35-.21-.61-.5-.71-.84l-.07-.37L.21 3.36c-.03-.45.17-.9.57-1.25c.39-.36.97-.6 1.62-.66L15.35.22a2.8 2.8 0 0 1 1.7.35a1.5 1.5 0 0 1 .77 1.13l1.23 14.12c.03.45-.17.9-.57 1.25a2.85 2.85 0 0 1-1.62.67L3.92 18.95a2.75 2.75 0 0 1-1.7-.35m-1-1.1c.02.18.07.35.15.5l.02.25c.05.56.4 1.03.9 1.34c.51.3 1.19.46 1.9.4l13.34-1.27a3.15 3.15 0 0 0 1.8-.74c.45-.4.71-.93.66-1.49L18.73 1.87a1.77 1.77 0 0 0-.9-1.33a2.9 2.9 0 0 0-1.24-.4a3.2 3.2 0 0 0-1.27-.12L2.4 1.23a3.1 3.1 0 0 0-1.74.72c-.44.39-.7.9-.64 1.44l1.22 14.1zm1.2 1.9a1.6 1.6 0 0 1-.78-1a2 2 0 0 0 .47.39c.49.3 1.14.44 1.84.38l12.93-1.22c.7-.06 1.31-.33 1.74-.72c.44-.38.7-.9.64-1.43L18.04 1.69a1.62 1.62 0 0 0-.62-1.11c.1.04.2.09.29.15c.46.28.76.7.8 1.16l1.26 14.62c.04.48-.18.94-.59 1.3c-.4.37-1 .63-1.67.7L4.17 19.75a2.9 2.9 0 0 1-1.76-.36ZM1.21 5.3l4.34-.5l.06.47l-.28.04c-.28.03-.48.12-.6.26a.57.57 0 0 0-.15.46a12 12 0 0 0 .53 1.33l2.91 6.12l1.15-5.56l-.8-1.68c-.16-.27-.31-.5-.48-.7a1 1 0 0 0-.28-.23a1.4 1.4 0 0 0-.42-.17c-.1-.02-.25-.02-.48 0l-.08.02l-.06-.48l4.56-.53l.06.48l-.38.04c-.3.04-.5.13-.6.26a.67.67 0 0 0-.13.53c0 .02 0 .06.03.15l.15.4l3.2 6.84l1.32-6.48c.16-.75.22-1.25.18-1.51a.57.57 0 0 0-.14-.32a.57.57 0 0 0-.3-.18c-.2-.05-.47-.06-.8-.02h-.08l-.06-.48l3.53-.4l.06.48h-.08c-.29.04-.5.12-.66.24c-.15.12-.3.33-.42.64c-.08.2-.2.7-.35 1.5l-2.01 9.9l-.45.05l-3.4-7.06l-1.61 7.64l-.42.04l-4.56-9.42q-.51-1.05-.63-1.23a1 1 0 0 0-.47-.4a1.6 1.6 0 0 0-.76-.07h-.08Z"/></svg>';
@@ -87,47 +88,60 @@ const ICO_WIKT = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><p
 //  Audio playback
 // =====================================================================
 
-let currentAudio: HTMLAudioElement | null = null;
+// Audio is decoded from bytes and played through the Web Audio API, never loaded
+// into the page as a <audio>/<Audio> element. A page's media-src CSP blocks the
+// element from loading a Wikimedia URL or even a blob, silently, so the buttons
+// made no sound on exactly the strict-CSP sites people read. Decoding bytes we
+// already hold is not a resource load, so no CSP applies. The bytes are fetched
+// by the background, which is not subject to the page's CSP either.
+
+let audioCtx: AudioContext | null = null;
+let currentSource: AudioBufferSourceNode | null = null;
 
 function stopAudio(): void {
-  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (currentSource) { try { currentSource.stop(); } catch { /* already stopped */ } currentSource = null; }
 }
 
-/** Play audio from a direct URL (Wiktionary/Wikimedia). */
-function playUrl(url: string): void {
+async function playBytes(bytes: number[]): Promise<void> {
+  if (!bytes.length) return;
   stopAudio();
-  currentAudio = new Audio(url);
-  currentAudio.volume = 0.8;
-  currentAudio.play().catch(() => {});
+  if (!audioCtx) audioCtx = new AudioContext();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+  // decodeAudioData needs its own copy of the buffer; a plain number[] arrives
+  // over messaging, so it is packed back into an ArrayBuffer here.
+  const buffer = new Uint8Array(bytes).buffer;
+  const decoded = await audioCtx.decodeAudioData(buffer);
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = decoded;
+  source.connect(audioCtx.destination);
+  source.start();
+  currentSource = source;
 }
 
-/** Play IPA symbol audio from Wikimedia Commons. */
+/** Play a Commons/Wiktionary recording, fetched as bytes by the background. */
+function playAudioUrl(url: string): void {
+  sendMessage('fetchAudio', { url })
+    .then(playBytes)
+    .catch((e) => console.warn('[Phonetix] audio playback failed:', e));
+}
+
+/** Play the recording of a single IPA symbol from Wikimedia Commons. */
 function playSymbol(filename: string): void {
-  playUrl(wikimediaAudioURL(filename));
+  playAudioUrl(wikimediaAudioURL(filename));
 }
 
 /**
- * Speak a word via espeak-ng synthesis in the offscreen document.
- * Uses the actual espeak voice engine — pronounces IPA, not just
- * reading raw text like speechSynthesis would.
+ * Speak a word via espeak-ng synthesis. The engine runs in the offscreen document
+ * on Chrome and the background on Firefox; either way it returns WAV bytes, which
+ * play through the same CSP-proof path as every other sound.
  */
 function speakWord(word: string, lang: Language): void {
-  stopAudio();
   const voice = voiceFor(lang);
-  if (import.meta.env.BROWSER === 'firefox') {
-    // Firefox background can't play audio (no user gesture); play the WAV here.
-    sendMessage('synthesizeAudio', { word, voice })
-      .then((bytes) => {
-        if (!bytes.length) return;
-        const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'audio/wav' }));
-        playUrl(url);
-        // playUrl replaces currentAudio; revoke once it can start.
-        currentAudio?.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
-      })
-      .catch((e) => console.warn('[Phonetix] synthesizeAudio failed:', e));
-  } else {
-    sendMessage('speakWord', { word, voice });
-  }
+  sendMessage('synthesizeAudio', { word, voice })
+    .then(playBytes)
+    .catch((e) => console.warn('[Phonetix] synthesizeAudio failed:', e));
 }
 
 // =====================================================================
@@ -403,7 +417,7 @@ function renderTooltip(word: string, ipa: string, lang: Language, src: string): 
     if (info.audioUrl) {
       audioBtn.classList.remove('disabled');
       audioBtn.title = 'Human recording (Wiktionary)';
-      audioBtn.addEventListener('click', (e) => { e.stopPropagation(); playUrl(info.audioUrl!); });
+      audioBtn.addEventListener('click', (e) => { e.stopPropagation(); playAudioUrl(info.audioUrl!); });
     } else {
       audioBtn.title = 'No human recording on Wiktionary';
     }
@@ -510,18 +524,19 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
     ttDetail.appendChild(spk);
   }
 
-  // Real mouths, moving: Seeing Speech films every IPA sound under MRI and
-  // ultrasound. The films cannot be shipped (they are not free to redistribute) but
-  // they can be linked, and they are the best answer there is to "how do I say this".
-  const chart = info.type === 'vowel' ? 4 : 1;
-  const mri = el('a', 'px-detail-mri') as HTMLAnchorElement;
-  mri.textContent = 'MRI';
-  mri.href = `https://www.seeingspeech.ac.uk/ipa-charts/?chart=${chart}`;
-  mri.target = '_blank';
-  mri.rel = 'noopener noreferrer';
-  mri.title = `Watch a mouth say ${info.name} on MRI and ultrasound (Seeing Speech, University of Glasgow)`;
-  mri.addEventListener('click', (e) => e.stopPropagation());
-  ttDetail.appendChild(mri);
+  // Real mouths, moving: Seeing Speech (University of Glasgow) films every sound
+  // under MRI, ultrasound and animation. The films are not free to redistribute but
+  // the site opens one directly from this hash, so the link goes straight to it.
+  if (info.seeing) {
+    const mri = el('a', 'px-detail-mri') as HTMLAnchorElement;
+    mri.textContent = 'MRI';
+    mri.href = `https://www.seeingspeech.ac.uk/ipa-charts/${info.seeing}`;
+    mri.target = '_blank';
+    mri.rel = 'noopener noreferrer';
+    mri.title = `Watch a mouth say ${info.name} on MRI and ultrasound (Seeing Speech)`;
+    mri.addEventListener('click', (e) => e.stopPropagation());
+    ttDetail.appendChild(mri);
+  }
 
   // The mouth making the sound: a section through the head with the tongue and lips
   // where they have to be. It is a picture of the answer to "how do I say this".

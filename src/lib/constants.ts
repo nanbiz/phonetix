@@ -34,7 +34,14 @@ export const TECHNICAL_RE = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{
 export const PHONETIX_CSS = `
 /* Base styles */
 .${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; }
-.${PHONETIX_CLASS}.px-active { background: rgba(109,159,255,.12); }
+/* Over a hovered word the pointer sits on top of the very IPA it reveals, hiding a
+   letter or two. It is replaced by a small faint dot: enough to see where the mouse
+   is, little enough to read the transcription under it. */
+.${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
+.${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22%3E%3Ccircle cx=%227%22 cy=%227%22 r=%223%22 fill=%22rgba(130,130,140,0.35)%22/%3E%3C/svg%3E') 7 7, default;
+}
+
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
 .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; }
 
@@ -96,15 +103,18 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS}::before {
   content: '';
   position: absolute;
-  inset: -2px -14px;
+  /* Tight to the text: the surface widened by 14px a side reached onto the words
+     next to it even when the revealed layer was no wider than the word it replaced.
+     It now clears the glyphs and no more, and the blur fades out within that. */
+  inset: -1px -5px;
   z-index: -1;
   pointer-events: none;
-  border-radius: 8px;
-  background: color-mix(in srgb, Canvas 88%, transparent);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 2px 12px rgba(0,0,0,.22);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  border-radius: 6px;
+  background: color-mix(in srgb, Canvas 90%, transparent);
+  backdrop-filter: blur(3px);
+  box-shadow: 0 1px 6px rgba(0,0,0,.18);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 5px, black calc(100% - 5px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 5px, black calc(100% - 5px), transparent 100%);
 }
 
 /* showOriginalOnHover: the IPA is the running text; the original overlays it. */
@@ -292,9 +302,12 @@ export const TOOLTIP_CSS = `
   font-size: 11px;
   color: #d8d8de;
   font-weight: 500;
+  /* The description is the point of the panel, so it wraps to a second line rather
+     than being cut off with an ellipsis. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .px-detail-name .px-detail-link { font-weight: 500; }
 .px-detail-link {
@@ -323,6 +336,10 @@ export const TOOLTIP_CSS = `
 }
 .px-detail-mri:hover { color: #fff; background: #33436b; }
 
+/* The diagrams are dark line drawings on a transparent ground. Inverting them makes
+   the lines light so they sit on the tooltip's own dark background instead of a
+   white box: the picture blends into the panel, and there is no white ground to
+   flash through as it scales. */
 .px-detail-diagram {
   display: flex;
   align-items: center;
@@ -331,7 +348,7 @@ export const TOOLTIP_CSS = `
   width: 46px;
   height: 34px;
   border-radius: 4px;
-  background: #fff;
+  background: #2c2c31;
   overflow: visible;
 }
 .px-detail-diagram:empty { background: none; }
@@ -339,19 +356,21 @@ export const TOOLTIP_CSS = `
   max-width: 100%;
   max-height: 100%;
   display: block;
+  filter: invert(0.9) contrast(1.05);
   transition: transform .12s ease-out;
 }
 
 /* A 46px thumbnail shows that a diagram exists; it does not show a mouth. Hovering
    it grows the picture about its own centre, so it opens where the eye already is
-   rather than jumping somewhere else to be read. */
+   rather than jumping somewhere else to be read. The enlarged view carries its own
+   dark ground so the light lines stay readable wherever it overflows to. */
 .px-detail-diagram:hover {
   z-index: 10;
 }
 .px-detail-diagram:hover img {
   transform: scale(5);
   transform-origin: center center;
-  background: #fff;
+  background: #1c1c1e;
   border-radius: 2px;
   box-shadow: 0 4px 24px rgba(0,0,0,.45);
 }

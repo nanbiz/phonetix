@@ -19,6 +19,22 @@ const WRITE = process.argv.includes('--write');
 /** Interface furniture: on every article, about none of them. */
 const CHROME = /^(loudspeaker|disc plain black|blank vowel trapezoid|question book|ambox|audio-input|commons-logo|wiktionary|edit-clear|folder|symbol|padlock|wikidata|speakerlink|braille|ipa unicode)/i;
 
+/**
+ * A file that shows the mouth making the sound, and only that.
+ *
+ * It must be an SVG: the line drawings are vector and recolour cleanly, while the
+ * bitmaps are MRI photographs that read as a grey smear at thumbnail size. And it
+ * must be an articulation section, not a vowel chart — the trapezoid with a dot is
+ * the same picture for every vowel and shows no mouth at all.
+ */
+function isMouthDiagram(file) {
+  const lower = file.toLowerCase();
+  if (!lower.endsWith('.svg')) return false;
+  if (CHROME.test(file)) return false;
+  if (/vowel chart|trapezoid|quadrilateral|vowel space|blank vowel/.test(lower)) return false;
+  return true;
+}
+
 async function api(url) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' } });
@@ -66,8 +82,7 @@ async function diagramFor(title, name) {
 
   const files = page.images
     .map(i => i.title.replace(/^File:/, ''))
-    .filter(f => /\.(svg|png|gif|jpe?g)$/i.test(f))
-    .filter(f => !CHROME.test(f));
+    .filter(isMouthDiagram);
 
   const words = name.toLowerCase().split(/[\s-]+/).filter(w => w.length > 3);
 
@@ -76,7 +91,6 @@ async function diagramFor(title, name) {
     let score = 0;
     if (/articulation|sagittal|section|mouth|tongue|vocal tract/.test(lower)) score += 5;
     for (const word of words) if (lower.includes(word)) score += 2;
-    if (/vowel chart|vowel trapezoid|vowel space/.test(lower)) score += 1;
     return { file, score };
   }).filter(s => s.score > 0).sort((a, b) => b.score - a.score);
 
@@ -92,7 +106,7 @@ async function diagramFor(title, name) {
   );
   for (const hit of search?.query?.search ?? []) {
     const file = hit.title.replace(/^File:/, '');
-    if (!/\.(svg|png|gif|jpe?g)$/i.test(file) || CHROME.test(file)) continue;
+    if (!isMouthDiagram(file)) continue;
     const lower = file.toLowerCase();
     const matched = words.filter(w => lower.includes(w)).length;
     // A file named after the sound is that sound's picture, whether or not it also
@@ -103,7 +117,9 @@ async function diagramFor(title, name) {
 }
 
 const source = fs.readFileSync(SOURCE, 'utf8');
-const entry = /^\s*'(?<sym>[^']+)':\s*\{\s*name:\s*'(?<name>[^']+)',\s*wiki:\s*'(?<wiki>[^']+)'/;
+// Fields may appear in any order after the key, so name and wiki are matched
+// independently rather than assumed adjacent.
+const entry = /^\s*'(?<sym>[^']+)':\s*\{.*\bname:\s*'(?<name>[^']+)'.*\bwiki:\s*'(?<wiki>[^']+)'/;
 
 const lines = source.split('\n');
 const out = [];

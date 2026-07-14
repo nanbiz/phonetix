@@ -33,8 +33,10 @@ interface ProtocolMap {
   /** A Commons file showing the sound being made, as a data URL. The page's own
    *  CSP would block loading it straight into the page. */
   symbolDiagram(data: { file: string }): string;
-  speakWord(data: { word: string; voice: string }): void;
-  /** Synthesize a word to WAV bytes (Firefox: played in the content script). */
+  /** Fetch an audio file (Commons recording) as bytes, so the content script can
+   *  play it through Web Audio without the page's media-src CSP blocking a load. */
+  fetchAudio(data: { url: string }): number[];
+  /** Synthesize a word to WAV bytes, played in the content script through Web Audio. */
   synthesizeAudio(data: { word: string; voice: string }): number[];
 }
 

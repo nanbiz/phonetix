@@ -719,23 +719,35 @@ export default defineBackground(() => {
     }
   });
 
-  onMessage('speakWord', async ({ data }) => {
-    await ensureOffscreen();
-    chrome.runtime.sendMessage({
-      target: 'offscreen',
-      type: 'speak-word',
-      // The accent is not always a voice espeak has; asked for one it lacks it
-      // speaks nonsense, so it is resolved to a voice espeak really owns.
-      data: { ...data, voice: voiceForAccent(data.voice.split('-')[0], data.voice) },
-    });
+  // A recording, fetched here and handed to the page as bytes: the content script
+  // plays it through Web Audio, which a page's media-src CSP cannot block the way it
+  // blocks an <audio> element loading the same URL.
+  onMessage('fetchAudio', async ({ data }) => {
+    try {
+      const res = await fetch(data.url);
+      if (!res.ok) throw new Error(String(res.status));
+      return Array.from(new Uint8Array(await res.arrayBuffer()));
+    } catch (e) {
+      console.warn(`[Phonetix] Audio fetch failed for ${data.url}:`, e);
+      return [];
+    }
   });
 
-  // Firefox: synthesize to WAV here; the content script plays it (it has the
-  // user gesture a background-page AudioContext lacks).
+  // espeak returns WAV bytes, which the content script plays through Web Audio. The
+  // engine needs a DOM and AudioContext, which a Chrome service worker lacks, so
+  // there it runs in the offscreen document; on Firefox the background has both.
   onMessage('synthesizeAudio', async ({ data }) => {
-    if (!IS_FIREFOX) return [];
-    const { synthesizeWav } = await import('@/lib/espeak-engine');
-    const wav = await synthesizeWav(data.word, voiceForAccent(data.voice.split('-')[0], data.voice));
-    return Array.from(wav);
+    const voice = voiceForAccent(data.voice.split('-')[0], data.voice);
+    if (IS_FIREFOX) {
+      const { synthesizeWav } = await import('@/lib/espeak-engine');
+      return Array.from(await synthesizeWav(data.word, voice));
+    }
+    await ensureOffscreen();
+    const bytes: number[] = await chrome.runtime.sendMessage({
+      target: 'offscreen',
+      type: 'synthesize-wav',
+      data: { word: data.word, voice },
+    });
+    return bytes ?? [];
   });
 });

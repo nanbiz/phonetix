@@ -4,7 +4,7 @@
  * DOM/AudioContext. Firefox runs the same engine directly in its background page.
  */
 
-import { initEspeak, phonemizeBatch, speak } from '@/lib/espeak-engine';
+import { initEspeak, phonemizeBatch, synthesizeWav } from '@/lib/espeak-engine';
 
 chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse: (response: any) => void) => {
   if (message.target !== 'offscreen') return false;
@@ -21,14 +21,16 @@ chrome.runtime.onMessage.addListener((message: any, _sender, sendResponse: (resp
     return true;
   }
 
-  if (message.type === 'speak-word') {
+  // Synthesize to WAV bytes and hand them back; the content script plays them
+  // through Web Audio, so playback is not subject to the page's media-src CSP.
+  if (message.type === 'synthesize-wav') {
     const { word, voice } = message.data as { word: string; voice: string };
     (async () => {
       try {
-        await speak(word, voice);
-        sendResponse({ success: true });
+        sendResponse(Array.from(await synthesizeWav(word, voice)));
       } catch (e: any) {
-        sendResponse({ success: false, error: e?.message || String(e) });
+        console.error('[Phonetix] synthesize-wav failed:', e);
+        sendResponse([]);
       }
     })();
     return true;
