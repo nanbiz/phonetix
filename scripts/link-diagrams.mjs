@@ -40,6 +40,25 @@ async function api(url) {
  * the sagittal sections. A vowel has no such picture, and takes the chart the
  * article marks its position on.
  */
+/**
+ * Commons carries a series of sagittal sections named after the symbol itself
+ * ("IPA k Sagittal Section.svg"), drawn to one style and — unlike the articles —
+ * covering vowels as well. Where one exists it is the better picture, so it is
+ * looked for first.
+ */
+async function seriesDiagram(symbol) {
+  for (const variant of [symbol, symbol.toUpperCase()]) {
+    const file = `IPA ${variant} Sagittal Section.svg`;
+    const data = await api(
+      `${COMMONS}?action=query&format=json&titles=${encodeURIComponent(`File:${file}`)}`,
+    );
+    const page = Object.values(data?.query?.pages ?? {})[0];
+    await new Promise(r => setTimeout(r, 200));
+    if (page && !('missing' in page)) return file;
+  }
+  return null;
+}
+
 async function diagramFor(title, name) {
   const data = await api(`${API}?action=query&format=json&prop=images&imlimit=max&titles=${encodeURIComponent(title)}`);
   const page = Object.values(data?.query?.pages ?? {})[0];
@@ -99,7 +118,7 @@ for (const line of lines) {
   }
 
   const { sym, name, wiki } = m.groups;
-  const file = await diagramFor(wiki.replace(/_/g, ' '), name);
+  const file = (await seriesDiagram(sym)) ?? (await diagramFor(wiki.replace(/_/g, ' '), name));
   await new Promise(r => setTimeout(r, 250));
 
   if (file) {

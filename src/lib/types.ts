@@ -217,18 +217,16 @@ export const LANG_NAME_TO_CODE: Record<string, string> = {
 // ─── Non-language types ──────────────────────────────────────────────
 
 export const Modes = {
-  wholePage: 'Translate Whole Page',
-  onHover: 'Translate on Hover',
   showOriginalOnHover: 'Show Original on Hover',
+  onHover: 'Translate on Hover',
 } as const;
 
 export type Mode = keyof typeof Modes;
 
 /** Short labels, for controls that show every mode side by side. */
 export const ModeLabels: Record<Mode, string> = {
-  wholePage: 'Whole page',
-  onHover: 'IPA on hover',
-  showOriginalOnHover: 'Word on hover',
+  showOriginalOnHover: 'IPA, word on hover',
+  onHover: 'Word, IPA on hover',
 };
 
 export interface ResolvedIpa {

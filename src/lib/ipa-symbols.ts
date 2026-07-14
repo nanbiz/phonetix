@@ -25,42 +25,42 @@ export function wikimediaAudioURL(filename: string): string {
 
 export const IPA_SYMBOLS: Record<string, IPASymbolInfo> = {
   // ─── Consonants: Plosives ──────────────────────────────────────────
-  'p': { name: 'voiceless bilabial plosive', wiki: 'Voiceless_bilabial_plosive', diagram: 'Voiceless bilabial plosive.svg', type: 'consonant', example: '"p" in pin', audio: 'Voiceless_bilabial_plosive.ogg' },
-  'b': { name: 'voiced bilabial plosive', wiki: 'Voiced_bilabial_plosive', diagram: 'Voiced bilabial plosive.svg', type: 'consonant', example: '"b" in bin', audio: 'Voiced_bilabial_plosive.ogg' },
-  't': { name: 'voiceless alveolar plosive', wiki: 'Voiceless_dental_and_alveolar_plosives', diagram: 'Voiceless alveolar plosive.svg', type: 'consonant', example: '"t" in tin', audio: 'Voiceless_alveolar_plosive.ogg' },
-  'd': { name: 'voiced alveolar plosive', wiki: 'Voiced_dental_and_alveolar_plosives', diagram: 'Voiced alveolar plosive.svg', type: 'consonant', example: '"d" in din', audio: 'Voiced_alveolar_plosive.ogg' },
-  'k': { name: 'voiceless velar plosive', wiki: 'Voiceless_velar_plosive', diagram: 'Voiceless velar plosive.svg', type: 'consonant', example: '"k" in kin', audio: 'Voiceless_velar_plosive.ogg' },
+  'p': { name: 'voiceless bilabial plosive', wiki: 'Voiceless_bilabial_plosive', diagram: 'IPA p Sagittal Section.svg', type: 'consonant', example: '"p" in pin', audio: 'Voiceless_bilabial_plosive.ogg' },
+  'b': { name: 'voiced bilabial plosive', wiki: 'Voiced_bilabial_plosive', diagram: 'IPA b Sagittal Section.svg', type: 'consonant', example: '"b" in bin', audio: 'Voiced_bilabial_plosive.ogg' },
+  't': { name: 'voiceless alveolar plosive', wiki: 'Voiceless_dental_and_alveolar_plosives', diagram: 'IPA t Sagittal Section.svg', type: 'consonant', example: '"t" in tin', audio: 'Voiceless_alveolar_plosive.ogg' },
+  'd': { name: 'voiced alveolar plosive', wiki: 'Voiced_dental_and_alveolar_plosives', diagram: 'IPA d Sagittal Section.svg', type: 'consonant', example: '"d" in din', audio: 'Voiced_alveolar_plosive.ogg' },
+  'k': { name: 'voiceless velar plosive', wiki: 'Voiceless_velar_plosive', diagram: 'IPA k Sagittal Section.svg', type: 'consonant', example: '"k" in kin', audio: 'Voiceless_velar_plosive.ogg' },
   'ɡ': { name: 'voiced velar plosive', wiki: 'Voiced_velar_plosive', diagram: 'Voiced velar plosive.svg', type: 'consonant', example: '"g" in give', audio: 'Voiced_velar_plosive.ogg' },
-  'g': { name: 'voiced velar plosive', wiki: 'Voiced_velar_plosive', diagram: 'Voiced velar plosive.svg', type: 'consonant', example: '"g" in give', audio: 'Voiced_velar_plosive.ogg' },
+  'g': { name: 'voiced velar plosive', wiki: 'Voiced_velar_plosive', diagram: 'IPA g Sagittal Section.svg', type: 'consonant', example: '"g" in give', audio: 'Voiced_velar_plosive.ogg' },
   'ʔ': { name: 'glottal stop', wiki: 'Glottal_stop', type: 'consonant', example: 'the catch in "uh-oh"', audio: 'Glottal_stop.ogg' },
-  'c': { name: 'voiceless palatal plosive', wiki: 'Voiceless_palatal_plosive', diagram: 'Voiceless palatal plosive.svg', type: 'consonant', example: '"k" in keen (some dialects)', audio: 'Voiceless_palatal_plosive.ogg' },
-  'ɟ': { name: 'voiced palatal plosive', wiki: 'Voiced_palatal_plosive', diagram: 'Voiced palatal plosive.svg', type: 'consonant', example: '"g" in argue (some dialects)', audio: 'Voiced_palatal_plosive.ogg' },
-  'q': { name: 'voiceless uvular plosive', wiki: 'Voiceless_uvular_plosive', diagram: 'Voiceless uvular plosive.svg', type: 'consonant', example: 'Arabic "q" in Quran', audio: 'Voiceless_uvular_plosive.ogg' },
+  'c': { name: 'voiceless palatal plosive', wiki: 'Voiceless_palatal_plosive', diagram: 'IPA c Sagittal Section.svg', type: 'consonant', example: '"k" in keen (some dialects)', audio: 'Voiceless_palatal_plosive.ogg' },
+  'ɟ': { name: 'voiced palatal plosive', wiki: 'Voiced_palatal_plosive', diagram: 'IPA ɟ Sagittal Section.svg', type: 'consonant', example: '"g" in argue (some dialects)', audio: 'Voiced_palatal_plosive.ogg' },
+  'q': { name: 'voiceless uvular plosive', wiki: 'Voiceless_uvular_plosive', diagram: 'IPA q Sagittal Section.svg', type: 'consonant', example: 'Arabic "q" in Quran', audio: 'Voiceless_uvular_plosive.ogg' },
 
   // ─── Consonants: Fricatives ────────────────────────────────────────
-  'f': { name: 'voiceless labiodental fricative', wiki: 'Voiceless_labiodental_fricative', diagram: 'Voiceless labiodental fricative articulation.svg', type: 'consonant', example: '"f" in fan', audio: 'Voiceless_labiodental_fricative.ogg' },
-  'v': { name: 'voiced labiodental fricative', wiki: 'Voiced_labiodental_fricative', diagram: 'Voiced labiodental fricative articulation.svg', type: 'consonant', example: '"v" in van', audio: 'Voiced_labiodental_fricative.ogg' },
-  'θ': { name: 'voiceless dental fricative', wiki: 'Voiceless_dental_fricative', diagram: 'Voiceless dental fricative articulation.svg', type: 'consonant', example: '"th" in thin', audio: 'Voiceless_dental_fricative.ogg' },
-  'ð': { name: 'voiced dental fricative', wiki: 'Voiced_dental_fricative', diagram: 'Voiced dental fricative articulation.svg', type: 'consonant', example: '"th" in this', audio: 'Voiced_dental_fricative.ogg' },
+  'f': { name: 'voiceless labiodental fricative', wiki: 'Voiceless_labiodental_fricative', diagram: 'IPA F Sagittal Section.svg', type: 'consonant', example: '"f" in fan', audio: 'Voiceless_labiodental_fricative.ogg' },
+  'v': { name: 'voiced labiodental fricative', wiki: 'Voiced_labiodental_fricative', diagram: 'IPA v Sagittal Section.svg', type: 'consonant', example: '"v" in van', audio: 'Voiced_labiodental_fricative.ogg' },
+  'θ': { name: 'voiceless dental fricative', wiki: 'Voiceless_dental_fricative', diagram: 'IPA θ Sagittal Section.svg', type: 'consonant', example: '"th" in thin', audio: 'Voiceless_dental_fricative.ogg' },
+  'ð': { name: 'voiced dental fricative', wiki: 'Voiced_dental_fricative', diagram: 'IPA ð Sagittal Section.svg', type: 'consonant', example: '"th" in this', audio: 'Voiced_dental_fricative.ogg' },
   's': { name: 'voiceless alveolar fricative', wiki: 'Voiceless_alveolar_fricative', diagram: 'Voiceless alveolar fricative articulation.svg', type: 'consonant', example: '"s" in sin', audio: 'Voiceless_alveolar_fricative.ogg' },
   'z': { name: 'voiced alveolar fricative', wiki: 'Voiced_alveolar_fricative', diagram: 'Voiced palato-alveolar fricative articulation.svg', type: 'consonant', example: '"z" in zoo', audio: 'Voiced_alveolar_fricative.ogg' },
   'ʃ': { name: 'voiceless postalveolar fricative', wiki: 'Voiceless_postalveolar_fricative', diagram: 'Voiceless palato-alveolar fricative articulation.svg', type: 'consonant', example: '"sh" in shin', audio: 'Voiceless_palato-alveolar_sibilant.ogg' },
   'ʒ': { name: 'voiced postalveolar fricative', wiki: 'Voiced_postalveolar_fricative', diagram: 'Voiced palato-alveolar fricative articulation.svg', type: 'consonant', example: '"s" in measure', audio: 'Voiced_palato-alveolar_sibilant.ogg' },
-  'ç': { name: 'voiceless palatal fricative', wiki: 'Voiceless_palatal_fricative', diagram: 'Voiceless palatal fricative articulation.svg', type: 'consonant', example: '"ch" in German ich', audio: 'Voiceless_palatal_fricative.ogg' },
-  'x': { name: 'voiceless velar fricative', wiki: 'Voiceless_velar_fricative', diagram: 'Voiceless velar fricative articulation.svg', type: 'consonant', example: '"ch" in German Bach', audio: 'Voiceless_velar_fricative.ogg' },
+  'ç': { name: 'voiceless palatal fricative', wiki: 'Voiceless_palatal_fricative', diagram: 'IPA ç Sagittal Section.svg', type: 'consonant', example: '"ch" in German ich', audio: 'Voiceless_palatal_fricative.ogg' },
+  'x': { name: 'voiceless velar fricative', wiki: 'Voiceless_velar_fricative', diagram: 'IPA x Sagittal Section.svg', type: 'consonant', example: '"ch" in German Bach', audio: 'Voiceless_velar_fricative.ogg' },
   'ɣ': { name: 'voiced velar fricative', wiki: 'Voiced_velar_fricative', diagram: 'Voiced velar fricative articulation.svg', type: 'consonant', example: '"g" in Spanish fuego', audio: 'Voiced_velar_fricative.ogg' },
   'χ': { name: 'voiceless uvular fricative', wiki: 'Voiceless_uvular_fricative', diagram: 'Voiceless uvular fricative articulation.svg', type: 'consonant', example: '"ch" in Swiss-German', audio: 'Voiceless_uvular_fricative.ogg' },
-  'ʁ': { name: 'voiced uvular fricative', wiki: 'Voiced_uvular_fricative', diagram: 'Voiced uvular fricative articulation.svg', type: 'consonant', example: '"r" in French rouge', audio: 'Voiced_uvular_fricative.ogg' },
+  'ʁ': { name: 'voiced uvular fricative', wiki: 'Voiced_uvular_fricative', diagram: 'IPA ʁ Sagittal Section.svg', type: 'consonant', example: '"r" in French rouge', audio: 'Voiced_uvular_fricative.ogg' },
   'h': { name: 'voiceless glottal fricative', wiki: 'Voiceless_glottal_fricative', type: 'consonant', example: '"h" in hat', audio: 'Voiceless_glottal_fricative.ogg' },
   'ɦ': { name: 'voiced glottal fricative', wiki: 'Voiced_glottal_fricative', diagram: 'Voiced-glottal-fricative-and-Voiced-velar-plosive.png', type: 'consonant', example: '"h" in ahead', audio: 'Voiced_glottal_fricative.ogg' },
   'ɸ': { name: 'voiceless bilabial fricative', wiki: 'Voiceless_bilabial_fricative', diagram: 'Voiceless bilabial approximant - text.svg', type: 'consonant', example: 'blowing out a candle', audio: 'Voiceless_bilabial_fricative.ogg' },
   'β': { name: 'voiced bilabial fricative', wiki: 'Voiced_bilabial_fricative', diagram: 'Voiced bilabial fricative articulation.svg', type: 'consonant', example: '"b" in Spanish cabo', audio: 'Voiced_bilabial_fricative.ogg' },
 
   // ─── Consonants: Nasals ────────────────────────────────────────────
-  'm': { name: 'bilabial nasal', wiki: 'Voiced_bilabial_nasal', diagram: 'Voiced bilabial nasal.svg', type: 'consonant', example: '"m" in man', audio: 'Bilabial_nasal.ogg' },
-  'n': { name: 'alveolar nasal', wiki: 'Voiced_dental_and_alveolar_nasals', diagram: 'Voiced alveolar nasal.svg', type: 'consonant', example: '"n" in no', audio: 'Alveolar_nasal.ogg' },
-  'ŋ': { name: 'velar nasal', wiki: 'Voiced_velar_nasal', diagram: 'Velar nasal (vector).svg', type: 'consonant', example: '"ng" in sing', audio: 'Velar_nasal.ogg' },
-  'ɲ': { name: 'palatal nasal', wiki: 'Voiced_palatal_nasal', diagram: 'Voiced palatal nasal.svg', type: 'consonant', example: '"ñ" in Spanish año', audio: 'Palatal_nasal.ogg' },
+  'm': { name: 'bilabial nasal', wiki: 'Voiced_bilabial_nasal', diagram: 'IPA m Sagittal Section.svg', type: 'consonant', example: '"m" in man', audio: 'Bilabial_nasal.ogg' },
+  'n': { name: 'alveolar nasal', wiki: 'Voiced_dental_and_alveolar_nasals', diagram: 'IPA n Sagittal Section.svg', type: 'consonant', example: '"n" in no', audio: 'Alveolar_nasal.ogg' },
+  'ŋ': { name: 'velar nasal', wiki: 'Voiced_velar_nasal', diagram: 'IPA ŋ Sagittal Section.svg', type: 'consonant', example: '"ng" in sing', audio: 'Velar_nasal.ogg' },
+  'ɲ': { name: 'palatal nasal', wiki: 'Voiced_palatal_nasal', diagram: 'IPA ɲ Sagittal Section.svg', type: 'consonant', example: '"ñ" in Spanish año', audio: 'Palatal_nasal.ogg' },
   'ɱ': { name: 'labiodental nasal', wiki: 'Voiced_labiodental_nasal', diagram: 'Voiced labiodental nasal.svg', type: 'consonant', example: '"m" in symphony', audio: 'Labiodental_nasal.ogg' },
 
   // ─── Consonants: Approximants ──────────────────────────────────────
@@ -92,7 +92,7 @@ export const IPA_SYMBOLS: Record<string, IPASymbolInfo> = {
   'p͡f': { name: 'voiceless labiodental affricate', wiki: 'Voiceless_labiodental_affricate', diagram: 'P-f affricate ligature.svg', type: 'consonant', example: '"pf" in German Pferd', audio: null },
 
   // ─── Vowels: Close ─────────────────────────────────────────────────
-  'i': { name: 'close front unrounded vowel', wiki: 'Close_front_unrounded_vowel', diagram: 'Spectrogram of close front unrounded vowel (IPA i).png', type: 'vowel', example: '"ee" in see', audio: 'Close_front_unrounded_vowel.ogg' },
+  'i': { name: 'close front unrounded vowel', wiki: 'Close_front_unrounded_vowel', diagram: 'IPA i Sagittal Section.svg', type: 'vowel', example: '"ee" in see', audio: 'Close_front_unrounded_vowel.ogg' },
   'y': { name: 'close front rounded vowel', wiki: 'Close_front_rounded_vowel', diagram: 'Spectrogram of close front rounded vowel (IPA y).png', type: 'vowel', example: '"u" in French tu', audio: 'Close_front_rounded_vowel.ogg' },
   'ɨ': { name: 'close central unrounded vowel', wiki: 'Close_central_unrounded_vowel', diagram: 'Spectrogram of close central unrounded vowel (IPA ɨ).png', type: 'vowel', example: '"y" in Polish ryba', audio: 'Close_central_unrounded_vowel.ogg' },
   'ʉ': { name: 'close central rounded vowel', wiki: 'Close_central_rounded_vowel', diagram: 'Spectrogram of close central rounded vowel (IPA ʉ).png', type: 'vowel', example: '"oo" in Australian goose', audio: 'Close_central_rounded_vowel.ogg' },
@@ -100,9 +100,9 @@ export const IPA_SYMBOLS: Record<string, IPASymbolInfo> = {
   'u': { name: 'close back rounded vowel', wiki: 'Close_back_rounded_vowel', diagram: 'IPA u Sagittal Section.svg', type: 'vowel', example: '"oo" in blue', audio: 'Close_back_rounded_vowel.ogg' },
 
   // ─── Vowels: Near-Close ────────────────────────────────────────────
-  'ɪ': { name: 'near-close front unrounded vowel', wiki: 'Near-close_near-front_unrounded_vowel', diagram: 'Spectrogram near-close near-front unrounded vowel (IPA ɪ).png', type: 'vowel', example: '"i" in sit', audio: 'Near-close_near-front_unrounded_vowel.ogg' },
+  'ɪ': { name: 'near-close front unrounded vowel', wiki: 'Near-close_near-front_unrounded_vowel', diagram: 'IPA Ɪ Sagittal Section.svg', type: 'vowel', example: '"i" in sit', audio: 'Near-close_near-front_unrounded_vowel.ogg' },
   'ʏ': { name: 'near-close front rounded vowel', wiki: 'Near-close_near-front_rounded_vowel', diagram: 'Spectrogram of near-close near-front rounded vowel (IPA ʏ).png', type: 'vowel', example: '"ü" in German hübsch', audio: 'Near-close_near-front_rounded_vowel.ogg' },
-  'ʊ': { name: 'near-close back rounded vowel', wiki: 'Near-close_near-back_rounded_vowel', diagram: 'Spectrogram near-close near-back rounded vowel (IPA ʊ).png', type: 'vowel', example: '"oo" in foot', audio: 'Near-close_near-back_rounded_vowel.ogg' },
+  'ʊ': { name: 'near-close back rounded vowel', wiki: 'Near-close_near-back_rounded_vowel', diagram: 'IPA Ʊ Sagittal Section.svg', type: 'vowel', example: '"oo" in foot', audio: 'Near-close_near-back_rounded_vowel.ogg' },
 
   // ─── Vowels: Close-Mid ─────────────────────────────────────────────
   'e': { name: 'close-mid front unrounded vowel', wiki: 'Close-mid_front_unrounded_vowel', diagram: 'Spectrogram close-mid front unrounded vowel (IPA e).png', type: 'vowel', example: '"ay" in say (pure)', audio: 'Close-mid_front_unrounded_vowel.ogg' },
@@ -113,7 +113,7 @@ export const IPA_SYMBOLS: Record<string, IPASymbolInfo> = {
   'ə': { name: 'schwa (mid central vowel)', wiki: 'Mid_central_vowel', type: 'vowel', example: '"a" in about', audio: 'Mid-central_vowel.ogg' },
 
   // ─── Vowels: Open-Mid ──────────────────────────────────────────────
-  'ɛ': { name: 'open-mid front unrounded vowel', wiki: 'Open-mid_front_unrounded_vowel', diagram: 'Spectrogram of open-mid front unrounded vowel (IPA ɛ).png', type: 'vowel', example: '"e" in bed', audio: 'Open-mid_front_unrounded_vowel.ogg' },
+  'ɛ': { name: 'open-mid front unrounded vowel', wiki: 'Open-mid_front_unrounded_vowel', diagram: 'IPA Ɛ Sagittal Section.svg', type: 'vowel', example: '"e" in bed', audio: 'Open-mid_front_unrounded_vowel.ogg' },
   'œ': { name: 'open-mid front rounded vowel', wiki: 'Open-mid_front_rounded_vowel', diagram: 'Spectrogram of open-mid front rounded vowel (IPA œ).png', type: 'vowel', example: '"eu" in French coeur', audio: 'Open-mid_front_rounded_vowel.ogg' },
   'ɜ': { name: 'open-mid central unrounded vowel', wiki: 'Open-mid_central_unrounded_vowel', type: 'vowel', example: '"ir" in British bird', audio: 'Open-mid_central_unrounded_vowel.ogg' },
   'ɞ': { name: 'open-mid central rounded vowel', wiki: 'Open-mid_central_rounded_vowel', diagram: 'Spectrogram of open-mid central rounded vowel (IPA ɞ).png', type: 'vowel', example: 'rounded schwa variant', audio: 'Open-mid_central_rounded_vowel.ogg' },
@@ -221,8 +221,8 @@ export function tokenizeIPA(ipa: string): string[] {
  */
 const MORE_SYMBOLS: Record<string, IPASymbolInfo> = {
   'ɤ': { name: 'close-mid back unrounded vowel', wiki: 'Close-mid_back_unrounded_vowel', diagram: 'Spectrogram of close-mid back unrounded vowel (IPA ɤ).png', type: 'vowel', example: '"със" (Bulgarian)', audio: null },
-  'ʕ': { name: 'voiced pharyngeal fricative', wiki: 'Voiced_pharyngeal_fricative', diagram: 'Voiced pharyngeal fricative articulation.svg', type: 'consonant', example: '"عين" (Arabic)', audio: null },
-  'ħ': { name: 'voiceless pharyngeal fricative', wiki: 'Voiceless_pharyngeal_fricative', diagram: 'Voiceless pharyngeal fricative articulation.svg', type: 'consonant', example: '"حسن" (Arabic)', audio: null },
+  'ʕ': { name: 'voiced pharyngeal fricative', wiki: 'Voiced_pharyngeal_fricative', diagram: 'IPA ʕ Sagittal Section.svg', type: 'consonant', example: '"عين" (Arabic)', audio: null },
+  'ħ': { name: 'voiceless pharyngeal fricative', wiki: 'Voiceless_pharyngeal_fricative', diagram: 'IPA ħ Sagittal Section.svg', type: 'consonant', example: '"حسن" (Arabic)', audio: null },
   'ʈ': { name: 'voiceless retroflex plosive', wiki: 'Voiceless_retroflex_plosive', diagram: 'Voiceless retroflex plosive.svg', type: 'consonant', example: '"গঠন" (Bengali)', audio: null },
   'ɖ': { name: 'voiced retroflex plosive', wiki: 'Voiced_retroflex_plosive', diagram: 'Voiced retroflex plosive.svg', type: 'consonant', example: '"ডজন" (Bengali)', audio: null },
   'ɳ': { name: 'retroflex nasal', wiki: 'Voiced_retroflex_nasal', diagram: 'Voiced retroflex nasal.svg', type: 'consonant', example: '"शरण" (Hindi)', audio: null },
@@ -234,7 +234,7 @@ const MORE_SYMBOLS: Record<string, IPASymbolInfo> = {
   'ɕ': { name: 'voiceless alveolo-palatal fricative', wiki: 'Voiceless_alveolo-palatal_fricative', diagram: 'Voiceless alveolo-palatal fricative articulation.svg', type: 'consonant', example: '"易しい" (Japanese)', audio: null },
   'ʑ': { name: 'voiced alveolo-palatal fricative', wiki: 'Voiced_alveolo-palatal_fricative', diagram: 'Voiced alveolo-palatal fricative articulation.svg', type: 'consonant', example: '"じかん" (Japanese)', audio: null },
   'ɺ': { name: 'alveolar lateral flap', wiki: 'Voiced_alveolar_lateral_flap', type: 'consonant', example: '', audio: null },
-  'ɢ': { name: 'voiced uvular plosive', wiki: 'Voiced_uvular_plosive', diagram: 'Voiced uvular plosive.svg', type: 'consonant', example: '"قوش" (Persian)', audio: null },
+  'ɢ': { name: 'voiced uvular plosive', wiki: 'Voiced_uvular_plosive', diagram: 'IPA ɢ Sagittal Section.svg', type: 'consonant', example: '"قوش" (Persian)', audio: null },
   'ʙ': { name: 'bilabial trill', wiki: 'Voiced_bilabial_trill', diagram: 'Voiced bilabial trill.svg', type: 'consonant', example: '"brr" (German)', audio: null },
   'ɘ': { name: 'close-mid central unrounded vowel', wiki: 'Close-mid_central_unrounded_vowel', diagram: 'Spectrogram of close-mid central unrounded vowel (IPA ɘ).png', type: 'vowel', example: '"бір" (Kazakh)', audio: null },
   'ɵ': { name: 'close-mid central rounded vowel', wiki: 'Close-mid_central_rounded_vowel', diagram: 'Spectrogram of close-mid central rounded vowel (IPA ɵ).png', type: 'vowel', example: '"көз" (Kazakh)', audio: null },

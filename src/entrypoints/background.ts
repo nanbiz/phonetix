@@ -698,7 +698,7 @@ export default defineBackground(() => {
     if (cached !== undefined) return cached;
 
     try {
-      const url = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(data.file)}?width=160`;
+      const url = `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(data.file)}?width=480`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(String(res.status));
       // Encoded by hand rather than with FileReader, which a Chrome service worker

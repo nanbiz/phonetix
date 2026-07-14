@@ -15,7 +15,7 @@
   /** Voice per language. A page can carry several languages at once, so an
    *  accent is only meaningful relative to one of them. */
   let accents = $state<Record<string, string>>({});
-  let selectedMode = $state<Mode>("wholePage");
+  let selectedMode = $state<Mode>("showOriginalOnHover");
   let initialized = $state(false);
   let dictManifest = $state<Record<string, { entries: number; sizeKB: number }>>({});
 

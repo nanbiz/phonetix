@@ -108,6 +108,13 @@ class Driver:
     def js(self, expr):
         r = self.cdp.send("Runtime.evaluate", {"expression": expr, "returnByValue": True}, session=self.s)
         return r.get("result", {}).get("value")
+    def hover(self, x, y):
+        """Move the real mouse there. :hover is a state of the browser, and no event
+           dispatched from JavaScript puts an element into it — which is how a rule
+           that only applies while hovered went unmeasured."""
+        self.cdp.send("Input.dispatchMouseEvent",
+                      {"type": "mouseMoved", "x": x, "y": y, "buttons": 0}, session=self.s)
+        time.sleep(0.35)
     def poll(self, expr, ok, tries=25, delay=2.0):
         """Wait for the extension to finish; a cold start loads the ngram model,
            espeak and dictionaries, which is slow on a CI runner."""
@@ -202,7 +209,7 @@ def integration(d):
       const h = document.documentElement;
       const out = {};
       for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
-        h.classList.remove('px-mode-whole', 'px-mode-hover', 'px-mode-reveal');
+        h.classList.remove('px-mode-hover', 'px-mode-reveal');
         h.classList.add(mode);
         let worst = 0;
         for (const span of document.querySelectorAll('#prose .phonetix')) {
@@ -284,7 +291,7 @@ def integration(d):
       const h = document.documentElement;
       const out = {};
       for (const mode of ['px-mode-hover', 'px-mode-reveal']) {
-        h.classList.remove('px-mode-whole', 'px-mode-hover', 'px-mode-reveal');
+        h.classList.remove('px-mode-hover', 'px-mode-reveal');
         h.classList.add(mode);
         let worstTop = 0, sizeMismatch = 0, worstCentre = 0;
         for (const span of document.querySelectorAll('#prose .phonetix')) {
@@ -309,6 +316,75 @@ def integration(d):
                f"{r['sizeMismatch']} spans change size")
         expect(f"revealed layer is centred on the word in {mode}", r["centre"] <= 1,
                f"off centre by {r['centre']}px")
+    d.close_tab()
+
+    # Hovering a word may change what is painted and nothing else. The layer that
+    # appears must land exactly on the word it replaces — same top, same centre, same
+    # size — or the text jumps under the cursor at the moment of being read.
+    #
+    # This is measured while the browser really has the word hovered: a :hover rule
+    # does not apply otherwise, so the earlier check, which compared the two layers
+    # at rest, could not see any of it.
+    d.load(f"http://127.0.0.1:{PORT}/editable.html", settle=3)
+    d.poll("document.querySelectorAll('#prose .phonetix').length", ok=lambda v: bool(v) and v > 0)
+
+    for mode, hidden, shown in [
+        ("px-mode-hover", ".px-orig", ".px-ipa"),
+        ("px-mode-reveal", ".px-ipa", ".px-orig"),
+    ]:
+        d.js(f"(() => {{ const h = document.documentElement;"
+             f" h.classList.remove('px-mode-hover','px-mode-reveal');"
+             f" h.classList.add('{mode}'); return 1; }})()")
+
+        # what the word looks like before anyone touches it
+        before = json.loads(d.js(f"""(() => {{
+          const span = [...document.querySelectorAll('#prose .phonetix')][3];
+          span.scrollIntoView({{block: 'center'}});
+          // The glyphs, not the box around them: padding grows the box without
+          // moving its edge, while the text inside it shifts — which is exactly what
+          // the reader sees and what an element rect cannot show.
+          const range = document.createRange();
+          range.selectNodeContents(span.querySelector('{hidden}'));
+          const at = range.getBoundingClientRect();
+          const box = span.getBoundingClientRect();
+          return JSON.stringify({{
+            top: at.top, height: at.height, centre: at.left + at.width / 2,
+            font: getComputedStyle(span.querySelector('{hidden}')).fontSize,
+            x: box.left + box.width / 2, y: box.top + box.height / 2,
+          }});
+        }})()""") or "{}")
+
+        d.hover(before["x"], before["y"])
+
+        after = json.loads(d.js(f"""(() => {{
+          const span = [...document.querySelectorAll('#prose .phonetix')][3];
+          const el = span.querySelector('{shown}');
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const r = range.getBoundingClientRect();
+          return JSON.stringify({{
+            hovered: span.matches(':hover'),
+            top: r.top, height: r.height, centre: r.left + r.width / 2,
+            font: getComputedStyle(el).fontSize,
+          }});
+        }})()""") or "{}")
+
+        expect(f"the word is really hovered in {mode}", after.get("hovered") is True,
+               "the browser never entered :hover, so nothing below was measured")
+        expect(f"revealed layer keeps the top in {mode}",
+               abs(after["top"] - before["top"]) <= 1,
+               f"moved {after['top'] - before['top']:.1f}px down")
+        expect(f"revealed layer keeps the height in {mode}",
+               abs(after["height"] - before["height"]) <= 1,
+               f"grew {after['height'] - before['height']:.1f}px")
+        expect(f"revealed layer keeps the centre in {mode}",
+               abs(after["centre"] - before["centre"]) <= 1,
+               f"moved {after['centre'] - before['centre']:.1f}px sideways")
+        expect(f"revealed layer keeps the font size in {mode}",
+               after["font"] == before["font"], f"{before['font']} -> {after['font']}")
+
+        d.hover(5, 5)   # leave the word
+
     d.close_tab()
 
     # tooltip lifecycle: a press inside pins it, so dragging out a selection to
@@ -343,9 +419,9 @@ def integration(d):
               "  || document.querySelector('#secret .phonetix');"
               " if (!s) return 'no-span';"
               " return getComputedStyle(s).visibility; })()")
-    for mode in ("px-mode-whole", "px-mode-hover", "px-mode-reveal"):
+    for mode in ("px-mode-hover", "px-mode-reveal"):
         d.js(f"(() => {{ const h = document.documentElement;"
-             f" h.classList.remove('px-mode-whole','px-mode-hover','px-mode-reveal');"
+             f" h.classList.remove('px-mode-hover','px-mode-reveal');"
              f" h.classList.add('{mode}'); return 1; }})()")
         vis = d.js(HIDDEN)
         expect(f"hidden panel stays hidden ({mode})", vis == "hidden", f"visibility={vis}")

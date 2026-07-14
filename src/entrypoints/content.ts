@@ -35,7 +35,7 @@ let accents: Record<string, string> = {};
 function voiceFor(lang: Language): string {
   return accents[lang] || DefaultAccents[lang] || lang;
 }
-let mode: Mode = 'wholePage';
+let mode: Mode = 'showOriginalOnHover';
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */
 let hideStress = false;
@@ -425,14 +425,22 @@ function renderSymbols(container: HTMLElement, ipa: string): void {
     if (!tok.trim()) continue;
     const info = describeSymbol(tok);
     const cls = info ? TYPE_CLASS[info.type] || '' : '';
-    const hasAudio = !!info?.audio;
 
-    const sym = el('span', `px-sym ${cls} ${hasAudio ? 'clickable' : ''}`);
+    // The symbol itself is the link to the article on this sound, so the reader
+    // clicks the thing they are looking at. The recording is on the speaker beside
+    // the description, which is where the rest of the sound's detail is.
+    const sym = info?.wiki
+      ? (el('a', `px-sym ${cls} clickable`) as HTMLAnchorElement)
+      : el('span', `px-sym ${cls}`);
     sym.textContent = tok;
 
-    if (hasAudio) {
-      const file = info!.audio!;
-      sym.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
+    if (info?.wiki) {
+      const link = sym as HTMLAnchorElement;
+      link.href = `https://en.wikipedia.org/wiki/${info.wiki}`;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.title = `${info.name}: read about this sound`;
+      link.addEventListener('click', (e) => e.stopPropagation());
     }
 
     if (info) {
@@ -484,21 +492,6 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
 
   ttDetail.innerHTML = '';
 
-  // The symbol itself links to the article on this sound as a whole: how it is
-  // articulated, which languages have it, and a recording of a speaker saying it.
-  if (info.wiki) {
-    const symLink = el('a', 'px-detail-sym px-detail-link') as HTMLAnchorElement;
-    symLink.textContent = tok;
-    symLink.href = `https://en.wikipedia.org/wiki/${info.wiki}`;
-    symLink.target = '_blank';
-    symLink.rel = 'noopener noreferrer';
-    symLink.title = `${info.name}: read about this sound on Wikipedia`;
-    symLink.addEventListener('click', (e) => e.stopPropagation());
-    ttDetail.appendChild(symLink);
-  } else {
-    ttDetail.appendChild(txt('span', 'px-detail-sym', tok));
-  }
-
   const text = el('span', 'px-detail-text');
 
   // A description is a stack of independent facts — "r-colored open-mid central
@@ -516,6 +509,19 @@ function showDetail(sym: HTMLElement, tok: string, info: IPASymbolInfo): void {
     spk.addEventListener('click', (e) => { e.stopPropagation(); playSymbol(file); });
     ttDetail.appendChild(spk);
   }
+
+  // Real mouths, moving: Seeing Speech films every IPA sound under MRI and
+  // ultrasound. The films cannot be shipped (they are not free to redistribute) but
+  // they can be linked, and they are the best answer there is to "how do I say this".
+  const chart = info.type === 'vowel' ? 4 : 1;
+  const mri = el('a', 'px-detail-mri') as HTMLAnchorElement;
+  mri.textContent = 'MRI';
+  mri.href = `https://www.seeingspeech.ac.uk/ipa-charts/?chart=${chart}`;
+  mri.target = '_blank';
+  mri.rel = 'noopener noreferrer';
+  mri.title = `Watch a mouth say ${info.name} on MRI and ultrasound (Seeing Speech, University of Glasgow)`;
+  mri.addEventListener('click', (e) => e.stopPropagation());
+  ttDetail.appendChild(mri);
 
   // The mouth making the sound: a section through the head with the tongue and lips
   // where they have to be. It is a picture of the answer to "how do I say this".

@@ -18,9 +18,8 @@ export const ORIG_CLASS = 'px-orig';
 export const IPA_CLASS = 'px-ipa';
 
 export const MODE_CLASSES = {
-  wholePage: 'px-mode-whole',
-  onHover: 'px-mode-hover',
   showOriginalOnHover: 'px-mode-reveal',
+  onHover: 'px-mode-hover',
 } as const;
 
 /** Regex matching Latin-script words (including accented chars for DE/ES/FR) */
@@ -38,10 +37,6 @@ export const PHONETIX_CSS = `
 .${PHONETIX_CLASS}.px-active { background: rgba(109,159,255,.12); }
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
 .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; }
-
-/* wholePage: show IPA, hide original — no stacking needed */
-.${MODE_CLASSES.wholePage} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: none; }
-.${MODE_CLASSES.wholePage} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; }
 
 /*
  * Hover modes show one layer and keep the other for the hover. Only the visible
@@ -81,35 +76,35 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS} {
   visibility: inherit;
   z-index: 2147483646;
-  /* The revealed layer overflows its box and lies over the words beside it, so it
-     needs a surface of its own: Canvas is the page's own background colour, in
-     whichever theme the page uses, and without it the two texts overlap into
-     something unreadable. */
-  /* The revealed layer lies over the words beside it. Rather than cover them with
-     a hard card, it blurs what is behind it: backdrop-filter acts on the backdrop,
-     never on the element's own text, so the transcription stays sharp while the
-     words under it recede. The surface is only mostly opaque, so the blur is
-     visible through it. */
-  background: color-mix(in srgb, Canvas 88%, transparent);
-  backdrop-filter: blur(3px);
-  padding: 1px 5px;
-  border-radius: 5px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.22);
+
 }
 
-/* The blur extends past the card and fades to nothing, so the effect has no edge
-   of its own. It sits behind the text and takes no clicks. */
+/*
+ * The revealed layer's surface is drawn behind the text, never on it.
+ *
+ * Padding or a border on the layer itself applies only while hovered, and a box that
+ * gains padding on hover moves its own text: the word shifted down and sideways at
+ * the moment of being read. Everything the surface needs — the backing colour, the
+ * blur of what lies behind, the shadow — sits on a pseudo-element inset behind the
+ * text, so hovering changes the paint and nothing about the box.
+ *
+ * backdrop-filter acts on the backdrop, never on the element's own text, so the
+ * transcription stays sharp while the words under it recede. The blur reaches past
+ * the text and fades out to both sides, so it has no edge of its own.
+ */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover .${IPA_CLASS}::before,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS}::before {
   content: '';
   position: absolute;
-  inset: -2px -16px;
+  inset: -2px -14px;
   z-index: -1;
   pointer-events: none;
   border-radius: 8px;
+  background: color-mix(in srgb, Canvas 88%, transparent);
   backdrop-filter: blur(4px);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+  box-shadow: 0 2px 12px rgba(0,0,0,.22);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 14px, black calc(100% - 14px), transparent 100%);
 }
 
 /* showOriginalOnHover: the IPA is the running text; the original overlays it. */
@@ -127,16 +122,7 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover .${ORIG_CLASS} {
   visibility: inherit;
   z-index: 2147483646;
-  /* The revealed layer lies over the words beside it. Rather than cover them with
-     a hard card, it blurs what is behind it: backdrop-filter acts on the backdrop,
-     never on the element's own text, so the transcription stays sharp while the
-     words under it recede. The surface is only mostly opaque, so the blur is
-     visible through it. */
-  background: color-mix(in srgb, Canvas 88%, transparent);
-  backdrop-filter: blur(3px);
-  padding: 1px 5px;
-  border-radius: 5px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.22);
+
 }
 `.trim();
 
@@ -256,6 +242,7 @@ export const TOOLTIP_CSS = `
 .px-sym {
   font: 500 24px/1.25 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
   color: #eaeaf0;
+  text-decoration: none;
   padding: 2px 2px 3px;
   border-radius: 4px;
   border-bottom: 2px solid transparent;
@@ -272,12 +259,14 @@ export const TOOLTIP_CSS = `
 .px-sym.D { border-bottom-color: #5de8b0; }
 
 /* ── Detail line: fixed height, so exploring never resizes the tooltip ── */
+/* Fixed height, so reading a symbol never resizes the tooltip. It is the text that
+   is clipped to it, not the line itself: clipping the line would cut off the
+   enlarged diagram, which has to be able to grow out of the tooltip. */
 .px-detail {
   display: flex;
   align-items: center;
   gap: 8px;
   height: 46px;
-  overflow: hidden;
   padding: 6px 8px;
   border-radius: 6px;
   background: #232327;
@@ -287,7 +276,14 @@ export const TOOLTIP_CSS = `
   color: #6d9fff;
   flex: none;
 }
-.px-detail-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.px-detail-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
 .px-detail-name {
   font-size: 11px;
   color: #d8d8de;
@@ -310,6 +306,19 @@ export const TOOLTIP_CSS = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.px-detail-mri {
+  flex: none;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: #9fc0ff;
+  text-decoration: none;
+  padding: 3px 6px;
+  border: 1px solid #33436b;
+  border-radius: 999px;
+}
+.px-detail-mri:hover { color: #fff; background: #33436b; }
+
 .px-detail-diagram {
   display: flex;
   align-items: center;
@@ -319,10 +328,29 @@ export const TOOLTIP_CSS = `
   height: 34px;
   border-radius: 4px;
   background: #fff;
-  overflow: hidden;
+  overflow: visible;
 }
 .px-detail-diagram:empty { background: none; }
-.px-detail-diagram img { max-width: 100%; max-height: 100%; display: block; }
+.px-detail-diagram img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  transition: transform .12s ease-out;
+}
+
+/* A 46px thumbnail shows that a diagram exists; it does not show a mouth. Hovering
+   it grows the picture about its own centre, so it opens where the eye already is
+   rather than jumping somewhere else to be read. */
+.px-detail-diagram:hover {
+  z-index: 10;
+}
+.px-detail-diagram:hover img {
+  transform: scale(5);
+  transform-origin: center center;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.45);
+}
 
 .px-detail-spk {
   margin-left: auto;

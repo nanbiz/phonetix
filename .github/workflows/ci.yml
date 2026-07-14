@@ -83,6 +83,10 @@ jobs:
         run: pnpm test:integration
       - name: IPA symbol names match the IPA
         run: pnpm test:names
+      - name: Hovering a word may not move it
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:hover
       - name: Popup layout
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
