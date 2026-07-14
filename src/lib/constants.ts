@@ -239,13 +239,17 @@ export const TOOLTIP_CSS = `
 }
 
 /* Each symbol is the text itself, not a box repeating it. */
+/* The symbol underlines itself, rather than carrying a rule beneath its box: the
+   underline follows the letter, and its colour says what kind of sound it is. */
 .px-sym {
   font: 500 24px/1.25 'Gentium Plus', 'Doulos SIL', 'Charis SIL', 'Noto Sans', serif;
   color: #eaeaf0;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
   padding: 2px 2px 3px;
   border-radius: 4px;
-  border-bottom: 2px solid transparent;
   cursor: default;
   transition: background .08s, color .08s;
 }
@@ -253,10 +257,10 @@ export const TOOLTIP_CSS = `
 .px-sym.active { background: rgba(109,159,255,.18); color: #fff; }
 .px-sym.clickable { cursor: pointer; }
 .px-sym.clickable:active { transform: scale(.94); }
-.px-sym.C { border-bottom-color: #6d9fff; }
-.px-sym.V { border-bottom-color: #ff6d8f; }
-.px-sym.S { border-bottom-color: #b78dff; }
-.px-sym.D { border-bottom-color: #5de8b0; }
+.px-sym.C { text-decoration-color: #6d9fff; }
+.px-sym.V { text-decoration-color: #ff6d8f; }
+.px-sym.S { text-decoration-color: #b78dff; }
+.px-sym.D { text-decoration-color: #5de8b0; }
 
 /* ── Detail line: fixed height, so exploring never resizes the tooltip ── */
 /* Fixed height, so reading a symbol never resizes the tooltip. It is the text that
