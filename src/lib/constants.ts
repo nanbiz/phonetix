@@ -34,12 +34,12 @@ export const TECHNICAL_RE = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{
 export const PHONETIX_CSS = `
 /* Base styles */
 .${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; }
-/* Over a hovered word the pointer sits on top of the very IPA it reveals, hiding a
-   letter or two. It becomes a small hollow ring with a black-and-white outline:
-   visible on any background, and the transcription shows through the hole. */
+/* Over a hovered word the pointer sits on the very IPA it reveals, so it shrinks to
+   a small dot: a filled centre with a thin light outline, visible on any background
+   while covering as little of the transcription as possible. */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS}:hover,
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS}:hover {
-  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(0,0,0,0.28)%22 stroke-width=%223%22/%3E%3Ccircle cx=%229%22 cy=%229%22 r=%225.5%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.32)%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
+  cursor: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2218%22 height=%2218%22%3E%3Ccircle cx=%229%22 cy=%229%22 r=%223.5%22 fill=%22rgba(0,0,0,0.5)%22 stroke=%22rgba(255,255,255,0.7)%22 stroke-width=%221.5%22/%3E%3C/svg%3E') 9 9, default;
 }
 
 .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }

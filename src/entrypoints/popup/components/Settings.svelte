@@ -114,24 +114,32 @@
     storage.setItem<string>('local:selectedLanguage', selectedLanguage);
   });
 
-  let hideStress = $state(false);
-  (async () => { hideStress = (await storage.getItem<string>('local:hideStress')) === 'true'; })();
+  // Hidden stress marks and narrow detail are on by default; an unset key is the
+  // default, not off. These must match the same defaults in content.ts.
+  let hideStress = $state(true);
+  (async () => {
+    const saved = await storage.getItem<string>('local:hideStress');
+    if (saved !== null && saved !== undefined) hideStress = saved === 'true';
+  })();
 
   async function setHideStress(hide: boolean) {
     hideStress = hide;
     await storage.setItem<string>('local:hideStress', String(hide));
   }
 
-  let narrow = $state(false);
-  (async () => { narrow = (await storage.getItem<string>('local:narrow')) === 'true'; })();
+  let narrow = $state(true);
+  (async () => {
+    const saved = await storage.getItem<string>('local:narrow');
+    if (saved !== null && saved !== undefined) narrow = saved === 'true';
+  })();
 
   async function setNarrow(on: boolean) {
     narrow = on;
     await storage.setItem<string>('local:narrow', String(on));
   }
 
-  // Animations default to the system's reduced-motion setting until chosen here.
-  let animations = $state(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Animations are off by default; the reader turns them on here.
+  let animations = $state(false);
   (async () => {
     const saved = await storage.getItem<string>('local:animations');
     if (saved !== null && saved !== undefined) animations = saved === 'true';

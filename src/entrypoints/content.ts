@@ -38,14 +38,14 @@ function voiceFor(lang: Language): string {
 let mode: Mode = 'showOriginalOnHover';
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */
-let hideStress = false;
+let hideStress = true;
 /** Narrow transcription keeps the fine phonetic detail Wiktionary records:
- *  aspiration, final devoicing, small vowel raisings. It is precise and noisy, so
- *  a reader gets the broad form by default and turns this on for the detail. */
-let showNarrow = false;
-/** The tooltip fade, the reveal, the diagram zoom. On by default, following the
- *  system's reduced-motion setting until the reader chooses in the popup. */
-let animations = true;
+ *  aspiration, final devoicing, small vowel raisings. On by default; the reader
+ *  turns it off in the popup for the plain broad form. */
+let showNarrow = true;
+/** The tooltip fade, the reveal, the diagram zoom. Off by default; the reader
+ *  turns them on in the popup. */
+let animations = false;
 
 /** Mark the page and tooltip so the CSS animations apply, or do not. */
 function applyAnimations(): void {
@@ -1155,14 +1155,16 @@ export default defineContentScript({
       const savedAccents = await storage.getItem<string>('local:accents');
       if (savedAccents) accents = JSON.parse(savedAccents);
 
-      hideStress = (await storage.getItem<string>('local:hideStress')) === 'true';
-      showNarrow = (await storage.getItem<string>('local:narrow')) === 'true';
+      // Narrow detail and hidden stress marks are on by default; the reader turns
+      // them off in the popup. An unset key means the default, not false.
+      const savedStress = await storage.getItem<string>('local:hideStress');
+      hideStress = savedStress === null || savedStress === undefined ? true : savedStress === 'true';
+      const savedNarrow = await storage.getItem<string>('local:narrow');
+      showNarrow = savedNarrow === null || savedNarrow === undefined ? true : savedNarrow === 'true';
 
-      // Default to the system's reduced-motion preference until the reader chooses.
+      // Animations are off by default; the reader turns them on in the popup.
       const savedAnim = await storage.getItem<string>('local:animations');
-      animations = savedAnim === null || savedAnim === undefined
-        ? !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        : savedAnim === 'true';
+      animations = savedAnim === 'true';
 
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
