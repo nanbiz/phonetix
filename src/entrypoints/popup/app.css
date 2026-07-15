@@ -15,7 +15,9 @@ body {
 body {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 150;
+  /* A normal weight. A hairline (150) rounds to the font's Thin face and reads as
+     faint, hard-to-see text, which looked like the fonts were too small. */
+  font-weight: 400;
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);

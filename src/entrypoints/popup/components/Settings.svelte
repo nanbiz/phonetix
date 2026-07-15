@@ -218,7 +218,7 @@
         {/each}
       </div>
       {#if ruleBasedNote}
-        <p class="text-xs text-gray-500">{ruleBasedNote}</p>
+        <p class="text-xs text-gray-400">{ruleBasedNote}</p>
       {/if}
     {:else}
       <p class="text-sm text-gray-500">
@@ -228,7 +228,7 @@
 
     {#if otherAccentChoices.length}
       <details class="pt-1">
-        <summary class="cursor-pointer select-none text-xs text-gray-500">Other languages</summary>
+        <summary class="cursor-pointer select-none text-xs text-gray-400">Other languages</summary>
         <div class="mt-2 flex flex-col gap-2">
           {#each otherAccentChoices as [lang, options] (lang)}
             <Dropdown
@@ -260,7 +260,7 @@
         {LanguageNames[effectiveLanguage] || effectiveLanguage}
         {#if accentLabel}<span class="text-gray-400"> · {accentLabel}</span>{/if}
       </span>
-      <span class="block truncate text-xs text-gray-500">
+      <span class="block truncate text-xs text-gray-400">
         {selectedLanguage === 'auto' ? 'detected' : 'set by you'}
         {#if effectiveHasDict}
           · {(dictManifest[effectiveLanguage]?.entries || 0).toLocaleString()} words
@@ -284,7 +284,7 @@
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">
       Narrow transcription
-      <span class="block text-xs text-gray-500">Keeps fine detail like aspiration and devoicing (kʰ, z̥); off shows the broad form</span>
+      <span class="block text-xs text-gray-400">Keeps fine detail like aspiration and devoicing (kʰ, z̥); off shows the broad form</span>
     </span>
     <input
       type="checkbox"
@@ -297,7 +297,7 @@
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">
       Hide stress marks
-      <span class="block text-xs text-gray-500">Leaves out ˈ and ˌ; the tooltip still shows them</span>
+      <span class="block text-xs text-gray-400">Leaves out ˈ and ˌ; the tooltip still shows them</span>
     </span>
     <input
       type="checkbox"
@@ -310,7 +310,7 @@
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">
       Animations
-      <span class="block text-xs text-gray-500">The tooltip, the reveal and the diagram ease in; off is instant</span>
+      <span class="block text-xs text-gray-400">The tooltip, the reveal and the diagram ease in; off is instant</span>
     </span>
     <input
       type="checkbox"
@@ -321,7 +321,7 @@
   </label>
 
   <details class="mt-2 px-1">
-    <summary class="text-xs text-gray-500 cursor-pointer select-none">Advanced</summary>
+    <summary class="text-xs text-gray-400 cursor-pointer select-none">Advanced</summary>
 
     <div class="mt-2">
       <Dropdown
@@ -330,7 +330,7 @@
         elements={languageOptions}
         onElementChange={(lang) => (selectedLanguage = lang as LanguageOption)}
       />
-      <p class="mt-1 text-[10px] text-gray-500">
+      <p class="mt-1 text-xs text-gray-400">
         Each block of the page is detected on its own, so a page in several languages
         already reads correctly. Set this only for a page detection gets wrong.
       </p>
@@ -346,7 +346,7 @@
         class="mt-1 w-full text-xs bg-transparent border border-gray-700 rounded px-2 py-1 text-white"
       />
     </label>
-    <p class="mt-1 text-[10px] text-gray-500">
+    <p class="mt-1 text-xs text-gray-400">
       Fetch dictionaries from a remote host (cached offline after first use). Empty
       uses the bundled dictionaries.
     </p>
@@ -363,7 +363,7 @@
     </button>
 
     {#if showInfo}
-      <div class="mt-2 text-xs text-gray-500 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
+      <div class="mt-2 text-xs text-gray-400 bg-gray-800/60 rounded-lg p-3 space-y-2.5">
         <div class="flex items-start gap-2">
           <span class="text-blue-400 mt-0.5 flex-shrink-0">1.</span>
           <p>

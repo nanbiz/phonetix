@@ -69,12 +69,20 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.showOriginalOnHover} .px-hover .${ORIG_CLASS} {
   display: inline-block;
   position: absolute;
-  left: 0;
+  /* The first glyph must still sit on the word's first glyph, so the box is pulled
+     left by exactly its own padding: the text starts at the word's origin (0px), and
+     the padding is breathing room that keeps the revealed form from butting against
+     the neighbouring words when it is the wider one. box-sizing:content-box so
+     min-width is the word's width, and the box covers the word plus that margin. */
+  box-sizing: content-box;
+  left: -4px;
   top: 0;
+  padding: 0 4px;
   min-width: 100%;
   white-space: nowrap;
   color: inherit;
   background: var(--px-bg, #fff);
+  border-radius: 3px;
   z-index: 5;
 }
 

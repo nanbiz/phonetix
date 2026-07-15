@@ -128,7 +128,10 @@ def main():
         shift = abs(after["wordTop"] - info["wordTop"])
         # It must cover the whole word — no letter of the word peeks out past either
         # side of the reveal, even when the revealed form is the shorter of the two.
-        peek_l = max(0.0, after["wordBoxLeft"] - after["revBoxLeft"])
+        # A peek is the word sticking out past the reveal: on the left when the reveal
+        # starts to the right of the word, on the right when it ends to the left of it.
+        # The reveal may extend beyond the word (its covering margin), which is not a peek.
+        peek_l = max(0.0, after["revBoxLeft"] - after["wordBoxLeft"])
         peek_r = max(0.0, after["wordBoxRight"] - after["revBoxRight"])
         bg_ok = after["revealBg"] == after["pageBg"]
         aligned = dx < 0.05 and dy < 0.05
