@@ -3,6 +3,9 @@
 
   import Toggles from "./components/Toggles.svelte";
   import Settings from "./components/Settings.svelte";
+
+  // The running version, read from the manifest so it is always the installed build.
+  const version = chrome.runtime.getManifest().version;
 </script>
 
 <!-- Fixed-height column: the header and footer stay put and only the middle
@@ -14,9 +17,9 @@
     <Settings />
   </div>
 
-  <div class="inline-flex shrink-0 items-center justify-center gap-1.5 py-2 text-sm">
+  <div class="flex shrink-0 items-center justify-center gap-1.5 py-2 text-sm">
     Made with
     <Heart class="size-5 text-red-500" />
-    .
+    <span class="text-gray-500">· v{version}</span>
   </div>
 </main>

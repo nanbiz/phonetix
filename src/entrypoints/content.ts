@@ -43,6 +43,16 @@ let hideStress = false;
  *  aspiration, final devoicing, small vowel raisings. It is precise and noisy, so
  *  a reader gets the broad form by default and turns this on for the detail. */
 let showNarrow = false;
+/** The tooltip fade, the reveal, the diagram zoom. On by default, following the
+ *  system's reduced-motion setting until the reader chooses in the popup. */
+let animations = true;
+
+/** Mark the page and tooltip so the CSS animations apply, or do not. */
+function applyAnimations(): void {
+  const v = animations ? 'on' : 'off';
+  document.documentElement.dataset.pxAnim = v;
+  if (ttEl) ttEl.dataset.pxAnim = v;
+}
 
 const STRESS_MARKS = /[\u02C8\u02CC]/g;
 
@@ -337,8 +347,10 @@ function setupTooltipEvents(): void {
     if (!t || t === curTarget) return;
     // A pinned tooltip is never replaced by hovering another word.
     if (ttPinned) return;
-    // Don't switch words if mouse is in the tooltip's safe zone
-    if (ttVisible && isInSafeZone(e.clientX, e.clientY)) return;
+    // Reaching here means the cursor is over a different word, so the tooltip must
+    // follow it. The safe zone only keeps the tooltip alive while the cursor crosses
+    // the gap to it (handled by the hide timer); it must not block a real switch, or
+    // the tooltip stays on the previous word while the new one is highlighted.
     clearTimers();
     curTarget = t;
     // The in-page reveal is instant (it is the mode, not the tooltip); the tooltip
@@ -1177,6 +1189,12 @@ export default defineContentScript({
       hideStress = (await storage.getItem<string>('local:hideStress')) === 'true';
       showNarrow = (await storage.getItem<string>('local:narrow')) === 'true';
 
+      // Default to the system's reduced-motion preference until the reader chooses.
+      const savedAnim = await storage.getItem<string>('local:animations');
+      animations = savedAnim === null || savedAnim === undefined
+        ? !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : savedAnim === 'true';
+
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
 
@@ -1193,6 +1211,7 @@ export default defineContentScript({
     injectStyles();
     initTooltip();
     setupTooltipEvents();
+    applyAnimations();
 
     if (isEnabled) {
       setMode(mode);
@@ -1223,6 +1242,11 @@ export default defineContentScript({
     storage.watch<string>('local:hideStress', async (value) => {
       hideStress = value === 'true';
       await reprocess();
+    });
+
+    storage.watch<string>('local:animations', (value) => {
+      animations = value === 'true';
+      applyAnimations();
     });
 
     storage.watch<string>('local:narrow', async (value) => {

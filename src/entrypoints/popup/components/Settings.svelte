@@ -130,6 +130,18 @@
     await storage.setItem<string>('local:narrow', String(on));
   }
 
+  // Animations default to the system's reduced-motion setting until chosen here.
+  let animations = $state(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  (async () => {
+    const saved = await storage.getItem<string>('local:animations');
+    if (saved !== null && saved !== undefined) animations = saved === 'true';
+  })();
+
+  async function setAnimations(on: boolean) {
+    animations = on;
+    await storage.setItem<string>('local:animations', String(on));
+  }
+
   async function setAccent(lang: string, accent: string) {
     accents = { ...accents, [lang]: accent };
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
@@ -292,6 +304,19 @@
       class="toggle toggle-primary toggle-sm flex-none"
       checked={hideStress}
       onchange={(e) => setHideStress((e.currentTarget as HTMLInputElement).checked)}
+    />
+  </label>
+
+  <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
+    <span class="text-sm text-gray-300">
+      Animations
+      <span class="block text-xs text-gray-500">The tooltip, the reveal and the diagram ease in; off is instant</span>
+    </span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary toggle-sm flex-none"
+      checked={animations}
+      onchange={(e) => setAnimations((e.currentTarget as HTMLInputElement).checked)}
     />
   </label>
 

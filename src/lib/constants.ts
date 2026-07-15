@@ -73,8 +73,12 @@ export const PHONETIX_CSS = `
   border-radius: 6px;
   box-shadow: 0 2px 12px rgba(0,0,0,.28);
   display: none;
-
 }
+
+/* The reveal fades in when animations are on. Only opacity is animated — the inline
+   transform that centres it on the word must not be overridden by a keyframe. */
+@keyframes px-reveal-in { from { opacity: 0; } to { opacity: 1; } }
+[data-px-anim="on"] .px-reveal { animation: px-reveal-in .12s ease-out; }
 `.trim();
 
 /** CSS for the tooltip (injected into Shadow DOM) */
@@ -95,11 +99,12 @@ export const TOOLTIP_CSS = `
   font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   color: #d1d5db;
   opacity: 0;
-  transform: translateY(4px);
-  transition: opacity .12s, transform .12s;
+  transform: translateY(6px) scale(.985);
   pointer-events: auto;
 }
-.px-tt.visible { opacity: 1; transform: translateY(0); }
+/* The entrance runs only when animations are on; off, it appears in place. */
+.px-tt[data-px-anim="on"] { transition: opacity .15s ease, transform .18s cubic-bezier(.2,.8,.2,1); }
+.px-tt.visible { opacity: 1; transform: translateY(0) scale(1); }
 
 /* Arrow */
 .px-tt::before {
@@ -328,6 +333,32 @@ export const TOOLTIP_CSS = `
 }
 .px-detail-spk:hover { color: #a9c8ff; background: rgba(109,159,255,.14); }
 .px-detail-spk svg { width: 20px; height: 20px; display: block; }
+
+/* ── Animations, all gated on the reader's setting ── */
+/* The transcription's symbols rise in one after another as the tooltip opens. */
+@keyframes px-sym-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.px-tt[data-px-anim="on"] .px-sym { animation: px-sym-in .22s cubic-bezier(.2,.8,.2,1) both; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(1) { animation-delay: .02s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(2) { animation-delay: .05s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(3) { animation-delay: .08s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(4) { animation-delay: .11s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(5) { animation-delay: .14s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(6) { animation-delay: .17s; }
+.px-tt[data-px-anim="on"] .px-sym:nth-child(n+7) { animation-delay: .2s; }
+
+/* Row 1, the description line and the pronunciation ease in under the symbols. */
+@keyframes px-fade-up { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+.px-tt[data-px-anim="on"] .px-r1,
+.px-tt[data-px-anim="on"] .px-r2,
+.px-tt[data-px-anim="on"] .px-detail { animation: px-fade-up .2s ease-out both; }
+.px-tt[data-px-anim="on"] .px-detail { animation-delay: .06s; }
+
+/* The description swaps softly as a new symbol is read. */
+.px-tt[data-px-anim="on"] .px-detail-text { transition: opacity .1s ease; }
+
+/* The diagram zoom only eases when animations are on; off, it snaps. */
+.px-detail-diagram img { transition: none; }
+.px-tt[data-px-anim="on"] .px-detail-diagram img { transition: transform .13s cubic-bezier(.2,.8,.2,1); }
 
 /* Light mode: the tooltip follows the reader's system theme. Only the surfaces and
    ink flip; the type colours (blue links, coloured underlines, source tags) hold on
