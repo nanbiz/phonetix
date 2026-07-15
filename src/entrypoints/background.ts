@@ -412,7 +412,10 @@ async function tryWiktionaryLang(
 
       const matchedTitle: string = pages[pageId]?.title || candidate;
       const images: { title: string }[] = pages[pageId]?.images || [];
-      const audioFilename = findBestAudio(images, candidate, lang);
+      // The recording must be in the word's language, not this Wiktionary edition's:
+      // the English edition of "casa" lists an English recording, but for the Italian
+      // word only an Italian one may play.
+      const audioFilename = findBestAudio(images, candidate, expectedWordLang || lang);
       const audioUrl = audioFilename
         ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(audioFilename)}`
         : null;
@@ -520,39 +523,76 @@ function pickBestIpa(allIpas: string[], espeakHint?: string): string {
   return best;
 }
 
+/** ISO 639-1 (our language codes) to ISO 639-3, which Lingua Libre audio uses. */
+const ISO1_TO_3: Record<string, string> = {
+  af: 'afr', ar: 'ara', bg: 'bul', bn: 'ben', bs: 'bos', ca: 'cat', cs: 'ces',
+  cy: 'cym', da: 'dan', de: 'deu', el: 'ell', en: 'eng', eo: 'epo', es: 'spa',
+  et: 'est', eu: 'eus', fa: 'fas', fi: 'fin', fr: 'fra', ga: 'gle', hi: 'hin',
+  hr: 'hrv', hu: 'hun', hy: 'hye', id: 'ind', is: 'isl', it: 'ita', ja: 'jpn',
+  ka: 'kat', kk: 'kaz', ko: 'kor', ku: 'kur', la: 'lat', lt: 'lit', lv: 'lav',
+  mk: 'mkd', ml: 'mal', ms: 'msa', my: 'mya', nl: 'nld', no: 'nor', pl: 'pol',
+  pt: 'por', ro: 'ron', ru: 'rus', sk: 'slk', sl: 'slv', sq: 'sqi', sr: 'srp',
+  sv: 'swe', sw: 'swa', ta: 'tam', te: 'tel', th: 'tha', tr: 'tur', uk: 'ukr',
+  ur: 'urd', uz: 'uzb', vi: 'vie', zh: 'zho',
+};
+
 /**
- * Pick the best audio file from a page's images list.
+ * The language a recording is in, read from its filename, or null when unknown.
+ *
+ * Two conventions carry it: Lingua Libre names a file "LL-Q150 (fra)-Speaker-word.wav"
+ * with an ISO 639-3 code in parentheses, and the older files start with the language
+ * like "En-us-cat.ogg" or "De-Katze.ogg". A word spelled the same in two languages
+ * ("animations" in English and French) has a recording under each, so the language
+ * has to be checked or the wrong one plays.
  */
-function findBestAudio(
-  images: { title: string }[],
-  word: string,
-  lang: Language
-): string | null {
-  const audioFiles: string[] = [];
+function audioLanguage(name: string): string | null {
+  const ll = name.match(/\bLL-Q\d+ \(([a-z]{3})\)/i);
+  if (ll) return ll[1].toLowerCase();          // ISO 639-3
+  const old = name.match(/^([a-z]{2,3})(?:-[a-z]{2,})?[-_]/i);
+  if (old) return old[1].toLowerCase();        // ISO 639-1 (or -3)
+  return null;
+}
+
+/**
+ * The best audio recording for the word in this language, or null.
+ *
+ * A recording whose language is known and does not match is rejected: a French
+ * recording of "animations" must never play for the English word. A recording whose
+ * convention we cannot read is kept as a last resort, since dropping it would lose
+ * legitimate audio for languages neither convention covers.
+ */
+function findBestAudio(images: { title: string }[], word: string, lang: Language): string | null {
+  const iso3 = ISO1_TO_3[lang];
+  const candidates: { name: string; matches: boolean }[] = [];
+
   for (const img of images) {
     const colonIdx = img.title.indexOf(':');
     const name = colonIdx >= 0 ? img.title.slice(colonIdx + 1) : img.title;
-    if (/\.(ogg|mp3|wav|oga|flac)$/i.test(name)) {
-      audioFiles.push(name);
+    if (!/\.(ogg|mp3|wav|oga|flac)$/i.test(name)) continue;
+
+    const fileLang = audioLanguage(name);
+    if (fileLang === null) {
+      candidates.push({ name, matches: false });   // unknown convention, last resort
+    } else if (fileLang === lang || fileLang === iso3) {
+      candidates.push({ name, matches: true });
     }
+    // A file whose language is known and different is dropped entirely.
   }
-  if (audioFiles.length === 0) return null;
+
+  if (candidates.length === 0) return null;
 
   const wordLower = word.toLowerCase();
-  const langPrefix = lang.charAt(0).toUpperCase() + lang.slice(1).toLowerCase();
-  audioFiles.sort((a, b) => {
-    const aLower = a.toLowerCase();
-    const bLower = b.toLowerCase();
-    const aHasWord = aLower.includes(wordLower) ? 1 : 0;
-    const bHasWord = bLower.includes(wordLower) ? 1 : 0;
-    if (aHasWord !== bHasWord) return bHasWord - aHasWord;
-    const aHasLang = (a.startsWith(langPrefix + '-') || a.startsWith(lang + '-')) ? 1 : 0;
-    const bHasLang = (b.startsWith(langPrefix + '-') || b.startsWith(lang + '-')) ? 1 : 0;
-    if (aHasLang !== bHasLang) return bHasLang - aHasLang;
-    return a.length - b.length;
+  candidates.sort((a, b) => {
+    if (a.matches !== b.matches) return a.matches ? -1 : 1;   // language match first
+    const aWord = a.name.toLowerCase().includes(wordLower) ? 1 : 0;
+    const bWord = b.name.toLowerCase().includes(wordLower) ? 1 : 0;
+    if (aWord !== bWord) return bWord - aWord;
+    return a.name.length - b.name.length;
   });
 
-  return audioFiles[0];
+  // Nothing whose language matches, only unknown-convention files: keep the best of
+  // those. They are ambiguous, but better than silence and cannot be proven wrong.
+  return candidates[0].name;
 }
 
 // ─── Message handlers ───────────────────────────────────────────────

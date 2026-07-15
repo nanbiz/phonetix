@@ -95,6 +95,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:diagram
+      - name: Human recordings match the word's language
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:audio
       - name: Accents and espeak voices
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
