@@ -200,7 +200,8 @@ function inTooltip(e: Event): boolean {
 //  In-page hover reveal (the other layer, over the word)
 // =====================================================================
 
-let revealEl: HTMLDivElement | null = null;
+const HOVER_CLASS = 'px-hover';
+let revealSpan: HTMLElement | null = null;
 
 /** In a hover mode, the word shows one layer inline and the other is hidden. */
 function hiddenLayer(span: HTMLElement): { shown: HTMLElement; hidden: HTMLElement } | null {
@@ -213,59 +214,21 @@ function hiddenLayer(span: HTMLElement): { shown: HTMLElement; hidden: HTMLEleme
 }
 
 /**
- * Draw the hidden layer over the word at its measured screen position.
+ * Show the word's hidden layer in place, over the word.
  *
- * The overlay is a single fixed element positioned by the word's own
- * getBoundingClientRect, so it lands on the word the same way in every browser —
- * unlike an absolutely positioned child of a multi-line inline element, which
- * Firefox places at the paragraph top. Its font and colour are copied from the
- * word so the reveal reads as the word itself, one detail level over.
+ * No measurement: the layer is positioned by CSS at the word's own origin (a class
+ * on the word), so it lands on the exact pixels in every browser and cannot drift.
+ * The only per-word fact is the background the word sits on, so the layer paints an
+ * opaque surface over the word beneath it instead of the transparent page showing
+ * both forms at once.
  */
 function showReveal(span: HTMLElement): void {
-  if (!revealEl) return;
   const layers = hiddenLayer(span);
-  if (!layers) return;
-  const text = layers.hidden.textContent || '';
-  if (!text) { hideReveal(); return; }
-
-  const rect = layers.shown.getBoundingClientRect();
-  if (rect.width === 0 && rect.height === 0) { hideReveal(); return; }
-
-  const cs = getComputedStyle(span);
-  revealEl.textContent = text;
-  revealEl.style.fontFamily = cs.fontFamily;
-  revealEl.style.fontSize = cs.fontSize;
-  revealEl.style.fontWeight = cs.fontWeight;
-  revealEl.style.fontStyle = cs.fontStyle;
-  revealEl.style.letterSpacing = cs.letterSpacing;
-  revealEl.style.lineHeight = cs.lineHeight;
-  revealEl.style.color = cs.color;
-  // The word's own background, so the reveal covers it and reads the same. NOT the
-  // CSS `Canvas` keyword, which is the OS theme's colour: on a dark-themed machine it
-  // painted a dark box over a light page and hid both the word and the reveal's text.
-  revealEl.style.background = pageBackground(span);
-  revealEl.style.left = `${rect.left + rect.width / 2}px`;
-  revealEl.style.top = `${rect.top}px`;
-  revealEl.style.transform = 'translateX(-50%)';
-  revealEl.style.display = 'block';
-
-  // Aligning the boxes leaves the glyphs off by up to a pixel, because the reveal's
-  // font metrics are not identical to the word's. Measure the actual glyphs of both
-  // and correct, so the letters land exactly on the word's letters — the box top can
-  // read aligned while the text has moved, which is how a 1px drop slipped through.
-  const wordTop = glyphTop(layers.shown);
-  const revealTop = glyphTop(revealEl);
-  if (wordTop !== null && revealTop !== null) {
-    revealEl.style.top = `${rect.top + (wordTop - revealTop)}px`;
-  }
-}
-
-/** The top of an element's rendered glyphs (its text box), not its layout box. */
-function glyphTop(el: HTMLElement): number | null {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const r = range.getBoundingClientRect();
-  return r.height === 0 ? null : r.top;
+  if (!layers || !layers.hidden.textContent) return;
+  span.style.setProperty('--px-bg', pageBackground(span));
+  if (revealSpan && revealSpan !== span) revealSpan.classList.remove(HOVER_CLASS);
+  span.classList.add(HOVER_CLASS);
+  revealSpan = span;
 }
 
 /** The nearest solid background behind an element, walking up to the page. */
@@ -279,7 +242,7 @@ function pageBackground(el: HTMLElement | null): string {
 }
 
 function hideReveal(): void {
-  if (revealEl) revealEl.style.display = 'none';
+  if (revealSpan) { revealSpan.classList.remove(HOVER_CLASS); revealSpan = null; }
 }
 
 // =====================================================================
@@ -292,12 +255,6 @@ function initTooltip(): void {
   ttHost.id = 'phonetix-tooltip-host';
   ttHost.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;overflow:visible;';
   document.body.appendChild(ttHost);
-
-  // The hover reveal lives in the page (not the shadow root) so it inherits the
-  // page's own rendering context; its look comes from the injected .px-reveal rule.
-  revealEl = document.createElement('div');
-  revealEl.className = 'px-reveal';
-  document.body.appendChild(revealEl);
 
   // Open, so a test can measure the card and read what it says. The boundary
   // still keeps the page's CSS out either way; closed only hides it from the
@@ -356,7 +313,7 @@ function setupTooltipEvents(): void {
     // The in-page reveal is instant (it is the mode, not the tooltip); the tooltip
     // still waits so it does not flicker up on every passing word.
     showReveal(t);
-    if (ttVisible) { showTooltip(t); } else { hoverTimer = setTimeout(() => showTooltip(t), 700); }
+    showTooltip(t);
   });
 
   document.addEventListener('mouseout', (e) => {

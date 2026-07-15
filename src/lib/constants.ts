@@ -49,36 +49,38 @@ export const PHONETIX_CSS = `
  * Hover modes show one layer as ordinary inline text; the other is display:none, so
  * the running text lays out exactly as the page would without us — no reserved
  * width, no reflow, and text-overflow ellipsis works because the span is inline.
- *
- * The hidden layer is NOT positioned inside the word. Absolutely positioning it
- * against a multi-line inline element lands it at the paragraph top in Firefox
- * (aligned only in Chrome), so on hover it is drawn instead by a single overlay
- * (the px-reveal element, content.ts) placed at the word's measured screen
- * position, the same pixels in every browser.
+ * On hover the hidden layer is shown in place over the word (the .px-hover rule).
  */
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: inline; }
 .${MODE_CLASSES.onHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: none; }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${IPA_CLASS} { display: inline; }
 .${MODE_CLASSES.showOriginalOnHover} .${PHONETIX_CLASS} .${ORIG_CLASS} { display: none; }
 
-/* The overlay that shows the other layer on hover. It is fixed, at the word's
-   measured position, over an opaque page-coloured surface that hides the word
-   beneath it. Its font and colour are copied from the word in content.ts. */
-.px-reveal {
-  position: fixed;
-  z-index: 2147483645;
-  pointer-events: none;
+/* On hover the word's other layer is shown in place, over the word itself: an
+   absolute box anchored at the word's own origin (top/left 0), so it lands on the
+   exact pixels in every browser with no measurement to drift. The hovered word is
+   inline-block only so it is its own containing block — an absolute child of a plain
+   inline element is placed at the paragraph top by Firefox. min-width keeps the box
+   covering the whole word even when the other form is shorter, so no part of the
+   word peeks out around it; the page-coloured background (set per word in content.ts)
+   hides the word beneath. Same font and line box as the word, so nothing shifts. */
+.px-hover { position: relative; display: inline-block; }
+.${MODE_CLASSES.onHover} .px-hover .${IPA_CLASS},
+.${MODE_CLASSES.showOriginalOnHover} .px-hover .${ORIG_CLASS} {
+  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  min-width: 100%;
   white-space: nowrap;
-  padding: 1px 6px;
-  border-radius: 6px;
-  box-shadow: 0 2px 12px rgba(0,0,0,.28);
-  display: none;
+  color: inherit;
+  background: var(--px-bg, #fff);
+  z-index: 5;
 }
 
-/* The reveal fades in when animations are on. Only opacity is animated — the inline
-   transform that centres it on the word must not be overridden by a keyframe. */
 @keyframes px-reveal-in { from { opacity: 0; } to { opacity: 1; } }
-[data-px-anim="on"] .px-reveal { animation: px-reveal-in .12s ease-out; }
+[data-px-anim="on"] .px-hover .${IPA_CLASS},
+[data-px-anim="on"] .px-hover .${ORIG_CLASS} { animation: px-reveal-in .12s ease-out; }
 `.trim();
 
 /** CSS for the tooltip (injected into Shadow DOM) */

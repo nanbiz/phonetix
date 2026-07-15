@@ -43,15 +43,19 @@ PROBE = """(() => {
   const ctx = document.querySelector(%s);
   const sp = [...ctx.querySelectorAll('.phonetix')].find(s => s.dataset.original === 'transparent');
   if (!sp) return JSON.stringify({error: 'no transparent span'});
-  const shown = [...sp.children].find(c => getComputedStyle(c).display !== 'none') || sp;
+  // The revealed layer is the child lifted to position:absolute on hover; the shown
+  // layer is the other, which still defines the word's box.
+  const kids = [...sp.children];
+  const rev = kids.find(c => getComputedStyle(c).position === 'absolute') || null;
+  const shown = kids.find(c => c !== rev && getComputedStyle(c).display !== 'none') || sp;
   // Glyph boxes (Range), not layout boxes: a box centre stays put while the text
   // inside it shifts, so the box hid a 1px drop of the letters themselves.
   const gr = e => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); };
   const w = gr(shown);
-  const rev = document.querySelector('.px-reveal');
-  const on = rev && getComputedStyle(rev).display !== 'none';
-  const r = on ? gr(rev) : null;
-  const box = shown.getBoundingClientRect();
+  const on = !!rev;
+  const rg = on ? gr(rev) : null;         // revealed glyphs
+  const wbox = shown.getBoundingClientRect();
+  const rbox = on ? rev.getBoundingClientRect() : null;
   // The background the word actually sits on, walked up to the page.
   let pageBg = 'rgba(0, 0, 0, 0)';
   for (let e = sp; e; e = e.parentElement) {
@@ -59,12 +63,16 @@ PROBE = """(() => {
     if (bg && bg !== 'transparent' && !bg.startsWith('rgba(0, 0, 0, 0)')) { pageBg = bg; break; }
   }
   return JSON.stringify({
-    x: box.left + box.width / 2, y: box.top + box.height / 2,
-    wordTop: w.top, wordCentreX: w.left + w.width / 2,
-    revealTop: r ? r.top : null, revealCentreX: r ? r.left + r.width / 2 : null,
+    x: wbox.left + wbox.width / 2, y: wbox.top + wbox.height / 2,
+    // Where the word's own glyphs start (top-left), and where the reveal's start.
+    wordTop: w.top, wordLeft: w.left,
+    revealTop: rg ? rg.top : null, revealLeft: rg ? rg.left : null,
+    // Boxes, to prove the reveal covers the whole word (no part peeks out).
+    wordBoxLeft: wbox.left, wordBoxRight: wbox.right,
+    revBoxLeft: rbox ? rbox.left : null, revBoxRight: rbox ? rbox.right : null,
     revealBg: rev ? getComputedStyle(rev).backgroundColor : null,
     pageBg,
-    on: !!on, text: rev ? rev.textContent : null,
+    on, text: rev ? rev.textContent : null,
   });
 })()"""
 
@@ -110,16 +118,46 @@ def main():
         if not after.get("on"):
             failures.append(f"{case}: no reveal appeared on hover")
             continue
-        dx = abs(after["revealCentreX"] - after["wordCentreX"])
+        # The reveal shares the word's own box, so its glyphs start on the word's:
+        # top and left align exactly, not "within a pixel". A separate measured
+        # overlay could only get near; this must be 0.
+        dx = abs(after["revealLeft"] - after["wordLeft"])
         dy = abs(after["revealTop"] - after["wordTop"])
+        # The word itself must not move when the reveal opens over it: its own glyphs
+        # sit at the same place before and after hover, or the line jumps ("moves down").
+        shift = abs(after["wordTop"] - info["wordTop"])
+        # It must cover the whole word — no letter of the word peeks out past either
+        # side of the reveal, even when the revealed form is the shorter of the two.
+        peek_l = max(0.0, after["wordBoxLeft"] - after["revBoxLeft"])
+        peek_r = max(0.0, after["wordBoxRight"] - after["revBoxRight"])
         bg_ok = after["revealBg"] == after["pageBg"]
-        ok = dx <= 1 and dy <= 0.6 and bg_ok
-        note = "" if bg_ok else f"  BG {after['revealBg']} != page {after['pageBg']}"
-        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} glyphs off by ({dx:.1f}, {dy:.1f})px{note}")
-        if dx > 1 or dy > 0.6:
-            failures.append(f"{case}: reveal glyphs off the word by ({dx:.1f}, {dy:.1f})px")
+        aligned = dx < 0.05 and dy < 0.05
+        still = shift < 0.05
+        covered = peek_l < 0.5 and peek_r < 0.5
+        ok = aligned and still and covered and bg_ok
+        notes = []
+        if not bg_ok:
+            notes.append(f"BG {after['revealBg']} != page {after['pageBg']}")
+        if not still:
+            notes.append(f"word moved {shift:.2f}px")
+        if not covered:
+            notes.append(f"word peeks out (l={peek_l:.1f} r={peek_r:.1f})")
+        note = ("  " + "; ".join(notes)) if notes else ""
+        print(f"  {'PASS' if ok else 'FAIL'}  {case:8} start off ({dx:.2f}, {dy:.2f})px shift {shift:.2f}px{note}")
+        if not aligned:
+            failures.append(f"{case}: reveal starts off the word by ({dx:.2f}, {dy:.2f})px")
+        if not still:
+            failures.append(f"{case}: the word moved {shift:.2f}px when the reveal opened")
+        if not covered:
+            failures.append(f"{case}: the word peeks out around the reveal (l={peek_l:.1f} r={peek_r:.1f})")
         if not bg_ok:
             failures.append(f"{case}: reveal background {after['revealBg']} does not match the page {after['pageBg']}")
+        # Dismiss the tooltip and clear the hovered word before the next case: the
+        # tooltip is instant now and would otherwise sit over the next word, so a
+        # synthetic hover would land on it instead of the word.
+        d.eval("(()=>{document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));"
+               "document.querySelectorAll('.phonetix').forEach(s=>s.dispatchEvent("
+               "new MouseEvent('mouseout',{bubbles:true,composed:true,relatedTarget:document.body})));return 1;})()")
         d.hover(2, 2)
 
     d.close()
