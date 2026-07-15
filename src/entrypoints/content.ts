@@ -307,18 +307,19 @@ function setupTooltipEvents(): void {
     // cursor: the old word never gets a mouseout, so its reveal would otherwise stay
     // painted over the new content. The next mouse movement anywhere clears it.
     if (revealSpan && t !== revealSpan) hideReveal();
-    if (!t || t === curTarget) return;
+    if (!t) return;
     // A pinned tooltip is never replaced by hovering another word.
     if (ttPinned) return;
-    // Reaching here means the cursor is over a different word, so the tooltip must
-    // follow it. The safe zone only keeps the tooltip alive while the cursor crosses
-    // the gap to it (handled by the hide timer); it must not block a real switch, or
-    // the tooltip stays on the previous word while the new one is highlighted.
+    // Any entry onto a word cancels a pending hide first. Coming back to the same
+    // word within the close delay must call this off, or the timer already scheduled
+    // dismisses the tooltip a moment later and it never returns — the stall.
     clearTimers();
-    curTarget = t;
-    // The in-page reveal is instant (it is the mode, not the tooltip); the tooltip
-    // still waits so it does not flicker up on every passing word.
     showReveal(t);
+    // Re-entering the same word while its tooltip is up: nothing to redraw, just keep
+    // it (the hide is already cancelled). This also avoids re-rendering on every
+    // mouseover the cursor fires while moving within the one word.
+    if (t === curTarget && ttVisible) return;
+    curTarget = t;
     showTooltip(t);
   });
 

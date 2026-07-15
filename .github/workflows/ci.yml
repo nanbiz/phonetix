@@ -103,6 +103,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:stale
+      - name: Re-hovering a word never stalls its tooltip
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:hover
       - name: Accents and espeak voices
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
@@ -149,3 +153,4 @@ jobs:
           PHONETIX_XPI="$XPI" pnpm test:firefox
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/reveal_position.py firefox
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/stale_reveal.py firefox
+          PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/hover_stability.py firefox
