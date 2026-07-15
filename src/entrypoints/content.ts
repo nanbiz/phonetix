@@ -300,7 +300,13 @@ function isInSafeZone(x: number, y: number): boolean {
 function setupTooltipEvents(): void {
   // Hover on phonetix spans
   document.addEventListener('mouseover', (e) => {
-    const t = (e.target as HTMLElement).closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
+    const el = e.target as HTMLElement;
+    const t = el.closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
+    // Moving onto anything that is not the revealed word clears the reveal. mouseout
+    // is not enough on a single-page app (YouTube) that swaps the DOM under a still
+    // cursor: the old word never gets a mouseout, so its reveal would otherwise stay
+    // painted over the new content. The next mouse movement anywhere clears it.
+    if (revealSpan && t !== revealSpan) hideReveal();
     if (!t || t === curTarget) return;
     // A pinned tooltip is never replaced by hovering another word.
     if (ttPinned) return;
@@ -1094,6 +1100,12 @@ function observeDOM() {
         if (el && !el.closest(`.${PHONETIX_CLASS}`)) pendingRoots.add(el);
       }
     }
+    // A single-page app (YouTube) removes the word the reveal or tooltip was anchored
+    // to when it swaps content. The cursor never moves, so no mouseout fires; the
+    // stale reveal would stay painted over the new video's text. Drop anything whose
+    // anchor has left the document.
+    if (revealSpan && !revealSpan.isConnected) hideReveal();
+    if (curTarget && !curTarget.isConnected) { clearTimers(); hideTooltip(true); curTarget = null; }
     if (pendingRoots.size > 0 && !flushTimer) {
       flushTimer = setTimeout(flushRoots, 300);
     }

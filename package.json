@@ -27,7 +27,8 @@
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
     "test:reveal": "uv run python scripts/proofread/reveal_position.py",
     "test:diagram": "uv run --with pillow python scripts/proofread/diagram_visible.py",
-    "test:audio": "uv run python scripts/proofread/audio_lang.py"
+    "test:audio": "uv run python scripts/proofread/audio_lang.py",
+    "test:stale": "uv run python scripts/proofread/stale_reveal.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
