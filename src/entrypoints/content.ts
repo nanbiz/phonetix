@@ -46,6 +46,10 @@ let showNarrow = true;
 /** The tooltip fade, the reveal, the diagram zoom. Off by default; the reader
  *  turns them on in the popup. */
 let animations = false;
+/** How long the cursor must rest on a word before its tooltip opens, in ms. Keeps
+ *  the tooltip from flicking up on every word the cursor crosses; the reader sets it
+ *  0–1000ms in the popup. The reveal is unaffected — it is the mode, always instant. */
+let hoverDelay = 200;
 
 /** Mark the page and tooltip so the CSS animations apply, or do not. */
 function applyAnimations(): void {
@@ -203,6 +207,13 @@ function inTooltip(e: Event): boolean {
 const HOVER_CLASS = 'px-hover';
 let revealSpan: HTMLElement | null = null;
 
+/** The saved hover delay as a number in [0, 1000] ms, defaulting to 200 when unset. */
+function clampDelay(value: string | null | undefined): number {
+  if (value === null || value === undefined || value === '') return 200;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(1000, Math.max(0, n)) : 200;
+}
+
 /** In a hover mode, the word shows one layer inline and the other is hidden. */
 function hiddenLayer(span: HTMLElement): { shown: HTMLElement; hidden: HTMLElement } | null {
   const orig = span.querySelector(`.${ORIG_CLASS}`) as HTMLElement | null;
@@ -320,7 +331,11 @@ function setupTooltipEvents(): void {
     // mouseover the cursor fires while moving within the one word.
     if (t === curTarget && ttVisible) return;
     curTarget = t;
-    showTooltip(t);
+    // The reveal is instant (it is the mode). The tooltip waits hoverDelay so it does
+    // not flick up on every word the cursor crosses; once it is already open, moving
+    // to the next word switches it at once rather than making the reader wait again.
+    if (ttVisible || hoverDelay <= 0) showTooltip(t);
+    else hoverTimer = setTimeout(() => showTooltip(t), hoverDelay);
   });
 
   document.addEventListener('mouseout', (e) => {
@@ -1167,6 +1182,8 @@ export default defineContentScript({
       const savedAnim = await storage.getItem<string>('local:animations');
       animations = savedAnim === 'true';
 
+      hoverDelay = clampDelay(await storage.getItem<string>('local:hoverDelay'));
+
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
 
@@ -1224,6 +1241,10 @@ export default defineContentScript({
     storage.watch<string>('local:narrow', async (value) => {
       showNarrow = value === 'true';
       await reprocess();
+    });
+
+    storage.watch<string>('local:hoverDelay', (value) => {
+      hoverDelay = clampDelay(value);
     });
 
     storage.watch<string>('local:selectedMode', (value) => {

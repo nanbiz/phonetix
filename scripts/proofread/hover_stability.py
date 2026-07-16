@@ -88,9 +88,9 @@ def main():
 
     failures = []
 
-    # 1. Enter a word: the tooltip comes up.
+    # 1. Enter a word: the tooltip comes up (after the short open delay).
     d.eval(enter("transparent"))
-    time.sleep(0.2)
+    time.sleep(0.4)
     v = json.loads(d.eval(VISIBLE))
     if not v.get("visible"):
         failures.append(f"tooltip did not open on first hover: {v}")
@@ -114,6 +114,39 @@ def main():
     print(f"  {'PASS' if ok2 else 'FAIL'}  switch word and back -> visible={v.get('visible')} word={v.get('word')!r}")
     if not ok2:
         failures.append(f"tooltip did not follow the switch: {v}")
+
+    # 4. The delay is a setting. Chrome only — the popup that writes storage needs a
+    #    signed add-on on Firefox, and the wiring here is engine-independent anyway.
+    if kind == "chrome":
+        # Instant: 0ms opens the tooltip with no wait.
+        d.set_setting({"local:hoverDelay": "0"})
+        d.navigate(f"http://127.0.0.1:{PORT}/")
+        d.wait_spans()
+        d.eval(enter("transparent"))
+        # The .visible class lands on the next animation frame, which headless
+        # throttles; this proves there is no delay timer, not the frame latency, so it
+        # is read against the 600ms case below, which is still shut well past here.
+        time.sleep(0.3)
+        v = json.loads(d.eval(VISIBLE))
+        ok3 = bool(v.get("visible"))
+        print(f"  {'PASS' if ok3 else 'FAIL'}  delay 0ms -> opens at once: visible={v.get('visible')}")
+        if not ok3:
+            failures.append(f"delay 0 did not open instantly: {v}")
+
+        # Long: 600ms is still shut at 150ms, open by 800ms.
+        d.set_setting({"local:hoverDelay": "600"})
+        d.navigate(f"http://127.0.0.1:{PORT}/")
+        d.wait_spans()
+        d.eval(enter("transparent"))
+        time.sleep(0.15)
+        early = json.loads(d.eval(VISIBLE))
+        time.sleep(0.7)
+        late = json.loads(d.eval(VISIBLE))
+        ok4 = not early.get("visible") and late.get("visible")
+        print(f"  {'PASS' if ok4 else 'FAIL'}  delay 600ms -> shut@150ms={early.get('visible')} open@850ms={late.get('visible')}")
+        if not ok4:
+            failures.append(f"delay 600 did not honour the wait: early={early} late={late}")
+        d.set_setting({"local:hoverDelay": "200"})
 
     d.close()
     if failures:

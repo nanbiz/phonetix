@@ -150,6 +150,21 @@
     await storage.setItem<string>('local:animations', String(on));
   }
 
+  // How long the cursor rests on a word before its tooltip opens, 0–1000ms.
+  let hoverDelay = $state(200);
+  (async () => {
+    const saved = await storage.getItem<string>('local:hoverDelay');
+    const n = Number(saved);
+    if (saved !== null && saved !== undefined && saved !== '' && Number.isFinite(n)) {
+      hoverDelay = Math.min(1000, Math.max(0, n));
+    }
+  })();
+
+  function setHoverDelay(ms: number) {
+    hoverDelay = ms;
+    storage.setItem<string>('local:hoverDelay', String(ms));
+  }
+
   async function setAccent(lang: string, accent: string) {
     accents = { ...accents, [lang]: accent };
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
@@ -327,6 +342,29 @@
       onchange={(e) => setAnimations((e.currentTarget as HTMLInputElement).checked)}
     />
   </label>
+
+  <div class="px-1">
+    <div class="mb-1 flex items-center justify-between gap-3">
+      <span class="text-sm text-gray-300">Tooltip delay</span>
+      <span class="rounded-md bg-blue-500/15 px-2 py-0.5 text-xs font-medium tabular-nums text-blue-300">
+        {hoverDelay} ms
+      </span>
+    </div>
+    <span class="mb-2.5 block text-xs text-gray-400">How long to rest on a word before its tooltip opens</span>
+    <input
+      type="range"
+      min="0"
+      max="1000"
+      step="50"
+      value={hoverDelay}
+      oninput={(e) => setHoverDelay(Number((e.currentTarget as HTMLInputElement).value))}
+      class="range range-primary range-sm"
+    />
+    <div class="mt-1 flex justify-between text-xs text-gray-500 tabular-nums">
+      <span>Instant</span>
+      <span>1000 ms</span>
+    </div>
+  </div>
 
   <details class="mt-2 px-1">
     <summary class="text-xs text-gray-400 cursor-pointer select-none">Advanced</summary>
