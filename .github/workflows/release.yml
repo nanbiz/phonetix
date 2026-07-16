@@ -14,6 +14,7 @@ permissions:
 jobs:
   sign:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,13 +36,14 @@ jobs:
         env:
           WEB_EXT_API_KEY: ${{ secrets.MOZ_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.MOZ_API_SECRET }}
-        # AMO's approval queue can take well over web-ext's 15-minute default, and a
-        # timeout leaves the version submitted but unsigned — and it cannot be
-        # re-uploaded under the same number. Wait up to 30 minutes for approval.
+        # AMO's approval queue can take hours when its signing service is backed up,
+        # and a timeout leaves the version submitted but unsigned — AMO then refuses to
+        # re-upload the same number, so the version is wasted. Wait up to 5 hours
+        # (under the job's own timeout) rather than lose the release to their queue.
         run: |
           pnpm dlx web-ext@latest sign \
             --channel=unlisted \
-            --approval-timeout=1800000 \
+            --approval-timeout=18000000 \
             --source-dir=.output/firefox-mv2 \
             --artifacts-dir=.output/signed
 
