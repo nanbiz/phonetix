@@ -35,9 +35,13 @@ jobs:
         env:
           WEB_EXT_API_KEY: ${{ secrets.MOZ_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.MOZ_API_SECRET }}
+        # AMO's approval queue can take well over web-ext's 15-minute default, and a
+        # timeout leaves the version submitted but unsigned — and it cannot be
+        # re-uploaded under the same number. Wait up to 30 minutes for approval.
         run: |
           pnpm dlx web-ext@latest sign \
             --channel=unlisted \
+            --approval-timeout=1800000 \
             --source-dir=.output/firefox-mv2 \
             --artifacts-dir=.output/signed
 
