@@ -219,16 +219,19 @@ export const LANG_NAME_TO_CODE: Record<string, string> = {
 export const Modes = {
   showOriginalOnHover: 'Show Original on Hover',
   onHover: 'Translate on Hover',
+  sprinkle: 'Sprinkle',
 } as const;
 
 export type Mode = keyof typeof Modes;
 
 /** Short labels, for controls that show every mode side by side. Named for what a
  *  hover brings up: the page shows IPA and a hover brings the text back, or the page
- *  shows the text and a hover brings the IPA up. */
+ *  shows the text and a hover brings the IPA up. Sprinkle transcribes only a small,
+ *  high-confidence fraction of the words, the rest staying as ordinary text. */
 export const ModeLabels: Record<Mode, string> = {
   showOriginalOnHover: 'Text on hover',
   onHover: 'IPA on hover',
+  sprinkle: 'Sprinkle',
 };
 
 export interface ResolvedIpa {

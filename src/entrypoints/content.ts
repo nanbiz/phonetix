@@ -36,6 +36,48 @@ function voiceFor(lang: Language): string {
   return accents[lang] || DefaultAccents[lang] || lang;
 }
 let mode: Mode = 'showOriginalOnHover';
+/** Sprinkle mode transcribes only a stable 1-in-N fraction of the dictionary-backed
+ *  words (espeak-synthesized guesses are never sprinkled). N is the density: 2 shows
+ *  half of them, 50 shows one in fifty. */
+let sprinkleDensity = 12;
+
+/** Deterministic 32-bit hash (FNV-1a) so the same word is always picked or skipped,
+ *  keeping the sprinkled set stable across re-renders instead of flickering. */
+function hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+function clampDensity(v: string | null | undefined): number {
+  const n = parseInt(v ?? '', 10);
+  return Number.isFinite(n) ? Math.min(50, Math.max(2, n)) : 12;
+}
+
+/** The most common words per language (public/common-words.json), skipped in sprinkle
+ *  mode so it lands on content words a reader wants, not "the", "of", "in". Loaded once
+ *  at startup; empty until then, which only means the first render skips no common word. */
+let commonWords: Record<string, Set<string>> = {};
+
+async function loadCommonWords(): Promise<void> {
+  try {
+    const res = await fetch(chrome.runtime.getURL('common-words.json' as any));
+    if (!res.ok) return;
+    const raw = await res.json() as Record<string, string[]>;
+    commonWords = Object.fromEntries(Object.entries(raw).map(([l, ws]) => [l, new Set(ws)]));
+  } catch { /* the feature degrades to sprinkling common words too, never to breaking */ }
+}
+
+/** In sprinkle mode, gate a word to the sparse subset worth reading: dictionary-backed
+ *  (never an espeak guess), not among the language's most common words, and one of the
+ *  stable 1-in-N the hash picks. Outside sprinkle mode every resolved word passes. */
+function sprinkleAllows(word: string, r: ResolvedIpa): boolean {
+  if (mode !== 'sprinkle') return true;
+  if (r.src !== 'dict') return false;
+  const lower = word.toLowerCase();
+  if (commonWords[r.lang]?.has(lower)) return false;
+  return hashStr(lower) % sprinkleDensity === 0;
+}
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */
 let hideStress = true;
@@ -1017,7 +1059,7 @@ function transformNode(node: Text, ipaMap: PhonemeResult, lang: Language, overri
       // Homograph override (context-resolved) wins over the context-free dict/espeak result.
       const r = override?.get(wordIdx) ?? ipaMap[s.text.toLowerCase()];
       wordIdx++;
-      if (!r) {
+      if (!r || !sprinkleAllows(s.text, r)) {
         frag.appendChild(document.createTextNode(s.text));
         continue;
       }
@@ -1183,9 +1225,13 @@ export default defineContentScript({
       animations = savedAnim === 'true';
 
       hoverDelay = clampDelay(await storage.getItem<string>('local:hoverDelay'));
+      sprinkleDensity = clampDensity(await storage.getItem<string>('local:sprinkleDensity'));
 
       const savedMode = await storage.getItem<string>('local:selectedMode');
       if (savedMode && savedMode in MODE_CLASSES) mode = savedMode as Mode;
+      // The common-word list is only consulted in sprinkle mode, so it is fetched
+      // only when that mode is active — here at startup, and on switching to it below.
+      if (mode === 'sprinkle') await loadCommonWords();
 
       if (languageOption === 'auto') {
         pageLang = await detectPageLanguage();
@@ -1247,10 +1293,21 @@ export default defineContentScript({
       hoverDelay = clampDelay(value);
     });
 
-    storage.watch<string>('local:selectedMode', (value) => {
+    storage.watch<string>('local:selectedMode', async (value) => {
       if (!value || !(value in MODE_CLASSES)) return;
+      const prev = mode;
       mode = value as Mode;
-      if (isEnabled) setMode(mode);
+      if (!isEnabled) return;
+      setMode(mode);
+      // Sprinkle changes which words become spans, not just how they display, so
+      // entering or leaving it has to rebuild the page rather than re-style it.
+      if (mode === 'sprinkle') await loadCommonWords();
+      if (mode === 'sprinkle' || prev === 'sprinkle') await reprocess();
+    });
+
+    storage.watch<string>('local:sprinkleDensity', async (value) => {
+      sprinkleDensity = clampDensity(value);
+      if (isEnabled && mode === 'sprinkle') await reprocess();
     });
 
     storage.watch<string>('local:selectedLanguage', async (value) => {

@@ -16,6 +16,8 @@
    *  accent is only meaningful relative to one of them. */
   let accents = $state<Record<string, string>>({});
   let selectedMode = $state<Mode>("showOriginalOnHover");
+  /** Sprinkle density: transcribe one in every N words (2 = half, 50 = one in fifty). */
+  let sprinkleDensity = $state(12);
   let initialized = $state(false);
   let dictManifest = $state<Record<string, { entries: number; sizeKB: number }>>({});
 
@@ -92,6 +94,12 @@
     const savedMode = await storage.getItem<string>('local:selectedMode');
     if (savedMode && savedMode in Modes) {
       selectedMode = savedMode as Mode;
+    }
+
+    const savedDensity = await storage.getItem<string>('local:sprinkleDensity');
+    if (savedDensity) {
+      const n = parseInt(savedDensity, 10);
+      if (Number.isFinite(n)) sprinkleDensity = Math.min(50, Math.max(2, n));
     }
 
     initialized = true;
@@ -173,6 +181,11 @@
   $effect(() => {
     if (!initialized) return;
     storage.setItem<string>('local:selectedMode', selectedMode);
+  });
+
+  $effect(() => {
+    if (!initialized) return;
+    storage.setItem<string>('local:sprinkleDensity', String(sprinkleDensity));
   });
 
   let showInfo = $state(false);
@@ -303,6 +316,31 @@
       if (mode in Modes) selectedMode = mode as Mode;
     }}
   />
+
+  {#if selectedMode === 'sprinkle'}
+    <div class="px-1">
+      <div class="mb-1 flex items-center justify-between gap-3">
+        <span class="text-sm text-gray-300">Density</span>
+        <span class="rounded-md bg-blue-500/15 px-2 py-0.5 text-xs font-medium tabular-nums text-blue-300">
+          1 in {sprinkleDensity} ({Math.round(100 / sprinkleDensity)}%)
+        </span>
+      </div>
+      <span class="mb-2.5 block text-xs text-gray-400">How many words get transcribed — only dictionary-backed ones, never synthesized guesses</span>
+      <input
+        type="range"
+        min="2"
+        max="50"
+        step="1"
+        value={sprinkleDensity}
+        oninput={(e) => (sprinkleDensity = Number((e.currentTarget as HTMLInputElement).value))}
+        class="range range-primary range-sm"
+      />
+      <div class="mt-1 flex justify-between text-xs text-gray-500 tabular-nums">
+        <span>1 in 2</span>
+        <span>1 in 50</span>
+      </div>
+    </div>
+  {/if}
 
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">

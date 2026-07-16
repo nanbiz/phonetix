@@ -20,6 +20,9 @@ export const IPA_CLASS = 'px-ipa';
 export const MODE_CLASSES = {
   showOriginalOnHover: 'px-mode-reveal',
   onHover: 'px-mode-hover',
+  // Sprinkle shows the IPA inline with the original on hover, exactly like reveal;
+  // it differs only in transcribing a sparse, high-confidence subset of the words.
+  sprinkle: 'px-mode-reveal',
 } as const;
 
 /** Regex matching Latin-script words (including accented chars for DE/ES/FR) */

@@ -29,7 +29,8 @@
     "test:diagram": "uv run --with pillow python scripts/proofread/diagram_visible.py",
     "test:audio": "uv run python scripts/proofread/audio_lang.py",
     "test:stale": "uv run python scripts/proofread/stale_reveal.py",
-    "test:hover": "uv run python scripts/proofread/hover_stability.py"
+    "test:hover": "uv run python scripts/proofread/hover_stability.py",
+    "test:sprinkle": "uv run python scripts/proofread/sprinkle_check.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",

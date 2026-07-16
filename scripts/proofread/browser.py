@@ -39,6 +39,14 @@ class Driver:
         """Write keys into the extension's storage (as the popup would)."""
         raise NotImplementedError
 
+    @staticmethod
+    def _bare(obj):
+        """Storage keys the extension reads. Its code names them "local:foo" (the area
+        plus the key), but wxt stores them in browser.storage.local under the bare
+        "foo" — so a write of the prefixed name lands under a key nothing ever reads,
+        and the setting silently stays at its default. Strip the area prefix."""
+        return {k.split(":", 1)[-1]: v for k, v in obj.items()}
+
     def wait_spans(self, selector=".phonetix", tries=20, delay=1.5):
         for _ in range(tries):
             if self.eval(f"document.querySelectorAll('{selector}').length"):
@@ -73,7 +81,7 @@ class ChromeDriver(Driver):
 
     def set_setting(self, obj):
         self.cdp.send("Runtime.evaluate",
-                      {"expression": f"chrome.storage.local.set({json.dumps(obj)})",
+                      {"expression": f"chrome.storage.local.set({json.dumps(self._bare(obj))})",
                        "awaitPromise": True, "returnByValue": True},
                       session=self._sw_session())
         time.sleep(1)
@@ -159,7 +167,7 @@ class FirefoxDriver(Driver):
         self.client.execute_async_script(
             "const done = arguments[0];"
             "browser.storage.local.set(arguments[1]).then(() => done('ok')).catch(e => done('err'+e));",
-            script_args=(obj,), script_timeout=10000)
+            script_args=(self._bare(obj),), script_timeout=10000)
 
     def navigate(self, url):
         self.client.navigate(url)

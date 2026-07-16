@@ -107,6 +107,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:hover
+      - name: Sprinkle mode is sparse, dictionary-only, and skips common words
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:sprinkle
       - name: Accents and espeak voices
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
