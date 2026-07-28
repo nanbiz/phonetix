@@ -145,9 +145,6 @@ export const TOOLTIP_CSS = `
   font-size: 16px;
   font-weight: 600;
   color: #f5f5f7;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .px-lang {

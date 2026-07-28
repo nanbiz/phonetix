@@ -452,6 +452,19 @@ function showTooltip(target: HTMLElement): void {
   ttEl.classList.remove('visible', 'above', 'below');
   ttHost.style.pointerEvents = 'auto';
 
+  // Fit the card to the word so a long one (Superbeginner) is not cut to
+  // "Superbegin…": widen it to hold the whole word, capped, once on open. It is then a
+  // fixed width, so reading the different-length symbol descriptions never resizes it.
+  const BASE = 340, MAXW = Math.min(460, window.innerWidth - 24);
+  ttEl.style.width = `${BASE}px`;
+  const wordEl = ttEl.querySelector(`.px-word`) as HTMLElement | null;
+  const r1 = ttEl.querySelector(`.px-r1`) as HTMLElement | null;
+  if (wordEl && r1) {
+    const others = r1.clientWidth - wordEl.clientWidth;   // the tags + buttons beside it
+    const need = wordEl.scrollWidth + others + 32 + 4;    // full word + those + card padding
+    ttEl.style.width = `${Math.max(BASE, Math.min(MAXW, need))}px`;
+  }
+
   // Position
   const rect = target.getBoundingClientRect();
   curTargetRect = rect;
