@@ -5,6 +5,7 @@ import { normalizeIpa } from '@/lib/ipa-normalize';
 import { ACCENTS, voiceForAccent } from '@/lib/accents';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
 import type { Language, PhonemeResult } from '@/lib/types';
+import { parseWikitext } from '@/lib/wiktionary-parse';
 
 /** Each language's script, derived from its own dictionary's keys on load. */
 const dictScript = new Map<string, string>();
@@ -440,7 +441,7 @@ async function tryWiktionaryLang(
 
       // Parse full wikitext — prefer section matching expectedWordLang
       const wikitext: string = pages[pageId]?.revisions?.[0]?.['*'] || '';
-      const { wordLang, wiktIpa } = parseWikitext(wikitext, lang, expectedWordLang);
+      const { wordLang, wiktIpa } = parseWikitext(wikitext, Languages[lang], LANG_NAME_TO_CODE, expectedWordLang);
 
       const result: WiktionaryInfo = { exists: true, audioUrl, matchedTitle, foundLang: lang, wordLang, wiktIpa };
 
@@ -460,63 +461,6 @@ async function tryWiktionaryLang(
   return fallback;
 }
 
-/**
- * Parse Wiktionary wikitext to extract the word's actual language and IPA.
- */
-function parseWikitext(
-  wikitext: string,
-  wiktLang: Language,
-  preferredLang?: Language
-): { wordLang: string | null; wiktIpa: string | null; allIpas: string[] } {
-  if (!wikitext) return { wordLang: null, wiktIpa: null, allIpas: [] };
-
-  const cfg = Languages[wiktLang];
-  if (!cfg?.wiktLangRe || !cfg?.wiktIpaRe) return { wordLang: null, wiktIpa: null, allIpas: [] };
-
-  // Split into level-2 sections (each starts with == ... ==)
-  const sections = wikitext.split(/(?=^==[^=])/m);
-
-  function resolveSectionLang(section: string): string | null {
-    const m = section.match(cfg.wiktLangRe!);
-    if (!m?.[1]) return null;
-    const raw = m[1].trim();
-    return cfg.wiktLangIsName
-      ? (LANG_NAME_TO_CODE[raw] || raw.toLowerCase().slice(0, 2))
-      : raw;
-  }
-
-  function extractAllIpas(section: string): string[] {
-    const re = new RegExp(cfg.wiktIpaRe!.source, 'g');
-    const results: string[] = [];
-    let m;
-    while ((m = re.exec(section)) !== null) {
-      const ipa = m[1].replace(/^[/\[]|[/\]]$/g, '').trim();
-      if (ipa && !results.includes(ipa)) results.push(ipa);
-    }
-    return results;
-  }
-
-  // First pass: look for a section matching the preferred language
-  if (preferredLang) {
-    for (const section of sections) {
-      if (resolveSectionLang(section) === preferredLang) {
-        const allIpas = extractAllIpas(section);
-        return { wordLang: preferredLang, wiktIpa: allIpas[0] || null, allIpas };
-      }
-    }
-  }
-
-  // Fallback: use the first section that has a detectable language
-  for (const section of sections) {
-    const lang = resolveSectionLang(section);
-    if (lang) {
-      const allIpas = extractAllIpas(section);
-      return { wordLang: lang, wiktIpa: allIpas[0] || null, allIpas };
-    }
-  }
-
-  return { wordLang: null, wiktIpa: null, allIpas: [] };
-}
 
 /** ISO 639-1 (our language codes) to ISO 639-3, which Lingua Libre audio uses. */
 const ISO1_TO_3: Record<string, string> = {
