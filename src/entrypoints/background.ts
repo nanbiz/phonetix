@@ -56,6 +56,15 @@ async function phonemizeViaOffscreen(
   await ensureOffscreen();
 
   return new Promise((resolve, reject) => {
+    // The offscreen document can be created but never answer (init failure, killed
+    // mid-flight); without a timeout the caller's Promise.all hangs and the content
+    // script never reaches observeDOM(), leaving the page half-transcribed. Time out.
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Phonemization timed out'));
+    }, 15000);
     chrome.runtime.sendMessage(
       {
         target: 'offscreen',
@@ -63,6 +72,9 @@ async function phonemizeViaOffscreen(
         data: { words, voice },
       },
       (response: any) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message));
           return;
@@ -311,12 +323,17 @@ async function lookupWiktionary(detectedLang: Language, word: string): Promise<W
 
   const miss: WiktionaryInfo = { exists: false, audioUrl: null, matchedTitle: null, foundLang: null, wordLang: null, wiktIpa: null };
 
+  // A miss reached only because a fetch errored (offline, a Wikimedia blip) must not be
+  // cached, or one bad moment permanently disables the link/recording for that word.
+  const err = { hit: false };
+  const cacheMiss = (r: WiktionaryInfo) => { if (!err.hit) wiktCache.set(cacheKey, r); return r; };
+
   // Only try Wiktionary editions that have parsing support
   const wiktLangs = WiktionaryLanguages;
 
   // Phase 1: Try detected language's Wiktionary (if it has parsing support)
   if (wiktLangs.includes(detectedLang)) {
-    const primary = await tryWiktionaryLang(detectedLang, word, detectedLang);
+    const primary = await tryWiktionaryLang(detectedLang, word, detectedLang, err);
     if (primary?.wordLang === detectedLang) {
       wiktCache.set(cacheKey, primary);
       return primary;
@@ -324,7 +341,7 @@ async function lookupWiktionary(detectedLang: Language, word: string): Promise<W
 
     // Phase 2: Try other Wiktionaries with parsing support
     const others = wiktLangs.filter(l => l !== detectedLang);
-    const results = await Promise.all(others.map(l => tryWiktionaryLang(l, word, detectedLang)));
+    const results = await Promise.all(others.map(l => tryWiktionaryLang(l, word, detectedLang, err)));
 
     let matchingLang: WiktionaryInfo | null = null;
     for (const r of results) {
@@ -344,22 +361,22 @@ async function lookupWiktionary(detectedLang: Language, word: string): Promise<W
     for (const r of allResults) {
       if (!best || (r.audioUrl && !best.audioUrl)) best = r;
     }
-    const result = best || miss;
-    wiktCache.set(cacheKey, result);
-    return result;
+    // A real entry (the word exists) is always worth caching; only a bare miss is
+    // withheld when a fetch errored.
+    if (best) { wiktCache.set(cacheKey, best); return best; }
+    return cacheMiss(miss);
   }
 
   // For languages without Wiktionary parsing: try English Wiktionary only
   if (wiktLangs.includes('en')) {
-    const result = await tryWiktionaryLang('en', word, detectedLang);
+    const result = await tryWiktionaryLang('en', word, detectedLang, err);
     if (result) {
       wiktCache.set(cacheKey, result);
       return result;
     }
   }
 
-  wiktCache.set(cacheKey, miss);
-  return miss;
+  return cacheMiss(miss);
 }
 
 /**
@@ -370,7 +387,8 @@ async function lookupWiktionary(detectedLang: Language, word: string): Promise<W
 async function tryWiktionaryLang(
   lang: Language,
   word: string,
-  expectedWordLang?: Language
+  expectedWordLang?: Language,
+  errFlag?: { hit: boolean }
 ): Promise<WiktionaryInfo | null> {
   const cfg = Languages[lang];
   if (!cfg?.wiktLangRe || !cfg?.wiktIpaRe) return null;
@@ -432,6 +450,9 @@ async function tryWiktionaryLang(
       // Otherwise save as fallback and try next capitalization
       if (!fallback || (result.audioUrl && !fallback.audioUrl)) fallback = result;
     } catch {
+      // A network/CORS error is not the same as "the word is not on Wiktionary": let
+      // the caller know so it does not cache the empty result as a permanent miss.
+      if (errFlag) errFlag.hit = true;
       continue;
     }
   }
@@ -497,32 +518,6 @@ function parseWikitext(
   return { wordLang: null, wiktIpa: null, allIpas: [] };
 }
 
-/** Simple Levenshtein distance for IPA disambiguation. */
-function ipaDistance(a: string, b: string): number {
-  const al = a.length, bl = b.length;
-  if (al === 0) return bl;
-  if (bl === 0) return al;
-  const d: number[][] = [];
-  for (let i = 0; i <= al; i++) {
-    d[i] = [i];
-    for (let j = 1; j <= bl; j++) d[i][j] = i === 0 ? j : 0;
-  }
-  for (let i = 1; i <= al; i++)
-    for (let j = 1; j <= bl; j++)
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-  return d[al][bl];
-}
-
-function pickBestIpa(allIpas: string[], espeakHint?: string): string {
-  if (allIpas.length <= 1 || !espeakHint) return allIpas[0];
-  let best = allIpas[0], bestDist = ipaDistance(espeakHint, allIpas[0]);
-  for (let i = 1; i < allIpas.length; i++) {
-    const d = ipaDistance(espeakHint, allIpas[i]);
-    if (d < bestDist) { best = allIpas[i]; bestDist = d; }
-  }
-  return best;
-}
-
 /** ISO 639-1 (our language codes) to ISO 639-3, which Lingua Libre audio uses. */
 const ISO1_TO_3: Record<string, string> = {
   af: 'afr', ar: 'ara', bg: 'bul', bn: 'ben', bs: 'bos', ca: 'cat', cs: 'ces',
@@ -545,11 +540,14 @@ const ISO1_TO_3: Record<string, string> = {
  * ("animations" in English and French) has a recording under each, so the language
  * has to be checked or the wrong one plays.
  */
-function audioLanguage(name: string): string | null {
+function audioLanguage(name: string): { lang: string; sure: boolean } | null {
   const ll = name.match(/\bLL-Q\d+ \(([a-z]{3})\)/i);
-  if (ll) return ll[1].toLowerCase();          // ISO 639-3
+  if (ll) return { lang: ll[1].toLowerCase(), sure: true };   // ISO 639-3, unambiguous
+  // The leading token of an old-convention file (En-us-cat.ogg) is usually a language,
+  // but an ordinary capitalised first word collides with real ISO codes (Cat-… → "cat",
+  // Catalan), so this reading is not certain.
   const old = name.match(/^([a-z]{2,3})(?:-[a-z]{2,})?[-_]/i);
-  if (old) return old[1].toLowerCase();        // ISO 639-1 (or -3)
+  if (old) return { lang: old[1].toLowerCase(), sure: false };
   return null;
 }
 
@@ -570,13 +568,18 @@ function findBestAudio(images: { title: string }[], word: string, lang: Language
     const name = colonIdx >= 0 ? img.title.slice(colonIdx + 1) : img.title;
     if (!/\.(ogg|mp3|wav|oga|flac)$/i.test(name)) continue;
 
-    const fileLang = audioLanguage(name);
-    if (fileLang === null) {
-      candidates.push({ name, matches: false });   // unknown convention, last resort
-    } else if (fileLang === lang || fileLang === iso3) {
+    const fl = audioLanguage(name);
+    if (fl === null) {
+      candidates.push({ name, matches: false });          // unknown convention, last resort
+    } else if (fl.lang === lang || fl.lang === iso3) {
       candidates.push({ name, matches: true });
+    } else if (fl.sure) {
+      continue;                                           // certainly a different language: drop
+    } else {
+      // An uncertain reading that does not match: keep as a last resort rather than
+      // discard a legitimate recording whose name merely collides with an ISO code.
+      candidates.push({ name, matches: false });
     }
-    // A file whose language is known and different is dropped entirely.
   }
 
   if (candidates.length === 0) return null;
@@ -757,8 +760,9 @@ export default defineBackground(() => {
       diagrams.set(data.file, dataUrl);
       return dataUrl;
     } catch (e) {
+      // Do not cache the empty result: a transient fetch error would otherwise leave
+      // the diagram permanently blank for this symbol even after the network recovers.
       console.warn(`[Phonetix] No diagram for ${data.file}:`, e);
-      diagrams.set(data.file, '');
       return '';
     }
   });

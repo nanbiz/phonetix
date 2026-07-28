@@ -816,19 +816,33 @@ interface TextBlock { blockElement: Element; textNodes: Text[]; text: string; }
  * sign of why. The failure is recorded on the document (a test can read it, as it
  * cannot see a content script's console) and the page is put back the way it was.
  */
+// One reprocess at a time. processPage yields to the event loop between batches, so a
+// second setting change arriving mid-flight would otherwise revert and re-walk the page
+// underneath the first, leaving a mix of old- and new-setting spans. Concurrent calls
+// coalesce: the in-flight run finishes, then runs once more if anything changed since.
+let reprocessing: Promise<void> | null = null;
+let reprocessAgain = false;
+
 async function reprocess(): Promise<void> {
   if (!isEnabled) return;
-  stopObserver();
-  revertAll();
-  try {
-    await processPage();
-    delete document.documentElement.dataset.pxerror;
-  } catch (e) {
-    document.documentElement.dataset.pxerror = String(e);
-    console.error('[Phonetix] reprocessing the page failed:', e);
-  } finally {
-    observeDOM();
-  }
+  if (reprocessing) { reprocessAgain = true; return reprocessing; }
+  reprocessing = (async () => {
+    do {
+      reprocessAgain = false;
+      stopObserver();
+      revertAll();
+      try {
+        await processPage();
+        delete document.documentElement.dataset.pxerror;
+      } catch (e) {
+        document.documentElement.dataset.pxerror = String(e);
+        console.error('[Phonetix] reprocessing the page failed:', e);
+      } finally {
+        observeDOM();
+      }
+    } while (reprocessAgain && isEnabled);
+  })();
+  try { await reprocessing; } finally { reprocessing = null; }
 }
 
 async function processPage(root: Element = document.body): Promise<void> {
@@ -1055,6 +1069,11 @@ async function applyTransforms(nodes: Text[], ipaMap: PhonemeResult, lang: Langu
   }
 }
 
+// The nodes we insert (spans and the plain text between them). The observer skips them,
+// so rewriting one text node does not schedule a re-scan of its whole block for the
+// text nodes we just put there.
+const ownInserted = new WeakSet<Node>();
+
 function transformNode(node: Text, ipaMap: PhonemeResult, lang: Language, override?: Map<number, ResolvedIpa>) {
   const text = node.nodeValue;
   if (!text) return;
@@ -1090,6 +1109,7 @@ function transformNode(node: Text, ipaMap: PhonemeResult, lang: Language, overri
       if (rest) frag.appendChild(document.createTextNode(rest));
     }
   }
+  frag.childNodes.forEach((n) => ownInserted.add(n));
   node.parentNode?.replaceChild(frag, node);
 }
 
@@ -1171,6 +1191,7 @@ function observeDOM() {
   observer = new MutationObserver((muts) => {
     for (const m of muts) {
       for (const n of m.addedNodes) {
+        if (ownInserted.has(n)) continue;   // a node we inserted, not new page content
         const el = n instanceof Element ? n : (n instanceof Text ? n.parentElement : null);
         if (el && !el.closest(`.${PHONETIX_CLASS}`)) pendingRoots.add(el);
       }

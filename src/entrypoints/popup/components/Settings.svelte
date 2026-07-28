@@ -117,9 +117,15 @@
   // Every page watches these keys, so writing them is all it takes: a message
   // would reach only the active tab, and only if the popup agreed with the
   // browser about which tab that is.
+  // Persist only a real change. Writing the just-loaded value back on open would make
+  // every tab (which watches these keys) run a full reprocess and flash a re-render for
+  // nothing, so the write that the load itself triggers is skipped.
+  let firstLangWrite = true;
   $effect(() => {
+    const v = selectedLanguage;
     if (!initialized) return;
-    storage.setItem<string>('local:selectedLanguage', selectedLanguage);
+    if (firstLangWrite) { firstLangWrite = false; return; }
+    storage.setItem<string>('local:selectedLanguage', v);
   });
 
   // Hidden stress marks and narrow detail are on by default; an unset key is the
@@ -178,14 +184,21 @@
     await storage.setItem<string>('local:accents', JSON.stringify(accents));
   }
 
+  // Same skip-the-load-write guard as for the language above.
+  let firstModeWrite = true;
   $effect(() => {
+    const v = selectedMode;
     if (!initialized) return;
-    storage.setItem<string>('local:selectedMode', selectedMode);
+    if (firstModeWrite) { firstModeWrite = false; return; }
+    storage.setItem<string>('local:selectedMode', v);
   });
 
+  let firstDensityWrite = true;
   $effect(() => {
+    const v = sprinkleDensity;
     if (!initialized) return;
-    storage.setItem<string>('local:sprinkleDensity', String(sprinkleDensity));
+    if (firstDensityWrite) { firstDensityWrite = false; return; }
+    storage.setItem<string>('local:sprinkleDensity', String(v));
   });
 
   let showInfo = $state(false);

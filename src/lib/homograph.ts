@@ -111,7 +111,7 @@ export function disambiguate(entry: HomographEntry, tokens: string[], wordIndex:
       const separated = tokens.some((t) => t.toLowerCase() === prefix && t.toLowerCase() !== word);
       const hasZuInfix = word.includes(`${prefix}zu`);
       if (separated || hasZuInfix) {
-        const sepClass = classes.find((c) => c.classId === 'separable');
+        const sepClass = classes.find((c) => c.classId.toLowerCase() === 'separable');
         if (sepClass) return sepClass.pronunciation;
       }
     }
