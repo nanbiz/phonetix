@@ -16,6 +16,7 @@ import { DefaultAccents, Languages, LanguageNames, AccentsByLanguage, Wiktionary
 import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/types';
 
 type Language = string;
+import { displayIpa as displayIpaPure } from '@/lib/display-ipa';
 import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
 import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
@@ -100,21 +101,10 @@ function applyAnimations(): void {
   if (ttEl) ttEl.dataset.pxAnim = v;
 }
 
-const STRESS_MARKS = /[\u02C8\u02CC]/g;
-
-/**
- * Diacritics that mark narrow phonetic detail rather than which sound is meant.
- * "cause" is /k\u0254\u02D0z/ broadly and [k\u02B0o\u02D0z\u0325] narrowly; stripping these turns the second
- * back into the first. Length, nasalization, syllabicity and the non-syllabic mark
- * of a diphthong are left in \u2014 they change the sound, not just its shade.
- */
-const NARROW_DETAIL = /[\u02B0\u02B1\u0325\u032C\u030A\u031D\u031E\u031F\u0320\u032A\u033A\u033B\u031A\u0308\u02DE\u02E0\u0334\u0318\u0319\u0339\u031C]/g;
-
+/** Inline display of a transcription under the current broad/narrow + stress settings.
+ *  The pure logic lives in display-ipa.ts (unit-tested); this supplies the state. */
 function displayIpa(ipa: string): string {
-  let out = ipa;
-  if (!showNarrow) out = out.replace(NARROW_DETAIL, '');
-  if (hideStress) out = out.replace(STRESS_MARKS, '');
-  return out;
+  return displayIpaPure(ipa, { narrow: showNarrow, hideStress });
 }
 
 // =====================================================================

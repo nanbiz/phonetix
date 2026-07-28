@@ -12,7 +12,7 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "node --experimental-strip-types scripts/test-homograph.ts && node --experimental-strip-types scripts/test-resolution.ts && node --experimental-strip-types scripts/test-langdetect.ts && node --experimental-strip-types scripts/test-ipa-normalize.ts && node --experimental-strip-types scripts/test-regions.ts && node --experimental-strip-types scripts/test-symbols.ts",
+    "test": "node --experimental-strip-types scripts/test-homograph.ts && node --experimental-strip-types scripts/test-resolution.ts && node --experimental-strip-types scripts/test-langdetect.ts && node --experimental-strip-types scripts/test-ipa-normalize.ts && node --experimental-strip-types scripts/test-regions.ts && node --experimental-strip-types scripts/test-symbols.ts && node --experimental-strip-types scripts/test-display-ipa.ts",
     "test:integration": "uv run python scripts/proofread/suite.py integration",
     "test:e2e": "uv run python scripts/proofread/suite.py e2e",
     "test:firefox": "uv run --with marionette_driver python scripts/proofread/firefox_check.py",
