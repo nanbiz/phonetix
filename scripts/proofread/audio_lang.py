@@ -82,13 +82,15 @@ def main():
             return {}
 
     failures = []
+    got_audio = 0
     print(f"checking Wiktionary audio language for {len(CASES)} words")
     for word, lang in CASES:
         info = check(word, lang)
         url = (info or {}).get("audioUrl")
         if not url:
-            print(f"  ---   {lang}/{word:12} no audio (acceptable)")
+            print(f"  ---   {lang}/{word:12} no audio")
             continue
+        got_audio += 1
         # The filename is the last path segment, percent-decoded enough to read.
         fname = url.rsplit("/", 1)[-1]
         fname = fname.replace("%20", " ").replace("%28", "(").replace("%29", ")")
@@ -103,12 +105,18 @@ def main():
 
     cdp.close()
 
+    # Most of these words are known to have a recording; if almost none came back, the
+    # whole Wiktionary/Commons lookup is broken (not just "no wrong-language audio"),
+    # and this test would otherwise pass vacuously. Demand a floor so a dead lookup fails.
+    if got_audio < 4:
+        failures.append(f"only {got_audio}/{len(CASES)} words returned any audio — the lookup looks dead")
+
     if failures:
-        print(f"\nFAIL - {len(failures)} words got a wrong-language recording:")
+        print(f"\nFAIL:")
         for f in failures:
             print("   ", f)
         sys.exit(1)
-    print("\nPASS - every recording is in the word's language")
+    print(f"\nPASS - {got_audio}/{len(CASES)} words had audio, every recording in the word's language")
 
 
 if __name__ == "__main__":

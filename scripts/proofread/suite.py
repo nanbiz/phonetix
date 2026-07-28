@@ -174,6 +174,8 @@ def integration(d):
     for r in rows:
         expect(f"lang {r['exp']}: '{'' }'", r["lang"] == r["exp"], f"got={r['lang']} langs={r['langs']}")
     expect("mixed-language >=80%", right >= 0.8 * len(rows), f"{right}/{len(rows)}")
+    # the rendered IPA on this real page carries no variant punctuation
+    no_variant_junk(d, "mixed")
     d.close_tab()
 
     # garbage gating: no espeak span may be letter-spelling (contain a space)

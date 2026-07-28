@@ -46,9 +46,12 @@ export default defineConfig({
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     },
+    // Floors the store review + install can rely on. Firefox: Intl.Segmenter (used to
+    // split words) landed in 125. Chrome: the offscreen document (used to run espeak)
+    // needs 109.
     ...(browser === 'firefox'
-      ? { browser_specific_settings: { gecko: { id: 'phonetix@nanbiz.github.io' } } }
-      : {}),
+      ? { browser_specific_settings: { gecko: { id: 'phonetix@nanbiz.github.io', strict_min_version: '125.0' } } }
+      : { minimum_chrome_version: '109' }),
   }),
   ...(paths
     ? { webExt: { binaries: { chrome: paths['chrome'], firefox: paths['firefox'] } } }
