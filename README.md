@@ -8,8 +8,11 @@ Firefox from one codebase (WXT + Svelte 5).
 
 ## What it does
 
-You pick one of two modes: the page shows IPA and a hover brings the original word
-back, or the page stays as it is and a hover brings the IPA up.
+You pick one of three modes: the page shows IPA and a hover brings the original word
+back; the page stays as it is and a hover brings the IPA up; or sprinkle, which
+transcribes only a sparse set of the content words and leaves the common ones alone.
+
+![The three modes on the same sentence](docs/modes.png)
 
 Hovering a word opens a tooltip. It shows the transcription, where it came from
 (a dictionary or the synthesizer), and a link to the word on Wiktionary. The IPA
