@@ -72,16 +72,19 @@ export const PHONETIX_CSS = `
 .${MODE_CLASSES.showOriginalOnHover} .px-hover .${ORIG_CLASS} {
   display: inline-block;
   position: absolute;
-  /* The first glyph must still sit on the word's first glyph, so the box is pulled
-     left by exactly its own padding: the text starts at the word's origin (0px), and
-     the padding is breathing room that keeps the revealed form from butting against
-     the neighbouring words when it is the wider one. box-sizing:content-box so
-     min-width is the word's width, and the box covers the word plus that margin. */
+  /* Centred on the word's own slot: the box is at least as wide as the word
+     (min-width:100%), centred over it (left:50% + translateX(-50%)), and its text is
+     centred inside. So the revealed form — whether it is narrower than the word (an
+     original over its wider IPA) or wider (IPA over its word) — sits centred in the
+     same space, which is where the tooltip's arrow points. The padding keeps a wider
+     form from butting into the neighbouring words. */
   box-sizing: content-box;
-  left: -4px;
+  left: 50%;
   top: 0;
+  transform: translateX(-50%);
   padding: 0 4px;
   min-width: 100%;
+  text-align: center;
   white-space: nowrap;
   color: inherit;
   background: var(--px-bg, #fff);

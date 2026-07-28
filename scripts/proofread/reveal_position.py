@@ -64,9 +64,10 @@ PROBE = """(() => {
   }
   return JSON.stringify({
     x: wbox.left + wbox.width / 2, y: wbox.top + wbox.height / 2,
-    // Where the word's own glyphs start (top-left), and where the reveal's start.
-    wordTop: w.top, wordLeft: w.left,
-    revealTop: rg ? rg.top : null, revealLeft: rg ? rg.left : null,
+    // The word's own glyph top, and the horizontal centre of both glyph runs: the
+    // reveal is centred on the word's slot, so its centre must sit on the word's.
+    wordTop: w.top, wordCentreX: w.left + w.width / 2,
+    revealTop: rg ? rg.top : null, revealCentreX: rg ? rg.left + rg.width / 2 : null,
     // Boxes, to prove the reveal covers the whole word (no part peeks out).
     wordBoxLeft: wbox.left, wordBoxRight: wbox.right,
     revBoxLeft: rbox ? rbox.left : null, revBoxRight: rbox ? rbox.right : null,
@@ -118,10 +119,12 @@ def main():
         if not after.get("on"):
             failures.append(f"{case}: no reveal appeared on hover")
             continue
-        # The reveal shares the word's own box, so its glyphs start on the word's:
-        # top and left align exactly, not "within a pixel". A separate measured
-        # overlay could only get near; this must be 0.
-        dx = abs(after["revealLeft"] - after["wordLeft"])
+        # The reveal is centred on the word's own slot, so its glyph centre sits on the
+        # word's glyph centre and its top on the word's top — exactly, not "within a
+        # pixel". A separate measured overlay could only get near; this must be 0. The
+        # centre is what the tooltip's arrow points at, so this is also what keeps the
+        # revealed word and the arrow lined up.
+        dx = abs(after["revealCentreX"] - after["wordCentreX"])
         dy = abs(after["revealTop"] - after["wordTop"])
         # The word itself must not move when the reveal opens over it: its own glyphs
         # sit at the same place before and after hover, or the line jumps ("moves down").
