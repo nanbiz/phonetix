@@ -31,6 +31,10 @@ export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   // offscreen is a Chromium-only API; Firefox runs espeak in its background page.
   manifest: ({ browser }) => ({
+    name: 'Phonetix - Learn and Understand IPA',
+    // The toolbar-button tooltip, on both engines (WXT maps action → browser_action
+    // on Firefox MV2). Without this it shipped as the literal "Default Popup Title".
+    action: { default_title: 'Phonetix - Learn and Understand IPA' },
     permissions: browser === 'firefox' ? ['storage'] : ['storage', 'offscreen'],
     host_permissions: ['<all_urls>'],
     // The content script reads the common-word list (sprinkle mode) straight from the
