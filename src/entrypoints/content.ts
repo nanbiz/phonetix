@@ -455,7 +455,11 @@ function showTooltip(target: HTMLElement): void {
   // Fit the card to the word so a long one (Superbeginner) is not cut to
   // "Superbegin…": widen it to hold the whole word, capped, once on open. It is then a
   // fixed width, so reading the different-length symbol descriptions never resizes it.
-  const BASE = 340, MAXW = Math.min(460, window.innerWidth - 24);
+  // Widen the card to hold the whole word on one line — never wrap, never cut. The only
+  // limit is the viewport; a word longer than the whole screen (no real word is) would
+  // ellipsize as a last resort. The width is set once here and stays fixed, so reading
+  // the different-length symbol descriptions never resizes the card.
+  const BASE = 340, MAXW = window.innerWidth - 24;
   ttEl.style.width = `${BASE}px`;
   const wordEl = ttEl.querySelector(`.px-word`) as HTMLElement | null;
   const r1 = ttEl.querySelector(`.px-r1`) as HTMLElement | null;

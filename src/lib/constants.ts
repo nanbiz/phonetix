@@ -146,6 +146,11 @@ export const TOOLTIP_CSS = `
   font-weight: 600;
   color: #f5f5f7;
   white-space: nowrap;
+  /* The card is sized to hold the whole word, so this only bites for a word wider than
+     the entire viewport — a safety valve, never reached by a real word. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .px-lang {
   font-size: 9px;
