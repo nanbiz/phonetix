@@ -1,12 +1,10 @@
 <script lang="ts">
   import Dropdown from "./Dropdown.svelte";
-  import Segmented from "./Segmented.svelte";
   import Info from "virtual:icons/line-md/alert-circle";
-  import Book from "virtual:icons/line-md/document";
 
   import { sendMessage } from "@/lib/messaging"
 
-  import { Languages, LanguageNames, Modes, ModeLabels, AccentsByLanguage, DefaultAccents } from "@/lib/types"
+  import { Languages, LanguageNames, AccentsByLanguage, DefaultAccents } from "@/lib/types"
   import { ACCENTS } from "@/lib/accents"
   import type { LanguageOption, Mode } from "@/lib/types"
 
@@ -46,12 +44,15 @@
   let otherAccentChoices = $derived(accentChoices.filter(([lang]) => lang !== effectiveLanguage));
 
   // An accent with no per-word data behind it is derived from pronunciation rules.
-  // Say so, rather than let it look like the same kind of thing as the others.
-  let ruleBasedNote = $derived.by(() => {
-    const chosen = ACCENTS[effectiveLanguage]?.find(a => a.id === accentOf(effectiveLanguage));
-    if (!chosen?.ruleBased) return '';
-    return 'No per-word dictionary exists for this accent — it is derived from its pronunciation rules, applied to every word.';
-  });
+  // Say so, rather than let it look like the same kind of thing as the others — for
+  // whichever language's accent is being shown, not only the current one.
+  function ruleNoteFor(lang: string): string {
+    const chosen = ACCENTS[lang]?.find(a => a.id === accentOf(lang));
+    return chosen?.ruleBased
+      ? 'No per-word dictionary exists for this accent — it is derived from its pronunciation rules, applied to every word.'
+      : '';
+  }
+  let ruleBasedNote = $derived(ruleNoteFor(effectiveLanguage));
 
   // Language options: auto first, then every language with the size of the
   // dictionary behind it, so the choice says what it will actually get you.
@@ -92,7 +93,7 @@
     if (savedAccents) accents = JSON.parse(savedAccents);
 
     const savedMode = await storage.getItem<string>('local:selectedMode');
-    if (savedMode && savedMode in Modes) {
+    if (savedMode === 'showOriginalOnHover' || savedMode === 'onHover' || savedMode === 'sprinkle') {
       selectedMode = savedMode as Mode;
     }
 
@@ -201,10 +202,38 @@
     storage.setItem<string>('local:sprinkleDensity', String(v));
   });
 
+  // One control replaces the mode + density pair: an "IPA frequency" slider running
+  // from Full IPA (every word transcribed, hover brings the word back) at the left,
+  // through the sparse sprinkle in the middle, to IPA on Hover (nothing inline, hover
+  // brings the IPA up) at the right. It reads and writes the same selectedMode +
+  // sprinkleDensity the page already watches, so nothing downstream changes.
+  const FREQ_MAX = 100;
+  let freq = $derived(
+    selectedMode === 'showOriginalOnHover' ? 0
+    : selectedMode === 'onHover' ? FREQ_MAX
+    : Math.round(1 + ((sprinkleDensity - 2) / 48) * (FREQ_MAX - 2)),  // sprinkle: 2..50 → 1..99
+  );
+  function setFreq(v: number) {
+    if (v <= 0) {
+      selectedMode = 'showOriginalOnHover';
+    } else if (v >= FREQ_MAX) {
+      selectedMode = 'onHover';
+    } else {
+      selectedMode = 'sprinkle';
+      sprinkleDensity = Math.min(50, Math.max(2, Math.round(2 + ((v - 1) / (FREQ_MAX - 2)) * 48)));
+    }
+  }
+  let freqLabel = $derived(
+    selectedMode === 'showOriginalOnHover' ? 'Full IPA'
+    : selectedMode === 'onHover' ? 'IPA on hover'
+    : `1 in ${sprinkleDensity} (${Math.round(100 / sprinkleDensity)}%)`,
+  );
+
   let showInfo = $state(false);
-  /** The popup is one screen at a time: the accent has too many choices to sit in
-   *  a menu, and a page in several languages has an accent for each. */
-  let view = $state<'main' | 'accent'>('main');
+  /** The popup is one screen at a time: the accent has too many choices to sit in a
+   *  menu, and the detailed settings live behind their own button so the first screen
+   *  stays short. */
+  let view = $state<'main' | 'accent' | 'settings'>('main');
 
   let accentLabel = $derived(
     pageAccent ? pageAccent[accentOf(effectiveLanguage)] || '' : '',
@@ -280,18 +309,23 @@
         <summary class="cursor-pointer select-none text-xs text-gray-400">Other languages</summary>
         <div class="mt-2 flex flex-col gap-2">
           {#each otherAccentChoices as [lang, options] (lang)}
-            <Dropdown
-              topic={LanguageNames[lang] || lang}
-              selectedElement={accentOf(lang)}
-              elements={options}
-              onElementChange={(accent) => setAccent(lang, accent)}
-            />
+            <div>
+              <Dropdown
+                topic={LanguageNames[lang] || lang}
+                selectedElement={accentOf(lang)}
+                elements={options}
+                onElementChange={(accent) => setAccent(lang, accent)}
+              />
+              {#if ruleNoteFor(lang)}
+                <p class="mt-1 text-xs text-gray-400">{ruleNoteFor(lang)}</p>
+              {/if}
+            </div>
           {/each}
         </div>
       </details>
     {/if}
   </div>
-{:else}
+{:else if view === 'main'}
 <div class="w-full space-y-4">
   {#if unhealthy}
     <div class="text-xs text-red-300 bg-red-950/50 border border-red-900/60 rounded px-2 py-1.5">
@@ -321,39 +355,49 @@
     <span class="flex-none text-gray-500">›</span>
   </button>
 
-  <Segmented
-    topic="Mode"
-    selectedElement={selectedMode}
-    elements={ModeLabels}
-    onElementChange={(mode) => {
-      if (mode in Modes) selectedMode = mode as Mode;
-    }}
-  />
-
-  {#if selectedMode === 'sprinkle'}
-    <div class="px-1">
-      <div class="mb-1 flex items-center justify-between gap-3">
-        <span class="text-sm text-gray-300">Density</span>
-        <span class="rounded-md bg-blue-500/15 px-2 py-0.5 text-xs font-medium tabular-nums text-blue-300">
-          1 in {sprinkleDensity} ({Math.round(100 / sprinkleDensity)}%)
-        </span>
-      </div>
-      <span class="mb-2.5 block text-xs text-gray-400">How many words get transcribed — only dictionary-backed ones, never synthesized guesses</span>
-      <input
-        type="range"
-        min="2"
-        max="50"
-        step="1"
-        value={sprinkleDensity}
-        oninput={(e) => (sprinkleDensity = Number((e.currentTarget as HTMLInputElement).value))}
-        class="range range-primary range-sm"
-      />
-      <div class="mt-1 flex justify-between text-xs text-gray-500 tabular-nums">
-        <span>1 in 2</span>
-        <span>1 in 50</span>
-      </div>
+  <!-- One control instead of a mode picker plus a density slider: how much of the page
+       is transcribed, from all of it (Full IPA) to none until hovered. -->
+  <div class="px-1">
+    <div class="mb-1 flex items-center justify-between gap-3">
+      <span class="text-sm font-medium text-gray-200">IPA frequency</span>
+      <span class="rounded-md bg-blue-500/15 px-2 py-0.5 text-xs font-medium tabular-nums text-blue-300">{freqLabel}</span>
     </div>
-  {/if}
+    <input
+      type="range"
+      min="0"
+      max={FREQ_MAX}
+      step="1"
+      value={freq}
+      oninput={(e) => setFreq(Number((e.currentTarget as HTMLInputElement).value))}
+      class="range range-primary range-sm"
+    />
+    <div class="mt-1 flex justify-between text-xs text-gray-500">
+      <span>Full IPA</span>
+      <span>IPA on hover</span>
+    </div>
+  </div>
+
+  <button
+    class="flex w-full items-center justify-between gap-3 rounded-lg border border-gray-700 px-3 py-2.5 text-left text-sm text-gray-300 hover:border-gray-500"
+    onclick={() => (view = 'settings')}
+  >
+    <span class="flex items-center gap-2">
+      <svg class="size-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </span>
+    <span class="flex-none text-gray-500">›</span>
+  </button>
+</div>
+
+{:else}
+<!-- Settings sub-screen: everything that is not the day-to-day frequency choice. -->
+<div class="w-full space-y-4">
+  <button
+    class="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-200"
+    onclick={() => (view = 'main')}
+  >
+    ‹ Back
+  </button>
 
   <label class="flex cursor-pointer items-center justify-between gap-3 px-1">
     <span class="text-sm text-gray-300">
@@ -449,8 +493,7 @@
     </p>
   </details>
 
-  <!-- IPA source info -->
-  <div class="mt-3 px-1">
+  <div class="px-1">
     <button
       class="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-300 transition-colors"
       onclick={() => showInfo = !showInfo}
