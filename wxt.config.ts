@@ -19,6 +19,12 @@ const paths = devBrowsers();
 
 export default defineConfig({
   vite: () => ({
+    // Ship readable, unminified code. AMO flags minified/bundled code for manual review
+    // and asks a reviewer to diff the packaged output against the submitted source; an
+    // unminified build makes that diff trivial, which is what keeps an unlisted add-on
+    // from stalling in review for weeks. The bundle is tiny next to the espeak data, so
+    // there is no meaningful size cost.
+    build: { minify: false },
     plugins: [
       tailwindcss(),
       Icons({
