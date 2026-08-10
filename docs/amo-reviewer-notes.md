@@ -42,12 +42,15 @@ Then compare `.output/firefox-mv2/` against the signed package.
   page (`wasm-unsafe-eval` in the CSP is for this WASM and applies to extension pages
   only); no remote code is fetched or executed.
 
-- **Dictionaries** (`public/dictionaries/*.json.gz`) are offline IPA dictionaries built
-  from Wiktionary. They are **bundled inside the source archive** (`public/dictionaries/`),
-  so no download is required to reproduce the build. They are regenerated from the public
-  kaikki Wiktionary dump by `scripts/build-dictionaries.mjs` (`pnpm build:dict`); the
-  shipped `.gz` files are that script's output. In CI they are instead fetched with
-  `pnpm fetch:dict` (a GitHub release asset), which produces the same files.
+- **Dictionaries** (`public/dictionaries/*.json.gz`) and the espeak WASM blobs are
+  **data, not code**, and are not in this source archive (they are large and do not
+  affect the JavaScript you are diffing). The build copies them into the output verbatim
+  if present; if absent the JavaScript is byte-for-byte identical and the extension simply
+  falls back to espeak at runtime. To reproduce them: the dictionaries are generated from
+  the public kaikki Wiktionary dump by `scripts/build-dictionaries.mjs` (`pnpm build:dict`)
+  or fetched with `pnpm fetch:dict`; espeak is copied by `postinstall`
+  (`scripts/copy-espeak.mjs`) from the npm package `@echogarden/espeak-ng-emscripten`.
+  The reviewable code is `src/` → the JavaScript in the packaged xpi.
 
 - **`common-words.json`** (top words per language, used by the sparse "sprinkle" display)
   is generated from the `wordfreq` dataset by `scripts/build-common-words.py` and committed.
