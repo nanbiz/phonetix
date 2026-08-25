@@ -52,11 +52,26 @@ export default defineConfig({
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     },
-    // Floors the store review + install can rely on. Firefox: Intl.Segmenter (used to
-    // split words) landed in 125. Chrome: the offscreen document (used to run espeak)
-    // needs 109.
+    // Floors the store review + install can rely on. Firefox is 140 because that is
+    // where the built-in data-consent manifest below is honoured (it otherwise needs
+    // 125 for Intl.Segmenter). Chrome: the offscreen document (used to run espeak) needs 109.
+    //
+    // data_collection_permissions declares that the add-on transmits website content:
+    // the word under the cursor is sent to Wiktionary/Wikimedia to fetch its IPA, audio,
+    // and articulation diagram. Firefox shows this at install and lets the user see it in
+    // about:addons, which is the consent Mozilla's policy requires. The inline
+    // transcription itself is fully offline (bundled dictionaries + espeak); only the
+    // hover tooltip's enrichment leaves the browser.
     ...(browser === 'firefox'
-      ? { browser_specific_settings: { gecko: { id: 'phonetix@nanbiz.github.io', strict_min_version: '125.0' } } }
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: 'phonetix@nanbiz.github.io',
+              strict_min_version: '140.0',
+              data_collection_permissions: { required: ['websiteContent'] },
+            },
+          },
+        }
       : { minimum_chrome_version: '109' }),
   }),
   ...(paths
