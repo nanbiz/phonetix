@@ -207,20 +207,23 @@
   // through the sparse sprinkle in the middle, to IPA on Hover (nothing inline, hover
   // brings the IPA up) at the right. It reads and writes the same selectedMode +
   // sprinkleDensity the page already watches, so nothing downstream changes.
+  // Left = least IPA (IPA on hover), right = most (Full IPA), so dragging right raises
+  // the frequency, which is the way a slider is read. The sprinkle density in between
+  // gets denser (a smaller 1-in-N) toward the right.
   const FREQ_MAX = 100;
   let freq = $derived(
-    selectedMode === 'showOriginalOnHover' ? 0
-    : selectedMode === 'onHover' ? FREQ_MAX
-    : Math.round(1 + ((sprinkleDensity - 2) / 48) * (FREQ_MAX - 2)),  // sprinkle: 2..50 → 1..99
+    selectedMode === 'onHover' ? 0
+    : selectedMode === 'showOriginalOnHover' ? FREQ_MAX
+    : Math.round(1 + ((50 - sprinkleDensity) / 48) * (FREQ_MAX - 2)),  // sprinkle: 50..2 → 1..99
   );
   function setFreq(v: number) {
     if (v <= 0) {
-      selectedMode = 'showOriginalOnHover';
-    } else if (v >= FREQ_MAX) {
       selectedMode = 'onHover';
+    } else if (v >= FREQ_MAX) {
+      selectedMode = 'showOriginalOnHover';
     } else {
       selectedMode = 'sprinkle';
-      sprinkleDensity = Math.min(50, Math.max(2, Math.round(2 + ((v - 1) / (FREQ_MAX - 2)) * 48)));
+      sprinkleDensity = Math.min(50, Math.max(2, Math.round(50 - ((v - 1) / (FREQ_MAX - 2)) * 48)));
     }
   }
   let freqLabel = $derived(
@@ -356,7 +359,7 @@
   </button>
 
   <!-- One control instead of a mode picker plus a density slider: how much of the page
-       is transcribed, from all of it (Full IPA) to none until hovered. -->
+       is transcribed, from none until hovered (left) up to all of it (right). -->
   <div class="px-1">
     <div class="mb-1 flex items-center justify-between gap-3">
       <span class="text-sm font-medium text-gray-200">IPA frequency</span>
@@ -369,11 +372,11 @@
       step="1"
       value={freq}
       oninput={(e) => setFreq(Number((e.currentTarget as HTMLInputElement).value))}
-      class="range range-primary range-sm"
+      class="range range-primary range-sm w-full"
     />
     <div class="mt-1 flex justify-between text-xs text-gray-500">
-      <span>Full IPA</span>
       <span>IPA on hover</span>
+      <span>Full IPA</span>
     </div>
   </div>
 

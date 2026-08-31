@@ -8,16 +8,16 @@
   const version = chrome.runtime.getManifest().version;
 </script>
 
-<!-- Fixed-height column: the header and footer stay put and only the middle
-     scrolls, so the popup window keeps one size whatever opens inside it. -->
-<main class="flex h-full flex-col">
+<!-- Natural flow: the popup sizes its height to the current screen (see app.css),
+     so the column just stacks — header, the screen, then the footer. -->
+<main class="flex flex-col">
   <Toggles />
 
-  <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
+  <div class="px-4 pb-2">
     <Settings />
   </div>
 
-  <div class="flex shrink-0 items-center justify-center gap-1.5 py-2 text-sm">
+  <div class="flex items-center justify-center gap-1.5 py-2 text-sm">
     Made with
     <Heart class="size-5 text-red-500" />
     <span class="text-gray-500">· v{version}</span>

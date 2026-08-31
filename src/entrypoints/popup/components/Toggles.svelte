@@ -13,6 +13,8 @@
 
   let siteEnabled = $derived(siteOverride ?? defaultEnabled);
 
+  const logoUrl = chrome.runtime.getURL('icon/48.png');
+
   (async () => {
     try {
       const extState = await storage.getItem<string>('local:extension_enabled');
@@ -54,15 +56,18 @@
 </script>
 
 <div class="flex w-full flex-col gap-3 px-4 py-3">
-  <div class="flex w-full items-center justify-between">
-    <div class="min-w-0">
-      <h1 class="text-3xl font-bold">Phonetix</h1>
-      <p class="text-xs text-gray-500">Default for sites you have not set</p>
+  <div class="flex w-full items-center justify-between gap-3">
+    <div class="flex min-w-0 items-center gap-2.5">
+      <img class="size-9 flex-none rounded-lg" src={logoUrl} alt="" />
+      <div class="min-w-0">
+        <h1 class="text-3xl font-bold leading-none">Phonetix</h1>
+        <p class="mt-0.5 text-xs text-gray-500">Default for sites you have not set</p>
+      </div>
     </div>
     {#if stateInitialized}
       <input
         type="checkbox"
-        class="toggle toggle-primary toggle-lg"
+        class="toggle toggle-primary toggle-lg flex-none"
         checked={defaultEnabled}
         onchange={(e) => setDefault((e.currentTarget as HTMLInputElement).checked)}
       />
