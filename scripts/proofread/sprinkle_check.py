@@ -3,10 +3,13 @@
 
 Sprinkle differs from the hover modes in what it transcribes, not how it shows it:
 only dictionary-backed words (never espeak guesses), and only a 1-in-N fraction of
-those, chosen by a stable hash so the same words are picked every render. This loads
-a dense English page, and checks: every sprinkled word is dict-sourced, the fraction
-tracks the density setting, the choice is identical across a reload (no flicker), and
-raising the density transcribes fewer words.
+those, chosen by a stable hash so the same words are picked every render. The gate is
+keyed on each word's occurrence index, so a word repeated down the page lands as a mix
+of IPA and plain text rather than all-or-nothing — you meet it both ways. This loads a
+dense English page (its paragraph repeated, so words recur), and checks: every sprinkled
+word is dict-sourced, the fraction tracks the density setting, the choice is identical
+across a reload (no flicker), a repeated word shows up mixed, and raising the density
+transcribes fewer words.
 
   PHONETIX_CHROMIUM=<chrome> uv run python scripts/proofread/sprinkle_check.py
 """
@@ -36,8 +39,8 @@ COUNT = """(() => {
   const srcs = spans.map(s => s.dataset.src);
   // Rough count of eligible running words: every word-like token on the page.
   const text = document.body.innerText;
-  const total = (text.match(/[A-Za-z]{2,}/g) || []).length;
-  return JSON.stringify({n: spans.length, total, words, allDict: srcs.every(x => x === 'dict')});
+  const all = (text.match(/[A-Za-z]{2,}/g) || []).map(w => w.toLowerCase());
+  return JSON.stringify({n: spans.length, total: all.length, words, all, allDict: srcs.every(x => x === 'dict')});
 })()"""
 
 
@@ -103,6 +106,19 @@ def main():
     print(f"  reload same words: {same} ({len(a['words'])} vs {len(b['words'])})")
     if not same:
         failures.append("the sprinkled set changed across a reload (should be stable)")
+
+    # A repeated word is a mix: some occurrences transcribed, some left as text. Without
+    # per-occurrence gating every occurrence of a picked word would be transcribed, so a
+    # word appearing K times would appear K times among the sprinkled or zero — never in
+    # between. The page repeats its paragraph, so plenty of words recur.
+    from collections import Counter
+    page = Counter(a["all"])
+    spr = Counter(w.lower() for w in a["words"])
+    repeated = [w for w, c in page.items() if c >= 3]
+    mixed = [w for w in repeated if 0 < spr[w] < page[w]]
+    print(f"  repeated words: {len(repeated)}, shown as a mix (some IPA, some text): {len(mixed)}")
+    if repeated and not mixed:
+        failures.append("no repeated word was a mix of IPA and text — per-occurrence variety is missing")
 
     # Sparser at higher density.
     c = load(d, 20)

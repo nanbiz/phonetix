@@ -69,15 +69,31 @@ async function loadCommonWords(): Promise<void> {
   } catch { /* the feature degrades to sprinkling common words too, never to breaking */ }
 }
 
+/** How many times each word has been seen this render, so a word's Nth appearance is
+ *  gated on its own. A word repeated down the page is then shown some times and left as
+ *  plain text others — the reader meets it both ways instead of it being permanently one
+ *  or the other, which taught nothing once you had read it once. Cleared each full render
+ *  (in processPage) so the same page always sprinkles the same way, never flickering. */
+const sprinkleSeen = new Map<string, number>();
+
 /** In sprinkle mode, gate a word to the sparse subset worth reading: dictionary-backed
- *  (never an espeak guess), not among the language's most common words, and one of the
- *  stable 1-in-N the hash picks. Outside sprinkle mode every resolved word passes. */
+ *  (never an espeak guess), not among the language's most common words, and picked by a
+ *  1-in-N gate. Two things shape the gate. Rarer words are the ones worth stopping on, so
+ *  the gate favours them — word length stands in for rarity, since function words are
+ *  short and the words a reader wants to learn run longer, and a longer word shrinks N so
+ *  it is picked more. And the gate keys on the word's occurrence index, so repeats of one
+ *  word are decided independently and land as a mix of IPA and plain text down the page
+ *  rather than all-or-nothing. Outside sprinkle mode every resolved word passes. */
 function sprinkleAllows(word: string, r: ResolvedIpa): boolean {
   if (mode !== 'sprinkle') return true;
   if (r.src !== 'dict') return false;
   const lower = word.toLowerCase();
   if (commonWords[r.lang]?.has(lower)) return false;
-  return hashStr(lower) % sprinkleDensity === 0;
+  const boost = Math.min(2.4, Math.max(0.6, lower.length / 5));
+  const n = Math.max(1, Math.round(sprinkleDensity / boost));
+  const occ = sprinkleSeen.get(lower) ?? 0;
+  sprinkleSeen.set(lower, occ + 1);
+  return hashStr(`${lower}#${occ}`) % n === 0;
 }
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */
@@ -167,13 +183,22 @@ function stopAudio(): void {
 async function playBytes(bytes: number[]): Promise<void> {
   if (!bytes.length) return;
   stopAudio();
-  if (!audioCtx) audioCtx = new AudioContext();
-  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  // A closed context (rare, but terminal) never plays again — make a fresh one.
+  if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
 
   // decodeAudioData needs its own copy of the buffer; a plain number[] arrives
   // over messaging, so it is packed back into an ArrayBuffer here.
   const buffer = new Uint8Array(bytes).buffer;
   const decoded = await audioCtx.decodeAudioData(buffer);
+
+  // Never await resume() here. This runs after the fetch/decode awaits, so the click
+  // gesture is spent, and on Firefox resume() off a gesture never resolves — awaiting it
+  // hung playBytes and no sound came out, which is why it played on some clicks and not
+  // others. warmAudio() already resumed the context synchronously inside the click, so it
+  // is running by now; this is only a non-blocking nudge. A source started while still
+  // suspended is scheduled at the frozen clock and plays once the resume lands, so start
+  // unconditionally either way.
+  if (audioCtx.state === 'suspended') void audioCtx.resume().catch(() => {});
 
   const source = audioCtx.createBufferSource();
   source.buffer = decoded;
@@ -182,8 +207,20 @@ async function playBytes(bytes: number[]): Promise<void> {
   currentSource = source;
 }
 
+/** Create/resume the audio context now, while the click gesture is live. Doing it only
+ *  inside playBytes — after the await for the fetched bytes — was too late on Firefox,
+ *  which had already spent the gesture and left the context suspended, so the sound
+ *  decoded and played into silence. Called synchronously from every play click. */
+function warmAudio(): void {
+  try {
+    if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') void audioCtx.resume();
+  } catch { /* no audio output available */ }
+}
+
 /** Play a Commons/Wiktionary recording, fetched as bytes by the background. */
 function playAudioUrl(url: string): void {
+  warmAudio();
   sendMessage('fetchAudio', { url })
     .then(playBytes)
     .catch((e) => console.warn('[Phonetix] audio playback failed:', e));
@@ -200,6 +237,7 @@ function playSymbol(filename: string): void {
  * play through the same CSP-proof path as every other sound.
  */
 function speakWord(word: string, lang: Language): void {
+  warmAudio();
   const voice = voiceFor(lang);
   sendMessage('synthesizeAudio', { word, voice })
     .then(playBytes)
@@ -841,6 +879,9 @@ async function reprocess(): Promise<void> {
 }
 
 async function processPage(root: Element = document.body): Promise<void> {
+  // A full render restarts the occurrence counts; a subtree added later by the observer
+  // continues them, so dynamically inserted text keeps sprinkling consistently.
+  if (root === document.body) sprinkleSeen.clear();
   if (languageOption === 'auto') {
     await processMultilingual(root);
   } else {
