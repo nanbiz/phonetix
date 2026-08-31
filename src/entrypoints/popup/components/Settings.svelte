@@ -210,13 +210,24 @@
   // Left = least IPA (IPA on hover), right = most (Full IPA), so dragging right raises
   // the frequency, which is the way a slider is read. The sprinkle density in between
   // gets denser (a smaller 1-in-N) toward the right.
+  //
+  // The slider owns its own position (its 100 steps are finer than the ~49 sprinkle
+  // densities). Deriving the position back from the rounded density instead would snap
+  // the thumb to the nearest representable spot mid-drag — sometimes to the left of where
+  // it was dragged. So it is seeded from the stored setting once, then drives the setting.
   const FREQ_MAX = 100;
-  let freq = $derived(
-    selectedMode === 'onHover' ? 0
-    : selectedMode === 'showOriginalOnHover' ? FREQ_MAX
-    : Math.round(1 + ((50 - sprinkleDensity) / 48) * (FREQ_MAX - 2)),  // sprinkle: 50..2 → 1..99
-  );
+  let freq = $state(FREQ_MAX);
+  let freqSeeded = false;
+  $effect(() => {
+    const mode = selectedMode, dens = sprinkleDensity;
+    if (!initialized || freqSeeded) return;
+    freqSeeded = true;
+    freq = mode === 'onHover' ? 0
+      : mode === 'showOriginalOnHover' ? FREQ_MAX
+      : Math.round(1 + ((50 - dens) / 48) * (FREQ_MAX - 2));
+  });
   function setFreq(v: number) {
+    freq = v;   // the thumb sits exactly where it is dragged
     if (v <= 0) {
       selectedMode = 'onHover';
     } else if (v >= FREQ_MAX) {
