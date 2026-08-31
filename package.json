@@ -30,6 +30,7 @@
     "test:audio": "uv run python scripts/proofread/audio_lang.py",
     "test:stale": "uv run python scripts/proofread/stale_reveal.py",
     "test:hover": "uv run python scripts/proofread/hover_stability.py",
+    "test:revert": "uv run python scripts/proofread/revert_fidelity.py",
     "test:sprinkle": "uv run python scripts/proofread/sprinkle_check.py"
   },
   "devDependencies": {

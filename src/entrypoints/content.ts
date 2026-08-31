@@ -769,6 +769,11 @@ function createPhoneticSpan(original: string, r: ResolvedIpa, trailing = ''): HT
   const span = document.createElement('span');
   span.className = PHONETIX_CLASS;
   span.dataset.original = original;
+  // The trailing mark was sliced off the following text node and folded into this span's
+  // display, so it lives nowhere else. Keep it here (apart from dataset.original, which
+  // stays the clean word for the tooltip and lookups) so reverting can put it back —
+  // without it, punctuation vanished from the page when the extension was toggled off.
+  if (trailing) span.dataset.trail = trailing;
   span.dataset.ipa = finalIpa;     // the pronunciation alone, without the trailing mark
   span.dataset.lang = finalLang;   // resolution language (may differ from block for loanwords)
   span.dataset.src = r.src;        // 'dict' | 'espeak' — drives the tooltip source label
@@ -1161,7 +1166,10 @@ function clearMode() {
 function revertAll() {
   hideTooltip(true);
   for (const span of document.querySelectorAll(`.${PHONETIX_CLASS}`)) {
-    const orig = (span as HTMLElement).dataset.original || '';
+    const el = span as HTMLElement;
+    // Restore the word AND the trailing mark that was folded into it, so the page text
+    // comes back exactly as it was — not with its commas, periods and brackets dropped.
+    const orig = (el.dataset.original || '') + (el.dataset.trail || '');
     span.parentNode?.replaceChild(document.createTextNode(orig), span);
   }
   document.body.normalize();

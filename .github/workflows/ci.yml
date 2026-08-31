@@ -111,6 +111,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:sprinkle
+      - name: Turning the extension off restores the page text exactly
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:revert
       - name: Accents and espeak voices
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
