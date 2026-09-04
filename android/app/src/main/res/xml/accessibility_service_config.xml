@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Content changes and scrolls are what move text under the overlay, so those are the
+  events worth waking for; window state changes tell us the foreground app switched.
+  The service reads window content (that is the whole point) and asks for the extra
+  per-character bounds it needs to place a transcription on one word rather than on a
+  whole paragraph.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRequestEnhancedWebAccessibility|flagReportViewIds"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/service_description"
+    android:notificationTimeout="100"
+    android:settingsActivity="io.github.nanbiz.phonetix.MainActivity" />

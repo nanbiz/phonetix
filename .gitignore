@@ -15,3 +15,9 @@ src/public/languages_with_audio/
 src/public/languages_without_audio/
 scripts/proofread/out/
 __pycache__/
+
+# Android app
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

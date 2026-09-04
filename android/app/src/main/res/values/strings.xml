@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Phonetix</string>
+    <string name="service_label">Phonetix transcriptions</string>
+    <string name="service_description">Reads the text on screen so Phonetix can show its pronunciation over the words you are reading, in any app.</string>
+</resources>
