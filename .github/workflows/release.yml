@@ -58,6 +58,19 @@ jobs:
           PHONETIX_FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
         run: pnpm test:firefox
 
+      # The Chrome zip is published alongside the signed xpi, so verify the Chrome build
+      # drives a real page before shipping it, the same as the Firefox artifact above.
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          # Chrome 150 loads the extension but stops injecting content scripts in
+          # headless, which would verify against nothing. Pinned to match ci.yml.
+          chrome-version: '149'
+      - name: Verify Chrome build
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:integration
+
       - name: Package Chrome zip
         run: pnpm zip
 
