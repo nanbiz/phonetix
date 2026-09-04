@@ -188,6 +188,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val root = rootInActiveWindow ?: run { main.post { overlay.hideNow() }; return }
         if (!SettingsStore.allows(root.packageName?.toString()) || !Dictionary.ready) {
             main.post { overlay.hideNow() }
+            // Reported as an empty screen rather than saying nothing at all: silence here
+            // reads to anyone watching as "the last set is still up", which is the very
+            // thing that went wrong.
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "BOXES ${android.os.SystemClock.uptimeMillis()} ${root.packageName} ",
+                )
+            }
             return
         }
 

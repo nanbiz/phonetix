@@ -34,7 +34,8 @@
     "test:sprinkle": "uv run python scripts/proofread/sprinkle_check.py",
     "gen:vectors": "node --experimental-strip-types scripts/gen-sprinkle-vectors.ts",
     "gen:symbols": "node --experimental-strip-types scripts/gen-ipa-symbols.ts",
-    "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py"
+    "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
+    "test:features": "uv run python scripts/proofread/android_features.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",

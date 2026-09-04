@@ -75,7 +75,16 @@ class OverlayController(
      */
     private val reveal = RevealState()
 
+    /**
+     * Everything off the screen, now.
+     *
+     * The layer has to come down with the windows. It draws the whole set by itself, so
+     * hiding only the windows left the last transcriptions painted over whatever came next
+     * - they survived the overlay being switched off, and the app they belonged to being
+     * closed, because nothing was left to take them down.
+     */
     fun hideNow() {
+        motion.stop()
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
     }
 

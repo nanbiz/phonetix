@@ -19,6 +19,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.SymbolInfo
 import io.github.nanbiz.phonetix.core.WordBox
@@ -51,12 +52,22 @@ class TooltipController(
 
     fun show(box: WordBox) {
         IpaSymbols.ensureLoaded(context)
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "TOOLTIP open word=${box.word} ipa=${box.full} " +
+                    "symbols=${IpaSymbols.explain(box.full).size}",
+            )
+        }
         expanded = null
         shown = box
         render(box)
     }
 
     fun hide() {
+        if (BuildConfig.DEBUG && view != null) {
+            android.util.Log.d("Phonetix", "TOOLTIP closed")
+        }
         speaker.stop()
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null

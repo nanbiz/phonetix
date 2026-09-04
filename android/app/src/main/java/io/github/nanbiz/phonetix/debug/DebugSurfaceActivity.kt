@@ -44,14 +44,6 @@ class DebugSurfaceActivity : Activity() {
         // The tests need the overlay actually switched on, which is otherwise a decision
         // only the reader makes in the app.
         io.github.nanbiz.phonetix.core.SettingsStore.init(this)
-        intent?.let { i ->
-            if (i.hasExtra(EXTRA_ENABLE)) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setEnabled(i.getIntExtra(EXTRA_ENABLE, 1) != 0)
-            }
-            if (i.hasExtra(EXTRA_DENSITY)) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setDensity(i.getIntExtra(EXTRA_DENSITY, 12))
-            }
-        }
         if (mode == "secure") {
             // A window nobody may capture: the sampler cannot read it, and the test checks
             // that this degrades rather than breaks.
@@ -118,6 +110,15 @@ class DebugSurfaceActivity : Activity() {
 
     private fun handle(intent: Intent?) {
         intent ?: return
+        // Applied here rather than only in onCreate: a relaunch with the same mode does not
+        // create the activity again, so settings passed that way were silently dropped and
+        // a test that changed the frequency measured the previous one.
+        applySettings(intent)
+        // Changing a setting alters nothing on screen, so nothing tells the service to look
+        // again - and a test that changes the frequency and reads the result sees whatever
+        // was there before, or nothing at all. A one-pixel nudge is a real content change
+        // and makes the next read describe the new setting.
+        nudge()
         if (intent.hasExtra(EXTRA_SCROLL)) {
             val y = intent.getIntExtra(EXTRA_SCROLL, 0)
             // Jumped, not animated: the test wants the movement finished.
@@ -133,6 +134,42 @@ class DebugSurfaceActivity : Activity() {
             val by = intent.getIntExtra(EXTRA_SMOOTH, 0)
             scroller.post { scroller.smoothScrollBy(0, by) }
         }
+    }
+
+    private fun applySettings(i: Intent) {
+
+            if (i.hasExtra(EXTRA_ENABLE)) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setEnabled(i.getIntExtra(EXTRA_ENABLE, 1) != 0)
+            }
+            if (i.hasExtra(EXTRA_DENSITY)) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setDensity(i.getIntExtra(EXTRA_DENSITY, 12))
+            }
+            // Which apps the overlay is allowed on, so the per-app scope is testable
+            // without driving the settings screen by hand.
+            if (i.hasExtra(EXTRA_SCOPE)) {
+                val all = i.getIntExtra(EXTRA_SCOPE, 1) != 0
+                io.github.nanbiz.phonetix.core.SettingsStore.setAllApps(all)
+                if (!all) {
+                    // Nothing chosen: the overlay should appear nowhere.
+                    for (p in io.github.nanbiz.phonetix.core.SettingsStore.current.apps.toList()) {
+                        io.github.nanbiz.phonetix.core.SettingsStore.toggleApp(p)
+                    }
+                }
+            }
+            if (i.hasExtra(EXTRA_STYLE)) {
+                val styles = io.github.nanbiz.phonetix.core.ChipStyle.entries
+                val idx = i.getIntExtra(EXTRA_STYLE, 0).coerceIn(0, styles.size - 1)
+                io.github.nanbiz.phonetix.core.SettingsStore.setStyle(styles[idx])
+            }
+            }
+
+    /** The smallest change that still counts as the window's content changing. */
+    private fun nudge() {
+        scroller.postDelayed({
+            scroller.scrollBy(0, 1)
+            scroller.scrollBy(0, -1)
+            scroller.requestLayout()
+        }, 60)
     }
 
     private fun content(): View = LinearLayout(this).apply {
@@ -169,6 +206,8 @@ class DebugSurfaceActivity : Activity() {
         const val EXTRA_SMOOTH = "smoothBy"
         const val EXTRA_ENABLE = "enable"
         const val EXTRA_DENSITY = "density"
+        const val EXTRA_SCOPE = "allApps"
+        const val EXTRA_STYLE = "style"
         const val HEADER_TAG = "header"
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.

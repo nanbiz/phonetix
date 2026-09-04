@@ -65,6 +65,9 @@ def read_state(dev, mode="plain", settle_for=2.2, **extras):
     # transcriptions on it - otherwise a check can pass by having nothing to check.
     extras.setdefault("enable", 1)
     extras.setdefault("density", 3)
+    # Pinned, so a previous suite that narrowed the scope cannot make this one measure a
+    # screen the overlay is not allowed to draw on.
+    extras.setdefault("allApps", 1)
     dev.surface(mode=mode, **extras)
     settle(dev, settle_for)
     log = dev.log()
