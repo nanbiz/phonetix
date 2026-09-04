@@ -55,17 +55,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
     // app are rarely the same colour, and averaging them gives a transcription that matches
     // neither. Keyed by the text itself so a line keeps its colours while it is on screen,
     // and cleared when the app changes.
-    private val lineColors = HashMap<String, WordColors>(32)
-    /** Lines that could not be read - too little text in them to tell ink from surface.
-     *  Remembered so they are not measured again on every single pass. */
-    private val unreadable = HashSet<String>(32)
-    /** The last colours that did come out of this app, for the lines that never will. */
-    @Volatile private var fallbackColors: WordColors? = null
+    private val wordColors = HashMap<String, WordColors>(64)
+    /** Words already looked for on this screen, found or not, so the overlay steps aside
+     *  a bounded number of times rather than once for every word it never manages to read. */
+    private val colorAttempted = HashSet<String>(64)
     @Volatile private var colorsFor: String? = null
     /** The rectangles the overlay is actually showing, which is what a capture contains. */
     @Volatile private var onScreenBoxes: List<RectF> = emptyList()
     /** Set while the overlay is briefly down so a capture can see the text underneath. */
-    @Volatile private var takingCleanFrame = false
+    @Volatile private var capturing = false
+    @Volatile private var cleanFrameAt = 0L
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -349,50 +348,43 @@ class PhonetixAccessibilityService : AccessibilityService() {
             return
         }
 
-        // Colours come from the screen itself, because accessibility does not carry them.
-        // The capture is rate-limited by the platform, so a frame is asked for here and
-        // whatever frame is already in hand is what these boxes are coloured from.
+        // Colours come from the screen, because accessibility carries none - and only ever
+        // from a frame taken while our own transcriptions are hidden.
+        //
+        // Every earlier attempt sampled a frame that already had them in it and read its own
+        // paint back: first as gold on cream, then, when the words were excluded from the
+        // sample, as nothing at all, because on a line holding one word the only text there
+        // is the word we covered. Stepping aside for a single frame removes the whole class
+        // of problem instead of guarding against it.
         val tb = android.os.SystemClock.uptimeMillis()
-        val painted0 = onScreenBoxes
-        sampler.refreshIfStale()
         if (pkg != colorsFor) {
-            lineColors.clear()
-            unreadable.clear()
-            fallbackColors = null
+            wordColors.clear()
+            colorAttempted.clear()
             colorsFor = pkg
+            cleanFrameAt = 0L
         }
 
-        // Per word, from the word's own pixels - not per line. A line here is whatever the
-        // app calls one node, and in a chat or an article that is a whole message: white
-        // prose, coloured code and more than one background inside it. Averaging that gave
-        // every word in the message the same wrong grey-green. A word's own rectangle holds
-        // its own ink on its own background, and nothing else.
-        val byWord = HashMap<String, WordColors>(boxes.size)
-        for (b in boxes) {
-            val key = b.word + "@" + b.rect.top.toInt()
-            val cached = lineColors[key]
-            if (cached != null) { byWord[b.word] = cached; continue }
-            if (key in unreadable) continue
-            val c = sampler.sampleAll(listOf(b.rect), painted0)
-            if (c != null) {
-                lineColors[key] = c
-                fallbackColors = c
-                byWord[b.word] = c
-            } else if (sampler.hasFrame) {
-                unreadable.add(key)
-            }
+        // Only words never tried on this screen are worth stepping aside for. Without that
+        // the overlay hid itself every second and a half for the whole life of a page,
+        // which cost more than the colours were worth and left flings barely drawn.
+        val untried = boxes.filter {
+            val key = it.word.lowercase()
+            key !in wordColors && key !in colorAttempted
         }
-        for (b in boxes) if (!byWord.containsKey(b.word)) {
-            fallbackColors?.let { byWord[b.word] = it }
+        if (untried.isNotEmpty()) requestCleanFrame(untried)
+
+        val painted = boxes.map {
+            val c = wordColors[it.word.lowercase()]
+            if (c == null) it else it.copy(background = c.background, ink = c.ink)
         }
+        onScreenBoxes = painted.map { it.rect }
 
         // One line per pass naming every transcription and where it sits, so a test can
         // assert that a word moved exactly as far as the text under it did.
-        fun telemetry(list: List<WordBox>) {
-            if (!BuildConfig.DEBUG) return
+        if (BuildConfig.DEBUG) {
             val sb = StringBuilder("BOXES ")
             sb.append(android.os.SystemClock.uptimeMillis()).append(' ').append(pkg).append(' ')
-            for ((i, b) in list.withIndex()) {
+            for ((i, b) in painted.withIndex()) {
                 sb.append(b.word).append('#').append(i).append(':')
                     .append(b.rect.left.toInt()).append(',')
                     .append(b.rect.top.toInt()).append(',')
@@ -403,33 +395,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     .append(if (b.background != 0 && b.ink != 0) 1 else 0).append(' ')
             }
             android.util.Log.d("Phonetix", sb.toString())
-        }
-
-        val painted = boxes.map {
-            val c = byWord[it.word]
-            if (c == null) it else it.copy(background = c.background, ink = c.ink)
-        }
-        onScreenBoxes = painted.map { it.rect }
-        telemetry(painted)
-
-        // A line whose only text is the word we replaced can never be read while we are
-        // covering it - the launcher, where every label is one word, reads as pure
-        // background. So once, per screen, the overlay steps aside for a frame and the
-        // capture sees the app's own text. It is a single frame and it happens only when
-        // there is nothing else to go on.
-        if (boxes.isNotEmpty() && byWord.isEmpty() && !takingCleanFrame && sampler.hasFrame) {
-            takingCleanFrame = true
-            main.post { overlay.hideNow() }
-            io.postDelayed({
-                sampler.invalidateFrame()
-                sampler.refreshIfStale()
-                io.postDelayed({
-                    takingCleanFrame = false
-                    onScreenBoxes = emptyList()
-                    schedule(0L)
-                }, 260)
-            }, 90)
-            return
         }
 
         val colourMs = android.os.SystemClock.uptimeMillis() - tb
@@ -446,6 +411,53 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "coloured=${painted.count { it.background != 0 }}",
             )
         }
+    }
+
+    /**
+     * Hide, capture, read the colours of these words, show again.
+     *
+     * The overlay is down for one capture. It is throttled, and only asked for when a word
+     * on screen has no colour yet, so a screen whose words are already known never blinks.
+     */
+    private fun requestCleanFrame(boxes: List<WordBox>) {
+        if (capturing) return
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - cleanFrameAt < CLEAN_FRAME_GAP_MS) return
+        capturing = true
+        cleanFrameAt = now
+        val wanted = boxes.toList()
+        val hiddenAt = now
+        main.post { overlay.hideNow() }
+        io.postDelayed({
+            sampler.invalidateFrame()
+            sampler.refreshIfStale(force = true)
+            io.postDelayed({
+                // Only a frame taken after the overlay went down can be trusted; anything
+                // older still has our transcriptions in it.
+                if (!sampler.hasFrame || sampler.frameAt < hiddenAt) {
+                    capturing = false
+                    schedule(0L)
+                    return@postDelayed
+                }
+                // The frame now holds the app's own text where our transcriptions were.
+                for (b in wanted) {
+                    val key = b.word.lowercase()
+                    colorAttempted.add(key)
+                    if (key in wordColors) continue
+                    // The word's own pixels first. A short word carries few of them, so if
+                    // that is too little to tell ink from surface, widen along the line -
+                    // the neighbouring words are the same colour as this one.
+                    val wide = RectF(
+                        b.rect.left - b.rect.width(), b.rect.top,
+                        b.rect.right + b.rect.width(), b.rect.bottom,
+                    )
+                    val c = sampler.sample(b.rect) ?: sampler.sample(wide)
+                    if (c != null) wordColors[key] = c
+                }
+                capturing = false
+                schedule(0L)
+            }, 320)
+        }, 80)
     }
 
     private class Planned(
@@ -645,6 +657,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val GAP_SCROLL_MS = 16L
         /** No scroll event for this long and the screen is considered to have stopped. */
         const val STILL_MS = 120L
+        /** How rarely the overlay may step aside to be able to read a colour. */
+        const val CLEAN_FRAME_GAP_MS = 1500L
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60

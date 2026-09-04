@@ -9,6 +9,11 @@
   Views the app marks unimportant for accessibility are deliberately not requested. Every
   node in the tree is a round trip into that app, and those round trips are almost all of
   the latency; the decorative containers that flag pulls in carry no text worth reading.
+
+  notificationTimeout is zero rather than the usual 100ms: it is how often the system is
+  allowed to hand us anything at all, and at 100ms a fling delivered one or two events in
+  its whole length, so the transcriptions were re-read twice during a movement of two
+  thousand pixels.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
@@ -17,8 +22,5 @@
     android:canRetrieveWindowContent="true"
     android:canTakeScreenshot="true"
     android:description="@string/service_description"
-    <!-- Zero, not the usual 100: this is how often the system is allowed to hand us an
-         event, and at 100ms a fling delivered one or two in its entire length, so the
-         transcriptions were read twice during a movement of two thousand pixels. -->
     android:notificationTimeout="0"
     android:settingsActivity="io.github.nanbiz.phonetix.MainActivity" />

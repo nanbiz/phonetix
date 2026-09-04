@@ -35,6 +35,9 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
 
     val hasFrame: Boolean get() = frame != null
 
+    /** When the held frame was taken, so a caller can wait for one newer than an event. */
+    val frameAt: Long get() = takenAt
+
     /** Throw the held frame away and take a new one at the next opportunity. */
     fun invalidateFrame() {
         takenAt = 0L
@@ -42,13 +45,19 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
         frame = null
     }
 
-    /** Ask for a fresh frame if the last one is old enough. Returns immediately. */
-    fun refreshIfStale() {
+    /**
+     * Ask for a fresh frame if the last one is old enough. Returns immediately.
+     *
+     * A forced capture is one taken with the overlay deliberately out of the way, and the
+     * rate limit must not turn it into a reuse of the frame that still has the overlay in
+     * it - which is how the colours came back as our own gold.
+     */
+    fun refreshIfStale(force: Boolean = false) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         // A request that never comes back would otherwise wedge this shut for good, so a
         // stale one is abandoned rather than waited on.
         if (pending && SystemClock.uptimeMillis() - requestedAt < REQUEST_TIMEOUT_MS) return
-        if (SystemClock.uptimeMillis() - takenAt < MIN_INTERVAL_MS) return
+        if (!force && SystemClock.uptimeMillis() - takenAt < MIN_INTERVAL_MS) return
         pending = true
         requestedAt = SystemClock.uptimeMillis()
         runCatching {

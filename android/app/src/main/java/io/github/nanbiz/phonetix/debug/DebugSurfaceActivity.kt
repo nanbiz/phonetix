@@ -82,7 +82,9 @@ class DebugSurfaceActivity : Activity() {
             // invisible to accessibility, so a word behind it is the case that only paint
             // order can catch.
             root.addView(TextView(this).apply {
-                text = "Fixed header covering the words behind it"
+                // No real words: anything transcribable here is legitimately drawn inside the
+                // bar, and the occlusion check could not tell that from a fault.
+                text = "\u25B2 \u25B2 \u25B2"
                 setTextColor(Color.WHITE)
                 setBackgroundColor(Color.rgb(0x20, 0x20, 0x20))
                 gravity = Gravity.CENTER
