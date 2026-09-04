@@ -41,14 +41,21 @@ object Frequency {
 
     fun label(d: Int): String = "1 in $d  ·  ${(100.0 / d).roundToInt()}%"
 
-    /** FNV-1a, so a word is picked the same way on every pass and nothing flickers. */
-    private fun hash(s: String): Int {
-        var h = -2128831035 // 2166136261 as a signed Int
+    /**
+     * FNV-1a, so a word is picked the same way on every pass and nothing flickers.
+     *
+     * Returned as an unsigned value in a Long. The extension ends its hash with `>>> 0`,
+     * so it takes the remainder of a number in 0..2^32-1; an Int here would carry the same
+     * bits but a negative sign, and the remainder of a negative number is a different word
+     * chosen. SprinkleParityTest is what caught that.
+     */
+    private fun hash(s: String): Long {
+        var h = -2128831035 // 2166136261 as a signed Int; the bits are what matter
         for (c in s) {
             h = h xor c.code
             h *= 16777619
         }
-        return h
+        return h.toLong() and 0xFFFFFFFFL
     }
 
     /**
@@ -63,6 +70,6 @@ object Frequency {
     fun picks(word: String, occurrence: Int, density: Int): Boolean {
         val boost = min(2.4, max(0.6, word.length / 5.0))
         val n = max(1, (density / boost).roundToInt())
-        return Math.floorMod(hash("$word#$occurrence"), n) == 0
+        return hash("$word#$occurrence") % n == 0L
     }
 }

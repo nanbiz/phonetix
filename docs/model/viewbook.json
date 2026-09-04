@@ -1,0 +1,8 @@
+{
+  "states": [
+    "Loading",
+    "Empty",
+    "Failed"
+  ],
+  "title": "phonetix"
+}

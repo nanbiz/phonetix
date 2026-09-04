@@ -6,6 +6,7 @@
 
   import { Languages, LanguageNames, AccentsByLanguage, DefaultAccents } from "@/lib/types"
   import { ACCENTS } from "@/lib/accents"
+  import { DENSITY_MIN, DENSITY_MAX, densityForPos, posForDensity } from "@/lib/sprinkle"
   import type { LanguageOption, Mode } from "@/lib/types"
 
   let selectedLanguage = $state<LanguageOption>("auto");
@@ -100,7 +101,7 @@
     const savedDensity = await storage.getItem<string>('local:sprinkleDensity');
     if (savedDensity) {
       const n = parseInt(savedDensity, 10);
-      if (Number.isFinite(n)) sprinkleDensity = Math.min(50, Math.max(2, n));
+      if (Number.isFinite(n)) sprinkleDensity = Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, n));
     }
 
     initialized = true;
@@ -216,31 +217,11 @@
   // the thumb to the nearest representable spot mid-drag — sometimes to the left of where
   // it was dragged. So it is seeded from the stored setting once, then drives the setting.
   const FREQ_MAX = 100;
-  const DMIN = 2, DMAX = 50;
 
-  // The bar controls a frequency (one word in N), and frequency is felt in ratios, not
-  // in N: the step from 1-in-2 to 1-in-4 is a world apart, 1-in-40 to 1-in-42 is nothing.
-  // A straight linear N spends most of the travel among the sparse densities no one can
-  // tell apart. Bend it toward geometric — equal drags change 1-in-N by a closer-to-equal
-  // ratio — but only partway (LOG_MIX), so it reads as a little logarithmic, not extreme.
-  const LOG_MIX = 0.6;
-  // pos runs 0 (sparse, 1-in-50) to 1 (dense, 1-in-2).
-  function densityForPos(t: number): number {
-    const lin = DMAX - t * (DMAX - DMIN);
-    const geo = DMAX * Math.pow(DMIN / DMAX, t);
-    return Math.min(DMAX, Math.max(DMIN, Math.round((1 - LOG_MIX) * lin + LOG_MIX * geo)));
-  }
-  // Inverse for seeding the thumb from a stored density: the nearest position whose
-  // density rounds to the stored one. A scan keeps it exactly consistent with the curve
-  // above whatever LOG_MIX is, and it runs once.
-  function posForDensity(d: number): number {
-    let best = 0, bestErr = Infinity;
-    for (let i = 0; i <= FREQ_MAX - 2; i++) {
-      const err = Math.abs(densityForPos(i / (FREQ_MAX - 2)) - d);
-      if (err < bestErr) { bestErr = err; best = i; }
-    }
-    return best;
-  }
+  // The curve and its inverse live in @/lib/sprinkle, which the page and the Android port
+  // both read, so the bar means the same thing everywhere.
+  const posToDensity = (v: number) => densityForPos((v - 1) / (FREQ_MAX - 2));
+  const densityToPos = (d: number) => 1 + Math.round(posForDensity(d) * (FREQ_MAX - 2));
 
   let freq = $state(FREQ_MAX);
   let freqSeeded = false;
@@ -250,7 +231,7 @@
     freqSeeded = true;
     freq = mode === 'onHover' ? 0
       : mode === 'showOriginalOnHover' ? FREQ_MAX
-      : 1 + posForDensity(dens);
+      : densityToPos(dens);
   });
   function setFreq(v: number) {
     freq = v;   // the thumb sits exactly where it is dragged
@@ -260,7 +241,7 @@
       selectedMode = 'showOriginalOnHover';
     } else {
       selectedMode = 'sprinkle';
-      sprinkleDensity = densityForPos((v - 1) / (FREQ_MAX - 2));
+      sprinkleDensity = posToDensity(v);
     }
   }
   let freqLabel = $derived(

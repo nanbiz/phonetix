@@ -17,6 +17,7 @@ import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/typ
 
 type Language = string;
 import { displayIpa as displayIpaPure } from '@/lib/display-ipa';
+import { picks as sprinklePicks } from '@/lib/sprinkle';
 import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
 import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
@@ -41,14 +42,6 @@ let mode: Mode = 'showOriginalOnHover';
  *  words (espeak-synthesized guesses are never sprinkled). N is the density: 2 shows
  *  half of them, 50 shows one in fifty. */
 let sprinkleDensity = 12;
-
-/** Deterministic 32-bit hash (FNV-1a) so the same word is always picked or skipped,
- *  keeping the sprinkled set stable across re-renders instead of flickering. */
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return h >>> 0;
-}
 
 function clampDensity(v: string | null | undefined): number {
   const n = parseInt(v ?? '', 10);
@@ -89,11 +82,9 @@ function sprinkleAllows(word: string, r: ResolvedIpa): boolean {
   if (r.src !== 'dict') return false;
   const lower = word.toLowerCase();
   if (commonWords[r.lang]?.has(lower)) return false;
-  const boost = Math.min(2.4, Math.max(0.6, lower.length / 5));
-  const n = Math.max(1, Math.round(sprinkleDensity / boost));
   const occ = sprinkleSeen.get(lower) ?? 0;
   sprinkleSeen.set(lower, occ + 1);
-  return hashStr(`${lower}#${occ}`) % n === 0;
+  return sprinklePicks(lower, occ, sprinkleDensity);
 }
 /** Stress marks read like stray apostrophes mid-sentence, so they can be left
  *  out of the page. The tooltip always shows the full transcription. */

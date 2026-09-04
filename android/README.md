@@ -64,6 +64,24 @@ Granting both permissions without touching the UI:
 the package, how many text nodes were measured, how many returned character bounds, and how
 many words came out — enough to tell "read nothing" from "chose nothing".
 
+## One definition of the behaviour
+
+Which words get transcribed, and how the frequency bar maps onto that, is defined once in
+`src/lib/sprinkle.ts` and used directly by the extension. Kotlin cannot import it, so the
+extension writes down what that module answers for a spread of inputs:
+
+    pnpm gen:vectors        # -> shared/sprinkle-vectors.json
+
+`SprinkleParityTest` asserts `Frequency` against every one of those cases, so a rule changed
+on one side and not the other fails a test instead of quietly giving the same setting two
+different meanings on a phone and in a browser. It has already earned its keep: the port
+took the FNV hash as a signed `Int` where the extension ends with `>>> 0`, which chose
+different words for any hash above 2^31.
+
+    ./gradlew testDebugUnitTest
+
+CI regenerates the vectors and fails if the checked-in copy is stale.
+
 ## Known limits
 
 `FLAG_SECURE` windows cannot be read. Compose and Canvas-drawn text usually reports no

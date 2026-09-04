@@ -44,6 +44,28 @@ android {
  * public/dictionaries by `pnpm fetch:dict` rather than committed. They are copied in at
  * build time so the app has exactly one source for them and the repository keeps one copy.
  */
+/**
+ * The behaviour vectors the extension generates from src/lib/sprinkle.ts. They are read by
+ * SprinkleParityTest, which is the thing that keeps this port and the extension agreeing
+ * about which words get transcribed.
+ */
+val bundleVectors by tasks.registering(Copy::class) {
+    val vectors = rootProject.file("../shared/sprinkle-vectors.json")
+    doFirst {
+        require(vectors.exists()) {
+            "Missing ${vectors.path}. Run `node --experimental-strip-types " +
+                "scripts/gen-sprinkle-vectors.ts` in the repository root."
+        }
+    }
+    from(vectors)
+    into(layout.buildDirectory.dir("vectors"))
+}
+
+tasks.withType<Test>().configureEach {
+    dependsOn(bundleVectors)
+    systemProperty("phonetix.vectors", layout.buildDirectory.file("vectors/sprinkle-vectors.json").get().asFile.path)
+}
+
 val bundleDictionaries by tasks.registering(Copy::class) {
     val dict = rootProject.file("../public/dictionaries/en.json.gz")
     val common = rootProject.file("../public/common-words.json")
@@ -68,4 +90,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20250517")
 }
