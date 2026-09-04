@@ -2,16 +2,24 @@ package io.github.nanbiz.phonetix.core
 
 import android.graphics.RectF
 
-/** A transcription and the screen rectangle of the word it belongs over. */
-data class WordBox(val rect: RectF, val ipa: String)
+/** A transcription, the word it replaces, and the screen rectangle of that word. */
+data class WordBox(val rect: RectF, val ipa: String, val word: String)
 
 /** One token of a line of text: the word, and its transcription when it was picked. */
 data class Token(val text: String, val ipa: String?)
+
+/** A word chosen for transcription and where it sits in its node's text. */
+data class Pick(val start: Int, val end: Int, val word: String, val ipa: String)
 
 /**
  * Turns text into the words worth transcribing. The occurrence counter is shared across a
  * whole pass so a word repeated down the screen is decided independently each time, the
  * way it is in the extension.
+ *
+ * Choosing and placing are deliberately separate. Choosing needs only the text and is
+ * nearly free; placing needs the per-character bounds, which cost a round trip to the app
+ * being read. Splitting them means that round trip is only paid for the nodes that turned
+ * out to hold a word worth showing, which on an ordinary screen is a small minority.
  */
 class Transcriber(private val density: Int) {
     private val seen = HashMap<String, Int>()
@@ -30,36 +38,48 @@ class Transcriber(private val density: Int) {
     fun tokens(text: String): List<Token> =
         WORD.findAll(text).map { Token(it.value, pick(it.value)) }.toList()
 
-    /**
-     * Word boxes for one on-screen text node, given the per-character screen rectangles
-     * the accessibility API returned. A word's box is the union of its characters, so it
-     * lands exactly on the word however the app laid the line out; characters scrolled out
-     * of view come back null and those words are skipped.
-     */
-    fun boxes(text: String, charRects: Array<RectF?>, into: MutableList<WordBox>) {
+    /** Which words of this text are transcribed. No layout, no round trip. */
+    fun plan(text: String): List<Pick> {
+        var out: ArrayList<Pick>? = null
         for (m in WORD.findAll(text)) {
             val ipa = pick(m.value) ?: continue
-            var l = Float.MAX_VALUE; var t = Float.MAX_VALUE
-            var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
-            var any = false
-            for (i in m.range) {
-                val cr = charRects.getOrNull(i) ?: continue
-                // A character the app has not laid out comes back as an empty rect.
-                if (cr.width() <= 0f || cr.height() <= 0f) continue
-                if (cr.left < l) l = cr.left
-                if (cr.top < t) t = cr.top
-                if (cr.right > r) r = cr.right
-                if (cr.bottom > b) b = cr.bottom
-                any = true
-            }
-            // Only paint over a word whose characters were all measured: a partial box
-            // would sit half over the word and half over its neighbour.
-            if (any && r > l && b > t) into.add(WordBox(RectF(l, t, r, b), ipa))
+            (out ?: ArrayList<Pick>(4).also { out = it })
+                .add(Pick(m.range.first, m.range.last, m.value, ipa))
         }
+        return out ?: emptyList()
     }
 
-    private companion object {
+    companion object {
         // Letters and the apostrophes inside them; no digits, so "2024" is left alone.
-        val WORD = Regex("[\\p{L}][\\p{L}'’]*")
+        private val WORD = Regex("[\\p{L}][\\p{L}'’]*")
+
+        /**
+         * Places already-chosen words, given the per-character screen rectangles the
+         * accessibility API returned. A word's box is the union of its characters, so it
+         * lands exactly on the word however the app laid the line out; characters scrolled
+         * out of view come back empty and those words are dropped rather than half-placed.
+         */
+        fun boxes(
+            picks: List<Pick>,
+            charRects: Array<RectF?>,
+            offset: Int,
+            into: MutableList<WordBox>,
+        ) {
+            for (p in picks) {
+                var l = Float.MAX_VALUE; var t = Float.MAX_VALUE
+                var r = -Float.MAX_VALUE; var b = -Float.MAX_VALUE
+                var any = false
+                for (i in p.start..p.end) {
+                    val cr = charRects.getOrNull(i - offset) ?: continue
+                    if (cr.width() <= 0f || cr.height() <= 0f) continue
+                    if (cr.left < l) l = cr.left
+                    if (cr.top < t) t = cr.top
+                    if (cr.right > r) r = cr.right
+                    if (cr.bottom > b) b = cr.bottom
+                    any = true
+                }
+                if (any && r > l && b > t) into.add(WordBox(RectF(l, t, r, b), p.ipa, p.word))
+            }
+        }
     }
 }
