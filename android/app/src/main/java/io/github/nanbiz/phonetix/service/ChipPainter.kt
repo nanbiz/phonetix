@@ -4,6 +4,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
+import kotlin.math.abs
 import io.github.nanbiz.phonetix.core.ChipStyle
 import io.github.nanbiz.phonetix.core.WordBox
 
@@ -20,6 +22,44 @@ class ChipPainter {
     private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
         isSubpixelText = true
+    }
+
+    /** A scratch paint for asking how wide a word would be in a given face. */
+    private val ruler = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val faces = listOf(
+        Typeface.SANS_SERIF,
+        Typeface.SERIF,
+        Typeface.MONOSPACE,
+        Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD),
+        Typeface.create(Typeface.SERIF, Typeface.BOLD),
+    )
+    private val matched = HashMap<String, Typeface>(64)
+
+    /**
+     * Which face the app drew this word in, worked out from how wide it drew it.
+     *
+     * Accessibility carries no typeface, but it does carry the exact rectangle the word
+     * occupies, and the word itself. Setting each candidate at the line's own size and
+     * measuring the same word in it gives a width to compare against the real one: the face
+     * that comes closest is the face on screen, or near enough that the replacement stops
+     * looking pasted on. Serif against sans is a difference of several percent in a word of
+     * any length, and bold against regular more, so the comparison is not delicate.
+     */
+    private fun faceFor(word: String, size: Float, width: Float): Typeface {
+        if (word.isEmpty() || width <= 0f) return Typeface.SANS_SERIF
+        val key = word + "|" + size.toInt() + "|" + width.toInt()
+        matched[key]?.let { return it }
+        ruler.textSize = size
+        var best = Typeface.SANS_SERIF
+        var bestErr = Float.MAX_VALUE
+        for (face in faces) {
+            ruler.typeface = face
+            val err = abs(ruler.measureText(word) - width)
+            if (err < bestErr) { bestErr = err; best = face }
+        }
+        if (matched.size > 512) matched.clear()
+        matched[key] = best
+        return best
     }
 
     fun draw(
@@ -65,6 +105,8 @@ class ChipPainter {
         // sized to the line, then shrunk until it fits, so a replacement never pushes into
         // the words on either side.
         var size = height * 0.80f
+        // In the face the app itself used, deduced from the width it gave the word.
+        ink.typeface = faceFor(box.word, size, width)
         ink.textSize = size
         val room = width - height * 0.12f
         val measured = ink.measureText(label)
