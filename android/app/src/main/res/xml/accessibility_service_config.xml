@@ -5,12 +5,17 @@
   The service reads window content (that is the whole point) and asks for the extra
   per-character bounds it needs to place a transcription on one word rather than on a
   whole paragraph.
+
+  Views the app marks unimportant for accessibility are deliberately not requested. Every
+  node in the tree is a round trip into that app, and those round trips are almost all of
+  the latency; the decorative containers that flag pulls in carry no text worth reading.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagIncludeNotImportantViews|flagRequestEnhancedWebAccessibility|flagReportViewIds"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
     android:description="@string/service_description"
     android:notificationTimeout="100"
     android:settingsActivity="io.github.nanbiz.phonetix.MainActivity" />

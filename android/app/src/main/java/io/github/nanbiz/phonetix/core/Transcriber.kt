@@ -2,8 +2,18 @@ package io.github.nanbiz.phonetix.core
 
 import android.graphics.RectF
 
-/** A transcription, the word it replaces, and the screen rectangle of that word. */
-data class WordBox(val rect: RectF, val ipa: String, val word: String)
+/**
+ * A transcription, the word it replaces, the screen rectangle of that word, and the colours
+ * that word is drawn in. The colours are 0 when they could not be read from the screen, and
+ * the overlay then falls back to its own palette rather than inventing one.
+ */
+data class WordBox(
+    val rect: RectF,
+    val ipa: String,
+    val word: String,
+    val background: Int = 0,
+    val ink: Int = 0,
+)
 
 /** One token of a line of text: the word, and its transcription when it was picked. */
 data class Token(val text: String, val ipa: String?)
@@ -35,24 +45,57 @@ class Transcriber(private val density: Int) {
     }
 
     /** Words of a text, each with its transcription when it was picked. For the preview. */
-    fun tokens(text: String): List<Token> =
-        WORD.findAll(text).map { Token(it.value, pick(it.value)) }.toList()
+    fun tokens(text: String): List<Token> {
+        val out = ArrayList<Token>()
+        val n = text.length
+        var i = 0
+        while (i < n) {
+            if (!Character.isLetter(text[i])) { i++; continue }
+            var j = i + 1
+            while (j < n) {
+                val c = text[j]
+                if (Character.isLetter(c) || c == '\'' || c == '\u2019') j++ else break
+            }
+            val raw = text.substring(i, j)
+            out.add(Token(raw, pick(raw)))
+            i = j
+        }
+        return out
+    }
 
-    /** Which words of this text are transcribed. No layout, no round trip. */
-    fun plan(text: String): List<Pick> {
+    /**
+     * Which words of this text are transcribed. No layout, no round trip.
+     *
+     * Hand-scanned rather than matched with a regex: this runs over every piece of text on
+     * screen on every pass, and a regex allocates a match object per word where a loop over
+     * the characters allocates only for the words that are actually looked up.
+     */
+    fun plan(text: CharSequence): List<Pick> {
         var out: ArrayList<Pick>? = null
-        for (m in WORD.findAll(text)) {
-            val ipa = pick(m.value) ?: continue
-            (out ?: ArrayList<Pick>(4).also { out = it })
-                .add(Pick(m.range.first, m.range.last, m.value, ipa))
+        val n = text.length
+        var i = 0
+        while (i < n) {
+            if (!Character.isLetter(text[i])) { i++; continue }
+            var j = i + 1
+            while (j < n) {
+                val c = text[j]
+                if (Character.isLetter(c) || c == '\'' || c == '\u2019') j++ else break
+            }
+            // Single-letter runs can never be in the dictionary under the length rule, so
+            // they are dropped before anything is allocated for them.
+            if (j - i >= 2) {
+                val raw = text.subSequence(i, j).toString()
+                val ipa = pick(raw)
+                if (ipa != null) {
+                    (out ?: ArrayList<Pick>(4).also { out = it }).add(Pick(i, j - 1, raw, ipa))
+                }
+            }
+            i = j
         }
         return out ?: emptyList()
     }
 
     companion object {
-        // Letters and the apostrophes inside them; no digits, so "2024" is left alone.
-        private val WORD = Regex("[\\p{L}][\\p{L}'’]*")
-
         /**
          * Places already-chosen words, given the per-character screen rectangles the
          * accessibility API returned. A word's box is the union of its characters, so it
