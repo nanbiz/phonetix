@@ -240,7 +240,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     else overlay.endMotion(moved, style0)
                     android.util.Log.d(
                         "Phonetix",
-                        "follow=${took}ms lines=${planned.size} withBoxes=${planned.count { it.boxes.isNotEmpty() }} measured=${planned.count { it.measuredAt != null }} boxes=${moved.size} moving=$moving",
+                        "follow=${took}ms lines=${planned.size} boxes=${moved.size} moving=$moving",
                     )
                 }
                 if (moving) schedule(GAP_SCROLL_MS)
@@ -371,7 +371,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             overlay.render(painted, style)
             android.util.Log.d(
                 "Phonetix",
-                "plan=${t1 - t0}ms cachedBoxes=${planned.count { it.boxes.isNotEmpty() }}${if (reuse) " REUSED" else ""} (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
+                "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
                     "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
                     "coloured=${painted.count { it.background != 0 }}",

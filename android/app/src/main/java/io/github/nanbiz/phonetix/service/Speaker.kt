@@ -55,7 +55,10 @@ class Speaker(context: Context) {
                 setDataSource(url)
                 setOnPreparedListener { it.start() }
                 setOnCompletionListener { stop() }
-                setOnErrorListener { _, _, _ -> stop(); true }
+                setOnErrorListener { _, what, extra ->
+                    android.util.Log.w("Phonetix", "play failed what=$what extra=$extra")
+                    stop(); true
+                }
                 prepareAsync()
             }
         }

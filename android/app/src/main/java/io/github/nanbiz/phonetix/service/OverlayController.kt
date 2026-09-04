@@ -80,6 +80,10 @@ class OverlayController(
     }
 
     fun render(boxes: List<WordBox>, style: ChipStyle) {
+        // Painting the small windows means the motion is over, whether it ended by settling
+        // or because the screen changed under it. Leaving the layer up would hide every one
+        // of them, and nothing would be tappable again.
+        if (motion.isRunning) motion.stop()
         lastRendered = boxes
         lastStyle = style
         val wanted = if (boxes.size > MAX_CHIPS) boxes.subList(0, MAX_CHIPS) else boxes

@@ -96,7 +96,9 @@ class TooltipController(
             if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hide()
             false
         }
-        runCatching { wm.addView(card, lp) }.onSuccess { view = card }
+        runCatching { wm.addView(card, lp) }
+            .onSuccess { view = card }
+            .onFailure { android.util.Log.w("Phonetix", "tooltip addView failed", it) }
     }
 
     private fun dp(v: Int): Float = TypedValue.applyDimension(
