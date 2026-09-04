@@ -433,6 +433,14 @@ function setupTooltipEvents(): void {
     if ((e as KeyboardEvent).key === 'Escape' && ttVisible) { clearTimers(); hideTooltip(true); curTarget = null; }
   });
 
+  // Long-pressing a word on Android can still raise the page context menu even with the
+  // span made unselectable, so swallow the menu when it fires on one of our words. The
+  // rest of the page keeps its normal menu.
+  document.addEventListener('contextmenu', (e) => {
+    const t = e.target as Element | null;
+    if (t?.closest?.(`.${PHONETIX_CLASS}`)) e.preventDefault();
+  });
+
   window.addEventListener('scroll', () => { hideReveal(); if (ttVisible) { clearTimers(); hideTooltip(); curTarget = null; } }, { passive: true });
 
   // Keep tooltip alive when hovered

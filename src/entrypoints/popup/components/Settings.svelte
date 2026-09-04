@@ -216,6 +216,32 @@
   // the thumb to the nearest representable spot mid-drag — sometimes to the left of where
   // it was dragged. So it is seeded from the stored setting once, then drives the setting.
   const FREQ_MAX = 100;
+  const DMIN = 2, DMAX = 50;
+
+  // The bar controls a frequency (one word in N), and frequency is felt in ratios, not
+  // in N: the step from 1-in-2 to 1-in-4 is a world apart, 1-in-40 to 1-in-42 is nothing.
+  // A straight linear N spends most of the travel among the sparse densities no one can
+  // tell apart. Bend it toward geometric — equal drags change 1-in-N by a closer-to-equal
+  // ratio — but only partway (LOG_MIX), so it reads as a little logarithmic, not extreme.
+  const LOG_MIX = 0.6;
+  // pos runs 0 (sparse, 1-in-50) to 1 (dense, 1-in-2).
+  function densityForPos(t: number): number {
+    const lin = DMAX - t * (DMAX - DMIN);
+    const geo = DMAX * Math.pow(DMIN / DMAX, t);
+    return Math.min(DMAX, Math.max(DMIN, Math.round((1 - LOG_MIX) * lin + LOG_MIX * geo)));
+  }
+  // Inverse for seeding the thumb from a stored density: the nearest position whose
+  // density rounds to the stored one. A scan keeps it exactly consistent with the curve
+  // above whatever LOG_MIX is, and it runs once.
+  function posForDensity(d: number): number {
+    let best = 0, bestErr = Infinity;
+    for (let i = 0; i <= FREQ_MAX - 2; i++) {
+      const err = Math.abs(densityForPos(i / (FREQ_MAX - 2)) - d);
+      if (err < bestErr) { bestErr = err; best = i; }
+    }
+    return best;
+  }
+
   let freq = $state(FREQ_MAX);
   let freqSeeded = false;
   $effect(() => {
@@ -224,7 +250,7 @@
     freqSeeded = true;
     freq = mode === 'onHover' ? 0
       : mode === 'showOriginalOnHover' ? FREQ_MAX
-      : Math.round(1 + ((50 - dens) / 48) * (FREQ_MAX - 2));
+      : 1 + posForDensity(dens);
   });
   function setFreq(v: number) {
     freq = v;   // the thumb sits exactly where it is dragged
@@ -234,7 +260,7 @@
       selectedMode = 'showOriginalOnHover';
     } else {
       selectedMode = 'sprinkle';
-      sprinkleDensity = Math.min(50, Math.max(2, Math.round(50 - ((v - 1) / (FREQ_MAX - 2)) * 48)));
+      sprinkleDensity = densityForPos((v - 1) / (FREQ_MAX - 2));
     }
   }
   let freqLabel = $derived(

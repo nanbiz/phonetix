@@ -36,7 +36,13 @@ export const TECHNICAL_RE = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{
 /** CSS injected into pages for display mode switching */
 export const PHONETIX_CSS = `
 /* Base styles */
-.${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; }
+/* The reveal is a tap on touch devices, and a tap on a run of text there also starts a
+   native selection and, held a moment, the Copy/Share/Web-search menu — so tapping a word
+   to see its IPA selected the word and popped that menu over the page. Make our own spans
+   unselectable and suppress the long-press callout, so a tap only ever reveals. The page's
+   own text is untouched; only these injected words opt out, and the tooltip stays
+   selectable because this rule does not reach it. */
+.${PHONETIX_CLASS} { display: inline; text-decoration: inherit; color: inherit; font: inherit; border-radius: 2px; transition: background .15s; -webkit-touch-callout: none; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
 /* Over a hovered word the pointer sits on top of the very IPA it reveals, hiding a
    letter or two. It becomes a small hollow ring with a black-and-white outline:
    visible on any background, and the transcription shows through the hole. */
