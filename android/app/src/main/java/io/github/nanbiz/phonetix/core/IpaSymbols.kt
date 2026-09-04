@@ -5,7 +5,24 @@ import org.json.JSONObject
 import java.text.Normalizer
 
 /** What a single symbol of a transcription is called, and a word it is heard in. */
-data class SymbolInfo(val token: String, val name: String, val example: String)
+data class SymbolInfo(
+    val token: String,
+    val name: String,
+    val example: String,
+    /** Wikipedia article for the sound, a recording of it, and the sagittal section that
+     *  shows how it is made. Null where the extension's table has none. */
+    val wiki: String? = null,
+    val audio: String? = null,
+    val diagram: String? = null,
+)
+
+/** Where Wikimedia serves a file by name; the extension builds the same URL. */
+fun wikimediaFileUrl(file: String): String =
+    "https://commons.wikimedia.org/wiki/Special:FilePath/" +
+        java.net.URLEncoder.encode(file.replace(' ', '_'), "UTF-8").replace("+", "%20")
+
+/** A raster of a Wikimedia file at a given width, so an SVG diagram can be shown. */
+fun wikimediaThumbUrl(file: String, width: Int): String = wikimediaFileUrl(file) + "?width=" + width
 
 /**
  * The names behind the symbols in a transcription, as the extension's tooltip gives them.
@@ -43,7 +60,14 @@ object IpaSymbols {
         val s = root.getJSONObject("symbols")
         for (token in s.keys()) {
             val o = s.getJSONObject(token)
-            symbols[token] = SymbolInfo(token, o.getString("name"), o.optString("example", ""))
+            symbols[token] = SymbolInfo(
+                token,
+                o.getString("name"),
+                o.optString("example", ""),
+                o.optString("wiki", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
+                o.optString("audio", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
+                o.optString("diagram", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
+            )
         }
         val d = root.getJSONObject("diacritics")
         for (mark in d.keys()) diacritics[mark] = d.getString(mark)
@@ -110,7 +134,13 @@ object IpaSymbols {
             baseName = baseName.removePrefix("voiceless ").removePrefix("voiced ")
         }
         val joined = marks.joinToString(", ")
-        return SymbolInfo(token, "$joined $baseName", "${info.example} ($joined)")
+        return info.copy(
+            token = token,
+            name = "$joined $baseName",
+            // The example belongs to the plain sound; the mark is what makes this symbol
+            // different from it, so it is named rather than exemplified.
+            example = "${info.example} ($joined)",
+        )
     }
 
     /** Every symbol of a transcription, with the ones we have no name for left out. */

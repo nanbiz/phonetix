@@ -4,6 +4,10 @@
     <!-- The overlay that paints the transcriptions over whatever app is in front. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- The recordings and the sagittal diagrams behind a symbol come from Wikimedia, the
+         same files the extension links to. Nothing is sent, only fetched. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Listing installed apps for the per-app picker. The launcher-intent query is
          enough, so the app never needs the far broader QUERY_ALL_PACKAGES. -->
     <queries>

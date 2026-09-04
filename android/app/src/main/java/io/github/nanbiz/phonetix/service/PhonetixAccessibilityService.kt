@@ -32,6 +32,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
     private lateinit var tooltip: TooltipController
+    private lateinit var speaker: Speaker
+    private lateinit var io: Handler
     private val main = Handler(Looper.getMainLooper())
     private lateinit var worker: Handler
     private lateinit var sampler: ScreenSampler
@@ -46,20 +48,33 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var cachedPainted: List<Painted> = emptyList()
     @Volatile private var scrollOnly = false
 
-    // One pair of colours per app, kept until the app changes. Text inside one app is drawn
-    // in one or two colours, so this is both steadier and cheaper than asking per word.
-    @Volatile private var appColors: WordColors? = null
-    @Volatile private var appColorsFor: String? = null
+    // Colours per line of text rather than per app: a heading and a paragraph in the same
+    // app are rarely the same colour, and averaging them gives a transcription that matches
+    // neither. Keyed by the text itself so a line keeps its colours while it is on screen,
+    // and cleared when the app changes.
+    private val lineColors = HashMap<String, WordColors>(32)
+    /** Lines that could not be read - too little text in them to tell ink from surface.
+     *  Remembered so they are not measured again on every single pass. */
+    private val unreadable = HashSet<String>(32)
+    /** The last colours that did come out of this app, for the lines that never will. */
+    @Volatile private var fallbackColors: WordColors? = null
+    @Volatile private var colorsFor: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         SettingsStore.init(this)
-        tooltip = TooltipController(this)
-        overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
-        IpaSymbols.ensureLoaded(this)
         val thread = HandlerThread("phonetix-scan").apply { start() }
         worker = Handler(thread.looper)
-        sampler = ScreenSampler(this) { r -> worker.post(r) }
+        // A separate thread for capture and for fetching a diagram. Both were queued behind
+        // the scans on the worker, and a scan can hold that thread for most of a second, so
+        // the screenshot callback simply never arrived and the colours never came.
+        val ioThread = HandlerThread("phonetix-io").apply { start() }
+        io = Handler(ioThread.looper)
+        speaker = Speaker(this)
+        tooltip = TooltipController(this, speaker) { r -> io.post(r) }
+        overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
+        IpaSymbols.ensureLoaded(this)
+        sampler = ScreenSampler(this) { r -> io.post(r) }
         Dictionary.ensureLoaded(this) { schedule(0L) }
     }
 
@@ -80,6 +95,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // is both the lag and a stream of transcriptions in the wrong places. Take them
         // down for the duration and put them back once the screen holds still, which is
         // only a few milliseconds' work.
+        // Only a scroll takes the paint down. Text streaming in also moves words, but it
+        // is re-read within a frame or two, and blinking every transcription off and on for
+        // each of those changes reads as a flicker far worse than being a few milliseconds
+        // late.
         if (::overlay.isInitialized && isScroll) {
             overlay.hideNow()
             if (::tooltip.isInitialized) tooltip.hide()
@@ -97,6 +116,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         if (::tooltip.isInitialized) tooltip.hide()
+        if (::speaker.isInitialized) speaker.destroy()
         if (::sampler.isInitialized) sampler.destroy()
         if (::overlay.isInitialized) overlay.destroy()
         if (::worker.isInitialized) worker.looper.quitSafely()
@@ -205,17 +225,43 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Colours come from the screen itself, because accessibility does not carry them.
         // The capture is rate-limited by the platform, so a frame is asked for here and
         // whatever frame is already in hand is what these boxes are coloured from.
+        val tb = android.os.SystemClock.uptimeMillis()
         sampler.refreshIfStale()
-        if (pkg != appColorsFor) { appColors = null; appColorsFor = pkg }
-        if (appColors == null && boxes.isNotEmpty()) {
-            sampler.sampleAll(boxes.map { it.rect })?.let { appColors = it }
+        if (pkg != colorsFor) {
+            lineColors.clear()
+            unreadable.clear()
+            fallbackColors = null
+            colorsFor = pkg
         }
-        val c = appColors
-        val painted = if (c == null) boxes else boxes.map {
-            it.copy(background = c.background, ink = c.ink)
+        val drawn = boxes.map { it.rect }
+        // Each line is sampled once and remembered: the pixels of a line do not change
+        // while it is on screen, and re-reading them every pass would be waste.
+        for (p in planned) {
+            if (lineColors.containsKey(p.text) || p.text in unreadable) continue
+            // Sample the line minus the places we have already drawn over, or it measures
+            // our own transcriptions instead of the app's text.
+            val c = sampler.sampleAll(listOf(RectF(p.clip)), drawn)
+            if (c != null) {
+                lineColors[p.text] = c
+                fallbackColors = c
+            } else if (sampler.hasFrame) {
+                unreadable.add(p.text)
+            }
+        }
+        val byWord = HashMap<String, WordColors>(planned.size)
+        for (p in planned) {
+            // A line we could not read still gets the app's colours rather than ours: they
+            // are far closer to right than a palette chosen without looking.
+            val c = lineColors[p.text] ?: fallbackColors ?: continue
+            for (pick in p.picks) byWord[pick.word] = c
+        }
+        val painted = boxes.map {
+            val c = byWord[it.word]
+            if (c == null) it else it.copy(background = c.background, ink = c.ink)
         }
 
-        val t2 = android.os.SystemClock.uptimeMillis()
+        val colourMs = android.os.SystemClock.uptimeMillis() - tb
+        val t2 = tb
         val style = settings.style
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
@@ -223,7 +269,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms${if (reuse) " REUSED" else ""} (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
-                    "bounds=${t2 - t1}ms calls=${planned.size} " +
+                    "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
                     "coloured=${painted.count { it.background != 0 }}",
             )

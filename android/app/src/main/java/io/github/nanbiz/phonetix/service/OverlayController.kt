@@ -225,7 +225,10 @@ class ChipView(
         // The whole window is painted, corner to corner: the window is the word's own box,
         // so covering it completely is what keeps the original from showing through.
         bg.color = chip
-        val r = height * 0.18f
+        // Square, and only rounded when the colour had to be guessed. When the surface came
+        // off the screen the patch is the same colour as what surrounds it, and a rounded
+        // corner is the one thing that would give it away as a patch.
+        val r = if (sampled) 0f else height * 0.18f
         canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, bg)
 
         val label = if (revealed) b.word else b.ipa

@@ -18,9 +18,21 @@ import { displayIpa } from '../src/lib/display-ipa.ts';
 const OUT = 'shared/ipa-symbols.json';
 
 // The table itself: what the extension shows for a symbol it knows by name.
-const symbols: Record<string, { name: string; example: string; type: string }> = {};
+const symbols: Record<string, {
+  name: string; example: string; type: string;
+  wiki: string | null; audio: string | null; diagram: string | null;
+}> = {};
 for (const [token, info] of Object.entries(IPA_SYMBOLS)) {
-  symbols[token] = { name: info.name, example: info.example, type: info.type };
+  symbols[token] = {
+    name: info.name,
+    example: info.example,
+    type: info.type,
+    // What the tooltip offers beyond the name: the article behind the sound, a recording
+    // of it, and the sagittal section showing how it is made.
+    wiki: info.wiki ?? null,
+    audio: info.audio ?? null,
+    diagram: (info as { diagram?: string }).diagram ?? null,
+  };
 }
 
 // Real transcriptions rather than invented ones: whatever the shipped dictionary actually
