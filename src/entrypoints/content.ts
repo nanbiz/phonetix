@@ -277,6 +277,12 @@ function inTooltip(e: Event): boolean {
 const HOVER_CLASS = 'px-hover';
 let revealSpan: HTMLElement | null = null;
 
+// Whether the last pointer down was a finger. On touch there is no hovering: a tap fires a
+// synthetic mouseover, so the hover reveal would fire on every tap — including taps meant
+// to follow a link or just to read. So on touch we ignore the hover path entirely and
+// reveal only on a deliberate tap of a bare word (see the click handler below).
+let lastPointerTouch = false;
+
 /** The saved hover delay as a number in [0, 1000] ms, defaulting to 200 when unset. */
 function clampDelay(value: string | null | undefined): number {
   if (value === null || value === undefined || value === '') return 200;
@@ -380,7 +386,35 @@ function isInSafeZone(x: number, y: number): boolean {
 
 function setupTooltipEvents(): void {
   // Hover on phonetix spans
+  document.addEventListener('pointerdown', (e) => {
+    lastPointerTouch = (e as PointerEvent).pointerType === 'touch';
+  }, true);
+
+  // Touch reveal: a deliberate tap on a bare word shows it. A tap on a word inside a link
+  // or button is left alone so the link still works — the eager hover reveal used to hijack
+  // those. A tap anywhere else does nothing (and dismissal is handled by the outside press
+  // handler below). Toggling: tapping the word whose tooltip is already up dismisses it.
+  document.addEventListener('click', (e) => {
+    if (!lastPointerTouch) return;
+    const el = e.target as HTMLElement;
+    if (inTooltip(e as MouseEvent)) return;
+    const t = el.closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
+    if (!t) {   // tap off any word dismisses an open tooltip
+      if (ttVisible) { clearTimers(); hideReveal(); hideTooltip(true); curTarget = null; }
+      return;
+    }
+    if (el.closest('a, button, [role="link"], [role="button"], [onclick]')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (t === curTarget && ttVisible) { clearTimers(); hideReveal(); hideTooltip(true); curTarget = null; return; }
+    clearTimers();
+    showReveal(t);
+    curTarget = t;
+    showTooltip(t);
+  }, true);
+
   document.addEventListener('mouseover', (e) => {
+    if (lastPointerTouch) return;   // touch uses the tap handler above, not hover
     const el = e.target as HTMLElement;
     const t = el.closest(`.${PHONETIX_CLASS}`) as HTMLElement | null;
     // Moving onto anything that is not the revealed word clears the reveal. mouseout
@@ -424,6 +458,7 @@ function setupTooltipEvents(): void {
   // dismiss it mid-selection, before the copy. A pinned tooltip is dismissed
   // only by pressing outside it, or by Escape.
   document.addEventListener('mousedown', (e) => {
+    if (lastPointerTouch) return;   // touch dismissal is handled in the click/tap handler
     if (!ttVisible) return;
     if (inTooltip(e as MouseEvent)) { clearTimers(); ttPinned = true; return; }
     clearTimers(); hideTooltip(true); curTarget = null;
