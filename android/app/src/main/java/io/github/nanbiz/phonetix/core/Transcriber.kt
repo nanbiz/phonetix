@@ -47,18 +47,9 @@ class Transcriber(private val density: Int) {
     /** Words of a text, each with its transcription when it was picked. For the preview. */
     fun tokens(text: String): List<Token> {
         val out = ArrayList<Token>()
-        val n = text.length
-        var i = 0
-        while (i < n) {
-            if (!Character.isLetter(text[i])) { i++; continue }
-            var j = i + 1
-            while (j < n) {
-                val c = text[j]
-                if (Character.isLetter(c) || c == '\'' || c == '\u2019') j++ else break
-            }
+        scanWords(text) { i, j ->
             val raw = text.substring(i, j)
             out.add(Token(raw, pick(raw)))
-            i = j
         }
         return out
     }
@@ -72,15 +63,7 @@ class Transcriber(private val density: Int) {
      */
     fun plan(text: CharSequence): List<Pick> {
         var out: ArrayList<Pick>? = null
-        val n = text.length
-        var i = 0
-        while (i < n) {
-            if (!Character.isLetter(text[i])) { i++; continue }
-            var j = i + 1
-            while (j < n) {
-                val c = text[j]
-                if (Character.isLetter(c) || c == '\'' || c == '\u2019') j++ else break
-            }
+        scanWords(text) { i, j ->
             // Single-letter runs can never be in the dictionary under the length rule, so
             // they are dropped before anything is allocated for them.
             if (j - i >= 2) {
@@ -90,12 +73,44 @@ class Transcriber(private val density: Int) {
                     (out ?: ArrayList<Pick>(4).also { out = it }).add(Pick(i, j - 1, raw, ipa))
                 }
             }
-            i = j
         }
         return out ?: emptyList()
     }
 
     companion object {
+        /**
+         * The word spans of a text: a letter, then any run of letters and the apostrophes
+         * inside them. Digits are left alone, so "2024" is never a word.
+         *
+         * Hand-scanned rather than matched with a regex, because this runs over every piece
+         * of text on screen on every pass and a regex allocates a match object per word.
+         * WordScanTest holds it to exactly what the regex it replaced matched.
+         */
+        inline fun scanWords(text: CharSequence, emit: (start: Int, endExclusive: Int) -> Unit) {
+            val n = text.length
+            var i = 0
+            while (i < n) {
+                // Stepped by code point, not by char: a letter outside the basic plane is
+                // stored as two chars, and testing either half alone says "not a letter" and
+                // drops the word. WordScanTest caught exactly that.
+                val cp = Character.codePointAt(text, i)
+                val size = Character.charCount(cp)
+                if (!Character.isLetter(cp)) { i += size; continue }
+                var j = i + size
+                while (j < n) {
+                    val c = Character.codePointAt(text, j)
+                    if (Character.isLetter(c) || c == APOSTROPHE || c == RIGHT_QUOTE) {
+                        j += Character.charCount(c)
+                    } else break
+                }
+                emit(i, j)
+                i = j
+            }
+        }
+
+        const val APOSTROPHE = '\''.code
+        const val RIGHT_QUOTE = '\u2019'.code
+
         /**
          * Places already-chosen words, given the per-character screen rectangles the
          * accessibility API returned. A word's box is the union of its characters, so it
