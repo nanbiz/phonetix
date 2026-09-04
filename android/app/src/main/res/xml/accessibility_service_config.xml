@@ -17,5 +17,8 @@
     android:canRetrieveWindowContent="true"
     android:canTakeScreenshot="true"
     android:description="@string/service_description"
-    android:notificationTimeout="100"
+    <!-- Zero, not the usual 100: this is how often the system is allowed to hand us an
+         event, and at 100ms a fling delivered one or two in its entire length, so the
+         transcriptions were read twice during a movement of two thousand pixels. -->
+    android:notificationTimeout="0"
     android:settingsActivity="io.github.nanbiz.phonetix.MainActivity" />

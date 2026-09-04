@@ -8,6 +8,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Pick
@@ -40,6 +41,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var generation = 0
     private var lastScanEnd = 0L
     @Volatile private var lastScrollAt = 0L
+    @Volatile private var following = false
 
     // What the last full pass found. A scroll moves these words without changing them, so
     // the next pass can ask them directly for their new positions instead of walking the
@@ -95,23 +97,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // where they are, which now costs about seven milliseconds because only their
         // bounds are re-fetched, and that is fast enough to simply do it again.
         val isScroll = event?.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
-        // While a list is actually moving there is no position worth drawing: what was
-        // measured a moment ago is already stale, and re-reading on every frame of a fling
-        // is both the lag and a stream of transcriptions in the wrong places. Take them
-        // down for the duration and put them back once the screen holds still, which is
-        // only a few milliseconds' work.
         // Nothing is taken down for a scroll: the words move with it. The layer takes over
-        // the moment one starts, and predicts between the measurements below.
+        // the moment one starts, and predicts between the measurements the loop below
+        // feeds it.
         if (isScroll) {
             if (::tooltip.isInitialized) tooltip.hide()
             if (::overlay.isInitialized) main.post { overlay.beginMotion() }
             lastScrollAt = android.os.SystemClock.uptimeMillis()
+            scrollOnly = scrollOnly || cachedPlan.isNotEmpty()
+            startFollowing()
+            return
         }
-        // Only a run of pure scrolls keeps the fast path; anything else may have changed
-        // the words themselves and has to be read properly.
-        scrollOnly = isScroll && (scrollOnly || cachedPlan.isNotEmpty())
-        if (!isScroll) scrollOnly = false
-        schedule(if (isScroll) GAP_SCROLL_MS else GAP_MS)
+        scrollOnly = false
+        schedule(GAP_MS)
     }
 
     override fun onInterrupt() {
@@ -133,6 +131,35 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * work happens off the main thread, where a slow read cannot stutter the app being
      * read.
      */
+    /**
+     * Keep re-reading positions for as long as the screen is moving.
+     *
+     * Driving this from the events themselves does not work: they arrive faster than a pass
+     * completes, and each one cancelled the pass the last one asked for, so during a fling
+     * the pass was starved and never ran at all - the transcriptions sat where the fling
+     * began and were nearly a thousand pixels adrift by the time it stopped. This is a loop
+     * that reschedules itself instead, and stops on its own once the events stop coming.
+     */
+    private fun startFollowing() {
+        if (!::worker.isInitialized || following) return
+        following = true
+        worker.post(follower)
+    }
+
+    private val follower = object : Runnable {
+        override fun run() {
+            val since = android.os.SystemClock.uptimeMillis() - lastScrollAt
+            if (since > STILL_MS) {
+                following = false
+                // One last read, to put the tappable windows back exactly on the words.
+                runCatching { scan() }
+                return
+            }
+            runCatching { scan() }
+            worker.postDelayed(this, GAP_SCROLL_MS)
+        }
+    }
+
     /**
      * Run on the leading edge, not the trailing one.
      *
@@ -201,16 +228,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val moved = ArrayList<WordBox>(16)
             var ok = true
             var why = ""
+            var alive = 0
+            var gone = 0
             for (p in planned) {
                 val was = p.measuredAt
                 // A line whose words were all clipped away contributes nothing, which is
                 // normal and not a reason to abandon following the rest of them.
                 if (was == null || p.boxes.isEmpty()) continue
-                if (!p.node.refresh()) { why = "node gone"; ok = false; break }
-                if (p.node.text?.toString() != p.text) { why = "text changed"; ok = false; break }
+                // A line that has scrolled off is recycled and can no longer be asked
+                // anything - that is ordinary during a fling, and abandoning the whole pass
+                // for it left the rest of the screen unfollowed and falling back to a full
+                // read that costs hundreds of milliseconds. Skip the line, keep the others.
+                if (!p.node.refresh()) { gone++; continue }
+                if (p.node.text?.toString() != p.text) { gone++; continue }
                 val now = android.graphics.Rect()
                 p.node.getBoundsInScreen(now)
-                if (now.isEmpty) { why = "no bounds"; ok = false; break }
+                if (now.isEmpty) { gone++; continue }
+                alive++
                 val dx = (now.left - was.left).toFloat()
                 val dy = (now.top - was.top).toFloat()
                 for (b in p.boxes) {
@@ -223,10 +257,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (inside && !covered(r, p.exit)) moved.add(b.copy(rect = r))
                 }
             }
-            // Nothing carried means the screen is not what it was; read it properly.
-            if (ok && moved.isEmpty() && planned.any { it.boxes.isNotEmpty() }) {
+            // Nothing survived at all: the screen is not what it was, so read it properly.
+            if (ok && alive == 0) {
                 ok = false
-                why = "carried nothing"
+                why = "every line was recycled"
+            }
+            // Most of the screen gone means the same thing, even if a line or two remain.
+            if (ok && gone > alive) {
+                ok = false
+                why = "more lines recycled ($gone) than kept ($alive)"
             }
             if (ok) {
                 val style0 = settings.style
@@ -234,7 +273,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // Still moving: hand the measurement to the layer, which corrects both the
                 // position and the speed it is carrying them at. Once the scrolling has
                 // stopped, put the tappable windows back where the words actually are.
-                val moving = android.os.SystemClock.uptimeMillis() - lastScrollAt < STILL_MS
+                val moving = following && android.os.SystemClock.uptimeMillis() - lastScrollAt < STILL_MS
+                if (BuildConfig.DEBUG) {
+                    val sb = StringBuilder("BOXES ")
+                        .append(android.os.SystemClock.uptimeMillis()).append(' ')
+                        .append(pkg).append(' ')
+                    for ((i, b) in moved.withIndex()) {
+                        sb.append(b.word).append('#').append(i).append(':')
+                            .append(b.rect.left.toInt()).append(',')
+                            .append(b.rect.top.toInt()).append(',')
+                            .append(b.rect.right.toInt()).append(',')
+                            .append(b.rect.bottom.toInt()).append(',')
+                            .append(Integer.toHexString(b.background)).append(',')
+                            .append(Integer.toHexString(b.ink)).append(',')
+                            .append(if (b.background != 0 && b.ink != 0) 1 else 0).append(' ')
+                    }
+                    android.util.Log.d("Phonetix", sb.toString())
+                }
                 main.post {
                     if (moving && overlay.inMotion) overlay.motionMeasured(moved, style0)
                     else overlay.endMotion(moved, style0)
@@ -243,7 +298,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         "follow=${took}ms lines=${planned.size} boxes=${moved.size} moving=$moving",
                     )
                 }
-                if (moving) schedule(GAP_SCROLL_MS)
                 return
             }
             android.util.Log.d("Phonetix", "follow gave up: $why")
@@ -307,41 +361,56 @@ class PhonetixAccessibilityService : AccessibilityService() {
             fallbackColors = null
             colorsFor = pkg
         }
-        // What was on screen when the frame was captured - not what this pass is about to
-        // draw. Excluding the new boxes masked out the very text being measured, which for
-        // a line holding one word (a launcher label, say) left nothing to read at all.
-        val drawn = painted0
-        // Each line is sampled once and remembered: the pixels of a line do not change
-        // while it is on screen, and re-reading them every pass would be waste.
-        for (p in planned) {
-            if (lineColors.containsKey(p.text) || p.text in unreadable) continue
-            // Only the band the text itself occupies, not the node's whole rectangle. A
-            // launcher label's node takes in the app icon above it, and averaging a
-            // colourful icon into the ink gave transcriptions that were orange over white
-            // text. The band comes from the characters we just measured.
-            val band = textBand(p) ?: continue
-            // Minus the places we have already drawn over, or it measures our own
-            // transcriptions instead of the app's text.
-            val c = sampler.sampleAll(listOf(band), drawn)
+
+        // Per word, from the word's own pixels - not per line. A line here is whatever the
+        // app calls one node, and in a chat or an article that is a whole message: white
+        // prose, coloured code and more than one background inside it. Averaging that gave
+        // every word in the message the same wrong grey-green. A word's own rectangle holds
+        // its own ink on its own background, and nothing else.
+        val byWord = HashMap<String, WordColors>(boxes.size)
+        for (b in boxes) {
+            val key = b.word + "@" + b.rect.top.toInt()
+            val cached = lineColors[key]
+            if (cached != null) { byWord[b.word] = cached; continue }
+            if (key in unreadable) continue
+            val c = sampler.sampleAll(listOf(b.rect), painted0)
             if (c != null) {
-                lineColors[p.text] = c
+                lineColors[key] = c
                 fallbackColors = c
+                byWord[b.word] = c
             } else if (sampler.hasFrame) {
-                unreadable.add(p.text)
+                unreadable.add(key)
             }
         }
-        val byWord = HashMap<String, WordColors>(planned.size)
-        for (p in planned) {
-            // A line we could not read still gets the app's colours rather than ours: they
-            // are far closer to right than a palette chosen without looking.
-            val c = lineColors[p.text] ?: fallbackColors ?: continue
-            for (pick in p.picks) byWord[pick.word] = c
+        for (b in boxes) if (!byWord.containsKey(b.word)) {
+            fallbackColors?.let { byWord[b.word] = it }
         }
+
+        // One line per pass naming every transcription and where it sits, so a test can
+        // assert that a word moved exactly as far as the text under it did.
+        fun telemetry(list: List<WordBox>) {
+            if (!BuildConfig.DEBUG) return
+            val sb = StringBuilder("BOXES ")
+            sb.append(android.os.SystemClock.uptimeMillis()).append(' ').append(pkg).append(' ')
+            for ((i, b) in list.withIndex()) {
+                sb.append(b.word).append('#').append(i).append(':')
+                    .append(b.rect.left.toInt()).append(',')
+                    .append(b.rect.top.toInt()).append(',')
+                    .append(b.rect.right.toInt()).append(',')
+                    .append(b.rect.bottom.toInt()).append(',')
+                    .append(Integer.toHexString(b.background)).append(',')
+                    .append(Integer.toHexString(b.ink)).append(',')
+                    .append(if (b.background != 0 && b.ink != 0) 1 else 0).append(' ')
+            }
+            android.util.Log.d("Phonetix", sb.toString())
+        }
+
         val painted = boxes.map {
             val c = byWord[it.word]
             if (c == null) it else it.copy(background = c.background, ink = c.ink)
         }
         onScreenBoxes = painted.map { it.rect }
+        telemetry(painted)
 
         // A line whose only text is the word we replaced can never be read while we are
         // covering it - the launcher, where every label is one word, reads as pure
