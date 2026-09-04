@@ -234,9 +234,36 @@ class TooltipController(
                 row.addView(image)
                 loadDiagram(s.diagram, image)
             }
-            if (s.wiki != null) {
-                row.addView(pill("Read about it", accent, surface, line) {
-                    open("https://en.wikipedia.org/wiki/${s.wiki}")
+            row.addView(LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, dp(6).roundToInt(), 0, 0)
+                if (s.wiki != null) {
+                    addView(pill("Read about it", accent, surface, line) {
+                        open("https://en.wikipedia.org/wiki/${s.wiki}")
+                    })
+                }
+                if (s.seeing != null) {
+                    // The same sound filmed in a real mouth, which is the one thing a
+                    // sagittal drawing cannot show.
+                    addView(pill("See it said", accent, surface, line) {
+                        open("https://www.seeingspeech.ac.uk/ipa-charts/${s.seeing}")
+                    })
+                }
+            })
+            // Each word of the description is a fact of its own, and each has an article.
+            val terms = s.name.split(' ', ',').mapNotNull { w ->
+                val clean = w.trim(',', '(', ')')
+                IpaSymbols.termArticle(clean)?.let { clean to it }
+            }.distinctBy { it.first }
+            if (terms.isNotEmpty()) {
+                row.addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    setPadding(0, dp(4).roundToInt(), 0, 0)
+                    for ((term, article) in terms.take(4)) {
+                        addView(pill(term, muted, surface, line) {
+                            open("https://en.wikipedia.org/wiki/$article")
+                        })
+                    }
                 })
             }
         }

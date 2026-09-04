@@ -36,6 +36,34 @@ class OverlayController(
 
     private val wm = context.getSystemService(WindowManager::class.java)
     private val chips = ArrayList<ChipView>(MAX_CHIPS)
+    private val motion = MotionLayer(context)
+    private var lastRendered: List<WordBox> = emptyList()
+    private var lastStyle: ChipStyle = ChipStyle.SOLID
+
+    /**
+     * While the screen is moving the whole set rides on one layer instead of a window each:
+     * carrying a dozen windows would be a dozen calls to the window manager every frame,
+     * and the layer moves by shifting a canvas. The small windows come back when it stops,
+     * because those are what can be tapped.
+     */
+    fun beginMotion() {
+        if (motion.isRunning) return
+        for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
+        motion.start(lastRendered, lastStyle)
+    }
+
+    fun motionMeasured(boxes: List<WordBox>, style: ChipStyle) {
+        lastRendered = boxes
+        lastStyle = style
+        motion.measured(boxes, style)
+    }
+
+    fun endMotion(boxes: List<WordBox>, style: ChipStyle) {
+        motion.stop()
+        render(boxes, style)
+    }
+
+    val inMotion: Boolean get() = motion.isRunning
 
     /**
      * Which word is currently showing itself instead of its transcription.
@@ -52,6 +80,8 @@ class OverlayController(
     }
 
     fun render(boxes: List<WordBox>, style: ChipStyle) {
+        lastRendered = boxes
+        lastStyle = style
         val wanted = if (boxes.size > MAX_CHIPS) boxes.subList(0, MAX_CHIPS) else boxes
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
@@ -88,6 +118,7 @@ class OverlayController(
     }
 
     fun destroy() {
+        motion.stop()
         for (c in chips) runCatching { wm.removeView(c) }
         chips.clear()
     }
@@ -168,11 +199,8 @@ class ChipView(
     private var style: ChipStyle = ChipStyle.SOLID
     private val revert = Runnable { onChanged() }
 
-    private val bg = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textAlign = Paint.Align.CENTER
-        isSubpixelText = true
-    }
+    private val painter = ChipPainter()
+    private val dest = RectF()
 
     fun bind(next: WordBox, nextStyle: ChipStyle, state: RevealState) {
         val changed = box?.ipa != next.ipa || box?.word != next.word || style != nextStyle
@@ -185,8 +213,7 @@ class ChipView(
         if (event.actionMasked == MotionEvent.ACTION_UP) {
             val b = box ?: return true
             // A tap opens the card, the way hovering opens the tooltip in the browser, and
-            // puts the original word back underneath it while the card is up so the reader
-            // can see both at once.
+            // puts the original word back underneath it so the reader sees both at once.
             reveal.toggle(b.word, REVEAL_MS)
             removeCallbacks(revert)
             postDelayed(revert, REVEAL_MS + 50)
@@ -200,55 +227,8 @@ class ChipView(
         val b = box ?: return
         val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
-
-        // The word's own colours, read off the screen, are what make a replacement look
-        // like the text it stands in for; the palette below is only for when they could not
-        // be read - a capture that has not landed yet, or a word with too little contrast to
-        // tell ink from surface.
-        val sampled = b.background != 0 && b.ink != 0
-        val chip = when {
-            sampled -> b.background
-            style == ChipStyle.SOFT -> if (dark) Color.argb(0xE6, 0x1B, 0x14, 0x10) else Color.argb(0xE6, 0xF7, 0xEF, 0xDD)
-            else -> if (dark) Color.rgb(0x1B, 0x14, 0x10) else Color.rgb(0xF7, 0xEF, 0xDD)
-        }
-        val revealed = reveal.isRevealed(b.word)
-        val fg = when {
-            // Revealed, the original word is put back exactly as the app drew it.
-            revealed && sampled -> b.ink
-            revealed -> if (dark) Color.rgb(0xF5, 0xED, 0xE0) else Color.rgb(0x2B, 0x21, 0x17)
-            // The transcription is drawn in the ink the word itself was drawn in, so it
-            // reads as part of the text rather than as something stuck on top of it.
-            sampled -> b.ink
-            else -> if (dark) Color.rgb(0xFB, 0xBF, 0x24) else Color.rgb(0xB4, 0x53, 0x09)
-        }
-
-        // The whole window is painted, corner to corner: the window is the word's own box,
-        // so covering it completely is what keeps the original from showing through.
-        bg.color = chip
-        // Square, and only rounded when the colour had to be guessed. When the surface came
-        // off the screen the patch is the same colour as what surrounds it, and a rounded
-        // corner is the one thing that would give it away as a patch.
-        val r = if (sampled) 0f else height * 0.18f
-        canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, bg)
-
-        val label = if (revealed) b.word else b.ipa
-        if (label.isEmpty()) return
-
-        // The width is fixed - it is the space the original word occupied - so the type is
-        // what gives. Size it to the line, then shrink until it fits that width, so a
-        // replacement never pushes into the words on either side.
-        var size = height * 0.80f
-        ink.textSize = size
-        val room = width - height * 0.12f
-        val measured = ink.measureText(label)
-        if (measured > room && measured > 0f) {
-            size *= room / measured
-            ink.textSize = size
-        }
-
-        ink.color = fg
-        val fm = ink.fontMetrics
-        canvas.drawText(label, width / 2f, height / 2f - (fm.ascent + fm.descent) / 2f, ink)
+        dest.set(0f, 0f, width.toFloat(), height.toFloat())
+        painter.draw(canvas, dest, b, style, dark, reveal.isRevealed(b.word))
     }
 
     private companion object {

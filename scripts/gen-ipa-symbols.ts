@@ -12,7 +12,7 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { IPA_SYMBOLS, DIACRITICS, STANDALONE_MODIFIERS, tokenizeIPA, describeSymbol } from '../src/lib/ipa-symbols.ts';
+import { IPA_SYMBOLS, DIACRITICS, STANDALONE_MODIFIERS, TERM_LINKS, tokenizeIPA, describeSymbol } from '../src/lib/ipa-symbols.ts';
 import { displayIpa } from '../src/lib/display-ipa.ts';
 
 const OUT = 'shared/ipa-symbols.json';
@@ -20,7 +20,7 @@ const OUT = 'shared/ipa-symbols.json';
 // The table itself: what the extension shows for a symbol it knows by name.
 const symbols: Record<string, {
   name: string; example: string; type: string;
-  wiki: string | null; audio: string | null; diagram: string | null;
+  wiki: string | null; audio: string | null; diagram: string | null; seeing: string | null;
 }> = {};
 for (const [token, info] of Object.entries(IPA_SYMBOLS)) {
   symbols[token] = {
@@ -32,6 +32,8 @@ for (const [token, info] of Object.entries(IPA_SYMBOLS)) {
     wiki: info.wiki ?? null,
     audio: info.audio ?? null,
     diagram: (info as { diagram?: string }).diagram ?? null,
+    // The Seeing Speech deep link: the same sound as MRI and ultrasound of a real mouth.
+    seeing: info.seeing ?? null,
   };
 }
 
@@ -92,6 +94,10 @@ writeFileSync(OUT, JSON.stringify({
   // The suprasegmentals that sit in the modifier range but are symbols in their own right
   // rather than marks on the sound before them.
   standaloneModifiers: [...STANDALONE_MODIFIERS],
+  // The article behind each term a description is built from. A description stacks
+  // independent facts, so each term is linked on its own rather than the phrase pointing at
+  // one of them.
+  termLinks: TERM_LINKS,
   cases,
   display,
 }, null, 2) + '\n');

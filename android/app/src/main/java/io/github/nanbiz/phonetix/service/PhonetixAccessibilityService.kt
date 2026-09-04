@@ -39,6 +39,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private lateinit var sampler: ScreenSampler
     private var generation = 0
     private var lastScanEnd = 0L
+    @Volatile private var lastScrollAt = 0L
 
     // What the last full pass found. A scroll moves these words without changing them, so
     // the next pass can ask them directly for their new positions instead of walking the
@@ -59,6 +60,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** The last colours that did come out of this app, for the lines that never will. */
     @Volatile private var fallbackColors: WordColors? = null
     @Volatile private var colorsFor: String? = null
+    /** The rectangles the overlay is actually showing, which is what a capture contains. */
+    @Volatile private var onScreenBoxes: List<RectF> = emptyList()
+    /** Set while the overlay is briefly down so a capture can see the text underneath. */
+    @Volatile private var takingCleanFrame = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -95,19 +100,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // is both the lag and a stream of transcriptions in the wrong places. Take them
         // down for the duration and put them back once the screen holds still, which is
         // only a few milliseconds' work.
-        // Only a scroll takes the paint down. Text streaming in also moves words, but it
-        // is re-read within a frame or two, and blinking every transcription off and on for
-        // each of those changes reads as a flicker far worse than being a few milliseconds
-        // late.
-        if (::overlay.isInitialized && isScroll) {
-            overlay.hideNow()
+        // Nothing is taken down for a scroll: the words move with it. The layer takes over
+        // the moment one starts, and predicts between the measurements below.
+        if (isScroll) {
             if (::tooltip.isInitialized) tooltip.hide()
+            if (::overlay.isInitialized) main.post { overlay.beginMotion() }
+            lastScrollAt = android.os.SystemClock.uptimeMillis()
         }
         // Only a run of pure scrolls keeps the fast path; anything else may have changed
         // the words themselves and has to be read properly.
         scrollOnly = isScroll && (scrollOnly || cachedPlan.isNotEmpty())
         if (!isScroll) scrollOnly = false
-        schedule(if (isScroll) SCROLL_SETTLE_MS else GAP_MS, trailing = isScroll)
+        schedule(if (isScroll) GAP_SCROLL_MS else GAP_MS)
     }
 
     override fun onInterrupt() {
@@ -187,6 +191,69 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Second pass: ask only the nodes that actually hold a chosen word for their
         // character bounds. That request is a round trip into the other app and is the
         // slowest thing here, so it is spent only on the nodes that earned it.
+        // Following a scroll does not need the characters again. They have not moved
+        // relative to their line; the line has moved. Asking each line where it is now is a
+        // single cheap call, against a character-by-character re-layout inside the other app
+        // that costs a hundred milliseconds and is the reason following a scroll looked
+        // impossible.
+        if (reuse) {
+            val tf = android.os.SystemClock.uptimeMillis()
+            val moved = ArrayList<WordBox>(16)
+            var ok = true
+            var why = ""
+            for (p in planned) {
+                val was = p.measuredAt
+                // A line whose words were all clipped away contributes nothing, which is
+                // normal and not a reason to abandon following the rest of them.
+                if (was == null || p.boxes.isEmpty()) continue
+                if (!p.node.refresh()) { why = "node gone"; ok = false; break }
+                if (p.node.text?.toString() != p.text) { why = "text changed"; ok = false; break }
+                val now = android.graphics.Rect()
+                p.node.getBoundsInScreen(now)
+                if (now.isEmpty) { why = "no bounds"; ok = false; break }
+                val dx = (now.left - was.left).toFloat()
+                val dy = (now.top - was.top).toFloat()
+                for (b in p.boxes) {
+                    val r = RectF(b.rect.left + dx, b.rect.top + dy, b.rect.right + dx, b.rect.bottom + dy)
+                    // The viewport does not move when its contents scroll, so the word is
+                    // tested against the clip where it stands, not against a moved one.
+                    // A word carried past the edge of its list simply drops out.
+                    val inside = r.top >= p.clip.top - 1 && r.bottom <= p.clip.bottom + 1 &&
+                        r.left >= p.clip.left - 1 && r.right <= p.clip.right + 1
+                    if (inside && !covered(r, p.exit)) moved.add(b.copy(rect = r))
+                }
+            }
+            // Nothing carried means the screen is not what it was; read it properly.
+            if (ok && moved.isEmpty() && planned.any { it.boxes.isNotEmpty() }) {
+                ok = false
+                why = "carried nothing"
+            }
+            if (ok) {
+                val style0 = settings.style
+                val took = android.os.SystemClock.uptimeMillis() - tf
+                // Still moving: hand the measurement to the layer, which corrects both the
+                // position and the speed it is carrying them at. Once the scrolling has
+                // stopped, put the tappable windows back where the words actually are.
+                val moving = android.os.SystemClock.uptimeMillis() - lastScrollAt < STILL_MS
+                main.post {
+                    if (moving && overlay.inMotion) overlay.motionMeasured(moved, style0)
+                    else overlay.endMotion(moved, style0)
+                    android.util.Log.d(
+                        "Phonetix",
+                        "follow=${took}ms lines=${planned.size} withBoxes=${planned.count { it.boxes.isNotEmpty() }} measured=${planned.count { it.measuredAt != null }} boxes=${moved.size} moving=$moving",
+                    )
+                }
+                if (moving) schedule(GAP_SCROLL_MS)
+                return
+            }
+            android.util.Log.d("Phonetix", "follow gave up: $why")
+            // Anything unexpected and the screen is simply read again.
+            cachedPlan = emptyList()
+            scrollOnly = false
+            schedule(0L)
+            return
+        }
+
         val boxes = ArrayList<WordBox>(planned.size * 2)
         var stale = false
         for (p in planned) {
@@ -196,6 +263,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (reuse && p.node.text?.toString() != p.text) { stale = true; break }
             val before = boxes.size
             Transcriber.boxes(p.picks, rects, p.from, boxes)
+            // Remember where this line was when its characters were measured, so a scroll
+            // can carry its words rather than measuring them again.
+            val at = android.graphics.Rect()
+            p.node.getBoundsInScreen(at)
+            p.measuredAt = at
             // Drop anything the node's ancestors clip away rather than painting a word that
             // is behind something else.
             var w = before
@@ -206,6 +278,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (inside && !covered(r, p.exit)) { boxes[w] = boxes[i]; w++ }
             }
             while (boxes.size > w) boxes.removeAt(boxes.size - 1)
+            p.boxes = boxes.subList(before, boxes.size).toList()
         }
         if (stale) {
             cachedPlan = emptyList()
@@ -226,6 +299,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // The capture is rate-limited by the platform, so a frame is asked for here and
         // whatever frame is already in hand is what these boxes are coloured from.
         val tb = android.os.SystemClock.uptimeMillis()
+        val painted0 = onScreenBoxes
         sampler.refreshIfStale()
         if (pkg != colorsFor) {
             lineColors.clear()
@@ -233,14 +307,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
             fallbackColors = null
             colorsFor = pkg
         }
-        val drawn = boxes.map { it.rect }
+        // What was on screen when the frame was captured - not what this pass is about to
+        // draw. Excluding the new boxes masked out the very text being measured, which for
+        // a line holding one word (a launcher label, say) left nothing to read at all.
+        val drawn = painted0
         // Each line is sampled once and remembered: the pixels of a line do not change
         // while it is on screen, and re-reading them every pass would be waste.
         for (p in planned) {
             if (lineColors.containsKey(p.text) || p.text in unreadable) continue
-            // Sample the line minus the places we have already drawn over, or it measures
-            // our own transcriptions instead of the app's text.
-            val c = sampler.sampleAll(listOf(RectF(p.clip)), drawn)
+            // Only the band the text itself occupies, not the node's whole rectangle. A
+            // launcher label's node takes in the app icon above it, and averaging a
+            // colourful icon into the ink gave transcriptions that were orange over white
+            // text. The band comes from the characters we just measured.
+            val band = textBand(p) ?: continue
+            // Minus the places we have already drawn over, or it measures our own
+            // transcriptions instead of the app's text.
+            val c = sampler.sampleAll(listOf(band), drawn)
             if (c != null) {
                 lineColors[p.text] = c
                 fallbackColors = c
@@ -259,6 +341,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val c = byWord[it.word]
             if (c == null) it else it.copy(background = c.background, ink = c.ink)
         }
+        onScreenBoxes = painted.map { it.rect }
+
+        // A line whose only text is the word we replaced can never be read while we are
+        // covering it - the launcher, where every label is one word, reads as pure
+        // background. So once, per screen, the overlay steps aside for a frame and the
+        // capture sees the app's own text. It is a single frame and it happens only when
+        // there is nothing else to go on.
+        if (boxes.isNotEmpty() && byWord.isEmpty() && !takingCleanFrame && sampler.hasFrame) {
+            takingCleanFrame = true
+            main.post { overlay.hideNow() }
+            io.postDelayed({
+                sampler.invalidateFrame()
+                sampler.refreshIfStale()
+                io.postDelayed({
+                    takingCleanFrame = false
+                    onScreenBoxes = emptyList()
+                    schedule(0L)
+                }, 260)
+            }, 90)
+            return
+        }
 
         val colourMs = android.os.SystemClock.uptimeMillis() - tb
         val t2 = tb
@@ -268,7 +371,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             overlay.render(painted, style)
             android.util.Log.d(
                 "Phonetix",
-                "plan=${t1 - t0}ms${if (reuse) " REUSED" else ""} (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
+                "plan=${t1 - t0}ms cachedBoxes=${planned.count { it.boxes.isNotEmpty() }}${if (reuse) " REUSED" else ""} (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
                     "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
                     "coloured=${painted.count { it.background != 0 }}",
@@ -289,7 +392,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Where this node's subtree ends in draw order; anything that starts after it is
          *  painted on top of it. */
         val exit: Int,
-    )
+    ) {
+        /** Where the node sat when its characters were measured, and what came out. A
+         *  scroll moves the line without moving the characters inside it, so the words can
+         *  be carried by the difference instead of being measured again. */
+        var measuredAt: android.graphics.Rect? = null
+        var boxes: List<WordBox> = emptyList()
+    }
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
     private class Painted(val enter: Int, val rect: android.graphics.Rect)
@@ -395,6 +504,28 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * The strip of a line that actually holds text: as wide as the line, as tall as its
+     * characters, which is what a transcription has to match.
+     */
+    private fun textBand(p: Planned): RectF? {
+        if (p.boxes.isEmpty()) return null
+        var top = Float.MAX_VALUE
+        var bottom = -Float.MAX_VALUE
+        for (b in p.boxes) {
+            if (b.rect.top < top) top = b.rect.top
+            if (b.rect.bottom > bottom) bottom = b.rect.bottom
+        }
+        if (bottom <= top) return null
+        val pad = (bottom - top) * 0.15f
+        return RectF(
+            p.clip.left.toFloat(),
+            (top - pad).coerceAtLeast(p.clip.top.toFloat()),
+            p.clip.right.toFloat(),
+            (bottom + pad).coerceAtMost(p.clip.bottom.toFloat()),
+        )
+    }
+
+    /**
      * Whether something painted after this word's node lies over it.
      *
      * A word can be perfectly visible as far as its own view is concerned and still be
@@ -440,10 +571,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // The smallest gap between passes. Not a wait before acting: the first event after
         // a quiet moment runs immediately, and this only spaces out a flood.
         const val GAP_MS = 16L
-        // How long the screen must hold still after a scroll before it is read again.
-        // Short enough to feel immediate when the finger lifts, long enough not to fire
-        // during the fling itself.
-        const val SCROLL_SETTLE_MS = 130L
+        // A scroll is followed rather than waited out, so this only spaces the passes to
+        // about one a frame.
+        const val GAP_SCROLL_MS = 16L
+        /** No scroll event for this long and the screen is considered to have stopped. */
+        const val STILL_MS = 120L
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60

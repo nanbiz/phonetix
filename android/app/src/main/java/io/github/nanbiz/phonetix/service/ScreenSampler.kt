@@ -35,6 +35,13 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
 
     val hasFrame: Boolean get() = frame != null
 
+    /** Throw the held frame away and take a new one at the next opportunity. */
+    fun invalidateFrame() {
+        takenAt = 0L
+        frame?.recycle()
+        frame = null
+    }
+
     /** Ask for a fresh frame if the last one is old enough. Returns immediately. */
     fun refreshIfStale() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return

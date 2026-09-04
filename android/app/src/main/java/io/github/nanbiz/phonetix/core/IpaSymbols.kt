@@ -14,6 +14,8 @@ data class SymbolInfo(
     val wiki: String? = null,
     val audio: String? = null,
     val diagram: String? = null,
+    /** Seeing Speech deep link: the same sound as MRI and ultrasound of a real mouth. */
+    val seeing: String? = null,
 )
 
 /** Where Wikimedia serves a file by name; the extension builds the same URL. */
@@ -37,6 +39,7 @@ object IpaSymbols {
     private val symbols = HashMap<String, SymbolInfo>(160)
     private val diacritics = HashMap<String, String>(48)
     private val standalone = HashSet<Char>(8)
+    private val termLinks = HashMap<String, String>(64)
 
     @Volatile
     var ready = false
@@ -67,10 +70,13 @@ object IpaSymbols {
                 o.optString("wiki", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
                 o.optString("audio", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
                 o.optString("diagram", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
+                o.optString("seeing", null.toString()).takeIf { it.isNotEmpty() && it != "null" },
             )
         }
         val d = root.getJSONObject("diacritics")
         for (mark in d.keys()) diacritics[mark] = d.getString(mark)
+        val terms = root.optJSONObject("termLinks")
+        if (terms != null) for (t in terms.keys()) termLinks[t] = terms.getString(t)
         val m = root.getJSONArray("standaloneModifiers")
         for (i in 0 until m.length()) m.getString(i).firstOrNull()?.let { standalone.add(it) }
     }
@@ -142,6 +148,15 @@ object IpaSymbols {
             example = "${info.example} ($joined)",
         )
     }
+
+    /**
+     * The article behind one word of a description.
+     *
+     * A description stacks independent facts - "voiceless postalveolar fricative" is a
+     * voicing, a place and a manner - so each term is worth its own article rather than the
+     * whole phrase pointing at one of them.
+     */
+    fun termArticle(term: String): String? = termLinks[term.lowercase()]
 
     /** Every symbol of a transcription, with the ones we have no name for left out. */
     fun explain(ipa: String): List<SymbolInfo> = tokenize(ipa).mapNotNull { describe(it) }

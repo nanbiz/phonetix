@@ -7,7 +7,8 @@
       "type": "consonant",
       "wiki": "Voiceless_bilabial_plosive",
       "audio": "Voiceless_bilabial_plosive.ogg",
-      "diagram": "IPA p Sagittal Section.svg"
+      "diagram": "IPA p Sagittal Section.svg",
+      "seeing": "?chart=1#location=112"
     },
     "b": {
       "name": "voiced bilabial plosive",
@@ -15,7 +16,8 @@
       "type": "consonant",
       "wiki": "Voiced_bilabial_plosive",
       "audio": "Voiced_bilabial_plosive.ogg",
-      "diagram": "IPA b Sagittal Section.svg"
+      "diagram": "IPA b Sagittal Section.svg",
+      "seeing": "?chart=1#location=98"
     },
     "t": {
       "name": "voiceless alveolar plosive",
@@ -23,7 +25,8 @@
       "type": "consonant",
       "wiki": "Voiceless_dental_and_alveolar_plosives",
       "audio": "Voiceless_alveolar_plosive.ogg",
-      "diagram": "IPA t Sagittal Section.svg"
+      "diagram": "IPA t Sagittal Section.svg",
+      "seeing": "?chart=1#location=116"
     },
     "d": {
       "name": "voiced alveolar plosive",
@@ -31,7 +34,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_plosives",
       "audio": "Voiced_alveolar_plosive.ogg",
-      "diagram": "IPA d Sagittal Section.svg"
+      "diagram": "IPA d Sagittal Section.svg",
+      "seeing": "?chart=1#location=100"
     },
     "k": {
       "name": "voiceless velar plosive",
@@ -39,7 +43,8 @@
       "type": "consonant",
       "wiki": "Voiceless_velar_plosive",
       "audio": "Voiceless_velar_plosive.ogg",
-      "diagram": "IPA k Sagittal Section.svg"
+      "diagram": "IPA k Sagittal Section.svg",
+      "seeing": "?chart=1#location=107"
     },
     "ɡ": {
       "name": "voiced velar plosive",
@@ -47,7 +52,8 @@
       "type": "consonant",
       "wiki": "Voiced_velar_plosive",
       "audio": "Voiced_velar_plosive.ogg",
-      "diagram": "Voiced velar plosive.svg"
+      "diagram": "Voiced velar plosive.svg",
+      "seeing": "?chart=1#location=609"
     },
     "g": {
       "name": "voiced velar plosive",
@@ -55,7 +61,8 @@
       "type": "consonant",
       "wiki": "Voiced_velar_plosive",
       "audio": "Voiced_velar_plosive.ogg",
-      "diagram": "IPA g Sagittal Section.svg"
+      "diagram": "IPA g Sagittal Section.svg",
+      "seeing": null
     },
     "ʔ": {
       "name": "glottal stop",
@@ -63,7 +70,8 @@
       "type": "consonant",
       "wiki": "Glottal_stop",
       "audio": "Glottal_stop.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=660"
     },
     "c": {
       "name": "voiceless palatal plosive",
@@ -71,7 +79,8 @@
       "type": "consonant",
       "wiki": "Voiceless_palatal_plosive",
       "audio": "Voiceless_palatal_plosive.ogg",
-      "diagram": "IPA c Sagittal Section.svg"
+      "diagram": "IPA c Sagittal Section.svg",
+      "seeing": "?chart=1#location=99"
     },
     "ɟ": {
       "name": "voiced palatal plosive",
@@ -79,7 +88,8 @@
       "type": "consonant",
       "wiki": "Voiced_palatal_plosive",
       "audio": "Voiced_palatal_plosive.ogg",
-      "diagram": "IPA ɟ Sagittal Section.svg"
+      "diagram": "IPA ɟ Sagittal Section.svg",
+      "seeing": "?chart=1#location=607"
     },
     "q": {
       "name": "voiceless uvular plosive",
@@ -87,7 +97,8 @@
       "type": "consonant",
       "wiki": "Voiceless_uvular_plosive",
       "audio": "Voiceless_uvular_plosive.ogg",
-      "diagram": "IPA q Sagittal Section.svg"
+      "diagram": "IPA q Sagittal Section.svg",
+      "seeing": "?chart=1#location=113"
     },
     "f": {
       "name": "voiceless labiodental fricative",
@@ -95,7 +106,8 @@
       "type": "consonant",
       "wiki": "Voiceless_labiodental_fricative",
       "audio": "Voiceless_labiodental_fricative.ogg",
-      "diagram": "IPA F Sagittal Section.svg"
+      "diagram": "IPA F Sagittal Section.svg",
+      "seeing": "?chart=1#location=102"
     },
     "v": {
       "name": "voiced labiodental fricative",
@@ -103,7 +115,8 @@
       "type": "consonant",
       "wiki": "Voiced_labiodental_fricative",
       "audio": "Voiced_labiodental_fricative.ogg",
-      "diagram": "IPA v Sagittal Section.svg"
+      "diagram": "IPA v Sagittal Section.svg",
+      "seeing": "?chart=1#location=118"
     },
     "θ": {
       "name": "voiceless dental fricative",
@@ -111,7 +124,8 @@
       "type": "consonant",
       "wiki": "Voiceless_dental_fricative",
       "audio": "Voiceless_dental_fricative.ogg",
-      "diagram": "IPA θ Sagittal Section.svg"
+      "diagram": "IPA θ Sagittal Section.svg",
+      "seeing": "?chart=1#location=952"
     },
     "ð": {
       "name": "voiced dental fricative",
@@ -119,7 +133,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_fricative",
       "audio": "Voiced_dental_fricative.ogg",
-      "diagram": "IPA ð Sagittal Section.svg"
+      "diagram": "IPA ð Sagittal Section.svg",
+      "seeing": "?chart=1#location=240"
     },
     "s": {
       "name": "voiceless alveolar fricative",
@@ -127,7 +142,8 @@
       "type": "consonant",
       "wiki": "Voiceless_alveolar_fricative",
       "audio": "Voiceless_alveolar_fricative.ogg",
-      "diagram": "Voiceless alveolar fricative articulation.svg"
+      "diagram": "Voiceless alveolar fricative articulation.svg",
+      "seeing": "?chart=1#location=115"
     },
     "z": {
       "name": "voiced alveolar fricative",
@@ -135,7 +151,8 @@
       "type": "consonant",
       "wiki": "Voiced_alveolar_fricative",
       "audio": "Voiced_alveolar_fricative.ogg",
-      "diagram": "Voiced palato-alveolar fricative articulation.svg"
+      "diagram": "Voiced palato-alveolar fricative articulation.svg",
+      "seeing": "?chart=1#location=122"
     },
     "ʃ": {
       "name": "voiceless postalveolar fricative",
@@ -143,7 +160,8 @@
       "type": "consonant",
       "wiki": "Voiceless_postalveolar_fricative",
       "audio": "Voiceless_palato-alveolar_sibilant.ogg",
-      "diagram": "Voiceless palato-alveolar fricative articulation.svg"
+      "diagram": "Voiceless palato-alveolar fricative articulation.svg",
+      "seeing": "?chart=1#location=643"
     },
     "ʒ": {
       "name": "voiced postalveolar fricative",
@@ -151,7 +169,8 @@
       "type": "consonant",
       "wiki": "Voiced_postalveolar_fricative",
       "audio": "Voiced_palato-alveolar_sibilant.ogg",
-      "diagram": "Voiced palato-alveolar fricative articulation.svg"
+      "diagram": "Voiced palato-alveolar fricative articulation.svg",
+      "seeing": "?chart=1#location=658"
     },
     "ç": {
       "name": "voiceless palatal fricative",
@@ -159,7 +178,8 @@
       "type": "consonant",
       "wiki": "Voiceless_palatal_fricative",
       "audio": "Voiceless_palatal_fricative.ogg",
-      "diagram": "IPA ç Sagittal Section.svg"
+      "diagram": "IPA ç Sagittal Section.svg",
+      "seeing": "?chart=1#location=231"
     },
     "x": {
       "name": "voiceless velar fricative",
@@ -167,7 +187,8 @@
       "type": "consonant",
       "wiki": "Voiceless_velar_fricative",
       "audio": "Voiceless_velar_fricative.ogg",
-      "diagram": "IPA x Sagittal Section.svg"
+      "diagram": "IPA x Sagittal Section.svg",
+      "seeing": "?chart=1#location=120"
     },
     "ɣ": {
       "name": "voiced velar fricative",
@@ -175,7 +196,8 @@
       "type": "consonant",
       "wiki": "Voiced_velar_fricative",
       "audio": "Voiced_velar_fricative.ogg",
-      "diagram": "Voiced velar fricative articulation.svg"
+      "diagram": "Voiced velar fricative articulation.svg",
+      "seeing": "?chart=1#location=611"
     },
     "χ": {
       "name": "voiceless uvular fricative",
@@ -183,7 +205,8 @@
       "type": "consonant",
       "wiki": "Voiceless_uvular_fricative",
       "audio": "Voiceless_uvular_fricative.ogg",
-      "diagram": "Voiceless uvular fricative articulation.svg"
+      "diagram": "Voiceless uvular fricative articulation.svg",
+      "seeing": "?chart=1#location=967"
     },
     "ʁ": {
       "name": "voiced uvular fricative",
@@ -191,7 +214,8 @@
       "type": "consonant",
       "wiki": "Voiced_uvular_fricative",
       "audio": "Voiced_uvular_fricative.ogg",
-      "diagram": "IPA ʁ Sagittal Section.svg"
+      "diagram": "IPA ʁ Sagittal Section.svg",
+      "seeing": "?chart=1#location=641"
     },
     "h": {
       "name": "voiceless glottal fricative",
@@ -199,7 +223,8 @@
       "type": "consonant",
       "wiki": "Voiceless_glottal_fricative",
       "audio": "Voiceless_glottal_fricative.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=104"
     },
     "ɦ": {
       "name": "voiced glottal fricative",
@@ -207,7 +232,8 @@
       "type": "consonant",
       "wiki": "Voiced_glottal_fricative",
       "audio": "Voiced_glottal_fricative.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=614"
     },
     "ɸ": {
       "name": "voiceless bilabial fricative",
@@ -215,7 +241,8 @@
       "type": "consonant",
       "wiki": "Voiceless_bilabial_fricative",
       "audio": "Voiceless_bilabial_fricative.ogg",
-      "diagram": "Voiceless bilabial approximant - text.svg"
+      "diagram": "Voiceless bilabial approximant - text.svg",
+      "seeing": "?chart=1#location=632"
     },
     "β": {
       "name": "voiced bilabial fricative",
@@ -223,7 +250,8 @@
       "type": "consonant",
       "wiki": "Voiced_bilabial_fricative",
       "audio": "Voiced_bilabial_fricative.ogg",
-      "diagram": "Voiced bilabial fricative articulation.svg"
+      "diagram": "Voiced bilabial fricative articulation.svg",
+      "seeing": "?chart=1#location=946"
     },
     "m": {
       "name": "bilabial nasal",
@@ -231,7 +259,8 @@
       "type": "consonant",
       "wiki": "Voiced_bilabial_nasal",
       "audio": "Bilabial_nasal.ogg",
-      "diagram": "IPA m Sagittal Section.svg"
+      "diagram": "IPA m Sagittal Section.svg",
+      "seeing": "?chart=1#location=109"
     },
     "n": {
       "name": "alveolar nasal",
@@ -239,7 +268,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_nasals",
       "audio": "Alveolar_nasal.ogg",
-      "diagram": "IPA n Sagittal Section.svg"
+      "diagram": "IPA n Sagittal Section.svg",
+      "seeing": "?chart=1#location=110"
     },
     "ŋ": {
       "name": "velar nasal",
@@ -247,7 +277,8 @@
       "type": "consonant",
       "wiki": "Voiced_velar_nasal",
       "audio": "Velar_nasal.ogg",
-      "diagram": "IPA ŋ Sagittal Section.svg"
+      "diagram": "IPA ŋ Sagittal Section.svg",
+      "seeing": "?chart=1#location=331"
     },
     "ɲ": {
       "name": "palatal nasal",
@@ -255,7 +286,8 @@
       "type": "consonant",
       "wiki": "Voiced_palatal_nasal",
       "audio": "Palatal_nasal.ogg",
-      "diagram": "IPA ɲ Sagittal Section.svg"
+      "diagram": "IPA ɲ Sagittal Section.svg",
+      "seeing": "?chart=1#location=626"
     },
     "ɱ": {
       "name": "labiodental nasal",
@@ -263,7 +295,8 @@
       "type": "consonant",
       "wiki": "Voiced_labiodental_nasal",
       "audio": "Labiodental_nasal.ogg",
-      "diagram": "Voiced labiodental nasal.svg"
+      "diagram": "Voiced labiodental nasal.svg",
+      "seeing": "?chart=1#location=625"
     },
     "ɹ": {
       "name": "alveolar approximant",
@@ -271,7 +304,8 @@
       "type": "consonant",
       "wiki": "Voiced_alveolar_approximant",
       "audio": "Alveolar_approximant.ogg",
-      "diagram": "Voiced alveolar approximant.svg"
+      "diagram": "Voiced alveolar approximant.svg",
+      "seeing": "?chart=1#location=633"
     },
     "j": {
       "name": "palatal approximant",
@@ -279,7 +313,8 @@
       "type": "consonant",
       "wiki": "Voiced_palatal_approximant",
       "audio": "Palatal_approximant.ogg",
-      "diagram": "Voiced palatal approximant.svg"
+      "diagram": "Voiced palatal approximant.svg",
+      "seeing": "?chart=1#location=106"
     },
     "w": {
       "name": "labio-velar approximant",
@@ -287,7 +322,8 @@
       "type": "consonant",
       "wiki": "Voiced_labial–velar_approximant",
       "audio": "Voiced_labio-velar_approximant.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=3#location=119"
     },
     "ʍ": {
       "name": "voiceless labio-velar approximant",
@@ -295,7 +331,8 @@
       "type": "consonant",
       "wiki": "Voiceless_labial–velar_fricative",
       "audio": "Voiceless_labio-velar_fricative.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=3#location=653"
     },
     "ɥ": {
       "name": "labial-palatal approximant",
@@ -303,7 +340,8 @@
       "type": "consonant",
       "wiki": "Voiced_labial–palatal_approximant",
       "audio": "LL-Q150_(fra)-WikiLucas00-labial-palatal_approximant.wav",
-      "diagram": "Voiced labial-palatal approximant.svg"
+      "diagram": "Voiced labial-palatal approximant.svg",
+      "seeing": "?chart=3#location=613"
     },
     "ɰ": {
       "name": "velar approximant",
@@ -311,7 +349,8 @@
       "type": "consonant",
       "wiki": "Voiced_velar_approximant",
       "audio": "Voiced_velar_approximant.ogg",
-      "diagram": "Voiced velar approximant articulation.svg"
+      "diagram": "Voiced velar approximant articulation.svg",
+      "seeing": null
     },
     "l": {
       "name": "alveolar lateral approximant",
@@ -319,7 +358,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_lateral_approximants",
       "audio": "Alveolar_lateral_approximant.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=108"
     },
     "ɫ": {
       "name": "velarized lateral (dark L)",
@@ -327,7 +367,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_lateral_approximants",
       "audio": "Velarized_alveolar_lateral_approximant.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɬ": {
       "name": "voiceless lateral fricative",
@@ -335,7 +376,8 @@
       "type": "consonant",
       "wiki": "Voiceless_dental_and_alveolar_lateral_fricatives",
       "audio": "Voiceless_alveolar_lateral_fricative.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=620"
     },
     "ɮ": {
       "name": "voiced lateral fricative",
@@ -343,7 +385,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_lateral_fricatives",
       "audio": "Voiced_alveolar_lateral_fricative.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=622"
     },
     "ʎ": {
       "name": "palatal lateral approximant",
@@ -351,7 +394,8 @@
       "type": "consonant",
       "wiki": "Voiced_palatal_lateral_approximant",
       "audio": "Palatal_lateral_approximant.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=654"
     },
     "r": {
       "name": "alveolar trill",
@@ -359,7 +403,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_trills",
       "audio": "Alveolar_trill.ogg",
-      "diagram": "Voiced alveolar trill articulation.svg"
+      "diagram": "Voiced alveolar trill articulation.svg",
+      "seeing": "?chart=1#location=114"
     },
     "ʀ": {
       "name": "uvular trill",
@@ -367,7 +412,8 @@
       "type": "consonant",
       "wiki": "Voiced_uvular_trill",
       "audio": "Uvular_trill.ogg",
-      "diagram": "Voiced uvular trill.svg"
+      "diagram": "Voiced uvular trill.svg",
+      "seeing": "?chart=1#location=640"
     },
     "ɾ": {
       "name": "alveolar tap",
@@ -375,7 +421,8 @@
       "type": "consonant",
       "wiki": "Voiced_dental_and_alveolar_taps_and_flaps",
       "audio": "Alveolar_flap.ogg",
-      "diagram": "Alveolar flap.svg"
+      "diagram": "Alveolar flap.svg",
+      "seeing": "?chart=1#location=638"
     },
     "ɽ": {
       "name": "retroflex flap",
@@ -383,7 +430,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_flap",
       "audio": "Retroflex_flap.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=637"
     },
     "t͡ʃ": {
       "name": "voiceless postalveolar affricate",
@@ -391,7 +439,8 @@
       "type": "consonant",
       "wiki": "Voiceless_postalveolar_affricate",
       "audio": "Voiceless_palato-alveolar_affricate.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=116"
     },
     "d͡ʒ": {
       "name": "voiced postalveolar affricate",
@@ -399,7 +448,8 @@
       "type": "consonant",
       "wiki": "Voiced_postalveolar_affricate",
       "audio": "Voiced_palato-alveolar_affricate.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=100"
     },
     "t͡s": {
       "name": "voiceless alveolar affricate",
@@ -407,7 +457,8 @@
       "type": "consonant",
       "wiki": "Voiceless_alveolar_affricate",
       "audio": "Voiceless_alveolar_sibilant_affricate.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=116"
     },
     "d͡z": {
       "name": "voiced alveolar affricate",
@@ -415,7 +466,8 @@
       "type": "consonant",
       "wiki": "Voiced_alveolar_affricate",
       "audio": "Voiced_alveolar_sibilant_affricate.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=100"
     },
     "p͡f": {
       "name": "voiceless labiodental affricate",
@@ -423,7 +475,8 @@
       "type": "consonant",
       "wiki": "Voiceless_labiodental_affricate",
       "audio": null,
-      "diagram": "P-f affricate ligature.svg"
+      "diagram": "P-f affricate ligature.svg",
+      "seeing": "?chart=1#location=112"
     },
     "i": {
       "name": "close front unrounded vowel",
@@ -431,7 +484,8 @@
       "type": "vowel",
       "wiki": "Close_front_unrounded_vowel",
       "audio": "Close_front_unrounded_vowel.ogg",
-      "diagram": "IPA i Sagittal Section.svg"
+      "diagram": "IPA i Sagittal Section.svg",
+      "seeing": "?chart=4#location=105"
     },
     "y": {
       "name": "close front rounded vowel",
@@ -439,7 +493,8 @@
       "type": "vowel",
       "wiki": "Close_front_rounded_vowel",
       "audio": "Close_front_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=121"
     },
     "ɨ": {
       "name": "close central unrounded vowel",
@@ -447,7 +502,8 @@
       "type": "vowel",
       "wiki": "Close_central_unrounded_vowel",
       "audio": "Close_central_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=616"
     },
     "ʉ": {
       "name": "close central rounded vowel",
@@ -455,7 +511,8 @@
       "type": "vowel",
       "wiki": "Close_central_rounded_vowel",
       "audio": "Close_central_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=649"
     },
     "ɯ": {
       "name": "close back unrounded vowel",
@@ -463,7 +520,8 @@
       "type": "vowel",
       "wiki": "Close_back_unrounded_vowel",
       "audio": "Close_back_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=623"
     },
     "u": {
       "name": "close back rounded vowel",
@@ -471,7 +529,8 @@
       "type": "vowel",
       "wiki": "Close_back_rounded_vowel",
       "audio": "Close_back_rounded_vowel.ogg",
-      "diagram": "IPA u Sagittal Section.svg"
+      "diagram": "IPA u Sagittal Section.svg",
+      "seeing": "?chart=4#location=117"
     },
     "ɪ": {
       "name": "near-close front unrounded vowel",
@@ -479,7 +538,8 @@
       "type": "vowel",
       "wiki": "Near-close_near-front_unrounded_vowel",
       "audio": "Near-close_near-front_unrounded_vowel.ogg",
-      "diagram": "IPA Ɪ Sagittal Section.svg"
+      "diagram": "IPA Ɪ Sagittal Section.svg",
+      "seeing": "?chart=4#location=618"
     },
     "ʏ": {
       "name": "near-close front rounded vowel",
@@ -487,7 +547,8 @@
       "type": "vowel",
       "wiki": "Near-close_near-front_rounded_vowel",
       "audio": "Near-close_near-front_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ʊ": {
       "name": "near-close back rounded vowel",
@@ -495,7 +556,8 @@
       "type": "vowel",
       "wiki": "Near-close_near-back_rounded_vowel",
       "audio": "Near-close_near-back_rounded_vowel.ogg",
-      "diagram": "IPA Ʊ Sagittal Section.svg"
+      "diagram": "IPA Ʊ Sagittal Section.svg",
+      "seeing": "?chart=4#location=650"
     },
     "e": {
       "name": "close-mid front unrounded vowel",
@@ -503,7 +565,8 @@
       "type": "vowel",
       "wiki": "Close-mid_front_unrounded_vowel",
       "audio": "Close-mid_front_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=101"
     },
     "ø": {
       "name": "close-mid front rounded vowel",
@@ -511,7 +574,8 @@
       "type": "vowel",
       "wiki": "Close-mid_front_rounded_vowel",
       "audio": "Close-mid_front_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=248"
     },
     "o": {
       "name": "close-mid back rounded vowel",
@@ -519,7 +583,8 @@
       "type": "vowel",
       "wiki": "Close-mid_back_rounded_vowel",
       "audio": "Close-mid_back_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=111"
     },
     "ə": {
       "name": "schwa (mid central vowel)",
@@ -527,7 +592,8 @@
       "type": "vowel",
       "wiki": "Mid_central_vowel",
       "audio": "Mid-central_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=601"
     },
     "ɛ": {
       "name": "open-mid front unrounded vowel",
@@ -535,7 +601,8 @@
       "type": "vowel",
       "wiki": "Open-mid_front_unrounded_vowel",
       "audio": "Open-mid_front_unrounded_vowel.ogg",
-      "diagram": "IPA Ɛ Sagittal Section.svg"
+      "diagram": "IPA Ɛ Sagittal Section.svg",
+      "seeing": "?chart=4#location=603"
     },
     "œ": {
       "name": "open-mid front rounded vowel",
@@ -543,7 +610,8 @@
       "type": "vowel",
       "wiki": "Open-mid_front_rounded_vowel",
       "audio": "Open-mid_front_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=339"
     },
     "ɜ": {
       "name": "open-mid central unrounded vowel",
@@ -551,7 +619,8 @@
       "type": "vowel",
       "wiki": "Open-mid_central_unrounded_vowel",
       "audio": "Open-mid_central_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɞ": {
       "name": "open-mid central rounded vowel",
@@ -559,7 +628,8 @@
       "type": "vowel",
       "wiki": "Open-mid_central_rounded_vowel",
       "audio": "Open-mid_central_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ʌ": {
       "name": "open-mid back unrounded vowel",
@@ -567,7 +637,8 @@
       "type": "vowel",
       "wiki": "Open-mid_back_unrounded_vowel",
       "audio": "PR-open-mid_back_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=652"
     },
     "ɔ": {
       "name": "open-mid back rounded vowel",
@@ -575,7 +646,8 @@
       "type": "vowel",
       "wiki": "Open-mid_back_rounded_vowel",
       "audio": "PR-open-mid_back_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=596"
     },
     "æ": {
       "name": "near-open front unrounded vowel",
@@ -583,7 +655,8 @@
       "type": "vowel",
       "wiki": "Near-open_front_unrounded_vowel",
       "audio": "Near-open_front_unrounded_vowel.ogg",
-      "diagram": "IPA æ Sagittal Section.svg"
+      "diagram": "IPA æ Sagittal Section.svg",
+      "seeing": null
     },
     "ɐ": {
       "name": "near-open central vowel",
@@ -591,7 +664,8 @@
       "type": "vowel",
       "wiki": "Near-open_central_vowel",
       "audio": "Near-open_central_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "a": {
       "name": "open front unrounded vowel",
@@ -599,7 +673,8 @@
       "type": "vowel",
       "wiki": "Open_front_unrounded_vowel",
       "audio": "Open_front_unrounded_vowel.ogg",
-      "diagram": "IPA a Sagittal Section.svg"
+      "diagram": "IPA a Sagittal Section.svg",
+      "seeing": "?chart=4#location=97"
     },
     "ɑ": {
       "name": "open back unrounded vowel",
@@ -607,7 +682,8 @@
       "type": "vowel",
       "wiki": "Open_back_unrounded_vowel",
       "audio": "Open_back_unrounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=593"
     },
     "ɒ": {
       "name": "open back rounded vowel",
@@ -615,7 +691,8 @@
       "type": "vowel",
       "wiki": "Open_back_rounded_vowel",
       "audio": "Open_back_rounded_vowel.ogg",
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=594"
     },
     "ɚ": {
       "name": "r-colored schwa",
@@ -623,7 +700,8 @@
       "type": "vowel",
       "wiki": "R-colored_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɝ": {
       "name": "r-colored open-mid central vowel",
@@ -631,7 +709,8 @@
       "type": "vowel",
       "wiki": "R-colored_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ˈ": {
       "name": "primary stress",
@@ -639,7 +718,8 @@
       "type": "suprasegmental",
       "wiki": "Stress_(linguistics)",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ˌ": {
       "name": "secondary stress",
@@ -647,7 +727,8 @@
       "type": "suprasegmental",
       "wiki": "Secondary_stress",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "'": {
       "name": "primary stress",
@@ -655,7 +736,8 @@
       "type": "suprasegmental",
       "wiki": null,
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     ",": {
       "name": "secondary stress",
@@ -663,7 +745,8 @@
       "type": "suprasegmental",
       "wiki": "Secondary_stress",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ː": {
       "name": "long",
@@ -671,7 +754,8 @@
       "type": "suprasegmental",
       "wiki": "Long",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ˑ": {
       "name": "half-long",
@@ -679,7 +763,8 @@
       "type": "suprasegmental",
       "wiki": "Length_(phonetics)",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     ".": {
       "name": "syllable break",
@@ -687,7 +772,8 @@
       "type": "suprasegmental",
       "wiki": null,
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "|": {
       "name": "minor break",
@@ -695,7 +781,8 @@
       "type": "suprasegmental",
       "wiki": null,
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "‖": {
       "name": "major break",
@@ -703,7 +790,8 @@
       "type": "suprasegmental",
       "wiki": null,
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ʰ": {
       "name": "aspirated",
@@ -711,7 +799,8 @@
       "type": "diacritic",
       "wiki": "Aspiration",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ʷ": {
       "name": "labialized",
@@ -719,7 +808,8 @@
       "type": "diacritic",
       "wiki": "Labialization",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ʲ": {
       "name": "palatalized",
@@ -727,7 +817,8 @@
       "type": "diacritic",
       "wiki": "Palatalization",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ˠ": {
       "name": "velarized",
@@ -735,7 +826,8 @@
       "type": "diacritic",
       "wiki": "Velarization",
       "audio": null,
-      "diagram": "Velarized alveolar lateral approximant.svg"
+      "diagram": "Velarized alveolar lateral approximant.svg",
+      "seeing": null
     },
     "ˤ": {
       "name": "pharyngealized",
@@ -743,7 +835,8 @@
       "type": "diacritic",
       "wiki": "Pharyngealization",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ⁿ": {
       "name": "nasal release",
@@ -751,7 +844,8 @@
       "type": "diacritic",
       "wiki": "Nasal_release",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ˡ": {
       "name": "lateral release",
@@ -759,7 +853,8 @@
       "type": "diacritic",
       "wiki": "Lateral_release",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "͡": {
       "name": "tie bar",
@@ -767,7 +862,8 @@
       "type": "diacritic",
       "wiki": "Tie_clip",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "͜": {
       "name": "tie bar (below)",
@@ -775,7 +871,8 @@
       "type": "diacritic",
       "wiki": "Tie_clip",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɤ": {
       "name": "close-mid back unrounded vowel",
@@ -783,7 +880,8 @@
       "type": "vowel",
       "wiki": "Close-mid_back_unrounded_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=612"
     },
     "ʕ": {
       "name": "voiced pharyngeal fricative",
@@ -791,7 +889,8 @@
       "type": "consonant",
       "wiki": "Voiced_pharyngeal_fricative",
       "audio": null,
-      "diagram": "IPA ʕ Sagittal Section.svg"
+      "diagram": "IPA ʕ Sagittal Section.svg",
+      "seeing": "?chart=1#location=661"
     },
     "ħ": {
       "name": "voiceless pharyngeal fricative",
@@ -799,7 +898,8 @@
       "type": "consonant",
       "wiki": "Voiceless_pharyngeal_fricative",
       "audio": null,
-      "diagram": "IPA ħ Sagittal Section.svg"
+      "diagram": "IPA ħ Sagittal Section.svg",
+      "seeing": "?chart=1#location=295"
     },
     "ʈ": {
       "name": "voiceless retroflex plosive",
@@ -807,7 +907,8 @@
       "type": "consonant",
       "wiki": "Voiceless_retroflex_plosive",
       "audio": null,
-      "diagram": "Voiceless retroflex plosive.svg"
+      "diagram": "Voiceless retroflex plosive.svg",
+      "seeing": "?chart=1#location=648"
     },
     "ɖ": {
       "name": "voiced retroflex plosive",
@@ -815,7 +916,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_plosive",
       "audio": null,
-      "diagram": "Voiced retroflex plosive.svg"
+      "diagram": "Voiced retroflex plosive.svg",
+      "seeing": "?chart=1#location=598"
     },
     "ɳ": {
       "name": "retroflex nasal",
@@ -823,7 +925,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_nasal",
       "audio": null,
-      "diagram": "Voiced retroflex nasal.svg"
+      "diagram": "Voiced retroflex nasal.svg",
+      "seeing": "?chart=1#location=627"
     },
     "ʂ": {
       "name": "voiceless retroflex fricative",
@@ -831,7 +934,8 @@
       "type": "consonant",
       "wiki": "Voiceless_retroflex_fricative",
       "audio": null,
-      "diagram": "Voiceless retroflex fricative articulation.svg"
+      "diagram": "Voiceless retroflex fricative articulation.svg",
+      "seeing": "?chart=1#location=642"
     },
     "ʐ": {
       "name": "voiced retroflex fricative",
@@ -839,7 +943,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_fricative",
       "audio": null,
-      "diagram": "Voiced retroflex fricative articulation.svg"
+      "diagram": "Voiced retroflex fricative articulation.svg",
+      "seeing": "?chart=1#location=656"
     },
     "ɭ": {
       "name": "retroflex lateral approximant",
@@ -847,7 +952,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_lateral_approximant",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=621"
     },
     "ɻ": {
       "name": "retroflex approximant",
@@ -855,7 +961,8 @@
       "type": "consonant",
       "wiki": "Voiced_retroflex_approximant",
       "audio": null,
-      "diagram": "Voiced retroflex approximant.svg"
+      "diagram": "Voiced retroflex approximant.svg",
+      "seeing": "?chart=1#location=635"
     },
     "ʋ": {
       "name": "labio-dental approximant",
@@ -863,7 +970,8 @@
       "type": "consonant",
       "wiki": "Voiced_labial–velar_approximant",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=1#location=651"
     },
     "ɕ": {
       "name": "voiceless alveolo-palatal fricative",
@@ -871,7 +979,8 @@
       "type": "consonant",
       "wiki": "Voiceless_alveolo-palatal_fricative",
       "audio": null,
-      "diagram": "Voiceless alveolo-palatal fricative articulation.svg"
+      "diagram": "Voiceless alveolo-palatal fricative articulation.svg",
+      "seeing": "?chart=3#location=597"
     },
     "ʑ": {
       "name": "voiced alveolo-palatal fricative",
@@ -879,7 +988,8 @@
       "type": "consonant",
       "wiki": "Voiced_alveolo-palatal_fricative",
       "audio": null,
-      "diagram": "Voiced alveolo-palatal fricative articulation.svg"
+      "diagram": "Voiced alveolo-palatal fricative articulation.svg",
+      "seeing": "?chart=3#location=657"
     },
     "ɺ": {
       "name": "alveolar lateral flap",
@@ -887,7 +997,8 @@
       "type": "consonant",
       "wiki": "Voiced_alveolar_lateral_flap",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=3#location=634"
     },
     "ɢ": {
       "name": "voiced uvular plosive",
@@ -895,7 +1006,8 @@
       "type": "consonant",
       "wiki": "Voiced_uvular_plosive",
       "audio": null,
-      "diagram": "IPA ɢ Sagittal Section.svg"
+      "diagram": "IPA ɢ Sagittal Section.svg",
+      "seeing": "?chart=1#location=610"
     },
     "ʙ": {
       "name": "bilabial trill",
@@ -903,7 +1015,8 @@
       "type": "consonant",
       "wiki": "Voiced_bilabial_trill",
       "audio": null,
-      "diagram": "Voiced bilabial trill.svg"
+      "diagram": "Voiced bilabial trill.svg",
+      "seeing": "?chart=1#location=665"
     },
     "ɘ": {
       "name": "close-mid central unrounded vowel",
@@ -911,7 +1024,8 @@
       "type": "vowel",
       "wiki": "Close-mid_central_unrounded_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɵ": {
       "name": "close-mid central rounded vowel",
@@ -919,7 +1033,8 @@
       "type": "vowel",
       "wiki": "Close-mid_central_rounded_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": null
     },
     "ɶ": {
       "name": "open front rounded vowel",
@@ -927,7 +1042,8 @@
       "type": "vowel",
       "wiki": "Open_front_rounded_vowel",
       "audio": null,
-      "diagram": null
+      "diagram": null,
+      "seeing": "?chart=4#location=630"
     }
   },
   "diacritics": {
@@ -973,6 +1089,59 @@
     "ː",
     "ˑ"
   ],
+  "termLinks": {
+    "affricate": "Affricate",
+    "alveolar": "Alveolar_consonant",
+    "alveolo-palatal": "Alveolo-palatal_consonant",
+    "approximant": "Approximant",
+    "aspirated": "Aspiration",
+    "back": "Back_vowel",
+    "bilabial": "Bilabial_consonant",
+    "central": "Central_vowel",
+    "close": "Close_vowel",
+    "close-mid": "Close-mid_vowel",
+    "dental": "Dental_consonant",
+    "flap": "Tap_and_flap_consonants",
+    "fricative": "Fricative",
+    "front": "Front_vowel",
+    "glottal": "Glottal_consonant",
+    "half-long": "Length_(phonetics)",
+    "labial-palatal": "Labio-palatalization",
+    "labialized": "Labialization",
+    "labio-dental": "Labiodental_consonant",
+    "labio-velar": "Labiovelar_consonant",
+    "labiodental": "Labiodental_consonant",
+    "lateral": "Lateral_consonant",
+    "mid": "Mid_vowel",
+    "nasal": "Nasal_consonant",
+    "near-close": "Near-close_vowel",
+    "near-open": "Near-open_vowel",
+    "open": "Open_vowel",
+    "open-mid": "Open-mid_vowel",
+    "palatal": "Palatal_consonant",
+    "palatalized": "Palatalization_(phonetics)",
+    "pharyngeal": "Pharyngeal_consonant",
+    "pharyngealized": "Pharyngealization",
+    "plosive": "Plosive",
+    "postalveolar": "Postalveolar_consonant",
+    "r-colored": "R-colored_vowel",
+    "release": "Occlusive",
+    "retroflex": "Retroflex_consonant",
+    "rounded": "Roundedness",
+    "schwa": "Mid_central_vowel",
+    "stop": "Plosive",
+    "stress": "Stress_(linguistics)",
+    "syllable": "Syllable",
+    "tap": "Tap_and_flap_consonants",
+    "trill": "Trill_consonant",
+    "unrounded": "Roundedness",
+    "uvular": "Uvular_consonant",
+    "velar": "Velar_consonant",
+    "velarized": "Velarization",
+    "voiced": "Voice_(phonetics)",
+    "voiceless": "Voicelessness",
+    "vowel": "Vowel"
+  },
   "cases": [
     {
       "ipa": "kˈæt",
