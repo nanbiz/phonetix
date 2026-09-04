@@ -13,6 +13,17 @@ export const STRESS_MARKS = /[ˈˌ]/g;
  */
 export const NARROW_DETAIL = /[ʰʱ̥̬̝̞̟̠̪̺̻̊̈̚˞ˠ̴̘̙̹̜]/g;
 
+/**
+ * Notation the dictionaries carry that is noise in running text.
+ *
+ * A syllable break tells a reader nothing they cannot see, and parentheses around a length
+ * mark say the vowel may be held or not - a fact about the word, not about this reading of
+ * it, and one that turns "tooltip" into ˈtu(ː)l.tɪp mid-sentence. The length is kept, the
+ * brackets and the break are not. The tooltip still shows the full form.
+ */
+export const SYLLABLE_BREAK = /\./g;
+export const OPTIONAL_LENGTH = /\(([ːˑ])\)/g;
+
 export interface DisplayOpts {
   /** Keep the narrow-detail diacritics (broad form drops them). */
   narrow: boolean;
@@ -24,5 +35,5 @@ export function displayIpa(ipa: string, opts: DisplayOpts): string {
   let out = ipa;
   if (!opts.narrow) out = out.replace(NARROW_DETAIL, '');
   if (opts.hideStress) out = out.replace(STRESS_MARKS, '');
-  return out;
+  return out.replace(OPTIONAL_LENGTH, '$1').replace(SYLLABLE_BREAK, '');
 }

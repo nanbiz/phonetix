@@ -64,6 +64,28 @@ Granting both permissions without touching the UI:
 the package, how many text nodes were measured, how many returned character bounds, and how
 many words came out — enough to tell "read nothing" from "chose nothing".
 
+## Drawing over the right pixels
+
+Three things decide whether a transcription belongs on screen at all, and each was learned
+the hard way:
+
+- **Ancestors clip it.** A word's box is intersected with every ancestor's bounds on the way
+  down the tree, which costs nothing because bounds travel with the node.
+- **Later siblings cover it.** A list scrolls *under* a toolbar, so the bar neither clips the
+  list nor makes `isVisibleToUser` false - it is simply painted afterwards. Depth-first
+  position is paint order, so anything beginning after a node's subtree ended is on top of
+  it, and a word it overlaps is dropped. Boxes spanning most of the screen are backdrops and
+  do not count.
+- **A window must move before it is shown.** Changing a window's text takes effect on the
+  next draw; moving it goes through the window manager and lands a frame later. Doing both
+  to a visible window paints the new word at the old word's place for that frame, which
+  looks like a transcription flashing at random. A window that has to move is hidden first
+  and shown once the move has been applied.
+
+While a list is actually moving there is no position worth drawing, so the transcriptions
+come down for the duration. Positions are never extrapolated from the scroll event's delta:
+it does not describe the screen (one swipe reported 313 pixels while the word moved 176).
+
 ## One definition of the behaviour
 
 Which words get transcribed, and how the frequency bar maps onto that, is defined once in
@@ -71,6 +93,10 @@ Which words get transcribed, and how the frequency bar maps onto that, is define
 extension writes down what that module answers for a spread of inputs:
 
     pnpm gen:vectors        # -> shared/sprinkle-vectors.json
+
+There are three such tables now: which words are chosen (`sprinkle-vectors.json`), and the
+symbol names, tokenisation and display-stripping behind the tooltip (`ipa-symbols.json`,
+from `pnpm gen:symbols`).
 
 `SprinkleParityTest` asserts `Frequency` against every one of those cases, so a rule changed
 on one side and not the other fails a test instead of quietly giving the same setting two

@@ -29,7 +29,10 @@ import kotlin.math.roundToInt
  * The windows are pooled and moved rather than added and removed, because the words shift
  * on every scroll and window churn is the expensive part.
  */
-class OverlayController(private val context: Context) {
+class OverlayController(
+    private val context: Context,
+    private val onWordTapped: (WordBox) -> Unit,
+) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
     private val chips = ArrayList<ChipView>(MAX_CHIPS)
@@ -53,12 +56,27 @@ class OverlayController(private val context: Context) {
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
             val chip = chips.getOrNull(i) ?: break
-            chip.bind(wanted[i], style, reveal)
-            place(chip, wanted[i].rect)
-            if (chip.visibility != View.VISIBLE) chip.visibility = View.VISIBLE
+            val box = wanted[i]
+            chip.bind(box, style, reveal)
+            // Changing what a window says takes effect on the next draw; moving it has to
+            // go through the window manager and lands a frame later. Do both to a visible
+            // window and it paints the new word at the old word's place for that frame,
+            // which is a transcription flashing somewhere it has no business being. So a
+            // window that has to move is hidden first and shown again only once the move
+            // has actually been applied.
+            if (place(chip, box.rect)) {
+                chip.visibility = View.INVISIBLE
+                val token = ++chip.moveToken
+                chip.post { if (chip.moveToken == token) chip.visibility = View.VISIBLE }
+            } else if (chip.visibility != View.VISIBLE) {
+                chip.visibility = View.VISIBLE
+            }
         }
         for (i in wanted.size until chips.size) {
-            if (chips[i].visibility != View.GONE) chips[i].visibility = View.GONE
+            if (chips[i].visibility != View.GONE) {
+                chips[i].moveToken++
+                chips[i].visibility = View.GONE
+            }
         }
     }
 
@@ -75,7 +93,7 @@ class OverlayController(private val context: Context) {
     }
 
     private fun addChip(): Boolean {
-        val v = ChipView(context, reveal) { refresh() }
+        val v = ChipView(context, reveal, onWordTapped) { refresh() }
         v.visibility = View.GONE
         val ok = runCatching { wm.addView(v, params(0, 0, 1, 1)) }.isSuccess
         if (!ok) return false
@@ -83,17 +101,19 @@ class OverlayController(private val context: Context) {
         return true
     }
 
-    private fun place(chip: ChipView, rect: RectF) {
+    /** Applies the window's geometry; true when it actually had to move. */
+    private fun place(chip: ChipView, rect: RectF): Boolean {
         // A hair of bleed on each side so an antialiased edge of the original word cannot
         // peek out from under its replacement, while the width still matches the word.
         val x = (rect.left - BLEED).roundToInt()
         val y = (rect.top - BLEED).roundToInt()
         val w = (rect.width() + BLEED * 2).roundToInt().coerceAtLeast(1)
         val h = (rect.height() + BLEED * 2).roundToInt().coerceAtLeast(1)
-        val lp = chip.layoutParams as? WindowManager.LayoutParams ?: return
-        if (lp.x == x && lp.y == y && lp.width == w && lp.height == h) return
+        val lp = chip.layoutParams as? WindowManager.LayoutParams ?: return false
+        if (lp.x == x && lp.y == y && lp.width == w && lp.height == h) return false
         lp.x = x; lp.y = y; lp.width = w; lp.height = h
         runCatching { wm.updateViewLayout(chip, lp) }
+        return true
     }
 
     @SuppressLint("WrongConstant")
@@ -136,8 +156,13 @@ class RevealState {
 class ChipView(
     context: Context,
     private val reveal: RevealState,
+    private val onTapped: (WordBox) -> Unit,
     private val onChanged: () -> Unit,
 ) : View(context) {
+
+    /** Bumped whenever the window is moved or retired, so a pending show for an older
+     *  position does not reveal a window that has since been moved again. */
+    var moveToken = 0
 
     private var box: WordBox? = null
     private var style: ChipStyle = ChipStyle.SOLID
@@ -158,11 +183,15 @@ class ChipView(
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.actionMasked == MotionEvent.ACTION_UP) {
-            val w = box?.word ?: return true
-            reveal.toggle(w, REVEAL_MS)
+            val b = box ?: return true
+            // A tap opens the card, the way hovering opens the tooltip in the browser, and
+            // puts the original word back underneath it while the card is up so the reader
+            // can see both at once.
+            reveal.toggle(b.word, REVEAL_MS)
             removeCallbacks(revert)
             postDelayed(revert, REVEAL_MS + 50)
             onChanged()
+            onTapped(b)
         }
         return true
     }
@@ -187,10 +216,9 @@ class ChipView(
             // Revealed, the original word is put back exactly as the app drew it.
             revealed && sampled -> b.ink
             revealed -> if (dark) Color.rgb(0xF5, 0xED, 0xE0) else Color.rgb(0x2B, 0x21, 0x17)
-            // A transcription is tinted off the real ink so it reads as ours, while still
-            // sitting in the app's own colour scheme rather than fighting it.
-            sampled && style == ChipStyle.UNDERLAY -> b.ink
-            sampled -> accent(b.ink, b.background)
+            // The transcription is drawn in the ink the word itself was drawn in, so it
+            // reads as part of the text rather than as something stuck on top of it.
+            sampled -> b.ink
             else -> if (dark) Color.rgb(0xFB, 0xBF, 0x24) else Color.rgb(0xB4, 0x53, 0x09)
         }
 
@@ -200,7 +228,6 @@ class ChipView(
         val r = height * 0.18f
         canvas.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, bg)
 
-        android.util.Log.d("Phonetix", "draw word=${b.word} revealed=$revealed state=${reveal.word}/${reveal.until} now=${android.os.SystemClock.uptimeMillis()}")
         val label = if (revealed) b.word else b.ipa
         if (label.isEmpty()) return
 
@@ -220,23 +247,6 @@ class ChipView(
         val fm = ink.fontMetrics
         canvas.drawText(label, width / 2f, height / 2f - (fm.ascent + fm.descent) / 2f, ink)
     }
-
-    /**
-     * The transcription's colour: the word's own ink, pulled a little toward the
-     * accent so it is recognisably a transcription, but never so far that it stops
-     * contrasting with the surface it sits on.
-     */
-    private fun accent(ink: Int, background: Int): Int {
-        val warm = if (isLight(background)) Color.rgb(0xB4, 0x53, 0x09) else Color.rgb(0xFB, 0xBF, 0x24)
-        return Color.rgb(
-            (Color.red(ink) + Color.red(warm)) / 2,
-            (Color.green(ink) + Color.green(warm)) / 2,
-            (Color.blue(ink) + Color.blue(warm)) / 2,
-        )
-    }
-
-    private fun isLight(c: Int): Boolean =
-        (0.299f * Color.red(c) + 0.587f * Color.green(c) + 0.114f * Color.blue(c)) > 140f
 
     private companion object {
         const val REVEAL_MS = 2500L

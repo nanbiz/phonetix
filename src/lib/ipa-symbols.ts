@@ -166,7 +166,7 @@ const COMBINING = /[\u0300-\u036F\u0361\u035C]/;
 const MODIFIER = /[\u02B0-\u02FF]/;
 
 /** Suprasegmentals that live in the MODIFIER range but should be standalone tokens */
-const STANDALONE_MODIFIERS = new Set([
+export const STANDALONE_MODIFIERS = new Set([
   '\u02C8', // ˈ primary stress
   '\u02CC', // ˌ secondary stress
   '\u02D0', // ː long
@@ -258,7 +258,7 @@ for (const [symbol, info] of Object.entries(MORE_SYMBOLS)) {
  *
  * Names follow the IPA's own: the diacritic's official name, applied to the base.
  */
-const DIACRITICS: Record<string, string> = {
+export const DIACRITICS: Record<string, string> = {
   // Spacing modifiers
   'ʰ': 'aspirated',
   'ʲ': 'palatalized',

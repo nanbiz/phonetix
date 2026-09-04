@@ -58,12 +58,14 @@ val bundleVectors by tasks.registering(Copy::class) {
         }
     }
     from(vectors)
+    from(rootProject.file("../shared/ipa-symbols.json"))
     into(layout.buildDirectory.dir("vectors"))
 }
 
 tasks.withType<Test>().configureEach {
     dependsOn(bundleVectors)
     systemProperty("phonetix.vectors", layout.buildDirectory.file("vectors/sprinkle-vectors.json").get().asFile.path)
+    systemProperty("phonetix.symbols", layout.buildDirectory.file("vectors/ipa-symbols.json").get().asFile.path)
 }
 
 val bundleDictionaries by tasks.registering(Copy::class) {
@@ -76,6 +78,7 @@ val bundleDictionaries by tasks.registering(Copy::class) {
     }
     from(dict)
     from(common)
+    from(rootProject.file("../shared/ipa-symbols.json"))
     into(layout.projectDirectory.dir("src/main/assets"))
 }
 

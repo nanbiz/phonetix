@@ -9,7 +9,10 @@ import android.graphics.RectF
  */
 data class WordBox(
     val rect: RectF,
+    /** What is drawn over the word: stripped for running text. */
     val ipa: String,
+    /** The whole transcription, marks and all, which is what the tooltip shows. */
+    val full: String,
     val word: String,
     val background: Int = 0,
     val ink: Int = 0,
@@ -136,7 +139,9 @@ class Transcriber(private val density: Int) {
                     if (cr.bottom > b) b = cr.bottom
                     any = true
                 }
-                if (any && r > l && b > t) into.add(WordBox(RectF(l, t, r, b), p.ipa, p.word))
+                if (any && r > l && b > t) {
+                    into.add(WordBox(RectF(l, t, r, b), DisplayIpa.display(p.ipa), p.ipa, p.word))
+                }
             }
         }
     }
