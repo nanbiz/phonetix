@@ -121,7 +121,11 @@ class DebugSurfaceActivity : Activity() {
         // was there before, or nothing at all. A one-pixel nudge is a real content change
         // and makes the next read describe the new setting.
         announce()
-        nudge()
+        // Not while a movement is being driven: the nudge changes the content, the list is
+        // laid out again, and a list being laid out clamps its scroll position and reports
+        // the jump - inside the very window the movement is measured in. The movement is a
+        // change of its own and needs no help being noticed.
+        if (!intent.hasExtra(EXTRA_MOTION)) nudge()
         if (intent.hasExtra(EXTRA_SCROLL)) {
             val y = intent.getIntExtra(EXTRA_SCROLL, 0)
             // Jumped, not animated: the test wants the movement finished.

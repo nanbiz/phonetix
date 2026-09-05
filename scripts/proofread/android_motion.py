@@ -114,14 +114,35 @@ def doc_drift(dev, frames, timeline):
     return worst, worst_word, samples
 
 
-def peak_speed(timeline, window=60):
-    """The fastest the page moved, in pixels a millisecond, over any short stretch."""
+def trim_to_movement(timeline, began_at, slack=60):
+    """Drop what the page reported before the movement really began.
+
+    Arriving with a new intent makes the page lay itself out again, and a list being laid out
+    reports a burst of clamped positions - the bottom of the page, then zero - that belong to
+    no movement at all. Measured against those, a transcription that never left its word looks
+    like it jumped the height of the page, and the allowance computed from them is nonsense
+    too. The movement's own reports start where it said it started.
+    """
+    for i, (_, y) in enumerate(timeline):
+        if abs(y - began_at) <= slack:
+            return timeline[i:]
+    return timeline
+
+
+def peak_speed(timeline, window=60, sane=20.0):
+    """The fastest the page moved, in pixels a millisecond, over any short stretch.
+
+    A step no finger or fling could produce is a jump rather than a movement - a page laid
+    out again, or two of its instances reporting at once - and is left out.
+    """
     fastest = 0.0
     for i, (t0, y0) in enumerate(timeline):
         for t1, y1 in timeline[i + 1:]:
             if t1 - t0 < window:
                 continue
-            fastest = max(fastest, abs(y1 - y0) / (t1 - t0))
+            speed = abs(y1 - y0) / (t1 - t0)
+            if speed <= sane:
+                fastest = max(fastest, speed)
             break
     return fastest
 
@@ -174,7 +195,10 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
         f"asked {distance}px, moved {ended_at - began_at}px",
     )
 
-    timeline = [(t, y) for t, y in dev.scroll_timeline(log) if from_when <= t <= to_when + 600]
+    timeline = trim_to_movement(
+        [(t, y) for t, y in dev.scroll_timeline(log) if from_when <= t <= to_when + 600],
+        began_at,
+    )
     frames = [(t, b) for t, b in dev.box_frames(log) if from_when <= t <= to_when + 600]
     # A movement the page only managed to report a handful of times is one the device
     # dropped frames through, and there is nothing in it to hold the overlay to.

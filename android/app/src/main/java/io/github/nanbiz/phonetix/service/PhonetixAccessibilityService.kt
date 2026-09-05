@@ -79,6 +79,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Set while the overlay is briefly down so a capture can see the text underneath. */
     @Volatile private var capturing = false
     @Volatile private var capturingSince = 0L
+    /** When the overlay actually came down for a capture, as opposed to being asked to. */
+    @Volatile private var hiddenAt = 0L
     @Volatile private var cleanFrameAt = 0L
 
     override fun onServiceConnected() {
@@ -719,15 +721,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
         capturingSince = now
         cleanFrameAt = now
         val wanted = lines.toList()
-        val hiddenAt = now
-        main.post { overlay.hideNow() }
+        // When the overlay was really taken down, which is not when it was asked to be: the
+        // request is posted to the main thread and waits its turn there. A frame captured
+        // between the asking and the hiding still has our own paint in it, and reading that
+        // gives our own gold back as the colour of the app's text.
+        hiddenAt = 0L
+        main.post { overlay.hideNow(); hiddenAt = android.os.SystemClock.uptimeMillis() }
         io.postDelayed({
             sampler.invalidateFrame()
             sampler.refreshIfStale(force = true)
             io.postDelayed({
                 // Only a frame taken after the overlay went down can be trusted; anything
                 // older still has our transcriptions in it.
-                if (!sampler.hasFrame || sampler.frameAt < hiddenAt) {
+                val down = hiddenAt
+                if (!sampler.hasFrame || down == 0L || sampler.frameAt < down + SETTLE_MS) {
                     // A capture that never arrived says nothing about the lines, so they are
                     // not counted as read: a device that refuses one screenshot, for a rate
                     // limit or a moment of secure content, would otherwise leave the screen
@@ -1063,13 +1070,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         clip: android.graphics.Rect,
     ): Array<RectF?>? {
         if (layout == null || at.isEmpty || at.width() != layout.width) return null
-        val cutTop = at.top <= clip.top + 1
-        val cutBottom = at.bottom >= clip.bottom - 1
-        val top = when {
-            !cutTop -> at.top
-            !cutBottom -> at.bottom - layout.height
-            else -> return null
-        }
+        // Only a line reported whole. A line cut by the edge of its list reports the part of
+        // itself that shows, and a corner taken from that is a few pixels out - enough to
+        // set a transcription over the line above or below it. Those lines are asked
+        // directly instead, which costs one request at each edge of the screen.
+        if (at.top <= clip.top + 1 || at.bottom >= clip.bottom - 1) return null
+        if (at.height() != layout.height) return null
+        val top = at.top
         return Array(layout.rects.size) { i ->
             layout.rects[i]?.let {
                 RectF(it.left + at.left, it.top + top, it.right + at.left, it.bottom + top)
@@ -1120,6 +1127,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val COLOR_RETRY_MS = 8000L
         /** After this a capture is treated as lost rather than still on its way. */
         const val CAPTURE_TIMEOUT_MS = 2500L
+        /** How long after the overlay comes down before a frame is free of it: what was
+         *  drawn is still on the display for a frame or two after the window has gone. */
+        const val SETTLE_MS = 48L
         /** How many apps' colours are kept, so switching between two is not a fresh read. */
         const val REMEMBERED_APPS = 4
         /** How many lines are asked where they are before the rest are carried with them. */
