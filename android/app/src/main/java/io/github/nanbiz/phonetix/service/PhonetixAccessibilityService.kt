@@ -375,11 +375,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (a.node.text?.toString() != a.text) { gone++; continue }
                 val now = android.graphics.Rect()
                 a.node.getBoundsInScreen(now)
-                readAt = android.os.SystemClock.uptimeMillis()
+                val readingAt = android.os.SystemClock.uptimeMillis()
                 if (now.isEmpty) { gone++; continue }
                 alive++
                 val shift = shiftOf(was, now, a.viewport)
                 if (shift == null) { unreadable++; continue }
+                // Stamped with the reading that is actually used, not with whichever line
+                // was asked last: a line that could not be read still took time to ask, and
+                // dating the answer by it puts the words tens of milliseconds - and at speed,
+                // tens of pixels - away from where they were measured.
+                readAt = readingAt
                 shifts.add(shift)
             }
             // The freshest answer, not the average of them. The lines are asked one after
@@ -407,6 +412,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // A line whose words were all clipped away contributes nothing, which is
                 // normal and not a reason to abandon following the rest of them.
                 if (was == null || p.boxes.isEmpty()) continue
+                // The same rule the full read follows: a line still waiting for its colours
+                // is not drawn in a palette of ours. Its colours may also have arrived since
+                // it was planned, in which case they are put on now - otherwise a line that
+                // came into view during a scroll would keep the absence it was born with
+                // until the movement stopped.
+                val key = colorKey(p.text)
+                val colours = lineColors[key]
+                if (colours != null && p.boxes.first().background != colours.background) {
+                    p.boxes = p.boxes.map {
+                        it.copy(background = colours.background, ink = colours.ink)
+                    }
+                }
+                if (colours == null && p.boxes.first().background == 0 &&
+                    (colorTries[key]?.count ?: 0) < COLOR_TRIES
+                ) {
+                    continue
+                }
                 var dx = shiftX
                 var dy = shiftY
                 if (!agreed) {
@@ -528,7 +550,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
             p.node.getBoundsInScreen(at)
             readAt = android.os.SystemClock.uptimeMillis()
             val remembered = charLayouts[layoutKey(p)]
-            val rects = placeRemembered(remembered, at, p.viewport)
+            val placed = placeRemembered(remembered, at, p.viewport)
+            // Asking the app where its characters are makes it lay the text out again, and a
+            // list being laid out while it scrolls clamps its own scroll position and jumps.
+            // A line that cannot be placed from memory is therefore left alone until the
+            // movement stops; it is one of the part-hidden lines at the edges of the screen,
+            // and it comes back with the next full read.
+            val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+            if (placed == null && moving) { p.boxes = emptyList(); continue }
+            val rects = placed
                 ?: charRects(p.node, p.from, p.length)?.also { fresh ->
                     remember(p, at, fresh)
                 }

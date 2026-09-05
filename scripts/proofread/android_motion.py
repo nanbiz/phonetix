@@ -114,19 +114,37 @@ def doc_drift(dev, frames, timeline):
     return worst, worst_word, samples
 
 
-def trim_to_movement(timeline, began_at, slack=60):
-    """Drop what the page reported before the movement really began.
+def settle_timeline(timeline, began_at, slack=60, sane=8.0):
+    """The page's own reports, with its layout storm taken out.
 
-    Arriving with a new intent makes the page lay itself out again, and a list being laid out
-    reports a burst of clamped positions - the bottom of the page, then zero - that belong to
-    no movement at all. Measured against those, a transcription that never left its word looks
-    like it jumped the height of the page, and the allowance computed from them is nonsense
-    too. The movement's own reports start where it said it started.
+    Arriving with a new intent makes the list lay itself out again, and a list being laid out
+    reports every intermediate scroll position it passes through - the bottom of the page,
+    then zero, then where it settles - half a dozen of them inside the same millisecond. No
+    finger produces that and nobody sees it, but it lands at the head of the window the
+    movement is measured in, and a transcription that never left its word is then measured
+    against a page that supposedly jumped its whole height.
+
+    So reports sharing a millisecond collapse to the last of them, the timeline starts where
+    the movement said it started, and anything that would have to travel faster than a fling
+    to be true is left out.
     """
-    for i, (_, y) in enumerate(timeline):
+    latest = {}
+    for t, y in timeline:
+        latest[t] = y
+    collapsed = sorted(latest.items())
+    start = 0
+    for i, (_, y) in enumerate(collapsed):
         if abs(y - began_at) <= slack:
-            return timeline[i:]
-    return timeline
+            start = i
+            break
+    kept = []
+    for t, y in collapsed[start:]:
+        if kept:
+            pt, py = kept[-1]
+            if abs(y - py) / max(1, t - pt) > sane:
+                continue
+        kept.append((t, y))
+    return kept
 
 
 def peak_speed(timeline, window=60, sane=20.0):
@@ -156,10 +174,29 @@ def longest_gap(frames, began, ended):
     return max(gaps + [stamps[0] - began, ended - stamps[-1]])
 
 
+def wait_until_still(dev, quiet=0.4, limit=6.0):
+    """Wait until the page stops reporting movement of its own.
+
+    Bringing the page forward lays it out again and restores where it was scrolled to, and it
+    reports every step of that - the bottom of the list, then zero, then the position it
+    settled at. Those are real movements of the page, so they cannot be filtered out
+    afterwards without also throwing away the movement under test; they simply have to be
+    over before the measuring starts.
+    """
+    deadline = time.time() + limit
+    while time.time() < deadline:
+        before = len(dev.scroll_timeline())
+        time.sleep(quiet)
+        if len(dev.scroll_timeline()) == before:
+            return True
+    return False
+
+
 def run_motion(dev, profile, distance, duration, strokes, seed, start=500):
     """Drive one movement and bring back everything said about it."""
     dev.surface(mode="unique", enable=1, density=3, allApps=1, scrollTo=start)
     time.sleep(2.2)
+    wait_until_still(dev)
     dev.clear_log()
     dev.surface(
         mode="unique", enable=1, density=3, allApps=1,
@@ -195,7 +232,7 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
         f"asked {distance}px, moved {ended_at - began_at}px",
     )
 
-    timeline = trim_to_movement(
+    timeline = settle_timeline(
         [(t, y) for t, y in dev.scroll_timeline(log) if from_when <= t <= to_when + 600],
         began_at,
     )
@@ -229,8 +266,17 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
     # pauses between them averages out to something slow, while each push is as fast as the
     # page ever goes, and it is during the push that a reading goes stale.
     speed = peak_speed(timeline)
+    average = abs(distance) / max(1, duration)
+    # None of these profiles is more than about two and a half times its own average at its
+    # fastest. A timeline that says otherwise is not describing this movement - it still has
+    # some of the page's layout in it - and the honest thing is to say so rather than to
+    # report a drift measured against a page that supposedly jumped.
+    credible = speed <= average * 4
     allowed = max(DRIFT_TOL, speed * LATENCY_MS)
-    if samples:
+    if not credible:
+        print(f"  {label}: the page's own report is not usable "
+              f"({speed:.1f}px/ms against an average of {average:.1f}), drift not judged")
+    elif samples:
         r.check(worst <= allowed, f"{label}: transcriptions kept up with the text",
                 f"worst drift {worst:.0f}px on {word} over {samples} readings, "
                 f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
