@@ -38,6 +38,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var worker: Handler
     private lateinit var sampler: ScreenSampler
+    private lateinit var bystanders: Bystanders
+    private val layouts = LineLayouts()
     private var generation = 0
     private var lastScanEnd = 0L
     /** When the screen was last seen to move, whether it said so or was measured moving. */
@@ -67,29 +69,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var lastShiftAt = 0L
     @Volatile private var speedY = 0f
 
-    // Colours per line of text rather than per app: a heading and a paragraph in the same
-    // app are rarely the same colour, and averaging them gives a transcription that matches
-    // neither. Keyed by the text itself so a line keeps its colours while it is on screen,
-    // and cleared when the app changes.
-    private val lineColors = HashMap<String, WordColors>(64)
-    /** How often a line has been looked for without being read, and when it was last
-     *  tried, so the overlay steps aside a bounded number of times for a line it cannot
-     *  resolve - and so a screen that failed while the device was busy is tried again later
-     *  rather than being left without colours for as long as it is open. */
-    private class Attempts(var count: Int, var at: Long)
-    private val colorTries = HashMap<String, Attempts>(64)
-    @Volatile private var colorsFor: String? = null
-    /** The page's own colours, for a line whose own could not be read. */
-    @Volatile private var screenColors: WordColors? = null
-    /** What was read for the apps seen before this one. */
-    private class Remembered(val lines: Map<String, WordColors>, val page: WordColors?)
-    private val colorsByPackage = LinkedHashMap<String, Remembered>()
-    /** Set while the overlay is briefly down so a capture can see the text underneath. */
-    @Volatile private var capturing = false
-    @Volatile private var capturingSince = 0L
-    /** When the overlay actually came down for a capture, as opposed to being asked to. */
-    @Volatile private var hiddenAt = 0L
-    @Volatile private var cleanFrameAt = 0L
+    /** The colours each line is drawn in, read off the screen. */
+    private lateinit var colours: LineColours
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -123,10 +104,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .onFailure { android.util.Log.w("Phonetix", "could not turn the node cache off", it) }
         }
         sampler = ScreenSampler(this) { r -> io.post(r) }
+        colours = LineColours(
+            sampler, main, io,
+            hideOverlay = { overlay.hideNow() },
+            readAgain = { schedule(0L) },
+        )
+        bystanders = Bystanders(this)
         Dictionary.ensureLoaded(this) { schedule(0L) }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // The home screen and the keyboard announce every flicker of themselves. Nothing of
+        // theirs is ever transcribed, so there is no reason to fetch their window to find
+        // that out - which is what every one of those announcements cost.
+        // Ignored rather than answered: the status bar reports its clock ticking over while
+        // the reader is in another app entirely, and taking the words down for that would
+        // be a flicker a minute. Whether the app in front is one of these is settled by the
+        // read itself, from the window that is actually there.
+        val from = event?.packageName?.toString()
+        if (::bystanders.isInitialized && bystanders.contains(from)) return
         // A scroll says how far the content moved, and the words moved exactly that far, so
         // the transcriptions are carried along in this same frame rather than being taken
         // down and put back. Re-reading the screen then only has to correct the drift.
@@ -274,7 +270,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // that follows shortly after, which is what would notice the app had changed.
         val followOnly = scrollOnly && cachedPlan.isNotEmpty() && cachedPackage != null &&
             settings.density == plannedDensity && !overdue &&
-            SettingsStore.allows(cachedPackage) && Dictionary.ready
+            SettingsStore.allows(cachedPackage) && !bystanders.contains(cachedPackage) &&
+            Dictionary.ready
         val root = if (followOnly) null else {
             val askedRoot = android.os.SystemClock.uptimeMillis()
             val fetched = rootInActiveWindow ?: run { main.post { overlay.hideNow() }; return }
@@ -284,7 +281,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             fetched
         }
-        if (root != null && (!SettingsStore.allows(root.packageName?.toString()) || !Dictionary.ready)) {
+        val inFront = root?.packageName?.toString()
+        if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
             main.post { overlay.hideNow() }
             // Reported as an empty screen rather than saying nothing at all: silence here
             // reads to anyone watching as "the last set is still up", which is the very
@@ -322,7 +320,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             planned = cachedPlan
         } else {
             val before = HashMap<String, Int>(cachedPlan.size)
-            for (p in cachedPlan) p.measuredAt?.let { before[colorKey(p.text)] = it.top }
+            for (p in cachedPlan) p.measuredAt?.let { before[colours.key(p.text)] = it.top }
             val fresh = ArrayList<Planned>(16)
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
@@ -498,16 +496,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // it was planned, in which case they are put on now - otherwise a line that
                 // came into view during a scroll would keep the absence it was born with
                 // until the movement stopped.
-                val key = colorKey(p.text)
-                val colours = lineColors[key]
-                if (colours != null && p.boxes.first().background != colours.background) {
-                    p.boxes = p.boxes.map {
-                        it.copy(background = colours.background, ink = colours.ink)
-                    }
+                val own = colours.of(p.text)
+                if (own != null && p.boxes.first().background != own.background) {
+                    p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
                 }
-                if (colours == null && p.boxes.first().background == 0 &&
-                    (colorTries[key]?.count ?: 0) < COLOR_TRIES
-                ) {
+                if (own == null && p.boxes.first().background == 0 && colours.stillPending(p.text)) {
                     continue
                 }
                 var dx = shiftX
@@ -637,8 +630,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             p.node.getBoundsInScreen(at)
             readAt = android.os.SystemClock.uptimeMillis()
             lineReadAt[p] = readAt
-            val remembered = charLayouts[layoutKey(p)]
-            val placed = placeRemembered(remembered, at, p.viewport)
+            val remembered = layouts.recall(p.text, p.from, p.length)
+            val placed = layouts.place(remembered, at, p.viewport)
             // Asking the app where its characters are makes it lay the text out again, and a
             // list being laid out while it scrolls clamps its own scroll position and jumps.
             // A line that cannot be placed from memory is therefore left alone until the
@@ -648,7 +641,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (placed == null && moving) { p.boxes = emptyList(); continue }
             val rects = placed
                 ?: charRects(p.node, p.from, p.length)?.also { fresh ->
-                    remember(p, at, fresh)
+                    layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
                 }
                 ?: continue
             // refreshWithExtraData just refreshed the node, so this is the text as it is
@@ -714,76 +707,28 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // is the word we covered. Stepping aside for a single frame removes the whole class
         // of problem instead of guarding against it.
         val tb = android.os.SystemClock.uptimeMillis()
-        // Colours are kept per app rather than thrown away whenever another one is in front
-        // for a moment. A notification shade or a system dialog counts as a different app
-        // here, and forgetting a screen's colours for it meant reading them all again - and
-        // painting a screenful in the fallback palette until they arrived.
-        if (pkg != colorsFor) {
-            colorsFor?.let { previous ->
-                if (lineColors.isNotEmpty() || screenColors != null) {
-                    colorsByPackage[previous] = Remembered(HashMap(lineColors), screenColors)
-                }
-            }
-            val kept = colorsByPackage[pkg]
-            lineColors.clear()
-            colorTries.clear()
-            if (kept != null) lineColors.putAll(kept.lines)
-            screenColors = kept?.page
-            colorsFor = pkg
-            cleanFrameAt = 0L
-            recycling = false
-            while (colorsByPackage.size > REMEMBERED_APPS) {
-                colorsByPackage.remove(colorsByPackage.keys.first())
-            }
-        }
+        if (colours.switchTo(pkg)) recycling = false
 
-        // A line is the unit, not a word. One word carries a few dozen glyph pixels and a
-        // short one carries none worth the name, which is how words ended up with no colour
-        // and wearing the palette below instead; a line carries thousands, and every word on
-        // it is drawn in the colour of its neighbours. Keying on the line's own text also
-        // keeps a heading apart from the paragraph under it, and one message in a
-        // conversation apart from the next, which a single colour per app cannot do.
-        val nowForColours = android.os.SystemClock.uptimeMillis()
-        val unread = planned.filter {
-            val key = colorKey(it.text)
-            val tried = colorTries[key]
-            it.boxes.isNotEmpty() && key !in lineColors &&
-                (tried == null || tried.count < COLOR_TRIES ||
-                    nowForColours - tried.at > COLOR_RETRY_MS)
-        }
         // Only lines never read on this screen are worth stepping aside for. Without that
         // the overlay hid itself every second and a half for the whole life of a page,
         // which cost more than the colours were worth and left flings barely drawn.
+        val unread = planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
         if (unread.isNotEmpty()) {
-            requestCleanFrame(unread.map { colorKey(it.text) to colorRect(it) })
+            colours.read(unread.map { colours.key(it.text) to colorRect(it) })
         }
 
         // The colours ride on the boxes the lines keep, so that following a scroll carries
         // them too: re-reading positions does not re-read colours, and a set of words that
         // lost its colours the moment the screen moved was the flicker between a scrolling
-        // transcription and a still one.
-        // A line whose colours have not been read yet waits rather than being painted in a
-        // palette of ours: a screen that appears in gold on brown and corrects itself a
-        // moment later is seen as the correction, which is what "it is orange first" meant.
-        // The wait ends after a bounded number of attempts, so an app that can never be
-        // captured - one that forbids screenshots - is still transcribed shortly after.
-        //
-        // The colours are kept on the line's own boxes, so that following a scroll carries
-        // them; only the painting is withheld, because a line dropped from the plan would be
-        // missing from the next pass too rather than appearing the moment its colours come.
-        val capturingNow = capturing &&
-            android.os.SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
+        // transcription and a still one. Only the painting of a line still waiting for its
+        // colours is withheld, because a line dropped from the plan would be missing from
+        // the next pass too rather than appearing the moment its colours come.
         val painted = ArrayList<WordBox>(boxes.size)
         for (p in planned) {
-            val key = colorKey(p.text)
-            // The page's own colours stand in only once this line has been given up on.
-            // Using them straight away would be quicker and wrong: every line would wear the
-            // page's ink, and a heading, a quotation and a highlighted phrase all differ
-            // from it - which is the whole reason colours are read per line.
-            val givenUp = (colorTries[key]?.count ?: 0) >= COLOR_TRIES && !capturingNow
-            val c = lineColors[key] ?: if (givenUp) screenColors else null
+            val decision = colours.decide(p.text)
+            val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
-            if (c != null || givenUp) painted.addAll(p.boxes)
+            if (c != null || decision.givenUp) painted.addAll(p.boxes)
         }
 
         // One line per pass naming every transcription and where it sits, so a test can
@@ -812,7 +757,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (!reuse) {
             var movedSince = false
             for (p in planned) {
-                val was = previousTops[colorKey(p.text)] ?: continue
+                val was = previousTops[colours.key(p.text)] ?: continue
                 val at = p.measuredAt ?: continue
                 if (kotlin.math.abs(at.top - was) > 1) { movedSince = true; break }
             }
@@ -836,78 +781,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "coloured=${painted.count { it.background != 0 }}",
             )
         }
-    }
-
-    /**
-     * Hide, capture, read the colours of these words, show again.
-     *
-     * The overlay is down for one capture. It is throttled, and only asked for when a word
-     * on screen has no colour yet, so a screen whose words are already known never blinks.
-     */
-    private fun requestCleanFrame(lines: List<Pair<String, RectF>>) {
-        val now = android.os.SystemClock.uptimeMillis()
-        // A capture that never came back must not shut this for good, and must not leave the
-        // words waiting for colours that are not coming either.
-        if (capturing && now - capturingSince < CAPTURE_TIMEOUT_MS) return
-        // The first reading for an app is not made to wait: until it lands there are no
-        // colours at all for this screen, and the words are either withheld or painted in a
-        // palette that is not the page's.
-        val nothingKnown = lineColors.isEmpty() && screenColors == null
-        if (!nothingKnown && now - cleanFrameAt < CLEAN_FRAME_GAP_MS) return
-        capturing = true
-        capturingSince = now
-        cleanFrameAt = now
-        val wanted = lines.toList()
-        // When the overlay was really taken down, which is not when it was asked to be: the
-        // request is posted to the main thread and waits its turn there. A frame captured
-        // between the asking and the hiding still has our own paint in it, and reading that
-        // gives our own gold back as the colour of the app's text.
-        hiddenAt = 0L
-        main.post { overlay.hideNow(); hiddenAt = android.os.SystemClock.uptimeMillis() }
-        io.postDelayed({
-            sampler.invalidateFrame()
-            sampler.refreshIfStale(force = true)
-            io.postDelayed({
-                // Only a frame taken after the overlay went down can be trusted; anything
-                // older still has our transcriptions in it.
-                val down = hiddenAt
-                if (!sampler.hasFrame || down == 0L || sampler.frameAt < down + SETTLE_MS) {
-                    // A capture that never arrived says nothing about the lines, so they are
-                    // not counted as read: a device that refuses one screenshot, for a rate
-                    // limit or a moment of secure content, would otherwise leave the screen
-                    // permanently uncoloured.
-                    // The lines were asked for and the answer did not come. That counts:
-                    // otherwise an app the platform refuses to capture would leave every one
-                    // of them waiting for colours that can never arrive, and unpainted.
-                    for ((key, _) in wanted) countAttempt(key)
-                    capturing = false
-                    if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
-                    schedule(0L)
-                    return@postDelayed
-                }
-                // The frame now holds the app's own text where our transcriptions were.
-                var read = 0
-                for ((key, rect) in wanted) {
-                    countAttempt(key)
-                    if (key in lineColors) continue
-                    val c = sampler.sampleRegion(rect) ?: continue
-                    lineColors[key] = c
-                    read++
-                }
-                // Whatever could not be read still has to be covered by something, and the
-                // page's own colour is a better guess than a palette of ours.
-                screenColors = sampler.screenColors() ?: screenColors
-                capturing = false
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d(
-                        "Phonetix",
-                        "COLOURS read=$read of ${wanted.size} screen=" +
-                            (screenColors?.let { Integer.toHexString(it.background) } ?: "none"),
-                    )
-                }
-                schedule(0L)
-            }, 320)
-        }, 80)
     }
 
     /**
@@ -941,23 +814,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
             else -> null
         }
     }
-
-    private fun countAttempt(key: String) {
-        val now = android.os.SystemClock.uptimeMillis()
-        val tried = colorTries[key]
-        if (tried == null) {
-            colorTries[key] = Attempts(1, now)
-        } else {
-            // A run of attempts long ago says nothing about now: the device was busy, or the
-            // app was mid-layout. Time since the last one starts the count again.
-            if (now - tried.at > COLOR_RETRY_MS) tried.count = 0
-            tried.count++
-            tried.at = now
-        }
-    }
-
-    /** A line is known by its text, which is what stays the same while it scrolls. */
-    private fun colorKey(text: String): String = text.length.toString() + ":" + text.hashCode()
 
     /**
      * Where to read a line's colours from: the line itself, as the app drew it.
@@ -1169,58 +1025,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * not report them - a Compose or Canvas-drawn surface that exposes text but no layout,
      * for instance - and those nodes are left alone rather than guessed at.
      */
-    /**
-     * What a line said about itself, kept so that it need not be asked twice.
-     *
-     * Held relative to the line's own top left corner, which is what makes it reusable: the
-     * page scrolls, the line moves, and the characters keep their places within it.
-     */
-    private class Layout(val width: Int, val height: Int, val rects: Array<RectF?>)
-
-    private val charLayouts = object : LinkedHashMap<String, Layout>(64, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Layout>?) = size > 200
-    }
-
-    private fun layoutKey(p: Planned): String =
-        p.text.length.toString() + ":" + p.text.hashCode() + ":" + p.from + ":" + p.length
-
-    /** Keep a line's character boxes, as offsets inside the line. */
-    private fun remember(p: Planned, at: android.graphics.Rect, rects: Array<RectF?>) {
-        // Only a line that is whole on screen can be remembered: the rectangle of a line
-        // half scrolled off is cut at the edge of its list, and offsets taken from it would
-        // put every character in the wrong place.
-        if (at.isEmpty || at.top <= p.viewport.top + 1 || at.bottom >= p.viewport.bottom - 1) return
-        val relative = Array<RectF?>(rects.size) { i ->
-            rects[i]?.let { RectF(it.left - at.left, it.top - at.top, it.right - at.left, it.bottom - at.top) }
-        }
-        charLayouts[layoutKey(p)] = Layout(at.width(), at.height(), relative)
-    }
-
-    /**
-     * The remembered boxes, moved to where the line is now, or null when they cannot be
-     * trusted for it: a line of a different width has been laid out again, and a line cut at
-     * both ends has no corner to measure from.
-     */
-    private fun placeRemembered(
-        layout: Layout?,
-        at: android.graphics.Rect,
-        clip: android.graphics.Rect,
-    ): Array<RectF?>? {
-        if (layout == null || at.isEmpty || at.width() != layout.width) return null
-        // Only a line reported whole. A line cut by the edge of its list reports the part of
-        // itself that shows, and a corner taken from that is a few pixels out - enough to
-        // set a transcription over the line above or below it. Those lines are asked
-        // directly instead, which costs one request at each edge of the screen.
-        if (at.top <= clip.top + 1 || at.bottom >= clip.bottom - 1) return null
-        if (at.height() != layout.height) return null
-        val top = at.top
-        return Array(layout.rects.size) { i ->
-            layout.rects[i]?.let {
-                RectF(it.left + at.left, it.top + top, it.right + at.left, it.bottom + top)
-            }
-        }
-    }
-
     private fun charRects(node: AccessibilityNodeInfo, from: Int, length: Int): Array<RectF?>? {
         val args = Bundle().apply {
             putInt(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX, from)
@@ -1256,19 +1060,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FULL_READ_MS = 900L
         /** And a moving one this often, to pick up the words scrolling into it. */
         const val FULL_READ_MOVING_MS = 2500L
-        /** How rarely the overlay may step aside to be able to read a colour. */
-        const val CLEAN_FRAME_GAP_MS = 1500L
-        /** How often a line's colours are looked for before the page's own are used. */
-        const val COLOR_TRIES = 3
-        /** And how long before a line that could not be read is worth trying again. */
-        const val COLOR_RETRY_MS = 8000L
-        /** After this a capture is treated as lost rather than still on its way. */
-        const val CAPTURE_TIMEOUT_MS = 2500L
-        /** How long after the overlay comes down before a frame is free of it: what was
-         *  drawn is still on the display for a frame or two after the window has gone. */
-        const val SETTLE_MS = 48L
-        /** How many apps' colours are kept, so switching between two is not a fresh read. */
-        const val REMEMBERED_APPS = 4
         /** How many lines are asked where they are before the rest are carried with them. */
         const val ANCHORS = 3
         /** And how many are asked whether they are still themselves, each pass. */

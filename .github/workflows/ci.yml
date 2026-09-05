@@ -170,3 +170,43 @@ jobs:
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/reveal_position.py firefox
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/stale_reveal.py firefox
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/hover_stability.py firefox
+
+  # The Android app. Its unit tests are what keep the port agreeing with the extension: the
+  # sprinkle rule, the display form of a transcription and the symbol table are asserted
+  # against vectors the extension generates, so a rule changed on one side without the other
+  # fails here rather than giving one setting two meanings on two devices.
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: public/dictionaries
+          key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
+      # The app bundles the extension's dictionary and word list at build time.
+      - name: Fetch dictionaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm fetch:dict
+      - name: Unit tests (parity with the extension)
+        working-directory: android
+        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: Build
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phonetix-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
