@@ -108,8 +108,38 @@ class TooltipController(
             false
         }
         runCatching { wm.addView(card, lp) }
-            .onSuccess { view = card }
+            .onSuccess {
+                view = card
+                // What the card actually laid out, once it has been measured: an overlay
+                // window is invisible to uiautomator, so without this a test can only know
+                // that the card was asked for, never that it drew anything or where its
+                // buttons ended up.
+                if (BuildConfig.DEBUG) card.post { describe(card) }
+            }
             .onFailure { android.util.Log.w("Phonetix", "tooltip addView failed", it) }
+    }
+
+    /** Every piece of text the card put on screen, with where it ended up. */
+    private fun describe(root: View) {
+        val out = StringBuilder("CARD ")
+        val at = IntArray(2)
+        fun walk(v: View) {
+            if (v is TextView && v.text.isNotEmpty()) {
+                v.getLocationOnScreen(at)
+                out.append('[').append(v.text.toString().replace(' ', '\u00b7')).append('@')
+                    .append(at[0]).append(',').append(at[1]).append(',')
+                    .append(v.width).append(',').append(v.height).append(']')
+            }
+            if (v is ImageView && v.drawable != null) {
+                v.getLocationOnScreen(at)
+                out.append("[image@").append(at[0]).append(',').append(at[1]).append(',')
+                    .append(v.width).append(',').append(v.height).append(']')
+            }
+            if (v is LinearLayout) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            if (v is ScrollView) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+        }
+        walk(root)
+        android.util.Log.d("Phonetix", out.toString())
     }
 
     private fun dp(v: Int): Float = TypedValue.applyDimension(

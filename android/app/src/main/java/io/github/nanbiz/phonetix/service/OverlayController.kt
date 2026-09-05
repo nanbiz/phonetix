@@ -211,6 +211,10 @@ class ChipView(
     private var box: WordBox? = null
     private var style: ChipStyle = ChipStyle.SOLID
     private val revert = Runnable { onChanged() }
+    private var downX = 0f
+    private var downY = 0f
+    private var dragging = false
+    private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
 
     private val painter = ChipPainter()
     private val dest = RectF()
@@ -223,7 +227,27 @@ class ChipView(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_UP) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.rawX
+                downY = event.rawY
+                dragging = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!dragging &&
+                    (kotlin.math.abs(event.rawX - downX) > slop ||
+                        kotlin.math.abs(event.rawY - downY) > slop)
+                ) {
+                    // The finger is scrolling, not tapping. These windows sit on top of the
+                    // app, so holding on to the gesture would stop the app scrolling at all
+                    // wherever a transcription happens to be - which is most of a page of
+                    // text. Step out of the way and let the rest of the gesture reach it.
+                    dragging = true
+                    passThrough(true)
+                }
+            }
+        }
+        if (event.actionMasked == MotionEvent.ACTION_UP && !dragging) {
             val b = box ?: return true
             // A tap opens the card, the way hovering opens the tooltip in the browser, and
             // puts the original word back underneath it so the reader sees both at once.
@@ -233,7 +257,25 @@ class ChipView(
             onChanged()
             onTapped(b)
         }
+        if (event.actionMasked == MotionEvent.ACTION_UP ||
+            event.actionMasked == MotionEvent.ACTION_CANCEL
+        ) {
+            // Takeable again once the gesture is over.
+            if (dragging) postDelayed({ passThrough(false); dragging = false }, 120)
+        }
         return true
+    }
+
+    /** Let touches through to the app underneath, or take them again. */
+    private fun passThrough(on: Boolean) {
+        val lp = layoutParams as? WindowManager.LayoutParams ?: return
+        val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        val next = if (on) lp.flags or flag else lp.flags and flag.inv()
+        if (next == lp.flags) return
+        lp.flags = next
+        runCatching {
+            (context.getSystemService(WindowManager::class.java)).updateViewLayout(this, lp)
+        }
     }
 
     override fun onDraw(canvas: Canvas) {

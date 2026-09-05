@@ -36,6 +36,8 @@ import android.widget.TextView
 class DebugSurfaceActivity : Activity() {
 
     private lateinit var scroller: ScrollView
+    /** An empty line whose text is toggled to make the window's content change. */
+    private var marker: TextView? = null
     private var mode = "plain"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,6 +120,7 @@ class DebugSurfaceActivity : Activity() {
         // again - and a test that changes the frequency and reads the result sees whatever
         // was there before, or nothing at all. A one-pixel nudge is a real content change
         // and makes the next read describe the new setting.
+        announce()
         nudge()
         if (intent.hasExtra(EXTRA_SCROLL)) {
             val y = intent.getIntExtra(EXTRA_SCROLL, 0)
@@ -137,6 +140,9 @@ class DebugSurfaceActivity : Activity() {
     }
 
     private fun applySettings(i: Intent) {
+        // Announced after the fact, so a test can wait for a reading taken after the setting
+        // landed rather than one taken just before it - which is a race it loses about half
+        // the time, and reports as the setting doing nothing.
 
             if (i.hasExtra(EXTRA_ENABLE)) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setEnabled(i.getIntExtra(EXTRA_ENABLE, 1) != 0)
@@ -163,12 +169,23 @@ class DebugSurfaceActivity : Activity() {
             }
             }
 
-    /** The smallest change that still counts as the window's content changing. */
+    private fun announce() {
+        val s = io.github.nanbiz.phonetix.core.SettingsStore.current
+        Log.d(TAG, "SETTINGS ${SystemClock.uptimeMillis()} enabled=${s.enabled} " +
+            "density=${s.density} allApps=${s.allApps} style=${s.style}")
+    }
+
+    /**
+     * The smallest change that still counts as the window's *content* changing.
+     *
+     * Not a scroll. A scroll puts the overlay on its fast path, which reuses the words it
+     * chose last time - so a test that changed the frequency and nudged by scrolling read
+     * back the old frequency's words and concluded the setting did nothing.
+     */
     private fun nudge() {
         scroller.postDelayed({
-            scroller.scrollBy(0, 1)
-            scroller.scrollBy(0, -1)
-            scroller.requestLayout()
+            val text = marker ?: return@postDelayed
+            text.text = if (text.text.isEmpty()) "\u200b" else ""
         }, 60)
     }
 
@@ -185,6 +202,7 @@ class DebugSurfaceActivity : Activity() {
         } else {
             repeat(14) { i -> addView(line("$i. $PARAGRAPH", Color.WHITE, BACKGROUND)) }
         }
+        marker = TextView(this@DebugSurfaceActivity).also { addView(it) }
     }
 
     private fun line(text: String, ink: Int, bg: Int) = TextView(this).apply {
