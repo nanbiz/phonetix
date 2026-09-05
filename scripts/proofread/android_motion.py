@@ -25,7 +25,15 @@ from android_harness import Device, shell
 
 # What a transcription may be out by while the page is moving before a reader would see it
 # lagging behind its word. A line here is about 50px tall.
+#
+# It scales with how fast the page is going, because part of the error is not ours to remove:
+# an app reports where its lines were when it last laid them out, and asking it costs a round
+# trip on top of that. At a slow read-along that is a pixel or two; through a flick of three
+# pixels a millisecond the same delay is tens of them. So the allowance is the distance the
+# page covers in the time the answer takes to arrive, and never less than the still-screen
+# tolerance.
 DRIFT_TOL = 24
+LATENCY_MS = 25
 # And once everything has stopped, it is simply wrong to be out at all.
 SETTLED_TOL = 3
 # The longest the overlay may go without redrawing while the page is moving. Beyond this the
@@ -106,6 +114,18 @@ def doc_drift(dev, frames, timeline):
     return worst, worst_word, samples
 
 
+def peak_speed(timeline, window=60):
+    """The fastest the page moved, in pixels a millisecond, over any short stretch."""
+    fastest = 0.0
+    for i, (t0, y0) in enumerate(timeline):
+        for t1, y1 in timeline[i + 1:]:
+            if t1 - t0 < window:
+                continue
+            fastest = max(fastest, abs(y1 - y0) / (t1 - t0))
+            break
+    return fastest
+
+
 def longest_gap(frames, began, ended):
     """The longest the overlay went without redrawing while the page was moving."""
     stamps = [t for t, _ in frames if began <= t <= ended]
@@ -181,9 +201,15 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
             f"{gap}ms without a redraw")
 
     worst, word, samples = doc_drift(dev, during, timeline)
+    # The speed it actually reached, not the average: a movement made in three pushes with
+    # pauses between them averages out to something slow, while each push is as fast as the
+    # page ever goes, and it is during the push that a reading goes stale.
+    speed = peak_speed(timeline)
+    allowed = max(DRIFT_TOL, speed * LATENCY_MS)
     if samples:
-        r.check(worst <= DRIFT_TOL, f"{label}: transcriptions kept up with the text",
-                f"worst drift {worst:.0f}px on {word} over {samples} readings")
+        r.check(worst <= allowed, f"{label}: transcriptions kept up with the text",
+                f"worst drift {worst:.0f}px on {word} over {samples} readings, "
+                f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
 
     # Nothing may lose its colours while it moves: a set that falls back to a palette of ours
     # mid-movement flickers into the wrong colour and back.

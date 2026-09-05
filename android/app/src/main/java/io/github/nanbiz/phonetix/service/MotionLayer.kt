@@ -31,6 +31,8 @@ class MotionLayer(private val context: Context) {
         /** How much lateness is worth carrying forward; beyond it the reading is not a
          *  measurement of this movement any more. */
         const val LATE_LIMIT_MS = 250L
+        /** What the app's own reporting is behind by, at sixty frames a second. */
+        const val FRAME_MS = 16L
     }
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -120,7 +122,10 @@ class MotionLayer(private val context: Context) {
         // that is scrolling where its lines are takes tens of milliseconds, and at the speed
         // of a flick the page has moved a hundred pixels by the time the answer arrives;
         // drawing the answer as if it were current is drawing the page as it was.
-        val late = (now - at).coerceIn(0, LATE_LIMIT_MS)
+        // Plus a frame, because the answer was already a frame old when it was given: an
+        // app reports the bounds of the tree as it was last laid out, not as it is being
+        // laid out, and at the speed of a flick that frame is fifty pixels.
+        val late = (now - at + FRAME_MS).coerceIn(0, LATE_LIMIT_MS)
         predictedX = 0f
         predictedY = vy * late
         lastFrameAt = now

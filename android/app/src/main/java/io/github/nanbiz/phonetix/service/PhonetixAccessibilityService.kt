@@ -152,7 +152,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // one cancelled the pass the one before it asked for, and a page scrolled from code
         // was therefore never read at all while it moved.
         lastMotionAt = android.os.SystemClock.uptimeMillis()
-        if (cachedPlan.isNotEmpty() && cachedPackage != null) {
+        // A window appearing or going away can mean a different app is in front, and a
+        // follow pass does not look at which one it is - it works from the lines it already
+        // holds. So this one is always answered by reading the screen properly.
+        val windowChanged = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        if (!windowChanged && cachedPlan.isNotEmpty() && cachedPackage != null) {
             scrollOnly = true
             startFollowing()
             return
@@ -243,13 +247,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private fun scan() {
         val settings = SettingsStore.current
-        val askedRoot = android.os.SystemClock.uptimeMillis()
-        val root = rootInActiveWindow ?: run { main.post { overlay.hideNow() }; return }
-        val rootMs = android.os.SystemClock.uptimeMillis() - askedRoot
-        if (BuildConfig.DEBUG && rootMs > 30) {
-            android.util.Log.d("Phonetix", "ROOT took ${rootMs}ms")
+        val sinceFull = android.os.SystemClock.uptimeMillis() - lastFullReadAt
+        val settled = android.os.SystemClock.uptimeMillis() - lastMotionAt > STILL_MS
+        val overdue = sinceFull > FULL_READ_MS && settled || sinceFull > FULL_READ_MOVING_MS
+        // Following needs the lines, which are already in hand; it does not need the window
+        // they are in. Asking for the whole window costs thirty to ninety milliseconds while
+        // the app is busy scrolling, and every one of those is a millisecond the positions
+        // are out of date by the time they are drawn. The window is fetched on the full read
+        // that follows shortly after, which is what would notice the app had changed.
+        val followOnly = scrollOnly && cachedPlan.isNotEmpty() && cachedPackage != null &&
+            settings.density == plannedDensity && !overdue &&
+            SettingsStore.allows(cachedPackage) && Dictionary.ready
+        val root = if (followOnly) null else {
+            val askedRoot = android.os.SystemClock.uptimeMillis()
+            val fetched = rootInActiveWindow ?: run { main.post { overlay.hideNow() }; return }
+            val rootMs = android.os.SystemClock.uptimeMillis() - askedRoot
+            if (BuildConfig.DEBUG && rootMs > 30) {
+                android.util.Log.d("Phonetix", "ROOT took ${rootMs}ms")
+            }
+            fetched
         }
-        if (!SettingsStore.allows(root.packageName?.toString()) || !Dictionary.ready) {
+        if (root != null && (!SettingsStore.allows(root.packageName?.toString()) || !Dictionary.ready)) {
             main.post { overlay.hideNow() }
             // Reported as an empty screen rather than saying nothing at all: silence here
             // reads to anyone watching as "the last set is still up", which is the very
@@ -263,7 +281,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             return
         }
 
-        val pkg = root.packageName?.toString()
+        val pkg = if (root != null) root.packageName?.toString() else cachedPackage
         val t0 = android.os.SystemClock.uptimeMillis()
 
         // A scroll moved the words it did not change, so the nodes found last time are
@@ -278,11 +296,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // milliseconds during which nothing is followed at all - a visible stall in the
         // middle of a scroll. A long movement is interrupted for one anyway, since words
         // scrolling in have never been read.
-        val sinceFull = android.os.SystemClock.uptimeMillis() - lastFullReadAt
-        val settled = android.os.SystemClock.uptimeMillis() - lastMotionAt > STILL_MS
-        val overdue = sinceFull > FULL_READ_MS && settled || sinceFull > FULL_READ_MOVING_MS
-        val reuse = scrollOnly && pkg != null && pkg == cachedPackage &&
-            cachedPlan.isNotEmpty() && settings.density == plannedDensity && !overdue
+        val reuse = followOnly || (scrollOnly && pkg != null && pkg == cachedPackage &&
+            cachedPlan.isNotEmpty() && settings.density == plannedDensity && !overdue)
         val planned: List<Planned>
         val budget = Budget()
         val stats = Stats()
@@ -294,7 +309,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val fresh = ArrayList<Planned>(16)
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
-            plan(root, Transcriber(settings.density), fresh, budget, stats, full, seen)
+            plan(root!!, Transcriber(settings.density), fresh, budget, stats, full, seen)
             planned = fresh
             cachedPlan = fresh
             cachedPackage = pkg
