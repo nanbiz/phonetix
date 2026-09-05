@@ -32,6 +32,15 @@ def serve(port):
 def main():
     port = 8912; serve(port)
     prof = tempfile.mkdtemp(prefix="ff-phonetix-")
+    # A port of our own, not Marionette's default. A browser already running on this
+    # machine with Marionette on - a developer's own - listens on 2828, and a harness that
+    # assumed that port connected to it and drove the developer's live profile: it read
+    # their settings and wrote one. The browser that answers is also checked below to be the
+    # one launched here, by the profile it is running.
+    import socket
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port_m = probe.getsockname()[1]
     os.makedirs(os.path.join(prof, "extensions"), exist_ok=True)
     # Sideload the signed xpi. Firefox requires the file to be named after the
     # add-on id, so read it out of the manifest rather than assuming it.
@@ -48,7 +57,7 @@ def main():
     print(f"{'signed' if signed else 'unsigned'}: {os.path.basename(XPI)}")
     with open(os.path.join(prof, "user.js"), "w") as f:
         f.write('user_pref("extensions.autoDisableScopes", 0);\n')
-        f.write('user_pref("marionette.port", 2828);\n')
+        f.write('user_pref("marionette.port", %d);\n' % port_m)
         f.write('user_pref("xpinstall.signatures.required", false);\n')
         f.write('user_pref("extensions.webextensions.uuids", "{\\"%s\\": \\"%s\\"}");\n'
                 % (gecko_id, EXT_UUID))
@@ -60,12 +69,24 @@ def main():
         from marionette_driver.marionette import Marionette
         client = None
         for _ in range(40):
+            # A browser that has already died is not going to answer. This one cannot start
+            # on a machine without its shared libraries, and waiting for it a minute at a
+            # time was what let a stray connection elsewhere go unnoticed.
+            if proc.poll() is not None:
+                print(f"FAIL - the browser exited with {proc.returncode} before Marionette came up")
+                return 2
             try:
-                client = Marionette(host="127.0.0.1", port=2828); client.start_session(); break
+                client = Marionette(host="127.0.0.1", port=port_m, socket_timeout=5)
+                client.start_session()
+                break
             except Exception:
                 time.sleep(1)
         if not client:
             print("could not connect to marionette"); return 2
+        running = client.session_capabilities.get("moz:profile", "")
+        if os.path.realpath(running) != os.path.realpath(prof):
+            print(f"FAIL - connected to a browser running {running!r}, not the one launched here")
+            return 2
         client.timeout.page_load = 30
         if not signed:
             from marionette_driver.addons import Addons
