@@ -3,7 +3,7 @@ package io.github.nanbiz.phonetix.debug
 import android.os.SystemClock
 import android.util.Log
 import android.view.Choreographer
-import android.widget.ScrollView
+import android.view.View
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -27,6 +27,15 @@ import kotlin.random.Random
  * against: a constant speed nothing biological produces, and pure acceleration.
  */
 object ScrollMotion {
+
+    /**
+     * Whatever is being scrolled, asked in the only two ways this needs to ask.
+     *
+     * A page that keeps all its lines and a list that recycles them scroll by different
+     * means and do not even hold their position the same way, but a movement is a movement:
+     * where it is now, and put it there.
+     */
+    class Page(val view: View, val at: () -> Int, val moveTo: (Int) -> Unit)
 
     /** How far along the travel is, for a movement that is `t` of the way through its time. */
     fun progress(profile: String, t: Float, random: Random): Float = when (profile) {
@@ -66,7 +75,7 @@ object ScrollMotion {
      * down a page, and each pause is a chance for the overlay to settle in the wrong place.
      */
     fun run(
-        scroller: ScrollView,
+        page: Page,
         profile: String,
         distance: Int,
         durationMs: Int,
@@ -75,7 +84,7 @@ object ScrollMotion {
         onDone: () -> Unit = {},
     ) {
         val random = Random(seed)
-        val from = scroller.scrollY
+        val from = page.at()
         val count = strokes.coerceAtLeast(1)
         // Strokes of uneven length, because a reader's are: a run of identical ones is one
         // movement in disguise.
@@ -99,7 +108,7 @@ object ScrollMotion {
 
         fun leg(index: Int, startY: Int) {
             if (index >= legs.size) {
-                Log.d(TAG, "MOTION done at=${SystemClock.uptimeMillis()} y=${scroller.scrollY}")
+                Log.d(TAG, "MOTION done at=${SystemClock.uptimeMillis()} y=${page.at()}")
                 onDone()
                 return
             }
@@ -111,13 +120,13 @@ object ScrollMotion {
                     val elapsed = (SystemClock.uptimeMillis() - began).toFloat()
                     val t = (elapsed / perLeg).coerceIn(0f, 1f)
                     val y = startY + (travel * progress(profile, t, random)).roundToInt()
-                    scroller.scrollTo(0, y.coerceAtLeast(0))
+                    page.moveTo(y.coerceAtLeast(0))
                     if (t < 1f) {
                         choreographer.postFrameCallback(this)
                     } else {
                         // The pause between strokes, which is where a reader actually reads.
                         val rest = 90L + (random.nextFloat() * 220f).toLong()
-                        scroller.postDelayed({ leg(index + 1, scroller.scrollY) }, rest)
+                        page.view.postDelayed({ leg(index + 1, page.at()) }, rest)
                     }
                 }
             })

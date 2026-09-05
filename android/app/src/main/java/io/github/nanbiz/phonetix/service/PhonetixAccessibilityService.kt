@@ -58,6 +58,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var plannedDensity = -1
     /** When the screen was last read in full, rather than followed. */
     @Volatile private var lastFullReadAt = 0L
+    /** Which line is next in line to be asked whether it is still itself. */
+    @Volatile private var verifyFrom = 0
+    /** Whether this screen has been seen handing a row to a different line. */
+    @Volatile private var recycling = false
+    /** The last measured shift and when, and the speed they give, in pixels a millisecond. */
+    @Volatile private var lastShiftY = 0f
+    @Volatile private var lastShiftAt = 0L
+    @Volatile private var speedY = 0f
 
     // Colours per line of text rather than per app: a heading and a paragraph in the same
     // app are rarely the same colour, and averaging them gives a transcription that matches
@@ -211,7 +219,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // it is the standing still that is expensive.
             if (since > FOLLOW_IDLE_MS) {
                 following = false
-                // One last read, to put the tappable windows back exactly on the words.
+                // One last read, and a full one. Following carries the words by how far the
+                // lines report they have moved, and if that has gone wrong - a list that
+                // recycles its rows, a line that answered for a different line - the error
+                // stays on screen until something happens to ask again, which in an app that
+                // says nothing while it is idle is never. Reading the screen properly is what
+                // ends a movement.
+                scrollOnly = false
+                cachedPlan = emptyList()
                 runCatching { scan() }
                 return
             }
@@ -368,7 +383,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     (0 until ANCHORS).map { usable[(it * step).toInt()] }
                 }
             }
-            val shifts = ArrayList<Pair<Float, Float>>(ANCHORS)
+            /** Each anchor's answer, and the moment it gave it. */
+            val shifts = ArrayList<Triple<Float, Float, Long>>(ANCHORS)
             for (a in anchors) {
                 val was = a.measuredAt ?: continue
                 if (!a.node.refresh()) { gone++; continue }
@@ -380,24 +396,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 alive++
                 val shift = shiftOf(was, now, a.viewport)
                 if (shift == null) { unreadable++; continue }
-                // Stamped with the reading that is actually used, not with whichever line
-                // was asked last: a line that could not be read still took time to ask, and
-                // dating the answer by it puts the words tens of milliseconds - and at speed,
-                // tens of pixels - away from where they were measured.
-                readAt = readingAt
-                shifts.add(shift)
+                shifts.add(Triple(shift.first, shift.second, readingAt))
             }
-            // The freshest answer, not the average of them. The lines are asked one after
-            // another and the page keeps moving while they are: at the speed of a flick it
-            // travels three pixels in the millisecond between two answers, so they differ by
-            // tens of pixels and the last one is simply the most recent truth. Requiring
-            // them to agree was requiring the page to hold still.
+            // The middle answer, dated by the moment it was given. Not the freshest: on a
+            // list, the row that answers last may be a row that has just been handed to a
+            // different line, and its "movement" is the jump from one end of the screen to
+            // the other rather than the page's. Two of three genuine answers outvote it. Not
+            // the average either, for the same reason: one jump would drag it.
             var shiftX = 0f
             var shiftY = 0f
             var agreed = shifts.isNotEmpty()
             if (agreed) {
-                shiftX = shifts.last().first
-                shiftY = shifts.last().second
+                val middle = shifts.sortedBy { it.second }[shifts.size / 2]
+                shiftX = middle.first
+                shiftY = middle.second
+                readAt = middle.third
                 // A disagreement far larger than the movement can explain is not one page
                 // scrolling: it is a list inside a page, or a bar that stays put while the
                 // text moves under it, and then there is nothing for one measurement to
@@ -406,8 +419,61 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (spread > INDEPENDENT_PX) agreed = false
             }
             if (alive > 0 && (shiftY != 0f || shiftX != 0f)) shifted = true
+            // How fast the page is going, from this reading against the one before. The
+            // full read below needs it: it takes tens of milliseconds, and its first line is
+            // measured well before its last.
+            if (agreed && lastShiftAt > 0L && readAt > lastShiftAt) {
+                val dt = (readAt - lastShiftAt).toFloat()
+                if (dt in 1f..300f) speedY = (shiftY - lastShiftY) / dt
+            }
+            lastShiftY = shiftY
+            lastShiftAt = readAt
+
+            // A few lines are asked whether they are still the lines they were, a couple
+            // each pass and a different couple next time, so every one of them is checked
+            // within a few frames. A list that recycles its rows hands the same node to a
+            // different line, and carrying that line's old words by the anchors' distance is
+            // how transcriptions end up scattered over text they have nothing to do with -
+            // words that are not on the screen at all any more.
+            // The ones nearest the edge the content is leaving by, because that is where a
+            // list hands a row to a new line: scrolling down, the rows at the top go first.
+            // The rest are taken in turn, so every line is checked within a few frames.
+            val checks = ArrayList<Planned>(VERIFY_PER_PASS + VERIFY_AT_EDGE)
+            if (planned.isNotEmpty()) {
+                val leaving = planned
+                    .filter { it.measuredAt != null && it.boxes.isNotEmpty() }
+                    .sortedBy { line ->
+                        val top = line.measuredAt?.top ?: 0
+                        if (shiftY <= 0f) top else -top
+                    }
+                checks.addAll(leaving.take(VERIFY_AT_EDGE))
+                for (i in 0 until minOf(VERIFY_PER_PASS, planned.size)) {
+                    checks.add(planned[(verifyFrom + i) % planned.size])
+                }
+                verifyFrom = (verifyFrom + VERIFY_PER_PASS) % planned.size
+            }
+            val verified = HashSet<Planned>(checks.size + anchors.size)
+            verified.addAll(anchors)
+            for (c in checks) {
+                if (c in verified) continue
+                if (!c.node.refresh() || c.node.text?.toString() != c.text) {
+                    // A row that now says something else is a row a list has handed to
+                    // another line. From here on this screen is treated as one that recycles.
+                    recycling = true
+                    ok = false
+                    why = "a line is not the line it was"
+                    break
+                }
+                verified.add(c)
+            }
 
             for (p in planned) {
+                if (!ok) break
+                // On a screen that recycles its rows, a line nobody has asked about this pass
+                // is a line that may already belong to different words. Its transcriptions
+                // wait for the movement to end rather than being carried on a guess, which is
+                // how they ended up scattered over text they had nothing to do with.
+                if (recycling && p !in verified) continue
                 val was = p.measuredAt
                 // A line whose words were all clipped away contributes nothing, which is
                 // normal and not a reason to abandon following the rest of them.
@@ -469,7 +535,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // transcription off the screen. That happened after a jump, where a surviving
             // line's words all landed outside the clip it was measured in, and the overlay
             // went blank on a page full of words.
-            if (ok && moved.isEmpty() && planned.any { it.boxes.isNotEmpty() }) {
+            if (ok && recycling && moved.isEmpty()) {
+                // Nothing verified yet on a recycling screen is not a failure; the next pass
+                // verifies the next lines, and the full read at the end settles it.
+                ok = true
+            } else if (ok && moved.isEmpty() && planned.any { it.boxes.isNotEmpty() }) {
                 ok = false
                 why = "the follow kept no words at all ($clipped clipped, $hidden covered, $unreadable unreadable)"
             }
@@ -539,6 +609,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var stale = false
         /** When the lines of this pass were measured; the page may move while it runs. */
         var readAt = t1
+        /** And when each of them was, since they are not measured together. */
+        val lineReadAt = HashMap<Planned, Long>(planned.size)
         for (p in planned) {
             // Where the characters of this line sit within it is a property of the line, not
             // of where the page has scrolled to, so a line already measured once is placed
@@ -549,6 +621,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val at = android.graphics.Rect()
             p.node.getBoundsInScreen(at)
             readAt = android.os.SystemClock.uptimeMillis()
+            lineReadAt[p] = readAt
             val remembered = charLayouts[layoutKey(p)]
             val placed = placeRemembered(remembered, at, p.viewport)
             // Asking the app where its characters are makes it lay the text out again, and a
@@ -583,6 +656,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             while (boxes.size > w) boxes.removeAt(boxes.size - 1)
             p.boxes = boxes.subList(before, boxes.size).toList()
+        }
+        // Every line of a full read is measured at a different moment, and on a moving page
+        // that is a screen that never existed: the first line belongs to where the page was
+        // fifty milliseconds ago and the last to where it is now. Each is carried forward at
+        // the speed the following measured, to the moment the reading finished.
+        if (!reuse && speedY != 0f &&
+            android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+        ) {
+            for (p in planned) {
+                val when0 = lineReadAt[p] ?: continue
+                val ahead = (readAt - when0).coerceIn(0L, 200L).toFloat() * speedY
+                if (ahead == 0f) continue
+                p.boxes = p.boxes.map {
+                    val r = it.rect
+                    it.copy(rect = RectF(r.left, r.top + ahead, r.right, r.bottom + ahead))
+                }
+            }
         }
         if (stale) {
             cachedPlan = emptyList()
@@ -625,6 +715,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             screenColors = kept?.page
             colorsFor = pkg
             cleanFrameAt = 0L
+            recycling = false
             while (colorsByPackage.size > REMEMBERED_APPS) {
                 colorsByPackage.remove(colorsByPackage.keys.first())
             }
@@ -1164,6 +1255,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val REMEMBERED_APPS = 4
         /** How many lines are asked where they are before the rest are carried with them. */
         const val ANCHORS = 3
+        /** And how many are asked whether they are still themselves, each pass. */
+        const val VERIFY_PER_PASS = 2
+        /** Plus this many at the edge the content is leaving by, where rows are recycled. */
+        const val VERIFY_AT_EDGE = 2
         /** Beyond this, lines are not moving together and each has to be asked itself. */
         const val INDEPENDENT_PX = 300f
         const val MAX_NODES = 120

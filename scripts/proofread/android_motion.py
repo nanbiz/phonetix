@@ -43,6 +43,11 @@ GAP_MS = 400
 # The shapes of movement, as the app knows them.
 PROFILES = ["linear", "accelerate", "decelerate", "minjerk", "lognormal", "tremor"]
 
+# Which page the movement happens on. "unique" keeps every line it has, the way an article
+# does; "list" recycles its rows the way every real list does, handing the same view - and
+# the same accessibility node - to a different line as the old one leaves the screen.
+PAGE = "unique"
+
 # How far and how fast, from a slow read-along to a flick.
 SPEEDS = [
     ("slow", 420, 1400),
@@ -76,7 +81,7 @@ def warm(dev, attempts=12):
     dictionary is loaded."""
     for _ in range(attempts):
         dev.clear_log()
-        dev.surface(mode="unique", enable=1, density=3, allApps=1, scrollTo=0)
+        dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=0)
         time.sleep(2.5)
         boxes = dev.boxes()
         if boxes:
@@ -194,12 +199,12 @@ def wait_until_still(dev, quiet=0.4, limit=6.0):
 
 def run_motion(dev, profile, distance, duration, strokes, seed, start=500):
     """Drive one movement and bring back everything said about it."""
-    dev.surface(mode="unique", enable=1, density=3, allApps=1, scrollTo=start)
+    dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=start)
     time.sleep(2.2)
     wait_until_still(dev)
     dev.clear_log()
     dev.surface(
-        mode="unique", enable=1, density=3, allApps=1,
+        mode=PAGE, enable=1, density=3, allApps=1,
         motion=profile, distance=distance, duration=duration, strokes=strokes, seed=seed,
     )
     # The movement, its pauses, and enough afterwards for the overlay to settle on the page
@@ -306,7 +311,7 @@ def check_settled(r, dev, profile, ended_at):
     """
     after_motion = dev.boxes()
     dev.clear_log()
-    dev.surface(mode="unique", enable=1, density=3, allApps=1, scrollTo=ended_at)
+    dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=ended_at)
     time.sleep(2.5)
     still = dev.boxes()
     if not r.check(bool(after_motion) and bool(still),
@@ -334,15 +339,18 @@ def main():
     profiles = PROFILES
     speeds = SPEEDS
     strokes = STROKES
+    global PAGE
     for arg in sys.argv[1:]:
         if arg.startswith("--profiles"):
             profiles = arg.split("=", 1)[1].split(",")
+        if arg.startswith("--page"):
+            PAGE = arg.split("=", 1)[1]
         if arg == "--quick":
             speeds = SPEEDS[1:2]
             strokes = [1]
 
     dev = Device()
-    print(f"device {dev.width}x{dev.height}")
+    print(f"device {dev.width}x{dev.height}, page {PAGE}")
     if not warm(dev):
         print("FAIL - nothing is transcribed at all; is the service enabled?")
         sys.exit(1)

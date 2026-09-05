@@ -11,7 +11,9 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.BaseAdapter
 import android.widget.FrameLayout
+import android.widget.ListView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -36,6 +38,32 @@ import android.widget.TextView
 class DebugSurfaceActivity : Activity() {
 
     private lateinit var scroller: ScrollView
+    /** The recycling list, when that is the page being shown. */
+    private var listView: ListView? = null
+
+    /** Where a list is scrolled to, in pixels, which it does not keep as a single number. */
+    private fun listScroll(): Int {
+        val list = listView ?: return 0
+        val first = list.getChildAt(0) ?: return 0
+        return list.firstVisiblePosition * first.height - first.top
+    }
+
+    /** The page under test, whichever kind it is. */
+    private fun page(): ScrollMotion.Page {
+        val list = listView
+        if (list != null) {
+            return ScrollMotion.Page(
+                view = list,
+                at = { listScroll() },
+                moveTo = { y -> list.scrollListBy(y - listScroll()) },
+            )
+        }
+        return ScrollMotion.Page(
+            view = scroller,
+            at = { scroller.scrollY },
+            moveTo = { y -> scroller.scrollTo(0, y) },
+        )
+    }
     /** An empty line whose text is toggled to make the window's content change. */
     private var marker: TextView? = null
     private var mode = "plain"
@@ -54,6 +82,44 @@ class DebugSurfaceActivity : Activity() {
 
         val root = FrameLayout(this)
         root.setBackgroundColor(BACKGROUND)
+
+        if (mode == "list") {
+            // A list that recycles its rows, which a ScrollView never does. Everything an app
+            // in front of the reader actually scrolls works this way: the same view, and the
+            // same accessibility node, is handed to a different line as the old one leaves
+            // the screen. A page that keeps all its lines cannot show what that does to an
+            // overlay carrying words by how far their line reports it has moved.
+            val list = ListView(this).apply {
+                setBackgroundColor(BACKGROUND)
+                divider = null
+                adapter = object : BaseAdapter() {
+                    override fun getCount() = DISTINCT.size * 3
+                    override fun getItem(position: Int) = DISTINCT[position % DISTINCT.size]
+                    override fun getItemId(position: Int) = position.toLong()
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
+                        val row = (convertView as? TextView) ?: line("", Color.WHITE, BACKGROUND)
+                        // Numbered, so a row is never the same text as another row: two lines
+                        // that read alike could be told apart by nothing but position, which
+                        // is the thing being measured.
+                        row.text = "$position ${getItem(position)}"
+                        return row
+                    }
+                }
+                // The same reports a ScrollView gives, so the suite reads one kind of ground
+                // truth whichever page it is driving.
+                viewTreeObserver.addOnScrollChangedListener {
+                    Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} ${listScroll()}")
+                }
+            }
+            listView = list
+            root.addView(list, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
+            ))
+            setContentView(root)
+            window.decorView.setBackgroundColor(BACKGROUND)
+            handle(intent)
+            return
+        }
 
         scroller = ScrollView(this).apply {
             isFillViewport = true
@@ -129,9 +195,10 @@ class DebugSurfaceActivity : Activity() {
         if (intent.hasExtra(EXTRA_SCROLL)) {
             val y = intent.getIntExtra(EXTRA_SCROLL, 0)
             // Jumped, not animated: the test wants the movement finished.
-            scroller.post { scroller.scrollTo(0, y); Log.d(TAG, "SETTLED $y") }
+            val page = page()
+            page.view.post { page.moveTo(y); Log.d(TAG, "SETTLED $y") }
         }
-        if (intent.hasExtra(EXTRA_FLING)) {
+        if (intent.hasExtra(EXTRA_FLING) && listView == null) {
             val v = intent.getIntExtra(EXTRA_FLING, 0)
             // A real fling, with the platform's own deceleration, which is the motion a
             // finger actually produces and nothing like a straight line.
@@ -145,13 +212,16 @@ class DebugSurfaceActivity : Activity() {
             val duration = intent.getIntExtra(EXTRA_DURATION, 700)
             val strokes = intent.getIntExtra(EXTRA_STROKES, 1)
             val seed = intent.getIntExtra(EXTRA_SEED, 1)
-            scroller.post {
-                ScrollMotion.run(scroller, profile, distance, duration, strokes, seed)
+            val page = page()
+            page.view.post {
+                ScrollMotion.run(page, profile, distance, duration, strokes, seed)
             }
         }
         if (intent.hasExtra(EXTRA_SMOOTH)) {
             val by = intent.getIntExtra(EXTRA_SMOOTH, 0)
-            scroller.post { scroller.smoothScrollBy(0, by) }
+            val list = listView
+            if (list != null) list.post { list.smoothScrollByOffset(by / 100) }
+            else scroller.post { scroller.smoothScrollBy(0, by) }
         }
     }
 
@@ -194,6 +264,7 @@ class DebugSurfaceActivity : Activity() {
      * back the old frequency's words and concluded the setting did nothing.
      */
     private fun nudge() {
+        if (listView != null) return
         scroller.postDelayed({
             val text = marker ?: return@postDelayed
             text.text = if (text.text.isEmpty()) "\u200b" else ""
