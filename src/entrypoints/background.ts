@@ -648,6 +648,15 @@ export default defineBackground(() => {
     return detectBlocks(data.pageLang, data.blocks);
   });
 
+  onMessage('openPopupTab', async ({ sender }) => {
+    // Only from a page on the machine itself: this exists for the test harness, and a
+    // site on the web has no business opening the popup.
+    const from = sender?.url ?? '';
+    if (!/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(from)) return false;
+    await browser.tabs.create({ url: browser.runtime.getURL('/popup.html') });
+    return true;
+  });
+
   onMessage('getHealth', async () => {
     const errors: string[] = [];
     let eld = false, dict = false, espeak = false;

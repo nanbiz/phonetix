@@ -99,15 +99,43 @@ def main():
             if any(before.values()):
                 break
             time.sleep(1.5)
+        if not any(before.values()):
+            # What the page actually holds, so a run that transcribed nothing says why
+            # rather than reporting that the accent did nothing.
+            print("firefox page:", client.execute_script(
+                "return JSON.stringify({"
+                "  marked: document.querySelectorAll('.phonetix').length,"
+                "  attrs: [...document.documentElement.attributes].map(a => a.name),"
+                "  text: document.body.innerText.slice(0, 120),"
+                "});"))
 
         # The popup opens in its own tab: navigating the page's tab to it would
         # take the page away, and then nothing could be observed on it.
+        #
+        # Opened from the browser's own side rather than by navigating to it. Marionette
+        # refuses to navigate a content tab to a moz-extension: page, and has since the
+        # Firefox releases of mid-2026, so the tab is added with the browser's privileges
+        # and only then driven as a content page.
+        # Opened by the extension itself. Marionette refuses to navigate a tab to a
+        # moz-extension: page, and has since the Firefox releases of mid-2026, so the page
+        # asks the extension for the popup in a tab of its own (see ?pxopenpopup in the
+        # content script) and the new tab is driven from there.
         page = client.current_window_handle
-        client.execute_script("window.open('about:blank', '_blank');")
-        time.sleep(1)
-        popup_tab = [h for h in client.window_handles if h != page][-1]
-        client.switch_to_window(popup_tab)
-        client.navigate(f"moz-extension://{EXT_UUID}/popup.html")
+        client.execute_script("window.open(location.pathname + '?pxopenpopup=1', '_blank');")
+        for _ in range(30):
+            time.sleep(0.5)
+            if len(client.window_handles) >= 3:
+                break
+        popup_tab = None
+        for h in client.window_handles:
+            if h == page:
+                continue
+            client.switch_to_window(h)
+            if client.get_url().startswith("moz-extension://"):
+                popup_tab = h
+                break
+        if popup_tab is None:
+            raise SystemExit("the extension did not open its popup")
         time.sleep(3)
         # Drive the popup's own control, so the extension's code does the work with
         # its own privileges: Marionette's sandbox has no extension APIs, and using

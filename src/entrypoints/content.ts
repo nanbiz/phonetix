@@ -1372,6 +1372,14 @@ export default defineContentScript({
         .then((h) => { document.documentElement.dataset.pxhealth = JSON.stringify(h); })
         .catch((e) => { document.documentElement.dataset.pxhealth = JSON.stringify({ error: String(e) }); });
     }
+    // Test hook: on ?pxopenpopup pages, ask for the popup in a tab of its own. Marionette
+    // cannot navigate to an extension page, so the extension opens it; the background
+    // honours this only from a page on the machine itself.
+    if (location.search.includes('pxopenpopup')) {
+      sendMessage('openPopupTab', {})
+        .then((ok) => { document.documentElement.dataset.pxopenpopup = ok ? 'opened' : 'refused'; })
+        .catch((e) => { document.documentElement.dataset.pxopenpopup = String(e); });
+    }
 
     // Settings are watched, not delivered.
     //

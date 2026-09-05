@@ -30,6 +30,9 @@ interface ProtocolMap {
   /** Actively probe each subsystem (language detection, dictionary, espeak) so a
    *  test can assert none silently degraded. */
   getHealth(data: Record<string, never>): { eld: boolean; dict: boolean; espeak: boolean; errors: string[] };
+  /** Open the popup in a tab of its own. A test hook: a driver outside the browser cannot
+   *  navigate to an extension page, so the extension opens it. */
+  openPopupTab(data: Record<string, never>): boolean;
   /** A Commons file showing the sound being made, as a data URL. The page's own
    *  CSP would block loading it straight into the page. */
   symbolDiagram(data: { file: string }): string;
