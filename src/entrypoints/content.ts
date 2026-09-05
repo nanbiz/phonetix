@@ -1359,9 +1359,21 @@ export default defineContentScript({
     setupTooltipEvents();
     applyAnimations();
 
+    // What the first pass got up to, for a page served from this machine: a harness that
+    // finds no transcriptions can then say where the work stopped instead of guessing.
+    const local = /^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+    const stage = (name: string) => { if (local) document.documentElement.dataset.pxstage = name; };
+    stage(isEnabled ? 'enabled' : 'disabled');
     if (isEnabled) {
       setMode(mode);
-      await processPage();
+      stage('processing');
+      try {
+        await processPage();
+        stage('done');
+      } catch (e) {
+        stage(`failed: ${String(e).slice(0, 200)}`);
+        throw e;
+      }
       observeDOM();
     }
 
@@ -1372,13 +1384,20 @@ export default defineContentScript({
         .then((h) => { document.documentElement.dataset.pxhealth = JSON.stringify(h); })
         .catch((e) => { document.documentElement.dataset.pxhealth = JSON.stringify({ error: String(e) }); });
     }
-    // Test hook: on ?pxopenpopup pages, ask for the popup in a tab of its own. Marionette
-    // cannot navigate to an extension page, so the extension opens it; the background
-    // honours this only from a page on the machine itself.
-    if (location.search.includes('pxopenpopup')) {
-      sendMessage('openPopupTab', {})
-        .then((ok) => { document.documentElement.dataset.pxopenpopup = ok ? 'opened' : 'refused'; })
-        .catch((e) => { document.documentElement.dataset.pxopenpopup = String(e); });
+    // Test hook: on ?pxaccent=<lang>:<accent> pages served from this machine, choose an
+    // accent the way the popup does - the same key, the same value - so a driver that cannot
+    // run scripts inside the popup (Marionette in current Firefox) can still check that a
+    // changed accent reaches every page. Only from the machine itself: a site on the web
+    // does not get to change a reader's settings.
+    const accentHook = new URLSearchParams(location.search).get('pxaccent');
+    if (accentHook && /^(127\.0\.0\.1|localhost)$/.test(location.hostname)) {
+      const [lang, accent] = accentHook.split(':');
+      storage.getItem<string>('local:accents').then(async (saved) => {
+        const accents = saved ? JSON.parse(saved) : {};
+        accents[lang] = accent;
+        await storage.setItem<string>('local:accents', JSON.stringify(accents));
+        document.documentElement.dataset.pxaccent = 'set';
+      });
     }
 
     // Settings are watched, not delivered.

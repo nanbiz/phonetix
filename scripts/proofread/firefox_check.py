@@ -105,59 +105,34 @@ def main():
             print("firefox page:", client.execute_script(
                 "return JSON.stringify({"
                 "  marked: document.querySelectorAll('.phonetix').length,"
-                "  attrs: [...document.documentElement.attributes].map(a => a.name),"
+                "  stage: document.documentElement.dataset.pxstage || null,"
+                "  host: location.hostname,"
                 "  text: document.body.innerText.slice(0, 120),"
                 "});"))
 
-        # The popup opens in its own tab: navigating the page's tab to it would
-        # take the page away, and then nothing could be observed on it.
-        #
-        # Opened from the browser's own side rather than by navigating to it. Marionette
-        # refuses to navigate a content tab to a moz-extension: page, and has since the
-        # Firefox releases of mid-2026, so the tab is added with the browser's privileges
-        # and only then driven as a content page.
-        # Opened by the extension itself. Marionette refuses to navigate a tab to a
-        # moz-extension: page, and has since the Firefox releases of mid-2026, so the page
-        # asks the extension for the popup in a tab of its own (see ?pxopenpopup in the
-        # content script) and the new tab is driven from there.
+        # The accent is chosen the way the popup chooses it - the same storage key, the
+        # same value - from a second tab served by this machine. Marionette in current
+        # Firefox cannot run scripts inside the popup at all (an extension page is a
+        # privileged context), so the popup's button is exercised in the Chrome suite and
+        # what is checked here is the Firefox half that broke before: that a changed
+        # setting reaches the pages already open.
         page = client.current_window_handle
-        client.execute_script("window.open(location.pathname + '?pxopenpopup=1', '_blank');")
-        for _ in range(30):
+        client.execute_script("window.open(location.pathname + '?pxaccent=en:en-us', '_blank');")
+        chooser = None
+        for _ in range(20):
             time.sleep(0.5)
-            if len(client.window_handles) >= 3:
+            others = [h for h in client.window_handles if h != page]
+            if others:
+                chooser = others[-1]
                 break
-        popup_tab = None
-        for h in client.window_handles:
-            if h == page:
-                continue
-            client.switch_to_window(h)
-            if client.get_url().startswith("moz-extension://"):
-                popup_tab = h
+        if chooser is None:
+            print("FAIL - the accent tab did not open"); return 1
+        client.switch_to_window(chooser)
+        for _ in range(20):
+            if client.execute_script("return document.documentElement.dataset.pxaccent || null;"):
                 break
-        if popup_tab is None:
-            raise SystemExit("the extension did not open its popup")
-        time.sleep(3)
-        # Drive the popup's own control, so the extension's code does the work with
-        # its own privileges: Marionette's sandbox has no extension APIs, and using
-        # them from here would test the harness rather than the popup.
-        # Open the language row, then choose the accent from the view it opens. The
-        # popup is driven exactly as a person drives it, so a change to how the
-        # accent is chosen fails here rather than passing against a control that no
-        # longer exists.
-        client.execute_script(
-            "const row = [...document.querySelectorAll('button')]"
-            "  .find(b => /detected|set by you/.test(b.textContent));"
-            "if (row) row.click();",
-        )
-        time.sleep(1)
-        picked = client.execute_script(
-            "const btn = [...document.querySelectorAll('button')]"
-            "  .find(b => b.textContent.trim() === 'American');"
-            "if (!btn) return 'no American accent to choose';"
-            "btn.click();"
-            "return 'picked American';",
-        )
-        print("firefox popup:", picked)
+            time.sleep(0.5)
+        print("firefox accent chosen:", client.execute_script("return document.documentElement.dataset.pxaccent || null;"))
         client.switch_to_window(page)
         after = {}
         for _ in range(20):

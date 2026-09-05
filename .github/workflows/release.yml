@@ -74,6 +74,21 @@ jobs:
       - name: Package Chrome zip
         run: pnpm zip
 
+      # The Android app, as the debug build: it installs on any phone with sideloading on,
+      # which is how this app is used, and needs no signing key in the repository.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+      - name: Build Android app
+        working-directory: android
+        run: gradle --no-daemon testDebugUnitTest assembleDebug
+      - name: Name the APK after the release
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk ".output/phonetix-${GITHUB_REF_NAME}-android-debug.apk"
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -81,4 +96,4 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
             --generate-notes \
-            .output/signed/*.xpi .output/*-chrome.zip
+            .output/signed/*.xpi .output/*-chrome.zip .output/*-android-debug.apk
