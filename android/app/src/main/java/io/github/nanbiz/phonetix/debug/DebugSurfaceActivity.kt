@@ -162,17 +162,12 @@ class DebugSurfaceActivity : Activity() {
                     }
                 }
             }
-            if (i.hasExtra(EXTRA_STYLE)) {
-                val styles = io.github.nanbiz.phonetix.core.ChipStyle.entries
-                val idx = i.getIntExtra(EXTRA_STYLE, 0).coerceIn(0, styles.size - 1)
-                io.github.nanbiz.phonetix.core.SettingsStore.setStyle(styles[idx])
-            }
             }
 
     private fun announce() {
         val s = io.github.nanbiz.phonetix.core.SettingsStore.current
         Log.d(TAG, "SETTINGS ${SystemClock.uptimeMillis()} enabled=${s.enabled} " +
-            "density=${s.density} allApps=${s.allApps} style=${s.style}")
+            "density=${s.density} allApps=${s.allApps}")
     }
 
     /**
@@ -211,6 +206,20 @@ class DebugSurfaceActivity : Activity() {
         setBackgroundColor(bg)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         setPadding(0, pad(), 0, pad())
+        // What this line is really drawn in and where it ended up, so a test comparing the
+        // overlay's colours against the app's own owes nothing to the overlay's account of
+        // itself, and can tell one line's words from the next line's identical ones.
+        post {
+            val at = IntArray(2)
+            getLocationOnScreen(at)
+            android.util.Log.d(
+                TAG,
+                "SURFACE ink=#%06X bg=#%06X at=%d,%d,%d,%d text=%s".format(
+                    ink and 0xFFFFFF, bg and 0xFFFFFF,
+                    at[0], at[1], width, height, text,
+                ),
+            )
+        }
     }
 
     private fun pad() = (16 * resources.displayMetrics.density).toInt()
@@ -225,7 +234,6 @@ class DebugSurfaceActivity : Activity() {
         const val EXTRA_ENABLE = "enable"
         const val EXTRA_DENSITY = "density"
         const val EXTRA_SCOPE = "allApps"
-        const val EXTRA_STYLE = "style"
         const val HEADER_TAG = "header"
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.

@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.nanbiz.phonetix.core.ChipStyle
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.Frequency
 import io.github.nanbiz.phonetix.core.Settings
@@ -60,7 +59,6 @@ fun HomeScreen(
     dictionaryReady: Boolean,
     onEnabled: (Boolean) -> Unit,
     onDensity: (Int) -> Unit,
-    onStyle: (ChipStyle) -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenApps: () -> Unit,
@@ -96,8 +94,6 @@ fun HomeScreen(
             dictionaryReady = dictionaryReady,
             onDensity = onDensity,
         )
-
-        StyleCard(style = settings.style, onStyle = onStyle)
 
         AppsCard(settings = settings, onOpenApps = onOpenApps)
 
@@ -263,7 +259,7 @@ private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (In
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Label("A few words")
-            Label("Every other word")
+            Label("Every word")
         }
         Spacer(Modifier.height(14.dp))
         Text(
@@ -317,52 +313,6 @@ private fun Preview(density: Int, ready: Boolean) {
         } else {
             Text(text, style = MaterialTheme.typography.bodyMedium, lineHeight = 24.sp)
         }
-    }
-}
-
-@Composable
-private fun StyleCard(style: ChipStyle, onStyle: (ChipStyle) -> Unit) {
-    SectionCard(title = "Appearance") {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StyleOption("Solid", "Covers the word", style == ChipStyle.SOLID, Modifier.weight(1f)) {
-                onStyle(ChipStyle.SOLID)
-            }
-            StyleOption("Soft", "Lets it show", style == ChipStyle.SOFT, Modifier.weight(1f)) {
-                onStyle(ChipStyle.SOFT)
-            }
-            StyleOption("Tint", "No cover", style == ChipStyle.UNDERLAY, Modifier.weight(1f)) {
-                onStyle(ChipStyle.UNDERLAY)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StyleOption(
-    title: String,
-    body: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val border by animateColorAsState(
-        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-        label = "style",
-    )
-    Column(
-        modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else Color.Transparent
-            )
-            .border(if (selected) 2.dp else 1.dp, border, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 10.dp),
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text(body, style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

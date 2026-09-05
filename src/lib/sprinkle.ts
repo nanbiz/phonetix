@@ -10,8 +10,8 @@
  * Nothing here touches the DOM or any browser API, so it runs the same under node.
  */
 
-/** One word in every N: 2 is every other word, 50 is a rare sprinkle. */
-export const DENSITY_MIN = 2;
+/** One word in every N: 1 is every word, 50 is a rare sprinkle. */
+export const DENSITY_MIN = 1;
 export const DENSITY_MAX = 50;
 
 /**
@@ -65,6 +65,10 @@ export function posForDensity(d: number, steps = 100): number {
  * `word` is expected lowercased; `occurrence` counts from 0 within one render.
  */
 export function picks(word: string, occurrence: number, density: number): boolean {
+  // The end of the bar means every word, and it has to mean it exactly: the rarity boost
+  // would otherwise still hold short words back to one in two at the densest setting, and a
+  // reader who asks for all of them would find some missing with no way to ask harder.
+  if (density <= DENSITY_MIN) return true;
   const boost = Math.min(2.4, Math.max(0.6, word.length / 5));
   const n = Math.max(1, Math.round(density / boost));
   return hashStr(`${word}#${occurrence}`) % n === 0;

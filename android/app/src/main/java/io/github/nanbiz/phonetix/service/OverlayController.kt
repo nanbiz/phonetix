@@ -12,7 +12,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import io.github.nanbiz.phonetix.core.ChipStyle
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlin.math.roundToInt
 
@@ -38,7 +37,6 @@ class OverlayController(
     private val chips = ArrayList<ChipView>(MAX_CHIPS)
     private val motion = MotionLayer(context)
     private var lastRendered: List<WordBox> = emptyList()
-    private var lastStyle: ChipStyle = ChipStyle.SOLID
 
     /**
      * While the screen is moving the whole set rides on one layer instead of a window each:
@@ -49,18 +47,17 @@ class OverlayController(
     fun beginMotion() {
         if (motion.isRunning) return
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
-        motion.start(lastRendered, lastStyle)
+        motion.start(lastRendered)
     }
 
-    fun motionMeasured(boxes: List<WordBox>, style: ChipStyle) {
+    fun motionMeasured(boxes: List<WordBox>) {
         lastRendered = boxes
-        lastStyle = style
-        motion.measured(boxes, style)
+        motion.measured(boxes)
     }
 
-    fun endMotion(boxes: List<WordBox>, style: ChipStyle) {
+    fun endMotion(boxes: List<WordBox>) {
         motion.stop()
-        render(boxes, style)
+        render(boxes)
     }
 
     val inMotion: Boolean get() = motion.isRunning
@@ -88,19 +85,18 @@ class OverlayController(
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
     }
 
-    fun render(boxes: List<WordBox>, style: ChipStyle) {
+    fun render(boxes: List<WordBox>) {
         // Painting the small windows means the motion is over, whether it ended by settling
         // or because the screen changed under it. Leaving the layer up would hide every one
         // of them, and nothing would be tappable again.
         if (motion.isRunning) motion.stop()
         lastRendered = boxes
-        lastStyle = style
         val wanted = if (boxes.size > MAX_CHIPS) boxes.subList(0, MAX_CHIPS) else boxes
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
             val chip = chips.getOrNull(i) ?: break
             val box = wanted[i]
-            chip.bind(box, style, reveal)
+            chip.bind(box, reveal)
             // Changing what a window says takes effect on the next draw; moving it has to
             // go through the window manager and lands a frame later. Do both to a visible
             // window and it paints the new word at the old word's place for that frame,
@@ -209,7 +205,6 @@ class ChipView(
     var moveToken = 0
 
     private var box: WordBox? = null
-    private var style: ChipStyle = ChipStyle.SOLID
     private val revert = Runnable { onChanged() }
     private var downX = 0f
     private var downY = 0f
@@ -219,10 +214,9 @@ class ChipView(
     private val painter = ChipPainter()
     private val dest = RectF()
 
-    fun bind(next: WordBox, nextStyle: ChipStyle, state: RevealState) {
-        val changed = box?.ipa != next.ipa || box?.word != next.word || style != nextStyle
+    fun bind(next: WordBox, state: RevealState) {
+        val changed = box?.ipa != next.ipa || box?.word != next.word 
         box = next
-        style = nextStyle
         if (changed) invalidate()
     }
 
@@ -283,7 +277,7 @@ class ChipView(
         val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
         dest.set(0f, 0f, width.toFloat(), height.toFloat())
-        painter.draw(canvas, dest, b, style, dark, reveal.isRevealed(b.word))
+        painter.draw(canvas, dest, b, dark, reveal.isRevealed(b.word))
     }
 
     private companion object {

@@ -47,8 +47,27 @@ class TooltipController(
     private val wm = context.getSystemService(WindowManager::class.java)
     private val main = Handler(Looper.getMainLooper())
     private var view: View? = null
+    /** The scrolling list of symbols, refilled in place when a row opens or closes. */
+    private var list: LinearLayout? = null
+    private var scroller: ScrollView? = null
     private var expanded: String? = null
     private var shown: WordBox? = null
+
+    /**
+     * Views of ours that must not report themselves to accessibility.
+     *
+     * The card lives in an overlay window of the same process as the service, and a service
+     * hears the events of every app including its own. The list scrolling therefore arrived
+     * as a scroll of the screen, which takes the transcriptions down and the card with them:
+     * the card could not be scrolled at all, because scrolling it was what closed it.
+     */
+    private val mute = object : View.AccessibilityDelegate() {
+        override fun sendAccessibilityEvent(host: View, eventType: Int) {}
+        override fun sendAccessibilityEventUnchecked(
+            host: View,
+            event: android.view.accessibility.AccessibilityEvent,
+        ) {}
+    }
 
     fun show(box: WordBox) {
         IpaSymbols.ensureLoaded(context)
@@ -71,6 +90,8 @@ class TooltipController(
         speaker.stop()
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
+        list = null
+        scroller = null
         shown = null
         expanded = null
     }
@@ -80,6 +101,7 @@ class TooltipController(
         view = null
 
         val card = build(box)
+        card.accessibilityDelegate = mute
         val metrics = context.resources.displayMetrics
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -97,11 +119,10 @@ class TooltipController(
             width = (metrics.widthPixels * 0.88f).roundToInt()
             height = WindowManager.LayoutParams.WRAP_CONTENT
             x = ((metrics.widthPixels - width) / 2f).roundToInt()
-            // Below the word when there is room, above it when there is not, so the card
-            // never covers the word it is explaining.
-            val room = metrics.heightPixels - box.rect.bottom
-            y = if (room > metrics.heightPixels * 0.45f) (box.rect.bottom + dp(10)).roundToInt()
-            else (box.rect.top - metrics.heightPixels * 0.42f).coerceAtLeast(dp(28)).roundToInt()
+            // Below the word to start with; where it really ends up is settled once the
+            // card has been measured, since how tall it is depends on how many symbols the
+            // word has.
+            y = (box.rect.bottom + dp(10)).roundToInt()
         }
         card.setOnTouchListener { _, e ->
             if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hide()
@@ -110,19 +131,56 @@ class TooltipController(
         runCatching { wm.addView(card, lp) }
             .onSuccess {
                 view = card
-                // What the card actually laid out, once it has been measured: an overlay
-                // window is invisible to uiautomator, so without this a test can only know
-                // that the card was asked for, never that it drew anything or where its
-                // buttons ended up.
-                if (BuildConfig.DEBUG) card.post { describe(card) }
+                card.post {
+                    place(card, lp, box)
+                    // What the card actually laid out, once it has been measured and moved
+                    // to where it will stay: an overlay window is invisible to uiautomator,
+                    // so without this a test can only know that the card was asked for,
+                    // never that it drew anything or where its buttons ended up. Reported
+                    // after the move, because a position read before it is the position the
+                    // card no longer has.
+                    if (BuildConfig.DEBUG) card.post { describe(card) }
+                }
             }
             .onFailure { android.util.Log.w("Phonetix", "tooltip addView failed", it) }
+    }
+
+    /**
+     * Put the measured card where it fits: below the word, above it, or as far up as it can
+     * go when it is taller than either gap.
+     *
+     * Guessing the height beforehand put a long card half off the bottom of the screen, with
+     * the buttons that close it out of reach.
+     */
+    private fun place(card: View, lp: WindowManager.LayoutParams, box: WordBox) {
+        val metrics = context.resources.displayMetrics
+        val margin = dp(8).roundToInt()
+        val height = card.height
+        val below = (box.rect.bottom + dp(10)).roundToInt()
+        val above = (box.rect.top - dp(10)).roundToInt() - height
+        val y = when {
+            below + height + margin <= metrics.heightPixels -> below
+            above >= margin -> above
+            else -> (metrics.heightPixels - height - margin).coerceAtLeast(margin)
+        }
+        if (y == lp.y) return
+        lp.y = y
+        runCatching { wm.updateViewLayout(card, lp) }
     }
 
     /** Every piece of text the card put on screen, with where it ended up. */
     private fun describe(root: View) {
         val out = StringBuilder("CARD ")
         val at = IntArray(2)
+        root.getLocationOnScreen(at)
+        out.append("card@").append(at[0]).append(',').append(at[1]).append(',')
+            .append(root.width).append(',').append(root.height).append(' ')
+        scroller?.let { sv ->
+            // How much of the list is out of sight, so a test knows whether there is
+            // anything to scroll before it insists that scrolling moved something.
+            val room = (sv.getChildAt(0)?.height ?: 0) - sv.height
+            out.append("scrollable=").append(room.coerceAtLeast(0)).append(' ')
+        }
         fun walk(v: View) {
             if (v is TextView && v.text.isNotEmpty()) {
                 v.getLocationOnScreen(at)
@@ -146,13 +204,33 @@ class TooltipController(
         TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), context.resources.displayMetrics,
     )
 
-    private fun build(box: WordBox): View {
+    /** The card's own colours, taken from the surface the word was sitting on. */
+    private class Palette(
+        val surface: Int,
+        val onSurface: Int,
+        val muted: Int,
+        val accent: Int,
+        val line: Int,
+    )
+
+    private fun palette(box: WordBox): Palette {
         val dark = box.background == 0 || isDark(box.background)
-        val surface = if (dark) Color.rgb(0x24, 0x1C, 0x17) else Color.rgb(0xFF, 0xFB, 0xF2)
-        val onSurface = if (dark) Color.rgb(0xF5, 0xED, 0xE0) else Color.rgb(0x2B, 0x21, 0x17)
-        val muted = if (dark) Color.rgb(0xC9, 0xB7, 0x9C) else Color.rgb(0x6B, 0x5B, 0x45)
-        val accent = if (dark) Color.rgb(0xFB, 0xBF, 0x24) else Color.rgb(0xB4, 0x53, 0x09)
-        val line = if (dark) Color.rgb(0x3A, 0x2E, 0x25) else Color.rgb(0xE3, 0xD7, 0xBE)
+        return Palette(
+            surface = if (dark) Color.rgb(0x24, 0x1C, 0x17) else Color.rgb(0xFF, 0xFB, 0xF2),
+            onSurface = if (dark) Color.rgb(0xF5, 0xED, 0xE0) else Color.rgb(0x2B, 0x21, 0x17),
+            muted = if (dark) Color.rgb(0xC9, 0xB7, 0x9C) else Color.rgb(0x6B, 0x5B, 0x45),
+            accent = if (dark) Color.rgb(0xFB, 0xBF, 0x24) else Color.rgb(0xB4, 0x53, 0x09),
+            line = if (dark) Color.rgb(0x3A, 0x2E, 0x25) else Color.rgb(0xE3, 0xD7, 0xBE),
+        )
+    }
+
+    private fun build(box: WordBox): View {
+        val p = palette(box)
+        val surface = p.surface
+        val onSurface = p.onSurface
+        val muted = p.muted
+        val accent = p.accent
+        val line = p.line
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -191,19 +269,37 @@ class TooltipController(
 
         root.addView(divider(line))
 
-        // One row per symbol, and the row opens into the detail the extension shows.
-        val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        for (s in IpaSymbols.explain(box.full)) {
-            list.addView(symbolRow(s, onSurface, muted, accent, surface, line))
-        }
-        root.addView(ScrollView(context).apply {
+        // One row per symbol, and the row opens into the detail the extension shows. The
+        // list grows to what it holds and stops at a fraction of the screen, so a word of
+        // three sounds is a short card rather than a tall one with a gap in it, and a long
+        // one scrolls instead of running off the bottom.
+        val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        list = rows
+        val scroll = BoundedScrollView(
+            context, (context.resources.displayMetrics.heightPixels * 0.42f).roundToInt(),
+        ).apply {
             isVerticalScrollBarEnabled = true
-            addView(list)
+            isScrollbarFadingEnabled = false
+            // How far the list has actually been scrolled. An overlay window is invisible to
+            // uiautomator, so this is the only way a test can tell a card that scrolls under
+            // the finger from one that does not.
+            if (BuildConfig.DEBUG) {
+                setOnScrollChangeListener { _, _, y, _, _ ->
+                    android.util.Log.d("Phonetix", "CARDSCROLL y=$y")
+                }
+            }
+            // The list is what scrolls, so it is the view whose events would otherwise be
+            // heard by the service as the screen moving.
+            accessibilityDelegate = mute
+            addView(rows)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (context.resources.displayMetrics.heightPixels * 0.34f).roundToInt(),
+                LinearLayout.LayoutParams.WRAP_CONTENT,
             )
-        })
+        }
+        scroller = scroll
+        fill(box, p)
+        root.addView(scroll)
 
         root.addView(divider(line))
         root.addView(LinearLayout(context).apply {
@@ -214,6 +310,29 @@ class TooltipController(
             addView(pill("Close", muted, surface, line) { hide() })
         })
         return root
+    }
+
+    /**
+     * Fill the list of symbols, keeping the card and where it is scrolled to.
+     *
+     * Opening a row used to build the whole card again and put up a new window for it, which
+     * threw away the scroll position, fetched the diagram a second time, and moved the card
+     * out from under the finger that had just tapped it.
+     */
+    private fun fill(box: WordBox, p: Palette) {
+        val rows = list ?: return
+        val at = scroller?.scrollY ?: 0
+        rows.removeAllViews()
+        for (s in IpaSymbols.explain(box.full)) {
+            rows.addView(symbolRow(s, p.onSurface, p.muted, p.accent, p.surface, p.line))
+        }
+        scroller?.let { sv ->
+            sv.post {
+                val room = (sv.getChildAt(0)?.height ?: 0) - sv.height
+                sv.scrollTo(0, at.coerceIn(0, room.coerceAtLeast(0)))
+            }
+        }
+        if (BuildConfig.DEBUG) view?.post { view?.let { card -> card.post { describe(card) } } }
     }
 
     private fun symbolRow(
@@ -262,7 +381,18 @@ class TooltipController(
         // is made, and where to read more.
         row.setOnClickListener {
             expanded = if (expanded == s.token) null else s.token
-            shown?.let { render(it) }
+            shown?.let { box ->
+                fill(box, palette(box))
+                // The card is taller or shorter than it was, so where it sits is settled
+                // again rather than left half off the screen.
+                val card = view
+                if (card != null) {
+                    card.post {
+                        val lp = card.layoutParams as? WindowManager.LayoutParams ?: return@post
+                        place(card, lp, box)
+                    }
+                }
+            }
         }
 
         if (expanded == s.token) {
@@ -361,4 +491,19 @@ class TooltipController(
 
     private fun isDark(c: Int): Boolean =
         (0.299f * Color.red(c) + 0.587f * Color.green(c) + 0.114f * Color.blue(c)) < 140f
+}
+
+/**
+ * A scrolling list that takes the height it needs, up to a limit.
+ *
+ * A ScrollView given a fixed height leaves a gap under a short list; given a free one it
+ * grows past the bottom of the screen and takes the card's own buttons with it.
+ */
+private class BoundedScrollView(context: Context, private val maxHeight: Int) : ScrollView(context) {
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(
+            widthMeasureSpec,
+            MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST),
+        )
+    }
 }

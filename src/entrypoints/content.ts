@@ -17,7 +17,7 @@ import type { LanguageOption, Mode, ResolvedIpa, PhonemeResult } from '@/lib/typ
 
 type Language = string;
 import { displayIpa as displayIpaPure } from '@/lib/display-ipa';
-import { picks as sprinklePicks } from '@/lib/sprinkle';
+import { picks as sprinklePicks, DENSITY_MIN, DENSITY_MAX } from '@/lib/sprinkle';
 import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA, wikimediaAudioURL } from '@/lib/ipa-symbols';
 import type { IPASymbolInfo } from '@/lib/ipa-symbols';
 import { segment, words as wordsOf } from '@/lib/segment';
@@ -39,13 +39,13 @@ function voiceFor(lang: Language): string {
 }
 let mode: Mode = 'showOriginalOnHover';
 /** Sprinkle mode transcribes only a stable 1-in-N fraction of the dictionary-backed
- *  words (espeak-synthesized guesses are never sprinkled). N is the density: 2 shows
- *  half of them, 50 shows one in fifty. */
+ *  words (espeak-synthesized guesses are never sprinkled). N is the density: 1 shows
+ *  every one of them, 50 shows one in fifty. */
 let sprinkleDensity = 12;
 
 function clampDensity(v: string | null | undefined): number {
   const n = parseInt(v ?? '', 10);
-  return Number.isFinite(n) ? Math.min(50, Math.max(2, n)) : 12;
+  return Number.isFinite(n) ? Math.min(DENSITY_MAX, Math.max(DENSITY_MIN, n)) : 12;
 }
 
 /** The most common words per language (public/common-words.json), skipped in sprinkle

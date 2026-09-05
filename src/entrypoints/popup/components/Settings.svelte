@@ -247,6 +247,7 @@
   let freqLabel = $derived(
     selectedMode === 'showOriginalOnHover' ? 'Full IPA'
     : selectedMode === 'onHover' ? 'IPA on hover'
+    : sprinkleDensity <= DENSITY_MIN ? 'Every word'
     : `1 in ${sprinkleDensity} (${Math.round(100 / sprinkleDensity)}%)`,
   );
 

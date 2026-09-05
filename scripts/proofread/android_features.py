@@ -39,10 +39,11 @@ def show(dev, settle=2.5, **extras):
     transcribed" - which is how a suite concludes the frequency bar does nothing.
     """
     extras.setdefault("enable", 1)
+    mode = extras.pop("mode", "plain")
     log = ""
     for attempt in range(5):
         dev.clear_log()
-        dev.surface(mode="plain", **extras)
+        dev.surface(mode=mode, **extras)
         time.sleep(settle)
         log = dev.log()
         # The surface says when it applied the setting. Only a reading taken after that
@@ -67,7 +68,7 @@ def reset(dev):
     # suite then measures a device where the thing under test is not running at all - which
     # it duly reported as every feature being broken.
     for _ in range(6):
-        boxes, _ = show(dev, enable=1, density=3, allApps=1, style=0, scrollTo=0, settle=2.5)
+        boxes, _ = show(dev, enable=1, density=3, allApps=1, scrollTo=0, settle=2.5)
         if boxes:
             return boxes
         dev.enable_service()
@@ -136,7 +137,9 @@ def check_tooltip(r, dev):
             fresh = dev.boxes() or show(dev, density=3, scrollTo=0, settle=2.5)[0]
         if not fresh:
             continue
-        key = sorted(fresh, key=lambda k: fresh[k]["rect"][1])[len(fresh) // 2]
+        # The longest word on screen: it has the most symbols, so the card is at its
+        # fullest and its list is the one most likely to need scrolling.
+        key = max(fresh, key=lambda k: len(fresh[k]["word"]))
         left, top, right, bottom = fresh[key]["rect"]
         word = fresh[key]["word"]
         dev.clear_log()
@@ -194,6 +197,48 @@ def check_tooltip(r, dev):
             "the player reported a failure",
         )
 
+    # The card scrolls under the finger. It is an overlay window of the same process as the
+    # service, so its own list scrolling arrives as an accessibility event like any app's:
+    # the card used to be taken down by the very swipe that was scrolling it.
+    where = re.search(r"CARD card@(-?\d+),(-?\d+),(\d+),(\d+) scrollable=(\d+)", log)
+    if not r.check(where is not None, "card: it reports where it is", "no card bounds logged"):
+        return
+    cx, cy, cw, ch, room = (int(g) for g in where.groups())
+    dev.clear_log()
+    shell("input", "swipe", str(cx + cw // 2), str(cy + int(ch * 0.75)),
+          str(cx + cw // 2), str(cy + int(ch * 0.3)), "500")
+    time.sleep(2.0)
+    scrolled = dev.log()
+    r.check("TOOLTIP closed" not in scrolled, "card: scrolling it does not close it",
+            "the card went away while being scrolled")
+    moved = [int(m) for m in re.findall(r"CARDSCROLL y=(\d+)", scrolled)]
+    if room > 0:
+        r.check(bool(moved) and max(moved) > 0, "card: it scrolls under the finger",
+                f"{room}px of list out of sight, scroll positions reported: {moved[:6]}")
+    else:
+        r.check(not moved, "card: a list that fits does not scroll", str(moved[:4]))
+
+    # A symbol opens where it stands, keeping the card and where it was scrolled to.
+    dev.clear_log()
+    fresh_card = re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", scrolled)
+    rows = fresh_card or laid_out
+    names = [m for m in rows if any(
+        k in m[0] for k in ("plosive", "fricative", "vowel", "approximant", "nasal", "lateral")
+    )]
+    if r.check(bool(names), "card: there is a sound to open", "no named sound on the card"):
+        _, x, y, w, h = names[0]
+        shell("input", "tap", str(int(x) + int(w) // 2), str(int(y) + int(h) // 2))
+        time.sleep(2.5)
+        opened_row = dev.log()
+        r.check("TOOLTIP closed" not in opened_row, "card: opening a sound keeps the card",
+                "the card was rebuilt or closed")
+        detail = re.findall(r"\[([^@\]]+)@", opened_row)
+        r.check(
+            any("Read" in t or "See" in t for t in detail),
+            "card: an opened sound shows what to read and watch",
+            f"laid out after the tap: {detail[:8]}",
+        )
+
     # A tap away from it closes it again.
     dev.clear_log()
     shell("input", "tap", "20", "20")
@@ -235,18 +280,85 @@ def check_switch(r, dev):
 
 
 # --------------------------------------------------------------------------------------
-# Every style still covers the word.
+# The colours a transcription is drawn in, which are the colours of the text it replaces.
 # --------------------------------------------------------------------------------------
 
-def check_styles(r, dev):
+def check_colors(r, dev):
+    """Every word gets colours read off the screen, and they are the ones under it.
+
+    A transcription that keeps a palette of ours is a patch: the whole point is that it is
+    drawn in the app's own ink on the app's own surface. The debug surface paints its lines
+    in colours it names in the log, one line differing from the next, so what the overlay
+    reports can be compared against what the app says it drew.
+    """
     reset(dev)
-    for index, name in enumerate(("solid", "soft", "tint")):
-        boxes, _ = show(dev, density=3, style=index, settle=3)
-        r.check(bool(boxes), f"style {name}: transcribes", "nothing transcribed")
-        for key, info in boxes.items():
-            l, t, right, bottom = info["rect"]
-            r.check(right > l and bottom > t, f"style {name}: {info['word']} has a real box",
-                    str(info["rect"]))
+    boxes, log = show(dev, mode="colors", density=3, scrollTo=0, settle=4)
+    if not r.check(bool(boxes), "colours: there is something to colour", "nothing transcribed"):
+        return
+
+    sampled = [b for b in boxes.values() if b["sampled"]]
+    r.check(
+        len(sampled) == len(boxes),
+        "colours: every transcription has colours read off the screen",
+        f"{len(boxes) - len(sampled)} of {len(boxes)} fell back to a palette",
+    )
+
+    # What the surface says it painted, line by line, so the comparison owes nothing to our
+    # own sampling. Matched by where the line is rather than by the words on it: the page
+    # repeats its words, and matching by name compares the amber line's "immediately"
+    # against a white line's.
+    painted = re.findall(
+        r"SURFACE ink=#([0-9A-F]{6}) bg=#([0-9A-F]{6}) at=(-?\d+),(-?\d+),(\d+),(\d+) text=(.+)",
+        log,
+    )
+    r.check(bool(painted), "colours: the surface reported what it drew", "no SURFACE lines")
+    checked = 0
+    for ink_hex, bg_hex, x, y, w, h, text in painted:
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        on_this_line = [
+            b for b in boxes.values()
+            if x <= (b["rect"][0] + b["rect"][2]) // 2 <= x + w
+            and y <= (b["rect"][1] + b["rect"][3]) // 2 <= y + h
+        ]
+        if not on_this_line:
+            continue
+        checked += 1
+        first = text.split()[0][:14]
+        r.check(
+            all(close(b["bg"], int(bg_hex, 16)) for b in on_this_line),
+            f"colours: words on '{first}' sit on that line's own surface #{bg_hex}",
+            str([hex(b["bg"]) for b in on_this_line]),
+        )
+        r.check(
+            all(close(b["ink"], int(ink_hex, 16), tolerance=90) for b in on_this_line),
+            f"colours: words on '{first}' are written in that line's own ink #{ink_hex}",
+            str([(b["word"], hex(b["ink"])) for b in on_this_line]),
+        )
+    r.check(checked >= 2, "colours: more than one differently coloured line was measured",
+            f"only {checked} line(s) carried a transcription")
+
+    # Colours survive a scroll: they are carried with the words rather than read again, and
+    # a set that loses them mid-scroll flickers into our palette and back.
+    dev.clear_log()
+    shell("input", "swipe", "540", "1500", "540", "1100", "300")
+    time.sleep(2.5)
+    after = dev.boxes()
+    if after:
+        kept = [b for b in after.values() if b["sampled"]]
+        r.check(
+            len(kept) == len(after),
+            "colours: they survive a scroll",
+            f"{len(after) - len(kept)} of {len(after)} lost their colours while moving",
+        )
+
+
+def close(got, want, tolerance=60):
+    """Whether two colours are the same to the eye, the sampler quantising as it does."""
+    return (
+        abs(((got >> 16) & 0xFF) - ((want >> 16) & 0xFF))
+        + abs(((got >> 8) & 0xFF) - ((want >> 8) & 0xFF))
+        + abs((got & 0xFF) - (want & 0xFF))
+    ) <= tolerance
 
 
 # --------------------------------------------------------------------------------------
@@ -269,15 +381,21 @@ def check_settings_screen(r, dev):
     # A dump only contains what is on screen, and the screen is taller than the window, so
     # the whole of it is collected by scrolling through it.
     texts, dump = ui_text(dev)
-    for _ in range(6):
-        shell("input", "swipe", "540", "1500", "540", "600", "500")
-        time.sleep(1.4)
+    # Short steps, and a dump after each. A long swipe scrolls a whole section past
+    # between two dumps, and the section is then reported missing from a screen that
+    # showed it perfectly well.
+    for _ in range(10):
+        shell("input", "swipe", "540", "1300", "540", "950", "400")
+        time.sleep(1.2)
         more, more_dump = ui_text(dev)
         texts += more
         dump += more_dump
 
-    for wanted in ("Phonetix", "Frequency", "Preview", "Appearance", "Apps"):
-        r.check(wanted in texts, f"settings: the screen shows {wanted}", str(texts[:10]))
+    # The screen sets its section titles in capitals, so the comparison is on the words
+    # rather than on their case.
+    seen = {t.lower() for t in texts}
+    for wanted in ("Phonetix", "Frequency", "Preview", "Apps"):
+        r.check(wanted.lower() in seen, f"settings: the screen shows {wanted}", str(texts[:12]))
 
     # The frequency reads as one word in so many, and the preview shows what that does.
     r.check(
@@ -286,8 +404,8 @@ def check_settings_screen(r, dev):
         str([t for t in texts if "in" in t][:5]),
     )
     r.check(
-        any(t in texts for t in ("Solid", "Soft", "Tint")),
-        "settings: the styles are offered",
+        "Every word" in texts,
+        "settings: the dense end of the bar says it means every word",
         str(texts[:12]),
     )
     r.check("SeekBar" in dump, "settings: the frequency bar is a real control", "no slider in the screen")
@@ -330,8 +448,8 @@ def main():
     check_scope(r, dev)
     print("the master switch")
     check_switch(r, dev)
-    print("the styles")
-    check_styles(r, dev)
+    print("the colours")
+    check_colors(r, dev)
     print("the app's own screen")
     check_settings_screen(r, dev)
     check_switch_in_ui(r, dev)
@@ -342,7 +460,7 @@ def main():
         for f in r.failures:
             print("   ", f)
         sys.exit(1)
-    print("\nPASS - the bar, the card, the scope, the switch and the styles all do as they say")
+    print("\nPASS - the bar, the card, the scope, the switch and the colours all do as they say")
 
 
 if __name__ == "__main__":

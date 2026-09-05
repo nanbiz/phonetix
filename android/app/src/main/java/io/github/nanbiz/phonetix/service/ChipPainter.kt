@@ -6,7 +6,6 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import kotlin.math.abs
-import io.github.nanbiz.phonetix.core.ChipStyle
 import io.github.nanbiz.phonetix.core.WordBox
 
 /**
@@ -66,7 +65,6 @@ class ChipPainter {
         canvas: Canvas,
         where: RectF,
         box: WordBox,
-        style: ChipStyle,
         dark: Boolean,
         revealed: Boolean,
     ) {
@@ -80,8 +78,6 @@ class ChipPainter {
         val sampled = box.background != 0 && box.ink != 0
         val chip = when {
             sampled -> box.background
-            style == ChipStyle.SOFT ->
-                if (dark) Color.argb(0xE6, 0x1B, 0x14, 0x10) else Color.argb(0xE6, 0xF7, 0xEF, 0xDD)
             else -> if (dark) Color.rgb(0x1B, 0x14, 0x10) else Color.rgb(0xF7, 0xEF, 0xDD)
         }
         val fg = when {

@@ -5,14 +5,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** How a transcription is painted over the word it belongs to. */
-enum class ChipStyle { SOLID, SOFT, UNDERLAY }
-
 data class Settings(
     val enabled: Boolean = false,
     /** Transcribe one word in every N. */
     val density: Int = 12,
-    val style: ChipStyle = ChipStyle.SOLID,
     /** Empty means every app; otherwise only these packages. */
     val apps: Set<String> = emptySet(),
     val allApps: Boolean = true,
@@ -27,7 +23,6 @@ object SettingsStore {
     private const val FILE = "phonetix.settings"
     private const val K_ENABLED = "enabled"
     private const val K_DENSITY = "density"
-    private const val K_STYLE = "style"
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
 
@@ -44,8 +39,6 @@ object SettingsStore {
         _state.value = Settings(
             enabled = p.getBoolean(K_ENABLED, false),
             density = p.getInt(K_DENSITY, 12),
-            style = runCatching { ChipStyle.valueOf(p.getString(K_STYLE, null) ?: "SOLID") }
-                .getOrDefault(ChipStyle.SOLID),
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
         )
@@ -57,7 +50,6 @@ object SettingsStore {
         prefs?.edit()
             ?.putBoolean(K_ENABLED, next.enabled)
             ?.putInt(K_DENSITY, next.density)
-            ?.putString(K_STYLE, next.style.name)
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
             ?.apply()
@@ -65,7 +57,6 @@ object SettingsStore {
 
     fun setEnabled(v: Boolean) = update { it.copy(enabled = v) }
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
-    fun setStyle(v: ChipStyle) = update { it.copy(style = v) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)

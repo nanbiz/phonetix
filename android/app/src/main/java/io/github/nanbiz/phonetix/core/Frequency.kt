@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
  * that it feels extreme.
  */
 object Frequency {
-    const val DMIN = 2
+    const val DMIN = 1
     const val DMAX = 50
     private const val LOG_MIX = 0.6
 
@@ -39,7 +39,8 @@ object Frequency {
         return best / 100f
     }
 
-    fun label(d: Int): String = "1 in $d  ·  ${(100.0 / d).roundToInt()}%"
+    fun label(d: Int): String =
+        if (d <= DMIN) "Every word" else "1 in $d  ·  ${(100.0 / d).roundToInt()}%"
 
     /**
      * FNV-1a, so a word is picked the same way on every pass and nothing flickers.
@@ -68,6 +69,9 @@ object Frequency {
      * independently and land as a mix down the screen rather than all-or-nothing.
      */
     fun picks(word: String, occurrence: Int, density: Int): Boolean {
+        // The end of the bar means every word, exactly: the rarity boost would otherwise
+        // still hold a short word back to one in two at the densest setting.
+        if (density <= DMIN) return true
         val boost = min(2.4, max(0.6, word.length / 5.0))
         val n = max(1, (density / boost).roundToInt())
         return hash("$word#$occurrence") % n == 0L

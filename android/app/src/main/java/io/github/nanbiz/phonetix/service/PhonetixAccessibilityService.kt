@@ -55,13 +55,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
     // app are rarely the same colour, and averaging them gives a transcription that matches
     // neither. Keyed by the text itself so a line keeps its colours while it is on screen,
     // and cleared when the app changes.
-    private val wordColors = HashMap<String, WordColors>(64)
-    /** Words already looked for on this screen, found or not, so the overlay steps aside
-     *  a bounded number of times rather than once for every word it never manages to read. */
-    private val colorAttempted = HashSet<String>(64)
+    private val lineColors = HashMap<String, WordColors>(64)
+    /** How often a line has been looked for without being read, so the overlay steps aside
+     *  a bounded number of times rather than once per pass for a line it cannot resolve,
+     *  and a single refused capture does not condemn a screen to no colour at all. */
+    private val colorTries = HashMap<String, Int>(64)
     @Volatile private var colorsFor: String? = null
-    /** The rectangles the overlay is actually showing, which is what a capture contains. */
-    @Volatile private var onScreenBoxes: List<RectF> = emptyList()
+    /** The page's own colours, for a line whose own could not be read. */
+    @Volatile private var screenColors: WordColors? = null
     /** Set while the overlay is briefly down so a capture can see the text underneath. */
     @Volatile private var capturing = false
     @Volatile private var cleanFrameAt = 0L
@@ -276,7 +277,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 why = "more lines recycled ($gone) than kept ($alive)"
             }
             if (ok) {
-                val style0 = settings.style
                 val took = android.os.SystemClock.uptimeMillis() - tf
                 // Still moving: hand the measurement to the layer, which corrects both the
                 // position and the speed it is carrying them at. Once the scrolling has
@@ -299,8 +299,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d("Phonetix", sb.toString())
                 }
                 main.post {
-                    if (moving && overlay.inMotion) overlay.motionMeasured(moved, style0)
-                    else overlay.endMotion(moved, style0)
+                    if (moving && overlay.inMotion) overlay.motionMeasured(moved)
+                    else overlay.endMotion(moved)
                     android.util.Log.d(
                         "Phonetix",
                         "follow=${took}ms lines=${planned.size} boxes=${moved.size} moving=$moving",
@@ -367,26 +367,39 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // of problem instead of guarding against it.
         val tb = android.os.SystemClock.uptimeMillis()
         if (pkg != colorsFor) {
-            wordColors.clear()
-            colorAttempted.clear()
+            lineColors.clear()
+            colorTries.clear()
+            screenColors = null
             colorsFor = pkg
             cleanFrameAt = 0L
         }
 
-        // Only words never tried on this screen are worth stepping aside for. Without that
+        // A line is the unit, not a word. One word carries a few dozen glyph pixels and a
+        // short one carries none worth the name, which is how words ended up with no colour
+        // and wearing the palette below instead; a line carries thousands, and every word on
+        // it is drawn in the colour of its neighbours. Keying on the line's own text also
+        // keeps a heading apart from the paragraph under it, and one message in a
+        // conversation apart from the next, which a single colour per app cannot do.
+        val unread = planned.filter {
+            val key = colorKey(it.text)
+            it.boxes.isNotEmpty() && key !in lineColors && (colorTries[key] ?: 0) < COLOR_TRIES
+        }
+        // Only lines never read on this screen are worth stepping aside for. Without that
         // the overlay hid itself every second and a half for the whole life of a page,
         // which cost more than the colours were worth and left flings barely drawn.
-        val untried = boxes.filter {
-            val key = it.word.lowercase()
-            key !in wordColors && key !in colorAttempted
+        if (unread.isNotEmpty()) {
+            requestCleanFrame(unread.map { colorKey(it.text) to colorRect(it) })
         }
-        if (untried.isNotEmpty()) requestCleanFrame(untried)
 
-        val painted = boxes.map {
-            val c = wordColors[it.word.lowercase()]
-            if (c == null) it else it.copy(background = c.background, ink = c.ink)
+        // The colours ride on the boxes the lines keep, so that following a scroll carries
+        // them too: re-reading positions does not re-read colours, and a set of words that
+        // lost its colours the moment the screen moved was the flicker between a scrolling
+        // transcription and a still one.
+        for (p in planned) {
+            val c = lineColors[colorKey(p.text)] ?: screenColors ?: continue
+            p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
         }
-        onScreenBoxes = painted.map { it.rect }
+        val painted = planned.flatMap { it.boxes }
 
         // One line per pass naming every transcription and where it sits, so a test can
         // assert that a word moved exactly as far as the text under it did.
@@ -408,10 +421,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         val colourMs = android.os.SystemClock.uptimeMillis() - tb
         val t2 = tb
-        val style = settings.style
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            overlay.render(painted, style)
+            overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
@@ -428,13 +440,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * The overlay is down for one capture. It is throttled, and only asked for when a word
      * on screen has no colour yet, so a screen whose words are already known never blinks.
      */
-    private fun requestCleanFrame(boxes: List<WordBox>) {
+    private fun requestCleanFrame(lines: List<Pair<String, RectF>>) {
         if (capturing) return
         val now = android.os.SystemClock.uptimeMillis()
         if (now - cleanFrameAt < CLEAN_FRAME_GAP_MS) return
         capturing = true
         cleanFrameAt = now
-        val wanted = boxes.toList()
+        val wanted = lines.toList()
         val hiddenAt = now
         main.post { overlay.hideNow() }
         io.postDelayed({
@@ -444,29 +456,68 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // Only a frame taken after the overlay went down can be trusted; anything
                 // older still has our transcriptions in it.
                 if (!sampler.hasFrame || sampler.frameAt < hiddenAt) {
+                    // A capture that never arrived says nothing about the lines, so they are
+                    // not counted as read: a device that refuses one screenshot, for a rate
+                    // limit or a moment of secure content, would otherwise leave the screen
+                    // permanently uncoloured.
                     capturing = false
+                    if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
                     schedule(0L)
                     return@postDelayed
                 }
                 // The frame now holds the app's own text where our transcriptions were.
-                for (b in wanted) {
-                    val key = b.word.lowercase()
-                    colorAttempted.add(key)
-                    if (key in wordColors) continue
-                    // The word's own pixels first. A short word carries few of them, so if
-                    // that is too little to tell ink from surface, widen along the line -
-                    // the neighbouring words are the same colour as this one.
-                    val wide = RectF(
-                        b.rect.left - b.rect.width(), b.rect.top,
-                        b.rect.right + b.rect.width(), b.rect.bottom,
-                    )
-                    val c = sampler.sample(b.rect) ?: sampler.sample(wide)
-                    if (c != null) wordColors[key] = c
+                var read = 0
+                for ((key, rect) in wanted) {
+                    colorTries[key] = (colorTries[key] ?: 0) + 1
+                    if (key in lineColors) continue
+                    val c = sampler.sampleRegion(rect) ?: continue
+                    lineColors[key] = c
+                    read++
                 }
+                // Whatever could not be read still has to be covered by something, and the
+                // page's own colour is a better guess than a palette of ours.
+                screenColors = sampler.screenColors() ?: screenColors
                 capturing = false
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "COLOURS read=$read of ${wanted.size} screen=" +
+                            (screenColors?.let { Integer.toHexString(it.background) } ?: "none"),
+                    )
+                }
                 schedule(0L)
             }, 320)
         }, 80)
+    }
+
+    /** A line is known by its text, which is what stays the same while it scrolls. */
+    private fun colorKey(text: String): String = text.length.toString() + ":" + text.hashCode()
+
+    /**
+     * Where to read a line's colours from: the line itself, as the app drew it.
+     *
+     * The node's own rectangle, clipped to what its ancestors show of it, is the whole run
+     * of text and so holds enough of both colours to tell them apart. When there is no
+     * rectangle to be had, the words fall back to their own boxes grown sideways, which is
+     * the same line with fewer pixels of it.
+     */
+    private fun colorRect(p: Planned): RectF {
+        val at = p.measuredAt
+        if (at != null) {
+            val r = android.graphics.Rect(at)
+            if (r.intersect(p.clip) && r.width() > 2 && r.height() > 2) return RectF(r)
+        }
+        val first = p.boxes.first().rect
+        var left = first.left
+        var right = first.right
+        var top = first.top
+        var bottom = first.bottom
+        for (b in p.boxes) {
+            left = minOf(left, b.rect.left); right = maxOf(right, b.rect.right)
+            top = minOf(top, b.rect.top); bottom = maxOf(bottom, b.rect.bottom)
+        }
+        val grow = (bottom - top)
+        return RectF(left - grow, top, right + grow, bottom)
     }
 
     private class Planned(
@@ -668,6 +719,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val STILL_MS = 120L
         /** How rarely the overlay may step aside to be able to read a colour. */
         const val CLEAN_FRAME_GAP_MS = 1500L
+        /** How often a line's colours are looked for before the page's own are used. */
+        const val COLOR_TRIES = 3
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60

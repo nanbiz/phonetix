@@ -9,7 +9,6 @@ import android.view.Choreographer
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
-import io.github.nanbiz.phonetix.core.ChipStyle
 import io.github.nanbiz.phonetix.core.WordBox
 
 /**
@@ -34,7 +33,6 @@ class MotionLayer(private val context: Context) {
 
     /** Where the words really were at the last measurement. */
     private var boxes: List<WordBox> = emptyList()
-    private var style: ChipStyle = ChipStyle.SOLID
 
     /** Pixels per millisecond, from the last two measurements. */
     private var vx = 0f
@@ -60,9 +58,8 @@ class MotionLayer(private val context: Context) {
     }
 
     /** Take the words over from the small windows, at the positions they are already at. */
-    fun start(current: List<WordBox>, chipStyle: ChipStyle) {
+    fun start(current: List<WordBox>) {
         boxes = current
-        style = chipStyle
         vx = 0f; vy = 0f
         predictedX = 0f; predictedY = 0f
         lastMeasureAt = SystemClock.uptimeMillis()
@@ -83,7 +80,7 @@ class MotionLayer(private val context: Context) {
             ).apply { gravity = Gravity.TOP or Gravity.START; x = 0; y = 0 }
             runCatching { wm.addView(v, lp) }.onSuccess { view = v }
         }
-        view?.set(boxes, style)
+        view?.set(boxes)
         Choreographer.getInstance().removeFrameCallback(frame)
         Choreographer.getInstance().postFrameCallback(frame)
     }
@@ -95,7 +92,7 @@ class MotionLayer(private val context: Context) {
      * reset to the truth, so error cannot accumulate the way it did when the scroll event's
      * own delta was believed.
      */
-    fun measured(current: List<WordBox>, chipStyle: ChipStyle) {
+    fun measured(current: List<WordBox>) {
         val now = SystemClock.uptimeMillis()
         val dt = (now - lastMeasureAt).coerceAtLeast(1)
         val movedY = averageShift(boxes, current)
@@ -107,11 +104,10 @@ class MotionLayer(private val context: Context) {
         }
         vx = 0f
         boxes = current
-        style = chipStyle
         lastMeasureAt = now
         predictedX = 0f
         predictedY = 0f
-        view?.set(boxes, style)
+        view?.set(boxes)
     }
 
     /** How far the words as a set moved between two measurements, if they are the same set. */
@@ -143,14 +139,12 @@ class MotionLayer(private val context: Context) {
 private class LayerView(context: Context) : View(context) {
 
     private var boxes: List<WordBox> = emptyList()
-    private var style: ChipStyle = ChipStyle.SOLID
     private var dx = 0f
     private var dy = 0f
     private val painter = ChipPainter()
 
-    fun set(next: List<WordBox>, nextStyle: ChipStyle) {
+    fun set(next: List<WordBox>) {
         boxes = next
-        style = nextStyle
         invalidate()
     }
 
@@ -169,7 +163,7 @@ private class LayerView(context: Context) : View(context) {
         val out = RectF()
         for (b in boxes) {
             out.set(b.rect.left + dx, b.rect.top + dy, b.rect.right + dx, b.rect.bottom + dy)
-            painter.draw(canvas, out, b, style, dark, revealed = false)
+            painter.draw(canvas, out, b, dark, revealed = false)
         }
     }
 }
