@@ -50,9 +50,10 @@ class OverlayController(
         motion.start(lastRendered)
     }
 
-    fun motionMeasured(boxes: List<WordBox>) {
+    /** `at` is when the positions were actually read, which is not when they arrive here. */
+    fun motionMeasured(boxes: List<WordBox>, at: Long) {
         lastRendered = boxes
-        motion.measured(boxes)
+        motion.measured(boxes, at)
     }
 
     fun endMotion(boxes: List<WordBox>) {
@@ -134,6 +135,7 @@ class OverlayController(
 
     private fun addChip(): Boolean {
         val v = ChipView(context, reveal, onWordTapped) { refresh() }
+        OverlayMute.apply(v)
         v.visibility = View.GONE
         val ok = runCatching { wm.addView(v, params(0, 0, 1, 1)) }.isSuccess
         if (!ok) return false

@@ -133,6 +133,18 @@ class DebugSurfaceActivity : Activity() {
             // finger actually produces and nothing like a straight line.
             scroller.post { scroller.fling(v) }
         }
+        if (intent.hasExtra(EXTRA_MOTION)) {
+            // A movement with a shape to it, driven frame by frame, so the suite can hold
+            // the overlay against something other than the one motion the platform makes.
+            val profile = intent.getStringExtra(EXTRA_MOTION) ?: "minjerk"
+            val distance = intent.getIntExtra(EXTRA_DISTANCE, 600)
+            val duration = intent.getIntExtra(EXTRA_DURATION, 700)
+            val strokes = intent.getIntExtra(EXTRA_STROKES, 1)
+            val seed = intent.getIntExtra(EXTRA_SEED, 1)
+            scroller.post {
+                ScrollMotion.run(scroller, profile, distance, duration, strokes, seed)
+            }
+        }
         if (intent.hasExtra(EXTRA_SMOOTH)) {
             val by = intent.getIntExtra(EXTRA_SMOOTH, 0)
             scroller.post { scroller.smoothScrollBy(0, by) }
@@ -187,7 +199,9 @@ class DebugSurfaceActivity : Activity() {
     private fun content(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(pad(), if (mode == "header") headerHeight() else pad(), pad(), pad())
-        if (mode == "colors") {
+        if (mode == "unique") {
+            for (text in DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "colors") {
             // Three lines whose colours the test knows, to catch a sampler that averages
             // a whole node - or a whole screen - into one wrong colour.
             addView(line("Pronunciation arrives quietly", Color.WHITE, BACKGROUND))
@@ -228,6 +242,11 @@ class DebugSurfaceActivity : Activity() {
     private companion object {
         const val TAG = "PhonetixTest"
         const val EXTRA_MODE = "mode"
+        const val EXTRA_MOTION = "motion"
+        const val EXTRA_DISTANCE = "distance"
+        const val EXTRA_DURATION = "duration"
+        const val EXTRA_STROKES = "strokes"
+        const val EXTRA_SEED = "seed"
         const val EXTRA_SCROLL = "scrollTo"
         const val EXTRA_FLING = "fling"
         const val EXTRA_SMOOTH = "smoothBy"
@@ -238,6 +257,37 @@ class DebugSurfaceActivity : Activity() {
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.
         const val BACKGROUND = Color.BLACK
+        /**
+         * Lines in which no word appears twice.
+         *
+         * A page that repeats itself cannot be measured through a movement: a test pairing
+         * a transcription with the one it was a moment ago has several identical candidates
+         * to choose between, and picks by position, which is the very thing under test. With
+         * every word on the page its own, a transcription is identified by what it says.
+         */
+        val DISTINCT = listOf(
+            "apple bridge candle dolphin ember forest garden hammer",
+            "island jacket kettle lantern meadow needle orchard pencil",
+            "quiver ribbon saddle tunnel umbrella velvet window yellow",
+            "zebra anchor basket copper diamond engine falcon granite",
+            "harbour ivory jungle kernel ladder magnet nectar oyster",
+            "pillow quartz rocket silver timber violet walnut zephyr",
+            "almond blanket cactus dagger eagle fabric glacier helmet",
+            "insect jigsaw koala lemon marble noodle ocean parrot",
+            "quilt rabbit sapphire trumpet unicorn valley whistle yoghurt",
+            "acorn bamboo cinnamon donkey elephant feather gravel hostel",
+            "igloo jasmine kayak lilac mustard nutmeg opal pepper",
+            "quiche raccoon sandal thistle upright vanilla wagon yarn",
+            "azure beetle carrot dandelion emerald flannel goblin hazel",
+            "iodine jockey kitten lettuce mango nickel octopus parsley",
+            "quarry rhubarb saffron tulip urgent vinegar walrus yeast",
+            "abbey burrow cavern dungeon estuary furnace gallery hollow",
+            "inlet jetty knoll lagoon marsh notch orchid plateau",
+            "quay ravine summit thicket upland vista wharf yonder",
+            "anvil bellows chisel drill emery file gauge hinge",
+            "ingot joint kiln lever mallet nozzle oiler pulley",
+        )
+
         const val PARAGRAPH =
             "Reading a paragraph teaches pronunciation quietly because every unfamiliar " +
                 "word arrives already spoken and the dictionary answers immediately."

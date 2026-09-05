@@ -447,8 +447,14 @@ class TooltipController(
     private fun loadDiagram(file: String, into: ImageView) {
         val width = (context.resources.displayMetrics.widthPixels * 0.7f).roundToInt()
         io.execute {
+            // With timeouts: a host that never answers would otherwise hold this thread for
+            // as long as the system's default, which is minutes.
             val bmp = runCatching {
-                URL(wikimediaThumbUrl(file, width)).openStream().use { BitmapFactory.decodeStream(it) }
+                val connection = URL(wikimediaThumbUrl(file, width)).openConnection().apply {
+                    connectTimeout = 8000
+                    readTimeout = 8000
+                }
+                connection.getInputStream().use { BitmapFactory.decodeStream(it) }
             }.getOrNull()
             if (bmp != null) main.post { into.setImageBitmap(bmp) }
         }

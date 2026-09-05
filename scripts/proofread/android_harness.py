@@ -68,10 +68,44 @@ class Device:
     # ---- driving the test surface -------------------------------------------
 
     def surface(self, mode="plain", **extras):
-        args = ["am", "start", "-n", SURFACE, "--es", "mode", mode]
+        """Bring the test page to the front and give it its instructions.
+
+        Insisting that it is really in front matters: the app's own settings screen is an
+        activity of the same app, and with it on top `am start` delivers the intent to the
+        page behind it and reports success. A suite then measures a screen that is not the
+        one under test - a whole run once passed its geometry checks against the settings
+        screen - so the page is asked for again, in its own fresh task, until the device
+        agrees that is what the reader is looking at.
+        """
+        # Reordered to the front, not merely started: the page and the app's own settings
+        # screen are separate tasks, and starting a page that already exists behind another
+        # task delivers the intent to it and leaves it there, out of sight.
+        args = ["am", "start", "-n", SURFACE, "--activity-reorder-to-front",
+                "--es", "mode", mode]
         for key, value in extras.items():
-            args += ["--ei", key, str(value)]
+            # Strings go as strings: the motion profile is named, not numbered.
+            flag = "--es" if isinstance(value, str) else "--ei"
+            args += [flag, key, str(value)]
         shell(*args)
+        # Given a moment to come forward before anything harsher is tried: starting it again
+        # in a fresh task destroys the page and builds it anew, which resets where it is
+        # scrolled to and leaves the old instance still reporting its own position for a
+        # moment - two pages in one log, and a timeline that runs backwards.
+        for _ in range(10):
+            if "DebugSurfaceActivity" in self.top_activity():
+                return
+            time.sleep(0.3)
+        shell(*(args + ["--activity-clear-task", "--activity-new-task"]))
+        for _ in range(10):
+            if "DebugSurfaceActivity" in self.top_activity():
+                return
+            time.sleep(0.3)
+
+    def top_activity(self):
+        """Which activity the device says the reader is actually looking at."""
+        out = shell("dumpsys", "activity", "activities")
+        m = re.search(r"topResumedActivity=ActivityRecord\{\S+ \S+ (\S+)", out)
+        return m.group(1) if m else ""
 
     def clear_log(self):
         adb("logcat", "-c")

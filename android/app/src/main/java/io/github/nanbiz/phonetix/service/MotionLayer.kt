@@ -3,7 +3,6 @@ package io.github.nanbiz.phonetix.service
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.PixelFormat
-import android.graphics.RectF
 import android.os.SystemClock
 import android.view.Choreographer
 import android.view.Gravity
@@ -27,6 +26,12 @@ import io.github.nanbiz.phonetix.core.WordBox
  * back.
  */
 class MotionLayer(private val context: Context) {
+
+    private companion object {
+        /** How much lateness is worth carrying forward; beyond it the reading is not a
+         *  measurement of this movement any more. */
+        const val LATE_LIMIT_MS = 250L
+    }
 
     private val wm = context.getSystemService(WindowManager::class.java)
     private var view: LayerView? = null
@@ -52,7 +57,13 @@ class MotionLayer(private val context: Context) {
             lastFrameAt = now
             predictedX += vx * dt
             predictedY += vy * dt
-            v.offset(predictedX, predictedY)
+            // Moved, not redrawn. Recording the whole set again every frame was work the
+            // display did sixty times a second and, on a machine with no real GPU, enough
+            // to starve the very reads that tell the layer where the words have got to: a
+            // measurement that costs twelve milliseconds on a still screen took six hundred
+            // in the middle of the movement it was following.
+            v.translationX = predictedX
+            v.translationY = predictedY
             Choreographer.getInstance().postFrameCallback(this)
         }
     }
@@ -65,7 +76,7 @@ class MotionLayer(private val context: Context) {
         lastMeasureAt = SystemClock.uptimeMillis()
         lastFrameAt = lastMeasureAt
         if (view == null) {
-            val v = LayerView(context)
+            val v = LayerView(context).also { OverlayMute.apply(it) }
             val lp = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -92,9 +103,9 @@ class MotionLayer(private val context: Context) {
      * reset to the truth, so error cannot accumulate the way it did when the scroll event's
      * own delta was believed.
      */
-    fun measured(current: List<WordBox>) {
+    fun measured(current: List<WordBox>, at: Long) {
         val now = SystemClock.uptimeMillis()
-        val dt = (now - lastMeasureAt).coerceAtLeast(1)
+        val dt = (at - lastMeasureAt).coerceAtLeast(1)
         val movedY = averageShift(boxes, current)
         if (movedY != null && dt < 260) {
             // Blend, so one odd sample does not throw the speed about.
@@ -104,10 +115,17 @@ class MotionLayer(private val context: Context) {
         }
         vx = 0f
         boxes = current
-        lastMeasureAt = now
+        lastMeasureAt = at
+        // Where the words are now, not where they were when they were read. Asking an app
+        // that is scrolling where its lines are takes tens of milliseconds, and at the speed
+        // of a flick the page has moved a hundred pixels by the time the answer arrives;
+        // drawing the answer as if it were current is drawing the page as it was.
+        val late = (now - at).coerceIn(0, LATE_LIMIT_MS)
         predictedX = 0f
-        predictedY = 0f
+        predictedY = vy * late
+        lastFrameAt = now
         view?.set(boxes)
+        view?.let { v -> v.translationY = predictedY }
     }
 
     /** How far the words as a set moved between two measurements, if they are the same set. */
@@ -139,19 +157,12 @@ class MotionLayer(private val context: Context) {
 private class LayerView(context: Context) : View(context) {
 
     private var boxes: List<WordBox> = emptyList()
-    private var dx = 0f
-    private var dy = 0f
     private val painter = ChipPainter()
 
     fun set(next: List<WordBox>) {
         boxes = next
-        invalidate()
-    }
-
-    fun offset(x: Float, y: Float) {
-        if (x == dx && y == dy) return
-        dx = x
-        dy = y
+        translationX = 0f
+        translationY = 0f
         invalidate()
     }
 
@@ -160,10 +171,8 @@ private class LayerView(context: Context) : View(context) {
         val dark = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val out = RectF()
         for (b in boxes) {
-            out.set(b.rect.left + dx, b.rect.top + dy, b.rect.right + dx, b.rect.bottom + dy)
-            painter.draw(canvas, out, b, dark, revealed = false)
+            painter.draw(canvas, b.rect, b, dark, revealed = false)
         }
     }
 }
