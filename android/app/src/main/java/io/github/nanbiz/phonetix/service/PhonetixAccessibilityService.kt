@@ -409,7 +409,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // answer is nowhere near that has not moved with the page, it has been handed to
             // another line and jumped. With a speed to compare against, one such answer is
             // recognised on its own rather than having to be outvoted.
-            val believable = if (speedY == 0f || lastShiftAt == 0L) shifts else {
+            // A speed measured a moment ago describes a page that may since have stopped -
+            // a reader scrolling in short pushes stops between each - so it is only believed
+            // while it is fresh.
+            val speedIsFresh = speedY != 0f && lastShiftAt > 0L &&
+                android.os.SystemClock.uptimeMillis() - lastShiftAt < SPEED_FRESH_MS
+            val believable = if (!speedIsFresh) shifts else {
                 val kept = shifts.filter { (_, dy, at) ->
                     val expected = lastShiftY + speedY * (at - lastShiftAt)
                     kotlin.math.abs(dy - expected) <= PREDICTION_TOL
@@ -672,6 +677,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // fifty milliseconds ago and the last to where it is now. Each is carried forward at
         // the speed the following measured, to the moment the reading finished.
         if (!reuse && speedY != 0f &&
+            android.os.SystemClock.uptimeMillis() - lastShiftAt < SPEED_FRESH_MS &&
             android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
         ) {
             for (p in planned) {
@@ -1274,6 +1280,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How far an answer may be from what the page's own speed predicts before it is
          *  taken for a row that jumped rather than a page that moved. */
         const val PREDICTION_TOL = 90f
+        /** How long a measured speed still describes the page. */
+        const val SPEED_FRESH_MS = 120L
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60

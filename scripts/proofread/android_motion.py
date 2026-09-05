@@ -314,6 +314,13 @@ def check_settled(r, dev, profile, ended_at):
     dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=ended_at)
     time.sleep(2.5)
     still = dev.boxes()
+    if not still:
+        # Asking the page to go where it already is moves nothing, so nothing happens and
+        # nothing is reported - which is not the same as nothing being transcribed. A pixel
+        # of movement gives it something to say.
+        dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=ended_at - 1)
+        time.sleep(2.0)
+        still = dev.boxes()
     if not r.check(bool(after_motion) and bool(still),
                    f"{profile}: there are transcriptions to compare after it stops",
                    f"{len(after_motion)} after the movement, {len(still)} on the still page"):
