@@ -80,8 +80,11 @@ class Device:
         # Reordered to the front, not merely started: the page and the app's own settings
         # screen are separate tasks, and starting a page that already exists behind another
         # task delivers the intent to it and leaves it there, out of sight.
+        # A changing extra on every launch: two identical intents in a row can be treated as
+        # a duplicate and never delivered, and the page then quietly keeps doing what it was
+        # doing while the test waits for something new.
         args = ["am", "start", "-n", SURFACE, "--activity-reorder-to-front",
-                "--es", "mode", mode]
+                "--es", "mode", mode, "--ei", "nonce", str(int(time.time() * 1000) % 100000)]
         for key, value in extras.items():
             # Strings go as strings: the motion profile is named, not numbered.
             flag = "--es" if isinstance(value, str) else "--ei"

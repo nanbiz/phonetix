@@ -1,6 +1,5 @@
 package io.github.nanbiz.phonetix.debug
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -35,11 +34,14 @@ import android.widget.TextView
  *       --es mode header --ei scrollTo 240
  *   adb shell am start -n io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity --ei fling -6000
  */
-class DebugSurfaceActivity : Activity() {
+class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private lateinit var scroller: ScrollView
     /** The recycling list, when that is the page being shown. */
     private var listView: ListView? = null
+    /** The Compose list, once it has composed itself and said how to drive it. */
+    private var composePage: ScrollMotion.Page? = null
+    private var composeScope: kotlinx.coroutines.CoroutineScope? = null
 
     /** Where a list is scrolled to, in pixels, which it does not keep as a single number. */
     private fun listScroll(): Int {
@@ -50,6 +52,13 @@ class DebugSurfaceActivity : Activity() {
 
     /** The page under test, whichever kind it is. */
     private fun page(): ScrollMotion.Page {
+        composePage?.let { return it }
+        // A Compose page exists only once it has composed itself. Until then there is
+        // nothing to drive, and saying so is better than driving the wrong thing.
+        if (mode == "lazy") {
+            val nothing = window.decorView
+            return ScrollMotion.Page(nothing, { 0 }, { })
+        }
         val list = listView
         if (list != null) {
             return ScrollMotion.Page(
@@ -83,6 +92,23 @@ class DebugSurfaceActivity : Activity() {
         val root = FrameLayout(this)
         root.setBackgroundColor(BACKGROUND)
 
+        if (mode == "lazy") {
+            // The kind of list a Compose app scrolls, which describes itself through
+            // semantics rather than as a tree of views.
+            val scope = kotlinx.coroutines.MainScope()
+            composeScope = scope
+            root.addView(
+                LazyListPage.build(this, scope) { p -> composePage = p },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            setContentView(root)
+            window.decorView.setBackgroundColor(BACKGROUND)
+            handle(intent)
+            return
+        }
+
         if (mode == "list") {
             // A list that recycles its rows, which a ScrollView never does. Everything an app
             // in front of the reader actually scrolls works this way: the same view, and the
@@ -93,8 +119,9 @@ class DebugSurfaceActivity : Activity() {
                 setBackgroundColor(BACKGROUND)
                 divider = null
                 adapter = object : BaseAdapter() {
-                    override fun getCount() = DISTINCT.size * 3
-                    override fun getItem(position: Int) = DISTINCT[position % DISTINCT.size]
+                    override fun getCount() = TestWords.DISTINCT.size * 3
+                    override fun getItem(position: Int) =
+                        TestWords.DISTINCT[position % TestWords.DISTINCT.size]
                     override fun getItemId(position: Int) = position.toLong()
                     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
                         val row = (convertView as? TextView) ?: line("", Color.WHITE, BACKGROUND)
@@ -161,14 +188,14 @@ class DebugSurfaceActivity : Activity() {
         handle(intent)
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         // The layout is built from the mode in onCreate, so arriving with a different mode
         // has to build it again. Without this the activity quietly keeps the previous mode
         // and a test for the header runs against a page that has none - which is how the
         // occlusion check came back failing against a bar that was never on screen.
-        val wanted = intent?.getStringExtra(EXTRA_MODE) ?: "plain"
+        val wanted = intent.getStringExtra(EXTRA_MODE) ?: "plain"
         if (wanted != mode) {
             recreate()
             return
@@ -194,9 +221,15 @@ class DebugSurfaceActivity : Activity() {
         if (!intent.hasExtra(EXTRA_MOTION)) nudge()
         if (intent.hasExtra(EXTRA_SCROLL)) {
             val y = intent.getIntExtra(EXTRA_SCROLL, 0)
-            // Jumped, not animated: the test wants the movement finished.
-            val page = page()
-            page.view.post { page.moveTo(y); Log.d(TAG, "SETTLED $y") }
+            // Jumped, not animated: the test wants the movement finished. A Compose page has
+            // to have composed itself before it can be told anything, so this waits for it.
+            val y0 = y
+            val target = page()
+            target.view.postDelayed({
+                val now = page()
+                now.moveTo(y0)
+                Log.d(TAG, "SETTLED $y0")
+            }, if (composePage == null && mode == "lazy") 400 else 0)
         }
         if (intent.hasExtra(EXTRA_FLING) && listView == null) {
             val v = intent.getIntExtra(EXTRA_FLING, 0)
@@ -264,7 +297,9 @@ class DebugSurfaceActivity : Activity() {
      * back the old frequency's words and concluded the setting did nothing.
      */
     private fun nudge() {
-        if (listView != null) return
+        // Only the page made of ordinary views has a marker to toggle; the others announce
+        // themselves by being scrolled.
+        if (!::scroller.isInitialized) return
         scroller.postDelayed({
             val text = marker ?: return@postDelayed
             text.text = if (text.text.isEmpty()) "\u200b" else ""
@@ -275,7 +310,7 @@ class DebugSurfaceActivity : Activity() {
         orientation = LinearLayout.VERTICAL
         setPadding(pad(), if (mode == "header") headerHeight() else pad(), pad(), pad())
         if (mode == "unique") {
-            for (text in DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+            for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "colors") {
             // Three lines whose colours the test knows, to catch a sampler that averages
             // a whole node - or a whole screen - into one wrong colour.
@@ -332,37 +367,6 @@ class DebugSurfaceActivity : Activity() {
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.
         const val BACKGROUND = Color.BLACK
-        /**
-         * Lines in which no word appears twice.
-         *
-         * A page that repeats itself cannot be measured through a movement: a test pairing
-         * a transcription with the one it was a moment ago has several identical candidates
-         * to choose between, and picks by position, which is the very thing under test. With
-         * every word on the page its own, a transcription is identified by what it says.
-         */
-        val DISTINCT = listOf(
-            "apple bridge candle dolphin ember forest garden hammer",
-            "island jacket kettle lantern meadow needle orchard pencil",
-            "quiver ribbon saddle tunnel umbrella velvet window yellow",
-            "zebra anchor basket copper diamond engine falcon granite",
-            "harbour ivory jungle kernel ladder magnet nectar oyster",
-            "pillow quartz rocket silver timber violet walnut zephyr",
-            "almond blanket cactus dagger eagle fabric glacier helmet",
-            "insect jigsaw koala lemon marble noodle ocean parrot",
-            "quilt rabbit sapphire trumpet unicorn valley whistle yoghurt",
-            "acorn bamboo cinnamon donkey elephant feather gravel hostel",
-            "igloo jasmine kayak lilac mustard nutmeg opal pepper",
-            "quiche raccoon sandal thistle upright vanilla wagon yarn",
-            "azure beetle carrot dandelion emerald flannel goblin hazel",
-            "iodine jockey kitten lettuce mango nickel octopus parsley",
-            "quarry rhubarb saffron tulip urgent vinegar walrus yeast",
-            "abbey burrow cavern dungeon estuary furnace gallery hollow",
-            "inlet jetty knoll lagoon marsh notch orchid plateau",
-            "quay ravine summit thicket upland vista wharf yonder",
-            "anvil bellows chisel drill emery file gauge hinge",
-            "ingot joint kiln lever mallet nozzle oiler pulley",
-        )
-
         const val PARAGRAPH =
             "Reading a paragraph teaches pronunciation quietly because every unfamiliar " +
                 "word arrives already spoken and the dictionary answers immediately."
