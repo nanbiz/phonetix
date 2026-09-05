@@ -458,22 +458,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (c in verified) continue
                 if (!c.node.refresh() || c.node.text?.toString() != c.text) {
                     // A row that now says something else is a row a list has handed to
-                    // another line. From here on this screen is treated as one that recycles.
+                    // another line: its words belong to text that is no longer there, so it
+                    // is dropped and the rest are followed as before. Abandoning the whole
+                    // plan for it meant reading the entire screen again, which takes long
+                    // enough to be a visible stall in the middle of the scroll that caused
+                    // it - and on a list that recycles constantly, over and over.
+                    c.boxes = emptyList()
+                    c.measuredAt = null
                     recycling = true
-                    ok = false
-                    why = "a line is not the line it was"
-                    break
+                    continue
                 }
                 verified.add(c)
             }
 
             for (p in planned) {
                 if (!ok) break
-                // On a screen that recycles its rows, a line nobody has asked about this pass
-                // is a line that may already belong to different words. Its transcriptions
-                // wait for the movement to end rather than being carried on a guess, which is
-                // how they ended up scattered over text they had nothing to do with.
-                if (recycling && p !in verified) continue
                 val was = p.measuredAt
                 // A line whose words were all clipped away contributes nothing, which is
                 // normal and not a reason to abandon following the rest of them.
