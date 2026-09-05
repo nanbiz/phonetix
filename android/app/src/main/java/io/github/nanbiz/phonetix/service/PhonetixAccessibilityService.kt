@@ -405,9 +405,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // the average either, for the same reason: one jump would drag it.
             var shiftX = 0f
             var shiftY = 0f
-            var agreed = shifts.isNotEmpty()
+            // What the page was doing a moment ago says what it is doing now: a line whose
+            // answer is nowhere near that has not moved with the page, it has been handed to
+            // another line and jumped. With a speed to compare against, one such answer is
+            // recognised on its own rather than having to be outvoted.
+            val believable = if (speedY == 0f || lastShiftAt == 0L) shifts else {
+                val kept = shifts.filter { (_, dy, at) ->
+                    val expected = lastShiftY + speedY * (at - lastShiftAt)
+                    kotlin.math.abs(dy - expected) <= PREDICTION_TOL
+                }
+                if (kept.isEmpty()) shifts else kept
+            }
+            var agreed = believable.isNotEmpty()
             if (agreed) {
-                val middle = shifts.sortedBy { it.second }[shifts.size / 2]
+                val middle = believable.sortedBy { it.second }[believable.size / 2]
                 shiftX = middle.first
                 shiftY = middle.second
                 readAt = middle.third
@@ -415,7 +426,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // scrolling: it is a list inside a page, or a bar that stays put while the
                 // text moves under it, and then there is nothing for one measurement to
                 // stand for and each line is asked about itself.
-                val spread = shifts.maxOf { it.second } - shifts.minOf { it.second }
+                val spread = believable.maxOf { it.second } - believable.minOf { it.second }
                 if (spread > INDEPENDENT_PX) agreed = false
             }
             if (alive > 0 && (shiftY != 0f || shiftX != 0f)) shifted = true
@@ -1260,6 +1271,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val VERIFY_AT_EDGE = 2
         /** Beyond this, lines are not moving together and each has to be asked itself. */
         const val INDEPENDENT_PX = 300f
+        /** How far an answer may be from what the page's own speed predicts before it is
+         *  taken for a row that jumped rather than a page that moved. */
+        const val PREDICTION_TOL = 90f
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60
