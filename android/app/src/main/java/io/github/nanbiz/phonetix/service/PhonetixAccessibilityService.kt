@@ -15,6 +15,8 @@ import io.github.nanbiz.phonetix.core.Pick
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Transcriber
 import io.github.nanbiz.phonetix.core.WordBox
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
  * Reads the text of the app in front and hands the overlay the words to transcribe.
@@ -39,8 +41,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private lateinit var worker: Handler
     private lateinit var sampler: ScreenSampler
     private lateinit var bystanders: Bystanders
+    private var settingsWatch: kotlinx.coroutines.CoroutineScope? = null
     private val layouts = LineLayouts()
     private var generation = 0
+    /** Whether the last event found the overlay switched on, so switching off hides once. */
+    @Volatile private var wasEnabled = true
     private var lastScanEnd = 0L
     /** When the screen was last seen to move, whether it said so or was measured moving. */
     @Volatile private var lastMotionAt = 0L
@@ -110,6 +115,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
             readAgain = { schedule(0L) },
         )
         bystanders = Bystanders(this)
+        // A change of setting is acted on at once, not at the next thing the app in front
+        // happens to do. The switch in the shade and the bar in this app both write here,
+        // and a reader who turns the overlay on while looking at a still page expects the
+        // words to appear, not to wait for the page to move.
+        settingsWatch = kotlinx.coroutines.MainScope().also { scope ->
+            scope.launch {
+                SettingsStore.state.collect { s ->
+                    if (!s.enabled) {
+                        overlay.hideNow()
+                        tooltip.hide()
+                    }
+                    scrollOnly = false
+                    schedule(0L)
+                }
+            }
+        }
         Dictionary.ensureLoaded(this) { schedule(0L) }
     }
 
@@ -123,6 +144,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // read itself, from the window that is actually there.
         val from = event?.packageName?.toString()
         if (::bystanders.isInitialized && bystanders.contains(from)) return
+        // Switched off, nothing is read at all. Fetching the window to discover that on
+        // every event of every app is work a reader who turned the overlay off did not ask
+        // for; the words come down once, and the next event after it is switched back on
+        // is answered as usual.
+        if (!SettingsStore.current.enabled) {
+            if (wasEnabled && ::overlay.isInitialized) main.post { overlay.hideNow() }
+            wasEnabled = false
+            return
+        }
+        wasEnabled = true
         // A scroll says how far the content moved, and the words moved exactly that far, so
         // the transcriptions are carried along in this same frame rather than being taken
         // down and put back. Re-reading the screen then only has to correct the drift.
@@ -176,6 +207,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        settingsWatch?.cancel()
         if (::tooltip.isInitialized) tooltip.hide()
         if (::speaker.isInitialized) speaker.destroy()
         if (::sampler.isInitialized) sampler.destroy()

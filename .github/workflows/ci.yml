@@ -188,7 +188,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # The wrapper jar is a build artefact and is not committed, so Gradle itself is set up
+      # at the version the wrapper names and run directly.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
       - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         with:
@@ -201,10 +205,10 @@ jobs:
         run: pnpm fetch:dict
       - name: Unit tests (parity with the extension)
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest
+        run: gradle --no-daemon testDebugUnitTest
       - name: Build
         working-directory: android
-        run: ./gradlew --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: phonetix-android-debug
