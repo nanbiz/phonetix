@@ -48,6 +48,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var generation = 0
     /** Where other windows - a keyboard above all - stand over the app being read. */
     @Volatile private var blockers: List<android.graphics.Rect> = emptyList()
+    /** Apps already named in the log as never standing still. */
+    private val waitedOut = HashSet<String>(4)
+    /** Apps already named in the log as giving no character bounds, so each is said once. */
+    private val noCharacters = HashSet<String>(4)
     /** Apps already named in the log as bystanders, so each is said once. */
     private val ignored = HashSet<String>(4)
     /** Whether the last event found the overlay switched on, so switching off hides once. */
@@ -241,6 +245,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // scheduled pass, because these events arrive faster than any pass completes: each
         // one cancelled the pass the one before it asked for, and a page scrolled from code
         // was therefore never read at all while it moved.
+        //
+        // A change counts as movement here, which is not obviously right and was tried both
+        // ways. It decides whether a line's characters may be measured - asking for them
+        // makes the app lay its text out again, which a page being scrolled cannot afford -
+        // so an app that changes something ten times a second is never measured at all.
+        // Chrome is one. Not counting it, though, let the colours be read off a screen that
+        // was moving, which photographs as a smear, and left what is drawn through a swipe
+        // measurably further from its word. Chrome cannot be transcribed either way: it
+        // answers the request for character positions with nothing at all.
         lastMotionAt = android.os.SystemClock.uptimeMillis()
         // A window appearing or going away can mean a different app is in front, and a
         // follow pass does not look at which one it is - it works from the lines it already
@@ -359,7 +372,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             Dictionary.ready
         val root = if (followOnly) null else {
             val askedRoot = android.os.SystemClock.uptimeMillis()
-            val fetched = rootInActiveWindow ?: run { main.post { overlay.hideNow() }; return }
+            val fetched = rootInActiveWindow ?: run {
+                if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "NOROOT")
+                main.post { overlay.hideNow() }
+                return
+            }
             val rootMs = android.os.SystemClock.uptimeMillis() - askedRoot
             if (BuildConfig.DEBUG && rootMs > 30) {
                 android.util.Log.d("Phonetix", "ROOT took ${rootMs}ms")
@@ -839,12 +856,32 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // movement stops; it is one of the part-hidden lines at the edges of the screen,
             // and it comes back with the next full read.
             val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
-            if (placed == null && moving) { p.boxes = emptyList(); continue }
+            if (placed == null && moving) {
+                if (BuildConfig.DEBUG && waitedOut.add(pkg.orEmpty())) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "WAITING $pkg is never still, so its characters are never measured",
+                    )
+                }
+                p.boxes = emptyList(); continue
+            }
             val rects = placed
                 ?: charRects(p.node, p.from, p.length)?.also { fresh ->
                     layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
                 }
-                ?: continue
+                ?: run {
+                    // Some apps will not say where the characters of a line are. Without them
+                    // a transcription cannot be put on one word, so the line is left alone -
+                    // and it is worth knowing which apps those are.
+                    if (BuildConfig.DEBUG && noCharacters.add(pkg.orEmpty())) {
+                        android.util.Log.d(
+                            "Phonetix",
+                            "NOCHARS $pkg will not give character bounds for '" +
+                                p.text.take(24) + "'",
+                        )
+                    }
+                    continue
+                }
             // refreshWithExtraData just refreshed the node, so this is the text as it is
             // now. If it has moved on, the picks describe a screen that is gone.
             if (reuse && p.node.text?.toString() != p.text) { stale = true; break }
@@ -1318,10 +1355,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val ok = runCatching {
             node.refreshWithExtraData(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY, args)
         }.getOrDefault(false)
-        if (!ok) return null
-        val raw = node.extras?.getParcelableArray(
+        val raw = if (!ok) null else node.extras?.getParcelableArray(
             AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY
-        ) ?: return null
+        )
+        if (raw == null) return null
         return Array(raw.size) { raw[it] as? RectF }
     }
 
