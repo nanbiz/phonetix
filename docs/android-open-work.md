@@ -3,6 +3,22 @@
 What is being worked on and what is still owed, kept here because chat scrolls away.
 Ticked items are done and verified by a suite; the rest are not.
 
+## Scrolling
+
+- [x] **A swipe that started on a transcription did not scroll the page.** 0px against 941px
+  for the same swipe beside it. The transcriptions are windows over the words and a window
+  that takes a gesture keeps it, so most swipes on a page of text were swallowed whole. They
+  take no touches now unless `touchWords` is on; that setting is what buys the card.
+- [x] **What is drawn is measured from photographs of the screen**, not from the service's own
+  account of itself (`android_eyes.py`, `marks=1`). It found the transcriptions a line below
+  their words mid-swipe.
+- [x] **The layer worked out the page's speed for itself and got two to eight times the real
+  one**, from box positions over an interval it half guessed. The reading measures the speed
+  properly; it is told now. Typical error through a swipe: a line, down to a third of one.
+- [ ] **A tenth of the frames through a swipe are still further out** - about a line at worst.
+  What is left is the gap between readings, which on the emulator is a round trip into a busy
+  app at ten-odd milliseconds each.
+
 ## In flight
 
 - [x] **Movement measured against the last pass, not against zero.** A shift is the distance
