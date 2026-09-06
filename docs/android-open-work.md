@@ -18,30 +18,35 @@ Ticked items are done and verified by a suite; the rest are not.
   clock, so words scrolling in are not blank until the movement stops.
 - [x] **The suite measures what is drawn**, not only what the service read, and the page
   reports its own position every frame instead of leaving holes to interpolate across.
-- [ ] **A line given up on keeps its black box while the screen moves.** The follow path asked
+- [x] **A line given up on kept its black box while the screen moves.** The follow path asked
   only for a line's own reading and never for the fallback, so an unreadable line kept
-  background 0 - black - for as long as anything moved. Fixed in the tree, not yet verified.
-- [ ] **A colour read that is throttled now comes back later.** Without it a still page whose
+  background 0 - black - for as long as anything moved.
+- [x] **A colour read that is throttled now comes back later.** Without it a still page whose
   lines could not be read on the first attempt showed nothing at all, for as long as the
-  reader stayed on it. Fixed in the tree, not yet verified.
-- [ ] **The fallback colour is read where the line is**, not taken from the commonest colour
+  reader stayed on it.
+- [x] **The fallback colour is read where the line is**, not taken from the commonest colour
   on the screen, which is how a title over cover art got a black patch on an olive page.
-  Fixed in the tree, not yet verified; `mode=gradient` and `check_unreadable_colors` cover it.
+  Covered by `mode=gradient` and `check_unreadable_colors`.
 
 ## Owed
 
-- [ ] **Language detection.** There is none: one espeak-generated dictionary that pronounces
+- [x] **Language detection, as a stopgap.** There is none: one espeak-generated dictionary that pronounces
   any string of letters, applied to every word on screen, so a German page gets English
   pronunciations - on "Song" and "Video", and on "war", "hat", "man". Dictionary coverage
   cannot answer it here the way it does in the extension, because that dictionary knows
   "und", "der" and "das" too. Being built from the 300 commonest words of each of the 38
   languages already shipped for the sprinkle: the language whose function words appear is the
-  language of the line, and a line too short to hold one is answered for by its screen.
-- [ ] **The card opens on a long press**, not on a tap.
-- [ ] **An accessibility button to switch the whole thing off and on.** Not there yet. The
-  quick-settings tile is (`PhonetixTileService`); the service does not ask for the
-  accessibility button, which needs `flagRequestAccessibilityButton` in
-  `accessibility_service_config.xml` and an `AccessibilityButtonController` callback.
+  language of the line, and a line too short to hold one is answered for by its screen. A page
+  of ordinary German now comes back untouched (`mode=german`, `check_language`).
+- [ ] **Port eld, which is what the extension actually uses.** Word lists answer a page of
+  sentences and not much else: a screen of labels holds no function words, and the reply then
+  rests on the screen around it. eld is a naive-Bayes over character 4-grams and ships models
+  from 893KB (XS) to 4.4MB; the scoring loop is short and the data can be an asset. That is
+  parity rather than a stand-in.
+- [x] **The card opens on a press held**, and a tap shows the word underneath.
+- [x] **An accessibility button to switch the whole thing off and on.** Added:
+  `flagRequestAccessibilityButton` plus an `AccessibilityButtonController` callback. It has to
+  be assigned to Phonetix in the system's accessibility settings before it appears.
 - [ ] **Abbreviations are spelled out.** "Ms" comes back as `ɛmɛs`, which is the espeak
   dictionary reading it as initials. The extension has Wiktionary's `/mɪz/`. A dictionary
   question rather than a placement one.
