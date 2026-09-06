@@ -46,6 +46,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var settingsWatch: kotlinx.coroutines.CoroutineScope? = null
     private val layouts = LineLayouts()
     private var generation = 0
+    /** Apps already named in the log as bystanders, so each is said once. */
+    private val ignored = HashSet<String>(4)
     /** Whether the last event found the overlay switched on, so switching off hides once. */
     @Volatile private var wasEnabled = true
     private var lastScanEnd = 0L
@@ -176,7 +178,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // be a flicker a minute. Whether the app in front is one of these is settled by the
         // read itself, from the window that is actually there.
         val from = event?.packageName?.toString()
-        if (::bystanders.isInitialized && bystanders.contains(from)) return
+        if (::bystanders.isInitialized && bystanders.contains(from)) {
+            // Said once per app, because an app dropped here is dropped before anything else
+            // is recorded about it: the settings app was ignored whole on a device whose home
+            // intent answers with its own placeholder activity, and nothing in the log
+            // mentioned the settings app at all.
+            if (BuildConfig.DEBUG && ignored.add(from.orEmpty())) {
+                android.util.Log.d("Phonetix", "IGNORING $from, it is a bystander")
+            }
+            return
+        }
         // Switched off, nothing is read at all. Fetching the window to discover that on
         // every event of every app is work a reader who turned the overlay off did not ask
         // for; the words come down once, and the next event after it is switched back on

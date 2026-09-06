@@ -483,6 +483,45 @@ def check_language(r, dev):
     )
 
 
+def check_a_real_app(r, dev):
+    """An app nobody wrote for this test gets transcriptions, and keeps them through a scroll.
+
+    Every other page here is one this repository draws, and a page this repository draws is a
+    page whose every quirk has been designed around. The settings app is not: it is a real
+    list, laid out by someone else, and it was invisible to the overlay for the whole life of
+    this feature. Its events were dropped as a bystander's - the device's home intent is
+    answered by that same app's placeholder activity, so the launcher lookup named it - and a
+    bystander is dropped before anything is read or logged, so nothing anywhere said so.
+    """
+    reset(dev)
+    shell("am", "start", "-a", "android.settings.SETTINGS")
+    time.sleep(4)
+    if not r.check("settings" in dev.top_activity().lower(),
+                   "a real app: the settings app is in front", dev.top_activity()):
+        return
+    boxes = {}
+    for _ in range(6):
+        time.sleep(2.0)
+        boxes = dev.boxes()
+        if boxes:
+            break
+    if not r.check(bool(boxes), "a real app: its words are transcribed",
+                   "nothing at all on a screen full of English"):
+        return
+    r.check(
+        all(b["sampled"] for b in boxes.values()),
+        "a real app: they wear its own colours",
+        f"{sum(1 for b in boxes.values() if not b['sampled'])} of {len(boxes)} fell back",
+    )
+    # And they survive being scrolled, which is a different list implementation from any of
+    # the pages here.
+    shell("input", "swipe", "540", "1400", "540", "800", "400")
+    time.sleep(3.0)
+    after = dev.boxes()
+    r.check(bool(after), "a real app: they are still there after a scroll",
+            "the screen came back empty")
+
+
 def close(got, want, tolerance=60):
     """Whether two colours are the same to the eye, the sampler quantising as it does."""
     return (
@@ -617,6 +656,8 @@ def main():
     check_unreadable_colors(r, dev)
     print("the language of the page")
     check_language(r, dev)
+    print("an app nobody wrote for this test")
+    check_a_real_app(r, dev)
     print("the app's own screen")
     check_settings_screen(r, dev)
     check_switch_in_ui(r, dev)

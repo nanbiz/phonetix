@@ -34,9 +34,24 @@ class Bystanders(private val context: Context) {
         lookedUpAt = SystemClock.uptimeMillis()
         val found = HashSet<String>(8)
         found.add("com.android.systemui")
+        // Whatever answers the home intent, unless what answers it is not a launcher.
+        //
+        // A device with no launcher installed - an emulator, a freshly flashed phone - answers
+        // it with the settings app's own FallbackHome, and a device with several answers it
+        // with the chooser. Adding either meant an entire ordinary app was ignored: on the
+        // emulator the settings app produced no transcriptions at all, and nothing said why,
+        // because a bystander's events are dropped before anything is logged about them.
         runCatching {
             val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-            context.packageManager.resolveActivity(home, 0)?.activityInfo?.packageName
+            val resolved = context.packageManager
+                .resolveActivity(home, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+                ?.activityInfo
+            val name = resolved?.name.orEmpty()
+            if (resolved != null && NOT_A_LAUNCHER.none { name.endsWith(it) }) {
+                resolved.packageName
+            } else {
+                null
+            }
         }.getOrNull()?.let { found.add(it) }
         runCatching {
             val imm = context.getSystemService(InputMethodManager::class.java)
@@ -47,5 +62,10 @@ class Bystanders(private val context: Context) {
 
     private companion object {
         const val REFRESH_MS = 60_000L
+
+        /** Activities that answer the home intent without being anyone's home screen: the
+         *  placeholder a device shows before a launcher is installed, and the chooser a
+         *  device shows when it has several. */
+        val NOT_A_LAUNCHER = listOf("FallbackHome", "ResolverActivity")
     }
 }
