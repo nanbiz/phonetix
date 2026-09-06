@@ -50,6 +50,22 @@ Ticked items are done and verified by a suite; the rest are not.
   on the screen, which is how a title over cover art got a black patch on an olive page.
   Covered by `mode=gradient` and `check_unreadable_colors`.
 
+## Found by testing an app nobody wrote for the test
+
+- [x] **An entire real app was invisible.** The settings app produced no transcriptions and
+  nothing in the log mentioned it: the launcher is found by asking what answers the home
+  intent, and a device with no launcher installed answers with the settings app's own
+  placeholder activity - so every event of that app was dropped as a bystander's, before
+  anything is read or logged. The placeholder and the chooser are not launchers now, an app
+  that is dropped says so once, and `check_a_real_app` holds the settings app to being
+  transcribed, wearing its own colours, and surviving a scroll.
+- [x] **Transcriptions were drawn over the keyboard.** A word behind the keyboard is still in
+  the app's tree, so its transcription was drawn where the word would have been - over the
+  letter keys, since our window is above the keyboard. The system is asked which windows stand
+  over the app.
+- [x] **The accessibility button works**, verified by pressing it: the overlay goes empty and
+  comes back. The system draws it as a floating button with the app's icon.
+
 ## Owed
 
 - [x] **Language detection, as a stopgap.** There is none: one espeak-generated dictionary that pronounces
