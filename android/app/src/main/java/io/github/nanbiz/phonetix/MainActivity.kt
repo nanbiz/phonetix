@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
                     dictionaryReady = dictReady,
                     onEnabled = SettingsStore::setEnabled,
                     onDensity = SettingsStore::setDensity,
+                    onTouchWords = SettingsStore::setTouchWords,
                     onOpenAccessibility = { openAccessibilitySettings() },
                     onOpenOverlay = { openOverlaySettings() },
                     onOpenApps = { showApps = true },

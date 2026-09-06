@@ -59,6 +59,7 @@ fun HomeScreen(
     dictionaryReady: Boolean,
     onEnabled: (Boolean) -> Unit,
     onDensity: (Int) -> Unit,
+    onTouchWords: (Boolean) -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenApps: () -> Unit,
@@ -94,6 +95,8 @@ fun HomeScreen(
             dictionaryReady = dictionaryReady,
             onDensity = onDensity,
         )
+
+        TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
 
         AppsCard(settings = settings, onOpenApps = onOpenApps)
 
@@ -235,6 +238,43 @@ private fun StatusDot(on: Boolean) {
             .clip(RoundedCornerShape(50))
             .background(c),
     )
+}
+
+/**
+ * Whether the transcriptions themselves can be touched.
+ *
+ * They are windows lying over the words. A finger that comes down on one comes down on it and
+ * not on the app underneath, and a window that has taken a gesture keeps it - so with this on,
+ * a swipe that begins on a transcription does not scroll the page. Most of a page of text is
+ * transcriptions. That is the whole of the trade, and it is put plainly here because a reader
+ * who turns it on and then cannot scroll would have no way of guessing why.
+ */
+@Composable
+private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
+    SectionCard(title = "Touching a word") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (on) "Press a word for its sounds" else "Words are not touchable",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (on) {
+                        "Hold a transcription to open its card. While this is on, a swipe " +
+                            "that starts on a transcription will not scroll the page."
+                    } else {
+                        "Every touch goes to the app underneath, so scrolling is untouched. " +
+                            "Turn this on to open a word's card by holding it."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = on, onCheckedChange = onTouchWords)
+        }
+    }
 }
 
 @Composable
