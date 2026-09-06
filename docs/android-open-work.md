@@ -15,9 +15,15 @@ Ticked items are done and verified by a suite; the rest are not.
 - [x] **The layer worked out the page's speed for itself and got two to eight times the real
   one**, from box positions over an interval it half guessed. The reading measures the speed
   properly; it is told now. Typical error through a swipe: a line, down to a third of one.
-- [ ] **A tenth of the frames through a swipe are still further out** - about a line at worst.
-  What is left is the gap between readings, which on the emulator is a round trip into a busy
-  app at ten-odd milliseconds each.
+- [x] **A swipe no longer costs full reads of the screen.** Nothing answering a pass was read
+  as every line having been recycled - it is what a busy app thread looks like - so a swipe
+  provoked nine full reads, each a tenth to half a second with the words standing still. And
+  the turnover re-read fired on any page under a pixel a millisecond, which is every drag a
+  reader can read along with. Through a finger swipe, photographed: typical error 7 pixels of
+  the capture (was 9-11), nine in ten within 16 (was 21), worst 20 (was 54).
+- [ ] **A tenth of the frames through a swipe are still about a line out.** What is left is the
+  gap between readings - 60 to 130ms on the emulator, where one round trip into a busy app
+  costs ten. A phone should do better; there is no way to measure that from here.
 
 ## In flight
 
@@ -59,9 +65,10 @@ Ticked items are done and verified by a suite; the rest are not.
   answers are reliable, and scores to within a hundredth, over twelve languages
   (`EldParityTest`). The word lists are gone. Regenerate with
   `node scripts/build-eld-model.mjs XS` and gzip the result to `eld.bin.gz`.
-- [ ] **A line of one or two words still cannot be judged on its own** - eld says so itself -
-  so the screen it is on answers for it. That is what the extension does too, but it means a
-  single English word on a German page goes untranscribed.
+- [ ] **A German sentence on an English page is still transcribed.** The language is decided
+  for the whole screen, because eld reliably calls a line of English nouns Italian and per-line
+  suppression cost an English page most of its transcriptions. The extension does better by
+  measuring each block against every dictionary it has; there is one dictionary here.
 - [x] **The card opens on a press held**, and a tap shows the word underneath.
 - [x] **An accessibility button to switch the whole thing off and on.** Added:
   `flagRequestAccessibilityButton` plus an `AccessibilityButtonController` callback. It has to
