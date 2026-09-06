@@ -170,19 +170,25 @@ class Device:
         return out
 
     def scroll_at(self, timeline, stamp):
-        """Where the page was at a given instant, interpolated between its own reports."""
+        """Where the page was at a given instant: the last position it reported by then.
+
+        A page moves in frames, and between two of them it is not on its way anywhere - it
+        is standing exactly where the last frame put it. Reading a straight line between two
+        reports says otherwise, and where the app misses a frame and then covers the whole
+        distance in the next one, that line is a movement the page never made: a reading
+        taken in the middle of it was measured against a position the page was never at, and
+        counted as drift of hundreds of pixels.
+        """
         if not timeline:
             return None
         if stamp <= timeline[0][0]:
             return timeline[0][1]
-        if stamp >= timeline[-1][0]:
-            return timeline[-1][1]
-        for (t0, y0), (t1, y1) in zip(timeline, timeline[1:]):
-            if t0 <= stamp <= t1:
-                if t1 == t0:
-                    return y0
-                return y0 + (y1 - y0) * (stamp - t0) / (t1 - t0)
-        return timeline[-1][1]
+        held = timeline[0][1]
+        for at, y in timeline:
+            if at > stamp:
+                break
+            held = y
+        return held
 
     # ---- what the screen actually shows --------------------------------------
 

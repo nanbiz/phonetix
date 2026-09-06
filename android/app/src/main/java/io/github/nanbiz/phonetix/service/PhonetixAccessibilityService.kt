@@ -69,8 +69,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var verifyFrom = 0
     /** Whether this screen has been seen handing a row to a different line. */
     @Volatile private var recycling = false
+    /** How many passes in a row have kept no words at all. */
+    @Volatile private var blankFollows = 0
     /** The last measured shift and when, and the speed they give, in pixels a millisecond. */
     @Volatile private var lastShiftY = 0f
+    @Volatile private var lastShiftX = 0f
     @Volatile private var lastShiftAt = 0L
     @Volatile private var speedY = 0f
 
@@ -364,6 +367,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
             previousTops = before
             plannedDensity = settings.density
             lastFullReadAt = android.os.SystemClock.uptimeMillis()
+            // Every line is measured where it is now, so the distance from there is nothing
+            // and the following starts again from that. Carrying the old numbers over made
+            // the first pass after a read report the whole of the previous plan's travel as
+            // movement that had just happened.
+            lastShiftY = 0f
+            lastShiftX = 0f
+            blankFollows = 0
+            // And what the previous plan was seen doing is not known about this one; held
+            // across plans, one recycled row on one screen let every later pass keep no words
+            // and still call itself a success.
+            recycling = false
         }
         val t1 = android.os.SystemClock.uptimeMillis()
 
@@ -406,11 +420,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // Whole when they were measured, so there is an edge of them to compare.
                     at.top > p.viewport.top + 1 && at.bottom < p.viewport.bottom - 1
             }.ifEmpty { planned.filter { it.measuredAt != null && it.boxes.isNotEmpty() } }
+            // Fewer of them the faster the page is going. Asking a line where it is costs a
+            // round trip into an app that is busy laying itself out, ten-odd milliseconds
+            // each, and while the page moves that cost is paid twice: once in the pass, and
+            // again in everything the words are carried by a speed nobody has checked since.
+            // Through a flick, two answers arriving quickly place the words better than three
+            // arriving late.
+            val wanted = if (kotlin.math.abs(speedY) > HURRIED_PX_PER_MS) ANCHORS_FAST else ANCHORS
             val anchors = when {
-                usable.size <= ANCHORS -> usable
+                usable.size <= wanted -> usable
+                wanted == 1 -> listOf(usable[usable.size / 2])
                 else -> {
-                    val step = (usable.size - 1).toFloat() / (ANCHORS - 1)
-                    (0 until ANCHORS).map { usable[(it * step).toInt()] }
+                    val step = (usable.size - 1).toFloat() / (wanted - 1)
+                    (0 until wanted).map { usable[(it * step).toInt()] }
                 }
             }
             /** Each anchor's answer, and the moment it gave it. */
@@ -464,7 +486,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 val spread = believable.maxOf { it.second } - believable.minOf { it.second }
                 if (spread > INDEPENDENT_PX) agreed = false
             }
-            if (alive > 0 && (shiftY != 0f || shiftX != 0f)) shifted = true
+            // Against the shift the last pass measured, not against zero. A shift is the
+            // distance from where the plan was made, so it stays large for as long as the
+            // plan lives: read as movement, a page that scrolled once and then stood still
+            // reported itself moving for ever. The loop then never idled, the full read that
+            // ends a movement never ran, and the words stayed on the motion layer being
+            // carried at a speed the page no longer had.
+            if (alive > 0 && (kotlin.math.abs(shiftY - lastShiftY) > MOVED_PX ||
+                    kotlin.math.abs(shiftX - lastShiftX) > MOVED_PX)
+            ) {
+                shifted = true
+            }
             // How fast the page is going, from this reading against the one before. The
             // full read below needs it: it takes tens of milliseconds, and its first line is
             // measured well before its last.
@@ -473,6 +505,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (dt in 1f..300f) speedY = (shiftY - lastShiftY) / dt
             }
             lastShiftY = shiftY
+            lastShiftX = shiftX
             lastShiftAt = readAt
 
             // A few lines are asked whether they are still the lines they were, a couple
@@ -485,18 +518,29 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // list hands a row to a new line: scrolling down, the rows at the top go first.
             // The rest are taken in turn, so every line is checked within a few frames.
             val checks = ArrayList<Planned>(VERIFY_PER_PASS + VERIFY_AT_EDGE)
-            if (planned.isNotEmpty()) {
+            // Not while the page is racing, for the reason above: each check is another round
+            // trip, and a row that has been handed to a different line is caught by the next
+            // slower pass and by the full read that ends the movement. What it costs to check
+            // it now is every word on the screen sitting where the page was a moment ago.
+            if (planned.isNotEmpty() && kotlin.math.abs(speedY) <= HURRIED_PX_PER_MS) {
                 val leaving = planned
                     .filter { it.measuredAt != null && it.boxes.isNotEmpty() }
                     .sortedBy { line ->
                         val top = line.measuredAt?.top ?: 0
                         if (shiftY <= 0f) top else -top
                     }
-                checks.addAll(leaving.take(VERIFY_AT_EDGE))
-                for (i in 0 until minOf(VERIFY_PER_PASS, planned.size)) {
+                // The edge is where a list hands a row to a new line, so it is watched closely
+                // - but only on a screen that has been seen doing it. An article does not
+                // recycle anything, and on one of those these were four round trips a pass
+                // spent confirming what never changes, which is four round trips the words
+                // were not being measured in: the readings came half as often and everything
+                // on the screen sat that much further behind the text.
+                checks.addAll(leaving.take(if (recycling) VERIFY_AT_EDGE else 1))
+                val turns = if (recycling) VERIFY_PER_PASS else 1
+                for (i in 0 until minOf(turns, planned.size)) {
                     checks.add(planned[(verifyFrom + i) % planned.size])
                 }
-                verifyFrom = (verifyFrom + VERIFY_PER_PASS) % planned.size
+                verifyFrom = (verifyFrom + turns) % planned.size
             }
             val verified = HashSet<Planned>(checks.size + anchors.size)
             verified.addAll(anchors)
@@ -554,7 +598,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (shift == null) { unreadable++; continue }
                     dx = shift.first
                     dy = shift.second
-                    if (dy != 0f || dx != 0f) shifted = true
+                    // Against this line's own last answer, for the reason above: the shift is
+                    // measured from where the plan was made and does not return to zero when
+                    // the page stops.
+                    if (kotlin.math.abs(dy - p.lastDy) > MOVED_PX ||
+                        kotlin.math.abs(dx - p.lastDx) > MOVED_PX
+                    ) {
+                        shifted = true
+                    }
+                    p.lastDx = dx
+                    p.lastDy = dy
                 }
                 for (b in p.boxes) {
                     val r = RectF(b.rect.left + dx, b.rect.top + dy, b.rect.right + dx, b.rect.bottom + dy)
@@ -575,13 +628,26 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // transcription off the screen. That happened after a jump, where a surviving
             // line's words all landed outside the clip it was measured in, and the overlay
             // went blank on a page full of words.
-            if (ok && recycling && moved.isEmpty()) {
+            if (moved.isEmpty()) blankFollows++ else blankFollows = 0
+            if (ok && recycling && moved.isEmpty() && blankFollows <= BLANK_FOLLOWS) {
                 // Nothing verified yet on a recycling screen is not a failure; the next pass
-                // verifies the next lines, and the full read at the end settles it.
+                // verifies the next lines, and the full read at the end settles it. Only for
+                // a pass or two, though: text that is being written changes the lines under
+                // the plan, every word then falls outside the line it was measured in, and
+                // treating that as success held a plan describing a screen that was gone for
+                // as long as the movement lasted - an overlay showing nothing at all while
+                // the reader watched an answer being written.
                 ok = true
             } else if (ok && moved.isEmpty() && planned.any { it.boxes.isNotEmpty() }) {
                 ok = false
                 why = "the follow kept no words at all ($clipped clipped, $hidden covered, $unreadable unreadable)"
+            }
+            // However few lines are left to keep words in, an overlay that has drawn nothing
+            // for several passes running is not following anything.
+            if (ok && moved.isEmpty() && blankFollows > BLANK_FOLLOWS) {
+                ok = false
+                why = "nothing kept for $blankFollows passes ($clipped clipped, $hidden " +
+                    "covered, $unreadable unreadable)"
             }
             // Nothing survived at all: the screen is not what it was, so read it properly.
             if (ok && alive == 0) {
@@ -632,7 +698,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d(
                         "Phonetix",
                         "follow=${took}ms lines=${planned.size} boxes=${moved.size} moving=$moving " +
-                            "shift=$shiftY agreed=$agreed alive=$alive gone=$gone clipped=$clipped",
+                            "shift=$shiftY agreed=$agreed alive=$alive gone=$gone " +
+                            "clipped=$clipped covered=$hidden unreadable=$unreadable",
                     )
                 }
                 return
@@ -697,17 +764,52 @@ class PhonetixAccessibilityService : AccessibilityService() {
             while (boxes.size > w) boxes.removeAt(boxes.size - 1)
             p.boxes = boxes.subList(before, boxes.size).toList()
         }
+        // How fast the page went during this read, measured by the read itself: the first
+        // line that was measured is asked once more at the end, and the distance it has
+        // covered meanwhile is what every other line has to be carried by.
+        //
+        // The speed the following left behind cannot answer for this. A read takes tens of
+        // milliseconds to a fifth of a second, and it is entered exactly when the following
+        // has stopped believing its own speed - at the start of a stroke, after a pause -
+        // so the compensation below was skipped in the case that most needed it, and a page
+        // read from top to bottom during a movement came out as a screen that never existed.
+        var during = 0f
+        if (!reuse && android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS) {
+            val first = planned.firstOrNull { lineReadAt[it] != null && it.boxes.isNotEmpty() }
+            val was = first?.measuredAt
+            val when0 = if (first != null) lineReadAt[first] else null
+            if (first != null && was != null && when0 != null) {
+                val again = android.graphics.Rect()
+                if (first.node.refresh() && first.node.text?.toString() == first.text) {
+                    first.node.getBoundsInScreen(again)
+                    val nowAt = android.os.SystemClock.uptimeMillis()
+                    val travelled = shiftOf(was, again, first.viewport)
+                    val dt = (nowAt - when0).toFloat()
+                    // A page cannot cross the screen in a frame. A number larger than that is
+                    // a line that was handed to another line, or a layout jump, and carrying
+                    // every word by it would throw the whole screenful somewhere it never was.
+                    val rate = travelled?.second?.div(dt) ?: 0f
+                    if (travelled != null && dt >= 1f && kotlin.math.abs(rate) <= SANE_PX_PER_MS) {
+                        during = rate
+                        // What the following would have measured, had it been running: this
+                        // is a reading of the page's speed like any other, and the pass after
+                        // this one has nothing fresher.
+                        speedY = during
+                        lastShiftAt = nowAt
+                        readAt = nowAt
+                    }
+                }
+            }
+        }
         // Every line of a full read is measured at a different moment, and on a moving page
         // that is a screen that never existed: the first line belongs to where the page was
-        // fifty milliseconds ago and the last to where it is now. Each is carried forward at
-        // the speed the following measured, to the moment the reading finished.
-        if (!reuse && speedY != 0f &&
-            android.os.SystemClock.uptimeMillis() - lastShiftAt < SPEED_FRESH_MS &&
-            android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
-        ) {
+        // fifty milliseconds ago and the last to where it is now. Each is carried forward to
+        // the moment the reading finished.
+        if (!reuse && during != 0f) {
             for (p in planned) {
                 val when0 = lineReadAt[p] ?: continue
-                val ahead = (readAt - when0).coerceIn(0L, 200L).toFloat() * speedY
+                val ahead = ((readAt - when0).coerceIn(0L, 200L).toFloat() * during)
+                    .coerceIn(-CARRY_LIMIT_PX, CARRY_LIMIT_PX)
                 if (ahead == 0f) continue
                 p.boxes = p.boxes.map {
                     val r = it.rect
@@ -810,7 +912,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
                     "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
-                    "coloured=${painted.count { it.background != 0 }}",
+                    "coloured=${painted.count { it.background != 0 }} during=$during",
             )
         }
     }
@@ -897,6 +999,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  be carried by the difference instead of being measured again. */
         var measuredAt: android.graphics.Rect? = null
         var boxes: List<WordBox> = emptyList()
+        /** How far this line was carried on the last pass, so the next one can tell whether
+         *  it has moved since rather than whether it has moved at all. */
+        var lastDx = 0f
+        var lastDy = 0f
     }
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
@@ -1094,6 +1200,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FULL_READ_MOVING_MS = 2500L
         /** How many lines are asked where they are before the rest are carried with them. */
         const val ANCHORS = 3
+        /** And how many while the page is moving quickly, where an answer that arrives late
+         *  is worth less than one that arrives. */
+        const val ANCHORS_FAST = 2
+        /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
+         *  lines: at this rate the page moves a line's height in the time one answer takes. */
+        const val HURRIED_PX_PER_MS = 1.0f
+        /** Faster than any page really travels, at a screen height in a frame or two. A
+         *  measurement above this is not a speed, it is a jump. */
+        const val SANE_PX_PER_MS = 12f
+        /** And however fast it is going, no line is carried further than this to bring it to
+         *  the same instant as the rest: past a screenful the correction is the error. */
+        const val CARRY_LIMIT_PX = 400f
         /** And how many are asked whether they are still themselves, each pass. */
         const val VERIFY_PER_PASS = 2
         /** Plus this many at the edge the content is leaving by, where rows are recycled. */
@@ -1105,6 +1223,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val PREDICTION_TOL = 90f
         /** How long a measured speed still describes the page. */
         const val SPEED_FRESH_MS = 120L
+
+        /** Movement, in pixels: below this a line has been measured twice in the same place
+         *  and the difference is rounding, not the page going anywhere. */
+        const val MOVED_PX = 0.5f
+
+        /** How many passes running may keep no words before the screen is read properly.
+         *  One is ordinary while a list hands rows around; several in a row means the plan
+         *  describes a screen that is no longer there. */
+        const val BLANK_FOLLOWS = 2
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60

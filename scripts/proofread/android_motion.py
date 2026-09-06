@@ -119,6 +119,53 @@ def doc_drift(dev, frames, timeline):
     return worst, worst_word, samples
 
 
+def drawn_drift(dev, log, frames, timeline, began, ended):
+    """How far what was actually on the screen sat from the text under it.
+
+    Between two readings the words are not where the overlay last read them: they are where
+    the layer carrying them has got to, frame by frame, at the speed it believes the page is
+    going. That is what a reader watches, and it is the thing a reading-by-reading comparison
+    cannot see - an overlay that read the page perfectly twice a second and slid its words
+    off the screen in between would look faultless.
+
+    So each frame the layer drew is taken with the reading it was drawing, offset by what it
+    had shifted that set by, and held against where the page was at that moment.
+    """
+    drawn = []
+    for line in log.splitlines():
+        m = re.search(r"LAYER (\d+) (-?[\d.]+) (\d+)", line)
+        if m:
+            drawn.append((int(m.group(1)), float(m.group(2)), int(m.group(3))))
+    if not drawn:
+        return None
+    readings = {stamp: boxes for stamp, boxes in frames}
+    worst = 0.0
+    worst_word = ""
+    samples = 0
+    for at, shift, base in drawn:
+        if not (began <= at <= ended):
+            continue
+        # The reading this frame is drawing, named by the layer itself.
+        boxes = readings.get(base)
+        if boxes is None:
+            continue
+        latest = (base, boxes)
+        was = dev.scroll_at(timeline, base)
+        now = dev.scroll_at(timeline, at)
+        if was is None or now is None:
+            continue
+        # The page scrolled (now - was) further on since the reading, which carries the text
+        # that far up the screen, so the words are in the right place only if the layer has
+        # taken them the same distance the other way. Whatever is left over is the gap a
+        # reader sees between a word and the transcription over it.
+        behind = (now - was) + shift
+        samples += 1
+        if abs(behind) > abs(worst):
+            worst = behind
+            worst_word = next(iter(latest[1].values()))["word"] if latest[1] else ""
+    return abs(worst), worst_word, samples
+
+
 def settle_timeline(timeline, began_at, slack=60, sane=8.0):
     """The page's own reports, with its layout storm taken out.
 
@@ -170,13 +217,38 @@ def peak_speed(timeline, window=60, sane=20.0):
     return fastest
 
 
-def longest_gap(frames, began, ended):
+def moving_spans(timeline, still_ms=120):
+    """The stretches in which the page was actually going somewhere.
+
+    A movement made in strokes stands still between them, and a reader pausing to read is
+    exactly when the transcriptions should be still too. Holding the overlay to a redraw rate
+    through those pauses measures nothing about it.
+    """
+    spans = []
+    open_at = None
+    for (t0, y0), (t1, y1) in zip(timeline, timeline[1:]):
+        if y1 != y0 and t1 - t0 <= still_ms:
+            if open_at is None:
+                open_at = t0
+            end = t1
+        elif open_at is not None:
+            spans.append((open_at, end))
+            open_at = None
+    if open_at is not None:
+        spans.append((open_at, timeline[-1][0]))
+    return spans
+
+
+def longest_gap(frames, timeline):
     """The longest the overlay went without redrawing while the page was moving."""
-    stamps = [t for t, _ in frames if began <= t <= ended]
-    if len(stamps) < 2:
-        return ended - began
-    gaps = [b - a for a, b in zip(stamps, stamps[1:])]
-    return max(gaps + [stamps[0] - began, ended - stamps[-1]])
+    worst = 0
+    for began, ended in moving_spans(timeline):
+        stamps = [t for t, _ in frames if began <= t <= ended]
+        gaps = [b - a for a, b in zip(stamps, stamps[1:])]
+        # A stretch of movement the overlay drew nothing in at all is the whole stretch.
+        edges = [stamps[0] - began, ended - stamps[-1]] if stamps else [ended - began]
+        worst = max([worst, *gaps, *edges])
+    return worst
 
 
 def wait_until_still(dev, quiet=0.4, limit=6.0):
@@ -262,7 +334,7 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
         f"{len(during)} redraws over {moving_to - moving_from}ms, wanted {wanted}",
     )
 
-    gap = longest_gap(frames, moving_from, moving_to)
+    gap = longest_gap(frames, timeline)
     r.check(gap <= GAP_MS, f"{label}: it never froze mid-movement",
             f"{gap}ms without a redraw")
 
@@ -284,6 +356,14 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
     elif samples:
         r.check(worst <= allowed, f"{label}: transcriptions kept up with the text",
                 f"worst drift {worst:.0f}px on {word} over {samples} readings, "
+                f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
+
+    # And what was on the screen between those readings, which is what a reader sees.
+    seen = drawn_drift(dev, log, frames, timeline, moving_from, moving_to)
+    if seen is not None and seen[2] and credible:
+        shown, shown_word, shown_n = seen
+        r.check(shown <= allowed, f"{label}: what was on the screen kept up with the text",
+                f"worst {shown:.0f}px on {shown_word} over {shown_n} frames, "
                 f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
 
     # Nothing may lose its colours while it moves: a set that falls back to a palette of ours

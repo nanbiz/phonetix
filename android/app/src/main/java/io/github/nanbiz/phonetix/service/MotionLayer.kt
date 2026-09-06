@@ -33,6 +33,23 @@ class MotionLayer(private val context: Context) {
         const val LATE_LIMIT_MS = 250L
         /** What the app's own reporting is behind by, at sixty frames a second. */
         const val FRAME_MS = 16L
+        /** What a measurement is taken to say about the future, as a multiple of the gap
+         *  between measurements: at full speed for one gap, fading to a standstill by the
+         *  end of the second. A page stops without announcing it - a stroke ends, a finger
+         *  lifts - and the only news of that is the next measurement, so a speed carried
+         *  unquestioned until then took the words off the screen. */
+        const val COAST = 1.0f
+        const val FADE = 2.0f
+        /** The gap between measurements is smoothed and kept inside this, so neither one
+         *  quick pass nor one slow one decides how far the layer trusts itself. */
+        const val GAP_MIN_MS = 24f
+        const val GAP_MAX_MS = 120f
+        /** Faster than any page travels: a screen height in a couple of frames. Anything
+         *  above it came out of two readings that were not of the same screen. */
+        const val SANE_PX_PER_MS = 8f
+        /** And however fast it is going, the words are never carried further than this from
+         *  where they were last measured. */
+        const val CARRY_LIMIT_PX = 400f
     }
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -45,9 +62,16 @@ class MotionLayer(private val context: Context) {
     private var vx = 0f
     private var vy = 0f
     private var lastMeasureAt = 0L
+    /** When the last measurement reached this layer, as against when it was taken. */
+    private var lastArrivedAt = 0L
     private var predictedX = 0f
     private var predictedY = 0f
     private var lastFrameAt = 0L
+    /** How far apart the measurements have been coming, smoothed: how long a speed of
+     *  theirs is worth believing. */
+    private var gap = GAP_MAX_MS
+    /** How many measurements this movement has had. */
+    private var measurements = 0
 
     val isRunning: Boolean get() = view != null
 
@@ -57,8 +81,16 @@ class MotionLayer(private val context: Context) {
             val now = SystemClock.uptimeMillis()
             val dt = (now - lastFrameAt).coerceIn(0, 48).toFloat()
             lastFrameAt = now
-            predictedX += vx * dt
-            predictedY += vy * dt
+            // A measurement says where the words were and how fast they were going, and that
+            // is worth carrying for about as long as it takes the next one to arrive. Past
+            // that the speed is a guess about a page nobody has looked at, so it is let go of
+            // rather than run on: a page that stopped between two strokes used to have its
+            // words carried on at the speed of the stroke that ended, hundreds of pixels off
+            // the text they belong to, until a reading caught up with them.
+            val trust = trustAt(now)
+            predictedX += vx * dt * trust
+            predictedY = (predictedY + vy * dt * trust)
+                .coerceIn(-CARRY_LIMIT_PX, CARRY_LIMIT_PX)
             // Moved, not redrawn. Recording the whole set again every frame was work the
             // display did sixty times a second and, on a machine with no real GPU, enough
             // to starve the very reads that tell the layer where the words have got to: a
@@ -66,8 +98,31 @@ class MotionLayer(private val context: Context) {
             // in the middle of the movement it was following.
             v.translationX = predictedX
             v.translationY = predictedY
+            // What is on the screen this frame, which is the only thing a reader sees. The
+            // readings the service takes are what it knows; between them the words are where
+            // this puts them, and a test that only ever saw the readings could not tell a
+            // transcription riding its word from one sliding off it.
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                // Named by the reading it is drawing, so that what was on the screen can be
+                // held against the positions it was drawn from rather than against whichever
+                // reading happens to be nearest in time.
+                android.util.Log.d("Phonetix", "LAYER $now $predictedY $lastMeasureAt")
+            }
             Choreographer.getInstance().postFrameCallback(this)
         }
+    }
+
+    /**
+     * How much of the last measured speed still applies, from one at the moment it was taken
+     * to nothing once it is twice the usual gap old.
+     */
+    private fun trustAt(now: Long): Float {
+        val age = (now - lastMeasureAt).toFloat()
+        val coast = gap * COAST
+        if (age <= coast) return 1f
+        val fade = gap * FADE
+        if (age >= fade) return 0f
+        return 1f - (age - coast) / (fade - coast)
     }
 
     /** Take the words over from the small windows, at the positions they are already at. */
@@ -75,7 +130,10 @@ class MotionLayer(private val context: Context) {
         boxes = current
         vx = 0f; vy = 0f
         predictedX = 0f; predictedY = 0f
+        gap = GAP_MAX_MS
+        measurements = 0
         lastMeasureAt = SystemClock.uptimeMillis()
+        lastArrivedAt = lastMeasureAt
         lastFrameAt = lastMeasureAt
         if (view == null) {
             val v = LayerView(context).also { OverlayMute.apply(it) }
@@ -107,11 +165,23 @@ class MotionLayer(private val context: Context) {
      */
     fun measured(current: List<WordBox>, at: Long) {
         val now = SystemClock.uptimeMillis()
-        val dt = (at - lastMeasureAt).coerceAtLeast(1)
+        // How far apart the two readings were, by when they were taken - checked against when
+        // they arrived here. A reading is stamped with the moment its positions were read
+        // inside the other app, and two of those can be a few milliseconds apart while the
+        // passes that produced them were a tenth of a second apart. Dividing the distance the
+        // words moved by that few milliseconds gave a speed many times the page's, and the
+        // layer ran the whole set off the text at it. Readings cannot arrive faster than they
+        // are taken, so where the stamps disagree with the arrivals, the arrivals are right.
+        val arrived = (now - lastArrivedAt).coerceAtLeast(1)
+        val stamped = (at - lastMeasureAt).coerceAtLeast(1)
+        val dt = if (stamped >= arrived / 2 && stamped <= arrived * 2) stamped else arrived
         val movedY = averageShift(boxes, current)
+        lastArrivedAt = now
+        measurements++
+        gap = (0.5f * gap + 0.5f * dt.toFloat()).coerceIn(GAP_MIN_MS, GAP_MAX_MS)
         if (movedY != null && dt < 260) {
             // Blend, so one odd sample does not throw the speed about.
-            vy = 0.4f * vy + 0.6f * (movedY / dt)
+            vy = (0.4f * vy + 0.6f * (movedY / dt)).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
         } else {
             vy = 0f
         }
@@ -127,25 +197,45 @@ class MotionLayer(private val context: Context) {
         // laid out, and at the speed of a flick that frame is fifty pixels.
         val late = (now - at + FRAME_MS).coerceIn(0, LATE_LIMIT_MS)
         predictedX = 0f
-        predictedY = vy * late
+        // However late the answer and however fast the page, the words are not carried off
+        // the screen to catch up with it: past this the prediction is worth less than the
+        // measurement it is correcting.
+        //
+        // And nothing is predicted from the first measurement of a movement. Its speed comes
+        // from one reading taken while the page was still and one taken after it started, so
+        // it describes neither, and running a reading's whole age forward at it threw the
+        // words a couple of hundred pixels ahead of the text in the opening frames of every
+        // scroll. The second measurement is of the movement itself, and prediction starts
+        // there.
+        predictedY = if (measurements < 2) 0f
+        else (vy * late).coerceIn(-CARRY_LIMIT_PX, CARRY_LIMIT_PX)
         lastFrameAt = now
         view?.set(boxes)
         view?.let { v -> v.translationY = predictedY }
     }
 
-    /** How far the words as a set moved between two measurements, if they are the same set. */
+    /**
+     * How far the words as a set moved between two measurements, if they are the same set.
+     *
+     * The middle answer, not the average. Two readings of a screen are rarely the same words:
+     * a line scrolls in, a re-read finds text the last one did not, and the same word can
+     * appear twice on a page. Averaging let one such pair - a word matched to another copy of
+     * itself half a screen away - stand for the whole set, and the speed that came out of it
+     * carried every transcription two thousand pixels off the page in one frame.
+     */
     private fun averageShift(before: List<WordBox>, after: List<WordBox>): Float? {
         if (before.isEmpty() || after.isEmpty()) return null
         val byWord = HashMap<String, Float>(before.size)
         for (b in before) byWord[b.word + "@" + b.ipa] = b.rect.top
-        var sum = 0f
-        var n = 0
+        val shifts = ArrayList<Float>(after.size)
         for (a in after) {
             val was = byWord[a.word + "@" + a.ipa] ?: continue
-            sum += a.rect.top - was
-            n++
+            shifts.add(a.rect.top - was)
         }
-        return if (n == 0) null else sum / n
+        // One word agreeing with itself is not a measurement of a screenful.
+        if (shifts.size < 2) return null
+        shifts.sort()
+        return shifts[shifts.size / 2]
     }
 
     /** Hand the words back to the small windows and stop drawing. */

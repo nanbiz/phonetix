@@ -121,12 +121,24 @@ object ScrollMotion {
                     val t = (elapsed / perLeg).coerceIn(0f, 1f)
                     val y = startY + (travel * progress(profile, t, random)).roundToInt()
                     page.moveTo(y.coerceAtLeast(0))
+                    // Where the page is, said by the thing that just put it there. A view's
+                    // own scroll-changed listener is the other source of this, and it misses
+                    // frames: a stroke that reported twice in two hundred milliseconds left
+                    // the suite interpolating a straight line across a movement the page did
+                    // not make, and measuring the overlay against it.
+                    Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} ${page.at()}")
                     if (t < 1f) {
                         choreographer.postFrameCallback(this)
                     } else {
                         // The pause between strokes, which is where a reader actually reads.
+                        // Reported at both ends, so that a pause reads as a page standing
+                        // still rather than as a gap for anyone reading this to interpolate
+                        // a movement across.
                         val rest = 90L + (random.nextFloat() * 220f).toLong()
-                        page.view.postDelayed({ leg(index + 1, page.at()) }, rest)
+                        page.view.postDelayed({
+                            Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} ${page.at()}")
+                            leg(index + 1, page.at())
+                        }, rest)
                     }
                 }
             })

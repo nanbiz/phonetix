@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.util.TypedValue
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -75,6 +76,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
     }
     /** An empty line whose text is toggled to make the window's content change. */
     private var marker: TextView? = null
+
+    /** The line that is being written into, on the page that streams. */
+    private var growing: TextView? = null
+    private var written = 0
+    private var living = false
     private var mode = "plain"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -157,7 +163,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             // and a transcription that lags through the whole of a fling and catches up at
             // the end would pass.
             viewTreeObserver.addOnScrollChangedListener {
-                Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} $scrollY")
+                Log.d(
+                    TAG,
+                    "SCROLLY ${SystemClock.uptimeMillis()} $scrollY " +
+                        "view=${System.identityHashCode(this)}",
+                )
             }
         }
         root.addView(scroller, FrameLayout.LayoutParams(
@@ -237,6 +247,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             // finger actually produces and nothing like a straight line.
             scroller.post { scroller.fling(v) }
         }
+        if (intent.hasExtra(EXTRA_LIVE)) {
+            startLiving(intent.getIntExtra(EXTRA_LIVE, 4000))
+        }
         if (intent.hasExtra(EXTRA_MOTION)) {
             // A movement with a shape to it, driven frame by frame, so the suite can hold
             // the overlay against something other than the one motion the platform makes.
@@ -306,10 +319,79 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         }, 60)
     }
 
+    /**
+     * Write into the box and move it, and say where every line of it is as it happens.
+     *
+     * The words are added one at a time, which reflows the lines under them, and the whole
+     * column is slid at the same time, which is a box making room for itself. What is
+     * reported is where each line actually is on each frame - the only ground truth for
+     * whether a transcription is on its word while both are moving.
+     */
+    private fun startLiving(durationMs: Int) {
+        val box = growing ?: return
+        if (living) return
+        living = true
+        written = 0
+        val began = SystemClock.uptimeMillis()
+        val column = box.parent as? View
+        val words = TestWords.DISTINCT.joinToString(" ").split(" ")
+        val frame = object : Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
+                val now = SystemClock.uptimeMillis()
+                val gone = (now - began).toFloat()
+                if (gone > durationMs) {
+                    living = false
+                    Log.d(TAG, "LIVE done at=$now")
+                    return
+                }
+                // A word every so often, and a slide that never stops: the two together are
+                // what an answer being written looks like.
+                val wanted = (gone / WORD_MS).toInt()
+                if (wanted > written && written < words.size) {
+                    written = wanted.coerceAtMost(words.size)
+                    box.text = words.take(written).joinToString(" ")
+                }
+                column?.translationY = -(gone / durationMs) * SLIDE_PX * resources.displayMetrics.density
+                report(now)
+                Choreographer.getInstance().postFrameCallback(this)
+            }
+        }
+        Log.d(TAG, "LIVE start at=${SystemClock.uptimeMillis()} duration=$durationMs")
+        box.post { Choreographer.getInstance().postFrameCallback(frame) }
+    }
+
+    /** Where each line of the living page is now, and what it says. */
+    private fun report(now: Long) {
+        val column = (growing?.parent as? LinearLayout) ?: return
+        val at = IntArray(2)
+        val out = StringBuilder("LINES ").append(now).append(' ')
+        for (i in 0 until column.childCount) {
+            val child = column.getChildAt(i) as? TextView ?: continue
+            val text = child.text?.toString().orEmpty()
+            if (text.isEmpty()) continue
+            child.getLocationOnScreen(at)
+            out.append(i).append(':').append(at[1]).append(',').append(child.height)
+                .append(',').append(text.hashCode()).append(' ')
+        }
+        Log.d(TAG, out.toString())
+    }
+
     private fun content(): View = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(pad(), if (mode == "header") headerHeight() else pad(), pad(), pad())
-        if (mode == "unique") {
+        if (mode == "live") {
+            // A box that grows while it moves, which is what a message being written into a
+            // conversation does: a word is added every few frames, the lines below are
+            // pushed down by it, and the whole block slides as the app makes room. Nothing
+            // here scrolls. Every fixture before this one moved a page whose text stayed
+            // exactly as it was, so the case a reader actually watches - text that changes
+            // while it moves - was never once tested.
+            for (text in TestWords.DISTINCT.take(6)) addView(line(text, Color.WHITE, BACKGROUND))
+            growing = line("", Color.WHITE, BACKGROUND).also { addView(it) }
+            for (text in TestWords.DISTINCT.drop(6).take(6)) {
+                addView(line(text, Color.WHITE, BACKGROUND))
+            }
+        } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "colors") {
             // Three lines whose colours the test knows, to catch a sampler that averages
@@ -357,6 +439,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         const val EXTRA_DURATION = "duration"
         const val EXTRA_STROKES = "strokes"
         const val EXTRA_SEED = "seed"
+        const val EXTRA_LIVE = "live"
         const val EXTRA_SCROLL = "scrollTo"
         const val EXTRA_FLING = "fling"
         const val EXTRA_SMOOTH = "smoothBy"
@@ -366,6 +449,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         const val HEADER_TAG = "header"
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.
+        /** How often a word is added to the box being written into. */
+        const val WORD_MS = 90f
+        /** How far the whole block slides while it is written, in dp. */
+        const val SLIDE_PX = 220f
+
         const val BACKGROUND = Color.BLACK
         const val PARAGRAPH =
             "Reading a paragraph teaches pronunciation quietly because every unfamiliar " +
