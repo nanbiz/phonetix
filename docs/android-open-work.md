@@ -66,9 +66,13 @@ Ticked items are done and verified by a suite; the rest are not.
 - [x] **An accessibility button to switch the whole thing off and on.** Added:
   `flagRequestAccessibilityButton` plus an `AccessibilityButtonController` callback. It has to
   be assigned to Phonetix in the system's accessibility settings before it appears.
-- [ ] **Abbreviations are spelled out.** "Ms" comes back as `ɛmɛs`, which is the espeak
-  dictionary reading it as initials. The extension has Wiktionary's `/mɪz/`. A dictionary
-  question rather than a placement one.
+- [ ] **Abbreviations are spelled out.** "Ms" comes back as `ɛmɛs`. Not an Android gap: the
+  extension ships the same file (`public/dictionaries/en.json.gz`, 191,952 entries) and gives
+  the same answer, because that dictionary is espeak-generated rather than read from
+  Wiktionary - espeak pronounces any string of letters, which is also why `und`, `der` and
+  `das` are in it with English vowels. Fixing it means rebuilding the dictionaries from the
+  kaikki dump (`scripts/build-dictionaries.mjs`, a 2.3GB download) and would change what both
+  platforms say, so it is the user's call rather than a tidy-up.
 - [ ] **What is drawn still lags at speed.** Slow reading scrolls sit within a line's height;
   a brisk fling is 130-270px behind, and the emulator's 5-8px/ms flings several hundred. The
   limit is the round trip into a busy app, ten-odd milliseconds each, several per reading.
