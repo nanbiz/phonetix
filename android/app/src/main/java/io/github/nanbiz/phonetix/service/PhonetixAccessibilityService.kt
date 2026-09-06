@@ -832,6 +832,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
 
         val boxes = ArrayList<WordBox>(planned.size * 2)
+        var waited = 0
         var stale = false
         /** When the lines of this pass were measured; the page may move while it runs. */
         var readAt = t1
@@ -857,6 +858,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // and it comes back with the next full read.
             val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
             if (placed == null && moving) {
+                waited++
                 if (BuildConfig.DEBUG && waitedOut.add(pkg.orEmpty())) {
                     android.util.Log.d(
                         "Phonetix",
@@ -1054,7 +1056,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
                     "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
-                    "coloured=${painted.count { it.background != 0 }} during=$during",
+                    "coloured=${painted.count { it.background != 0 }} during=$during " +
+                    "waited=$waited/${planned.size}",
             )
         }
     }

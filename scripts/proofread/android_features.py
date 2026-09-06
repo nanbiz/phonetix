@@ -417,10 +417,14 @@ def check_unreadable_colors(r, dev):
     # for a frame, and that is throttled and asynchronous: until the attempts have been made
     # and given up on, a line is painted in nothing at all, which is not what this is asking
     # about. What says they are done is the transcriptions carrying a colour of the page's.
+    # Waited for until the screen is telling the truth about itself. "Has colours" is not
+    # enough to wait on: a line that has been given up on is painted in the colour of the
+    # whole screen, which is a colour, and looks read. This page is deliberately two colours,
+    # so until two come back the reading is still arriving.
     boxes, log = {}, ""
     for _ in range(6):
         boxes, log = show(dev, mode="gradient", density=3, scrollTo=0, settle=7)
-        if boxes and all(b["sampled"] for b in boxes.values()):
+        if boxes and len({b["bg"] for b in boxes.values()}) >= 2:
             break
     if not r.check(bool(boxes), "unreadable: there is something to colour",
                    "nothing transcribed"):
