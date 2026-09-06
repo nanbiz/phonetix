@@ -496,6 +496,19 @@ def close(got, want, tolerance=60):
 # The app's own screen, which unlike the overlay is an ordinary window a dump can see.
 # --------------------------------------------------------------------------------------
 
+def to_top():
+    """Back to the top of the app's own screen before reading it.
+
+    It keeps where it was scrolled to, so a check that left it half way down had the next
+    one reading the second half twice and reporting the first half missing from a screen
+    that showed it perfectly well.
+    """
+    for _ in range(8):
+        shell("input", "swipe", "540", "700", "540", "1500", "300")
+        time.sleep(0.4)
+    time.sleep(1.2)
+
+
 def ui_text(dev):
     shell("uiautomator", "dump", "/sdcard/ui.xml")
     dump = shell("cat", "/sdcard/ui.xml")
@@ -507,8 +520,26 @@ def check_settings_screen(r, dev):
     # first swipe and leave the screen where it started.
     shell("input", "tap", "20", "20")
     time.sleep(1.0)
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity")
-    time.sleep(4)
+    # Brought forward and waited for, not started and hoped about. The test page is an
+    # activity of this same app, so starting the settings screen behind it delivers the
+    # intent and leaves the page where it is - and the dump below then reads the page,
+    # reports every section of the settings screen missing, and blames the screen.
+    for attempt in range(6):
+        shell(
+            "am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+            "--activity-reorder-to-front",
+        )
+        time.sleep(2.0)
+        if "MainActivity" in dev.top_activity():
+            break
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+              "--activity-clear-task", "--activity-new-task")
+        time.sleep(2.0)
+    if not r.check("MainActivity" in dev.top_activity(),
+                   "settings: the app's own screen comes to the front",
+                   f"the device is showing {dev.top_activity()}"):
+        return
+    to_top()
     # A dump only contains what is on screen, and the screen is taller than the window, so
     # the whole of it is collected by scrolling through it.
     texts, dump = ui_text(dev)
@@ -553,8 +584,10 @@ def check_settings_screen(r, dev):
 
 def check_switch_in_ui(r, dev):
     """The switch on the screen is the same switch the overlay obeys."""
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity")
+    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+          "--activity-reorder-to-front")
     time.sleep(3)
+    to_top()
     texts, _ = ui_text(dev)
     r.check(
         "Transcribing" in texts or "Paused" in texts,
