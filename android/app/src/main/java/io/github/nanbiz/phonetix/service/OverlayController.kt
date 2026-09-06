@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlin.math.roundToInt
 
@@ -50,10 +51,14 @@ class OverlayController(
         motion.start(lastRendered)
     }
 
-    /** `at` is when the positions were actually read, which is not when they arrive here. */
-    fun motionMeasured(boxes: List<WordBox>, at: Long) {
+    /**
+     * @param at when the positions were actually read, which is not when they arrive here
+     * @param speed how fast the page was going when they were read, in pixels a millisecond,
+     *   measured by the read itself rather than worked out again from these positions
+     */
+    fun motionMeasured(boxes: List<WordBox>, at: Long, speed: Float) {
         lastRendered = boxes
-        motion.measured(boxes, at)
+        motion.measured(boxes, at, speed)
     }
 
     fun endMotion(boxes: List<WordBox>) {
@@ -122,6 +127,24 @@ class OverlayController(
 
     fun clear() = hideNow()
 
+    /**
+     * Take touches, or stop taking them, because the reader has said which they want.
+     *
+     * The flag is fixed when a window is added, and these are pooled and kept for the life of
+     * the service, so a setting changed while they are up reaches nothing without this.
+     */
+    fun applyTouchability() {
+        val take = SettingsStore.current.touchWords
+        val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+        for (c in chips) {
+            val lp = c.layoutParams as? WindowManager.LayoutParams ?: continue
+            val next = if (take) lp.flags and flag.inv() else lp.flags or flag
+            if (next == lp.flags) continue
+            lp.flags = next
+            runCatching { wm.updateViewLayout(c, lp) }
+        }
+    }
+
     /** Repaint every chip, so revealing one word also un-reveals the last one. */
     private fun refresh() {
         for (c in chips) if (c.visibility == View.VISIBLE) c.invalidate()
@@ -162,11 +185,20 @@ class OverlayController(
     private fun params(x: Int, y: Int, w: Int, h: Int) = WindowManager.LayoutParams(
         w, h, x, y,
         WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-        // Touchable, so a transcription can be tapped, but never focusable: the app
-        // underneath keeps the keyboard, and every tap outside these small windows.
+        // Never focusable: the app underneath keeps the keyboard and every touch outside
+        // these small windows.
+        //
+        // And by default not touchable either, which is what lets a reader scroll. These
+        // windows lie over the words themselves, so a finger that comes down on one comes
+        // down on it and not on the app - and a window that has taken a gesture keeps it,
+        // whatever it does with its flags afterwards, so that whole swipe is lost and the
+        // page stands still. On a page of text most swipes start on a word. A reader who
+        // wants to open cards by pressing a word turns them touchable and takes that back.
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+            (if (SettingsStore.current.touchWords) 0
+            else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE),
         PixelFormat.TRANSLUCENT,
     ).apply { gravity = Gravity.TOP or Gravity.START }
 
@@ -288,6 +320,8 @@ class ChipView(
     /** Let touches through to the app underneath, or take them again. */
     private fun passThrough(on: Boolean) {
         val lp = layoutParams as? WindowManager.LayoutParams ?: return
+        // Nothing to hand back when they were never taking touches to begin with.
+        if (!SettingsStore.current.touchWords) return
         val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         val next = if (on) lp.flags or flag else lp.flags and flag.inv()
         if (next == lp.flags) return

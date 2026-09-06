@@ -130,6 +130,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         overlay.hideNow()
                         tooltip.hide()
                     }
+                    overlay.applyTouchability()
                     scrollOnly = false
                     schedule(0L)
                 }
@@ -704,7 +705,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // they live in, not how many were drawn: a line still waiting for the colours it
             // is to be painted in is held back every pass, and counting those as words the
             // page had lost sent a screen that was standing still into a read a second.
-            if (ok && shifted && planned.isNotEmpty()) {
+            // And not while the page is going quickly. Reading the screen again takes as long
+            // as forty round trips into an app that is busy scrolling - a third of a second,
+            // measured - and the words stand still on the page for all of it, which is worse
+            // than the words that scrolled in being bare until the movement ends. A reader
+            // moving slowly enough to read gets them filled in as they arrive.
+            if (ok && shifted && planned.isNotEmpty() &&
+                kotlin.math.abs(speedY) <= HURRIED_PX_PER_MS
+            ) {
                 val had = planned.sumOf { it.boxes.size }
                 val fresh = android.os.SystemClock.uptimeMillis() - lastFullReadAt
                 if (had > 0 && clipped > had * (1f - KEPT_ENOUGH) &&
@@ -748,7 +756,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d("Phonetix", sb.toString())
                 }
                 main.post {
-                    if (moving && overlay.inMotion) overlay.motionMeasured(moved, readAt)
+                    if (moving && overlay.inMotion) overlay.motionMeasured(moved, readAt, speedY)
                     else overlay.endMotion(moved)
                     android.util.Log.d(
                         "Phonetix",

@@ -27,12 +27,31 @@ import io.github.nanbiz.phonetix.core.WordBox
  */
 class MotionLayer(private val context: Context) {
 
-    private companion object {
+    companion object Knobs {
+        /** What a measurement is taken to be out of date by when it arrives, on top of the
+         *  time it took to arrive: the delay between this layer moving and the screen showing
+         *  it moved. Measured against photographs of the screen rather than reasoned about,
+         *  and left settable so a test can sweep it. */
+        @Volatile
+        @JvmStatic
+        var leadMs = 0L
+    }
+
+    private object Fixed {
         /** How much lateness is worth carrying forward; beyond it the reading is not a
          *  measurement of this movement any more. */
         const val LATE_LIMIT_MS = 250L
-        /** What the app's own reporting is behind by, at sixty frames a second. */
-        const val FRAME_MS = 16L
+        /** What the app's own reporting is behind by.
+         *
+         *  Nothing, as it turns out. This was a frame, on the reasoning that an app reports
+         *  the tree as it was last laid out - but a page does not lay itself out again to
+         *  scroll, it moves its contents, and the bounds a node gives are worked out when
+         *  they are asked for. Pushing the words a frame further on every measurement drew
+         *  them above the text by the distance the page covers in a frame, which through an
+         *  ordinary swipe is a third of a line: the original words showed underneath. */
+        const val FRAME_MS = 0L
+
+
         /** What a measurement is taken to say about the future, as a multiple of the gap
          *  between measurements: at full speed for one gap, fading to a standstill by the
          *  end of the second. A page stops without announcing it - a stroke ends, a finger
@@ -71,7 +90,7 @@ class MotionLayer(private val context: Context) {
     private var lastFrameAt = 0L
     /** How far apart the measurements have been coming, smoothed: how long a speed of
      *  theirs is worth believing. */
-    private var gap = GAP_MAX_MS
+    private var gap = Fixed.GAP_MAX_MS
     /** How many measurements this movement has had. */
     private var measurements = 0
     /** How well the last two speeds agreed, from nothing to one. */
@@ -94,7 +113,7 @@ class MotionLayer(private val context: Context) {
             val trust = trustAt(now)
             predictedX += vx * dt * trust
             predictedY = (predictedY + vy * dt * trust)
-                .coerceIn(-CARRY_LIMIT_PX, CARRY_LIMIT_PX)
+                .coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
             // Moved, not redrawn. Recording the whole set again every frame was work the
             // display did sixty times a second and, on a machine with no real GPU, enough
             // to starve the very reads that tell the layer where the words have got to: a
@@ -128,10 +147,10 @@ class MotionLayer(private val context: Context) {
         // they are wanted - a round trip into an app busy laying itself out can take a fifth
         // of a second - and through one of those the words either keep up or stand still on
         // a moving page.
-        val steady = if (steadiness > 0.75f) STEADY else 1f
-        val coast = gap * COAST * steady
+        val steady = if (steadiness > 0.75f) Fixed.STEADY else 1f
+        val coast = gap * Fixed.COAST * steady
         if (age <= coast) return 1f
-        val fade = gap * FADE * steady
+        val fade = gap * Fixed.FADE * steady
         if (age >= fade) return 0f
         return 1f - (age - coast) / (fade - coast)
     }
@@ -141,7 +160,7 @@ class MotionLayer(private val context: Context) {
         boxes = current
         vx = 0f; vy = 0f
         predictedX = 0f; predictedY = 0f
-        gap = GAP_MAX_MS
+        gap = Fixed.GAP_MAX_MS
         measurements = 0
         steadiness = 0f
         lastMeasureAt = SystemClock.uptimeMillis()
@@ -175,36 +194,39 @@ class MotionLayer(private val context: Context) {
      * reset to the truth, so error cannot accumulate the way it did when the scroll event's
      * own delta was believed.
      */
-    fun measured(current: List<WordBox>, at: Long) {
+    fun measured(current: List<WordBox>, at: Long, speed: Float) {
         val now = SystemClock.uptimeMillis()
-        // How far apart the two readings were, by when they were taken - checked against when
-        // they arrived here. A reading is stamped with the moment its positions were read
-        // inside the other app, and two of those can be a few milliseconds apart while the
-        // passes that produced them were a tenth of a second apart. Dividing the distance the
-        // words moved by that few milliseconds gave a speed many times the page's, and the
-        // layer ran the whole set off the text at it. Readings cannot arrive faster than they
-        // are taken, so where the stamps disagree with the arrivals, the arrivals are right.
+        // How far apart the readings have been coming, which is how long a speed of theirs is
+        // worth carrying. Not what the speed is measured over: that is measured where it can
+        // be measured properly.
         val arrived = (now - lastArrivedAt).coerceAtLeast(1)
-        val stamped = (at - lastMeasureAt).coerceAtLeast(1)
-        val dt = if (stamped >= arrived / 2 && stamped <= arrived * 2) stamped else arrived
-        val movedY = averageShift(boxes, current)
+        gap = (0.5f * gap + 0.5f * arrived.toFloat()).coerceIn(Fixed.GAP_MIN_MS, Fixed.GAP_MAX_MS)
         lastArrivedAt = now
         measurements++
-        gap = (0.5f * gap + 0.5f * dt.toFloat()).coerceIn(GAP_MIN_MS, GAP_MAX_MS)
-        if (movedY != null && dt < 260) {
-            val fresh = (movedY / dt).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
-            // How much this reading agrees with the speed already being carried: one at the
-            // same speed, nothing at a different one or a standstill.
-            val bigger = maxOf(kotlin.math.abs(fresh), kotlin.math.abs(vy))
-            steadiness = if (bigger < 0.05f) 0f
-            else (1f - kotlin.math.abs(fresh - vy) / bigger).coerceIn(0f, 1f)
-            // Blend, so one odd sample does not throw the speed about.
-            vy = (0.4f * vy + 0.6f * fresh).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
-        } else {
-            vy = 0f
-            steadiness = 0f
-        }
+
+        // The speed the reading itself measured, from one line asked where it is twice, over
+        // the interval between those two askings.
+        //
+        // Working it out here instead - from how far the whole set of words appears to have
+        // moved between two readings - could not be made to hold. Two readings are not always
+        // of the same set of words, and the interval between them is not the interval between
+        // the moments they describe: a reading taken two hundred milliseconds ago can arrive
+        // thirty milliseconds after the last one. Both mistakes inflate the speed, and it came
+        // out at twice to eight times the speed the page was really going.
+        val fresh = speed.coerceIn(-Fixed.SANE_PX_PER_MS, Fixed.SANE_PX_PER_MS)
+        val bigger = maxOf(kotlin.math.abs(fresh), kotlin.math.abs(vy))
+        steadiness = if (bigger < 0.05f) 0f
+        else (1f - kotlin.math.abs(fresh - vy) / bigger).coerceIn(0f, 1f)
+        // Blended, so one odd reading does not throw the speed about.
+        vy = 0.4f * vy + 0.6f * fresh
         vx = 0f
+
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "MEAS told=$speed vy=$vy arrived=$arrived gap=$gap steady=$steadiness",
+            )
+        }
         boxes = current
         lastMeasureAt = at
         // Where the words are now, not where they were when they were read. Asking an app
@@ -214,7 +236,7 @@ class MotionLayer(private val context: Context) {
         // Plus a frame, because the answer was already a frame old when it was given: an
         // app reports the bounds of the tree as it was last laid out, not as it is being
         // laid out, and at the speed of a flick that frame is fifty pixels.
-        val late = (now - at + FRAME_MS).coerceIn(0, LATE_LIMIT_MS)
+        val late = (now - at + Fixed.FRAME_MS + leadMs).coerceIn(0, Fixed.LATE_LIMIT_MS)
         predictedX = 0f
         // However late the answer and however fast the page, the words are not carried off
         // the screen to catch up with it: past this the prediction is worth less than the
@@ -227,34 +249,10 @@ class MotionLayer(private val context: Context) {
         // scroll. The second measurement is of the movement itself, and prediction starts
         // there.
         predictedY = if (measurements < 2) 0f
-        else (vy * late).coerceIn(-CARRY_LIMIT_PX, CARRY_LIMIT_PX)
+        else (vy * late).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
         lastFrameAt = now
         view?.set(boxes)
         view?.let { v -> v.translationY = predictedY }
-    }
-
-    /**
-     * How far the words as a set moved between two measurements, if they are the same set.
-     *
-     * The middle answer, not the average. Two readings of a screen are rarely the same words:
-     * a line scrolls in, a re-read finds text the last one did not, and the same word can
-     * appear twice on a page. Averaging let one such pair - a word matched to another copy of
-     * itself half a screen away - stand for the whole set, and the speed that came out of it
-     * carried every transcription two thousand pixels off the page in one frame.
-     */
-    private fun averageShift(before: List<WordBox>, after: List<WordBox>): Float? {
-        if (before.isEmpty() || after.isEmpty()) return null
-        val byWord = HashMap<String, Float>(before.size)
-        for (b in before) byWord[b.word + "@" + b.ipa] = b.rect.top
-        val shifts = ArrayList<Float>(after.size)
-        for (a in after) {
-            val was = byWord[a.word + "@" + a.ipa] ?: continue
-            shifts.add(a.rect.top - was)
-        }
-        // One word agreeing with itself is not a measurement of a screenful.
-        if (shifts.size < 2) return null
-        shifts.sort()
-        return shifts[shifts.size / 2]
     }
 
     /** Hand the words back to the small windows and stop drawing. */

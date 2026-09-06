@@ -22,7 +22,7 @@ pixel checks are the counterweight.
 import sys
 import time
 
-from android_harness import Device, near, overlaps, rgb
+from android_harness import Device, near, overlaps, rgb, shell
 
 # The test page is flat black with white text, so what the sampler should have read is a
 # fact rather than an opinion.
@@ -347,6 +347,55 @@ def check_secure(r, dev):
     print(f"  secure window: {len(boxes)} transcriptions, service alive")
 
 
+# --------------------------------------------------------------------------------------
+# A finger on the page, which is the only way a reader ever scrolls one.
+# --------------------------------------------------------------------------------------
+
+def check_finger(r, dev):
+    """A swipe that begins on a transcription scrolls the page, like any other swipe.
+
+    Every other check here drives the page from inside the app, frame by frame, which is the
+    only way to know where it was at each instant - and it means none of them ever put a
+    finger on the screen. A reader has nothing else. The transcriptions are windows lying over
+    the words, so a finger that comes down on one lands on our window and not on the app, and
+    a window that has taken a gesture keeps it: handing it back mid-drag does not give the app
+    the rest of it. Most of a page of text is covered in transcriptions, so most swipes a
+    reader makes start on one.
+    """
+    dev.surface(mode="unique", enable=1, density=3, allApps=1, scrollTo=400)
+    time.sleep(3.5)
+    boxes = dev.boxes()
+    for _ in range(6):
+        if boxes:
+            break
+        time.sleep(2.0)
+        boxes = dev.boxes()
+    if not r.check(bool(boxes), "finger: there is a transcription to swipe from",
+                   "nothing transcribed"):
+        return
+
+    def swipe_from(x, y):
+        dev.clear_log()
+        shell("input", "swipe", str(x), str(y), str(x), str(y - 500), "400")
+        time.sleep(2.0)
+        timeline = dev.scroll_timeline()
+        return abs(timeline[-1][1] - timeline[0][1]) if len(timeline) >= 2 else 0
+
+    # The widest transcription on the screen, which is the easiest to land on deliberately -
+    # and where a reader's thumb is most likely to come down by accident.
+    chip = max(boxes.values(), key=lambda b: b["rect"][2] - b["rect"][0])
+    left, top, right, bottom = chip["rect"]
+    on = swipe_from((left + right) // 2, (top + bottom) // 2)
+    # The same swipe beside it, over the page itself, to show the gesture was good.
+    off = swipe_from(20, (top + bottom) // 2)
+    r.check(off > 200, "finger: a swipe over the page scrolls it", f"moved {off}px")
+    r.check(
+        on > off * 0.5,
+        "finger: a swipe that starts on a transcription scrolls it too",
+        f"moved {on}px against {off}px beside it, on '{chip['word']}'",
+    )
+
+
 def main():
     dev = Device()
     print(f"device {dev.width}x{dev.height}")
@@ -365,6 +414,8 @@ def main():
     check_per_line_colors(r, dev)
     print("\na window that cannot be captured")
     check_secure(r, dev)
+    print("\na finger on the page")
+    check_finger(r, dev)
 
     print(f"\n{r.passed}/{r.total} checks passed")
     if r.failures:

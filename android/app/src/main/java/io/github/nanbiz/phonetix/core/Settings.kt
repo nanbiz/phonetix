@@ -12,6 +12,17 @@ data class Settings(
     /** Empty means every app; otherwise only these packages. */
     val apps: Set<String> = emptySet(),
     val allApps: Boolean = true,
+    /**
+     * Whether the transcriptions themselves can be touched.
+     *
+     * They are windows lying over the words, so a finger that comes down on one lands on it
+     * and not on the app underneath - and a window that has taken a gesture keeps it, so the
+     * swipe that touch began is lost entirely and the page does not move. Most of a page of
+     * text is covered in transcriptions. Off, they are a picture: every touch reaches the app
+     * and scrolling is exactly as it was without the overlay. On, a press held on a word
+     * opens its card, at the cost of the swipes that start on one.
+     */
+    val touchWords: Boolean = false,
 )
 
 /**
@@ -25,6 +36,7 @@ object SettingsStore {
     private const val K_DENSITY = "density"
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
+    private const val K_TOUCH = "touch_words"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -41,6 +53,7 @@ object SettingsStore {
             density = p.getInt(K_DENSITY, 12),
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
+            touchWords = p.getBoolean(K_TOUCH, false),
         )
     }
 
@@ -52,12 +65,14 @@ object SettingsStore {
             ?.putInt(K_DENSITY, next.density)
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
+            ?.putBoolean(K_TOUCH, next.touchWords)
             ?.apply()
     }
 
     fun setEnabled(v: Boolean) = update { it.copy(enabled = v) }
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
+    fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }

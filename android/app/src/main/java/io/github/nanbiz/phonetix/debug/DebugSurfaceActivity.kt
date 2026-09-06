@@ -281,6 +281,21 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         // landed rather than one taken just before it - which is a race it loses about half
         // the time, and reports as the setting doing nothing.
 
+            // The marks a capture of the screen is read by, and whether the words themselves
+            // take touches: both are things a test asks for and a reader never sees.
+            if (i.hasExtra("leadMs")) {
+                io.github.nanbiz.phonetix.service.MotionLayer.leadMs =
+                    i.getIntExtra("leadMs", 0).toLong()
+            }
+            if (i.hasExtra("marks")) {
+                DebugMarks.on = i.getIntExtra("marks", 0) != 0
+                window?.decorView?.invalidate()
+            }
+            if (i.hasExtra("touchWords")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setTouchWords(
+                    i.getIntExtra("touchWords", 0) != 0,
+                )
+            }
             if (i.hasExtra(EXTRA_ENABLE)) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setEnabled(i.getIntExtra(EXTRA_ENABLE, 1) != 0)
             }
@@ -435,12 +450,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         marker = TextView(this@DebugSurfaceActivity).also { addView(it) }
     }
 
-    private fun line(text: String, ink: Int, bg: Int) = TextView(this).apply {
+    private fun line(text: String, ink: Int, bg: Int) = MarkedLine(this).apply {
         this.text = text
         setTextColor(ink)
         setBackgroundColor(bg)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-        setPadding(0, pad(), 0, pad())
+        // A gutter down the left, which is where a line puts the bar that says where it is.
+        // Without it the bar sits exactly where the line's first word starts, so the
+        // transcription of that word covers it and the line reports itself as absent.
+        setPadding(DebugMarks.GUTTER, pad(), 0, pad())
         // What this line is really drawn in and where it ended up, so a test comparing the
         // overlay's colours against the app's own owes nothing to the overlay's account of
         // itself, and can tell one line's words from the next line's identical ones.

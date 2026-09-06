@@ -127,8 +127,12 @@ def check_density(r, dev):
 
 def check_tooltip(r, dev):
     reset(dev)
-    boxes, _ = show(dev, density=3, scrollTo=0, settle=3)
-    if not r.check(bool(boxes), "card: there is a word to tap", "nothing transcribed"):
+    # The words do not take touches unless the reader has asked them to: they are windows
+    # lying over the text, and a window that takes a touch keeps the whole gesture, so with
+    # them touchable every swipe that starts on a word is lost. The card is what that setting
+    # buys, so it is switched on for these checks and off again after.
+    boxes, _ = show(dev, density=3, scrollTo=0, settle=3, touchWords=1)
+    if not r.check(bool(boxes), "card: there is a word to press", "nothing transcribed"):
         return
     # Tapped where the overlay says the word is right now. A position read a moment ago can
     # already be stale - the screen need only have settled once more - so it is re-read
@@ -144,7 +148,7 @@ def check_tooltip(r, dev):
         else:
             dev.clear_log()
             time.sleep(2.0)
-            fresh = dev.boxes() or show(dev, density=3, scrollTo=0, settle=2.5)[0]
+            fresh = dev.boxes() or show(dev, density=3, scrollTo=0, settle=2.5, touchWords=1)[0]
         if not fresh:
             continue
         # The longest word on screen: it has the most symbols, so the card is at its
@@ -275,6 +279,20 @@ def check_tooltip(r, dev):
         "TOOLTIP open" not in dev.log(),
         "card: a tap does not open it",
         "a plain tap opened the card",
+    )
+
+    # And with the words left as they come - a picture, taking no touches - a press held on
+    # one opens nothing at all, because the gesture belongs to the app underneath.
+    dev.clear_log()
+    dev.surface(mode="plain", enable=1, density=3, allApps=1, touchWords=0)
+    time.sleep(2.5)
+    dev.clear_log()
+    press(dev, (left + right) // 2, (top + bottom) // 2)
+    time.sleep(2.0)
+    r.check(
+        "TOOLTIP open" not in dev.log(),
+        "card: it stays shut when the words are not touchable",
+        "the card opened although the words take no touches",
     )
 
 

@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import kotlin.math.abs
+import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.WordBox
 
 /**
@@ -93,6 +94,20 @@ class ChipPainter {
         bg.color = chip
         val r = if (sampled) 0f else height * 0.18f
         canvas.drawRoundRect(where, r, r, bg)
+
+        // A bar a capture of the real screen can find, so that where a transcription actually
+        // ended up can be measured from the screen rather than from what this service says
+        // about itself. Only when a test has asked for it.
+        if (BuildConfig.DEBUG && io.github.nanbiz.phonetix.debug.DebugMarks.on) {
+            // Down the middle of the chip, not along its top edge: a chip is a little taller
+            // than the letters it covers, so its top is not where its word is, and its middle
+            // is. The page marks the middle of each of its rows to match.
+            bg.color = io.github.nanbiz.phonetix.debug.DebugMarks.CHIP
+            val middle = where.centerY()
+            val half = io.github.nanbiz.phonetix.debug.DebugMarks.THICK / 2f
+            canvas.drawRect(where.left, middle - half, where.right, middle + half, bg)
+            bg.color = chip
+        }
 
         val label = if (revealed) box.word else box.ipa
         if (label.isEmpty()) return
