@@ -73,6 +73,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var recycling = false
     /** How many passes in a row have kept no words at all. */
     @Volatile private var blankFollows = 0
+    /** And how many in a row have had no line answer where it is. */
+    @Volatile private var deadFollows = 0
     /** The last measured shift and when, and the speed they give, in pixels a millisecond. */
     @Volatile private var lastShiftY = 0f
     @Volatile private var lastShiftX = 0f
@@ -388,10 +390,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
             plan(root!!, Transcriber(settings.density), fresh, budget, stats, full, seen)
-            // Lines that are not in the language this dictionary is for. Dropped here, after
-            // the walk and before anything is measured, because a line can only be judged
-            // against the screen it is on and the screen is not known until the walk is done.
-            fresh.retainAll { Language.ours(it.reading, stats.tongue) }
+            // A screen in a language this dictionary is not for is left alone. Judged after
+            // the walk, because it is the whole of the screen that says what language it is
+            // in - a line on its own says too little, and saying it confidently.
+            if (!Language.ours(stats.tongue.read())) fresh.clear()
             planned = fresh
             cachedPlan = fresh
             cachedPackage = pkg
@@ -406,6 +408,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             lastShiftY = 0f
             lastShiftX = 0f
             blankFollows = 0
+            deadFollows = 0
             // And what the previous plan was seen doing is not known about this one; held
             // across plans, one recycled row on one screen let every later pass keep no words
             // and still call itself a success.
@@ -688,10 +691,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 why = "nothing kept for $blankFollows passes ($clipped clipped, $hidden " +
                     "covered, $unreadable unreadable)"
             }
-            // Nothing survived at all: the screen is not what it was, so read it properly.
-            if (ok && alive == 0) {
+            // Nothing answered at all. That is what a screen replaced under us looks like -
+            // and also what a busy moment looks like, because asking a line where it is goes
+            // to the app's own thread and comes back empty-handed when that thread is behind.
+            // Reading the whole screen again costs a tenth of a second during which nothing
+            // is followed, so a page being flung answered nothing, was read in full, answered
+            // nothing again: nine full reads in one swipe, and the words standing still
+            // through all of them. A pass or two of silence is waited out instead; the layer
+            // carries the words meanwhile, and the plan is only given up when the silence
+            // lasts.
+            if (alive == 0) deadFollows++ else deadFollows = 0
+            if (ok && alive == 0 && deadFollows > DEAD_FOLLOWS) {
                 ok = false
-                why = "every line was recycled"
+                why = "nothing answered for $deadFollows passes"
             }
             // Most of the screen gone means the same thing, even if a line or two remain.
             if (ok && gone > alive) {
@@ -709,13 +721,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // they live in, not how many were drawn: a line still waiting for the colours it
             // is to be painted in is held back every pass, and counting those as words the
             // page had lost sent a screen that was standing still into a read a second.
-            // And not while the page is going quickly. Reading the screen again takes as long
-            // as forty round trips into an app that is busy scrolling - a third of a second,
-            // measured - and the words stand still on the page for all of it, which is worse
-            // than the words that scrolled in being bare until the movement ends. A reader
-            // moving slowly enough to read gets them filled in as they arrive.
+            // And only once the page has all but stopped. Reading the screen again takes as
+            // long as forty round trips into an app that is busy scrolling - a third to half
+            // a second, measured - and the words stand still on the page for all of it. A
+            // drag a reader can read along with is half a pixel a millisecond, so allowing it
+            // at anything under a pixel meant an ordinary swipe stalled the overlay twice.
+            // What scrolled in is filled in the moment the finger stops, which is what the
+            // loop does when it goes idle anyway.
             if (ok && shifted && planned.isNotEmpty() &&
-                kotlin.math.abs(speedY) <= HURRIED_PX_PER_MS
+                kotlin.math.abs(speedY) <= SETTLING_PX_PER_MS
             ) {
                 val had = planned.sumOf { it.boxes.size }
                 val fresh = android.os.SystemClock.uptimeMillis() - lastFullReadAt
@@ -1063,9 +1077,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Where this node's subtree ends in draw order; anything that starts after it is
          *  painted on top of it. */
         val exit: Int,
-        /** What this line's own words say about which language it is in. */
-        val reading: Language.Reading =
-            Language.nothing,
+
     ) {
         /** Where the node sat when its characters were measured, and what came out. A
          *  scroll moves the line without moving the characters inside it, so the words can
@@ -1102,9 +1114,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var ipcNs: Long = 0,
         var computeNs: Long = 0,
         var calls: Int = 0,
-        /** What every line of text on the screen says together about its language. */
-        var tongue: Language.Reading =
-            Language.nothing,
+        /** The text of the screen, for deciding what language it is in. */
+        val tongue: Language.Screen = Language.Screen(),
     )
 
     private class Budget(
@@ -1156,11 +1167,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             budget.nodes--
             mark = System.nanoTime()
             val picks = t.plan(text)
-            // What this line says about its language, and what the screen says with it. Every
-            // line counts towards the screen, including the ones that hold nothing worth
-            // transcribing: a page's German is mostly in its labels and its buttons.
-            val reading = Language.read(text)
-            stats.tongue = stats.tongue + reading
+            // Every line counts towards what language the screen is in, including the ones
+            // that hold nothing worth transcribing: a page's German is mostly in its labels
+            // and its buttons.
+            stats.tongue.add(text)
             stats.computeNs += System.nanoTime() - mark
             if (picks.isNotEmpty()) {
                 // Only the span from the first chosen word to the last: asking for a whole
@@ -1173,7 +1183,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     Planned(
                         node, from, to - from + 1, picks, text,
                         android.graphics.Rect(clip), android.graphics.Rect(inherited), 0,
-                        reading,
                     ),
                 )
                 budget.words -= picks.size
@@ -1197,7 +1206,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val was = out[plannedHere]
             out[plannedHere] = Planned(
                 was.node, was.from, was.length, was.picks, was.text, was.clip, was.viewport,
-                budget.order, was.reading,
+                budget.order,
             )
         }
     }
@@ -1304,6 +1313,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
          *  lines: at this rate the page moves a line's height in the time one answer takes. */
         const val HURRIED_PX_PER_MS = 1.0f
+        /** A page that has all but stopped: slow enough that reading it again in full is
+         *  worth the moment the overlay stands still for. */
+        const val SETTLING_PX_PER_MS = 0.15f
+
         /** Faster than any page really travels, at a screen height in a frame or two. A
          *  measurement above this is not a speed, it is a jump. */
         const val SANE_PX_PER_MS = 12f
@@ -1325,6 +1338,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Movement, in pixels: below this a line has been measured twice in the same place
          *  and the difference is rounding, not the page going anywhere. */
         const val MOVED_PX = 0.5f
+
+        /** How many passes running may have no line answer at all before the screen is read
+         *  properly. A line that has really gone stays gone; a busy moment does not. */
+        const val DEAD_FOLLOWS = 2
 
         /** How many passes running may keep no words before the screen is read properly.
          *  One is ordinary while a list hands rows around; several in a row means the plan

@@ -206,7 +206,15 @@ class LineColours(
                         // Its text could not be told from what it is written on, but what it
                         // is written on can still be read, and that is what it will be drawn
                         // in if it is given up on.
-                        sampler.surfaceUnder(rect)?.let { surfaces[k] = it }
+                        val under = sampler.surfaceUnder(rect)
+                        if (under != null) surfaces[k] = under
+                        if (BuildConfig.DEBUG) {
+                            android.util.Log.d(
+                                "Phonetix",
+                                "SURFACEUNDER ${if (under == null) "none" else
+                                    Integer.toHexString(under.background)} for $rect",
+                            )
+                        }
                         continue
                     }
                     lines[k] = c
