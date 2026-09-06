@@ -435,7 +435,7 @@ def check_unreadable_colors(r, dev):
         return
     painted = re.findall(
         r"SURFACE ink=#([0-9A-F]{6}) bg=#([0-9A-F]{6}) at=(-?\d+),(-?\d+),(\d+),(\d+) text=(.+)",
-        log,
+        only_this_page(log),
     )
     checked = 0
     for _ink_hex, bg_hex, x, y, w, h, text in painted:
@@ -570,6 +570,18 @@ def close(got, want, tolerance=60):
 # --------------------------------------------------------------------------------------
 # The app's own screen, which unlike the overlay is an ordinary window a dump can see.
 # --------------------------------------------------------------------------------------
+
+def only_this_page(log):
+    """The part of the log that describes the page now on screen.
+
+    Every page says where its lines are and what they are drawn in, and the log keeps saying
+    it after that page has gone. A check that reads the whole buffer matches a transcription
+    against a line of some earlier page that happened to be at the same height - which is how
+    a page of two colours came back failing at random.
+    """
+    marks = [m.end() for m in re.finditer(r"SETTINGS \d+ ", log)]
+    return log[marks[-1]:] if marks else log
+
 
 def to_top():
     """Back to the top of the app's own screen before reading it.

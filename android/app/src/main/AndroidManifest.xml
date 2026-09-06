@@ -35,14 +35,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Drives the scroll-tracking test; exported so adb can start it with an exact
-             scroll position. It carries no data and does nothing on its own. -->
-        <activity
-            android:name=".debug.DebugSurfaceActivity"
-            android:exported="true"
-            android:label="Phonetix test surface"
-            android:launchMode="singleTop" />
-
         <service
             android:name=".service.PhonetixAccessibilityService"
             android:exported="true"
