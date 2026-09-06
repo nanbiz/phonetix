@@ -31,6 +31,16 @@ class Results:
         return self.passed + len(self.failures)
 
 
+def press(dev, x, y, ms=700):
+    """A press held on one spot, which is what opens the card.
+
+    A swipe that goes nowhere: `input tap` is too brief to be a long press, and the card is
+    deliberately not on a tap - the windows cover the words themselves, so every touch that
+    lands on text lands on one, and opening a card for each would make a page unreadable.
+    """
+    shell("input", "swipe", str(x), str(y), str(x), str(y), str(ms))
+
+
 def show(dev, settle=2.5, **extras):
     """Apply a setting and read what the overlay did about it.
 
@@ -143,16 +153,18 @@ def check_tooltip(r, dev):
         left, top, right, bottom = fresh[key]["rect"]
         word = fresh[key]["word"]
         dev.clear_log()
-        shell("input", "tap", str((left + right) // 2), str((top + bottom) // 2))
+        # Held, not tapped. The card would otherwise open on any touch that landed on text,
+        # and on a page of transcriptions that is most of the page.
+        press(dev, (left + right) // 2, (top + bottom) // 2)
         time.sleep(2.5)
         log = dev.log()
         opened = re.search(r"TOOLTIP open word=(\S+) ipa=(\S+) symbols=(\d+)", log)
         if opened:
             break
-    if not r.check(opened is not None, "card: a tap opens it", f"no card for {word}"):
+    if not r.check(opened is not None, "card: a press held opens it", f"no card for {word}"):
         return
-    r.check(opened.group(1) == word, "card: it is about the word that was tapped",
-            f"tapped {word}, card says {opened.group(1)}")
+    r.check(opened.group(1) == word, "card: it is about the word that was pressed",
+            f"pressed {word}, card says {opened.group(1)}")
     r.check(int(opened.group(3)) > 0, "card: it names the symbols of the transcription",
             f"{opened.group(3)} symbols for {opened.group(2)}")
     r.check(len(opened.group(2)) > 0, "card: it shows the full transcription", "empty")
@@ -249,6 +261,22 @@ def check_tooltip(r, dev):
 # --------------------------------------------------------------------------------------
 # Which apps the reader chose.
 # --------------------------------------------------------------------------------------
+
+    # And a touch that is not held opens nothing. Every transcription is its own window over
+    # the word it covers, so a tap opening a card would put one in the way of any reader who
+    # touched the text at all. Left to the end: the card is dismissed to run it, and a card
+    # that has been dismissed and opened again does not report its layout a second time.
+    shell("input", "keyevent", "4")
+    time.sleep(1.2)
+    dev.clear_log()
+    shell("input", "tap", str((left + right) // 2), str((top + bottom) // 2))
+    time.sleep(2.0)
+    r.check(
+        "TOOLTIP open" not in dev.log(),
+        "card: a tap does not open it",
+        "a plain tap opened the card",
+    )
+
 
 def check_scope(r, dev):
     reset(dev)
@@ -352,6 +380,91 @@ def check_colors(r, dev):
         )
 
 
+
+def check_unreadable_colors(r, dev):
+    """A line whose own colours cannot be read is given the ones where it stands.
+
+    Not every line can be measured. Text over artwork, a word drawn in a tone a shade from
+    its surface, a page that will not be captured at all: the sampler gives up on those, and
+    what it falls back to has to be a colour the word can be read on. One colour for the
+    whole screen is not that. A player with a title over its cover art and a dark half below
+    it is mostly dark, so its title got a black patch on a coloured surface - which is what
+    the reader saw on their phone.
+
+    Here nothing at all can be read, since the text is drawn in nothing, and four lines stand
+    on a colour the rest of the screen does not have.
+    """
+    reset(dev)
+    # Waited for rather than timed. Reading a line's colours means taking the overlay down
+    # for a frame, and that is throttled and asynchronous: until the attempts have been made
+    # and given up on, a line is painted in nothing at all, which is not what this is asking
+    # about. What says they are done is the transcriptions carrying a colour of the page's.
+    boxes, log = {}, ""
+    for _ in range(6):
+        boxes, log = show(dev, mode="gradient", density=3, scrollTo=0, settle=7)
+        if boxes and all(b["sampled"] for b in boxes.values()):
+            break
+    if not r.check(bool(boxes), "unreadable: there is something to colour",
+                   "nothing transcribed"):
+        return
+    bare = [b["word"] for b in boxes.values() if not b["sampled"]]
+    if not r.check(not bare, "unreadable: they are given the page's colours, not ours",
+                   f"{len(bare)} left in a palette of ours: {sorted(set(bare))[:6]}"):
+        return
+    painted = re.findall(
+        r"SURFACE ink=#([0-9A-F]{6}) bg=#([0-9A-F]{6}) at=(-?\d+),(-?\d+),(\d+),(\d+) text=(.+)",
+        log,
+    )
+    checked = 0
+    for _ink_hex, bg_hex, x, y, w, h, text in painted:
+        x, y, w, h = int(x), int(y), int(w), int(h)
+        on_this_line = [
+            b for b in boxes.values()
+            if x <= (b["rect"][0] + b["rect"][2]) // 2 <= x + w
+            and y <= (b["rect"][1] + b["rect"][3]) // 2 <= y + h
+        ]
+        if not on_this_line:
+            continue
+        checked += 1
+        first = text.split()[0][:14]
+        r.check(
+            all(close(b["bg"], int(bg_hex, 16), tolerance=40) for b in on_this_line),
+            f"unreadable: words on '{first}' stand on the surface they are on #{bg_hex}",
+            str([hex(b["bg"]) for b in on_this_line]),
+        )
+    r.check(checked >= 2, "unreadable: lines on both surfaces carried transcriptions",
+            f"only {checked} line(s) carried one")
+
+
+def check_language(r, dev):
+    """A page in a language the dictionary is not for is left alone.
+
+    There is one dictionary here and it is English, generated by espeak, which will pronounce
+    any string of letters put to it - so "und", "der" and "das" are all in it, with English
+    vowels. Left to itself it put English pronunciations through German sentences, on the
+    loanwords a German page really has and on the words the two languages happen to share.
+
+    What decides it is which language's commonest words a line is made of, and a line too
+    short to hold one is decided for by the screen it is on. So this asks two pages the same
+    question: a German one, which should come back untouched, and an English one, which
+    should come back transcribed as it always was.
+    """
+    reset(dev)
+    german, _ = show(dev, mode="german", density=2, scrollTo=0, settle=4)
+    english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
+    r.check(
+        len(english) > 0,
+        "language: an English page is still transcribed",
+        f"{len(english)} transcriptions on it",
+    )
+    r.check(
+        len(german) == 0,
+        "language: a German page is left alone",
+        f"{len(german)} transcriptions on it: "
+        + str(sorted({b["word"] for b in german.values()})[:8]),
+    )
+
+
 def close(got, want, tolerance=60):
     """Whether two colours are the same to the eye, the sampler quantising as it does."""
     return (
@@ -450,6 +563,9 @@ def main():
     check_switch(r, dev)
     print("the colours")
     check_colors(r, dev)
+    check_unreadable_colors(r, dev)
+    print("the language of the page")
+    check_language(r, dev)
     print("the app's own screen")
     check_settings_screen(r, dev)
     check_switch_in_ui(r, dev)

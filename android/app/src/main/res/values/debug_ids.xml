@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keys for the colours a test page's line was built with, so it can say what it drew
+     however many times it is asked. Ids rather than plain tags because a view holds tags by
+     id and a bare setTag would collide with anything else that used one. -->
+<resources>
+    <item name="debug_ink" type="id" />
+    <item name="debug_bg" type="id" />
+</resources>

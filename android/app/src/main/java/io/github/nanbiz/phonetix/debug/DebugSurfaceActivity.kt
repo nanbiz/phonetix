@@ -215,6 +215,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private fun handle(intent: Intent?) {
         intent ?: return
+        // Say again where every line is and what it is drawn in. These are reported when a
+        // line is laid out, which happens once, so a page asked for a second time in the mode
+        // it is already in said nothing at all about itself - and a test comparing the
+        // overlay's colours against the page's own had nothing to compare them to.
+        say()
         // Applied here rather than only in onCreate: a relaunch with the same mode does not
         // create the activity again, so settings passed that way were silently dropped and
         // a test that changed the frequency measured the previous one.
@@ -393,6 +398,30 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             }
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "german") {
+            // A page in a language the dictionary is not for. Nothing on it should be
+            // transcribed: an English pronunciation put on a German word is not a
+            // pronunciation of that word.
+            for (text in TestWords.GERMAN) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "gradient") {
+            // A page that is not one colour. A music player, a photo behind a title, a sheet
+            // that fades into the wallpaper: the surface a word sits on at the top of the
+            // screen is not the surface a word sits on at the bottom, and a line whose own
+            // colours cannot be read has to be given the colours where it is rather than the
+            // one colour that covers most of the screen. Told to draw its text in the colour
+            // it is standing on, so no line here can be read on its own terms and every one
+            // of them takes the fallback.
+            // The text is drawn in nothing at all, so no line can be told from the surface it
+            // is on and every one of them falls back. Four lines stand on one colour and the
+            // rest on another, so the colour that covers most of the screen is the wrong
+            // answer for the four - which is the case a screen with a title over artwork and
+            // a dark half below it presents.
+            for (text in TestWords.DISTINCT.take(4)) {
+                addView(line(text, Color.TRANSPARENT, BAND))
+            }
+            for (text in TestWords.DISTINCT.drop(4).take(10)) {
+                addView(line(text, Color.TRANSPARENT, BACKGROUND))
+            }
         } else if (mode == "colors") {
             // Three lines whose colours the test knows, to catch a sampler that averages
             // a whole node - or a whole screen - into one wrong colour.
@@ -415,16 +444,35 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         // What this line is really drawn in and where it ended up, so a test comparing the
         // overlay's colours against the app's own owes nothing to the overlay's account of
         // itself, and can tell one line's words from the next line's identical ones.
-        post {
-            val at = IntArray(2)
-            getLocationOnScreen(at)
-            android.util.Log.d(
-                TAG,
-                "SURFACE ink=#%06X bg=#%06X at=%d,%d,%d,%d text=%s".format(
-                    ink and 0xFFFFFF, bg and 0xFFFFFF,
-                    at[0], at[1], width, height, text,
-                ),
-            )
+        setTag(R_INK, ink)
+        setTag(R_BG, bg)
+        post { report(this) }
+    }
+
+    /** Where a line ended up and what it is really drawn in. */
+    private fun report(view: TextView) {
+        val ink = view.getTag(R_INK) as? Int ?: return
+        val bg = view.getTag(R_BG) as? Int ?: return
+        val at = IntArray(2)
+        view.getLocationOnScreen(at)
+        Log.d(
+            TAG,
+            "SURFACE ink=#%06X bg=#%06X at=%d,%d,%d,%d text=%s".format(
+                ink and 0xFFFFFF, bg and 0xFFFFFF,
+                at[0], at[1], view.width, view.height, view.text,
+            ),
+        )
+    }
+
+    /** Every line of the page saying where it is, however the page was arrived at. */
+    private fun say() {
+        val root = window?.decorView ?: return
+        root.post {
+            fun walk(v: View) {
+                if (v is TextView && v.getTag(R_INK) != null) report(v)
+                if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+            }
+            walk(root)
         }
     }
 
@@ -455,6 +503,14 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         const val SLIDE_PX = 220f
 
         const val BACKGROUND = Color.BLACK
+
+        /** Where a line keeps the colours it was built with, for reporting them again. */
+        val R_INK = io.github.nanbiz.phonetix.R.id.debug_ink
+        val R_BG = io.github.nanbiz.phonetix.R.id.debug_bg
+
+        /** The colour of the part of a page that is not the rest of it: what a title sits on
+         *  above a dark body, which no single colour for the whole screen can stand for. */
+        val BAND = Color.rgb(0x2A, 0x2E, 0x10)
         const val PARAGRAPH =
             "Reading a paragraph teaches pronunciation quietly because every unfamiliar " +
                 "word arrives already spoken and the dictionary answers immediately."

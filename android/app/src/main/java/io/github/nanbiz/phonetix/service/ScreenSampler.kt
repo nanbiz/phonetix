@@ -123,6 +123,44 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
      * palette of ours: it is at worst the wrong shade of the right thing, where a fixed
      * colour is a patch that announces itself.
      */
+    /**
+     * The surface a line is standing on, for a line whose own text could not be read off it.
+     *
+     * The colour of the screen as a whole answers for a page that is one colour, and a great
+     * many are not: a title over cover art with a dark half beneath it, a sheet fading into a
+     * wallpaper, a coloured card in a grey list. There the commonest colour on the screen is
+     * simply somewhere else, and a word given it wears a patch of the wrong colour - a black
+     * box over a title on an olive page, which is what a reader saw on a music player.
+     *
+     * So it is read where the line is: the commonest colour in a band across the line, which
+     * on any line is the surface rather than the letters, since letters are the minority of
+     * the pixels they sit in.
+     */
+    fun surfaceUnder(rect: RectF): WordColors? {
+        val bmp = frame ?: return null
+        if (SystemClock.uptimeMillis() - takenAt > MAX_AGE_MS) return null
+        val where = toFrame(bmp, rect)
+        // Wider than the word and a little taller than the line: enough of the surface to
+        // outweigh the text on it, not so much as to reach whatever is above or below.
+        val grow = where.height() * 0.5f
+        val band = RectF(
+            where.left - where.width(),
+            where.top - grow,
+            where.right + where.width(),
+            where.bottom + grow,
+        )
+        val counts = histogramInFrame(bmp, band, WIDE_STEP) ?: return null
+        val background = counts.maxByOrNull { it.value }?.key ?: return null
+        return WordColors(opaque(background), readableOn(background))
+    }
+
+    /** Ink that can be read on a surface whose own text could not be measured. */
+    private fun readableOn(background: Int): Int {
+        val light = Color.red(background) * 299 + Color.green(background) * 587 +
+            Color.blue(background) * 114 > 140_000
+        return if (light) Color.rgb(0x1A, 0x1A, 0x1A) else Color.rgb(0xF2, 0xF2, 0xF2)
+    }
+
     fun screenColors(): WordColors? {
         val bmp = frame ?: return null
         if (SystemClock.uptimeMillis() - takenAt > MAX_AGE_MS) return null
@@ -132,10 +170,7 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
         // Ink against the page as a whole is a judgement, not a measurement: whatever reads
         // on it. The average of the distant colours here would be the colour of icons and
         // images as much as of text.
-        val light = Color.red(background) * 299 + Color.green(background) * 587 +
-            Color.blue(background) * 114 > 140_000
-        val ink = if (light) Color.rgb(0x1A, 0x1A, 0x1A) else Color.rgb(0xF2, 0xF2, 0xF2)
-        return WordColors(opaque(background), ink)
+        return WordColors(opaque(background), readableOn(background))
     }
 
     private fun separate(counts: Map<Int, Int>): WordColors? {

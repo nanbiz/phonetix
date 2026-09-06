@@ -38,14 +38,22 @@ class LineColours(
     private class Attempts(var count: Int, var at: Long)
     private val tries = HashMap<String, Attempts>(64)
 
-    /** The page's own colours, for a line whose own could not be read. */
+    /** The page's own colours, for a line whose own could not be read and whose surface
+     *  could not be read either. */
     @Volatile private var page: WordColors? = null
+
+    /** The surface each unreadable line was standing on, which is not the same colour for
+     *  every line of a screen that is not one colour. */
+    private val surfaces = HashMap<String, WordColors>(32)
 
     @Volatile private var forPackage: String? = null
 
     /** What was read for the apps seen before this one. */
     private class Remembered(val lines: Map<String, WordColors>, val page: WordColors?)
     private val byPackage = LinkedHashMap<String, Remembered>()
+
+    /** Whether a look at this screen is already arranged for when the throttle is up. */
+    @Volatile private var retryPosted = false
 
     /** Set while the overlay is briefly down so a capture can see the text underneath. */
     @Volatile private var capturing = false
@@ -75,6 +83,7 @@ class LineColours(
         val kept = byPackage[pkg]
         lines.clear()
         tries.clear()
+        surfaces.clear()
         if (kept != null) lines.putAll(kept.lines)
         page = kept?.page
         forPackage = pkg
@@ -111,7 +120,9 @@ class LineColours(
         val k = key(text)
         val capturingNow = capturing && SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
         val givenUp = (tries[k]?.count ?: 0) >= COLOR_TRIES && !capturingNow
-        val c = lines[k] ?: if (givenUp) page else null
+        // Its own colours if they were read; otherwise, once it has been given up on, the
+        // surface it stands on, and only failing that the page as a whole.
+        val c = lines[k] ?: if (givenUp) (surfaces[k] ?: page) else null
         return Decision(c, givenUp)
     }
 
@@ -133,7 +144,20 @@ class LineColours(
         // colours at all for this screen, and the words are either withheld or painted in a
         // palette that is not the page's.
         val nothingKnown = lines.isEmpty() && page == null
-        if (!nothingKnown && now - cleanFrameAt < CLEAN_FRAME_GAP_MS) return
+        if (!nothingKnown && now - cleanFrameAt < CLEAN_FRAME_GAP_MS) {
+            // Come back when the throttle is up. Nothing else will: a screen only gets looked
+            // at again because something on it announced a change, and a page holding still -
+            // an article, a paused player - announces nothing. A line whose colours were not
+            // read on the one attempt this allowed was therefore never attempted again, never
+            // given up on either, and so never painted: the overlay showed nothing at all for
+            // as long as the reader stayed on that screen.
+            if (!retryPosted) {
+                retryPosted = true
+                io.postDelayed({ retryPosted = false; readAgain() },
+                    CLEAN_FRAME_GAP_MS - (now - cleanFrameAt) + 1)
+            }
+            return
+        }
         capturing = true
         capturingSince = now
         cleanFrameAt = now
@@ -166,7 +190,14 @@ class LineColours(
                 for ((k, rect) in asked) {
                     countAttempt(k)
                     if (k in lines) continue
-                    val c = sampler.sampleRegion(rect) ?: continue
+                    val c = sampler.sampleRegion(rect)
+                    if (c == null) {
+                        // Its text could not be told from what it is written on, but what it
+                        // is written on can still be read, and that is what it will be drawn
+                        // in if it is given up on.
+                        sampler.surfaceUnder(rect)?.let { surfaces[k] = it }
+                        continue
+                    }
                     lines[k] = c
                     read++
                 }

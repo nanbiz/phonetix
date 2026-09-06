@@ -50,6 +50,8 @@ class MotionLayer(private val context: Context) {
         /** And however fast it is going, the words are never carried further than this from
          *  where they were last measured. */
         const val CARRY_LIMIT_PX = 400f
+        /** How much further a steady movement is predicted into than a changing one. */
+        const val STEADY = 2.5f
     }
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -72,6 +74,8 @@ class MotionLayer(private val context: Context) {
     private var gap = GAP_MAX_MS
     /** How many measurements this movement has had. */
     private var measurements = 0
+    /** How well the last two speeds agreed, from nothing to one. */
+    private var steadiness = 0f
 
     val isRunning: Boolean get() = view != null
 
@@ -118,9 +122,16 @@ class MotionLayer(private val context: Context) {
      */
     private fun trustAt(now: Long): Float {
         val age = (now - lastMeasureAt).toFloat()
-        val coast = gap * COAST
+        // A page whose last two readings gave the same speed is being carried along steadily,
+        // and the next moment of it is worth predicting further into: it is a page that has
+        // just changed speed which may be about to stop. Readings do not always come when
+        // they are wanted - a round trip into an app busy laying itself out can take a fifth
+        // of a second - and through one of those the words either keep up or stand still on
+        // a moving page.
+        val steady = if (steadiness > 0.75f) STEADY else 1f
+        val coast = gap * COAST * steady
         if (age <= coast) return 1f
-        val fade = gap * FADE
+        val fade = gap * FADE * steady
         if (age >= fade) return 0f
         return 1f - (age - coast) / (fade - coast)
     }
@@ -132,6 +143,7 @@ class MotionLayer(private val context: Context) {
         predictedX = 0f; predictedY = 0f
         gap = GAP_MAX_MS
         measurements = 0
+        steadiness = 0f
         lastMeasureAt = SystemClock.uptimeMillis()
         lastArrivedAt = lastMeasureAt
         lastFrameAt = lastMeasureAt
@@ -180,10 +192,17 @@ class MotionLayer(private val context: Context) {
         measurements++
         gap = (0.5f * gap + 0.5f * dt.toFloat()).coerceIn(GAP_MIN_MS, GAP_MAX_MS)
         if (movedY != null && dt < 260) {
+            val fresh = (movedY / dt).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
+            // How much this reading agrees with the speed already being carried: one at the
+            // same speed, nothing at a different one or a standstill.
+            val bigger = maxOf(kotlin.math.abs(fresh), kotlin.math.abs(vy))
+            steadiness = if (bigger < 0.05f) 0f
+            else (1f - kotlin.math.abs(fresh - vy) / bigger).coerceIn(0f, 1f)
             // Blend, so one odd sample does not throw the speed about.
-            vy = (0.4f * vy + 0.6f * (movedY / dt)).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
+            vy = (0.4f * vy + 0.6f * fresh).coerceIn(-SANE_PX_PER_MS, SANE_PX_PER_MS)
         } else {
             vy = 0f
+            steadiness = 0f
         }
         vx = 0f
         boxes = current

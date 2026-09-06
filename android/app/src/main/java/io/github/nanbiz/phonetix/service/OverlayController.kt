@@ -222,12 +222,28 @@ class ChipView(
         if (changed) invalidate()
     }
 
+    /** Opens the card, if the finger stays put long enough to mean it. */
+    private val held = Runnable {
+        val b = box ?: return@Runnable
+        heldDown = true
+        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        showTheWord(b)
+        onTapped(b)
+    }
+    private var heldDown = false
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = event.rawX
                 downY = event.rawY
                 dragging = false
+                heldDown = false
+                // The card waits for a press held, so that reading a page never opens one by
+                // accident: these windows cover the words themselves, and every touch that
+                // lands on text lands on one of them.
+                removeCallbacks(held)
+                postDelayed(held, android.view.ViewConfiguration.getLongPressTimeout().toLong())
             }
             MotionEvent.ACTION_MOVE -> {
                 if (!dragging &&
@@ -239,27 +255,34 @@ class ChipView(
                     // wherever a transcription happens to be - which is most of a page of
                     // text. Step out of the way and let the rest of the gesture reach it.
                     dragging = true
+                    removeCallbacks(held)
                     passThrough(true)
                 }
             }
         }
-        if (event.actionMasked == MotionEvent.ACTION_UP && !dragging) {
+        if (event.actionMasked == MotionEvent.ACTION_UP && !dragging && !heldDown) {
+            removeCallbacks(held)
             val b = box ?: return true
-            // A tap opens the card, the way hovering opens the tooltip in the browser, and
-            // puts the original word back underneath it so the reader sees both at once.
-            reveal.toggle(b.word, REVEAL_MS)
-            removeCallbacks(revert)
-            postDelayed(revert, REVEAL_MS + 50)
-            onChanged()
-            onTapped(b)
+            // A tap shows the word that is underneath, which is the quick question - what
+            // did that say? - and leaves the card to a press held.
+            showTheWord(b)
         }
         if (event.actionMasked == MotionEvent.ACTION_UP ||
             event.actionMasked == MotionEvent.ACTION_CANCEL
         ) {
+            removeCallbacks(held)
             // Takeable again once the gesture is over.
             if (dragging) postDelayed({ passThrough(false); dragging = false }, 120)
         }
         return true
+    }
+
+    /** Put the original word back for a moment, so the reader sees both. */
+    private fun showTheWord(b: WordBox) {
+        reveal.toggle(b.word, REVEAL_MS)
+        removeCallbacks(revert)
+        postDelayed(revert, REVEAL_MS + 50)
+        onChanged()
     }
 
     /** Let touches through to the app underneath, or take them again. */

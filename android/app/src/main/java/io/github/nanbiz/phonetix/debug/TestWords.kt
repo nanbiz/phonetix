@@ -33,4 +33,26 @@ object TestWords {
         "anvil bellows chisel drill emery file gauge hinge",
         "ingot joint kiln lever mallet nozzle oiler pulley",
     )
+
+    /**
+     * Ordinary German, which the overlay has no dictionary for.
+     *
+     * Whether a line is in the language the dictionary is for cannot be tested with words
+     * chosen to make the point: these are plain sentences of the kind that fill a page a
+     * reader is actually looking at, and several of them carry words English has too -
+     * "war", "hat", "man", "die", "in", "so" - because those are exactly what made a German
+     * page come back covered in English pronunciations.
+     */
+    val GERMAN = listOf(
+        "Die Wiedergabe wurde angehalten und der Titel gespeichert",
+        "Er hat die ganze Nacht an dem Lied gearbeitet",
+        "Das war ein guter Abend für alle die dabei waren",
+        "Man kann die Lautstärke oben rechts wieder ändern",
+        "Alle Kommentare zu diesem Video ansehen",
+        "Der Sänger schreibt seine Texte meistens selbst",
+        "Wir haben die Aufnahme im Studio noch einmal gehört",
+        "Sie ist mit dem Zug nach Hause gefahren",
+        "Es gibt keinen Grund das jetzt schon zu entscheiden",
+        "Diese Einstellung gilt nur für dieses Gerät",
+    )
 }

@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityNodeInfo
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
+import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Pick
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Transcriber
@@ -133,6 +134,28 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     schedule(0L)
                 }
             }
+        }
+        // The accessibility button, which is the one place a reader can reach without leaving
+        // what they are reading: it sits in the navigation bar or floats over the screen, and
+        // it is where a service that changes what every app looks like belongs. The tile in
+        // the shade does the same thing, two swipes away.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            runCatching {
+                accessibilityButtonController.registerAccessibilityButtonCallback(
+                    object : android.accessibilityservice.AccessibilityButtonController
+                    .AccessibilityButtonCallback() {
+                        override fun onClicked(
+                            controller: android.accessibilityservice.AccessibilityButtonController,
+                        ) {
+                            val on = !SettingsStore.current.enabled
+                            SettingsStore.setEnabled(on)
+                            if (BuildConfig.DEBUG) {
+                                android.util.Log.d("Phonetix", "BUTTON enabled=$on")
+                            }
+                        }
+                    },
+                )
+            }.onFailure { android.util.Log.w("Phonetix", "no accessibility button", it) }
         }
         Dictionary.ensureLoaded(this) { schedule(0L) }
     }
@@ -360,6 +383,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
             plan(root!!, Transcriber(settings.density), fresh, budget, stats, full, seen)
+            // Lines that are not in the language this dictionary is for. Dropped here, after
+            // the walk and before anything is measured, because a line can only be judged
+            // against the screen it is on and the screen is not known until the walk is done.
+            fresh.retainAll { Language.ours(it.reading, stats.tongue) }
             planned = fresh
             cachedPlan = fresh
             cachedPackage = pkg
@@ -572,11 +599,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // it was planned, in which case they are put on now - otherwise a line that
                 // came into view during a scroll would keep the absence it was born with
                 // until the movement stopped.
-                val own = colours.of(p.text)
+                // Asked the same question the full read asks, which includes what a line that
+                // could not be read at all is to be drawn in. Asking only for the line's own
+                // reading meant a line that had been given up on kept the nothing it was born
+                // with for as long as the screen kept moving, and nothing is drawn as black:
+                // a black patch over a word on a coloured page, which is what it did on a
+                // music player whose title sits on its cover art.
+                val decision = colours.decide(p.text)
+                val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
                 }
-                if (own == null && p.boxes.first().background == 0 && colours.stillPending(p.text)) {
+                if (own == null && p.boxes.first().background == 0 && !decision.givenUp) {
                     continue
                 }
                 var dx = shiftX
@@ -658,6 +692,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (ok && gone > alive) {
                 ok = false
                 why = "more lines recycled ($gone) than kept ($alive)"
+            }
+            // A screen that has largely scrolled away is a screen whose words are mostly new
+            // ones, and following cannot transcribe a word it has never read. Carried on to
+            // the end of the movement, the overlay emptied out as the reader scrolled: thirty
+            // transcriptions at the top of a page, nineteen a screen later, and the lines that
+            // had arrived in the meantime bare. The clock that forces a read during a movement
+            // cannot answer for this - it is the distance travelled that matters, not the time
+            // taken - so a plan that has lost this much of itself is read again now.
+            // What says so is how many words have been carried off the edge of the window
+            // they live in, not how many were drawn: a line still waiting for the colours it
+            // is to be painted in is held back every pass, and counting those as words the
+            // page had lost sent a screen that was standing still into a read a second.
+            if (ok && shifted && planned.isNotEmpty()) {
+                val had = planned.sumOf { it.boxes.size }
+                val fresh = android.os.SystemClock.uptimeMillis() - lastFullReadAt
+                if (had > 0 && clipped > had * (1f - KEPT_ENOUGH) &&
+                    fresh > FULL_READ_TURNOVER_MS
+                ) {
+                    ok = false
+                    why = "the screen has moved on: $clipped of $had words scrolled away"
+                }
             }
             if (ok) {
                 val took = android.os.SystemClock.uptimeMillis() - tf
@@ -863,6 +918,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
             if (c != null || decision.givenUp) painted.addAll(p.boxes)
+            if (BuildConfig.DEBUG && c == null && decision.givenUp) {
+                android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
+            }
         }
 
         // One line per pass naming every transcription and where it sits, so a test can
@@ -993,6 +1051,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Where this node's subtree ends in draw order; anything that starts after it is
          *  painted on top of it. */
         val exit: Int,
+        /** What this line's own words say about which language it is in. */
+        val reading: Language.Reading =
+            Language.nothing,
     ) {
         /** Where the node sat when its characters were measured, and what came out. A
          *  scroll moves the line without moving the characters inside it, so the words can
@@ -1025,7 +1086,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     /** Caps so one very dense screen cannot stall a pass. */
     /** Split of where a pass actually goes: calls into the other app, versus our own work. */
-    private class Stats(var ipcNs: Long = 0, var computeNs: Long = 0, var calls: Int = 0)
+    private class Stats(
+        var ipcNs: Long = 0,
+        var computeNs: Long = 0,
+        var calls: Int = 0,
+        /** What every line of text on the screen says together about its language. */
+        var tongue: Language.Reading =
+            Language.nothing,
+    )
 
     private class Budget(
         /** Depth-first position, which is also paint order: later means on top. */
@@ -1076,6 +1144,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             budget.nodes--
             mark = System.nanoTime()
             val picks = t.plan(text)
+            // What this line says about its language, and what the screen says with it. Every
+            // line counts towards the screen, including the ones that hold nothing worth
+            // transcribing: a page's German is mostly in its labels and its buttons.
+            val reading = Language.read(text)
+            stats.tongue = stats.tongue + reading
             stats.computeNs += System.nanoTime() - mark
             if (picks.isNotEmpty()) {
                 // Only the span from the first chosen word to the last: asking for a whole
@@ -1088,6 +1161,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     Planned(
                         node, from, to - from + 1, picks, text,
                         android.graphics.Rect(clip), android.graphics.Rect(inherited), 0,
+                        reading,
                     ),
                 )
                 budget.words -= picks.size
@@ -1111,7 +1185,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val was = out[plannedHere]
             out[plannedHere] = Planned(
                 was.node, was.from, was.length, was.picks, was.text, was.clip, was.viewport,
-                budget.order,
+                budget.order, was.reading,
             )
         }
     }
@@ -1198,6 +1272,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FULL_READ_MS = 900L
         /** And a moving one this often, to pick up the words scrolling into it. */
         const val FULL_READ_MOVING_MS = 2500L
+        /** How much of a plan's words have to survive the following for it to still describe
+         *  the screen. Below this, most of what a reader is looking at has never been read. */
+        const val KEPT_ENOUGH = 0.7f
+        /** However fast a screen turns over, it is not read again more often than this: a
+         *  read costs tens of milliseconds during which nothing is followed at all. */
+        const val FULL_READ_TURNOVER_MS = 350L
         /** How many lines are asked where they are before the rest are carried with them. */
         const val ANCHORS = 3
         /** And how many while the page is moving quickly, where an answer that arrives late
