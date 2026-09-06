@@ -46,6 +46,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var settingsWatch: kotlinx.coroutines.CoroutineScope? = null
     private val layouts = LineLayouts()
     private var generation = 0
+    /** Where other windows - a keyboard above all - stand over the app being read. */
+    @Volatile private var blockers: List<android.graphics.Rect> = emptyList()
     /** Apps already named in the log as bystanders, so each is said once. */
     private val ignored = HashSet<String>(4)
     /** Whether the last event found the overlay switched on, so switching off hides once. */
@@ -164,6 +166,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         }
                     },
                 )
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "BUTTON registered available=" +
+                            accessibilityButtonController.isAccessibilityButtonAvailable,
+                    )
+                }
             }.onFailure { android.util.Log.w("Phonetix", "no accessibility button", it) }
         }
         Dictionary.ensureLoaded(this) { schedule(0L) }
@@ -400,6 +409,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val fresh = ArrayList<Planned>(16)
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
+            readBlockers()
             plan(root!!, Transcriber(settings.density), fresh, budget, stats, full, seen)
             // A screen in a language this dictionary is not for is left alone. Judged after
             // the walk, because it is the whole of the screen that says what language it is
@@ -1257,11 +1267,42 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val w = android.graphics.Rect(
             word.left.toInt(), word.top.toInt(), word.right.toInt(), word.bottom.toInt(),
         )
+        // Another window standing over the app: a keyboard, most of all. The app still holds
+        // the text that is behind it and still reports where it is, so a transcription of a
+        // word under the keyboard was drawn on top of the keyboard - our own window is above
+        // both of them - and floated there over the letter keys.
+        for (r in blockers) if (android.graphics.Rect.intersects(r, w)) return true
         for (p in cachedPainted) {
             if (p.enter < exit) continue
             if (android.graphics.Rect.intersects(p.rect, w)) return true
         }
         return false
+    }
+
+    /**
+     * The windows standing over the app being read, which nothing of ours may be drawn on.
+     *
+     * Read from the system rather than guessed at: a keyboard is a window of its own, and so
+     * is a system dialog or a picture in picture. Asked once a pass rather than once a word,
+     * and only the ones that are not the app itself.
+     */
+    private fun readBlockers() {
+        val found = ArrayList<android.graphics.Rect>(2)
+        runCatching {
+            for (w in windows) {
+                val type = w.type
+                val isOverlay = type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD ||
+                    type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM ||
+                    type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SPLIT_SCREEN_DIVIDER
+                if (!isOverlay) continue
+                val r = android.graphics.Rect()
+                w.getBoundsInScreen(r)
+                // Ours is a window too, and it is a system overlay by type. Anything the size
+                // of one word is one of ours; a keyboard is not.
+                if (!r.isEmpty && r.height() > MIN_BLOCKER) found.add(r)
+            }
+        }
+        blockers = found
     }
 
     /**
@@ -1324,6 +1365,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
          *  lines: at this rate the page moves a line's height in the time one answer takes. */
         const val HURRIED_PX_PER_MS = 1.0f
+        /** Shorter than this, a window standing over the app is one of ours: every
+         *  transcription is a window the height of a word. A keyboard is half a screen. */
+        const val MIN_BLOCKER = 240
+
         /** A page that has all but stopped: slow enough that reading it again in full is
          *  worth the moment the overlay stands still for. */
         const val SETTLING_PX_PER_MS = 0.15f

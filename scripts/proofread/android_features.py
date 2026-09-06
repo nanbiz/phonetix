@@ -483,6 +483,38 @@ def check_language(r, dev):
     )
 
 
+def check_accessibility_button(r, dev):
+    """The service asks for the button that switches it off without leaving the page.
+
+    It is the one control a reader can reach while reading, and whether it exists at all comes
+    down to one flag in the service's configuration - which nothing else would notice the loss
+    of. The system draws it as a floating button, or in the navigation bar, depending on how
+    the device is set up, so this asks the service rather than hunting for it on the screen.
+    """
+    # A fresh process is what makes it say what it asked for. Switching the service off and
+    # on again is not enough: it reconnects in the process it was already running in, and
+    # says nothing the second time.
+    shell("am", "force-stop", "io.github.nanbiz.phonetix")
+    time.sleep(2)
+    dev.clear_log()
+    dev.enable_service()
+    time.sleep(6)
+    log = dev.log()
+    r.check(
+        "BUTTON registered" in log,
+        "the button: the service asks for it",
+        "no registration in the log",
+    )
+    r.check(
+        "no accessibility button" not in log,
+        "the button: the platform did not refuse it",
+        "registering the callback threw",
+    )
+    # Whether the button is showing is the reader's business - it depends on how they
+    # navigate and on what they have assigned it to - so that is not asserted here.
+    reset(dev)
+
+
 def check_a_real_app(r, dev):
     """An app nobody wrote for this test gets transcriptions, and keeps them through a scroll.
 
@@ -658,6 +690,8 @@ def main():
     check_language(r, dev)
     print("an app nobody wrote for this test")
     check_a_real_app(r, dev)
+    print("the button that switches it off")
+    check_accessibility_button(r, dev)
     print("the app's own screen")
     check_settings_screen(r, dev)
     check_switch_in_ui(r, dev)
