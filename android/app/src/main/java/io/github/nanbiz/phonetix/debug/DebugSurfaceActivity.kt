@@ -283,6 +283,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
             // The marks a capture of the screen is read by, and whether the words themselves
             // take touches: both are things a test asks for and a reader never sees.
+            if (i.hasExtra("gapMs")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.gapMs =
+                    i.getIntExtra("gapMs", 16).toLong()
+            }
             if (i.hasExtra("leadMs")) {
                 io.github.nanbiz.phonetix.service.MotionLayer.leadMs =
                     i.getIntExtra("leadMs", 0).toLong()

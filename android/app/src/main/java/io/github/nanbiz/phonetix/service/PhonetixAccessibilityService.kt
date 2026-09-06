@@ -286,7 +286,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 return
             }
             runCatching { scan() }
-            worker.postDelayed(this, GAP_SCROLL_MS)
+            worker.postDelayed(this, gapMs)
         }
     }
 
@@ -1260,7 +1260,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         return Array(raw.size) { raw[it] as? RectF }
     }
 
-    private companion object {
+    companion object {
+        /** The wait between passes while a page moves, left settable so it can be measured
+         *  against photographs of the screen rather than argued about. */
+        @Volatile
+        @JvmStatic
+        var gapMs = 16L
+
         // Short enough that a transcription follows a settled screen almost at once, long
         // enough that a fling is read once at its end rather than at every frame.
         // The smallest gap between passes. Not a wait before acting: the first event after

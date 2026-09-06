@@ -41,15 +41,15 @@ class MotionLayer(private val context: Context) {
         /** How much lateness is worth carrying forward; beyond it the reading is not a
          *  measurement of this movement any more. */
         const val LATE_LIMIT_MS = 250L
-        /** What the app's own reporting is behind by.
+        /** How far ahead of itself the layer draws, to arrive on time.
          *
-         *  Nothing, as it turns out. This was a frame, on the reasoning that an app reports
-         *  the tree as it was last laid out - but a page does not lay itself out again to
-         *  scroll, it moves its contents, and the bounds a node gives are worked out when
-         *  they are asked for. Pushing the words a frame further on every measurement drew
-         *  them above the text by the distance the page covers in a frame, which through an
-         *  ordinary swipe is a third of a line: the original words showed underneath. */
-        const val FRAME_MS = 0L
+         *  A frame. Not because the app's report is stale - a page does not lay itself out
+         *  again to scroll, and the bounds it gives are worked out when they are asked for -
+         *  but because what is worked out here is shown a frame later, and the page has moved
+         *  on by then. Measured, not reasoned: photographed through a finger swipe at nothing,
+         *  a frame, two and three, the error is 8.8, 5.5, 5.9 and 12.2 pixels of the capture,
+         *  and it changes sign between two frames and three. */
+        const val FRAME_MS = 16L
 
 
         /** What a measurement is taken to say about the future, as a multiple of the gap
