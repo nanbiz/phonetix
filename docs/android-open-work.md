@@ -66,6 +66,21 @@ Ticked items are done and verified by a suite; the rest are not.
 - [x] **The accessibility button works**, verified by pressing it: the overlay goes empty and
   comes back. The system draws it as a floating button with the app's icon.
 
+## Where it cannot work
+
+- [ ] **A browser shows nothing.** Chrome answers the request for character positions with
+  success and no data, so there is nothing to place a transcription on: a whole page of English
+  produces none. Nothing in the accessibility API gives word positions inside a paragraph
+  without it, so this would mean laying the text out ourselves from the paragraph's rectangle
+  and hoping the font matches. The browser extension is the answer for browsers.
+- [ ] **An app that never stands still is never measured.** Whether the screen is moving
+  decides whether a line's characters may be asked for, and asking makes the app lay its text
+  out again - which a page being scrolled cannot afford. An app that changes something ten
+  times a second is therefore permanently moving. Not counting a change as movement was tried
+  and is worse: the colours are read by photographing the screen, and a moving screen
+  photographs as a smear. Both apps found so far that hit this (Chrome) cannot be transcribed
+  for the reason above anyway.
+
 ## Owed
 
 - [x] **Language detection, as a stopgap.** There is none: one espeak-generated dictionary that pronounces
