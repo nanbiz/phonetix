@@ -52,13 +52,16 @@ Ticked items are done and verified by a suite; the rest are not.
   cannot answer it here the way it does in the extension, because that dictionary knows
   "und", "der" and "das" too. Being built from the 300 commonest words of each of the 38
   languages already shipped for the sprinkle: the language whose function words appear is the
-  language of the line, and a line too short to hold one is answered for by its screen. A page
-  of ordinary German now comes back untouched (`mode=german`, `check_language`).
-- [ ] **Port eld, which is what the extension actually uses.** Word lists answer a page of
-  sentences and not much else: a screen of labels holds no function words, and the reply then
-  rests on the screen around it. eld is a naive-Bayes over character 4-grams and ships models
-  from 893KB (XS) to 4.4MB; the scoring loop is short and the data can be an asset. That is
-  parity rather than a stand-in.
+  language of the line. Replaced by eld below; the fixture it was built against stays
+  (`mode=german`, `check_language`): a page of ordinary German comes back untouched.
+- [x] **Ported eld, which is what the extension uses.** The model is an asset (819KB, a quarter
+  of that packed); the port names the same language as the JavaScript, agrees about which
+  answers are reliable, and scores to within a hundredth, over twelve languages
+  (`EldParityTest`). The word lists are gone. Regenerate with
+  `node scripts/build-eld-model.mjs XS` and gzip the result to `eld.bin.gz`.
+- [ ] **A line of one or two words still cannot be judged on its own** - eld says so itself -
+  so the screen it is on answers for it. That is what the extension does too, but it means a
+  single English word on a German page goes untranscribed.
 - [x] **The card opens on a press held**, and a tap shows the word underneath.
 - [x] **An accessibility button to switch the whole thing off and on.** Added:
   `flagRequestAccessibilityButton` plus an `AccessibilityButtonController` callback. It has to
