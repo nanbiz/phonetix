@@ -10,6 +10,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Dictionary
+import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Pick
@@ -101,6 +102,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         tooltip = TooltipController(this, speaker) { r -> net.post(r) }
         overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
         IpaSymbols.ensureLoaded(this)
+        // Which language a line is in, which decides whether it is transcribed at all. Read
+        // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
+        io.post { Eld.ensureLoaded(this) { schedule(0L) } }
         // Positions are the whole product here, and a cached position is a wrong one. The
         // platform keeps a copy of the node tree for a service to read cheaply, and while a
         // page is moving that copy is a picture of where the words used to be: lines came

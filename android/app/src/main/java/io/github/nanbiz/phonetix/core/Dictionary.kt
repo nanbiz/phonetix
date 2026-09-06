@@ -18,10 +18,6 @@ object Dictionary {
     private val words = HashMap<String, String>(220_000)
     private val common = HashSet<String>(512)
 
-    /** Which languages count a word among their commonest, which is what says what language
-     *  a line of text is in. */
-    private val spoken = HashMap<String, MutableList<String>>(8_192)
-
     @Volatile
     var ready = false
         private set
@@ -82,26 +78,19 @@ object Dictionary {
             r.beginObject()
             while (r.hasNext()) {
                 val lang = r.nextName()
-                r.beginArray()
-                while (r.hasNext()) {
-                    val word = r.nextString()
-                    if (lang == "en") common.add(word)
-                    // Every language's, not only ours. Which languages call a word their own
-                    // is what says what language a line is in, and a word several of them
-                    // share - "in", "die", "man" - says so by naming all of them rather than
-                    // by being counted for one.
-                    spoken.getOrPut(word) { ArrayList(2) }.add(lang)
+                if (lang == "en") {
+                    r.beginArray()
+                    while (r.hasNext()) common.add(r.nextString())
+                    r.endArray()
+                } else {
+                    r.skipValue()
                 }
-                r.endArray()
             }
             r.endObject()
         }
     }
 
     fun isCommon(word: String): Boolean = word in common
-
-    /** The languages that count this word among their commonest, if any do. */
-    fun speaks(word: String): List<String> = spoken[word] ?: emptyList()
 
     /** The transcription for a word, or null when the dictionary does not have it. */
     fun lookup(word: String): String? {

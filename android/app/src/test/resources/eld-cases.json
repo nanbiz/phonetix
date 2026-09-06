@@ -1,0 +1,170 @@
+[
+ {
+  "text": "Pronunciation arrives quietly in the middle of a sentence",
+  "language": "en",
+  "reliable": true,
+  "score": 0.4925
+ },
+ {
+  "text": "The dictionary answers immediately and the page carries on",
+  "language": "en",
+  "reliable": true,
+  "score": 0.6776
+ },
+ {
+  "text": "Save to library",
+  "language": "en",
+  "reliable": true,
+  "score": 0.4866
+ },
+ {
+  "text": "Up next",
+  "language": "en",
+  "reliable": false,
+  "score": 0.6299
+ },
+ {
+  "text": "Show more comments",
+  "language": "en",
+  "reliable": true,
+  "score": 0.6376
+ },
+ {
+  "text": "Video",
+  "language": "sl",
+  "reliable": false,
+  "score": 0.6255
+ },
+ {
+  "text": "Song",
+  "language": "",
+  "reliable": false,
+  "score": 0
+ },
+ {
+  "text": "Oh Ms Believer",
+  "language": "en",
+  "reliable": true,
+  "score": 0.3786
+ },
+ {
+  "text": "Twenty One Pilots",
+  "language": "en",
+  "reliable": true,
+  "score": 0.1286
+ },
+ {
+  "text": "quiver ribbon saddle tunnel umbrella velvet window yellow",
+  "language": "en",
+  "reliable": true,
+  "score": 0.1885
+ },
+ {
+  "text": "Die Wiedergabe wurde angehalten und der Titel gespeichert",
+  "language": "de",
+  "reliable": true,
+  "score": 0.7012
+ },
+ {
+  "text": "Er hat die ganze Nacht an dem Lied gearbeitet",
+  "language": "de",
+  "reliable": true,
+  "score": 0.6078
+ },
+ {
+  "text": "Das war ein guter Abend für alle die dabei waren",
+  "language": "de",
+  "reliable": true,
+  "score": 0.7531
+ },
+ {
+  "text": "Alle Kommentare zu diesem Video ansehen",
+  "language": "de",
+  "reliable": true,
+  "score": 0.5906
+ },
+ {
+  "text": "Nächster Titel",
+  "language": "de",
+  "reliable": true,
+  "score": 0.6308
+ },
+ {
+  "text": "Ähnliche Titel",
+  "language": "de",
+  "reliable": true,
+  "score": 0.6322
+ },
+ {
+  "text": "Speichern",
+  "language": "de",
+  "reliable": true,
+  "score": 0.6324
+ },
+ {
+  "text": "Songtext",
+  "language": "en",
+  "reliable": true,
+  "score": 0.209
+ },
+ {
+  "text": "Le chat dort sur la table de la cuisine",
+  "language": "fr",
+  "reliable": true,
+  "score": 0.634
+ },
+ {
+  "text": "El perro corre por el parque todos los días",
+  "language": "es",
+  "reliable": true,
+  "score": 0.5697
+ },
+ {
+  "text": "Il gatto dorme sul divano del salotto",
+  "language": "it",
+  "reliable": true,
+  "score": 0.4544
+ },
+ {
+  "text": "De kat slaapt op de bank in de woonkamer",
+  "language": "nl",
+  "reliable": true,
+  "score": 0.4926
+ },
+ {
+  "text": "Kissa nukkuu sohvalla olohuoneessa",
+  "language": "fi",
+  "reliable": true,
+  "score": 0.2449
+ },
+ {
+  "text": "Kotten sover i soffan i vardagsrummet",
+  "language": "sv",
+  "reliable": true,
+  "score": 0.2911
+ },
+ {
+  "text": "Кошка спит на диване в гостиной",
+  "language": "bg",
+  "reliable": true,
+  "score": 0.7542
+ },
+ {
+  "text": "Ο σκύλος τρέχει στο πάρκο κάθε μέρα",
+  "language": "el",
+  "reliable": true,
+  "score": 0.6526
+ },
+ {
+  "text": "猫はリビングのソファで寝ています",
+  "language": "ja",
+  "reliable": true,
+  "score": 1.1548
+ },
+ {
+  "text": "고양이가 거실 소파에서 자고 있습니다",
+  "language": "ko",
+  "reliable": true,
+  "score": 0.4466
+ }
+]

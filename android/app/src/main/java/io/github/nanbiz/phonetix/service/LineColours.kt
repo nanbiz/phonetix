@@ -35,7 +35,11 @@ class LineColours(
      *  tried, so the overlay steps aside a bounded number of times for a line it cannot
      *  resolve - and so a screen that failed while the device was busy is tried again later
      *  rather than being left without colours for as long as it is open. */
-    private class Attempts(var count: Int, var at: Long)
+    private class Attempts(var count: Int, var at: Long) {
+        /** Attempts that never got a frame to look at, kept apart from attempts that looked
+         *  and could not tell the text from what it was written on. */
+        var blind: Int = 0
+    }
     private val tries = HashMap<String, Attempts>(64)
 
     /** The page's own colours, for a line whose own could not be read and whose surface
@@ -96,8 +100,10 @@ class LineColours(
     fun wanted(text: String, now: Long = SystemClock.uptimeMillis()): Boolean {
         val k = key(text)
         val tried = tries[k]
-        return k !in lines &&
-            (tried == null || tried.count < COLOR_TRIES || now - tried.at > COLOR_RETRY_MS)
+        return k !in lines && (
+            tried == null || tried.count < COLOR_TRIES || tried.blind < BLIND_TRIES ||
+                now - tried.at > COLOR_RETRY_MS
+            )
     }
 
     /** The line's own colours, if they have been read. */
@@ -119,7 +125,9 @@ class LineColours(
     fun decide(text: String): Decision {
         val k = key(text)
         val capturingNow = capturing && SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
-        val givenUp = (tries[k]?.count ?: 0) >= COLOR_TRIES && !capturingNow
+        val tried = tries[k]
+        val givenUp = ((tried?.count ?: 0) >= COLOR_TRIES ||
+            (tried?.blind ?: 0) >= BLIND_TRIES) && !capturingNow
         // Its own colours if they were read; otherwise, once it has been given up on, the
         // surface it stands on, and only failing that the page as a whole.
         val c = lines[k] ?: if (givenUp) (surfaces[k] ?: page) else null
@@ -127,7 +135,10 @@ class LineColours(
     }
 
     /** Whether a line that has no colours yet should still be carried while following. */
-    fun stillPending(text: String): Boolean = (tries[key(text)]?.count ?: 0) < COLOR_TRIES
+    fun stillPending(text: String): Boolean {
+        val tried = tries[key(text)] ?: return true
+        return tried.count < COLOR_TRIES && tried.blind < BLIND_TRIES
+    }
 
     /**
      * Hide, capture, read the colours of these lines, show again.
@@ -179,7 +190,7 @@ class LineColours(
                     // The lines were asked for and the answer did not come. That counts:
                     // otherwise an app the platform refuses to capture would leave every one
                     // of them waiting for colours that can never arrive, and unpainted.
-                    for ((k, _) in asked) countAttempt(k)
+                    for ((k, _) in asked) countAttempt(k, sawFrame = false)
                     capturing = false
                     if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
                     readAgain()
@@ -188,7 +199,7 @@ class LineColours(
                 // The frame now holds the app's own text where our transcriptions were.
                 var read = 0
                 for ((k, rect) in asked) {
-                    countAttempt(k)
+                    countAttempt(k, sawFrame = true)
                     if (k in lines) continue
                     val c = sampler.sampleRegion(rect)
                     if (c == null) {
@@ -217,11 +228,22 @@ class LineColours(
         }, 80)
     }
 
-    private fun countAttempt(k: String) {
+    /**
+     * @param sawFrame whether there was a picture of the screen to look at. A capture that
+     *   never arrived says nothing about whether this line can be read, and counting it
+     *   towards giving up meant a busy moment - three of them in four seconds - left the line
+     *   painted in the colour of the whole screen for as long as the screen stayed up. A
+     *   device that will not be captured at all is still given up on, after more tries.
+     */
+    private fun countAttempt(k: String, sawFrame: Boolean) {
         val now = SystemClock.uptimeMillis()
         val tried = tries[k]
         if (tried == null) {
-            tries[k] = Attempts(1, now)
+            tries[k] = Attempts(if (sawFrame) 1 else 0, now).also { if (!sawFrame) it.blind = 1 }
+        } else if (!sawFrame) {
+            if (now - tried.at > COLOR_RETRY_MS) tried.blind = 0
+            tried.blind++
+            tried.at = now
         } else {
             // A run of attempts long ago says nothing about now: the device was busy, or the
             // app was mid-layout. Time since the last one starts the count again.
@@ -236,6 +258,11 @@ class LineColours(
         const val CLEAN_FRAME_GAP_MS = 1500L
         /** How often a line's colours are looked for before the page's own are used. */
         const val COLOR_TRIES = 3
+
+        /** How many attempts that never saw a frame are allowed before a line is given up on
+         *  anyway. Higher than the tries that did see one: a capture failing says nothing
+         *  about the line, only about the moment. */
+        const val BLIND_TRIES = 8
         /** And how long before a line that could not be read is worth trying again. */
         const val COLOR_RETRY_MS = 8000L
         /** After this a capture is treated as lost rather than still on its way. */
