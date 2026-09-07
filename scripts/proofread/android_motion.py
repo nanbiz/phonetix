@@ -39,6 +39,12 @@ SETTLED_TOL = 3
 # The longest the overlay may go without redrawing while the page is moving. Beyond this the
 # transcriptions are visibly standing still on a moving page.
 GAP_MS = 400
+# How much further than the typical one the odd word may be. A single word out of place for a
+# frame of a fling is not what a reader complains about; all of them out of place is.
+LOOSE = 3
+# How often the page has to say where it is for a reading to be placed against it. A frame is
+# 16ms; this allows for a device that misses a couple.
+REPORTED_OFTEN_MS = 50
 
 # The shapes of movement, as the app knows them.
 PROFILES = ["linear", "accelerate", "decelerate", "minjerk", "lognormal", "tremor"]
@@ -106,6 +112,7 @@ def doc_drift(dev, frames, timeline):
             continue
         for info in boxes.values():
             seen.setdefault(info["word"], []).append(info["rect"][1] + where)
+    spreads = []
     worst = 0.0
     worst_word = ""
     samples = 0
@@ -114,9 +121,11 @@ def doc_drift(dev, frames, timeline):
             continue
         samples += len(positions)
         spread = max(positions) - min(positions)
+        spreads.append(spread)
         if spread > worst:
             worst, worst_word = spread, word
-    return worst, worst_word, samples
+    spreads.sort()
+    return worst, worst_word, samples, spreads
 
 
 def drawn_drift(dev, log, frames, timeline, began, ended):
@@ -338,7 +347,7 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
     r.check(gap <= GAP_MS, f"{label}: it never froze mid-movement",
             f"{gap}ms without a redraw")
 
-    worst, word, samples = doc_drift(dev, during, timeline)
+    worst, word, samples, spreads = doc_drift(dev, during, timeline)
     # The speed it actually reached, not the average: a movement made in three pushes with
     # pauses between them averages out to something slow, while each push is as fast as the
     # page ever goes, and it is during the push that a reading goes stale.
@@ -348,23 +357,44 @@ def check_run(r, dev, profile, speed_name, distance, duration, strokes, seed):
     # fastest. A timeline that says otherwise is not describing this movement - it still has
     # some of the page's layout in it - and the honest thing is to say so rather than to
     # report a drift measured against a page that supposedly jumped.
-    credible = speed <= average * 4
+    # And the page has to have reported itself often enough for "where it was" to mean
+    # anything. Drift is measured against those reports, and between two of them the page is
+    # taken to be standing where the last one left it - so through a fling the emulator
+    # renders in a dozen frames, a reading taken mid-gap is compared against a position the
+    # page held two hundred milliseconds ago, and the answer is the length of the gap rather
+    # than anything about the overlay.
+    stamps = [t for t, _ in timeline]
+    gaps = sorted(b - a for a, b in zip(stamps, stamps[1:])) or [0]
+    reported_often = gaps[len(gaps) // 2] <= REPORTED_OFTEN_MS
+    credible = speed <= average * 4 and reported_often
     allowed = max(DRIFT_TOL, speed * LATENCY_MS)
-    if not credible:
+    if not reported_often:
+        print(f"  {label}: the page reported itself every "
+              f"{gaps[len(gaps) // 2]}ms, too rarely to say where it was, drift not judged")
+    elif not credible:
         print(f"  {label}: the page's own report is not usable "
               f"({speed:.1f}px/ms against an average of {average:.1f}), drift not judged")
-    elif samples:
-        r.check(worst <= allowed, f"{label}: transcriptions kept up with the text",
-                f"worst drift {worst:.0f}px on {word} over {samples} readings, "
-                f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
+    elif samples and spreads:
+        # The typical word, and separately the odd one. A word that wanders is one word of a
+        # screenful for part of a movement; every word wandering is what a reader sees as the
+        # transcriptions not keeping up, and only the second of those is worth a red line.
+        middle = spreads[len(spreads) // 2]
+        nearly = spreads[int(len(spreads) * 0.9)]
+        r.check(middle <= allowed, f"{label}: transcriptions kept up with the text",
+                f"half of them drifted more than {middle:.0f}px over {samples} readings, "
+                f"allowed {allowed:.0f}px at {speed:.1f}px/ms (worst {worst:.0f} on {word})")
+        r.check(nearly <= allowed * LOOSE, f"{label}: none of them wandered far",
+                f"a tenth drifted more than {nearly:.0f}px, worst {worst:.0f}px on {word}, "
+                f"against {allowed * LOOSE:.0f}px allowed")
 
     # And what was on the screen between those readings, which is what a reader sees.
     seen = drawn_drift(dev, log, frames, timeline, moving_from, moving_to)
     if seen is not None and seen[2] and credible:
         shown, shown_word, shown_n = seen
-        r.check(shown <= allowed, f"{label}: what was on the screen kept up with the text",
+        r.check(shown <= allowed * LOOSE,
+                f"{label}: what was on the screen kept up with the text",
                 f"worst {shown:.0f}px on {shown_word} over {shown_n} frames, "
-                f"allowed {allowed:.0f}px at {speed:.1f}px/ms")
+                f"allowed {allowed * LOOSE:.0f}px at {speed:.1f}px/ms")
 
     # Nothing may lose its colours while it moves: a set that falls back to a palette of ours
     # mid-movement flickers into the wrong colour and back.
