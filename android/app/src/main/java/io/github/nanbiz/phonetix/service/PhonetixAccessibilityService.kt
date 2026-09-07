@@ -1349,6 +1349,40 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
     }
 
+
+    /**
+     * Measure one line's words, or place them from what the line said the last time it was
+     * measured, and hand back what it now carries.
+     *
+     * The same work a full read does for every line, in a form the band read can call for
+     * the two or three lines it has just found scrolling into view.
+     *
+     * @return false when the line could not be placed at all
+     */
+    private fun measureLine(p: Planned, allowedToAsk: Boolean): Boolean {
+        val at = android.graphics.Rect()
+        p.node.getBoundsInScreen(at)
+        val remembered = layouts.recall(p.text, p.from, p.length)
+        val placed = layouts.place(remembered, at, p.viewport)
+        if (placed == null && !allowedToAsk) return false
+        val rects = placed
+            ?: charRects(p.node, p.from, p.length)?.also { fresh ->
+                layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
+            }
+            ?: return false
+        val made = ArrayList<WordBox>(p.picks.size)
+        Transcriber.boxes(p.picks, rects, p.from, made)
+        if (remembered != null) p.node.getBoundsInScreen(at)
+        p.measuredAt = at
+        p.boxes = made.filter { b ->
+            val r = b.rect
+            r.left >= p.viewport.left - 1 && r.top >= p.viewport.top - 1 &&
+                r.right <= p.viewport.right + 1 && r.bottom <= p.viewport.bottom + 1 &&
+                !covered(r, p.exit)
+        }
+        return p.boxes.isNotEmpty()
+    }
+
     /**
      * Read the strip of screen the movement has brought into view and add it to the plan.
      *
@@ -1375,9 +1409,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             p.measuredAt?.let { already.add(p.text + "@" + (it.top / LINE_SAME_PX)) }
         }
         val added = ArrayList<Planned>(held)
+        var asked = 0
         for (p in fresh) {
+            // A line the walk found has been planned but not measured: where its characters
+            // sit is a separate question and a costly one, so only a couple are asked per
+            // strip and the rest wait for the strip after.
+            if (!measureLine(p, allowedToAsk = asked < MEASURE_MOVING_MAX)) continue
+            if (asked < MEASURE_MOVING_MAX) asked++
             val at = p.measuredAt ?: continue
-            if (p.boxes.isEmpty()) continue
             if (already.add(p.text + "@" + (at.top / LINE_SAME_PX))) added.add(p)
         }
         lastShiftY = 0f

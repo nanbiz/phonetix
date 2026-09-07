@@ -71,6 +71,9 @@ BIGGER = 1.3
 # bottom has not been read yet. Most of them, though - a reader scrolling a page of text
 # watched two thirds of them disappear for as long as the finger was down.
 KEPT_MOVING = 0.75
+# About how far apart the lines of this page are, in the pixels of a capture. Used only to
+# decide whether a transcription is near the page's text at all.
+LINE_APART = 16
 # A single frame of a movement may be further out than the rest without anyone seeing it, so
 # the occasional one is held to a looser bound than the typical one - this many times looser,
 # which is about a line.
@@ -139,14 +142,21 @@ def shots(dev, into, count, gap=0.0, keep=0):
 def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False, against=None):
     """Every transcription in every frame has to be level with a line of the page.
 
-    @param against how many transcriptions a frame of this page carries when it is standing
+    @param against what share of this page's lines carry a transcription when it is standing
         still. A movement that keeps them on their words but keeps only a third of them is
         not a movement anybody would call working, and every check here but this one is
         blind to it: they all judge the transcriptions that are on the screen, so the fewer
         survive the better the page scores.
+
+        Counted as a share of the lines in the same frame rather than as a number of
+        transcriptions. How many the camera catches depends on which instant it caught and on
+        how much of the page was on screen then, and on a loaded machine that moved the answer
+        threefold between runs of the same build; how many of the lines in one photograph
+        carry a transcription does not depend on either.
     """
     worst = 0
     worst_at = ""
+    shares = []
     seen = 0
     empty = 0
     adrift = 0
@@ -170,11 +180,17 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False, against=Non
         # screen shows its text but not the bar at its left, so a transcription down there
         # has nothing to be held against - and was being held against the last row that did
         # have one, two lines above it.
+        #
+        # A line's worth of slack, not the placement bar: dropping everything outside the bar
+        # dropped exactly the transcriptions that were furthest from their words, so pushing
+        # the whole set further off its lines improved every number here. What is beyond even
+        # this is off the page's text altogether and has no line to be judged against.
         first, last = min(lines), max(lines)
-        chips = [y for y in chips if first - allowed <= y <= last + allowed]
+        chips = [y for y in chips if first - LINE_APART <= y <= last + LINE_APART]
         if not chips:
             continue
         seen += len(chips)
+        shares.append(len(chips) / max(1, len(lines)))
         for y in chips:
             off = min(abs(y - line) for line in lines)
             if off > worst:
@@ -201,18 +217,20 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False, against=Non
             f"on the screen), of {allowed} allowed")
     r.check(nearly_worst <= LOOSE * allowed, f"{label}: none of them wanders far",
             f"a tenth of them are further than {nearly_worst}, worst {worst} - {worst_at}")
-    per_frame = seen / max(1, len([f for f in frames if f]))
+    shares.sort()
+    carried = shares[len(shares) // 2] if shares else 0.0
     if against:
         r.check(
-            per_frame >= against * KEPT_MOVING,
+            carried >= against * KEPT_MOVING,
             f"{label}: the page keeps its transcriptions",
-            f"{per_frame:.1f} a frame against {against:.1f} standing still - "
-            f"{100 * per_frame / against:.0f}% of them, of {100 * KEPT_MOVING:.0f}% wanted",
+            f"{100 * carried:.0f}% of the lines in a frame carry one, against "
+            f"{100 * against:.0f}% standing still - {100 * carried / against:.0f}% of them, "
+            f"of {100 * KEPT_MOVING:.0f}% wanted",
         )
-    print(f"  {label}: {len(frames)} frames, {seen} seen ({per_frame:.1f} a frame), "
-          f"median {middle}, nine in ten within {nearly_worst}, worst {worst} "
+    print(f"  {label}: {len(frames)} frames, {seen} seen, {100 * carried:.0f}% of lines "
+          f"carry one, median {middle}, nine in ten within {nearly_worst}, worst {worst} "
           f"(allowed {allowed}, frame pixels of {ON_THE_LINE} on the screen)")
-    return worst, per_frame
+    return worst, carried
 
 
 def still(r, dev, into):
