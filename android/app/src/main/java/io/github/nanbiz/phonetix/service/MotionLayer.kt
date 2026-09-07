@@ -36,6 +36,23 @@ class MotionLayer(private val context: Context) {
         @JvmStatic
         var leadMs = 0L
 
+        /** How long the words are drawn on the strength of one reading before the layer
+         *  stops drawing them. Settable so a test can sweep it. */
+        @Volatile
+        @JvmStatic
+        var staleMs = 600L
+
+        /** How far apart readings may come and the words still be carried between them. */
+        @Volatile
+        @JvmStatic
+        var followableMs = 200L
+
+        /** How far out the drawing may be, measured against the next reading, before the
+         *  words are taken off the screen rather than left on the wrong text. */
+        @Volatile
+        @JvmStatic
+        var wrongByPx = 40f
+
         /** How long a measured speed is carried at full strength, and how long it takes to
          *  fade to nothing after that, both as multiples of the gap between measurements.
          *  Settable so a test can sweep them against photographs of a real swipe. */
@@ -119,6 +136,18 @@ class MotionLayer(private val context: Context) {
 
     val isRunning: Boolean get() = view != null
 
+    /** Whether the words are currently hidden for want of a fresh measurement. */
+    private var wasStale = false
+
+    /** How far apart the last two readings actually came. */
+    private var arrivedApart = 0L
+
+    /** How far out the words were when the last reading landed. */
+    private var drewOut = 0f
+
+    /** Whether the app in front can be followed between its answers at all. */
+    private var followable = true
+
     private val frame = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             val v = view ?: return
@@ -142,6 +171,29 @@ class MotionLayer(private val context: Context) {
             // in the middle of the movement it was following.
             v.translationX = predictedX
             v.translationY = predictedY
+            // Nothing at all, rather than words on the wrong text.
+            //
+            // Between measurements the words are where this layer believes they are, and that
+            // belief is only as good as the last reading. An app that answers every thirty
+            // milliseconds is followed; one that takes a second - a Compose conversation while
+            // it is being scrolled - is not, and carrying its words on regardless leaves a
+            // pronunciation of one word sitting on another. Measured on a page built like
+            // such an app, two thirds of what was on the screen through a drag named a word
+            // that was not under it. A transcription of the wrong word is worse than no
+            // transcription, so past this the layer shows nothing and the next reading brings
+            // it straight back.
+            // Nothing at all, rather than words on the wrong text.
+            //
+            // Whether this app can be followed is decided when a reading lands, not frame by
+            // frame: deciding it here made the words flash back on for the moment after each
+            // reading and off again, which is worse to look at than either answer. Age still
+            // counts, because a reading that never arrives is the same as one that cannot be
+            // trusted.
+            val stale = !followable || now - lastMeasureAt > staleMs
+            if (stale != wasStale) {
+                wasStale = stale
+                v.visibility = if (stale) View.INVISIBLE else View.VISIBLE
+            }
             // What is on the screen this frame, which is the only thing a reader sees. The
             // readings the service takes are what it knows; between them the words are where
             // this puts them, and a test that only ever saw the readings could not tell a
@@ -150,7 +202,10 @@ class MotionLayer(private val context: Context) {
                 // Named by the reading it is drawing, so that what was on the screen can be
                 // held against the positions it was drawn from rather than against whichever
                 // reading happens to be nearest in time.
-                android.util.Log.d("Phonetix", "LAYER $now $predictedY $lastMeasureAt")
+                android.util.Log.d(
+                    "Phonetix",
+                    "LAYER $now $predictedY $lastMeasureAt showing=${if (wasStale) 0 else 1}",
+                )
             }
             Choreographer.getInstance().postFrameCallback(this)
         }
@@ -186,6 +241,9 @@ class MotionLayer(private val context: Context) {
         steadiness = 0f
         lastMeasureAt = SystemClock.uptimeMillis()
         lastArrivedAt = lastMeasureAt
+        arrivedApart = 0L
+        drewOut = 0f
+        followable = true
         lastFrameAt = lastMeasureAt
         if (view == null) {
             val v = LayerView(context).also { OverlayMute.apply(it) }
@@ -225,10 +283,34 @@ class MotionLayer(private val context: Context) {
      */
     fun measured(current: List<WordBox>, at: Long, speed: Float) {
         val now = SystemClock.uptimeMillis()
+        // How far out the words were, just before this reading landed.
+        //
+        // The layer drew them at where the last reading put them plus what it has carried
+        // them by since; this reading says where they actually are. The difference is what a
+        // reader was looking at - and it is the only thing that knows whether an app can be
+        // followed at all. Neither the age of a reading nor the rhythm of them says it: a
+        // Compose conversation answers often enough and still moves several lines between
+        // answers, because the speed worked out from its answers is not the speed it is
+        // moving at. Past half a line of error the words are not on their words, and the
+        // layer stops drawing until a reading lands where it was expected.
+        val was = boxes.firstOrNull { old -> current.any { it.word == old.word } }
+        val same = if (was == null) null else current.first { it.word == was.word }
+        if (was != null && same != null && measurements > 0) {
+            drewOut = kotlin.math.abs((was.rect.top + predictedY) - same.rect.top)
+        }
+        // An app worth following answers often, and where it is expected to. Neither on its
+        // own is enough: a Compose conversation answers every two hundred milliseconds and
+        // has moved several lines by then, and an app answering late but predictably can be
+        // carried through it.
+        followable = measurements < 2 ||
+            (arrivedApart <= followableMs && drewOut <= wrongByPx)
         // How far apart the readings have been coming, which is how long a speed of theirs is
         // worth carrying. Not what the speed is measured over: that is measured where it can
         // be measured properly.
         val arrived = (now - lastArrivedAt).coerceAtLeast(1)
+        // Unsmoothed and unclamped, unlike the gap below: what is wanted here is how far
+        // apart the readings really are, not a figure to predict with.
+        if (measurements > 0) arrivedApart = arrived
         gap = (0.5f * gap + 0.5f * arrived.toFloat()).coerceIn(Fixed.GAP_MIN_MS, Fixed.GAP_MAX_MS)
         lastArrivedAt = now
         measurements++

@@ -56,7 +56,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         composePage?.let { return it }
         // A Compose page exists only once it has composed itself. Until then there is
         // nothing to drive, and saying so is better than driving the wrong thing.
-        if (mode == "lazy") {
+        if (mode == "lazy" || mode == "chat") {
             val nothing = window.decorView
             return ScrollMotion.Page(nothing, { 0 }, { })
         }
@@ -98,13 +98,17 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         val root = FrameLayout(this)
         root.setBackgroundColor(BACKGROUND)
 
-        if (mode == "lazy") {
+        if (mode == "lazy" || mode == "chat") {
             // The kind of list a Compose app scrolls, which describes itself through
             // semantics rather than as a tree of views.
             val scope = kotlinx.coroutines.MainScope()
             composeScope = scope
             root.addView(
-                LazyListPage.build(this, scope) { p -> composePage = p },
+                // "chat" is the same list with a message in each row rather than a line,
+                // which is the shape of the app a reader watches.
+                LazyListPage.build(this, scope, asMessages = mode == "chat") { p ->
+                    composePage = p
+                },
                 FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
                 ),
@@ -215,6 +219,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private fun handle(intent: Intent?) {
         intent ?: return
+        // Where every line of this page is, whenever a test asks. Answered after the page has
+        // been told where to scroll to, so it describes the page the test is about to look at.
+        if (intent.getIntExtra("placed", 0) != 0) {
+            window?.decorView?.postDelayed({ runCatching { placed() }.onFailure {
+                Log.d(TAG, "PLACED failed: $it")
+            } }, 900)
+        }
         // Only from a shell or from this app. The releases people install are debug builds -
         // that is how this app is distributed - so this page and its intent extras are on
         // their phones, and those extras are the app's own settings: whether the overlay is
@@ -255,7 +266,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 val now = page()
                 now.moveTo(y0)
                 Log.d(TAG, "SETTLED $y0")
-            }, if (composePage == null && mode == "lazy") 400 else 0)
+            }, if (composePage == null && (mode == "lazy" || mode == "chat")) 400 else 0)
         }
         if (intent.hasExtra(EXTRA_FLING) && listView == null) {
             val v = intent.getIntExtra(EXTRA_FLING, 0)
@@ -337,6 +348,18 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             if (i.hasExtra("predictFromFirst")) {
                 io.github.nanbiz.phonetix.service.MotionLayer.predictFromFirst =
                     i.getIntExtra("predictFromFirst", 0) != 0
+            }
+            if (i.hasExtra("wrongByPx")) {
+                io.github.nanbiz.phonetix.service.MotionLayer.wrongByPx =
+                    i.getIntExtra("wrongByPx", 40).toFloat()
+            }
+            if (i.hasExtra("followableMs")) {
+                io.github.nanbiz.phonetix.service.MotionLayer.followableMs =
+                    i.getIntExtra("followableMs", 200).toLong()
+            }
+            if (i.hasExtra("staleMs")) {
+                io.github.nanbiz.phonetix.service.MotionLayer.staleMs =
+                    i.getIntExtra("staleMs", 300).toLong()
             }
             if (i.hasExtra("leadMs")) {
                 io.github.nanbiz.phonetix.service.MotionLayer.leadMs =
@@ -444,6 +467,65 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         box.post { Choreographer.getInstance().postFrameCallback(frame) }
     }
 
+    /**
+     * Where every line of this page sits and what it says, once it has been laid out.
+     *
+     * Reported at the position the page is scrolled to when it is written, so a test can
+     * work out where any line was at any moment from the scroll positions the page reports
+     * anyway - and therefore which line a transcription was sitting on. Nothing else here
+     * can tell a transcription on its own word from one left behind on somebody else's: both
+     * are level with a line of text, which is all a photograph of a bar can see.
+     */
+    private fun placed() {
+        val found = ArrayList<TextView>(32)
+        collectLines(window?.decorView, found)
+        if (found.isEmpty()) {
+            Log.d(TAG, "PLACED nothing: no lines of text on this page")
+            return
+        }
+        val at = IntArray(2)
+        val now = SystemClock.uptimeMillis()
+        // A list has no ScrollView behind it, and asking a page which kind it is by touching
+        // the field is how this first came back empty.
+        val scrolled = if (listView != null) listScroll() else scroller.scrollY
+        // In the document's own coordinates, so a test can work out where a line was at any
+        // moment from the scroll positions this page reports anyway. A recycling list hands
+        // the same row to a different line as it scrolls, so there is no fixed row to report:
+        // what is reported is where each line of text is now, plus where the page is now.
+        // A line of the screen, not a view: a paragraph wraps over several, and a
+        // transcription two lines from its word is still inside the paragraph that holds it -
+        // so reporting views cannot tell the two apart, and the app a reader complained about
+        // is all wrapped paragraphs.
+        var n = 0
+        for (child in found) {
+            child.getLocationOnScreen(at)
+            val layout = child.layout
+            val text = child.text?.toString().orEmpty()
+            if (layout == null) {
+                Log.d(TAG, "PLACED $now ${n++} ${at[1] + scrolled} ${child.height} $text")
+                continue
+            }
+            for (i in 0 until layout.lineCount) {
+                val top = at[1] + scrolled + child.totalPaddingTop + layout.getLineTop(i)
+                val height = layout.getLineBottom(i) - layout.getLineTop(i)
+                val said = text.substring(layout.getLineStart(i), layout.getLineEnd(i)).trim()
+                if (said.isEmpty()) continue
+                Log.d(TAG, "PLACED $now ${n++} $top $height $said")
+            }
+        }
+    }
+
+    /** Every line of text on the page, wherever it is and whatever holds it. */
+    private fun collectLines(view: View?, into: MutableList<TextView>) {
+        if (view is TextView && !view.text.isNullOrBlank()) {
+            into.add(view)
+            return
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) collectLines(view.getChildAt(i), into)
+        }
+    }
+
     /** Where each line of the living page is now, and what it says. */
     private fun report(now: Long) {
         val column = (growing?.parent as? LinearLayout) ?: return
@@ -474,6 +556,22 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             growing = line("", Color.WHITE, BACKGROUND).also { addView(it) }
             for (text in TestWords.DISTINCT.drop(6).take(6)) {
                 addView(line(text, Color.WHITE, BACKGROUND))
+            }
+        } else if (mode == "essay") {
+            // Paragraphs that wrap, of words that appear nowhere else on the page.
+            //
+            // Every other fixture here puts one short line in one view, so a line's words and
+            // the view holding them are the same thing. The app a reader complained about is
+            // not like that: a message is one long run of text that wraps over a dozen lines,
+            // and a transcription is placed inside it from the character positions the app
+            // reports. Wrapping is where those come apart - and because the words are unique,
+            // a test can say which line a transcription is sitting on and whether that line
+            // is the one its word belongs to.
+            // Two of the word lines to a paragraph, so each wraps over several lines of the
+            // screen, and every word of the page appears exactly once.
+            for (i in TestWords.DISTINCT.indices step 2) {
+                val paragraph = TestWords.DISTINCT.drop(i).take(2).joinToString(" ")
+                addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
