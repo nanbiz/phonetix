@@ -302,6 +302,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.MotionLayer.leadMs =
                     i.getIntExtra("leadMs", 0).toLong()
             }
+            // A dialog over the page: a window of this app's own, above the text but below
+            // the transcriptions, which is a thing the overlay has to notice.
+            if (i.getIntExtra("dialog", 0) != 0) {
+                android.app.AlertDialog.Builder(this)
+                    .setTitle("A dialog")
+                    .setMessage("It stands over the page and the page is still underneath it.")
+                    .setPositiveButton("Fine") { d, _ -> d.dismiss() }
+                    .show()
+            }
             if (i.hasExtra("marks")) {
                 DebugMarks.on = i.getIntExtra("marks", 0) != 0
                 window?.decorView?.invalidate()

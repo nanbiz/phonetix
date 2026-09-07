@@ -152,7 +152,16 @@ class LineColours(
         // two of its four coloured lines fall all the way through to the page's single colour
         // and come back black on a coloured band. Only failing all of that, the page.
         val c = lines[k] ?: if (givenUp) {
-            surfaces[k]?.colours ?: nearestSurface(top) ?: page
+            // Its own surface, unless that was read while the line was somewhere else - a
+            // capture taken while the page was still settling reads the surface under where
+            // the line used to be, and on a page of bands that is the wrong band. Then the
+            // nearest line that does have one is the better answer.
+            val own = surfaces[k]
+            val mine = if (own != null && (top < 0 || kotlin.math.abs(own.top - top) <= MOVED_ON))
+                own.colours
+            else
+                null
+            mine ?: nearestSurface(top) ?: page
         } else {
             null
         }
@@ -309,6 +318,10 @@ class LineColours(
         const val CLEAN_FRAME_GAP_MS = 1500L
         /** How often a line's colours are looked for before the page's own are used. */
         const val COLOR_TRIES = 3
+
+        /** How far a line may have moved since its surface was read before that reading is
+         *  taken to describe somewhere else. */
+        const val MOVED_ON = 60
 
         /** How far away a line may be and still be taken to stand on the same surface.
          *

@@ -98,6 +98,12 @@ class OverlayController(
         if (motion.isRunning) motion.stop()
         lastRendered = boxes
         val wanted = if (boxes.size > MAX_CHIPS) boxes.subList(0, MAX_CHIPS) else boxes
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG && boxes.size > wanted.size) {
+            android.util.Log.d(
+                "Phonetix",
+                "RENDER only ${wanted.size} of ${boxes.size}; the rest have no window",
+            )
+        }
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
             val chip = chips.getOrNull(i) ?: break
@@ -203,7 +209,7 @@ class OverlayController(
     ).apply { gravity = Gravity.TOP or Gravity.START }
 
     private companion object {
-        const val MAX_CHIPS = 48
+        const val MAX_CHIPS = 96
         const val BLEED = 1.5f
     }
 }
