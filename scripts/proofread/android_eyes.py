@@ -125,7 +125,7 @@ def shots(dev, into, count, gap=0.0, keep=0):
     return taken
 
 
-def judge(r, frames, label, dev_height, bar=ON_THE_LINE):
+def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False):
     """Every transcription in every frame has to be level with a line of the page."""
     worst = 0
     worst_at = ""
@@ -136,6 +136,8 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE):
     allowed = ON_THE_LINE
     for at, path in frames:
         image = Image.open(path).convert("RGB")
+        if turn:
+            image = image.transpose(Image.ROTATE_90)
         # The capture is scaled down from the screen, so what counts as being on a line is
         # scaled with it rather than measured in whatever pixels the emulator felt like.
         allowed = max(3, round(bar * image.size[1] / dev_height))
@@ -231,6 +233,25 @@ def while_scrolling(r, dev, into):
     judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING)
 
 
+def turned_sideways(r, dev, into):
+    """The screen rotated, which moves every word and every window on it.
+
+    A transcription is a window placed in screen coordinates, so a rotation moves the words
+    out from under all of them at once. The capture comes back the way the screen is wired
+    rather than the way it is being held, so it is turned upright here before it is read.
+    """
+    shell("settings", "put", "system", "accelerometer_rotation", "0")
+    shell("settings", "put", "system", "user_rotation", "1")
+    try:
+        time.sleep(3)
+        dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=200)
+        time.sleep(5)
+        judge(r, shots(dev, into, 3, gap=0.2), "turned sideways", dev.width, turn=True)
+    finally:
+        shell("settings", "put", "system", "user_rotation", "0")
+        time.sleep(3)
+
+
 def at_a_larger_font(r, dev, into):
     """A reader who has made the text bigger, which is who an overlay like this is for.
 
@@ -264,12 +285,19 @@ def main():
     into = os.path.join(
         os.environ.get("TMPDIR", "/tmp"), "phonetix-eyes",
     )
+    # Upright to begin with, whatever the last thing to touch this device left behind: the
+    # capture comes back the way the screen is wired, so a device left sideways photographs
+    # every page sideways and none of the marks line up.
+    shell("settings", "put", "system", "accelerometer_rotation", "0")
+    shell("settings", "put", "system", "user_rotation", "0")
+    time.sleep(2)
     r = Results()
     print("\nlooking at the screen")
     still(r, dev, into)
     while_scrolling(r, dev, into)
     after_it_stops(r, dev, into)
     at_a_larger_font(r, dev, into)
+    turned_sideways(r, dev, into)
     print(f"\n{r.passed}/{r.total} checks passed")
     if r.failures:
         print(f"\nFAIL - {len(r.failures)} problem(s):")
