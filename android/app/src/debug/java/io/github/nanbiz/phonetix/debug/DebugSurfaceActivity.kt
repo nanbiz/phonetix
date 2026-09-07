@@ -302,6 +302,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.ANCHORS =
                     i.getIntExtra("anchors", 3)
             }
+            if (i.hasExtra("measureMoving")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MEASURE_MOVING_MAX =
+                    i.getIntExtra("measureMoving", 2)
+            }
             if (i.hasExtra("mostlyGone")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MOSTLY_GONE =
                     i.getIntExtra("mostlyGone", 50) / 100f

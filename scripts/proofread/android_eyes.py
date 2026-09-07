@@ -187,7 +187,7 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False, against=Non
     r.check(seen > 0, f"{label}: transcriptions were on the screen at all",
             f"{empty} of {len(frames)} frames had none")
     if not offsets:
-        return 0
+        return 0, 0
     offsets.sort()
     middle = offsets[len(offsets) // 2]
     nearly_worst = offsets[int(len(offsets) * 0.9)]
