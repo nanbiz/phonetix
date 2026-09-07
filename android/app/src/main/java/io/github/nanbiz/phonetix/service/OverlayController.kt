@@ -108,14 +108,22 @@ class OverlayController(
         for (i in wanted.indices) {
             val chip = chips.getOrNull(i) ?: break
             val box = wanted[i]
-            chip.bind(box, reveal)
+            val says = chip.bind(box, reveal)
             // Changing what a window says takes effect on the next draw; moving it has to
             // go through the window manager and lands a frame later. Do both to a visible
             // window and it paints the new word at the old word's place for that frame,
             // which is a transcription flashing somewhere it has no business being. So a
             // window that has to move is hidden first and shown again only once the move
             // has actually been applied.
-            if (place(chip, box.rect)) {
+            //
+            // Only a window that is going to say something different, though. One that is
+            // simply following its word says the same thing at the old place as at the new,
+            // so a frame at the old place is a frame of it being a pixel or two behind
+            // rather than a frame of it being wrong - and hiding it instead is a frame of
+            // nothing at all. Photographed while the page moved with the words back on these
+            // windows, that is most of the screen bare: every word moves every pass, so
+            // every window spent every other frame invisible.
+            if (place(chip, box.rect) && says) {
                 chip.visibility = View.INVISIBLE
                 val token = ++chip.moveToken
                 chip.post { if (chip.moveToken == token) chip.visibility = View.VISIBLE }
@@ -262,10 +270,13 @@ class ChipView(
     private val painter = ChipPainter()
     private val dest = RectF()
 
-    fun bind(next: WordBox, state: RevealState) {
-        val changed = box?.ipa != next.ipa || box?.word != next.word 
+    /** @return whether this window now says something different from what it said */
+    fun bind(next: WordBox, state: RevealState): Boolean {
+        val changed = box?.ipa != next.ipa || box?.word != next.word ||
+            box?.background != next.background || box?.ink != next.ink
         box = next
         if (changed) invalidate()
+        return changed
     }
 
     /** Opens the card, if the finger stays put long enough to mean it. */
