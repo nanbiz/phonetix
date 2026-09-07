@@ -48,6 +48,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var generation = 0
     /** Where other windows - a keyboard above all - stand over the app being read. */
     @Volatile private var blockers: List<android.graphics.Rect> = emptyList()
+    /** Looks again once a system window has finished coming or going. */
+    private val afterASystemWindow = Runnable { scrollOnly = false; schedule(0L) }
+
     /** How many times running the thing in front has been something we do not transcribe,
      *  so a shade closing is waited out and a launcher sitting there is not polled for ever. */
     @Volatile private var lookAgain = 0
@@ -207,8 +210,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // and the app underneath - which is not sending anything, it did not change -
                 // never prompts another. The transcriptions stayed gone until something else
                 // happened on screen.
-                scrollOnly = false
-                schedule(AFTER_A_SYSTEM_WINDOW, trailing = true)
+                //
+                // Asked for on the main thread, not through the usual scheduling: that empties
+                // the worker's queue, so the status bar - which announces itself whenever
+                // anything happens anywhere - was cancelling the read the app in front had
+                // just asked for and pushing it half a second into the future, over and over.
+                // A whole app came back bare.
+                main.removeCallbacks(afterASystemWindow)
+                main.postDelayed(afterASystemWindow, AFTER_A_SYSTEM_WINDOW)
                 return
             }
             // Said once per app, because an app dropped here is dropped before anything else
@@ -267,15 +276,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // one cancelled the pass the one before it asked for, and a page scrolled from code
         // was therefore never read at all while it moved.
         //
-        // A change counts as movement here, which is not obviously right and was tried both
-        // ways. It decides whether a line's characters may be measured - asking for them
-        // makes the app lay its text out again, which a page being scrolled cannot afford -
-        // so an app that changes something ten times a second is never measured at all.
-        // Chrome is one. Not counting it, though, let the colours be read off a screen that
-        // was moving, which photographs as a smear, and left what is drawn through a swipe
-        // measurably further from its word. Chrome cannot be transcribed either way: it
-        // answers the request for character positions with nothing at all.
-        lastMotionAt = android.os.SystemClock.uptimeMillis()
+        // A change is not a movement. Whether the screen is moving decides whether a line's
+        // characters may be measured - asking for them makes the app lay its text out again,
+        // which a page being scrolled cannot afford - and an app that changes something ten
+        // times a second was therefore permanently moving and permanently unmeasurable. The
+        // settings app is one while it settles: thirteen lines planned, no characters measured
+        // for any of them, nothing drawn, and a follow that ran every millisecond keeping no
+        // words at all.
+        //
+        // Movement is measured instead, by the pass that follows, which is the only thing
+        // that knows whether anything actually moved. What that costs is that the colours
+        // could then be read off a moving screen, which photographs as a smear - so they wait
+        // for stillness themselves, just below, rather than the whole overlay waiting for it.
         // A window appearing or going away can mean a different app is in front, and a
         // follow pass does not look at which one it is - it works from the lines it already
         // holds. So this one is always answered by reading the screen properly.
@@ -1034,7 +1046,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Only lines never read on this screen are worth stepping aside for. Without that
         // the overlay hid itself every second and a half for the whole life of a page,
         // which cost more than the colours were worth and left flings barely drawn.
-        val unread = planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
+        // Not off a screen that is going somewhere. Reading a line's colours photographs the
+        // display, and a display that is moving photographs as a smear: white text on a white
+        // page came back as the grey half way between them, on every word of the page. What
+        // says it is moving is a shift this service measured, not an app announcing that
+        // something on it changed.
+        val stillEnough = kotlin.math.abs(speedY) < SETTLING_PX_PER_MS &&
+            android.os.SystemClock.uptimeMillis() - lastShiftAt > STILL_MS
+        val unread = if (!stillEnough) emptyList()
+        else planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
         if (unread.isNotEmpty()) {
             colours.read(unread.map { colours.key(it.text) to colorRect(it) })
         }

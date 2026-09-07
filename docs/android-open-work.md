@@ -56,6 +56,19 @@ Ticked items are done and verified by a suite; the rest are not.
 
 ## Found by testing an app nobody wrote for the test
 
+- [x] **Nothing was painted over a real app at all.** The windows were there, visible, in the
+  right places, carrying the right colours, and the screen showed the app untouched: a
+  `SYSTEM_ALERT_WINDOW` overlay is hidden by the platform over any screen that asks for it,
+  and the settings app asks, as does every permission dialog, so that nothing can cover what
+  a reader is agreeing to. The log said eighteen transcriptions and a photograph of the
+  screen said none. They are accessibility overlays now, which is the type belonging to the
+  service that is already reading the screen: exempt from that hiding, and needing no
+  permission of its own.
+- [x] **A test suite passed against a screen with no transcriptions on it.** It measured the
+  rectangles the service reported, and those rectangles are the app's own words - so legible
+  text was found in every one of them whether or not anything of ours had been painted. Every
+  pixel check now photographs the same screen again with the service switched off, and counts
+  a transcription as painted only where the two differ (`android_ink.py`).
 - [x] **An entire real app was invisible.** The settings app produced no transcriptions and
   nothing in the log mentioned it: the launcher is found by asking what answers the home
   intent, and a device with no launcher installed answers with the settings app's own
@@ -109,13 +122,16 @@ Ticked items are done and verified by a suite; the rest are not.
   produces none. Nothing in the accessibility API gives word positions inside a paragraph
   without it, so this would mean laying the text out ourselves from the paragraph's rectangle
   and hoping the font matches. The browser extension is the answer for browsers.
-- [ ] **An app that never stands still is never measured.** Whether the screen is moving
+- [x] **An app that never stands still was never measured.** Whether the screen is moving
   decides whether a line's characters may be asked for, and asking makes the app lay its text
   out again - which a page being scrolled cannot afford. An app that changes something ten
-  times a second is therefore permanently moving. Not counting a change as movement was tried
-  and is worse: the colours are read by photographing the screen, and a moving screen
-  photographs as a smear. Both apps found so far that hit this (Chrome) cannot be transcribed
-  for the reason above anyway.
+  times a second was therefore permanently moving and permanently unmeasurable: the settings
+  app planned thirteen lines, measured none of them, and showed nothing at all. A change is
+  no longer a movement; movement is measured by the pass that follows, which is the only
+  thing that knows whether anything moved. The reason this was reverted once - a capture
+  taken off a moving screen smears white text into a white page and averages out to the grey
+  between them - is answered where it belongs: the colour reading waits for stillness itself
+  rather than the whole overlay waiting for it.
 
 ## Shipping
 
@@ -158,6 +174,13 @@ Ticked items are done and verified by a suite; the rest are not.
   `das` are in it with English vowels. Fixing it means rebuilding the dictionaries from the
   kaikki dump (`scripts/build-dictionaries.mjs`, a 2.3GB download) and would change what both
   platforms say, so it is the user's call rather than a tidy-up.
+- [x] **A transcription could be painted in a shade of its own background.** The ink and the
+  surface are measured off a photograph, and a pair a few dozen apart on a scale where black
+  on white is 765 is not text and its surface - it is a surface measured twice. Painted, it
+  looks like a word half rubbed out, which a reader reported as the transcriptions being
+  semi-transparent. Such a pair is rejected now and the line takes ink that is legible on the
+  surface it stands on; `android_ink.py` holds every drawn word to it, on a plain page, a
+  gradient, a dark page, through a scroll and on the settings app.
 - [ ] **What is drawn still lags at speed.** Slow reading scrolls sit within a line's height;
   a brisk fling is 130-270px behind, and the emulator's 5-8px/ms flings several hundred. The
   limit is the round trip into a busy app, ten-odd milliseconds each, several per reading.

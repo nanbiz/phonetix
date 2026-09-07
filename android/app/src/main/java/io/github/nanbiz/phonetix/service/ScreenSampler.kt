@@ -277,6 +277,18 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
         const val INK_SHARE = 0.75f
         /** Below this there was no text in the sample, only surface. */
         const val MIN_INK_PIXELS = 12L
-        const val MIN_CONTRAST = 60
+        /**
+         * How far ink has to stand from its surface before the pair is believed.
+         *
+         * The scale is the sum of the three channel differences, so black on white is 765
+         * and a faint grey on a slightly different grey is a few dozen. A pair that close
+         * is not text that was measured, it is a surface that was measured twice: a line
+         * whose glyphs were too thin to separate, or a capture taken while the screen was
+         * moving, where white letters smear into the page and average out to the grey half
+         * way between. Painting it makes the word look half erased, which is what it is.
+         * A line that cannot clear this reads its surface instead and takes ink that is
+         * legible on it.
+         */
+        const val MIN_CONTRAST = 210
     }
 }

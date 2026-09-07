@@ -106,7 +106,15 @@ class TooltipController(
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            // An accessibility overlay, not an application one. A window put up with
+            // SYSTEM_ALERT_WINDOW is hidden by the platform over any screen that asks for it -
+            // the settings app asks, and so does every permission dialog, to stop a window from
+            // covering what the reader is agreeing to. Over those screens the windows were still
+            // there, still visible, still in the right places, and nothing was painted: a real
+            // app that showed no transcriptions at all while the log said it had drawn eighteen.
+            // This type belongs to the service that is already reading the screen, is exempt
+            // from that hiding, and needs no permission of its own.
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             // Not focusable, so the app underneath keeps its keyboard and its state; the
             // outside touch only tells the card to close.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
