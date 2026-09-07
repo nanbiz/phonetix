@@ -493,19 +493,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // Whole when they were measured, so there is an edge of them to compare.
                     at.top > p.viewport.top + 1 && at.bottom < p.viewport.bottom - 1
             }.ifEmpty { planned.filter { it.measuredAt != null && it.boxes.isNotEmpty() } }
-            // Fewer of them the faster the page is going. Asking a line where it is costs a
-            // round trip into an app that is busy laying itself out, ten-odd milliseconds
-            // each, and while the page moves that cost is paid twice: once in the pass, and
-            // again in everything the words are carried by a speed nobody has checked since.
-            // Through a flick, two answers arriving quickly place the words better than three
-            // arriving late.
-            val wanted = if (kotlin.math.abs(speedY) > HURRIED_PX_PER_MS) ANCHORS_FAST else ANCHORS
+            // The same few however fast the page is going. Asking fewer while it hurries was
+            // tried, on the reasoning that an answer arriving late is worth less than one
+            // arriving: two are a shade quicker and photograph no better through a drag, and
+            // one cannot be outvoted at all - a line handed to another row answers with the
+            // distance between them, and a single anchor put the words a thousand pixels off
+            // during a fling. Three costs a round trip more and is the only count that
+            // outvotes a liar.
             val anchors = when {
-                usable.size <= wanted -> usable
-                wanted == 1 -> listOf(usable[usable.size / 2])
+                usable.size <= ANCHORS -> usable
                 else -> {
-                    val step = (usable.size - 1).toFloat() / (wanted - 1)
-                    (0 until wanted).map { usable[(it * step).toInt()] }
+                    val step = (usable.size - 1).toFloat() / (ANCHORS - 1)
+                    (0 until ANCHORS).map { usable[(it * step).toInt()] }
                 }
             }
             /** Each anchor's answer, and the moment it gave it. */
@@ -1399,9 +1398,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FULL_READ_TURNOVER_MS = 350L
         /** How many lines are asked where they are before the rest are carried with them. */
         const val ANCHORS = 3
-        /** And how many while the page is moving quickly, where an answer that arrives late
-         *  is worth less than one that arrives. */
-        const val ANCHORS_FAST = 2
         /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
          *  lines: at this rate the page moves a line's height in the time one answer takes. */
         const val HURRIED_PX_PER_MS = 1.0f
