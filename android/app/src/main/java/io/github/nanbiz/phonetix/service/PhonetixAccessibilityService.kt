@@ -606,9 +606,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // taken.
             val usable = planned.filter { p ->
                 val at = p.measuredAt
-                at != null && p.boxes.isNotEmpty() &&
-                    // Whole when they were measured, so there is an edge of them to compare.
-                    at.top > p.viewport.top + 1 && at.bottom < p.viewport.bottom - 1
+                if (at == null || p.boxes.isEmpty()) return@filter false
+                // Whole when they were measured, so there is an edge of them to compare.
+                if (at.top <= p.viewport.top + 1 || at.bottom >= p.viewport.bottom - 1) {
+                    return@filter false
+                }
+                // And still on the screen now, not merely when the plan was made.
+                //
+                // A line that has scrolled out of view stops being told where it is: asking
+                // it returns the same rectangle pass after pass while the page keeps moving.
+                // Believed, that is a page that has stopped - so the words were carried at a
+                // shift frozen where the anchor left the screen while the text went on
+                // without them, which is a transcription sitting on somebody else's word.
+                // Seen on a page of paragraphs: six passes running reporting a shift of
+                // exactly -242 through the second half of a drag.
+                val now = android.graphics.Rect(at)
+                now.offset(lastShiftX.toInt(), lastShiftY.toInt())
+                now.top > p.viewport.top + 1 && now.bottom < p.viewport.bottom - 1
             }.ifEmpty { planned.filter { it.measuredAt != null && it.boxes.isNotEmpty() } }
             // What the page was doing a moment ago, which is both what decides how many
             // lines have to be asked where they are and what their answers are tested

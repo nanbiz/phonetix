@@ -161,30 +161,63 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
     return share
 
 
-def a_page(r, dev, label, mode):
-    shell("am", "force-stop", "io.github.nanbiz.phonetix")
-    time.sleep(2)
-    dev.enable_service()
-    dev.clear_log()
-    dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, placed=1,
-                **(KNOBS or {}))
-    time.sleep(8)
-    print(f"{label}:")
-    document = lines_in_the_document(dev.log())
-    judge(r, dev, dev.log(), "standing still", newest_only=True, window=20000, document=document)
+# How many drags are judged before an answer is given. One drag is not a measurement: the same
+# page dragged four times running gave 44%, 45%, 73% and 16% on builds that differed in one
+# constant, which is a wider spread than anything being measured.
+DRAGS = 3
 
-    dev.clear_log()
-    shell("input", "swipe", "540", "1536", "540", "500", "1300")
-    time.sleep(1.5)
-    judge(r, dev, dev.log(), "through a drag", document=document)
-    time.sleep(3)
-    # A page that has stopped stops saying where its lines are, so what it last said is from
-    # the end of the movement. Nudged by a pixel, which makes it say where everything is now
-    # without moving anything a reader would see.
-    shell("input", "swipe", "540", "1200", "540", "1199", "120")
-    time.sleep(1.5)
-    judge(r, dev, dev.log(), "once it has settled", newest_only=True, window=3000,
-          document=document)
+
+def a_page(r, dev, label, mode):
+    print(f"{label}:")
+    wrong, settled = [], []
+    for round_number in range(DRAGS):
+        shell("am", "force-stop", "io.github.nanbiz.phonetix")
+        time.sleep(2)
+        dev.enable_service()
+        dev.clear_log()
+        dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, placed=1,
+                    **(KNOBS or {}))
+        time.sleep(8)
+        document = lines_in_the_document(dev.log())
+        quiet = Results()
+        if round_number == 0:
+            judge(r, dev, dev.log(), "  standing still", newest_only=True, window=20000,
+                  document=document)
+
+        dev.clear_log()
+        shell("input", "swipe", "540", "1536", "540", "500", "1300")
+        time.sleep(1.5)
+        log = dev.log()
+        passes = [l for l in log.splitlines() if "follow=" in l]
+        gaps = [int(m.group(1)) for m in
+                (re.search(r"MEAS .*arrived=(\d+)", l) for l in log.splitlines()) if m]
+        share = judge(quiet, dev, log, f"  drag {round_number + 1}", document=document)
+        print(f"      {len(passes)} passes, readings every "
+              f"{statistics.median(gaps) if gaps else 0:.0f}ms, "
+              f"{len([l for l in log.splitlines() if 'BAND ' in l])} strips")
+        if share is not None:
+            wrong.append(share)
+        time.sleep(3)
+        # A page that has stopped stops saying where its lines are, so what it last said is
+        # from the end of the movement. Nudged by a pixel, which makes it say where everything
+        # is now without moving anything a reader would see.
+        shell("input", "swipe", "540", "1200", "540", "1199", "120")
+        time.sleep(1.5)
+        share = judge(quiet, dev, dev.log(), f"  after drag {round_number + 1}",
+                      newest_only=True, window=3000, document=document)
+        if share is not None:
+            settled.append(share)
+    for name, got in (("through a drag", wrong), ("once it has settled", settled)):
+        if not got:
+            r.check(False, f"{label}, {name}: there was something to judge", "nothing was")
+            continue
+        middle = statistics.median(got)
+        r.check(
+            middle <= STRAYS_ALLOWED,
+            f"{label}, {name}: every transcription names a word that is under it",
+            f"the middle drag of {len(got)} had {100 * middle:.0f}% naming a word that is not "
+            f"under them (the drags: {', '.join(f'{100 * g:.0f}%' for g in got)})",
+        )
 
 
 def main():
