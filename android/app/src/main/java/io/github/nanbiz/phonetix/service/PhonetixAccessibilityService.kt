@@ -268,6 +268,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         schedule(GAP_MS)
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Every app on the device has just been repainted - a theme changed, or the text got
+        // bigger - and the colours were read off the way it looked before. They are keyed by
+        // the words of a line, which have not changed, so nothing else would notice.
+        if (::colours.isInitialized) colours.forget()
+        cachedPlan = emptyList()
+        scrollOnly = false
+        layouts.forget()
+        schedule(0L)
+    }
+
     override fun onInterrupt() {
         if (::overlay.isInitialized) overlay.hideNow()
     }

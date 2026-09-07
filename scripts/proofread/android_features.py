@@ -522,6 +522,47 @@ def check_accessibility_button(r, dev):
     reset(dev)
 
 
+def check_theme_change(r, dev):
+    """A theme change repaints every app, and the transcriptions follow it.
+
+    The colours a transcription wears are read off the screen and kept against the words of
+    the line they were read from. Those words do not change when a device switches to a dark
+    theme, so nothing noticed: the transcriptions kept the light background they had been read
+    on and sat on the dark page as pale patches.
+    """
+    def backgrounds():
+        shell("am", "start", "-a", "android.settings.SETTINGS")
+        time.sleep(5)
+        for _ in range(5):
+            boxes = dev.boxes()
+            if boxes:
+                return {b["bg"] for b in boxes.values()}
+            time.sleep(2.5)
+        return set()
+
+    try:
+        shell("cmd", "uimode", "night", "no")
+        time.sleep(4)
+        light = backgrounds()
+        shell("cmd", "uimode", "night", "yes")
+        time.sleep(4)
+        dark = backgrounds()
+    finally:
+        shell("cmd", "uimode", "night", "yes")
+        time.sleep(2)
+    if not r.check(bool(light) and bool(dark), "theme: the app is transcribed in both themes",
+                   f"{len(light)} colours light, {len(dark)} dark"):
+        return
+    def lightness(colours):
+        return sum(((c >> 16 & 0xFF) + (c >> 8 & 0xFF) + (c & 0xFF)) / 3 for c in colours) / len(colours)
+    r.check(
+        lightness(light) > lightness(dark) + 60,
+        "theme: they are read again when it changes",
+        f"light theme gave {lightness(light):.0f}, dark gave {lightness(dark):.0f} "
+        f"out of 255 - the same colours would mean the old ones were kept",
+    )
+
+
 def check_a_real_app(r, dev):
     """An app nobody wrote for this test gets transcriptions, and keeps them through a scroll.
 
@@ -709,6 +750,8 @@ def main():
     check_language(r, dev)
     print("an app nobody wrote for this test")
     check_a_real_app(r, dev)
+    print("a change of theme")
+    check_theme_change(r, dev)
     print("the button that switches it off")
     check_accessibility_button(r, dev)
     print("the app's own screen")

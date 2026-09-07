@@ -22,6 +22,15 @@ class LineLayouts {
             size > CAPACITY
     }
 
+    /**
+     * Forget where every line's characters were, because the text has been laid out again.
+     *
+     * A remembered layout is a line's character boxes scaled to the size it has now, which
+     * survives a scroll and a resize. It does not survive the text itself changing size: after
+     * a font-scale change the words are wider than the boxes they were measured into.
+     */
+    fun forget() = kept.clear()
+
     private fun key(text: String, from: Int, length: Int): String =
         text.length.toString() + ":" + text.hashCode() + ":" + from + ":" + length
 

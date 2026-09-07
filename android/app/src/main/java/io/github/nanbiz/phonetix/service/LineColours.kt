@@ -96,6 +96,23 @@ class LineColours(
         return true
     }
 
+    /**
+     * Forget every colour read anywhere, because the screen they were read from is gone.
+     *
+     * A theme change repaints every app on the device without changing a word of their text,
+     * and these are keyed by text: after switching to a dark theme the transcriptions kept
+     * the light background they were read on and sat on the page as pale patches.
+     */
+    fun forget() {
+        lines.clear()
+        tries.clear()
+        surfaces.clear()
+        byPackage.clear()
+        page = null
+        forPackage = null
+        cleanFrameAt = 0L
+    }
+
     /** Whether this line is still worth stepping aside for. */
     fun wanted(text: String, now: Long = SystemClock.uptimeMillis()): Boolean {
         val k = key(text)
