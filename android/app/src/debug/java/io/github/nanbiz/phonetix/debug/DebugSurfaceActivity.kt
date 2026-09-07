@@ -298,6 +298,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.gapMs =
                     i.getIntExtra("gapMs", 16).toLong()
             }
+            if (i.hasExtra("hurriedTenths")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.HURRIED_PX_PER_MS =
+                    i.getIntExtra("hurriedTenths", 10) / 10f
+            }
             if (i.hasExtra("anchors")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.ANCHORS =
                     i.getIntExtra("anchors", 3)

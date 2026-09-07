@@ -1530,7 +1530,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
         lastShiftY = 0f
         lastShiftX = 0f
         cachedPlan = added
-        cachedPainted = cachedPainted + seen
+        // Only what is still on the screen, and only the plan's own lines.
+        //
+        // Both of these are added to on every strip read and neither was ever taken from, so
+        // a page scrolled for a while carried a plan of lines that had left long ago and a
+        // list of painted rectangles that grew without bound - and every word of every pass
+        // is tested against every one of those to see what covers it. Photographed, that is a
+        // page that gets worse the more it is scrolled: three swipes in a row kept 65%, then
+        // 33%, then 12% of their lines carrying a transcription.
+        val screen = android.graphics.Rect(
+            0, -resources.displayMetrics.heightPixels,
+            resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels * 2,
+        )
+        cachedPainted = (cachedPainted + seen)
+            .filter { android.graphics.Rect.intersects(it.rect, screen) }
+            .takeLast(MAX_PAINTED)
+        cachedPlan = cachedPlan.filter { p ->
+            val at = p.measuredAt ?: return@filter true
+            android.graphics.Rect.intersects(at, screen)
+        }
         lastFullReadAt = android.os.SystemClock.uptimeMillis()
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
@@ -1834,6 +1852,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         @JvmStatic
         var MEASURE_MOVING_MAX = 12
 
+        /** How many painted rectangles are kept for working out what covers what. A screen
+         *  holds a hundred or so; beyond that they are old ones from before a scroll. */
+        const val MAX_PAINTED = 256
+
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24
 
@@ -1875,7 +1897,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var ANCHORS_WHEN_KNOWN = 1
         /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
          *  lines: at this rate the page moves a line's height in the time one answer takes. */
-        const val HURRIED_PX_PER_MS = 1.0f
+        /**
+         * Below this the lines are asked whether they are still the lines they were; above
+         * it the pass spends its round trips on where the words are instead.
+         *
+         * It was a pixel a millisecond, which is faster than an ordinary drag - so through
+         * every drag a reader makes, each pass spent two to four extra round trips into an
+         * app already busy laying out a scroll, on top of the one that measures the movement.
+         * Passes are what the whole thing is bound by: photographed through drags of a page
+         * that does not recycle, skipping the checks took the share of lines carrying a
+         * transcription from three fifths to over three quarters, and the typical
+         * transcription no further from its word. On a list, where the checks are also what
+         * notices a recycled row and transcribes it, the two cancel and it makes no odds.
+         *
+         * So they wait for the page to be nearly stopped, which is when what they protect
+         * matters: a plan about to be followed on a screen standing still.
+         */
+        @Volatile
+        @JvmStatic
+        var HURRIED_PX_PER_MS = 0.3f
         /** Shorter than this, a window standing over the app is one of ours: every
          *  transcription is a window the height of a word. A keyboard is half a screen. */
         const val MIN_BLOCKER = 240

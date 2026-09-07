@@ -278,13 +278,19 @@ def while_scrolling(r, dev, into, still_count):
     # do not move about like that.
     frames = []
     before = []
-    for _ in range(SWIPES):
+    each = []
+    for swipe_number in range(SWIPES):
         dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=900)
         # Waited for, not timed. A page that has only just been laid out is still having its
         # colours read, and a line without colours is not drawn - so a swipe photographed too
         # soon measures the reading rather than the movement. Three and a half seconds was
         # enough on the machine this was written on and is not on a busier one.
         wait_until_carried(dev, into)
+        # A moment for the machine to be idle again. Photographing the screen is the most
+        # expensive thing this suite does, and waiting for the page to be ready costs up to
+        # ten photographs - so the swipe that followed was measured on a device still working
+        # through them, which is exactly the thing the measurement is sensitive to.
+        time.sleep(2.0)
         # What this page carries standing still, at the position the swipe starts from. The
         # count taken at the top of the suite is of a different screen, and comparing against
         # it measures how many lines that screen happened to have rather than how many this
@@ -304,10 +310,31 @@ def while_scrolling(r, dev, into, still_count):
         swipe.start()
         # A moment for the gesture to start moving the page, then photograph it while it does.
         time.sleep(0.25)
-        frames += shots(dev, into, FRAMES, keep=len(frames))
+        mine = shots(dev, into, FRAMES, keep=len(frames))
+        frames += mine
+        each.append(mine)
         swipe.join(timeout=5)
     steady = judge(r, before, "standing still where the swipe starts", dev.height)[1]
-    judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING, against=steady)
+    # Judged one swipe at a time, and the middle one answered for.
+    #
+    # Pooling every frame of every swipe and taking the median across the lot reads whichever
+    # cluster happens to hold the middle frame: one bad swipe in three moved the answer from
+    # four fifths to a fifth, on runs that differed in nothing else. Each swipe is a movement
+    # in its own right and is judged as one.
+    kept = []
+    for i, mine in enumerate(each):
+        quiet = Results()
+        kept.append(judge(quiet, mine, f"swipe {i + 1}", dev.height, bar=WHILE_MOVING)[1])
+    kept.sort()
+    middle = kept[len(kept) // 2] if kept else 0
+    judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING)
+    r.check(
+        middle >= steady * KEPT_MOVING,
+        "through a finger swipe: the page keeps its transcriptions",
+        f"the middle swipe of {len(kept)} kept {100 * middle:.0f}% of the lines carrying one, "
+        f"against {100 * steady:.0f}% standing still, of {100 * KEPT_MOVING:.0f}% wanted "
+        f"(the swipes: {', '.join(f'{100 * k:.0f}%' for k in kept)})",
+    )
 
 
 def turned_sideways(r, dev, into):
