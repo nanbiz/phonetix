@@ -1704,12 +1704,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FULL_READ_MOVING_MS = 2500L
         /** How much of a plan's words have to survive the following for it to still describe
          *  the screen. Below this, most of what a reader is looking at has never been read. */
-        /** How many lines a single read may measure from scratch while the page is moving.
-         *  Every one of them makes the app lay that line out again, which costs the app
-         *  frames of its own scroll, so the work is spread over several reads. */
+        /**
+         * How many lines a single read may measure from scratch while the page is moving.
+         *
+         * Every one of them makes the app lay that line out again, and that comes out of the
+         * app's own scrolling: photographed through a drag, the page reported seventy-eight
+         * positions when it was left alone, and sixty to seventy-six while its lines were
+         * being measured, in coarser steps. What it buys is the transcriptions on the lines
+         * that scroll into view - the share of a moving page's lines carrying one went from a
+         * quarter to about half. Two and twelve were both measured and are both worse: two
+         * cannot keep up with what arrives, and twelve costs enough of the app's frames that
+         * what is drawn lands further from its word.
+         */
         @Volatile
         @JvmStatic
-        var MEASURE_MOVING_MAX = 2
+        var MEASURE_MOVING_MAX = 6
 
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24
