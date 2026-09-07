@@ -1392,15 +1392,29 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * hundreds a full read takes.
      */
     private fun extendInBand(held: List<Planned>) {
-        val band = arrivingBand(held) ?: return
-        val root = rootInActiveWindow ?: return
+        val began = android.os.SystemClock.uptimeMillis()
+        val band = arrivingBand(held) ?: run {
+            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND none to read")
+            return
+        }
+        val root = rootInActiveWindow ?: run {
+            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND no root")
+            return
+        }
+        val gotRoot = android.os.SystemClock.uptimeMillis()
         val settings = SettingsStore.current
         val fresh = ArrayList<Planned>(8)
         val seen = ArrayList<Painted>(32)
         runCatching {
             plan(root, Transcriber(settings.density), fresh, Budget(), Stats(), band, seen)
         }
-        if (fresh.isEmpty()) return
+        val walked = android.os.SystemClock.uptimeMillis()
+        if (fresh.isEmpty()) {
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "BAND ${band.top}..${band.bottom} held nothing")
+            }
+            return
+        }
         // Everything already held is brought up to where it now stands, so that one shift
         // describes lines read at two different moments.
         val already = HashSet<String>(held.size * 2)
@@ -1427,7 +1441,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
-                "BAND ${band.top}..${band.bottom} read ${fresh.size}, plan now ${added.size}",
+                "BAND ${band.top}..${band.bottom} read ${fresh.size}, plan now ${added.size}, " +
+                    "took ${android.os.SystemClock.uptimeMillis() - began}ms " +
+                    "(root ${gotRoot - began}ms, walk ${walked - gotRoot}ms)",
             )
         }
     }
@@ -1728,8 +1744,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  read costs tens of milliseconds during which nothing is followed at all. */
         const val FULL_READ_TURNOVER_MS = 350L
 
-        /** How much of what a moving page was carrying has to have scrolled away before it
-         *  is read again mid-movement, and how long apart two such readings may be. */
+        /**
+         * How much of what a moving page was carrying has to have scrolled away before the
+         * strip that has arrived is read, and how long apart two such readings may be.
+         *
+         * Both are set by what such a reading costs, which is not what it looks like. Only a
+         * few lines are measured, but finding them means asking every node on the way down
+         * where it is, and the walk alone timed at about 195ms on this emulator against 4 to
+         * 121ms to fetch the window - so a strip costs two to three hundred milliseconds,
+         * about what a whole screen costs, and the words are carried blind for all of it.
+         * Firing it oftener was measured and does not help for that reason.
+         */
         @Volatile
         @JvmStatic
         var MOSTLY_GONE = 0.25f
