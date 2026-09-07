@@ -140,7 +140,7 @@ class LineColours(
      */
     class Decision(val colours: WordColors?, val givenUp: Boolean)
 
-    fun decide(text: String, top: Int = -1): Decision {
+    fun decide(text: String, top: Int = -1, where: RectF? = null): Decision {
         val k = key(text)
         val capturingNow = capturing && SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
         val tried = tries[k]
@@ -161,11 +161,24 @@ class LineColours(
                 own.colours
             else
                 null
-            mine ?: nearestSurface(top) ?: page
+            // Failing that, read the surface under it now, out of the last picture taken
+            // while the overlay was down. The attempts that were meant to read it may all
+            // have come at bad moments - before the page settled, while it moved - and there
+            // is usually still a good picture to hand. This is a lookup in a bitmap, not
+            // another capture: nothing blinks for it.
+            mine ?: readSurfaceNow(k, where) ?: nearestSurface(top) ?: page
         } else {
             null
         }
         return Decision(c, givenUp)
+    }
+
+    /** The surface under a line, read from the picture already in hand, and kept. */
+    private fun readSurfaceNow(k: String, where: RectF?): WordColors? {
+        if (where == null || where.isEmpty) return null
+        val under = sampler.surfaceUnder(where) ?: return null
+        surfaces[k] = Surface(under, where.top.toInt())
+        return under
     }
 
     /**

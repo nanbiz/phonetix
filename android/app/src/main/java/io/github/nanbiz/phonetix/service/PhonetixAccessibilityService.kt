@@ -48,6 +48,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var generation = 0
     /** Where other windows - a keyboard above all - stand over the app being read. */
     @Volatile private var blockers: List<android.graphics.Rect> = emptyList()
+    /** How many times running the thing in front has been something we do not transcribe,
+     *  so a shade closing is waited out and a launcher sitting there is not polled for ever. */
+    @Volatile private var lookAgain = 0
     /** Apps already named in the log as never standing still. */
     private val waitedOut = HashSet<String>(4)
     /** Apps already named in the log as giving no character bounds, so each is said once. */
@@ -198,8 +201,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // re-read which windows now stand over that app, and the whole screenful of
             // transcriptions stayed painted on top of the shade.
             if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                // Looked at once the movement is over rather than at once. These windows
+                // arrive and leave with an animation, and during it the thing in front is
+                // still the shade: a look taken then finds nothing of ours, hides everything,
+                // and the app underneath - which is not sending anything, it did not change -
+                // never prompts another. The transcriptions stayed gone until something else
+                // happened on screen.
                 scrollOnly = false
-                schedule(GAP_MS)
+                schedule(AFTER_A_SYSTEM_WINDOW, trailing = true)
                 return
             }
             // Said once per app, because an app dropped here is dropped before anything else
@@ -408,6 +417,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val inFront = root?.packageName?.toString()
         if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
             main.post { overlay.hideNow() }
+            // And look again in a moment. What is in front is usually on its way somewhere -
+            // the notification shade closing, the recents screen going away - and while it
+            // animates it is still the thing in front. The app underneath sends nothing more
+            // once its own window has changed, so the look taken then was the last one and
+            // the transcriptions stayed gone until something else happened on screen.
+            //
+            // Posted on the main thread rather than the worker: the worker's queue is emptied
+            // whenever a fresh pass is asked for, and the events that arrive alongside this
+            // ask for one - so a re-look posted there is cancelled by the very thing that
+            // made it necessary.
+            if (SettingsStore.current.enabled && lookAgain < LOOK_AGAIN_TIMES) {
+                lookAgain++
+                main.postDelayed({ scrollOnly = false; schedule(0L) }, LOOK_AGAIN_MS)
+            }
             // Reported as an empty screen rather than saying nothing at all: silence here
             // reads to anyone watching as "the last set is still up", which is the very
             // thing that went wrong.
@@ -420,6 +443,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             return
         }
 
+        lookAgain = 0
         val pkg = if (root != null) root.packageName?.toString() else cachedPackage
         val t0 = android.os.SystemClock.uptimeMillis()
 
@@ -672,7 +696,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // with for as long as the screen kept moving, and nothing is drawn as black:
                 // a black patch over a word on a coloured page, which is what it did on a
                 // music player whose title sits on its cover art.
-                val decision = colours.decide(p.text, p.measuredAt?.top ?: -1)
+                val decision = colours.decide(p.text, p.measuredAt?.top ?: -1, colorRect(p))
                 val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
@@ -1021,7 +1045,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the next pass too rather than appearing the moment its colours come.
         val painted = ArrayList<WordBox>(boxes.size)
         for (p in planned) {
-            val decision = colours.decide(p.text, p.measuredAt?.top ?: -1)
+            val decision = colours.decide(p.text, p.measuredAt?.top ?: -1, colorRect(p))
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
             if (c != null || decision.givenUp) painted.addAll(p.boxes)
@@ -1426,6 +1450,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Shorter than this, a window standing over the app is one of ours: every
          *  transcription is a window the height of a word. A keyboard is half a screen. */
         const val MIN_BLOCKER = 240
+
+        /** How long to let a system window - the shade, the recents screen - finish coming
+         *  or going before looking at what is in front, and how many times to try. */
+        const val AFTER_A_SYSTEM_WINDOW = 600L
+        const val LOOK_AGAIN_MS = 500L
+        const val LOOK_AGAIN_TIMES = 6
 
         /** A page that has all but stopped: slow enough that reading it again in full is
          *  worth the moment the overlay stands still for. */
