@@ -181,8 +181,15 @@ Ticked items are done and verified by a suite; the rest are not.
   semi-transparent. Such a pair is rejected now and the line takes ink that is legible on the
   surface it stands on; `android_ink.py` holds every drawn word to it, on a plain page, a
   gradient, a dark page, through a scroll and on the settings app.
-- [ ] **A drag keeps between a fifth and four fifths of its transcriptions, and it is the
-  app's speed that decides.** Photographed through drags of a screen and a half: standing still 78-83% of
+- [ ] **A drag keeps between two fifths and four fifths of its transcriptions.** What is
+  missing is the lines arriving at the bottom: they are not in the plan, and putting them
+  there means reading the strip of screen they arrived in, which costs 130ms typically and
+  400 at worst because finding them means asking every node on the way down where it is. Two
+  or three such reads fit in a drag and a drag of a screen and a half brings fourteen lines.
+  Reading from the container the page scrolls in rather than the window does not help, nor
+  does letting a half-arrived line keep the words still outside the window it scrolls in.
+- [ ] **The old note, which is still true of what is left: it is the app's speed that
+  decides.** Photographed through drags of a screen and a half: standing still 78-83% of
   the page's lines carry a transcription, a fling 88-94%, a drag 50-88%. What separates a good
   drag from a bad one is how often the app answers - the following managed between 18 and 121
   passes through the same 1.3s drag on the same build, and what is carried tracks that almost

@@ -1538,6 +1538,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND none to read")
             return
         }
+        // From the window. Walking from the thing the page scrolls in instead was tried, on
+        // the reasoning that it holds the lines arriving and none of the app's furniture: no
+        // better, a strip costing 106 to 214ms against 132 either time, because finding that
+        // container means walking up from a line and asking each parent where it is, which
+        // costs what it saves.
         val root = rootInActiveWindow ?: run {
             if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND no root")
             return
