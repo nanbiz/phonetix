@@ -1452,6 +1452,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
         Transcriber.boxes(p.picks, rects, p.from, made)
         if (remembered != null) p.node.getBoundsInScreen(at)
         p.measuredAt = at
+        // Only the words inside the window this line scrolls in.
+        //
+        // What the bottom of a moving screen is missing is not these: photographed through a
+        // drag, the lines without a transcription are the ones arriving at the bottom - in one
+        // frame, all seven of them - and letting a line arriving from that edge keep the words
+        // that are still outside the window was measured and does not help. Nor does keeping
+        // every word wherever it is, which is worse: a word nowhere near the window counts as
+        // one the page has scrolled away from, and that is what decides whether the plan still
+        // describes the screen, so every pass believed it had moved on. Those lines are simply
+        // not in the plan yet.
         p.boxes = made.filter { b ->
             val r = b.rect
             r.left >= p.viewport.left - 1 && r.top >= p.viewport.top - 1 &&
