@@ -181,6 +181,17 @@ Ticked items are done and verified by a suite; the rest are not.
   semi-transparent. Such a pair is rejected now and the line takes ink that is legible on the
   surface it stands on; `android_ink.py` holds every drawn word to it, on a plain page, a
   gradient, a dark page, through a scroll and on the settings app.
+- [ ] **A drag keeps about three quarters of its transcriptions, and it is the app's speed
+  that decides.** Photographed through drags of a screen and a half: standing still 78-83% of
+  the page's lines carry a transcription, a fling 88-94%, a drag 50-88%. What separates a good
+  drag from a bad one is how often the app answers - the following managed between 18 and 121
+  passes through the same 1.3s drag on the same build, and what is carried tracks that almost
+  exactly (18 passes, half the lines; 121 passes, four fifths). Each pass is a round trip into
+  an app busy laying out a scroll, so this is the emulator's speed rather than anything in the
+  overlay, and a phone sits at the fast end of it. Nothing here is worth tuning against on this
+  machine: the last four sweeps (a lead on the prediction, correcting the measured drift,
+  reading strips oftener, reading them on their own thread) all came back inside that variance
+  or worse, and were reverted.
 - [ ] **What is drawn still lags at speed.** Slow reading scrolls sit within a line's height;
   a brisk fling is 130-270px behind, and the emulator's 5-8px/ms flings several hundred. The
   limit is the round trip into a busy app, ten-odd milliseconds each, several per reading.

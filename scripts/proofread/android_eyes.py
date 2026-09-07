@@ -248,6 +248,21 @@ def still(r, dev, into):
     return judge(r, shots(dev, into, 3, gap=0.2), "standing still", dev.height)[1]
 
 
+def wait_until_carried(dev, into, want=0.6, tries=10):
+    """Wait until most of the page's lines actually carry a transcription."""
+    for _ in range(tries):
+        time.sleep(1.2)
+        taken = shots(dev, into + "-wait", 1)
+        if not taken:
+            continue
+        image = Image.open(taken[0][1]).convert("RGB")
+        lines = rows_of(image, is_line)
+        chips = rows_of(image, is_chip)
+        if lines and len(chips) / len(lines) >= want:
+            return True
+    return False
+
+
 def while_scrolling(r, dev, into, still_count):
     """Photographed through a real finger swipe, which is the only way a reader scrolls.
 
@@ -265,7 +280,11 @@ def while_scrolling(r, dev, into, still_count):
     before = []
     for _ in range(SWIPES):
         dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=900)
-        time.sleep(3.5)
+        # Waited for, not timed. A page that has only just been laid out is still having its
+        # colours read, and a line without colours is not drawn - so a swipe photographed too
+        # soon measures the reading rather than the movement. Three and a half seconds was
+        # enough on the machine this was written on and is not on a busier one.
+        wait_until_carried(dev, into)
         # What this page carries standing still, at the position the swipe starts from. The
         # count taken at the top of the suite is of a different screen, and comparing against
         # it measures how many lines that screen happened to have rather than how many this
