@@ -258,6 +258,34 @@ def turned_sideways(r, dev, into):
         time.sleep(3)
 
 
+def through_a_fling(r, dev, into):
+    """Thrown rather than dragged, which is how a page is usually moved.
+
+    A drag is a hand keeping pace with the eye; a fling is the page carrying on by itself,
+    fastest at the moment the finger leaves and slowing after. It is the movement this was
+    first reported broken on, and the only way to see it is to photograph it.
+    """
+    frames = []
+    for _ in range(SWIPES):
+        dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=1200)
+        time.sleep(4)
+        throw = threading.Thread(
+            target=shell,
+            args=(
+                "input", "swipe",
+                str(dev.width // 2), str(int(dev.height * 0.78)),
+                str(dev.width // 2), str(int(dev.height * 0.26)),
+                "120",
+            ),
+            daemon=True,
+        )
+        throw.start()
+        time.sleep(0.15)
+        frames += shots(dev, into, 10, keep=len(frames))
+        throw.join(timeout=5)
+    judge(r, frames, "through a fling", dev.height, bar=WHILE_MOVING)
+
+
 def at_a_larger_font(r, dev, into):
     """A reader who has made the text bigger, which is who an overlay like this is for.
 
@@ -302,6 +330,7 @@ def main():
     still(r, dev, into)
     while_scrolling(r, dev, into)
     after_it_stops(r, dev, into)
+    through_a_fling(r, dev, into)
     at_a_larger_font(r, dev, into)
     turned_sideways(r, dev, into)
     print(f"\n{r.passed}/{r.total} checks passed")

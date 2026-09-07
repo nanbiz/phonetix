@@ -21,6 +21,10 @@ Ticked items are done and verified by a suite; the rest are not.
   the turnover re-read fired on any page under a pixel a millisecond, which is every drag a
   reader can read along with. Through a finger swipe, photographed: typical error 7 pixels of
   the capture (was 9-11), nine in ten within 16 (was 21), worst 20 (was 54).
+- [x] **A fling is photographed too, since that is the movement this was reported broken on.**
+  Typical transcription 30px from its word, nine in ten within 57, worst 60 - about half a line
+  and a line. A drag is 18px typical. Still and settled are 3px, at every font size and turned
+  sideways.
 - [ ] **A tenth of the frames through a swipe are still about a line out.** What is left is the
   gap between readings - 60 to 130ms on the emulator, where one round trip into a busy app
   costs ten. A phone should do better; there is no way to measure that from here.
