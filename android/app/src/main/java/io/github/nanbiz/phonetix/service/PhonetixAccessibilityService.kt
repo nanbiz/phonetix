@@ -75,6 +75,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var previousTops: Map<String, Int> = emptyMap()
     @Volatile private var following = false
 
+    /** Whether a read has already been asked for after a movement, so one is not queued for
+     *  every pass of the follow that noticed the page had stopped. */
+    @Volatile private var readPending = false
+
     // What the last full pass found. A scroll moves these words without changing them, so
     // the next pass can ask them directly for their new positions instead of walking the
     // whole tree again - which is sixty-odd calls into the other app, against five.
@@ -388,6 +392,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * only while events keep arriving does the next pass wait, and then just long enough to
      * keep a flood from turning into a queue of passes.
      */
+    /**
+     * Make sure a proper read happens once, a moment from now, cancelling nothing.
+     *
+     * Not the ordinary scheduling: that clears everything the worker was going to do, which
+     * is right when a fresh event has made the pending work stale and wrong here, where the
+     * point is only that the screen must not be left half read. If anything else scans in the
+     * meantime this stands down.
+     */
+    private fun readAgainSoon(delay: Long) {
+        if (!::worker.isInitialized || readPending) return
+        readPending = true
+        val was = lastFullReadAt
+        worker.postDelayed({
+            readPending = false
+            if (lastFullReadAt != was) return@postDelayed
+            if (following) return@postDelayed
+            scrollOnly = false
+            runCatching { scan() }
+        }, delay)
+    }
+
     private fun schedule(minGap: Long, trailing: Boolean = false) {
         if (!::worker.isInitialized) return
         val mine = ++generation
@@ -967,6 +992,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
                             "clipped=$clipped covered=$hidden unreadable=$unreadable",
                     )
                 }
+                // A page that has stopped has to be read properly, and nothing else will ask.
+                //
+                // The loop that follows a movement reads the screen when it goes idle, but it
+                // is not always the thing that ends: an event arriving near the end of a
+                // scroll schedules a pass of its own, and scheduling clears the loop. What
+                // ran then was a single following pass, which carries the words already known
+                // and cannot know about the lines that scrolled in - and nothing was left to
+                // ask again, because a list holding still announces nothing. Measured on a
+                // list after a drag: six of seventeen lines carried a transcription, and
+                // stayed that way for as long as the reader looked at it.
+                if (!following && !moving) {
+                    val due = FULL_READ_MS -
+                        (android.os.SystemClock.uptimeMillis() - lastFullReadAt)
+                    readAgainSoon(due.coerceIn(0L, FULL_READ_MS))
+                }
                 return
             }
             android.util.Log.d("Phonetix", "follow gave up: $why")
@@ -1155,8 +1195,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // page came back as the grey half way between them, on every word of the page. What
         // says it is moving is a shift this service measured, not an app announcing that
         // something on it changed.
+        //
+        // When the page last moved, not when it was last measured. This asked how long since
+        // the last reading of the lines' positions, which is a different clock entirely: it
+        // is set by every pass of the follow, shift or no shift, so on any screen the follow
+        // was still running over - a list that announces itself, an app that redraws - it was
+        // never more than a few milliseconds old and the colours were never read at all. The
+        // lines that scrolled in during a drag were then held back for want of colours that
+        // nothing was going to fetch, and the page a reader was left looking at after
+        // scrolling carried transcriptions on a third of its lines.
         val stillEnough = kotlin.math.abs(speedY) < SETTLING_PX_PER_MS &&
-            android.os.SystemClock.uptimeMillis() - lastShiftAt > STILL_MS
+            android.os.SystemClock.uptimeMillis() - lastMotionAt > STILL_MS
         val unread = if (!stillEnough) emptyList()
         else planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
         if (unread.isNotEmpty()) {
