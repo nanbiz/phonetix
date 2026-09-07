@@ -1695,16 +1695,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var mark = System.nanoTime()
         val visible = node.isVisibleToUser
         var plannedHere = -1
-        val text = if (visible) node.text?.toString() else null
-        stats.ipcNs += System.nanoTime() - mark
-        stats.calls++
-        if (!visible) return
-
         // Bounds travel with the node, so narrowing the clip on the way down costs nothing
         // and is the only thing that knows a word has scrolled under a toolbar: a node can
         // be "visible to user" while the part of it holding the word is covered.
         val bounds = android.graphics.Rect()
         node.getBoundsInScreen(bounds)
+        // Only what can be seen. Reading a screen beyond each edge as well was tried twice,
+        // because the lines a drag is missing are exactly the ones about to arrive: it finds
+        // nothing. The same ten lines are planned either way, since a node the app has not
+        // shown is not visible to the accessibility tree and does not report a rectangle
+        // outside the screen for one to reach.
+        val text = if (visible) node.text?.toString() else null
+        stats.ipcNs += System.nanoTime() - mark
+        stats.calls++
+        if (!visible) return
         val clip = android.graphics.Rect(inherited)
         if (!bounds.isEmpty && !clip.intersect(bounds)) return
 
