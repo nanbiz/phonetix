@@ -442,6 +442,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }, delay)
     }
 
+
+    /**
+     * Whether the page is going somewhere.
+     *
+     * A shift this service measured just now, or one seen a moment ago - either will do, and
+     * asking for only one of them is what put the two halves of the drawing out of step. A
+     * reading that comes back with the same positions, from an app too busy to have laid
+     * itself out again, reads as a speed of nothing while the page is plainly still moving;
+     * an app that says nothing at all between its own frames leaves the clock stale while the
+     * speed is right. Everything that has to know asks this.
+     */
+    private fun onTheMove(): Boolean =
+        kotlin.math.abs(speedY) > SETTLING_PX_PER_MS ||
+            android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+
     private fun scan() {
         val settings = SettingsStore.current
         val sinceFull = android.os.SystemClock.uptimeMillis() - lastFullReadAt
@@ -809,7 +824,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // music player whose title sits on its cover art.
                 val decision = colours.decide(
                     p.text, p.measuredAt?.top ?: -1, colorRect(p),
-                    impatient = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS,
+                    impatient = onTheMove(),
                 )
                 val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
@@ -826,10 +841,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // that had arrived without colours was withheld through it. On a list, where
                 // most of a drag's words are new, that is two swipes in eight showing under a
                 // tenth of their lines while the service reported thirty words drawn.
-                val onTheMove = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS ||
-                    android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
                 if (own == null && p.boxes.first().background == 0 && !decision.givenUp &&
-                    !onTheMove
+                    !onTheMove()
                 ) {
                     continue
                 }
@@ -967,7 +980,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // It is held to a larger loss and a longer wait than a settled page, because
                 // reading costs a few hundred milliseconds during which the words are carried
                 // on at the speed they had and then stand still.
-                val moving = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS
+                val moving = onTheMove()
                 val lost = if (moving) MOSTLY_GONE else 1f - KEPT_ENOUGH
                 val wait = if (moving) TURNOVER_MOVING_MS else FULL_READ_TURNOVER_MS
                 if (had > 0 && clipped > had * lost && fresh > wait) {
@@ -1009,10 +1022,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // word a frame of being invisible while its window moves. The speed the
                 // reading itself measured says whether the page is going anywhere, and it
                 // falls to nothing on its own once the readings agree.
-                val moving = following && (
-                    android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS ||
-                        kotlin.math.abs(speedY) > SETTLING_PX_PER_MS
-                    )
+                val moving = following && onTheMove()
                 if (BuildConfig.DEBUG) {
                     // Stamped with when the positions were read, not with when the line was
                     // written: they describe the page as it was at that instant.
@@ -1093,7 +1103,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // A line that cannot be placed from memory is therefore left alone until the
             // movement stops; it is one of the part-hidden lines at the edges of the screen,
             // and it comes back with the next full read.
-            val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+            val moving = onTheMove()
             // A line nobody has measured before, on a page that is moving.
             //
             // Asking an app where the characters of a line are makes it lay that text out
@@ -1167,6 +1177,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // so the compensation below was skipped in the case that most needed it, and a page
         // read from top to bottom during a movement came out as a screen that never existed.
         var during = 0f
+        // Recency alone here, not the speed as well: this compensates a read that spanned a
+        // movement, and a stale speed with no movement behind it made it correct a read that
+        // had nothing to correct.
         if (!reuse && android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS) {
             val first = planned.firstOrNull { lineReadAt[it] != null && it.boxes.isNotEmpty() }
             val was = first?.measuredAt
@@ -1253,8 +1266,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // lines that scrolled in during a drag were then held back for want of colours that
         // nothing was going to fetch, and the page a reader was left looking at after
         // scrolling carried transcriptions on a third of its lines.
-        val stillEnough = kotlin.math.abs(speedY) < SETTLING_PX_PER_MS &&
-            android.os.SystemClock.uptimeMillis() - lastMotionAt > STILL_MS
+        val stillEnough = !onTheMove()
         val unread = if (!stillEnough) emptyList()
         else planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
         if (unread.isNotEmpty()) {
@@ -1271,7 +1283,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         for (p in planned) {
             val decision = colours.decide(
                 p.text, p.measuredAt?.top ?: -1, colorRect(p),
-                impatient = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS,
+                impatient = onTheMove(),
             )
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
@@ -1285,8 +1297,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // all. Photographed at the display's own resolution: two frames running, some four
             // hundred milliseconds, with not one transcription on a page full of text, in the
             // middle of the drag that caused the read.
-            val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
-            if (c != null || decision.givenUp || moving) painted.addAll(p.boxes)
+            if (c != null || decision.givenUp || onTheMove()) painted.addAll(p.boxes)
             if (BuildConfig.DEBUG && c == null && decision.givenUp) {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
@@ -1635,7 +1646,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
      */
     private fun arrivingBand(held: List<Planned>): android.graphics.Rect? {
         if (held.isEmpty()) return null
-        if (kotlin.math.abs(speedY) <= SETTLING_PX_PER_MS) return null
+        if (!onTheMove()) return null
         val dm = resources.displayMetrics
         var top = Int.MAX_VALUE
         var bottom = Int.MIN_VALUE
