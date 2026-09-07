@@ -1817,18 +1817,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /**
          * How many lines a single read may measure from scratch while the page is moving.
          *
-         * Every one of them makes the app lay that line out again, and that comes out of the
-         * app's own scrolling: photographed through a drag, the page reported seventy-eight
-         * positions when it was left alone, and sixty to seventy-six while its lines were
-         * being measured, in coarser steps. What it buys is the transcriptions on the lines
-         * that scroll into view - the share of a moving page's lines carrying one went from a
-         * quarter to about half. Two and twelve were both measured and are both worse: two
-         * cannot keep up with what arrives, and twelve costs enough of the app's frames that
-         * what is drawn lands further from its word.
+         * Every one of them makes the app lay that line out again, which is why there is a
+         * limit at all. What it buys is the transcriptions on the lines scrolling into view:
+         * the share of a moving page's lines carrying one is about a fifth without this.
+         *
+         * Twelve, measured against six over three drags each: three fifths of the lines
+         * against under a half, and steadier - six ranged from a fifth to two thirds. It was
+         * set to six on an earlier measurement taken while a separate fault kept the colours
+         * from ever being read, which held back the very lines this was measuring.
+         *
+         * What it costs the app is too small to see at this figure: the page reported 73 to
+         * 75 positions through a drag against 76 to 77 with none of this, in steps of the
+         * same size. Somewhere above it that stops being true.
          */
         @Volatile
         @JvmStatic
-        var MEASURE_MOVING_MAX = 6
+        var MEASURE_MOVING_MAX = 12
 
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24
