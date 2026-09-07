@@ -57,6 +57,9 @@ FRAMES = 16
 SWIPE_MS = 1400
 # How many swipes are photographed and judged together.
 SWIPES = 3
+# The font size a reader who needs one sets. Android goes to 2.0; this is the ordinary end of
+# "larger", and the placement holds from 0.85 through 1.5.
+BIGGER = 1.3
 # A single frame of a movement may be further out than the rest without anyone seeing it, so
 # the occasional one is held to a looser bound than the typical one - this many times looser,
 # which is about a line.
@@ -143,6 +146,14 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE):
             continue
         if not lines:
             continue
+        # Only where the page has told us something. A row cut off by the bottom of the
+        # screen shows its text but not the bar at its left, so a transcription down there
+        # has nothing to be held against - and was being held against the last row that did
+        # have one, two lines above it.
+        first, last = min(lines), max(lines)
+        chips = [y for y in chips if first - allowed <= y <= last + allowed]
+        if not chips:
+            continue
         seen += len(chips)
         for y in chips:
             off = min(abs(y - line) for line in lines)
@@ -220,6 +231,25 @@ def while_scrolling(r, dev, into):
     judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING)
 
 
+def at_a_larger_font(r, dev, into):
+    """A reader who has made the text bigger, which is who an overlay like this is for.
+
+    Everything else here runs at the size the device came with. A larger font changes the
+    height of every line and the width of every word, and the transcriptions are placed from
+    where the app says its characters are - so if that ever stopped agreeing with what is
+    drawn, this is where it would show.
+    """
+    shell("settings", "put", "system", "font_scale", str(BIGGER))
+    try:
+        time.sleep(3)
+        dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=300)
+        time.sleep(5)
+        judge(r, shots(dev, into, 3, gap=0.2), f"at {BIGGER} times the font size", dev.height)
+    finally:
+        shell("settings", "put", "system", "font_scale", "1.0")
+        time.sleep(2)
+
+
 def after_it_stops(r, dev, into):
     time.sleep(2.5)
     judge(r, shots(dev, into, 3, gap=0.3), "once it has stopped", dev.height)
@@ -239,6 +269,7 @@ def main():
     still(r, dev, into)
     while_scrolling(r, dev, into)
     after_it_stops(r, dev, into)
+    at_a_larger_font(r, dev, into)
     print(f"\n{r.passed}/{r.total} checks passed")
     if r.failures:
         print(f"\nFAIL - {len(r.failures)} problem(s):")
