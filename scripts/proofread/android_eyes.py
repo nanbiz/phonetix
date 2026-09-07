@@ -193,8 +193,14 @@ def still(r, dev, into):
     # Anything a previous suite left open is not part of this page.
     shell("input", "keyevent", "4")
     time.sleep(0.6)
-    dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=300)
-    time.sleep(4.0)
+    # Waited for there to be something to photograph. This is the first thing the suite does,
+    # so it is the one that pays for the dictionary being loaded, the colours being read and
+    # whatever the last suite left on screen.
+    for _ in range(6):
+        dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=300)
+        time.sleep(4.0)
+        if dev.boxes():
+            break
     judge(r, shots(dev, into, 3, gap=0.2), "standing still", dev.height)
 
 
