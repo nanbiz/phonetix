@@ -302,6 +302,13 @@ class MotionLayer(private val context: Context) {
         // own is enough: a Compose conversation answers every two hundred milliseconds and
         // has moved several lines by then, and an app answering late but predictably can be
         // carried through it.
+        // The first answer of a movement is taken on trust, and only the ones after it are
+        // judged. Demanding that the first arrive promptly too was tried, on the reasoning
+        // that the opening of a movement is otherwise drawn on trust - and it is worse: on a
+        // loaded machine even a page that can be followed takes a few hundred milliseconds to
+        // answer the first time, so the words were withheld at the start of every scroll and
+        // what was shown after was no better placed. Measured, twice each: 43% and 53% of
+        // what was on the screen named a word that was not under it, against 12% and 18%.
         followable = measurements < 2 ||
             (arrivedApart <= followableMs && drewOut <= wrongByPx)
         // How far apart the readings have been coming, which is how long a speed of theirs is
