@@ -43,14 +43,20 @@ def is_line(px):
 ON_THE_LINE = 14
 # And what is allowed while the page is actually moving under a finger.
 #
-# Not where this should stand - what a reader wants is the same fourteen pixels moving as
-# still - but where it stands, measured rather than hoped: pooling three swipes and repeating
-# that, the typical transcription is six to twelve pixels of the capture from its line, and
-# which end of that a run lands on depends on how much of the swipe the emulator renders. So
-# the bar is the worst of those with a little margin, and it is a ratchet against getting
-# worse while the thing that would fix it - reading the page's positions oftener than every
-# sixty to ninety milliseconds - is still to do.
-WHILE_MOVING = 42
+# What a reader needs, not what the code currently manages. This was set to the latter once -
+# forty-two pixels of the capture, which is nearly three lines of the page - on the reasoning
+# that a bar measured from behaviour is a ratchet against getting worse. It is not: it is a
+# test that passes while a transcription sits three lines from its word, which is what the
+# reader of this was complaining about the whole time it was green.
+#
+# The same bar as standing still, and for a reason that took a photograph to see. Half a line
+# was allowed here once, on the reasoning that a movement cannot be as exact as stillness. But
+# every transcription is judged against the nearest line of the page, and the lines of a page
+# are about a line apart: a transcription sitting exactly between two of them is half a line
+# from each, which scored as well as one sitting on its word. Photographed mid-drag, the
+# screen showed transcriptions floating in the gaps between the lines while this suite called
+# them placed. Anything looser than the still bar cannot tell the two apart.
+WHILE_MOVING = ON_THE_LINE
 # How many photographs to take through one movement, and how long the movement lasts. The
 # camera manages about twenty frames a second, so these are chosen to fill the swipe.
 FRAMES = 16
@@ -60,6 +66,11 @@ SWIPES = 3
 # The font size a reader who needs one sets. Android goes to 2.0; this is the ordinary end of
 # "larger", and the placement holds from 0.85 through 1.5.
 BIGGER = 1.3
+# How many of a still page's transcriptions have to survive the page being moved. Not all of
+# them: a line leaving the top of the screen takes its own with it, and a line arriving at the
+# bottom has not been read yet. Most of them, though - a reader scrolling a page of text
+# watched two thirds of them disappear for as long as the finger was down.
+KEPT_MOVING = 0.75
 # A single frame of a movement may be further out than the rest without anyone seeing it, so
 # the occasional one is held to a looser bound than the typical one - this many times looser,
 # which is about a line.
@@ -125,8 +136,15 @@ def shots(dev, into, count, gap=0.0, keep=0):
     return taken
 
 
-def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False):
-    """Every transcription in every frame has to be level with a line of the page."""
+def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False, against=None):
+    """Every transcription in every frame has to be level with a line of the page.
+
+    @param against how many transcriptions a frame of this page carries when it is standing
+        still. A movement that keeps them on their words but keeps only a third of them is
+        not a movement anybody would call working, and every check here but this one is
+        blind to it: they all judge the transcriptions that are on the screen, so the fewer
+        survive the better the page scores.
+    """
     worst = 0
     worst_at = ""
     seen = 0
@@ -183,10 +201,18 @@ def judge(r, frames, label, dev_height, bar=ON_THE_LINE, turn=False):
             f"on the screen), of {allowed} allowed")
     r.check(nearly_worst <= LOOSE * allowed, f"{label}: none of them wanders far",
             f"a tenth of them are further than {nearly_worst}, worst {worst} - {worst_at}")
-    print(f"  {label}: {len(frames)} frames, {seen} seen, median {middle}, "
-          f"nine in ten within {nearly_worst}, worst {worst} (allowed {allowed}, "
-          f"frame pixels of {ON_THE_LINE} on the screen)")
-    return worst
+    per_frame = seen / max(1, len([f for f in frames if f]))
+    if against:
+        r.check(
+            per_frame >= against * KEPT_MOVING,
+            f"{label}: the page keeps its transcriptions",
+            f"{per_frame:.1f} a frame against {against:.1f} standing still - "
+            f"{100 * per_frame / against:.0f}% of them, of {100 * KEPT_MOVING:.0f}% wanted",
+        )
+    print(f"  {label}: {len(frames)} frames, {seen} seen ({per_frame:.1f} a frame), "
+          f"median {middle}, nine in ten within {nearly_worst}, worst {worst} "
+          f"(allowed {allowed}, frame pixels of {ON_THE_LINE} on the screen)")
+    return worst, per_frame
 
 
 def still(r, dev, into):
@@ -201,10 +227,10 @@ def still(r, dev, into):
         time.sleep(4.0)
         if dev.boxes():
             break
-    judge(r, shots(dev, into, 3, gap=0.2), "standing still", dev.height)
+    return judge(r, shots(dev, into, 3, gap=0.2), "standing still", dev.height)[1]
 
 
-def while_scrolling(r, dev, into):
+def while_scrolling(r, dev, into, still_count):
     """Photographed through a real finger swipe, which is the only way a reader scrolls.
 
     The swipe is run on a thread of its own. `input swipe` does not return until the gesture
@@ -218,9 +244,16 @@ def while_scrolling(r, dev, into):
     # because how much of a swipe the emulator manages to render varies. Three hundred frames
     # do not move about like that.
     frames = []
+    before = []
     for _ in range(SWIPES):
         dev.surface(mode="unique", enable=1, density=3, allApps=1, marks=1, scrollTo=900)
         time.sleep(3.5)
+        # What this page carries standing still, at the position the swipe starts from. The
+        # count taken at the top of the suite is of a different screen, and comparing against
+        # it measures how many lines that screen happened to have rather than how many this
+        # movement kept.
+        # In a folder of its own: a round of photographs empties the one it is given.
+        before += shots(dev, into + "-before", 1, keep=len(before))
         swipe = threading.Thread(
             target=shell,
             args=(
@@ -236,7 +269,8 @@ def while_scrolling(r, dev, into):
         time.sleep(0.25)
         frames += shots(dev, into, FRAMES, keep=len(frames))
         swipe.join(timeout=5)
-    judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING)
+    steady = judge(r, before, "standing still where the swipe starts", dev.height)[1]
+    judge(r, frames, "through a finger swipe", dev.height, bar=WHILE_MOVING, against=steady)
 
 
 def turned_sideways(r, dev, into):
@@ -258,7 +292,7 @@ def turned_sideways(r, dev, into):
         time.sleep(3)
 
 
-def through_a_fling(r, dev, into):
+def through_a_fling(r, dev, into, still_count):
     """Thrown rather than dragged, which is how a page is usually moved.
 
     A drag is a hand keeping pace with the eye; a fling is the page carrying on by itself,
@@ -283,7 +317,7 @@ def through_a_fling(r, dev, into):
         time.sleep(0.15)
         frames += shots(dev, into, 10, keep=len(frames))
         throw.join(timeout=5)
-    judge(r, frames, "through a fling", dev.height, bar=WHILE_MOVING)
+    judge(r, frames, "through a fling", dev.height, bar=WHILE_MOVING, against=still_count)  # noqa
 
 
 def at_a_larger_font(r, dev, into):
@@ -327,10 +361,10 @@ def main():
     time.sleep(2)
     r = Results()
     print("\nlooking at the screen")
-    still(r, dev, into)
-    while_scrolling(r, dev, into)
+    still_count = still(r, dev, into)
+    while_scrolling(r, dev, into, still_count)
     after_it_stops(r, dev, into)
-    through_a_fling(r, dev, into)
+    through_a_fling(r, dev, into, still_count)
     at_a_larger_font(r, dev, into)
     turned_sideways(r, dev, into)
     print(f"\n{r.passed}/{r.total} checks passed")

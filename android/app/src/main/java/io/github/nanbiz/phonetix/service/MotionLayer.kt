@@ -35,6 +35,27 @@ class MotionLayer(private val context: Context) {
         @Volatile
         @JvmStatic
         var leadMs = 0L
+
+        /** How long a measured speed is carried at full strength, and how long it takes to
+         *  fade to nothing after that, both as multiples of the gap between measurements.
+         *  Settable so a test can sweep them against photographs of a real swipe. */
+        @Volatile
+        @JvmStatic
+        var coastGaps = 1.0f
+
+        @Volatile
+        @JvmStatic
+        var fadeGaps = 2.0f
+
+        /** How much further a movement whose speed is not changing is carried. */
+        @Volatile
+        @JvmStatic
+        var steadyGaps = 2.5f
+
+        /** Whether the first measurement of a movement is predicted from at all. */
+        @Volatile
+        @JvmStatic
+        var predictFromFirst = false
     }
 
     private object Fixed {
@@ -147,10 +168,10 @@ class MotionLayer(private val context: Context) {
         // they are wanted - a round trip into an app busy laying itself out can take a fifth
         // of a second - and through one of those the words either keep up or stand still on
         // a moving page.
-        val steady = if (steadiness > 0.75f) Fixed.STEADY else 1f
-        val coast = gap * Fixed.COAST * steady
+        val steady = if (steadiness > 0.75f) steadyGaps else 1f
+        val coast = gap * coastGaps * steady
         if (age <= coast) return 1f
-        val fade = gap * Fixed.FADE * steady
+        val fade = gap * fadeGaps * steady
         if (age >= fade) return 0f
         return 1f - (age - coast) / (fade - coast)
     }
@@ -256,7 +277,7 @@ class MotionLayer(private val context: Context) {
         // words a couple of hundred pixels ahead of the text in the opening frames of every
         // scroll. The second measurement is of the movement itself, and prediction starts
         // there.
-        predictedY = if (measurements < 2) 0f
+        predictedY = if (measurements < 2 && !predictFromFirst) 0f
         else (vy * late).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
         lastFrameAt = now
         view?.set(boxes)

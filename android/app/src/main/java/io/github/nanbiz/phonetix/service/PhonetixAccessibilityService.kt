@@ -65,6 +65,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var lastScanEnd = 0L
     /** When the screen was last seen to move, whether it said so or was measured moving. */
     @Volatile private var lastMotionAt = 0L
+
+    /** Set when a single anchor gave an answer the page cannot have made, so the pass after
+     *  it asks the full set and takes the middle answer rather than trusting one again. */
+    private var voteNext = false
     /** Where the previous full read found each line, so this one can tell whether the page
      *  has moved even when nothing announced that it had. */
     @Volatile private var previousTops: Map<String, Int> = emptyMap()
@@ -553,35 +557,92 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // Whole when they were measured, so there is an edge of them to compare.
                     at.top > p.viewport.top + 1 && at.bottom < p.viewport.bottom - 1
             }.ifEmpty { planned.filter { it.measuredAt != null && it.boxes.isNotEmpty() } }
-            // The same few however fast the page is going. Asking fewer while it hurries was
-            // tried, on the reasoning that an answer arriving late is worth less than one
-            // arriving: two are a shade quicker and photograph no better through a drag, and
-            // one cannot be outvoted at all - a line handed to another row answers with the
-            // distance between them, and a single anchor put the words a thousand pixels off
-            // during a fling. Three costs a round trip more and is the only count that
-            // outvotes a liar.
-            val anchors = when {
-                usable.size <= ANCHORS -> usable
+            // What the page was doing a moment ago, which is both what decides how many
+            // lines have to be asked where they are and what their answers are tested
+            // against. A speed measured a moment ago describes a page that may since have
+            // stopped - a reader scrolling in short pushes stops between each - so it is
+            // only believed while it is fresh.
+            val speedIsFresh = speedY != 0f && lastShiftAt > 0L &&
+                android.os.SystemClock.uptimeMillis() - lastShiftAt < SPEED_FRESH_MS
+
+            // How many lines are asked where they are, which is the whole cost of a pass:
+            // each one is a round trip into an app that is busy laying out a scroll, and
+            // three of them make the difference between a reading every fifty milliseconds
+            // and one every eighty. At a finger's speed that gap is the drift.
+            //
+            // Three of them exist to outvote a liar: a list hands a row to another line and
+            // that row answers with the distance between the two, which is most of a screen,
+            // and a lone anchor believed once put the words a thousand pixels from their
+            // text during a fling. But a liar can also be recognised rather than outvoted -
+            // its answer is nowhere near what the page was doing a moment ago, which is what
+            // the filter below tests every answer against anyway. So while there is a fresh
+            // speed to test against, one anchor is asked and checked; when there is not -
+            // the first pass of a movement, or after a pause - the full three are asked and
+            // the middle answer taken. Measured through finger swipes: readings every 50ms
+            // against 80, and the typical drawn word 22px from its line against 44.
+            fun spread(count: Int): List<Planned> = when {
+                usable.size <= count -> usable
+                // Spread across the screen, so a page whose top half is one list and whose
+                // bottom half is another is not judged entirely from one of them. With a
+                // single anchor there is nothing to spread, and the middle of the screen is
+                // the part most likely to be the thing the reader is scrolling.
+                count <= 1 -> listOf(usable[usable.size / 2])
                 else -> {
-                    val step = (usable.size - 1).toFloat() / (ANCHORS - 1)
-                    (0 until ANCHORS).map { usable[(it * step).toInt()] }
+                    val step = (usable.size - 1).toFloat() / (count - 1)
+                    (0 until count).map { usable[(it * step).toInt()] }
                 }
             }
+
             /** Each anchor's answer, and the moment it gave it. */
             val shifts = ArrayList<Triple<Float, Float, Long>>(ANCHORS)
-            for (a in anchors) {
-                val was = a.measuredAt ?: continue
-                if (!a.node.refresh()) { gone++; continue }
-                if (a.node.text?.toString() != a.text) { gone++; continue }
-                val now = android.graphics.Rect()
-                a.node.getBoundsInScreen(now)
-                val readingAt = android.os.SystemClock.uptimeMillis()
-                if (now.isEmpty) { gone++; continue }
-                alive++
-                val shift = shiftOf(was, now, a.viewport)
-                if (shift == null) { unreadable++; continue }
-                shifts.add(Triple(shift.first, shift.second, readingAt))
+            /** Which lines were asked, however many rounds it took. */
+            val anchors = ArrayList<Planned>(ANCHORS)
+            fun ask(these: List<Planned>) {
+                anchors.addAll(these)
+                for (a in these) {
+                    val was = a.measuredAt ?: continue
+                    if (!a.node.refresh()) { gone++; continue }
+                    if (a.node.text?.toString() != a.text) { gone++; continue }
+                    val now = android.graphics.Rect()
+                    a.node.getBoundsInScreen(now)
+                    val readingAt = android.os.SystemClock.uptimeMillis()
+                    if (now.isEmpty) { gone++; continue }
+                    alive++
+                    val shift = shiftOf(was, now, a.viewport)
+                    if (shift == null) { unreadable++; continue }
+                    shifts.add(Triple(shift.first, shift.second, readingAt))
+                }
             }
+
+            /** Whether an answer is anywhere near what the page was doing a moment ago. */
+            fun credible(dy: Float, at: Long): Boolean {
+                if (!speedIsFresh) return true
+                val expected = lastShiftY + speedY * (at - lastShiftAt)
+                return kotlin.math.abs(dy - expected) <= PREDICTION_TOL
+            }
+
+            val asked = spread(
+                if (speedIsFresh && !voteNext) ANCHORS_WHEN_KNOWN else ANCHORS
+            )
+            ask(asked)
+            // The one anchor said something the page cannot have done. It may be a row a list
+            // has handed to another line, and it may be the page doing something new - one
+            // answer cannot tell those apart, and believing it moved every word on the screen
+            // sixteen hundred pixels.
+            //
+            // So it is not believed and not replaced either: this pass measures nothing, the
+            // layer carries the words on at the speed it already has, and the next pass asks
+            // the full three and votes. Asking the other two here instead was tried and is
+            // worse - an answer that is merely ahead of the prediction is ordinary while a
+            // page is speeding up, so the extra round trips were paid several times a second,
+            // and the readings that were meant to come oftener came half as often.
+            if (asked.size == 1 && shifts.size == 1 &&
+                !credible(shifts[0].second, shifts[0].third)
+            ) {
+                voteNext = true
+                return
+            }
+            voteNext = false
             // The middle answer, dated by the moment it was given. Not the freshest: on a
             // list, the row that answers last may be a row that has just been handed to a
             // different line, and its "movement" is the jump from one end of the screen to
@@ -589,22 +650,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // the average either, for the same reason: one jump would drag it.
             var shiftX = 0f
             var shiftY = 0f
-            // What the page was doing a moment ago says what it is doing now: a line whose
-            // answer is nowhere near that has not moved with the page, it has been handed to
-            // another line and jumped. With a speed to compare against, one such answer is
-            // recognised on its own rather than having to be outvoted.
-            // A speed measured a moment ago describes a page that may since have stopped -
-            // a reader scrolling in short pushes stops between each - so it is only believed
-            // while it is fresh.
-            val speedIsFresh = speedY != 0f && lastShiftAt > 0L &&
-                android.os.SystemClock.uptimeMillis() - lastShiftAt < SPEED_FRESH_MS
-            val believable = if (!speedIsFresh) shifts else {
-                val kept = shifts.filter { (_, dy, at) ->
-                    val expected = lastShiftY + speedY * (at - lastShiftAt)
-                    kotlin.math.abs(dy - expected) <= PREDICTION_TOL
-                }
-                if (kept.isEmpty()) shifts else kept
-            }
+            // A line whose answer is nowhere near what the page was doing has not moved with
+            // the page: it has been handed to another line and jumped. With a speed to
+            // compare against, such an answer is recognised on its own rather than having to
+            // be outvoted, which is what lets a single anchor be trusted above.
+            val believable = shifts.filter { (_, dy, at) -> credible(dy, at) }
+                .ifEmpty { shifts }
             var agreed = believable.isNotEmpty()
             if (agreed) {
                 val middle = believable.sortedBy { it.second }[believable.size / 2]
@@ -710,7 +761,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // with for as long as the screen kept moving, and nothing is drawn as black:
                 // a black patch over a word on a coloured page, which is what it did on a
                 // music player whose title sits on its cover art.
-                val decision = colours.decide(p.text, p.measuredAt?.top ?: -1, colorRect(p))
+                val decision = colours.decide(
+                    p.text, p.measuredAt?.top ?: -1, colorRect(p),
+                    impatient = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS,
+                )
                 val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
@@ -825,14 +879,37 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // at anything under a pixel meant an ordinary swipe stalled the overlay twice.
             // What scrolled in is filled in the moment the finger stops, which is what the
             // loop does when it goes idle anyway.
-            if (ok && shifted && planned.isNotEmpty() &&
-                kotlin.math.abs(speedY) <= SETTLING_PX_PER_MS
-            ) {
+            if (ok && shifted && planned.isNotEmpty()) {
                 val had = planned.sumOf { it.boxes.size }
                 val fresh = android.os.SystemClock.uptimeMillis() - lastFullReadAt
-                if (had > 0 && clipped > had * (1f - KEPT_ENOUGH) &&
-                    fresh > FULL_READ_TURNOVER_MS
-                ) {
+                // A page still moving is read again too, not only one that has settled.
+                // Waiting for stillness was the reason a drag emptied the screen: a plan
+                // covers the lines that were on it when the plan was made, the lines that
+                // scroll in were never in it, and through a swipe of a screen and a half
+                // the reader was left with a third of the transcriptions they started with -
+                // measured by photographing the movement, seven a frame against fourteen
+                // standing still.
+                //
+                // It costs what it always cost: reading the screen takes a few hundred
+                // milliseconds during which the words are carried on the layer at the speed
+                // they had, and past that they stand still. So a moving page is held to a
+                // larger loss and a longer wait than a settled one - it has to have lost
+                // most of what it was carrying before the reading is worth the stall.
+                // A page still moving is read again too, not only one that has settled.
+                // A plan covers the lines that were on the screen when it was made, and
+                // through a drag of a screen and a half almost none of those are left: the
+                // lines that scroll in were never in it and carry nothing. Photographed
+                // through three drags, waiting for stillness left a quarter of the
+                // transcriptions on the screen; reading again once half of them had scrolled
+                // away left more than half of them.
+                //
+                // It is held to a larger loss and a longer wait than a settled page, because
+                // reading costs a few hundred milliseconds during which the words are carried
+                // on at the speed they had and then stand still.
+                val moving = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS
+                val lost = if (moving) MOSTLY_GONE else 1f - KEPT_ENOUGH
+                val wait = if (moving) TURNOVER_MOVING_MS else FULL_READ_TURNOVER_MS
+                if (had > 0 && clipped > had * lost && fresh > wait) {
                     ok = false
                     why = "the screen has moved on: $clipped of $had words scrolled away"
                 }
@@ -1067,7 +1144,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the next pass too rather than appearing the moment its colours come.
         val painted = ArrayList<WordBox>(boxes.size)
         for (p in planned) {
-            val decision = colours.decide(p.text, p.measuredAt?.top ?: -1, colorRect(p))
+            val decision = colours.decide(
+                p.text, p.measuredAt?.top ?: -1, colorRect(p),
+                impatient = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS,
+            )
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
             if (c != null || decision.givenUp) painted.addAll(p.boxes)
@@ -1464,8 +1544,29 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** However fast a screen turns over, it is not read again more often than this: a
          *  read costs tens of milliseconds during which nothing is followed at all. */
         const val FULL_READ_TURNOVER_MS = 350L
+
+        /** How much of what a moving page was carrying has to have scrolled away before it
+         *  is read again mid-movement, and how long apart two such readings may be. */
+        @Volatile
+        @JvmStatic
+        var MOSTLY_GONE = 0.5f
+
+        @Volatile
+        @JvmStatic
+        var TURNOVER_MOVING_MS = 500L
         /** How many lines are asked where they are before the rest are carried with them. */
-        const val ANCHORS = 3
+        /** How many lines are asked where they are each pass. Settable so a test can sweep
+         *  it: each anchor is a round trip into an app that is busy scrolling, so the count
+         *  decides how often the words can be measured at all. */
+        @Volatile
+        @JvmStatic
+        var ANCHORS = 3
+
+        /** How many are asked while there is a fresh speed to check the answer against.
+         *  Settable so a test can compare this against asking the full set every pass. */
+        @Volatile
+        @JvmStatic
+        var ANCHORS_WHEN_KNOWN = 1
         /** The speed, in pixels a millisecond, past which a pass buys nothing by asking more
          *  lines: at this rate the page moves a line's height in the time one answer takes. */
         const val HURRIED_PX_PER_MS = 1.0f

@@ -140,7 +140,7 @@ class LineColours(
      */
     class Decision(val colours: WordColors?, val givenUp: Boolean)
 
-    fun decide(text: String, top: Int = -1, where: RectF? = null): Decision {
+    fun decide(text: String, top: Int = -1, where: RectF? = null, impatient: Boolean = false): Decision {
         val k = key(text)
         val capturingNow = capturing && SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
         val tried = tries[k]
@@ -151,7 +151,16 @@ class LineColours(
         // lines near each other are on the same thing, and a screen that is two colours had
         // two of its four coloured lines fall all the way through to the page's single colour
         // and come back black on a coloured band. Only failing all of that, the page.
-        val c = lines[k] ?: if (givenUp) {
+        // A line that arrived while the page was moving cannot wait for its own colours.
+        // Reading them means photographing the screen with the overlay down, which is not
+        // done while the page is moving - a moving screen photographs as a smear - so a line
+        // that scrolled into view was withheld for as long as the scrolling lasted. Through
+        // one swipe of a page of text that is most of the screen: a reader watched two thirds
+        // of the transcriptions disappear while their finger was down and come back when they
+        // lifted it. The surface under it, or the one its neighbours are standing on, is a
+        // good enough answer to be drawn in, and its own colours replace it the moment the
+        // page stops.
+        val c = lines[k] ?: if (givenUp || impatient) {
             // Its own surface, unless that was read while the line was somewhere else - a
             // capture taken while the page was still settling reads the surface under where
             // the line used to be, and on a page of bands that is the wrong band. Then the
