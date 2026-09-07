@@ -85,6 +85,9 @@ Ticked items are done and verified by a suite; the rest are not.
 - [x] **Placement holds at 0.85 to 1.5 times the font size, at three display densities, and
   turned sideways.** Photographed at each.
 - [x] **Home, recents and an app's own dialog** all clear correctly, checked.
+- [ ] **Split screen is untested.** The emulator will not enter it from `am` or from the recents
+  gesture, so there is no way to drive it here. Two apps side by side is the one arrangement
+  where a transcription could be drawn over the wrong app's half.
 
 ## Where it cannot work
 
