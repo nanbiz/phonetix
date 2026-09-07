@@ -1436,7 +1436,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * Read the strip of screen the movement has brought into view and add it to the plan.
      *
      * Runs on the worker in the middle of following, so the words stay on the layer and keep
-     * moving while it happens. What it costs is one fetch of the window and a walk of a band
+     * moving while it happens. On the worker and not on a thread of its own: that was tried,
+     * on the reasoning that the following should not have to wait for it, and it is worse.
+     * These calls all queue on the app's own main thread, so a reading running beside the
+     * following contends with it rather than overlapping it - the following managed ten passes
+     * through a drag instead of twenty-four, and its typical pass went from 53ms to 133ms. What it costs is one fetch of the window and a walk of a band
      * rather than of a screen: measured on a page of text, twenty milliseconds against the
      * hundreds a full read takes.
      */
