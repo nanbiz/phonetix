@@ -46,9 +46,10 @@ class LineColours(
      *  could not be read either. */
     @Volatile private var page: WordColors? = null
 
-    /** The surface each unreadable line was standing on, which is not the same colour for
-     *  every line of a screen that is not one colour. */
-    private val surfaces = HashMap<String, WordColors>(32)
+    /** The surface each unreadable line was standing on, and how far down the screen it was,
+     *  which is not the same colour for every line of a screen that is not one colour. */
+    private class Surface(val colours: WordColors, val top: Int)
+    private val surfaces = HashMap<String, Surface>(32)
 
     @Volatile private var forPackage: String? = null
 
@@ -139,16 +140,41 @@ class LineColours(
      */
     class Decision(val colours: WordColors?, val givenUp: Boolean)
 
-    fun decide(text: String): Decision {
+    fun decide(text: String, top: Int = -1): Decision {
         val k = key(text)
         val capturingNow = capturing && SystemClock.uptimeMillis() - capturingSince < CAPTURE_TIMEOUT_MS
         val tried = tries[k]
         val givenUp = ((tried?.count ?: 0) >= COLOR_TRIES ||
             (tried?.blind ?: 0) >= BLIND_TRIES) && !capturingNow
         // Its own colours if they were read; otherwise, once it has been given up on, the
-        // surface it stands on, and only failing that the page as a whole.
-        val c = lines[k] ?: if (givenUp) (surfaces[k] ?: page) else null
+        // surface it stands on - or the surface of the nearest line that has one, because
+        // lines near each other are on the same thing, and a screen that is two colours had
+        // two of its four coloured lines fall all the way through to the page's single colour
+        // and come back black on a coloured band. Only failing all of that, the page.
+        val c = lines[k] ?: if (givenUp) {
+            surfaces[k]?.colours ?: nearestSurface(top) ?: page
+        } else {
+            null
+        }
         return Decision(c, givenUp)
+    }
+
+    /**
+     * The surface of the nearest line that has one, if it is near enough to be the same one.
+     *
+     * Within a couple of lines: further than that is a different part of the screen, and a
+     * screen is only worth guessing about this way where it changes slowly - which is what
+     * makes a band, a header over artwork, or a card on a page.
+     */
+    private fun nearestSurface(top: Int): WordColors? {
+        if (top < 0) return null
+        var best: Surface? = null
+        for (s in surfaces.values) {
+            val gap = kotlin.math.abs(s.top - top)
+            if (gap > NEARBY_PX) continue
+            if (best == null || gap < kotlin.math.abs(best.top - top)) best = s
+        }
+        return best?.colours
     }
 
     /** Whether a line that has no colours yet should still be carried while following. */
@@ -224,7 +250,7 @@ class LineColours(
                         // is written on can still be read, and that is what it will be drawn
                         // in if it is given up on.
                         val under = sampler.surfaceUnder(rect)
-                        if (under != null) surfaces[k] = under
+                        if (under != null) surfaces[k] = Surface(under, rect.top.toInt())
                         if (BuildConfig.DEBUG) {
                             android.util.Log.d(
                                 "Phonetix",
@@ -283,6 +309,10 @@ class LineColours(
         const val CLEAN_FRAME_GAP_MS = 1500L
         /** How often a line's colours are looked for before the page's own are used. */
         const val COLOR_TRIES = 3
+
+        /** How far away a line may be and still be taken to stand on the same surface. About
+         *  three lines of text. */
+        const val NEARBY_PX = 220
 
         /** How many attempts that never saw a frame are allowed before a line is given up on
          *  anyway. Higher than the tries that did see one: a capture failing says nothing

@@ -662,7 +662,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // with for as long as the screen kept moving, and nothing is drawn as black:
                 // a black patch over a word on a coloured page, which is what it did on a
                 // music player whose title sits on its cover art.
-                val decision = colours.decide(p.text)
+                val decision = colours.decide(p.text, p.measuredAt?.top ?: -1)
                 val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
@@ -1011,7 +1011,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the next pass too rather than appearing the moment its colours come.
         val painted = ArrayList<WordBox>(boxes.size)
         for (p in planned) {
-            val decision = colours.decide(p.text)
+            val decision = colours.decide(p.text, p.measuredAt?.top ?: -1)
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
             if (c != null || decision.givenUp) painted.addAll(p.boxes)
