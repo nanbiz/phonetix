@@ -181,13 +181,22 @@ Ticked items are done and verified by a suite; the rest are not.
   semi-transparent. Such a pair is rejected now and the line takes ink that is legible on the
   surface it stands on; `android_ink.py` holds every drawn word to it, on a plain page, a
   gradient, a dark page, through a scroll and on the settings app.
-- [ ] **A drag keeps between two fifths and four fifths of its transcriptions.** What is
+- [ ] **A drag keeps about three fifths of its transcriptions, a fling and a still page more
+  than four fifths.** Photographed on a recycling list, eight drags: a mean of 62% of the
+  page's lines carrying one and a worst drag of 26%, against 39% and 8% before the nine
+  places that decide whether the page is moving were made to ask one question. On the article
+  page the same measure reads 50-82% a drag, 83-89% a fling, 78-88% standing still, and the
+  typical transcription sits 8 to 14 pixels of the capture from its line, about a third of one.
+- [ ] **What is left of it: the lines arriving at the bottom.** What is
   missing is the lines arriving at the bottom: they are not in the plan, and putting them
   there means reading the strip of screen they arrived in, which costs 130ms typically and
   400 at worst because finding them means asking every node on the way down where it is. Two
   or three such reads fit in a drag and a drag of a screen and a half brings fourteen lines.
   Reading from the container the page scrolls in rather than the window does not help, nor
-  does letting a half-arrived line keep the words still outside the window it scrolls in.
+  does letting a half-arrived line keep the words still outside the window it scrolls in, nor
+  reading a screen beyond each edge (there is nothing there to read: a node the app has not
+  shown reports no rectangle), nor reading strips oftener - 60ms apart against 200 measured
+  worse, a mean of 40% against 50%.
 - [ ] **The old note, which is still true of what is left: it is the app's speed that
   decides.** Photographed through drags of a screen and a half: standing still 78-83% of
   the page's lines carry a transcription, a fling 88-94%, a drag 50-88%. What separates a good
