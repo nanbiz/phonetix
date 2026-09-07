@@ -81,6 +81,17 @@ Ticked items are done and verified by a suite; the rest are not.
   photographs as a smear. Both apps found so far that hit this (Chrome) cannot be transcribed
   for the reason above anyway.
 
+## Shipping
+
+- [x] **The test page is out of the release APK** (its own debug source set and manifest,
+  checked by dumping both) **and refuses intents from other apps.** It writes the app's own
+  settings from its extras - whether the overlay is on, the frequency, whether words take
+  touches - and a release hands people the *debug* APK, so the page is on their phones either
+  way. Only a shell can drive it now.
+- [ ] **Releases ship a debug build.** That is what makes the point above necessary, and it
+  also means no minification and every debug log running on a reader's phone. A signed release
+  build needs a keystore that only the author can hold, so it is the author's call.
+
 ## Owed
 
 - [x] **Language detection, as a stopgap.** There is none: one espeak-generated dictionary that pronounces
