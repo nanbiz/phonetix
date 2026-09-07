@@ -310,9 +310,14 @@ class LineColours(
         /** How often a line's colours are looked for before the page's own are used. */
         const val COLOR_TRIES = 3
 
-        /** How far away a line may be and still be taken to stand on the same surface. About
-         *  three lines of text. */
-        const val NEARBY_PX = 220
+        /** How far away a line may be and still be taken to stand on the same surface.
+         *
+         *  A quarter of a tall screen. Three lines of text was not enough: on a page with a
+         *  coloured band four lines deep, only the lines next to the one that had been read
+         *  were rescued and the rest fell through to the colour of the whole screen. What is
+         *  being guessed at here is a surface that spans a part of the screen, so the reach
+         *  is a part of the screen. */
+        const val NEARBY_PX = 500
 
         /** How many attempts that never saw a frame are allowed before a line is given up on
          *  anyway. Higher than the tries that did see one: a capture failing says nothing

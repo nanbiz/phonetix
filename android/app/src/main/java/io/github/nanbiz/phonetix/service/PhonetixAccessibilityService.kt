@@ -192,6 +192,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // read itself, from the window that is actually there.
         val from = event?.packageName?.toString()
         if (::bystanders.isInitialized && bystanders.contains(from)) {
+            // A window of theirs opening or closing is still worth looking at, even though
+            // nothing of theirs is ever transcribed: the notification shade is one of these,
+            // and it comes down over the app being read. Its events were dropped, so nothing
+            // re-read which windows now stand over that app, and the whole screenful of
+            // transcriptions stayed painted on top of the shade.
+            if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+                scrollOnly = false
+                schedule(GAP_MS)
+                return
+            }
             // Said once per app, because an app dropped here is dropped before anything else
             // is recorded about it: the settings app was ignored whole on a device whose home
             // intent answers with its own placeholder activity, and nothing in the log

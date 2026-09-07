@@ -522,6 +522,34 @@ def check_accessibility_button(r, dev):
     reset(dev)
 
 
+def check_shade(r, dev):
+    """The notification shade comes down over the app, and the transcriptions go with it.
+
+    They are windows above everything, so a word that the shade now covers had its
+    transcription still painted on top of the shade - a screenful of them scattered over the
+    notifications. Nothing noticed, because the shade belongs to the system interface, whose
+    events are dropped as a bystander's before anything is looked at.
+    """
+    reset(dev)
+    boxes, _ = show(dev, mode="unique", density=3, scrollTo=200, settle=4)
+    if not r.check(bool(boxes), "the shade: there is something to cover", "nothing transcribed"):
+        return
+    try:
+        dev.clear_log()
+        shell("cmd", "statusbar", "expand-notifications")
+        time.sleep(3.5)
+        under = dev.boxes()
+        r.check(not under, "the shade: nothing is drawn over it",
+                f"{len(under)} transcriptions were still on the screen")
+    finally:
+        dev.clear_log()
+        shell("cmd", "statusbar", "collapse")
+        time.sleep(3.5)
+    back = dev.boxes()
+    r.check(bool(back), "the shade: they come back when it is closed",
+            "the page came back bare")
+
+
 def check_theme_change(r, dev):
     """A theme change repaints every app, and the transcriptions follow it.
 
@@ -752,6 +780,8 @@ def main():
     check_a_real_app(r, dev)
     print("a change of theme")
     check_theme_change(r, dev)
+    print("the notification shade")
+    check_shade(r, dev)
     print("the button that switches it off")
     check_accessibility_button(r, dev)
     print("the app's own screen")
