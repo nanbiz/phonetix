@@ -1899,11 +1899,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
          * where it is, and the walk alone timed at about 195ms on this emulator against 4 to
          * 121ms to fetch the window - so a strip costs two to three hundred milliseconds,
          * about what a whole screen costs, and the words are carried blind for all of it.
-         * Firing it oftener was measured and does not help for that reason.
+         *
+         * Even so it is worth reading early. Waiting until a quarter of the words had gone
+         * meant the first strip came after the bottom of the screen was already bare, and the
+         * reading never caught up with the drag; a tenth reads sooner and holds. Measured
+         * over nine swipes each: the middle swipe carried three fifths of its lines against
+         * a third. An earlier sweep of this said the opposite and was taken while a separate
+         * fault kept the colours from ever being read on a page being followed, so nothing a
+         * strip found could be drawn.
          */
         @Volatile
         @JvmStatic
-        var MOSTLY_GONE = 0.25f
+        var MOSTLY_GONE = 0.10f
 
         @Volatile
         @JvmStatic
