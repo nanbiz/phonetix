@@ -70,6 +70,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
      *  it asks the full set and takes the middle answer rather than trusting one again. */
     private var voteNext = false
 
+    /** How many recycled rows the pass now running has transcribed afresh, so that asking a
+     *  moving app to lay text out again costs a bounded amount. */
+    private var rewrittenThisPass = 0
+
     /** Where the previous full read found each line, so this one can tell whether the page
      *  has moved even when nothing announced that it had. */
     @Volatile private var previousTops: Map<String, Int> = emptyMap()
@@ -564,6 +568,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             var clipped = 0
             var hidden = 0
             var unreadable = 0
+            rewrittenThisPass = 0
             /** When the positions in this pass were actually read from the app. */
             var readAt = tf
 
@@ -755,7 +760,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             verified.addAll(anchors)
             for (c in checks) {
                 if (c in verified) continue
-                if (!c.node.refresh() || c.node.text?.toString() != c.text) {
+                val stillThere = c.node.refresh()
+                val says = if (stillThere) c.node.text?.toString() else null
+                if (!stillThere || says != c.text) {
                     // A row that now says something else is a row a list has handed to
                     // another line: its words belong to text that is no longer there, so it
                     // is dropped and the rest are followed as before. Abandoning the whole
@@ -765,6 +772,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     c.boxes = emptyList()
                     c.measuredAt = null
                     recycling = true
+                    // The row is gone, but the node is not: a list hands the same row to the
+                    // line that has just scrolled in, so this node now carries text nobody
+                    // has transcribed. Doing it here costs the refresh that found it, against
+                    // walking the app's tree to find the same line - which costs 45 to 320ms
+                    // and stalls the following for all of it.
+                    if (stillThere && says != null) rewriteRow(c, says, moved)
                     continue
                 }
                 verified.add(c)
@@ -1430,6 +1443,34 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 !covered(r, p.exit)
         }
         return p.boxes.isNotEmpty()
+    }
+
+    /**
+     * A recycled row now carrying a line nobody has read, transcribed where it stands.
+     *
+     * Everything the planning does for a line is done here for this one, and its characters
+     * are measured if this pass has room to ask - the same allowance the strip read works to,
+     * since both are asking a moving app to lay text out again.
+     */
+    private fun rewriteRow(p: Planned, says: String, into: MutableList<WordBox>) {
+        if (says.isBlank() || says.length > MAX_TEXT) return
+        if (rewrittenThisPass >= MEASURE_MOVING_MAX || !Dictionary.ready) return
+        val picks = Transcriber(SettingsStore.current.density).plan(says)
+        if (picks.isEmpty()) return
+        rewrittenThisPass++
+        val now = Planned(
+            p.node, picks.first().start, picks.last().end - picks.first().start + 1,
+            picks, says, android.graphics.Rect(p.clip), android.graphics.Rect(p.viewport), p.exit,
+        )
+        if (!measureLine(now, allowedToAsk = true)) return
+        val c = colours.decide(
+            now.text, now.measuredAt?.top ?: -1, colorRect(now), impatient = true,
+        ).colours
+        if (c != null) {
+            now.boxes = now.boxes.map { it.copy(background = c.background, ink = c.ink) }
+        }
+        cachedPlan = cachedPlan.map { if (it === p) now else it }
+        into.addAll(now.boxes)
     }
 
     /**
