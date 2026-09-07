@@ -235,7 +235,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // down and put back. Re-reading the screen then only has to correct the drift.
         // A scroll event reports how far a view believes it travelled, and that number does
         // not agree with how far the words actually moved on screen - measured at 313
-        // reported against 176 real pixels across one swipe. Positions guessed from it drift
+        // reported against 176 real pixels across one swipe, and again at 1918 against 1440
+        // across another. Nor are there many of them: seven events for forty-three frames of
+        // movement. Carrying the words on them was tried twice and is not worth trying again. Positions guessed from it drift
         // a little further with every event, which is how a transcription ends up sitting
         // beside its word instead of on it. So nothing is extrapolated: the words are asked
         // where they are, which now costs about seven milliseconds because only their
