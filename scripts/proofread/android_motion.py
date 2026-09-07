@@ -427,10 +427,19 @@ def check_settled(r, dev, profile, ended_at):
     if not still:
         # Asking the page to go where it already is moves nothing, so nothing happens and
         # nothing is reported - which is not the same as nothing being transcribed. A pixel
-        # of movement gives it something to say.
-        dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=ended_at - 1)
-        time.sleep(2.0)
-        still = dev.boxes()
+        # of movement is not enough either: a shift that small is inside what the follow
+        # treats as standing still, so it too passes without a word being said. Sent well
+        # away and brought back, which is a movement by any measure.
+        for away in (400, 900):
+            dev.surface(mode=PAGE, enable=1, density=3, allApps=1,
+                        scrollTo=max(0, ended_at - away))
+            time.sleep(1.5)
+            dev.clear_log()
+            dev.surface(mode=PAGE, enable=1, density=3, allApps=1, scrollTo=ended_at)
+            time.sleep(2.5)
+            still = dev.boxes()
+            if still:
+                break
     if not r.check(bool(after_motion) and bool(still),
                    f"{profile}: there are transcriptions to compare after it stops",
                    f"{len(after_motion)} after the movement, {len(still)} on the still page"):
