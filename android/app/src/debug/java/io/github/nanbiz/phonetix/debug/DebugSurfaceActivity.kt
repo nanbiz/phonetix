@@ -215,6 +215,17 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private fun handle(intent: Intent?) {
         intent ?: return
+        // Only from a shell or from this app. The releases people install are debug builds -
+        // that is how this app is distributed - so this page and its intent extras are on
+        // their phones, and those extras are the app's own settings: whether the overlay is
+        // on, how often it transcribes, whether the words take touches. Another app could
+        // have started it and quietly reconfigured this one. adb comes through the shell.
+        val who = referrer?.host
+        if (who != null && who != packageName && who !in SHELLS) {
+            Log.d(TAG, "ignoring an intent from $who")
+            finish()
+            return
+        }
         // Say again where every line is and what it is drawn in. These are reported when a
         // line is laid out, which happens once, so a page asked for a second time in the mode
         // it is already in said nothing at all about itself - and a test comparing the
@@ -523,6 +534,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         const val WORD_MS = 90f
         /** How far the whole block slides while it is written, in dp. */
         const val SLIDE_PX = 220f
+
+        /** What adb and the system shell come through. */
+        val SHELLS = setOf("com.android.shell", "android")
 
         const val BACKGROUND = Color.BLACK
 

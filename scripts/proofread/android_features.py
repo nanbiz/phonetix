@@ -452,7 +452,10 @@ def check_unreadable_colors(r, dev):
         r.check(
             all(close(b["bg"], int(bg_hex, 16), tolerance=40) for b in on_this_line),
             f"unreadable: words on '{first}' stand on the surface they are on #{bg_hex}",
-            str([hex(b["bg"]) for b in on_this_line]),
+            f"got {[format(b['bg'], '06x') for b in on_this_line]} "
+            f"at y {y}..{y + h}; the page said "
+            + str([(t.split()[0][:8], f"#{bg}", f"{yy}..{int(yy) + int(hh)}")
+                   for _i, bg, _x, yy, _w, hh, t in painted]),
         )
     r.check(checked >= 2, "unreadable: lines on both surfaces carried transcriptions",
             f"only {checked} line(s) carried one")
