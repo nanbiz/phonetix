@@ -808,7 +808,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
                 }
-                if (own == null && p.boxes.first().background == 0 && !decision.givenUp) {
+                // Drawn without colours rather than not drawn, while the page is moving:
+                // there are no colours to be had until it stops, and a word missing is worse
+                // than a word in a palette of ours for the length of a swipe.
+                if (own == null && p.boxes.first().background == 0 && !decision.givenUp &&
+                    kotlin.math.abs(speedY) <= SETTLING_PX_PER_MS
+                ) {
                     continue
                 }
                 var dx = shiftX
@@ -1239,7 +1244,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             )
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
-            if (c != null || decision.givenUp) painted.addAll(p.boxes)
+            // A word with no colours yet is still drawn while the page is moving.
+            //
+            // Withholding it is right on a page standing still: the colours are a moment away
+            // and a word that flickers into a palette of ours and out again is worse than one
+            // that arrives a moment late. But a screen read in the middle of a movement has no
+            // colours to be had - reading them means photographing a still screen - so
+            // withholding meant the read that happens during a drag could paint nothing at
+            // all. Photographed at the display's own resolution: two frames running, some four
+            // hundred milliseconds, with not one transcription on a page full of text, in the
+            // middle of the drag that caused the read.
+            val moving = android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+            if (c != null || decision.givenUp || moving) painted.addAll(p.boxes)
             if (BuildConfig.DEBUG && c == null && decision.givenUp) {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
