@@ -639,12 +639,57 @@ def check_a_real_app(r, dev):
                    "the screen came back empty"):
         return
 
+    # How much of the screen still carries a transcription, counted off the screen rather than
+    # off what the service says about itself.
+    #
+    # The service reporting words is not the same as a reader seeing them, and the two came
+    # apart badly: a page settled after a drag with a third of its lines transcribed and
+    # stayed that way, while the log said everything was fine. There are no marks to count in
+    # someone else's app, so the same screen is photographed again with the service switched
+    # off and the rows that differ are ours.
+    covered = [rows_of_ours(dev, "settled")]
+    for _ in range(2):
+        shell("input", "swipe", "540", "1400", "540", "500", "1300")
+        time.sleep(3.0)
+        covered.append(rows_of_ours(dev, "scrolled"))
+    r.check(
+        min(covered) >= covered[0] * KEPT_AFTER_SCROLLING,
+        "a real app: it still carries them after scrolling",
+        f"rows of the screen carrying a transcription, before and after each drag: {covered}",
+    )
+
     # Pressing a word for its card is checked on this repository's own page, where the words
     # stay where they are put. Doing it in someone else's app means pressing a moving target -
     # a list settles, a row animates, a press that misses lands on the app and navigates away -
     # and a check that cannot hit what it aims at reports the card as broken when nothing is.
     # Watched by hand instead, on the settings app: the card opens on a word of theirs, names
     # its sounds and scrolls through them.
+
+
+# How much of what a settled screen carries has to survive a drag and its aftermath. Not all
+# of it: a screen scrolled to a different place has different words on it, and some of them are
+# ones this dictionary has nothing for.
+KEPT_AFTER_SCROLLING = 0.7
+
+
+def rows_of_ours(dev, where):
+    """How many rows of the screen carry something the overlay drew."""
+    from PIL import Image, ImageChops
+    ours = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-ours")).convert("RGB")
+    shell("settings", "put", "secure", "enabled_accessibility_services", "none")
+    time.sleep(3.5)
+    bare = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-bare")).convert("RGB")
+    dev.enable_service()
+    time.sleep(3.0)
+    diff = ImageChops.difference(ours, bare)
+    width, height = diff.size
+    rows = 0
+    for y in range(0, height, 2):
+        for x in range(0, width, 2):
+            if sum(diff.getpixel((x, y))) > 60:
+                rows += 1
+                break
+    return rows
 
 
 def close(got, want, tolerance=60):
