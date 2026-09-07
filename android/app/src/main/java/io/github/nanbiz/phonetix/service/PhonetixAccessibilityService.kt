@@ -377,6 +377,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // movement. Each pass is a few milliseconds, so waiting out the quiet is cheap;
             // it is the standing still that is expensive.
             if (since > FOLLOW_IDLE_MS) {
+                if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "LOOPIDLE after ${since}ms")
                 following = false
                 // One last read, and a full one. Following carries the words by how far the
                 // lines report they have moved, and if that has gone wrong - a list that
@@ -428,6 +429,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (!::worker.isInitialized) return
         val mine = ++generation
         val now = android.os.SystemClock.uptimeMillis()
+        if (BuildConfig.DEBUG && following) {
+            android.util.Log.d(
+                "Phonetix",
+                "LOOPCUT by " + Throwable().stackTrace.drop(1).take(4)
+                    .joinToString(",") { it.methodName },
+            )
+        }
         // The loop's own next pass is among the callbacks cleared below, so it is told it
         // has stopped; otherwise it would never start again, having never noticed it died.
         following = false

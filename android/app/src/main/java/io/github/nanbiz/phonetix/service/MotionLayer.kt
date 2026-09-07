@@ -309,8 +309,15 @@ class MotionLayer(private val context: Context) {
         // answer the first time, so the words were withheld at the start of every scroll and
         // what was shown after was no better placed. Measured, twice each: 43% and 53% of
         // what was on the screen named a word that was not under it, against 12% and 18%.
-        followable = measurements < 2 ||
-            (arrivedApart <= followableMs && drewOut <= wrongByPx)
+        // A reading is also worthless if it was already old when it arrived. Asking a line
+        // where it is goes to the app's own thread, and on a page of paragraphs that answer
+        // has taken six hundred milliseconds - by which time the page has moved further than
+        // the answer describes. The layer used to clamp that lateness and draw anyway.
+        val arrivedOld = now - at
+        followable = measurements < 2 || (
+            arrivedApart <= followableMs && drewOut <= wrongByPx &&
+                arrivedOld <= Fixed.LATE_LIMIT_MS
+            )
         // How far apart the readings have been coming, which is how long a speed of theirs is
         // worth carrying. Not what the speed is measured over: that is measured where it can
         // be measured properly.
