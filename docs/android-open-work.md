@@ -66,6 +66,26 @@ Ticked items are done and verified by a suite; the rest are not.
 - [x] **The accessibility button works**, verified by pressing it: the overlay goes empty and
   comes back. The system draws it as a floating button with the app's icon.
 
+## Windows over the app, and settings a reader changes
+
+- [x] **Transcriptions were drawn over the keyboard**, and **over the notification shade** - a
+  screenful of them scattered across the notifications. A word another window now covers is
+  still in the app's tree, and our windows are above everything. The system is asked which
+  windows stand over the app; a bystander's window opening or closing is looked at, where its
+  events used to be dropped before anything looked.
+- [x] **The words came back when the shade closed.** They did not: the look taken when the
+  shade's window changes finds the shade still in front, and the app underneath then sends
+  nothing. It looks again shortly after, from the main thread, because the worker's queue is
+  emptied by the events that arrive alongside.
+- [x] **A quarter of the transcriptions were never drawn at the densest setting** - sixty-five
+  chosen, forty-eight windows - and the layer drew all of them while the page moved, so they
+  appeared during a scroll and vanished when it stopped.
+- [x] **A theme change left them wearing the old theme's colours.** Everything read off the
+  screen is forgotten when the configuration changes.
+- [x] **Placement holds at 0.85 to 1.5 times the font size, at three display densities, and
+  turned sideways.** Photographed at each.
+- [x] **Home, recents and an app's own dialog** all clear correctly, checked.
+
 ## Where it cannot work
 
 - [ ] **A browser shows nothing.** Chrome answers the request for character positions with
