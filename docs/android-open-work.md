@@ -91,6 +91,15 @@ Ticked items are done and verified by a suite; the rest are not.
 
 ## Where it cannot work
 
+- [ ] **A third of the apps on this emulator cannot be transcribed at all.** Opened twelve and
+  swiped each: settings 12 transcriptions, messages 7, files 4, youtube music 3, docs 2,
+  clock/contacts/maps 1, chrome/gmail/dialer/calendar 0 - and four of them (contacts, maps,
+  dialer, docs) answer the request for character positions with nothing, which is what makes
+  word placement impossible. Some of the zeros are only a sign-in screen with nothing to read.
+  There are two ways out and both are the author's call: place words from where their ink
+  actually is in the screen capture we already take for colours (exact, but a word-splitting
+  problem on a line of several words), or accept it and say so in the app when a screen cannot
+  be read.
 - [ ] **A browser shows nothing.** Chrome answers the request for character positions with
   success and no data, so there is nothing to place a transcription on: a whole page of English
   produces none. Nothing in the accessibility API gives word positions inside a paragraph
