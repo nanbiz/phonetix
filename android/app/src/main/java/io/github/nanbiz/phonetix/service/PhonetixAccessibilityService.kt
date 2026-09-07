@@ -818,8 +818,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // Drawn without colours rather than not drawn, while the page is moving:
                 // there are no colours to be had until it stops, and a word missing is worse
                 // than a word in a palette of ours for the length of a swipe.
+                //
+                // Moving by the same reckoning the drawing uses, which is the speed this
+                // measured or a movement seen a moment ago. Asking only about the speed left
+                // a window where the page was plainly still going - the words had just been
+                // handed back to the small windows for exactly that reason - and every word
+                // that had arrived without colours was withheld through it. On a list, where
+                // most of a drag's words are new, that is two swipes in eight showing under a
+                // tenth of their lines while the service reported thirty words drawn.
+                val onTheMove = kotlin.math.abs(speedY) > SETTLING_PX_PER_MS ||
+                    android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
                 if (own == null && p.boxes.first().background == 0 && !decision.givenUp &&
-                    kotlin.math.abs(speedY) <= SETTLING_PX_PER_MS
+                    !onTheMove
                 ) {
                     continue
                 }
