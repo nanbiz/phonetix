@@ -175,7 +175,16 @@ class LineColours(
             // have come at bad moments - before the page settled, while it moved - and there
             // is usually still a good picture to hand. This is a lookup in a bitmap, not
             // another capture: nothing blinks for it.
-            mine ?: readSurfaceNow(k, where) ?: nearestSurface(top) ?: page
+            val fell = mine ?: readSurfaceNow(k, where) ?: nearestSurface(top) ?: page
+            if (BuildConfig.DEBUG && mine == null) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "FELLBACK '${text.take(14)}' asked at $top, its surface " +
+                        (own?.let { "at ${it.top}" } ?: "unknown") +
+                        ", took ${fell?.let { Integer.toHexString(it.background) } ?: "nothing"}",
+                )
+            }
+            fell
         } else {
             null
         }
