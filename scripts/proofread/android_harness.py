@@ -195,9 +195,15 @@ class Device:
     def screenshot(self, into):
         """The real framebuffer, including our overlay.
 
-        `adb shell screencap` omits another app's overlay windows entirely - a screenshot
-        taken that way shows the app with no transcriptions on it at all - so the capture
-        has to come through the emulator console.
+        Through the emulator console, which comes back at the panel's own size - 320x640 on
+        this device - and takes about 27ms.
+
+        `adb exec-out screencap` is the other way and used not to work: it omitted another
+        app's overlay windows entirely, and a screenshot taken that way showed the app with no
+        transcriptions on it. That was while they were application overlays; as accessibility
+        overlays they are in it. It comes back at the display's full 1080x1920, which is three
+        times the detail, and takes about 205ms - worth it where the question is exactly where
+        something was drawn, not where it is how often the screen can be photographed.
         """
         os.makedirs(into, exist_ok=True)
         for name in os.listdir(into):
