@@ -248,8 +248,13 @@ def still(r, dev, into):
     return judge(r, shots(dev, into, 3, gap=0.2), "standing still", dev.height)[1]
 
 
-def wait_until_carried(dev, into, want=0.6, tries=10):
-    """Wait until most of the page's lines actually carry a transcription."""
+def wait_until_carried(dev, into, want=0.78, tries=14):
+    """Wait until the page carries what a settled page of this kind carries.
+
+    Not merely most of them. A page still filling in is a page whose next swipe starts from
+    less than it should, and the swipes after the first were being measured from exactly that:
+    the first swipe of a run scored three quarters where the second and third scored a fifth.
+    """
     for _ in range(tries):
         time.sleep(1.2)
         taken = shots(dev, into + "-wait", 1)

@@ -149,7 +149,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         colours = LineColours(
             sampler, main, io,
             hideOverlay = { overlay.hideNow() },
-            readAgain = { schedule(0L) },
+            // Not while a movement is being followed. Scheduling clears the loop that
+            // follows it, and this fires whenever a reading of the colours has to be tried
+            // again - including from a retry posted before the reader put their finger down.
+            // The loop then died in the middle of the drag, the words came off the layer and
+            // back onto the small windows, and each of those spends a frame invisible every
+            // time it moves. The colours are read when the page stops, which is the only time
+            // they can be read at all, and the pass that ends a movement asks for them.
+            readAgain = { if (!following) schedule(0L) },
         )
         bystanders = Bystanders(this)
         // A change of setting is acted on at once, not at the next thing the app in front
@@ -981,7 +988,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // Still moving: hand the measurement to the layer, which corrects both the
                 // position and the speed it is carrying them at. Once the scrolling has
                 // stopped, put the tappable windows back where the words actually are.
-                val moving = following && android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
+                //
+                // A page the app has not answered about for a moment is not a page that has
+                // stopped. This asked only how long since a shift was last measured, and a
+                // pass that comes back with the same positions - an app too busy to have laid
+                // itself out again - looks exactly like stillness. Two of those in a row took
+                // the words off the layer and put them back on the small windows, and the
+                // next measured shift put them back, and so on: photographed through one
+                // drag, the overlay changed hands seven times, and every change costs each
+                // word a frame of being invisible while its window moves. The speed the
+                // reading itself measured says whether the page is going anywhere, and it
+                // falls to nothing on its own once the readings agree.
+                val moving = following && (
+                    android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS ||
+                        kotlin.math.abs(speedY) > SETTLING_PX_PER_MS
+                    )
                 if (BuildConfig.DEBUG) {
                     // Stamped with when the positions were read, not with when the line was
                     // written: they describe the page as it was at that instant.
