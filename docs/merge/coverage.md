@@ -94,3 +94,22 @@ what happens when it does not use them. It is a floor, not an estimate of the fi
 
 What it does not measure: rarer words, verbs and adjectives rather than nouns, and languages
 whose entries are thinner than Spanish. The defined sample still has to be run.
+
+## Matching senses by their words does not work
+
+The obvious repair for the naive join is to use the sense each translation is tagged with, and
+match it against the English gloss the source sense carried. Tried on twenty words: it changed
+four answers and every change was worse (rennen to "ins Rennen schicken", Schnee to Schneefall,
+Kraft to erzwingen), and it repaired none of the three known failures.
+
+The reason is that the two strings are not written to be compared. A source sense arrives as
+"dog (the species Canis familiaris)" and the translation is tagged "male canine": correct, and
+sharing no words at all.
+
+What the data does carry is `_dis1` on every translation, a distribution over the senses of the
+English lemma, so a translation says numerically which sense it belongs to rather than
+describing it in prose. Joining through that, and separately deciding which English sense the
+source gloss means, is the approach worth measuring. String similarity is not.
+
+(Two rows of that sample are void: the test words were written without accents, so `rapido`
+found no entry and `sueno` matched a different word.)
