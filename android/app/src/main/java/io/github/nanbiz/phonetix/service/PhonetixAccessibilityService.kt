@@ -2205,11 +2205,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
         @JvmStatic
         var running: PhonetixAccessibilityService? = null
 
-        /** Whether the words are moved by what a view says it scrolled. Settable so a test
-         *  can weigh it against not doing so. */
+        /**
+         * Whether the words are moved by what a view says it has just scrolled.
+         *
+         * Off. Only a scroll view and a framework list report the distance in pixels; a
+         * Compose list reports a pseudo-offset of its own and a delta of one, so the speed
+         * taken from it is a fiction, and the layer carrying the words at a fiction is worse
+         * than carrying them at the speed the readings measure. Transcriptions more than a
+         * line from their own word through a drag, ten drags each: 51 to 36 percent on a
+         * conversation, 30 to 23 on wrapped paragraphs, 11 to 9 on a list - better on all
+         * three, and the conversation's worst drag went from every transcription wrong to
+         * under half.
+         *
+         * It was measured as helping when it was added. That was against a check reading the
+         * positions the service worked out rather than the ones the layer drew, on pages a
+         * drag ran off the end of.
+         */
         @Volatile
         @JvmStatic
-        var USE_SAID_SCROLL = true
+        var USE_SAID_SCROLL = false
 
         /** Past this, what a view says it scrolled by is not a scroll of a page: it is a
          *  jump, a relayout, or a number in units of its own. */
