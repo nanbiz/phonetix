@@ -29,6 +29,7 @@ Answer states, in cascade order (first hit wins; lower tiers fill what higher ti
 |---|---|---|---|
 | `entry` | Lex pack, spelling is a lemma | headline gloss (and IPA if on) | full entry |
 | `form` | Lex pack `forms` table, spelling is an inflection | headline gloss of the lemma | full entry, plus "form of" line |
+| `via-en` | Lex pack entry exists but has no translation into the target (a `partial` or `machine` pair, DR-2) | machine guess into the target, marked | guess headline marked, English gloss from the pack beneath it as the anchor, senses in English |
 | `homograph` | Lex pack has several entries and the three signals below disagree or none is confident | gloss of the most frequent reading, marked | reading chooser, then the entry |
 | `mono` | source == target, monolingual pack | IPA only (no gloss) | definitions instead of translations |
 | `guess` | No pack entry; MT engine answered | gloss, marked as guess | one line, "machine guess", IPA from espeak |
@@ -67,7 +68,7 @@ hover (desktop), tap (Android and touch browsers), or by dragging the lens (Andr
 ### Consequences
 
 - The Answer type is the contract between core and both UIs; both surfaces render the same
-  eleven states and nothing else.
+  twelve states and nothing else.
 - Homographs are resolved by three signals chained strongest first, all in the core, and the
   chooser is the fallback when they fail: (1) **the translation's own alignment**: whenever
   the sentence is being translated, for a gloss or for replace mode, the engine has already
@@ -109,73 +110,110 @@ SQLite pack per language pair on the phone from about a gigabyte of kaikki JSONL
 minutes, in a foreground service; nothing is bundled. A Phonetix dictionary is a strict subset of
 a Taplex pack. Browsers cannot open SQLite natively and cannot build a pack from a dump.
 
-The pair problem is smaller than "54 sources against any target". Glosses come from a
-Wiktionary **edition**, and kaikki publishes extracts of nine editions today: English, German,
-French, Spanish, Russian, Chinese, Japanese, Polish, Korean (web check, kaikki.org, today;
-Simple English exists but is not a target). A pack is therefore keyed by (source language,
-gloss edition), and the source language can be any language the edition describes. That is
-54 sources times at most 9 editions, and most of those cells are too thin to ship. Targets
-without an edition get the English-edition pack plus a machine guess of the headline gloss
-into the target, labelled as such.
+The first draft of this record keyed a pack by (source language, Wiktionary edition) and
+assumed the editions would fill the matrix. Measured against kaikki's index pages on
+2026-09-08 (`docs/merge/coverage.md`), that does not hold: twenty-one editions exist, there is
+no Swedish and no Arabic edition, and of the 112 cells that are not an edition's own language
+only 36 hold more than thirty thousand senses and 14 more than a hundred thousand, over half
+of those in the French and Chinese editions, whose sense counts run two to four times the
+English edition's because they generate a page per inflected form. The German, Spanish and
+Korean editions are single-language packs in practice: the German edition holds 9,448 Spanish
+senses against the English edition's 875,726. Keyed by edition, most pairs would have no
+dictionary tier, and machine translation would carry the product, which DR-1 forbids by making
+machine output a labelled guess and the dictionary the answer.
+
+The English edition is the rich one for every source language, and a kaikki entry in it
+carries a `translations` field: the entry's translations into other languages. A Spanish word
+glossed into German can come from the English edition's Spanish entry and its German
+translation rather than from the German edition's thin Spanish section. **How dense that
+field is per source and target is unmeasured**: kaikki publishes no coverage of translations,
+IPA or definitions, so it has to be sampled from the dumps themselves (below).
 
 ### Options
 
 | Option | Cost |
 |---|---|
-| Keep SQLite, open it in the browser through sql.js or wa-sqlite | 1 MB engine in WASM, the whole file in memory or a custom VFS, and two readers (Android's SQLite, the browser's WASM SQLite) that can drift in query logic. Build still needs a phone or a CI SQLite step. |
-| Keep gzipped JSON per language, add glosses | Whole file parsed into memory on open (Phonetix does this today at 35 MB total; a lex pack with senses is an order of magnitude larger per language). No random access. |
-| One immutable binary format, one reader in the shared core, built in CI | A format to own and version. A builder to run in CI against gigabyte dumps. |
-| Keep building on the phone | Browser cannot do it, so two build paths; minutes and a gigabyte of mobile data per language on the phone. |
+| Key by (source, edition), as first drafted | Bounded matrix, then mostly empty; most pairs are machine translation throughout while the interface implies a dictionary |
+| Key by source language, one extraction from the English edition per source, with the `translations` field carrying every target | One rich pack per source serves every target; the pack is larger (all translations of every entry); density per target is unmeasured and will vary; senses are written in English unless an edition pack exists |
+| Machine-translate the English glosses at build time into every target | Fabricates a dictionary out of guesses and hides the provenance DR-1 insists on |
+| Keep SQLite in the browser, or gzipped JSON, or on-phone builds | As in the first draft: two readers, no random access, or a gigabyte on the phone |
 
 ### Decision
 
-**One immutable binary format, `lexpack`, built offline by a Rust CLI in CI from the kaikki
-per-language extracts, delivered as release assets and through the existing pack-host URL,
-and read by one Rust reader on both platforms.** On-phone building is dropped.
+**A pack is keyed by source language and built from the English edition.** `lex-<src>` holds,
+per entry: lemma, part of speech, tags (gender among them), IPA and sounds, senses with English
+glosses, marks and examples, forms, and the entry's `translations` grouped by target
+language. The target language is a **view over the pack**, not a key: the card's headline for
+target T is the entry's translation into T when the entry has one; the English gloss stays
+in the card as the anchor either way. `ipa-<src>` is the same format with only the IPA table,
+as before, and is unaffected by the measurement.
+
+Edition packs survive only for what they are actually good for: **definitions written in the
+reader's own language**. `def-<src>-<edition>` is built from a non-English edition only for
+the cells the measurement shows dense (a build threshold of one hundred thousand senses, which
+today admits fourteen cells, French and Chinese first), and is optional on top of `lex-<src>`.
+Swedish and Arabic readers, and any target without an edition, are served by the translations
+view like everyone else.
+
+Because density is unmeasured, every pair is **classed at build time from a sample**, and the
+class is what the product tells the reader. The build takes the top twenty thousand lemmas of
+each source by frequency rank and counts, per target, the share carrying at least one
+translation. Classes, with thresholds to be tuned once the first sample exists:
+
+| Class | Sample result | What the reader gets |
+|---|---|---|
+| `dictionary` | at least 60 percent of the sampled lemmas have a translation into T | translation-first as DR-1 describes; misses go to the guess tier |
+| `partial` | 20 to 60 percent | dictionary where it has one; otherwise the machine guess into T as the headline, marked, with the English gloss beneath it as the anchor (`STATE-CARD-VIA-ENGLISH`) |
+| `machine` | under 20 percent, or no lex pack for the source | machine translation throughout, said so in the picker, the pack manager and every card; the IPA pack and the English gloss still show where they exist |
+
+The class is published in `packs.json` per (source, target) beside the pack rows, so the
+picker and the pack manager read it rather than infer it, and a reader is never told a pair is
+a dictionary when it is a guess. Every pair the engine can translate is offered, because the
+reader still has a page to read; what changes is the label and the promise.
 
 Layout (little-endian, sectioned, each section offset and length in the header):
 
 ```
-header      magic "LXPK", format version, source lang, gloss edition, build date,
-            entry count, flags (has_glosses, has_ipa), section table
-keys        an FST (finite state transducer, `fst` crate) over every spelling, lemma and
-            inflected form alike, NFC + case-folded; value = offset into `hits`
+header      magic "LXPK", format version, source lang, kind (ipa | lex | def), edition for
+            def packs, build date, entry count, section table
+keys        an FST (`fst` crate) over every spelling, lemma and inflected form alike,
+            NFC + case-folded; value = offset into `hits`
 hits        per spelling: list of (entry_id u32, form_label_id u16)
-ipa         per spelling: compact IPA string table for the inline layer, so an IPA-only
-            pack is the same format with an empty `entries` section
-entries     u32 offset table, then zstd-compressed blocks of ~64 KB; each block is a
-            run of CBOR entries {lemma, pos, ipa[], senses[{gloss, marks[], examples[]}],
-            freq_rank}
-labels      string table: form labels ("third-person singular present"), sense marks
+ipa         per spelling: compact IPA string table for the inline layer
+entries     u32 offset table, then zstd-compressed blocks of ~64 KB; each block a run of
+            CBOR entries {lemma, pos, tags[], ipa[], sounds[], senses[{gloss, marks[],
+            examples[]}], translations{lang: [word]}, freq_rank}
+labels      string table: form labels, sense marks, language codes
 ```
 
-Two pack tiers share the format: `ipa-<src>` (the inline IPA layer, hundreds of KB, all 54
-languages; the extension bundles these as it does today, Android downloads them), and
-`lex-<src>-<edition>` (entries with senses, tens of MB, always downloaded on demand at the
-first language pick). MT models are a third download, per direction, owned by the engine
-that consumes them, not part of the format.
+Delivery: built offline by a Rust CLI in CI from the kaikki per-language extracts, released as
+assets and through the existing pack-host URL; on-phone building is dropped. `packs.json`
+lists `{kind, src, edition?, version, size, sha256, url}` rows and a `pairs` table of
+`{src, target, class, sampled_share}`. Reader access as in the first draft: memory-mapped on
+Android, read into WASM memory in the browser, pure-Rust zstd on both.
 
-A `packs.json` manifest lists `{kind, src, edition, version, size, sha256, url}`; a pack host
-serves the same manifest shape, so the existing override keeps working.
+### What has to be sampled before the format is frozen
 
-Reader access: on Android the file is memory-mapped and the FST and blocks are read in place.
-In the browser the pack is read from OPFS into WASM memory in full on open, because the
-extension already holds 35 MB of dictionaries in memory; chunked reads through a host callback
-are a later step taken only if a measured pack exceeds a budget. zstd is decoded by a pure-Rust
-decoder so both targets run the same code.
+One CI job over the per-language English-edition extracts: for each of the 54 sources, take
+the top twenty thousand lemmas by frequency rank, and for each target language count the share
+of lemmas with at least one `translations` entry into it, the share with IPA, and the share
+with at least one example. That table decides the class thresholds above, the size of a
+`lex-<src>` pack with translations included, and whether the `translations` field is dense
+enough to be the mechanism at all. If it is not dense for a source, that source's pairs are
+`partial` or `machine` and the product says so; the format does not change.
 
 ### Consequences
 
-- The builder and the reader are the same crate, so the format cannot drift between them;
-  a format change is a version bump and a rebuilt release, never a phone migration.
-- The pair matrix is bounded by the nine editions. The manifest is the source of truth for
-  which cells exist; the UI never offers a pair the manifest lacks.
+- The builder and the reader are the same crate; a format change is a version bump and a
+  rebuilt release, never a phone migration.
+- The pair matrix is no longer bounded by editions but by what the sample finds; the
+  manifest's `pairs` table is the single source of truth for what a pair is, and the UI never
+  offers a pair without its class.
+- The card gains `STATE-CARD-VIA-ENGLISH`; the picker and the pack manager show the class;
+  the pack manager lists packs per source, not per pair, with `def` packs as optional extras.
 - Taplex's foreground build service, its SQLite layer and its unsynchronised handle go away.
-- CI needs a pack job with a cache of the kaikki extracts and a monthly refresh. Pack sizes
-  per cell are measured by that job, not estimated here.
-- The extension grows by nothing at install; lex packs are opt-in per pair.
-
----
+- CI needs the pack job, the sample job, and a monthly refresh; sizes and shares are measured
+  by those jobs, not estimated here.
 
 ## DR-3: Module structure and what is shared
 
@@ -591,6 +629,25 @@ every symbol stays reachable; nothing truncates. The guess state shows it.
 
 Type: headline 22 px, pronunciation 16 px in the IPA colour, grammar line 13 px, so the
 answer is the most prominent thing on the card and the transcription reads as its support.
+
+### The provenance badge and the Wiktionary mark
+
+The dictionary badge carries the Wiktionary mark, not a drawing of it. The mark is a Wikimedia
+Foundation trademark used here nominatively, to say where the data came from; the file used,
+its Commons page and its licence are pinned in `data/marks.json` and shipped as an asset, so
+the question is settled there. Which mark: not the classic multilingual tile block, which
+turns to mud below about twenty pixels, but Wikimedia's own small-size Wiktionary mark, the
+one it ships for favicons, at `--mark-size` (16 px). The badge is mark plus the word
+"Wiktionary" at the Full and Compact tiers and the word alone at Strip, so the name is always
+present. Themes and modes: the mark is never recoloured; it sits on a fixed white plate
+(`--color-mark-plate`, the one colour token that is not themed) inside the badge, so on a
+dark ground it reads as a small white tile and the DR-10 contrast rules apply to the badge's
+text on the badge's background as before. Meaning: every provenance value uses the same badge
+shape and type, so the set reads as one row of labels; only the Wiktionary badge has a mark
+because only it has one, and "guess" and "synthesised" stay text in the guess colour. Name and
+operation: the badge is a link with the accessible name "Source: Wiktionary. Opens the entry
+on Wiktionary." and keyboard focus; the foot keeps its Wiktionary action as the primary way
+to the entry.
 
 ### Consequences
 

@@ -144,7 +144,7 @@
    "uid": "REQ-PACK-ON-DEMAND",
    "tag": "REQ",
    "title": "Packs are prebuilt and fetched on demand",
-   "statement": "Lex packs are built in CI in one binary format, listed in a manifest, and downloaded per language pair when the reader picks it; nothing is built on the device.",
+   "statement": "Packs are built in CI in one binary format, keyed by source language from the English edition with each entry's translations into every target, listed in a manifest with a class per (source, target) pair, and downloaded per source when the reader picks it; nothing is built on the device.",
    "status": "proposed",
    "relations": [
     {
@@ -448,6 +448,48 @@
      "to": "REQ-PARITY"
     }
    ]
+  },
+  {
+   "uid": "REQ-PAIR-HONESTY",
+   "tag": "REQ",
+   "title": "A pair is never called a dictionary when it is a guess",
+   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) sampled from the pack's translations; the language picker, the pack manager and every card show that class, and a machine-class pair is offered only with machine translation named as what it is.",
+   "status": "proposed",
+   "relations": [
+    {
+     "role": "realised_by",
+     "to": "VIEW-PACKS"
+    },
+    {
+     "role": "realised_by",
+     "to": "VIEW-SETTINGS"
+    },
+    {
+     "role": "realised_by",
+     "to": "STATE-CARD-VIA-ENGLISH"
+    },
+    {
+     "role": "depends",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ]
+  },
+  {
+   "uid": "REQ-PROVENANCE-MARK",
+   "tag": "REQ",
+   "title": "Dictionary provenance carries the Wiktionary mark",
+   "statement": "The dictionary provenance badge shows Wikimedia's small Wiktionary mark (an asset pinned with its file and licence in data/marks.json, never redrawn) at 16 px on a fixed white plate beside the word, is a link with an accessible name that opens the entry, drops to the word alone at the Strip tier, and sits in the same badge shape as the other provenance values, which have no mark.",
+   "status": "proposed",
+   "relations": [
+    {
+     "role": "realised_by",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "constrains",
+     "to": "REQ-THEMES"
+    }
+   ]
   }
  ],
  "views": [
@@ -496,6 +538,7 @@
    "states": [
     "Card entry",
     "Card form",
+    "Card via English",
     "Card homograph",
     "Card reading decided",
     "Card mono",
@@ -619,7 +662,7 @@
    "uid": "VIEW-PACKS",
    "tag": "VIEW",
    "title": "Pack manager",
-   "statement": "The list of available and installed packs per language pair with size, download progress and errors, fed by the manifest.",
+   "statement": "The packs per source language (IPA, lex from the English edition, optional definitions packs where an edition is dense) with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
    "status": "proposed",
    "states": [
     "Packs ready",
@@ -640,6 +683,10 @@
     {
      "role": "renders",
      "to": "REQ-PACK-ON-DEMAND"
+    },
+    {
+     "role": "renders",
+     "to": "REQ-PAIR-HONESTY"
     }
    ]
   },
@@ -841,7 +888,7 @@
    "uid": "STATE-CARD-ENTRY",
    "tag": "STATE",
    "title": "Card entry",
-   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with dictionary provenance, pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
+   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with the Wiktionary provenance badge (mark plus word, a link to the entry), pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-entry.png",
@@ -870,7 +917,7 @@
    "uid": "STATE-CARD-FORM",
    "tag": "STATE",
    "title": "Card form",
-   "statement": "The spelling is an inflected form of a word with twelve senses: headline gloss for the applying sense, pronunciation line (synthesised), grammar line with the lemma prominent and the tapped form as the small part with its label, the example, two other senses and a ten-more count. Drawn at the Full tier.",
+   "statement": "The spelling is an inflected form of a word with twelve senses: headline gloss for the applying sense with the Wiktionary badge, pronunciation line (synthesised), grammar line with the lemma prominent and the tapped form as the small part with its label, the example, two other senses and a ten-more count. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-form.png",
@@ -1041,7 +1088,7 @@
    "uid": "STATE-CARD-NO-PACK",
    "tag": "STATE",
    "title": "Card no pack",
-   "statement": "No pack of any kind for the pair: the message in the headline slot and one action to fetch the pair with its size; no pronunciation line exists to show. Drawn at the Full tier.",
+   "statement": "No pack of any kind for the source: the message in the headline slot and one action to fetch the source's packs with their size, and the class the pair will have once fetched; no pronunciation line exists to show. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-no-pack.png",
@@ -1067,7 +1114,7 @@
    "uid": "STATE-CARD-UNKNOWN-LANG",
    "tag": "STATE",
    "title": "Card unknown language",
-   "statement": "The detector's confidence for the block is below threshold: the question in the headline slot and a short language picker seeded with the closest candidates; the choice is remembered for the site. Drawn at the Full tier.",
+   "statement": "The detector's confidence for the block is below threshold: the question in the headline slot and a short language picker seeded with the closest candidates, each carrying the class of its pair with the reader's language; the choice is remembered for the site. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-unknown-lang.png",
@@ -1195,7 +1242,7 @@
    "uid": "STATE-PACKS-READY",
    "tag": "STATE",
    "title": "Packs ready",
-   "statement": "The manifest is loaded: installed packs with their version and size, available packs with a fetch action.",
+   "statement": "The manifest is loaded: installed packs per source with version and size, available packs with a fetch action, and for each source the class of its pair with the reader's language (dictionary, partial, machine) read from the manifest, never inferred.",
    "status": "proposed",
    "renders": [
     "surface-light-packs-ready.png",
@@ -1258,7 +1305,7 @@
    "uid": "STATE-SETTINGS-READY",
    "tag": "STATE",
    "title": "Settings ready",
-   "statement": "First screen: on for this site (per site; per app on Android) and the default for new sites beside it, the languages detected on this page as chips with the note that each block is annotated in its own language, your language, the inline frequency slider with its curve ticks, the inline-shows chooser, pack status with a link to the manager, and the closed Advanced disclosure.",
+   "statement": "First screen: on for this site (per site; per app on Android) and the default for new sites beside it, the languages detected on this page as chips with the note that each block is annotated in its own language, your language with the class of the page's pair beside it (dictionary, partial or machine), the inline frequency slider with its curve ticks, the inline-shows chooser, pack status with a link to the manager, and the closed Advanced disclosure.",
    "status": "proposed",
    "renders": [
     "surface-light-settings-ready.png",
@@ -1443,7 +1490,7 @@
    "uid": "STATE-CARD-TIER-STRIP",
    "tag": "STATE",
    "title": "Card tier strip",
-   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
+   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge (the word alone, no mark) and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
    "status": "proposed",
    "renders": [
     "surface-light-card-tier-strip.png",
@@ -1488,6 +1535,36 @@
     {
      "role": "satisfies",
      "to": "REQ-HOMOGRAPH"
+    }
+   ]
+  },
+  {
+   "uid": "STATE-CARD-VIA-ENGLISH",
+   "tag": "STATE",
+   "title": "Card via English",
+   "statement": "The entry exists in the source pack but has no translation into the reader's language (a partial or machine pair): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
+   "status": "proposed",
+   "renders": [
+    "surface-light-card-via-english.png",
+    "surface-dark-card-via-english.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/resolve.rs"
+   ],
+   "relations": [
+    {
+     "role": "state_of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PAIR-HONESTY"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-GUESS-LABELLED"
     }
    ]
   }

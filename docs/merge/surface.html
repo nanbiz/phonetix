@@ -71,7 +71,9 @@
   --tier-full-min-height:   400px;
   --tier-compact-min-width: 240px;  /* below either Compact minimum the card is a Strip */
   --tier-compact-min-height: 240px;
-  --motion-dwell:      150ms;  /* a drag that pauses this long counts as stopped */
+  --motion-dwell:      150ms;
+  --color-mark-plate:  #ffffff; /* fixed, not themed: the mark keeps its own colours on a white plate */  /* a drag that pauses this long counts as stopped */
+  --mark-size:         16px;   /* the Wiktionary mark slot inside the badge */
   --diagram-width:     96px;
   --diagram-height:    72px;   /* 4:3 slot; the fetched image is letterboxed inside it */
 
@@ -339,17 +341,24 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .sym:hover, .sym.active { background: var(--color-accent-bg); }
 .ipa-note { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); }
 .ipa-note.guess { color: var(--color-guess); }
+.anchor-en { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; font-size: var(--font-size-ipa); color: var(--color-ink); }
+.anchor-en .anchor-label { font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-accent); }
+.anchor-en .anchor-gl { font-weight: var(--weight-medium); }
 .gram { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .gram .lemma { color: var(--color-ink); font-weight: var(--weight-medium); }
 .gram .lemma.prominent { font-size: var(--font-size-lemma); color: var(--color-accent); }
 .gram .g-sub { flex: 1 1 100%; }
 .chip { display: inline-flex; align-items: center; background: var(--color-chip-bg); color: var(--color-chip-ink); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); line-height: 1.6; white-space: nowrap; }
 .chip.mark { font-style: italic; font-weight: var(--weight-regular); }
+.chip.class-dictionary { background: var(--color-accent-bg); color: var(--color-accent); }
+.chip.class-partial { background: var(--color-guess-bg); color: var(--color-guess); }
+.chip.class-machine { background: var(--color-guess-bg); color: var(--color-guess); }
 
 .card-body { padding: 0 var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; }
 .card-body:empty { display: none; }
 .badge { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; text-transform: uppercase; border-radius: var(--radius-chip); padding: 1px var(--space-2); line-height: 1.6; white-space: nowrap; flex: 0 0 auto; }
-.badge.dict { background: var(--color-accent-bg); color: var(--color-accent); }
+.badge.dict { background: var(--color-accent-bg); color: var(--color-accent); display: inline-flex; align-items: center; gap: var(--space-1); text-decoration: none; }
+.mark-slot { width: var(--mark-size); height: var(--mark-size); flex: 0 0 auto; background: var(--color-mark-plate); border: var(--border-width) dashed var(--color-accent); border-radius: var(--radius-bar); box-sizing: border-box; }
 .badge.guess { background: var(--color-guess-bg); color: var(--color-guess); }
 .ex { margin: 0; padding-left: var(--space-2); border-left: 2px solid var(--color-border); color: var(--color-ink-muted); font-size: var(--font-size-small); }
 .ex q { quotes: none; color: var(--color-ink); }
@@ -380,6 +389,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .readings .r-pos { margin-left: auto; }
 .lang-picks { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .pick { font-family: var(--font-ui); font-size: var(--font-size-small); height: var(--button-height); padding: 0 var(--space-3); border-radius: var(--radius-chip); border: var(--border-width) solid var(--color-border); background: var(--color-surface); color: var(--color-ink); cursor: pointer; }
+.pick { display: inline-flex; align-items: center; gap: var(--space-1); }
 .pick.primary { background: var(--color-accent-bg); border-color: var(--color-accent); color: var(--color-accent); }
 .words { display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .skeleton { height: var(--skeleton-height); border-radius: var(--radius-bar); background: var(--color-skeleton); }
@@ -402,7 +412,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
   .card .fold { display: inline-flex; align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
 }
 @container card-space ((max-height: 239px) or (max-width: 239px)) {
-  .card .gram, .card .card-foot, .card .ipa-note, .card .card-body { display: none; }
+  .card .gram, .card .card-foot, .card .ipa-note, .card .card-body, .card .mark-slot { display: none; }
   .card .card-head { padding-bottom: var(--space-3); }
 }
 
@@ -439,6 +449,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    Packs and home (settings surfaces)
    ------------------------------------------------------------------ */
 .panel { width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
+.panel h4 .h4-note { float: right; font-weight: var(--weight-regular); font-size: var(--font-size-label); color: var(--color-ink-faint); }
+.row .r-name { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .panel h4 { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-body); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
 .rows { display: flex; flex-direction: column; }
 .row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); min-height: var(--touch-target); }
@@ -545,14 +557,31 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+          <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">a</button><button class="sym o">ː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
           <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
         </header>
         <div class="card-body">
           <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-VIA-ENGLISH">
+      <div class="label"><b>STATE-CARD-VIA-ENGLISH</b> Card via English</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">czytelnia</span><span class="badge guess">guess</span></div>
+          <div class="anchor-en"><span class="anchor-label">Wiktionary, in English</span><span class="anchor-gl">reading room</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+          <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">German → Polish is a <b>partial</b> pair: no Polish translation in the entry, so the headline is a machine guess</span></div>
+        </header>
+        <div class="card-body">
+          <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+        </div>
+        <footer class="card-foot"><span>German → Polish · lex-de 2026.09 · Bergamot de-pl</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -561,7 +590,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+          <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
           <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
         </header>
@@ -569,7 +598,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
           <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -586,7 +615,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <li><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip r-pos">verb</span></li>
           </ul>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -595,7 +624,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">modern, contemporary</span><span class="badge dict">Wiktionary</span></div>
+          <div class="headline"><span class="tr">modern, contemporary</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">m</button><button class="sym v">o</button><button class="sym c">d</button><button class="sym v">ɛ</button><button class="sym c">ʁ</button><button class="sym c">n</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
           <div class="gram"><span class="lemma">modern</span><span class="chip">adjective</span><span class="g-sub">decided from the translation; another reading exists</span></div>
           <button class="alt-reading"><span class="alt-label">Other reading</span><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip">verb</span><span class="chev">›</span></button>
@@ -603,7 +632,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
         <div class="card-body">
           <p class="ex"><q>Ein modernes Gebäude.</q><span class="ex-tr">A modern building.</span></p>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -612,7 +641,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><span class="badge dict">Wiktionary</span></div>
+          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">s</button><button class="sym v">ɛ</button><button class="sym c">ɹ</button><button class="sym v">ə</button><button class="sym c">n</button><button class="sym c">d</button><button class="sym v">ɪ</button><button class="sym c">p</button><button class="sym v">ɪ</button><button class="sym c">t</button><button class="sym v">i</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span><span class="ipa-note">General American</span></div>
           <div class="gram"><span class="lemma">serendipity</span><span class="chip">noun</span></div>
         </header>
@@ -620,7 +649,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <p class="ex"><q>Finding the letter was pure serendipity.</q></p>
           <div class="others"><span class="others-label">Other senses</span><ul><li>The faculty of making such discoveries. <span class="chip mark">uncountable</span></li></ul></div>
         </div>
-        <footer class="card-foot"><span>English · lex-en-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>English · lex-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -631,7 +660,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
         <header class="card-head">
           <div class="headline"><span class="tr">library card renewal</span><span class="badge guess">guess</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><button class="sym c">s</button><button class="sym v">a</button><button class="sym v">ʊ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">v</button><button class="sym v">a</button><button class="sym v">ɪ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">f</button><button class="sym v">ɛ</button><button class="sym v">ɐ</button><button class="sym c">l</button><button class="sym v">ɛ</button><button class="sym c">ŋ</button><button class="sym v">ə</button><button class="sym c">ʁ</button><button class="sym v">ʊ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
-          <div class="gram"><span class="g-sub">not in lex-de-en · machine translation of the whole word</span></div>
+          <div class="gram"><span class="g-sub">not in lex-de · machine translation of the whole word</span></div>
         </header>
         <div class="card-body">
           <p class="note">Its parts are in the dictionary:</p>
@@ -662,11 +691,11 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr quiet">No German → English dictionary here yet</span></div>
+          <div class="headline"><span class="tr quiet">No German pack here yet</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span><span class="ipa-note">ipa-de</span></div>
         </header>
         <div class="card-body">
-          <div class="btn-row"><button class="btn">Fetch lex-de-en · 38 MB</button><button class="btn secondary">Not now</button></div>
+          <div class="btn-row"><button class="btn">Fetch lex-de · 38 MB</button><button class="btn secondary">Not now</button></div>
         </div>
         <footer class="card-foot"><span>German → English</span><span class="actions"><button class="btn-text">Packs</button></span></footer>
       </article>
@@ -681,9 +710,9 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym c">ʁ</button><button class="sym c">m</button><button class="sym c">p</button><button class="sym c">f</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
         </header>
         <div class="card-body">
-          <p class="note">Not in lex-de-en, and the translation engine is not available offline.</p>
+          <p class="note">Not in lex-de, and the translation engine is not available offline.</p>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Search Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Search Wiktionary</button></span></footer>
       </article>
     </section>
 
@@ -692,10 +721,11 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr quiet">No pack for Portuguese → Polish on this device</span></div>
+          <div class="headline"><span class="tr quiet">No Portuguese pack on this device</span></div>
+          <div class="gram"><span class="g-sub">Portuguese → Polish will be a <b>machine</b> pair: translation is a guess throughout; IPA and English glosses come from the pack</span></div>
         </header>
         <div class="card-body">
-          <div class="btn-row"><button class="btn">Fetch ipa-pt + lex-pt-pl · 41 MB</button><button class="btn secondary">Not now</button></div>
+          <div class="btn-row"><button class="btn">Fetch ipa-pt + lex-pt · 41 MB</button><button class="btn secondary">Not now</button></div>
         </div>
         <footer class="card-foot"><span>Portuguese → Polish</span><span class="actions"><button class="btn-text">Packs</button></span></footer>
       </article>
@@ -710,7 +740,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <div class="gram"><span class="g-sub">not recognised; the choice is remembered for this site</span></div>
         </header>
         <div class="card-body">
-          <div class="lang-picks"><button class="pick primary">Dutch</button><button class="pick">Afrikaans</button><button class="pick">Czech</button><button class="pick">Other…</button></div>
+          <div class="lang-picks"><button class="pick primary">Dutch <span class="chip class-dictionary">dictionary</span></button><button class="pick">Afrikaans <span class="chip class-partial">partial</span></button><button class="pick">Czech <span class="chip class-dictionary">dictionary</span></button><button class="pick">Other…</button></div>
         </div>
         <footer class="card-foot"><span>? → English</span><span class="actions"><button class="btn-text">Always ask</button></span></footer>
       </article>
@@ -729,7 +759,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <div class="skeleton" style="width: 90%"></div>
           <div class="skeleton" style="width: 75%"></div>
         </div>
-        <footer class="card-foot"><span>Opening lex-de-en…</span></footer>
+        <footer class="card-foot"><span>Opening lex-de…</span></footer>
       </article>
     </section>
 
@@ -738,7 +768,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 420" style="width: 360px; height: 420px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -747,7 +777,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
     </section>
@@ -757,7 +787,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 260" style="width: 360px; height: 260px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -766,7 +796,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
     </section>
@@ -776,7 +806,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 140" style="width: 360px; height: 140px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -785,7 +815,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
     </section>
@@ -822,7 +852,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="screen tall">
         <article class="card moving">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span></div>
           </header>
@@ -839,11 +869,12 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
     <section class="state" data-uid="STATE-PACKS-READY">
       <div class="label"><b>STATE-PACKS-READY</b> Packs ready</div>
       <div class="panel">
-        <h4>Packs</h4>
+        <h4>Packs <span class="h4-note">your language: English</span></h4>
         <div class="rows">
-          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
-          <div class="row"><span class="r-name">German</span><span class="r-sub">ipa-de · 0.6 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
-          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 41 MB · 2026.09</span><button class="btn r-act">Fetch</button></div>
+          <div class="row"><span class="r-name">German <span class="chip class-dictionary">→ English: dictionary</span></span><span class="r-sub">lex-de 38 MB · ipa-de 0.6 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+          <div class="row"><span class="r-name">German definitions in German</span><span class="r-sub">def-de-de 21 MB · optional, senses written in German</span><button class="btn r-act">Fetch</button></div>
+          <div class="row"><span class="r-name">Portuguese <span class="chip class-partial">→ English: partial</span></span><span class="r-sub">lex-pt 41 MB · ipa-pt 0.5 MB · 2026.09</span><button class="btn r-act">Fetch</button></div>
+          <div class="row"><span class="r-name">Swedish <span class="chip class-machine">→ English: machine</span></span><span class="r-sub">ipa-sv 0.4 MB · no lex pack: translation is a guess throughout</span><button class="btn r-act">Fetch</button></div>
           <div class="row"><span class="r-name">Bergamot de → en</span><span class="r-sub">translation model · 16 MB · installed</span><button class="btn-text r-act">Remove</button></div>
         </div>
       </div>
@@ -852,10 +883,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
     <section class="state" data-uid="STATE-PACKS-DOWNLOADING">
       <div class="label"><b>STATE-PACKS-DOWNLOADING</b> Packs downloading</div>
       <div class="panel">
-        <h4>Packs</h4>
+        <h4>Packs <span class="h4-note">your language: English</span></h4>
         <div class="rows">
-          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 12.4 of 41 MB</span><button class="btn-text r-act">Cancel</button><div class="progress r-wide"><i></i></div></div>
-          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+          <div class="row"><span class="r-name">Portuguese <span class="chip class-partial">→ English: partial</span></span><span class="r-sub">lex-pt · 12.4 of 41 MB</span><button class="btn-text r-act">Cancel</button><div class="progress r-wide"><i></i></div></div>
+          <div class="row"><span class="r-name">German <span class="chip class-dictionary">→ English: dictionary</span></span><span class="r-sub">lex-de 38 MB · ipa-de 0.6 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
         </div>
       </div>
     </section>
@@ -863,10 +894,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
     <section class="state" data-uid="STATE-PACKS-ERROR">
       <div class="label"><b>STATE-PACKS-ERROR</b> Packs error</div>
       <div class="panel">
-        <h4>Packs</h4>
+        <h4>Packs <span class="h4-note">your language: English</span></h4>
         <div class="rows">
-          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 41 MB</span><button class="btn r-act">Retry</button><div class="alert r-wide">Checksum did not match after download. The file was discarded.</div></div>
-          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+          <div class="row"><span class="r-name">Portuguese <span class="chip class-partial">→ English: partial</span></span><span class="r-sub">lex-pt · 41 MB</span><button class="btn r-act">Retry</button><div class="alert r-wide">Checksum did not match after download. The file was discarded.</div></div>
+          <div class="row"><span class="r-name">German <span class="chip class-dictionary">→ English: dictionary</span></span><span class="r-sub">lex-de 38 MB · ipa-de 0.6 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
         </div>
       </div>
     </section>
@@ -882,10 +913,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <div class="row"><span class="r-name">New sites start on</span><span class="r-sub">the default for a site without its own switch</span><span class="toggle on r-act"></span></div>
           <div class="row"><span class="r-name">On this page</span><span class="r-sub">each block in its own language; correct one from its card</span><span class="chips r-act"><span class="chip">German</span><span class="chip">English</span></span></div>
           <div class="scope-head">Reading <span class="scope-note">everywhere</span></div>
-          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
+          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language · German → English is a <b>dictionary</b> pair</span><span class="select r-act">English</span></div>
           <div class="row"><span class="r-name">Inline annotations</span><span class="r-sub">how many words, on one curve from none to all</span><input class="slider r-wide" type="range" min="0" max="100" value="35"><span class="ticks r-wide"><span>card only</span><span>some words</span><span>every word</span></span></div>
           <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span class="on">Gloss</span><span>Gloss + IPA</span><span>IPA</span><span>Replace</span></span></div>
-          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de-en, ipa-de, ipa-en ready · Bergamot de→en</span><button class="btn-text r-act">Manage</button></div>
+          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de, ipa-de, ipa-en ready · Bergamot de→en</span><button class="btn-text r-act">Manage</button></div>
           <div class="row disclosure"><span class="r-name">Advanced</span><span class="chev r-act">⌄</span></div>
         </div>
       </div>
@@ -917,7 +948,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
           <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
           <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span>Gloss</span><span>Gloss + IPA</span><span>IPA</span><span class="on">Replace</span></span></div>
           <div class="row dim"><span class="r-name">Inline annotations</span><span class="r-sub">not used by Replace: every phrase that can be swapped safely is swapped, the rest keep a gloss</span><input class="slider r-wide" type="range" min="0" max="100" value="35" disabled></div>
-          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de-en, ipa-de, ipa-en ready · Bergamot de→en with alignments</span><button class="btn-text r-act">Manage</button></div>
+          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de, ipa-de, ipa-en ready · Bergamot de→en with alignments</span><button class="btn-text r-act">Manage</button></div>
           <div class="row disclosure"><span class="r-name">Advanced</span><span class="chev r-act">⌄</span></div>
         </div>
       </div>
@@ -980,7 +1011,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-paper mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -988,7 +1019,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">default · long reading, lowest chroma so the page stays dominant</p>
@@ -998,7 +1029,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-paper mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1006,7 +1037,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">default · long reading, lowest chroma so the page stays dominant</p>
@@ -1016,7 +1047,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-ink mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1024,7 +1055,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">contrast floor 7:1, 2 px borders, heavier weights; low vision and sunlight</p>
@@ -1034,7 +1065,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-ink mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1042,7 +1073,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">contrast floor 7:1, 2 px borders, heavier weights; low vision and sunlight</p>
@@ -1052,7 +1083,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-classroom mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1060,7 +1091,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">strong symbol kinds, 19 px pronunciation line; learning and teaching sounds</p>
@@ -1070,7 +1101,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-classroom mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" title="asset: Wiktionary small mark, 16 px, pinned in data/marks.json"></span><span class="badge-text">Wiktionary</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1078,7 +1109,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
             <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
         </article>
       </div>
       <p class="purpose">strong symbol kinds, 19 px pronunciation line; learning and teaching sounds</p>
