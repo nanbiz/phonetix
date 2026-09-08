@@ -198,6 +198,26 @@ Ticked items are done and verified by a suite; the rest are not.
   milliseconds, and between two passes that far apart the words are wherever the prediction put
   them. Measured and reverted for making it no better: capping how far the words are carried on
   one reading, and withholding them on the small windows as well as on the layer.
+- [ ] **What each kind of container says about its own scrolling** (measured 2026-09-08, and
+  read in the platform's source rather than guessed):
+  - A `ScrollView` reports the delta in real pixels: 997 against 991 really travelled.
+  - A `RecyclerView`, which is what most apps' lists are, also reports real pixels: 909/906,
+    1062/1053, 1068/1061.
+  - A `ListView` reports nothing usable - the delta is 0, and only `fromIndex`/`toIndex` move.
+  - A Compose lazy list reports a delta of -1 and a position of its own. Compose builds it
+    from `estimatedLazyScrollOffset`, which is
+    `firstVisibleItemScrollOffset + firstVisibleItemIndex * 500`, and the source calls it a
+    "best-effort pseudo-offset" because a lazy list cannot say where it is in pixels. It moves
+    in real pixels within an item and jumps 500 at each item boundary whatever that item's
+    height, which is why the scale between what it says and what it does wanders from 0.15 to
+    39 inside one drag.
+  Where the number is real it now sets the layer's speed. Where it is not, nothing can be done
+  with it.
+- [ ] **The suite cannot resolve a change of thirty points on the moving case.** Three runs of
+  one build gave the same page 4%, 37% and 41%; another gave 28%, 0% and 26%. Every conclusion
+  about the movement drawn from a single run of it is worthless, and several were drawn that
+  way before this was noticed. What it does say reliably: standing still and once settled are
+  clean, and the withholding turned off reads 64-73% against 12-18% on.
 - [ ] **Following from something other than the app's answers.** Two ways were measured and
   neither works. The display can be photographed by the service, but the system refuses more
   than about three a second - back to back, one frame then thirteen refusals in thirty
