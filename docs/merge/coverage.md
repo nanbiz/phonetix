@@ -69,3 +69,28 @@ would not have been, and how lossy is the thing to sample.
 
 What it buys is shape: the translations table is a property of English lemmas alone, so it is
 one shared asset every source pack points into rather than anything per pair.
+
+## The pivot join, sampled
+
+Twenty common Spanish nouns, run through both hops against kaikki's own pages on 2026-09-08,
+taking the first German translation on the English lemma and ignoring the sense it is tagged
+with, which is the naive join.
+
+Every one produced a German word: coverage through the pivot was twenty of twenty. Three of
+the twenty were wrong, and all three failed the same way, by landing on a sibling sense of the
+English lemma:
+
+| Spanish | English gloss | German taken | should be |
+| --- | --- | --- | --- |
+| perro | dog | Rüde (a male dog) | Hund |
+| camino | way, route | Weise (a manner) | Weg |
+| silla | chair | Sessel (an armchair) | Stuhl |
+
+So the naive join is about eighty-five percent right, and what it gets wrong is a confident
+wrong gloss rather than a miss, which is the failure that matters. Every translation on an
+English lemma carries the sense string it belongs to, and every sense of the source entry
+carries its English gloss, so the build has both halves of the join and this sample measures
+what happens when it does not use them. It is a floor, not an estimate of the finished thing.
+
+What it does not measure: rarer words, verbs and adjectives rather than nouns, and languages
+whose entries are thinner than Spanish. The defined sample still has to be run.
