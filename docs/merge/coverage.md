@@ -45,9 +45,27 @@ translation would carry the product.
 The IPA layer is unaffected: it is built per source language out of the English edition, which
 is the rich one, which is where the current 54 dictionaries come from.
 
-Worth testing before the pack format is settled: a kaikki entry carries a `translations` field,
-and the English edition holds a hundred times more of every language than the other editions do.
-A Spanish word glossed into German could come from the English edition's Spanish entry and its
-German translation, rather than from the German edition's Spanish section. If that field is
-dense enough, one rich extraction serves every pair and the edition key is only needed where a
-reader wants definitions written in their own language. How dense it is is not published.
+## The translations field, measured
+
+Tested against kaikki's own per-word pages on 2026-09-08, since the idea that one rich
+extraction could serve every pair rests on it.
+
+**A `translations` field exists only on English lemmas.** The English edition's entry for
+"house" carries sixteen translations blocks; its entries for Spanish "perro" and Spanish
+"libro" carry none at all. What the English edition gives for a Spanish word is its senses
+glossed in English, and nothing else. So a Spanish word does not carry a German translation
+there, and reading one off the source entry is not possible.
+
+**The pivot through English is possible, and it is rich.** The English entry for "house" holds
+translations into 436 languages, each carrying the `sense` string it belongs to, a sense
+distribution weight, and gender tags where the target language has them. So the chain is two
+hops inside one edition: the Spanish entry gives an English gloss, and the English lemma for
+that gloss gives the target language.
+
+What that costs is sense fidelity at the joint. The Spanish sense arrives as an English phrase,
+the English lemma's translations are tagged by their own sense strings, and matching one to the
+other is a join on meaning rather than on an identifier. It is lossy in a way a direct field
+would not have been, and how lossy is the thing to sample.
+
+What it buys is shape: the translations table is a property of English lemmas alone, so it is
+one shared asset every source pack points into rather than anything per pair.
