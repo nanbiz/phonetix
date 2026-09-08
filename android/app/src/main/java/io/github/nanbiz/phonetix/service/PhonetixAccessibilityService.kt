@@ -1111,21 +1111,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // It is held to a larger loss and a longer wait than a settled page, because
                 // reading costs a few hundred milliseconds during which the words are carried
                 // on at the speed they had and then stand still.
+                // Not while it is moving. Reading the strip of screen that has just arrived
+                // means walking the app's node tree, and that walk costs two to three hundred
+                // milliseconds on a page of any length - two to four of them in a drag of a
+                // second and a third. What it buys is the lines that scrolled in; what it
+                // costs is every reading that did not happen while it ran, and the following
+                // is the only thing keeping the words on their text. Starved of readings the
+                // layer stops trusting the speed it has and stops carrying, so the words fall
+                // behind the page and then stand still.
+                //
+                // Ten drags of each page, transcriptions more than a line from their own word
+                // through a drag: 36 to 11 percent on a conversation, 28 to 16 on wrapped
+                // paragraphs, 9 to 7 on a list. It costs less than nothing in what is drawn,
+                // because a stale reading is a reading the layer refuses to draw from: over
+                // the same ten drags the layer withheld the words on 75 to 862 samples with
+                // the strip read and on 0 to 737 without it.
                 val moving = onTheMove()
-                val lost = if (moving) MOSTLY_GONE else 1f - KEPT_ENOUGH
-                val wait = if (moving) TURNOVER_MOVING_MS else FULL_READ_TURNOVER_MS
-                if (had > 0 && clipped > had * lost && fresh > wait) {
-                    if (moving) {
-                        // Read in the middle of the movement, without stopping it. Giving up
-                        // and letting the next pass read instead takes the words off the
-                        // layer and puts them back on the small windows for the length of the
-                        // read, which photographs as the overlay blinking - and the oftener
-                        // the reading is worth doing, the more it blinks.
-                        extendInBand(planned)
-                    } else {
-                        ok = false
-                        why = "the screen has moved on: $clipped of $had words scrolled away"
-                    }
+                if (!moving && had > 0 && clipped > had * (1f - KEPT_ENOUGH) &&
+                    fresh > FULL_READ_TURNOVER_MS
+                ) {
+                    ok = false
+                    why = "the screen has moved on: $clipped of $had words scrolled away"
                 }
             }
             if (ok) {
@@ -1663,29 +1669,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var lastDx = 0f
         var lastDy = 0f
 
-        /**
-         * Move this line to where it now stands, so that lines read at different moments can
-         * be followed together.
-         *
-         * Every line in a plan is carried by one shift measured from where the plan was made,
-         * which only works while they were all made at the same moment. A line read later -
-         * one that scrolled into view during the movement - starts from where it is now, so
-         * the lines already held are brought up to now as well and the shift starts again
-         * from zero for all of them.
-         */
-        fun rebase(dx: Float, dy: Float) {
-            if (dx == 0f && dy == 0f) return
-            measuredAt?.offset(dx.toInt(), dy.toInt())
-            clip.offset(dx.toInt(), dy.toInt())
-            boxes = boxes.map {
-                it.copy(rect = RectF(
-                    it.rect.left + dx, it.rect.top + dy,
-                    it.rect.right + dx, it.rect.bottom + dy,
-                ))
-            }
-            lastDx = 0f
-            lastDy = 0f
-        }
     }
 
 
@@ -1784,148 +1767,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         into.addAll(now.boxes)
     }
 
-    /**
-     * Read the strip of screen the movement has brought into view and add it to the plan.
-     *
-     * Runs on the worker in the middle of following, so the words stay on the layer and keep
-     * moving while it happens. On the worker and not on a thread of its own: that was tried,
-     * on the reasoning that the following should not have to wait for it, and it is worse.
-     * These calls all queue on the app's own main thread, so a reading running beside the
-     * following contends with it rather than overlapping it - the following managed ten passes
-     * through a drag instead of twenty-four, and its typical pass went from 53ms to 133ms. What it costs is one fetch of the window and a walk of a band
-     * rather than of a screen: measured on a page of text, twenty milliseconds against the
-     * hundreds a full read takes.
-     */
-    private fun extendInBand(held: List<Planned>) {
-        val began = android.os.SystemClock.uptimeMillis()
-        val band = arrivingBand(held) ?: run {
-            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND none to read")
-            return
-        }
-        // From the window. Walking from the thing the page scrolls in instead was tried, on
-        // the reasoning that it holds the lines arriving and none of the app's furniture: no
-        // better, a strip costing 106 to 214ms against 132 either time, because finding that
-        // container means walking up from a line and asking each parent where it is, which
-        // costs what it saves.
-        val root = rootInActiveWindow ?: run {
-            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BAND no root")
-            return
-        }
-        val gotRoot = android.os.SystemClock.uptimeMillis()
-        val settings = SettingsStore.current
-        val fresh = ArrayList<Planned>(8)
-        val seen = ArrayList<Painted>(32)
-        runCatching {
-            plan(root, Transcriber(settings.density), fresh, Budget(), Stats(), band, seen)
-        }
-        val walked = android.os.SystemClock.uptimeMillis()
-        if (fresh.isEmpty()) {
-            if (BuildConfig.DEBUG) {
-                android.util.Log.d("Phonetix", "BAND ${band.top}..${band.bottom} held nothing")
-            }
-            return
-        }
-        // Everything already held is brought up to where it now stands, so that one shift
-        // describes lines read at two different moments.
-        val already = HashSet<String>(held.size * 2)
-        // Which line of the app each held one is, so that meeting it again is recognised as
-        // the same line however far the carrying has taken it from where it really is.
-        val heldNodes = HashMap<Any, Planned>(held.size * 2)
-        for (p in held) {
-            p.rebase(lastShiftX, lastShiftY)
-            p.measuredAt?.let { already.add(p.text + "@" + (it.top / LINE_SAME_PX)) }
-            heldNodes[Triple(p.node, p.from, p.length)] = p
-        }
-        val added = ArrayList<Planned>(held)
-        var asked = 0
-        for (p in fresh) {
-            // A line the walk found has been planned but not measured: where its characters
-            // sit is a separate question and a costly one, so only a couple are asked per
-            // strip and the rest wait for the strip after.
-            if (!measureLine(p, allowedToAsk = asked < MEASURE_MOVING_MAX)) continue
-            if (asked < MEASURE_MOVING_MAX) asked++
-            val at = p.measuredAt ?: continue
-            // A line already held, met again. The strip to read is worked out from where the
-            // held lines are believed to be, so a belief that has drifted puts lines still on
-            // the plan inside it - and telling them apart by text and position kept both
-            // copies, because drifting far enough is exactly what makes the positions differ.
-            // A reader saw two pronunciations of one word, the stale one over other text: on a
-            // conversation, eleven of fifty-five transcriptions after a drag were a second
-            // copy a hundred and sixty pixels above the right one. The line just measured is
-            // the one that is right, so it replaces what was held.
-            val was = heldNodes[Triple(p.node, p.from, p.length)]
-            if (was != null) {
-                val where = added.indexOf(was)
-                if (where >= 0) added[where] = p
-                continue
-            }
-            if (already.add(p.text + "@" + (at.top / LINE_SAME_PX))) added.add(p)
-        }
-        lastShiftY = 0f
-        lastShiftX = 0f
-        cachedPlan = added
-        // Only what is still on the screen, and only the plan's own lines.
-        //
-        // Both of these are added to on every strip read and neither was ever taken from, so
-        // a page scrolled for a while carried a plan of lines that had left long ago and a
-        // list of painted rectangles that grew without bound - and every word of every pass
-        // is tested against every one of those to see what covers it. Photographed, that is a
-        // page that gets worse the more it is scrolled: three swipes in a row kept 65%, then
-        // 33%, then 12% of their lines carrying a transcription.
-        val screen = android.graphics.Rect(
-            0, -resources.displayMetrics.heightPixels,
-            resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels * 2,
-        )
-        cachedPainted = (cachedPainted + seen)
-            .filter { android.graphics.Rect.intersects(it.rect, screen) }
-            .takeLast(MAX_PAINTED)
-        cachedPlan = cachedPlan.filter { p ->
-            val at = p.measuredAt ?: return@filter true
-            android.graphics.Rect.intersects(at, screen)
-        }
-        lastFullReadAt = android.os.SystemClock.uptimeMillis()
-        if (BuildConfig.DEBUG) {
-            android.util.Log.d(
-                "Phonetix",
-                "BAND ${band.top}..${band.bottom} read ${fresh.size}, plan now ${added.size}, " +
-                    "took ${android.os.SystemClock.uptimeMillis() - began}ms " +
-                    "(root ${gotRoot - began}ms, walk ${walked - gotRoot}ms)",
-            )
-        }
-    }
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
     private class Painted(val enter: Int, val rect: android.graphics.Rect)
 
-    /**
-     * The strip of screen a moving page is bringing into view, or null to read the lot.
-     *
-     * Where the words already planned end is where the new ones begin: below them when the
-     * content is travelling up, above them when it is travelling down. Null whenever there is
-     * nothing to add to - no plan, a page standing still, a screen that has been replaced -
-     * because then the whole screen is what has arrived.
-     */
-    private fun arrivingBand(held: List<Planned>): android.graphics.Rect? {
-        if (held.isEmpty()) return null
-        if (!onTheMove()) return null
-        val dm = resources.displayMetrics
-        var top = Int.MAX_VALUE
-        var bottom = Int.MIN_VALUE
-        for (p in held) {
-            val at = p.measuredAt ?: continue
-            if (p.boxes.isEmpty()) continue
-            top = minOf(top, at.top + lastShiftY.toInt())
-            bottom = maxOf(bottom, at.bottom + lastShiftY.toInt())
-        }
-        if (top > bottom) return null
-        // Content travelling up leaves a gap at the bottom, and the other way round. A hair
-        // of overlap, so a line straddling the edge of the band is read rather than missed.
-        return if (speedY < 0f) {
-            android.graphics.Rect(0, maxOf(0, bottom - LINE_SAME_PX), dm.widthPixels, dm.heightPixels)
-        } else {
-            android.graphics.Rect(0, 0, dm.widthPixels, minOf(dm.heightPixels, top + LINE_SAME_PX))
-        }
-    }
 
     /**
      * Whether a box is really a backdrop rather than something that hides a word.
@@ -2247,31 +2092,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  read costs tens of milliseconds during which nothing is followed at all. */
         const val FULL_READ_TURNOVER_MS = 350L
 
-        /**
-         * How much of what a moving page was carrying has to have scrolled away before the
-         * strip that has arrived is read, and how long apart two such readings may be.
-         *
-         * Both are set by what such a reading costs, which is not what it looks like. Only a
-         * few lines are measured, but finding them means asking every node on the way down
-         * where it is, and the walk alone timed at about 195ms on this emulator against 4 to
-         * 121ms to fetch the window - so a strip costs two to three hundred milliseconds,
-         * about what a whole screen costs, and the words are carried blind for all of it.
-         *
-         * Even so it is worth reading early. Waiting until a quarter of the words had gone
-         * meant the first strip came after the bottom of the screen was already bare, and the
-         * reading never caught up with the drag; a tenth reads sooner and holds. Measured
-         * over nine swipes each: the middle swipe carried three fifths of its lines against
-         * a third. An earlier sweep of this said the opposite and was taken while a separate
-         * fault kept the colours from ever being read on a page being followed, so nothing a
-         * strip found could be drawn.
-         */
-        @Volatile
-        @JvmStatic
-        var MOSTLY_GONE = 0.10f
 
-        @Volatile
-        @JvmStatic
-        var TURNOVER_MOVING_MS = 200L
         /** How many lines are asked where they are before the rest are carried with them. */
         /** How many lines are asked where they are each pass. Settable so a test can sweep
          *  it: each anchor is a round trip into an app that is busy scrolling, so the count

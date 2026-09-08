@@ -386,14 +386,6 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MEASURE_MOVING_MAX =
                     i.getIntExtra("measureMoving", 2)
             }
-            if (i.hasExtra("mostlyGone")) {
-                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MOSTLY_GONE =
-                    i.getIntExtra("mostlyGone", 50) / 100f
-            }
-            if (i.hasExtra("readMovingMs")) {
-                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.TURNOVER_MOVING_MS =
-                    i.getIntExtra("readMovingMs", 500).toLong()
-            }
             if (i.hasExtra("anchorsWhenKnown")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.ANCHORS_WHEN_KNOWN =
                     i.getIntExtra("anchorsWhenKnown", 1)
