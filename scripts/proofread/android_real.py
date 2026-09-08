@@ -158,12 +158,15 @@ def judge(dev, label, results, pkg):
             for top, bottom in seen[word]
         )
         if off > 0:
-            adrift.append(box["word"])
+            near = min(seen[word], key=lambda b: min(abs(middle - b[0]), abs(middle - b[1])))
+            adrift.append((box["word"], int(middle), near, int(off)))
     wrong = len(adrift) + len(gone)
+    for word, drawn, (top, bottom), off in adrift:
+        print(f"      {word}: drawn at y={drawn}, its word is in {top}..{bottom}, {off}px out")
     print(f"  {label}: {wrong} of {checked} are not on their word"
           f"{f', {len(gone)} name a word that is not on the screen at all' if gone else ''}"
           f"{f' (e.g. {gone[:3]})' if gone else ''}"
-          f"{f' and {len(adrift)} are on other text (e.g. {adrift[:3]})' if adrift else ''}")
+          f"{f' and {len(adrift)} are on other text' if adrift else ''}")
     results.append((label, wrong, checked))
 
 
@@ -203,7 +206,17 @@ def main():
         if pkg == "io.github.nanbiz.phonetix":
             shell("am", "force-stop", pkg)
             time.sleep(1.5)
-        shell("am", "start", "-n", activity.split("#")[0], *EXTRAS.get(activity, []))
+        extras = list(EXTRAS.get(activity, []))
+        # Our own page is force stopped above, which resets the statics these controls set, so
+        # they go in with the launch rather than once at the start. A control that is quietly
+        # dropped for two of the four pages is how a run reported fourteen clean looks while
+        # every transcription was supposed to be drawn 250px from its word.
+        if pkg == "io.github.nanbiz.phonetix":
+            if wrong_by is not None:
+                extras += ["--ei", "putThemWrongBy", wrong_by]
+            if said is not None:
+                extras += ["--ei", "useSaidScroll", said]
+        shell("am", "start", "-n", activity.split("#")[0], *extras)
         time.sleep(2)
         if pkg == "io.github.nanbiz.phonetix":
             dev.enable_service()
