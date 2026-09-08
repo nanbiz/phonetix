@@ -3,6 +3,29 @@
 What is being worked on and what is still owed, kept here because chat scrolls away.
 Ticked items are done and verified by a suite; the rest are not.
 
+## Is each transcription on its own word
+
+Measured by `scripts/proofread/android_words.py`, which is the only check that can tell a
+transcription sitting on its own word from one left behind on somebody else's. It walks the
+moving layer's own frames, sixty a second, so what it judges is what a reader sees rather than
+the positions the service worked out. Three shapes of page: a list, wrapped paragraphs, a
+conversation of wrapped messages.
+
+- [x] **Once the page has settled: none, on all three.** It was eleven of fifty-five on wrapped
+  paragraphs, up to a third on the other two. Three causes, each found by naming the words that
+  were wrong and photographing the screen rather than by tuning: character positions remembered
+  against the bounds the line had before the app laid it out again, two copies of a line kept
+  when the strip read met one it was already carrying, and a following pass spending a second
+  of a 1300ms drag asking a page where its characters are.
+- [ ] **Through a drag: 14 percent of transcriptions on a list, 25 on wrapped paragraphs, 46 on
+  a conversation, are more than a line from their own word.** Down from 49, 81 and 78. Within
+  one reading the lines fan out - each line lower on the screen further behind its own text
+  than the one above it, about 38 pixels top to bottom - and the whole set lags the page by
+  another 50 to 90. Carrying each line forward from its own moment was tried and measured
+  better on a list, worse on a conversation, and inside the noise on paragraphs.
+- [ ] **Four drags of one page cannot separate a ten point difference.** One run of one build
+  gave 23, 54, 57 and 72 percent. Anything measured from here needs more drags than that.
+
 ## Scrolling
 
 - [x] **A swipe that started on a transcription did not scroll the page.** 0px against 941px
