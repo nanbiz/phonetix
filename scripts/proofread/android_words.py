@@ -25,13 +25,18 @@ from android_harness import Device, shell
 
 # The pages this asks about, and why each one is here.
 PAGES = [
+    # The list an ordinary app is built from, and one of the two containers whose scroll
+    # events say in real pixels how far it has just moved.
+    ("a list", "recycler"),
+    # A page that scrolls as one piece, which is what a ScrollView, a WebView and most
+    # article-shaped screens are - and the only kind whose scroll events say in pixels how far
+    # it has just moved.
+    ("wrapped paragraphs", "essay"),
     # A conversation: a list that recycles, whose rows are messages wrapping over many lines.
     # This is the shape of the app the fault was reported on, and the only fixture that
     # reproduces it - a list of one-line rows never does, because the row and the line are the
     # same thing.
     ("a conversation", "chat"),
-    # The same question of a page of wrapped paragraphs that do not recycle.
-    ("wrapped paragraphs", "essay"),
 ]
 # What share of the transcriptions on the screen may name a word that is not under them. Not
 # what the code manages - what a reader would accept, which is next to none.

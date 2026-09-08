@@ -40,6 +40,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
     private lateinit var scroller: ScrollView
     /** The recycling list, when that is the page being shown. */
     private var listView: ListView? = null
+    private var recycler: androidx.recyclerview.widget.RecyclerView? = null
+
+    /** How far the list an ordinary app is built from has been scrolled, since it keeps no
+     *  such number of its own. */
+    private var recyclerAt = 0
     /** The Compose list, once it has composed itself and said how to drive it. */
     private var composePage: ScrollMotion.Page? = null
     private var composeScope: kotlinx.coroutines.CoroutineScope? = null
@@ -119,6 +124,48 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             return
         }
 
+        if (mode == "recycler") {
+            // The list an ordinary app is built from. A ListView reports its scrolling as row
+            // indices and a Compose list as a pseudo-offset of its own; this one is the case
+            // that has not been asked yet.
+            val rows = intent.getIntExtra("rows", 60)
+            val recycler = androidx.recyclerview.widget.RecyclerView(this).apply {
+                layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@DebugSurfaceActivity)
+                adapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<Holder>() {
+                    override fun onCreateViewHolder(parent: android.view.ViewGroup, kind: Int) =
+                        Holder(line("", Color.WHITE, BACKGROUND))
+
+                    override fun getItemCount() = rows
+
+                    override fun onBindViewHolder(holder: Holder, position: Int) {
+                        holder.line.text =
+                            "$position ${TestWords.DISTINCT[position % TestWords.DISTINCT.size]}"
+                    }
+                }
+                setBackgroundColor(BACKGROUND)
+                // The same report the other pages give, so the suite reads one kind of ground
+                // truth whichever page it is driving.
+                addOnScrollListener(object :
+                    androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+                    override fun onScrolled(
+                        view: androidx.recyclerview.widget.RecyclerView,
+                        dx: Int,
+                        dy: Int,
+                    ) {
+                        recyclerAt += dy
+                        Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} $recyclerAt")
+                    }
+                })
+            }
+            this.recycler = recycler
+            root.addView(recycler, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
+            ))
+            setContentView(root)
+            window.decorView.setBackgroundColor(BACKGROUND)
+            handle(intent)
+            return
+        }
         if (mode == "list") {
             // A list that recycles its rows, which a ScrollView never does. Everything an app
             // in front of the reader actually scrolls works this way: the same view, and the
@@ -357,6 +404,14 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.MotionLayer.followableMs =
                     i.getIntExtra("followableMs", 200).toLong()
             }
+            if (i.hasExtra("useSaidScroll")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.USE_SAID_SCROLL =
+                    i.getIntExtra("useSaidScroll", 1) != 0
+            }
+            if (i.hasExtra("timeAsking")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running
+                    ?.timeTheAsking(i.getIntExtra("timeAsking", 10))
+            }
             if (i.hasExtra("cameraRace")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running
                     ?.raceTheCamera(
@@ -494,7 +549,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         val now = SystemClock.uptimeMillis()
         // A list has no ScrollView behind it, and asking a page which kind it is by touching
         // the field is how this first came back empty.
-        val scrolled = if (listView != null) listScroll() else scroller.scrollY
+        // Every kind of page keeps its scroll somewhere different, and asking the wrong one
+        // throws rather than answers - which is how this came back empty for a whole page.
+        val scrolled = when {
+            recycler != null -> recyclerAt
+            listView != null -> listScroll()
+            else -> scroller.scrollY
+        }
         // In the document's own coordinates, so a test can work out where a line was at any
         // moment from the scroll positions this page reports anyway. A recycling list hands
         // the same row to a different line as it scrolls, so there is no fixed row to report:
@@ -618,6 +679,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         }
         marker = TextView(this@DebugSurfaceActivity).also { addView(it) }
     }
+
+    class Holder(val line: TextView) :
+        androidx.recyclerview.widget.RecyclerView.ViewHolder(line)
 
     private fun line(text: String, ink: Int, bg: Int) = MarkedLine(this).apply {
         this.text = text

@@ -61,6 +61,9 @@ class OverlayController(
         motion.measured(boxes, at, speed)
     }
 
+    /** The page says it has moved by this much since it last said so. */
+    fun told(dy: Float) = motion.told(dy)
+
     fun endMotion(boxes: List<WordBox>) {
         motion.stop()
         render(boxes)

@@ -139,6 +139,9 @@ class MotionLayer(private val context: Context) {
     /** Whether the words are currently hidden for want of a fresh measurement. */
     private var wasStale = false
 
+    /** When the page last said how far it had moved. */
+    private var lastToldAt = 0L
+
     /** How far apart the last two readings actually came. */
     private var arrivedApart = 0L
 
@@ -231,6 +234,34 @@ class MotionLayer(private val context: Context) {
         return 1f - (age - coast) / (fade - coast)
     }
 
+    /**
+     * The page says it has just moved by this much, so move the words with it.
+     *
+     * Between two readings the words are wherever this layer's guess at the page's speed puts
+     * them, and that guess is the whole of what goes wrong on an app that answers slowly. A
+     * scroll event carries how far the view says it moved, and where an app fills that in it
+     * is exact - 997 pixels reported against 991 really travelled, across a drag. It arrives
+     * without being asked for and costs nothing, so it is worth more than a guess. The next
+     * reading corrects whatever it got wrong, as it does for the guess.
+     */
+    fun told(dy: Float) {
+        if (view == null || dy == 0f) return
+        val now = SystemClock.uptimeMillis()
+        val since = (now - lastToldAt).coerceAtLeast(1)
+        lastToldAt = now
+        // Not a jump. The layer is already carrying the words at the speed it believes the
+        // page is going, and adding what the page says it moved on top of that counts the
+        // same movement twice - which is worse than not knowing: on the one page that reports
+        // this in pixels, doing it that way took the share of transcriptions naming a word
+        // that is not under them from 43% to 65%.
+        //
+        // What the page says is a better speed than the one worked out from readings taken
+        // tens of milliseconds apart, so it replaces it and the carrying goes on smoothly.
+        if (since in 8..400) {
+            vy = (-dy / since).coerceIn(-Fixed.SANE_PX_PER_MS, Fixed.SANE_PX_PER_MS)
+        }
+    }
+
     /** Take the words over from the small windows, at the positions they are already at. */
     fun start(current: List<WordBox>) {
         boxes = current
@@ -240,6 +271,7 @@ class MotionLayer(private val context: Context) {
         measurements = 0
         steadiness = 0f
         lastMeasureAt = SystemClock.uptimeMillis()
+        lastToldAt = lastMeasureAt
         lastArrivedAt = lastMeasureAt
         arrivedApart = 0L
         drewOut = 0f

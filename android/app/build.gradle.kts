@@ -94,6 +94,10 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
+    // The list most apps are built from, for the test pages only: what a scroll event says
+    // about how far it moved differs by container, and the answer for this one decides
+    // whether the overlay can follow an ordinary app's list.
+    debugImplementation("androidx.recyclerview:recyclerview:1.3.2")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
 }

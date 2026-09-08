@@ -288,11 +288,31 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.util.Log.d(
                     "Phonetix",
                     "SAIDSCROLL ${android.os.SystemClock.uptimeMillis()} " +
-                        "${event?.scrollDeltaY} from ${event?.packageName}",
+                        "dy=${event?.scrollDeltaY} y=${event?.scrollY} maxY=${event?.maxScrollY} " +
+                        "from=${event?.fromIndex} to=${event?.toIndex} " +
+                        "items=${event?.itemCount} cls=${event?.className}",
                 )
             }
             if (::tooltip.isInitialized) tooltip.hide()
-            if (::overlay.isInitialized) main.post { overlay.beginMotion() }
+            // How far the view says it has just moved. Where an app fills this in it is
+            // exact, and it arrives without being asked for - so the words are moved by it at
+            // once rather than waiting for the next reading, which on a slow app is hundreds
+            // of milliseconds and several lines away. Apps that recycle their rows report
+            // nothing here (a Compose list says -1 an event, a ListView says 0), and nothing
+            // is what this then does.
+            val said = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                event?.scrollDeltaY ?: 0
+            } else {
+                0
+            }
+            if (::overlay.isInitialized) {
+                main.post {
+                    overlay.beginMotion()
+                    if (USE_SAID_SCROLL && said != 0 && kotlin.math.abs(said) < SAID_TOO_FAR) {
+                        overlay.told(said.toFloat())
+                    }
+                }
+            }
             lastMotionAt = android.os.SystemClock.uptimeMillis()
             scrollOnly = scrollOnly || cachedPlan.isNotEmpty()
             startFollowing()
@@ -350,6 +370,45 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         if (::overlay.isInitialized) overlay.hideNow()
+    }
+
+    /**
+     * What it costs to ask different kinds of node where they are.
+     *
+     * Every anchor is a line of text, and a pass spends nearly all of its time waiting for
+     * those answers. Whether a text node is dearer to ask than the row that holds it is worth
+     * knowing rather than assuming: on a Compose page a node's answer is computed when it is
+     * asked for, and a line of text has more to compute than a box.
+     */
+    fun timeTheAsking(times: Int) {
+        worker.post {
+            val lines = cachedPlan.filter { it.measuredAt != null }.take(3)
+            if (lines.isEmpty()) {
+                android.util.Log.d("Phonetix", "ASKING nothing planned to ask")
+                return@post
+            }
+            for (kind in 0..1) {
+                var total = 0L
+                var asked = 0
+                for (round in 0 until times) {
+                    for (p in lines) {
+                        val node = if (kind == 0) p.node else runCatching { p.node.parent }
+                            .getOrNull() ?: continue
+                        val began = System.nanoTime()
+                        node.refresh()
+                        val at = android.graphics.Rect()
+                        node.getBoundsInScreen(at)
+                        total += System.nanoTime() - began
+                        asked++
+                    }
+                }
+                android.util.Log.d(
+                    "Phonetix",
+                    "ASKING ${if (kind == 0) "a line of text" else "the row holding it"}: " +
+                        "${total / 1_000_000}ms for $asked questions",
+                )
+            }
+        }
     }
 
     /** How fast the platform will hand this service frames, for a test to find out. */
@@ -701,12 +760,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             fun ask(these: List<Planned>) {
                 anchors.addAll(these)
                 for (a in these) {
-                    val was = a.measuredAt ?: continue
+                    // The row holding the line, when there is one worth asking; otherwise the
+                    // line itself.
+                    val holder = a.askNode
+                    val was = (if (holder != null) a.askAt else a.measuredAt) ?: continue
+                    val node = holder ?: a.node
                     val began = System.nanoTime()
-                    val alive0 = a.node.refresh()
-                    val says = if (alive0) a.node.text?.toString() else null
+                    val alive0 = node.refresh()
+                    // The text is read off the line itself either way: it is what says the
+                    // row has been handed to a different line, and a row does not carry it.
+                    val says = if (alive0 && holder == null) node.text?.toString() else a.text
                     val now = android.graphics.Rect()
-                    if (alive0) a.node.getBoundsInScreen(now)
+                    if (alive0) node.getBoundsInScreen(now)
                     askedNs += System.nanoTime() - began
                     asks++
                     if (!alive0) { gone++; continue }
@@ -1218,6 +1283,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // can carry its words rather than measuring them again.
             if (remembered != null) p.node.getBoundsInScreen(at)
             p.measuredAt = at
+            rememberACheaperNode(p, at)
             // Drop anything the node's ancestors clip away rather than painting a word that
             // is behind something else.
             var w = before
@@ -1434,6 +1500,31 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * the edge of the list. A line with no such edge says nothing that can be used, and null
      * says so rather than guessing.
      */
+    /**
+     * Remember a cheaper node to ask this line's position from, if there is one.
+     *
+     * The box holding a line answers faster than the line does, and moves with it: two
+     * milliseconds against one on a Compose page, which computes a node's answer when it is
+     * asked for and has more to compute for text than for a row. Nearly all of a pass is spent
+     * waiting for these answers.
+     *
+     * Only where the holder is a row rather than a column. A shift is measured from an edge,
+     * and a view spanning the document has both its edges off the screen.
+     */
+    private fun rememberACheaperNode(p: Planned, at: android.graphics.Rect) {
+        p.askNode = null
+        p.askAt = null
+        if (at.isEmpty) return
+        val holder = runCatching { p.node.parent }.getOrNull() ?: return
+        val around = android.graphics.Rect()
+        holder.getBoundsInScreen(around)
+        val room = p.viewport.height()
+        if (around.isEmpty || room <= 0 || around.height() > room * HOLDER_SHARE) return
+        if (!around.contains(at)) return
+        p.askNode = holder
+        p.askAt = around
+    }
+
     private fun shiftOf(
         was: android.graphics.Rect,
         now: android.graphics.Rect,
@@ -1502,6 +1593,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  be carried by the difference instead of being measured again. */
         var measuredAt: android.graphics.Rect? = null
         var boxes: List<WordBox> = emptyList()
+
+        /**
+         * A cheaper node to ask where this line is, and where that node was when the line was
+         * measured.
+         *
+         * Asking a line of text where it is costs more than asking the box that holds it -
+         * two milliseconds against one on a Compose page, which computes a node's answer when
+         * it is asked for and has more to compute for text than for a row. Nearly all of a
+         * pass is spent waiting for these answers, so it is worth asking the cheaper thing.
+         * Only where the holder is a row rather than a whole column: a column spans the
+         * document, both its edges are cut off by the screen, and a shift cannot be measured
+         * from an edge that is not there.
+         */
+        var askNode: AccessibilityNodeInfo? = null
+        var askAt: android.graphics.Rect? = null
         /** How far this line was carried on the last pass, so the next one can tell whether
          *  it has moved since rather than whether it has moved at all. */
         var lastDx = 0f
@@ -2000,6 +2106,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
         @Volatile
         @JvmStatic
         var running: PhonetixAccessibilityService? = null
+
+        /** Whether the words are moved by what a view says it scrolled. Settable so a test
+         *  can weigh it against not doing so. */
+        @Volatile
+        @JvmStatic
+        var USE_SAID_SCROLL = true
+
+        /** Past this, what a view says it scrolled by is not a scroll of a page: it is a
+         *  jump, a relayout, or a number in units of its own. */
+        const val SAID_TOO_FAR = 4000
+
+        /** How much of the window a line scrolls in its holder may fill and still count as a
+         *  row worth asking instead of the line. */
+        const val HOLDER_SHARE = 0.6f
 
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24
