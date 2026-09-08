@@ -113,6 +113,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        // So a test can ask this service to measure something about itself. Nothing in the
+        // app reaches the service otherwise: it is started by the system, not by us.
+        running = this
         SettingsStore.init(this)
         val thread = HandlerThread("phonetix-scan").apply { start() }
         worker = Handler(thread.looper)
@@ -335,6 +338,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     override fun onInterrupt() {
         if (::overlay.isInitialized) overlay.hideNow()
+    }
+
+    /** How fast the platform will hand this service frames, for a test to find out. */
+    fun raceTheCamera(times: Int, gapMs: Long) {
+        if (::sampler.isInitialized) sampler.raceTheCamera(times, gapMs)
     }
 
     override fun onDestroy() {
@@ -1975,6 +1983,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How many painted rectangles are kept for working out what covers what. A screen
          *  holds a hundred or so; beyond that they are old ones from before a scroll. */
         const val MAX_PAINTED = 256
+
+        /** The service, while it is running, so a test can ask it to measure itself. */
+        @Volatile
+        @JvmStatic
+        var running: PhonetixAccessibilityService? = null
 
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24

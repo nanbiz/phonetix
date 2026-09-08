@@ -357,6 +357,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.MotionLayer.followableMs =
                     i.getIntExtra("followableMs", 200).toLong()
             }
+            if (i.hasExtra("cameraRace")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running
+                    ?.raceTheCamera(
+                        i.getIntExtra("cameraRace", 12),
+                        i.getIntExtra("cameraGap", 0).toLong(),
+                    )
+            }
             if (i.hasExtra("staleMs")) {
                 io.github.nanbiz.phonetix.service.MotionLayer.staleMs =
                     i.getIntExtra("staleMs", 300).toLong()

@@ -38,6 +38,57 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
     /** When the held frame was taken, so a caller can wait for one newer than an event. */
     val frameAt: Long get() = takenAt
 
+    /**
+     * How fast the platform will hand over frames, asked rather than assumed.
+     *
+     * Following a scrolling page from pixels instead of from the app's own answers is only
+     * worth considering if the pixels arrive faster than the answers do, and the screenshot
+     * an accessibility service can take is rate limited by the system. This asks for as many
+     * as it will give, back to back, and says how far apart they came.
+     */
+    fun raceTheCamera(times: Int, gapMs: Long = 0L) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        val began = SystemClock.uptimeMillis()
+        var got = 0
+        var refused = 0
+        var last = began
+        fun again() {
+            if (got + refused >= times) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "CAMERA at ${gapMs}ms apart: $got frames and $refused refusals in " +
+                        "${SystemClock.uptimeMillis() - began}ms",
+                )
+                return
+            }
+            service.takeScreenshot(
+                Display.DEFAULT_DISPLAY, executor,
+                object : AccessibilityService.TakeScreenshotCallback {
+                    override fun onSuccess(result: AccessibilityService.ScreenshotResult) {
+                        val now = SystemClock.uptimeMillis()
+                        android.util.Log.d("Phonetix", "CAMERA frame after ${now - last}ms")
+                        last = now
+                        got++
+                        result.hardwareBuffer.close()
+                        if (gapMs > 0) main.postDelayed({ again() }, gapMs) else again()
+                    }
+
+                    override fun onFailure(errorCode: Int) {
+                        val now = SystemClock.uptimeMillis()
+                        android.util.Log.d(
+                            "Phonetix", "CAMERA refused ($errorCode) after ${now - last}ms",
+                        )
+                        last = now
+                        refused++
+                        if (gapMs > 0) main.postDelayed({ again() }, gapMs) else again()
+                    }
+                },
+            )
+        }
+        again()
+    }
+
     /** Throw the held frame away and take a new one at the next opportunity. */
     fun invalidateFrame() {
         takenAt = 0L
