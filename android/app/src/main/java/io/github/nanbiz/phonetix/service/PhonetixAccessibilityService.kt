@@ -588,6 +588,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // impossible.
         if (reuse) {
             val tf = android.os.SystemClock.uptimeMillis()
+            // Where a pass's time actually goes: into the app, or into this. A pass has been
+            // seen taking six hundred milliseconds and the app was blamed for it without
+            // anyone checking which half it was.
+            var askedNs = 0L
+            var asks = 0
+            var colourNs = 0L
             val moved = ArrayList<WordBox>(16)
             var ok = true
             var why = ""
@@ -676,10 +682,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 anchors.addAll(these)
                 for (a in these) {
                     val was = a.measuredAt ?: continue
-                    if (!a.node.refresh()) { gone++; continue }
-                    if (a.node.text?.toString() != a.text) { gone++; continue }
+                    val began = System.nanoTime()
+                    val alive0 = a.node.refresh()
+                    val says = if (alive0) a.node.text?.toString() else null
                     val now = android.graphics.Rect()
-                    a.node.getBoundsInScreen(now)
+                    if (alive0) a.node.getBoundsInScreen(now)
+                    askedNs += System.nanoTime() - began
+                    asks++
+                    if (!alive0) { gone++; continue }
+                    if (says != a.text) { gone++; continue }
                     val readingAt = android.os.SystemClock.uptimeMillis()
                     if (now.isEmpty) { gone++; continue }
                     alive++
@@ -696,6 +707,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 return kotlin.math.abs(dy - expected) <= PREDICTION_TOL
             }
 
+            // Asking one rather than three costs one round trip rather than three, and a
+            // round trip into a busy app is the whole cost of a pass: 701ms of one pass of
+            // 948, and 130 of 137 in the next worst. Asking one whenever the app has lately
+            // been slow, as well as whenever a fresh speed is in hand, was tried and does not
+            // help - the long passes do not follow one another, so a pass cannot tell from
+            // the one before it that it is about to be slow.
             val asked = spread(
                 if (speedIsFresh && !voteNext) ANCHORS_WHEN_KNOWN else ANCHORS
             )
@@ -844,10 +861,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // with for as long as the screen kept moving, and nothing is drawn as black:
                 // a black patch over a word on a coloured page, which is what it did on a
                 // music player whose title sits on its cover art.
+                val colourBegan = System.nanoTime()
                 val decision = colours.decide(
                     p.text, p.measuredAt?.top ?: -1, colorRect(p),
                     impatient = onTheMove(),
                 )
+                colourNs += System.nanoTime() - colourBegan
                 val own = decision.colours
                 if (own != null && p.boxes.first().background != own.background) {
                     p.boxes = p.boxes.map { it.copy(background = own.background, ink = own.ink) }
@@ -1068,7 +1087,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     else overlay.endMotion(moved)
                     android.util.Log.d(
                         "Phonetix",
-                        "follow=${took}ms lines=${planned.size} boxes=${moved.size} moving=$moving " +
+                        "follow=${took}ms (asked ${askedNs / 1_000_000}ms in $asks, " +
+                            "colours ${colourNs / 1_000_000}ms) " +
+                            "lines=${planned.size} boxes=${moved.size} moving=$moving " +
                             "shift=$shiftY agreed=$agreed alive=$alive gone=$gone " +
                             "clipped=$clipped covered=$hidden unreadable=$unreadable",
                     )
