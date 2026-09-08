@@ -29,6 +29,16 @@ conversation of wrapped messages.
   measure a speed over an interval shorter than a frame, where whole-pixel bounds make the
   answer several times the truth: better on a conversation (36 to 29) and a list (9 to 7),
   worse on wrapped paragraphs (23 to 34).
+- Also tried and measured worse, ten drags a page each: predicting from the first reading of a
+  movement (`predictFromFirst`), 44 percent against 36 on a conversation, which confirms the
+  older note that the first speed of a drag describes neither the still page nor the moving one.
+  And believing a measured speed in proportion to how long it was measured over, rather than
+  refusing short intervals outright: better on a conversation, 36 to 29, and worse everywhere
+  else, 23 to 35 on wrapped paragraphs and 9 to 15 on a list, and it broke the settled case on
+  paragraphs from none to 27 percent, because a speed that is smoothed never snaps to zero when
+  the page stops and the layer keeps carrying the words after the drag has ended.
+- Three attempts on the speed estimate have now measured worse. On this evidence what is left
+  of the mid-drag error is not the speed.
 - [ ] **Four drags of one page cannot separate a ten point difference.** One run of one build
   gave 23, 54, 57 and 72 percent. Anything measured from here needs more drags than that.
 
