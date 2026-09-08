@@ -198,6 +198,17 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
             word = box["word"].lower()
             mine = [(top, height) for top, height, text in lines if word in text.lower().split()]
             if not mine:
+                # A transcription of a word that is not on the screen at all.
+                #
+                # This used to be skipped as unjudgeable, which hid the worst thing the
+                # overlay does: through a real scroll on a real app, a transcription is left
+                # standing where its word used to be while the word itself has gone, so the
+                # reader is shown a pronunciation of something they cannot see, sitting on
+                # somebody else's text. Photographed on the settings app: the transcription of
+                # "apps" floating over "Notification history, conversations" after "apps" had
+                # scrolled away. Counting it as unknown scored that as nothing at all.
+                adrift.append((box["word"], "its word is gone"))
+                checked += 1
                 unknown += 1
                 continue
             middle = (box["rect"][1] + box["rect"][3]) / 2 + carry
@@ -209,19 +220,19 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
             )
             checked += 1
             if off > A_LINE:
-                adrift.append((box["word"], round(off)))
+                adrift.append((box["word"], f"{round(off)}px away"))
     if not checked:
         print(f"  {label}: nothing to judge ({withheld} withheld, {unknown} whose word the "
               f"page did not report)")
         return None
     share = len(adrift) / checked
-    print(f"  {label}: {len(adrift)} of {checked} ({100 * share:.0f}%) are more than a line "
-          f"from their own word, {withheld} withheld, {unknown} unknown")
+    print(f"  {label}: {len(adrift)} of {checked} ({100 * share:.0f}%) are not on their own "
+          f"word, {withheld} withheld, {unknown} of them name a word that is not on screen")
     r.check(
         share <= STRAYS_ALLOWED,
         f"{label}: every transcription is on its own word",
         f"{len(adrift)} of {checked} are not, e.g. "
-        f"{', '.join(f'{w} {d}px away' for w, d in adrift[:3])}",
+        f"{', '.join(f'{w} {d}' for w, d in adrift[:3])}",
     )
     return share
 
