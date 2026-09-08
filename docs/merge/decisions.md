@@ -399,10 +399,30 @@ Thrown away: the 1905-line class, the SQLite layer (replaced by the core reader)
 foreground build service, main-thread file writes, and the 19 never-compared states (replaced
 by states the screenshot suite actually asserts on).
 
+### The overlay vocabulary, a constraint on every mode
+
+The overlay paints over another app's screen. It cannot reflow that app's layout, so it can
+never insert a line between the app's own lines; what it can do is paint over a word's box
+(the union of its character rects, the line's leading included) and make that box tappable.
+That is the whole vocabulary, and it is taken as a hard constraint on every inline form on
+both surfaces, so that no mode exists in the browser that has no Android counterpart:
+
+- **Gloss, gloss and IPA, IPA**: the annotation is defined inside the word's box. Where the
+  host can make room (the DOM, by adding leading above the line) it does, and the annotation
+  sits tight above the glyphs (`STATE-PAGE-GLOSS`). Where it cannot, which is always on
+  Android, the annotation takes the in-box form (`STATE-PAGE-GLOSS-INBOX`): it sits in the
+  line's own leading and over the glyph tops, on a translucent backing, at the size derived
+  from the measured line height, which is what Phonetix's overlay does today. When the line
+  height leaves no room even for that size the word gets no annotation and stays tappable.
+- **Replace**: paints inside the box by definition; the swap cue is a rule on the box's
+  bottom edge (DR-7).
+- **Anything above a word** that is not inside its box is browser-only and therefore not in
+  the design.
+
 ### Consequences
 
-- The overlay has three inline painters (ruby gloss, ruby IPA, replace) over one placement
-  loop and one cache, plus two windows (card sheet, lens).
+- The overlay has three inline painters (in-box gloss, in-box IPA, replace) over one
+  placement loop and one cache, plus two windows (card sheet, lens).
 - The screenshot suite grows by one case per painter and one per failure case, and it runs
   in CI against the emulator, the same way the Phonetix suite does today.
 - The share of text runs carrying an annotation is the measured quality metric, per painter.
@@ -561,7 +581,7 @@ and anaphora. No prior art solves this; popup tools never edit the sentence.
 ### Decision
 
 **Replace by minimal monotone consistent phrase pairs from the sentence alignment, capped;
-downgrade anything else to a ruby gloss.** Language independent, and grammatical wherever it
+leave anything else untouched and tappable.** Language independent, and grammatical wherever it
 replaces, because a consistent pair carries its own articles, endings and order.
 
 Mechanism, in the core: the host translates each sentence and returns the target text with
@@ -572,14 +592,27 @@ that run) and **monotone** (successive units' target runs are in order), which a
 because the whole sentence is trivially such a pair. Each unit up to the span cap (four source
 tokens to start, a parameter in `data/`, tuned by measurement) is replaced in place by its
 target text. A unit over the cap means the words inside it have satellites too far away to
-swap safely; those words keep their source form and get a ruby gloss instead. "Das hat mir
-den Tag gerettet" becomes "That" plus four glossed German words, because "hat ... gerettet"
-and "saved" form one five-token unit.
+swap safely; that unit is **left untouched in the source language**, its pixels never painted,
+and made tappable so its phrase card is one tap away. It is not glossed: replace means
+replace, an annotation above a word is a different mode, and on Android nothing can be
+inserted between another app's lines at all (the overlay vocabulary, DR-4). "Das hat mir
+den Tag gerettet" becomes "That hat mir den Tag gerettet", with "That" swapped and the
+five-token unit "hat mir den Tag gerettet" left as it was.
 
-Replaced spans carry a faint underline and open the phrase card with the original text, so the
-mapping the reader lost by not seeing the source is one tap away. Anaphora across sentences is
-bounded by the engine's sentence window and is accepted as a labelled machine guess; the mode
-never claims dictionary provenance.
+What the reader sees in the normal, mixed case: target text where a swap was safe and source
+text where it was not, in the page's own colours throughout. They tell the two apart by a cue
+that lives inside the painted box: every swapped span carries a dotted rule along the bottom
+edge of its box, in the derived annotation colour; untouched text has none, because it is not
+painted. Tapping a swapped span opens the phrase card with the original text; tapping an
+untouched unit opens the phrase card with its translation; both are machine guesses and say
+so, with per-word dictionary entries beneath.
+
+Words with no translation, and the `guess` and `none` states inside replace: the engine
+translates whole sentences, so every word inside a translated sentence has a target run and
+the per-word states do not arise at span level; what can be missing is the engine. When no
+translation model is available for the pair (offline, model not fetched), replace cannot run
+for that page: the text stays untouched and the mode says so in the product's own chrome (the
+scanning pill's slot), never in the page.
 
 Density: the frequency slider does not apply to Replace. Sprinkling would replace some units
 and not their neighbours, which is the original error in a new coat. Replace swaps every unit
@@ -597,6 +630,8 @@ should get one guess on both surfaces.
   with vector fixtures, so both platforms cut sentences identically.
 - Replace mode is the one inline mode that needs the whole sentence translated, so its batch
   is a batch of sentences, still one call per batch.
+- The screenshot suite photographs a mixed sentence on both surfaces; the dotted rule is the
+  only cue and must be visible in every theme against a sampled page ground.
 - The span cap is measured: the share of tokens replaced versus downgraded per language is
   the quality metric for this mode.
 
@@ -661,19 +696,18 @@ every symbol stays reachable; nothing truncates. The guess state shows it.
 Type: headline 22 px, pronunciation 16 px in the IPA colour, grammar line 13 px, so the
 answer is the most prominent thing on the card and the transcription reads as its support.
 
-### The provenance badge and the Wiktionary mark
+### The provenance badge and the Wikipedia W
 
 The dictionary badge is the serif **W** letterform alone: no word beside it, no brackets, no
-tile block, no open book, at every density tier. The letterform is the W of the Wiktionary
-logo, not Wikipedia's mark: Wikipedia's W would say the wrong project even though it is the
-same Linux Libertine letterform, so `data/marks.json` pins the Wiktionary logo file on
-Wikimedia Commons (its exact file page and licence recorded and verified when pinned; the
-mark is a Wikimedia Foundation trademark used here nominatively to say where the data came
-from) and the asset is that file's W glyph, extracted, never redrawn. If extracting the glyph
-from the logo file proves impractical, the same letterform can be set from the Linux Libertine
-font under the OFL; that is a font, not Wikipedia's asset, and the record says so here rather
-than hiding it. The showcase typesets the same letterform from the font stack
-(`--font-mark`).
+tile block, no open book, at every density tier. The letterform is the W of Wikipedia's own
+mark, chosen by the owner. `data/marks.json` pins the Wikipedia logo file on Wikimedia
+Commons, its exact file page and licence recorded and verified when pinned; the asset is that
+file's W glyph, extracted, never redrawn, and the mark is a Wikimedia Foundation trademark used
+here nominatively. Recorded fact, seen and decided: the W denotes Wikipedia while the data
+behind the badge comes from Wiktionary; the owner chose it knowing that, and the accessible
+name says Wiktionary so a reader who cannot see the mark is told the source. The showcase
+typesets the same letterform from the font stack (`--font-mark`, Linux Libertine first, the
+face the Wikipedia wordmark uses).
 
 Size, measured rather than assumed: the W was rendered at 12 to 18 px on all six palettes. A
 single serif letter survives small: it is identifiable at 13 px and comfortable at **15 px**,
@@ -681,13 +715,12 @@ which is `--mark-size`, inside the 22 px pill (`--badge-height`) the other prove
 already use, so the row height did not have to change. Themes and modes: the W is a glyph,
 so it takes the badge's ink colour (accent) on the badge's ground (accent-bg) and the DR-10
 rule `accent/accentBg ≥ 4.5:1` covers it in every palette; no variant asset and no plate.
-Coherence: every provenance value is the same 22 px pill; the Wiktionary pill holds the W in
-the accent pair, the others ("guess", "synthesised") hold a word in small capitals in the
-guess pair, so the row reads as a row of provenance pills that differ by what they say, and
-the W reads as a wordmark-length label rather than a decoration. The via-English anchor uses
-the same W pill followed by "in English". Name and operation: the pill is a link with the
-accessible name "Source: Wiktionary. Opens the entry on Wiktionary." and keyboard focus; the
-foot keeps its Wiktionary action as the primary way to the entry.
+Coherence: every provenance value is the same 22 px pill; the Wikipedia-W pill means
+Wiktionary, the others ("guess", "synthesised") hold a word in small capitals in the guess
+pair, so the row reads as a row of provenance pills that differ by what they say. The
+via-English anchor uses the same W pill followed by "in English". Name and operation: the
+pill is a link with the accessible name "Source: Wiktionary. Opens the entry on Wiktionary."
+and keyboard focus; the foot keeps its Wiktionary action as the primary way to the entry.
 
 ### Consequences
 

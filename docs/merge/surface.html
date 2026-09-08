@@ -36,7 +36,9 @@
   --ruby-glyph-line:  1.15em;  /* the annotated word's own line box */
   --ruby-room-1:      0.95em;   /* room above the word for one ruby line */
   --ruby-room-2:      1.6em;  /* room for gloss plus IPA */
-  --ruby-overlap:     0.12em;  /* how far the ruby block reaches into the glyph line */
+  --ruby-overlap:     0.12em;  /* how far the ruby block reaches into the glyph line when room was made */
+  --ruby-inbox-overlap: 0.34em; /* in-box form: the gloss sits in the line's leading and over the glyph tops */
+  --ruby-inbox-scale: 0.5;     /* in-box form: gloss size, the floor derived from line height */
   --weight-regular:   400;
   --weight-medium:    500;
   --weight-bold:      650;
@@ -279,6 +281,7 @@
   --ruby-hue: var(--p-ruby-hue);
   --color-ruby-ink: var(--p-ipa-consonant);
   --color-ruby-ipa: var(--p-ink-muted);
+  --color-annotation-backing: color-mix(in srgb, var(--p-surface) 94%, transparent);  /* backing under an in-box gloss */
 }
 .theme-ink { --border-width: 2px; --weight-medium: 600; --weight-bold: 700; }
 .theme-classroom { --font-size-ipa: 19px; --font-size-ipa-lens: 15px; }
@@ -314,7 +317,11 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .rb .gl.guess { color: var(--color-guess); }
 .rb .ph { font-size: calc(1em * var(--ruby-ipa-scale)); font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
 .w.seen { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--border-width); text-underline-offset: 3px; }
-.rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }
+.rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }   /* the swap cue lives inside the painted box: a dotted rule on its bottom edge */
+.keep { }                                                                    /* an unswapped unit: untouched pixels, tappable */
+.page.inbox .w { padding-top: 0; }
+.page.inbox .w > .rb { bottom: calc(var(--ruby-glyph-line) - var(--ruby-inbox-overlap)); background: var(--color-annotation-backing); border-radius: var(--radius-bar); padding: 0 var(--space-1); }
+.page.inbox .rb .gl { font-size: calc(1em * var(--ruby-inbox-scale)); }
 .page-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2); }
 .scan-pill { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-muted); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-chip); padding: 2px var(--space-2) 2px var(--space-2); display: inline-flex; align-items: center; gap: var(--space-1); }
 .scan-pill i { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--color-accent); border-right-color: transparent; display: inline-block; }
@@ -360,7 +367,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .card-body:empty { display: none; }
 .badge { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; text-transform: uppercase; border-radius: var(--radius-chip); padding: 0 var(--space-2); height: var(--badge-height); display: inline-flex; align-items: center; white-space: nowrap; flex: 0 0 auto; box-sizing: border-box; }
 .badge.dict { background: var(--color-accent-bg); color: var(--color-accent); padding: 0 var(--space-2); text-decoration: none; }
-.mark-slot { font-family: var(--font-mark); font-size: var(--mark-size); font-weight: var(--weight-bold); line-height: 1; letter-spacing: 0; text-transform: none; }  /* the W letterform of the Wiktionary logo (Linux Libertine), the asset pinned in data/marks.json; the showcase typesets the same letterform from the font stack */
+.mark-slot { font-family: var(--font-mark); font-size: var(--mark-size); font-weight: var(--weight-bold); line-height: 1; letter-spacing: 0; text-transform: none; }  /* the W letterform of Wikipedia's mark (Linux Libertine), the asset pinned in data/marks.json; the showcase typesets the same letterform from the font stack */
 .badge.guess { background: var(--color-guess-bg); color: var(--color-guess); }
 .ex { margin: 0; padding-left: var(--space-2); border-left: 2px solid var(--color-border); color: var(--color-ink-muted); font-size: var(--font-size-small); }
 .ex q { quotes: none; color: var(--color-ink); }
@@ -539,8 +546,17 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 
     <section class="state" data-uid="STATE-PAGE-REPLACE">
       <div class="label"><b>STATE-PAGE-REPLACE</b> Page replace</div>
-      <div class="page ruby">
-        <p><span class="rep">The library</span> <span class="rep">opens</span> <span class="rep">at nine in the morning</span>, <span class="rep">but</span> <span class="rep">most students</span> <span class="rep">only come</span> <span class="rep">around</span> <span class="rep">noon</span>, <span class="rep">when</span> <span class="rep">the reading room</span> <span class="rep">is already full</span>. <span class="rep">That</span> <span class="w">hat<span class="rb"><span class="gl">has</span></span></span> <span class="w">mir<span class="rb"><span class="gl">me</span></span></span> <span class="w">den Tag<span class="rb"><span class="gl">the day</span></span></span> <span class="w">gerettet<span class="rb"><span class="gl">saved</span></span></span>.</p>
+      <div class="page">
+        <p><span class="rep">The library</span> <span class="rep">opens</span> <span class="rep">at nine in the morning</span>, <span class="rep">but</span> <span class="rep">most students</span> <span class="rep">only come</span> <span class="rep">around</span> <span class="rep">noon</span>, <span class="rep">when</span> <span class="rep">the reading room</span> <span class="rep">is already full</span>. <span class="rep">That</span> <span class="keep">hat mir den Tag gerettet</span>.</p>
+        <span class="hover-cursor">swapped spans carry the dotted rule inside their box; the unswapped unit is untouched and opens its phrase card on tap</span>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-GLOSS-INBOX">
+      <div class="label"><b>STATE-PAGE-GLOSS-INBOX</b> Page gloss in box</div>
+      <div class="page inbox">
+        <p>Die <span class="w">Bibliothek<span class="rb"><span class="gl">library</span></span></span> öffnet morgens um neun Uhr, aber die <span class="w">meisten<span class="rb"><span class="gl">most</span></span></span> Studenten kommen erst gegen <span class="w">Mittag<span class="rb"><span class="gl">noon</span></span></span>, wenn der <span class="w">Lesesaal<span class="rb"><span class="gl guess">reading hall</span></span></span> schon voll ist.</p>
+        <span class="hover-cursor">no room can be made: the gloss sits in the line's own leading inside the word's box, on a backing, at the line-height-derived size</span>
       </div>
     </section>
 
@@ -559,7 +575,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">a</button><button class="sym o">ː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
           <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
         </header>
@@ -576,7 +592,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
         <div class="card-handle"></div>
         <header class="card-head">
           <div class="headline"><span class="tr">czytelnia</span><span class="badge guess">guess</span></div>
-          <div class="anchor-en"><a class="badge dict" href="#" aria-label="Source: Wiktionary, English gloss. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a><span class="anchor-label">in English</span><span class="anchor-gl">reading room</span></div>
+          <div class="anchor-en"><a class="badge dict" href="#" aria-label="Source: Wiktionary, English gloss. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a><span class="anchor-label">in English</span><span class="anchor-gl">reading room</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
           <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">German → Polish is a <b>partial</b> pair: the English pivot found no confident Polish word for this sense, so the headline is a machine guess</span></div>
         </header>
@@ -592,7 +608,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
           <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
         </header>
@@ -626,7 +642,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">modern, contemporary</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">modern, contemporary</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">m</button><button class="sym v">o</button><button class="sym c">d</button><button class="sym v">ɛ</button><button class="sym c">ʁ</button><button class="sym c">n</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
           <div class="gram"><span class="lemma">modern</span><span class="chip">adjective</span><span class="g-sub">decided from the translation; another reading exists</span></div>
           <button class="alt-reading"><span class="alt-label">Other reading</span><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip">verb</span><span class="chev">›</span></button>
@@ -643,7 +659,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">s</button><button class="sym v">ɛ</button><button class="sym c">ɹ</button><button class="sym v">ə</button><button class="sym c">n</button><button class="sym c">d</button><button class="sym v">ɪ</button><button class="sym c">p</button><button class="sym v">ɪ</button><button class="sym c">t</button><button class="sym v">i</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span><span class="ipa-note">General American</span></div>
           <div class="gram"><span class="lemma">serendipity</span><span class="chip">noun</span></div>
         </header>
@@ -770,7 +786,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 420" style="width: 360px; height: 420px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -789,7 +805,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 260" style="width: 360px; height: 260px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -808,7 +824,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="space" data-space="360 × 140" style="width: 360px; height: 140px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
@@ -854,7 +870,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="screen tall">
         <article class="card moving">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span></div>
           </header>
@@ -1013,7 +1029,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-paper mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1031,7 +1047,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-paper mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1049,7 +1065,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-ink mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1067,7 +1083,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-ink mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1085,7 +1101,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-classroom mode-light">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>
@@ -1103,7 +1119,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="specimen-bg theme-classroom mode-dark">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wiktionary W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
           </header>

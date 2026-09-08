@@ -478,7 +478,7 @@
    "uid": "REQ-PROVENANCE-MARK",
    "tag": "REQ",
    "title": "Dictionary provenance carries the Wiktionary mark",
-   "statement": "The dictionary provenance badge is the serif W letterform of the Wiktionary logo alone, no word beside it at any tier: the glyph taken from the Wiktionary logo file pinned with its Commons page and licence in data/marks.json (never Wikipedia's mark, which would name the wrong project), typeset at 15 px in the badge's accent colour inside the same 22 px pill every other provenance value uses, so the DR-10 accent-on-accent-bg rule covers it; it is a link with the accessible name 'Source: Wiktionary, opens the entry'; the other provenance values are words in pills of the same height.",
+   "statement": "The dictionary provenance badge is the serif W letterform of Wikipedia's mark alone, chosen by the owner, no word beside it at any tier: the glyph taken from the Wikipedia logo file pinned with its Commons page and licence in data/marks.json, never redrawn, typeset at 15 px in the badge's accent colour inside the same 22 px pill every other provenance value uses, so the DR-10 accent-on-accent-bg rule covers it; recorded fact: the W denotes Wikipedia while the data comes from Wiktionary, and the accessible name 'Source: Wiktionary, opens the entry' says the source; the other provenance values are words in pills of the same height.",
    "status": "proposed",
    "relations": [
     {
@@ -488,6 +488,27 @@
     {
      "role": "constrains",
      "to": "REQ-THEMES"
+    }
+   ]
+  },
+  {
+   "uid": "REQ-OVERLAY-VOCABULARY",
+   "tag": "REQ",
+   "title": "The overlay can only paint over a word's box and make it tappable",
+   "statement": "On Android the overlay paints over another app's screen and cannot reflow it, so nothing is ever inserted between the app's lines; every inline form on both surfaces is defined inside the word's own painted box (its character-rect union, leading included), and a form that needs room above a word is browser-only unless it sits inside that box.",
+   "status": "settled",
+   "relations": [
+    {
+     "role": "constrains",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "constrains",
+     "to": "STATE-PAGE-REPLACE"
+    },
+    {
+     "role": "realised_by",
+     "to": "STATE-PAGE-GLOSS-INBOX"
     }
    ]
   }
@@ -504,6 +525,7 @@
     "Page gloss",
     "Page gloss and IPA",
     "Page IPA",
+    "Page gloss in box",
     "Page replace",
     "Page scanning"
    ],
@@ -526,6 +548,10 @@
     {
      "role": "depends",
      "to": "VIEW-CARD"
+    },
+    {
+     "role": "renders",
+     "to": "REQ-OVERLAY-VOCABULARY"
     }
    ]
   },
@@ -766,7 +792,7 @@
    "uid": "STATE-PAGE-GLOSS",
    "tag": "STATE",
    "title": "Page gloss",
-   "statement": "Sprinkled words carry a one-line ruby gloss above them; guesses are in the guess colour.",
+   "statement": "Sprinkled words carry a one-line gloss above their glyphs; in the browser the line makes room for it, elsewhere it takes the in-box form (Page gloss in box). Guesses are in the guess colour.",
    "status": "proposed",
    "renders": [
     "surface-light-page-gloss.png",
@@ -837,7 +863,7 @@
    "uid": "STATE-PAGE-REPLACE",
    "tag": "STATE",
    "title": "Page replace",
-   "statement": "Each sentence is machine translated with alignments and cut into minimal monotone consistent phrase pairs; every pair up to the span cap is repainted in place as its target phrase in the page's own sampled colours, so articles, adjective endings and word order move with their noun; a block over the cap keeps its source words with ruby glosses instead. Replaced spans carry a faint underline and open the phrase card; the frequency slider does not apply.",
+   "statement": "Each sentence is machine translated with alignments and cut into minimal monotone consistent phrase pairs; every pair up to the span cap is repainted in place as its target phrase in the page's own sampled colours, with a dotted rule on the bottom edge of its painted box as the swap cue. A unit over the cap is left untouched in the source language and made tappable, opening its phrase card; a mixed sentence therefore reads as target text with dotted rules and plain source text without them. Nothing is painted above any word. When no translation model is available the sentence stays untouched and the mode says so in its own chrome. The frequency slider does not apply.",
    "status": "proposed",
    "renders": [
     "surface-light-page-replace.png",
@@ -856,6 +882,10 @@
     {
      "role": "satisfies",
      "to": "REQ-REPLACE-SPANS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-OVERLAY-VOCABULARY"
     }
    ]
   },
@@ -1565,6 +1595,36 @@
     {
      "role": "satisfies",
      "to": "REQ-GUESS-LABELLED"
+    }
+   ]
+  },
+  {
+   "uid": "STATE-PAGE-GLOSS-INBOX",
+   "tag": "STATE",
+   "title": "Page gloss in box",
+   "statement": "The gloss and IPA forms as they are painted where no room can be made, which is always on Android and in the browser wherever reflow is refused: the annotation sits inside the word's own box, in the line's leading and over the glyph tops, on a translucent backing, at the size derived from the measured line height; when the line height leaves no room for even that size the word gets no annotation and stays tappable.",
+   "status": "proposed",
+   "renders": [
+    "surface-light-page-gloss-inbox.png",
+    "surface-dark-page-gloss-inbox.png"
+   ],
+   "sources": [
+    "android/overlay/RubyGlossPainter.kt",
+    "android/overlay/RubyIpaPainter.kt",
+    "ext/content/ruby.css"
+   ],
+   "relations": [
+    {
+     "role": "state_of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-OVERLAY-VOCABULARY"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PARITY"
     }
    ]
   }
