@@ -57,9 +57,14 @@ object LazyListPage {
      * row and the line are the same thing - and it is inside a wrapped message that the
      * transcriptions were seen sitting on the wrong words.
      */
+    // Three times through the words, because one is not a page. Ten messages of sixteen words
+    // fill about a screen and a half, so a drag of a screen reached the end of the list a
+    // third of the way through and the checks spent the rest of the movement judging a page
+    // that had stopped - as a movement.
     private val MESSAGES: List<String> =
-        (0 until TestWords.DISTINCT.size / 2).map { i ->
-            "$i " + TestWords.DISTINCT.drop(i * 2).take(2).joinToString(" ")
+        (0 until TestWords.DISTINCT.size / 2 * 3).map { i ->
+            val from = (i * 2) % TestWords.DISTINCT.size
+            "$i " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
         }
 
     /**

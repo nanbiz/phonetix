@@ -691,8 +691,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             // is the one its word belongs to.
             // Two of the word lines to a paragraph, so each wraps over several lines of the
             // screen, and every word of the page appears exactly once.
-            for (i in TestWords.DISTINCT.indices step 2) {
-                val paragraph = TestWords.DISTINCT.drop(i).take(2).joinToString(" ")
+            // Three times through the words: ten paragraphs of sixteen fill about a screen
+            // and a half, so a drag of a screen ran off the end of the page and the rest of
+            // the movement was judged on a page that had stopped.
+            for (n in 0 until TestWords.DISTINCT.size / 2 * 3) {
+                val from = (n * 2) % TestWords.DISTINCT.size
+                val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
                 addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
         } else if (mode == "unique") {
