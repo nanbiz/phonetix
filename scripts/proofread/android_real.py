@@ -15,6 +15,7 @@ on the screen at all.
 
   PHONETIX_ANDROID_SERIAL=emulator-5600 uv run python scripts/proofread/android_real.py
 """
+import os
 import re
 import subprocess
 import sys
@@ -27,9 +28,30 @@ from android_harness import Device, adb, shell
 APPS = [
     ("the settings app", "com.android.settings/.Settings"),
     ("its list of apps", "com.android.settings/.Settings$ManageApplicationsActivity"),
+    # A Compose list, which is the shape of the app this was reported broken on. It is one of
+    # ours, but nothing about the judging uses that: the tree is read by uiautomator like any
+    # other app's. What it brings is the case a framework list does not have, an app that
+    # reports a scroll delta of one whatever it did, so the overlay has to follow it without
+    # being told anything.
+    ("a Compose conversation", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity"),
 ]
+# What each app needs before it can be read, if anything.
+EXTRAS = {
+    "io.github.nanbiz.phonetix": ["--es", "mode", "chat", "--ei", "enable", "1",
+                                "--ei", "density", "3", "--ei", "allApps", "1"],
+}
 # How far a transcription may sit from the word it names before it is somebody else's.
 A_LINE = 55
+# How near in time the overlay's reading has to be to the reading of the screen. Without this
+# the last reading of an app is used whatever its age, so a page untouched for minutes can be
+# judged against a screen it never described.
+FRESH_MS = 3000
+
+
+def uptime_ms():
+    """The clock the service stamps its readings with."""
+    out = shell("cat", "/proc/uptime").strip().split()
+    return int(float(out[0]) * 1000) if out else 0
 
 
 def tree():
@@ -57,16 +79,23 @@ def tree():
 
 
 def words_on_screen(nodes):
-    """Which words are on the screen, and the vertical middles of every place they appear."""
+    """Which words are on the screen, and the band each place they appear sits in.
+
+    A band rather than a point, because a node is not always one line. A row of a list is, and
+    a message that wraps over three is not: its text is one node whose box covers all three, so
+    the most that can be said about a word inside it is that it is somewhere in that box. Held
+    to a point instead, every word of every wrapped message reads as half a message out of
+    place, which is an accusation the reading cannot support.
+    """
     where = {}
     for text, _l, top, _r, bottom in nodes:
-        middle = (top + bottom) / 2
         for word in re.findall(r"[^\W\d_]+", text.lower()):
-            where.setdefault(word, []).append(middle)
+            where.setdefault(word, []).append((top, bottom))
     return where
 
 
 def judge(dev, label, results, pkg):
+    when = uptime_ms()
     nodes = tree()
     if len(nodes) < 3:
         print(f"  {label}: the tree said nothing, skipped")
@@ -76,9 +105,10 @@ def judge(dev, label, results, pkg):
     # nothing, so clearing the log and waiting reads an empty log rather than a quiet overlay.
     # The last reading of this app is what is on the screen now.
     log = "\n".join(l for l in dev.log().splitlines() if f"BOXES " not in l or pkg in l)
-    frames = [f for f in dev.box_frames(log) if f[1]]
+    frames = [f for f in dev.box_frames(log) if f[1] and abs(f[0] - when) <= FRESH_MS]
     if not frames:
-        print(f"  {label}: the overlay has drawn nothing on this app")
+        print(f"  {label}: the overlay drew nothing on this app within "
+              f"{FRESH_MS}ms of the screen being read")
         return
     _stamp, boxes = frames[-1]
     adrift, gone, checked = [], [], 0
@@ -89,7 +119,12 @@ def judge(dev, label, results, pkg):
         if word not in seen:
             gone.append(box["word"])
             continue
-        if min(abs(middle - m) for m in seen[word]) > A_LINE:
+        off = min(
+            0.0 if top - A_LINE <= middle <= bottom + A_LINE
+            else min(abs(middle - top), abs(middle - bottom))
+            for top, bottom in seen[word]
+        )
+        if off > 0:
             adrift.append(box["word"])
     wrong = len(adrift) + len(gone)
     print(f"  {label}: {wrong} of {checked} are not on their word"
@@ -104,27 +139,52 @@ def main():
     if not dev.enable_service():
         print("the service will not start")
         return 1
+    # A control, so a green run can be shown to mean something. Setting this to 0 turns off
+    # the one signal a framework list gives for free, which is the fault this test was written
+    # to catch, and the run has to go red. A test that cannot be made to fail is not evidence.
+    # The plainest control there is: every transcription is drawn a fixed distance from where
+    # it belongs. A test that stays green through that is not reading the screen at all.
+    wrong_by = os.environ.get("PHONETIX_WRONG_BY")
+    if wrong_by is not None:
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+              "--es", "mode", "plain", "--ei", "enable", "1", "--ei", "allApps", "1",
+              "--ei", "putThemWrongBy", wrong_by)
+        time.sleep(2)
+        print(f"(control: every transcription is drawn {wrong_by}px from its word)")
+    said = os.environ.get("PHONETIX_SAID")
+    if said is not None:
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+              "--es", "mode", "plain", "--ei", "enable", "1", "--ei", "allApps", "1",
+              "--ei", "useSaidScroll", said)
+        time.sleep(2)
+        print(f"(control: the app's own scroll deltas are {'used' if said != '0' else 'ignored'})")
     results = []
     for name, activity in APPS:
         print(f"{name}:")
         pkg = activity.split("/")[0]
-        shell("am", "start", "-n", activity)
+        shell("am", "start", "-n", activity, *EXTRAS.get(pkg, []))
         time.sleep(5)
         judge(dev, "standing still", results, pkg)
         # A real gesture: a finger that lifts, so the app flings on after it.
-        shell("input", "swipe", "540", "1500", "540", "600", "250")
-        time.sleep(0.4)
-        judge(dev, "just after a fling", results, pkg)
-        time.sleep(3)
+        # A fling is over in well under a second and one dump of the tree takes about that
+        # long, so a single look is one moment with a handful of words in it, which decides
+        # nothing. Several flings, each looked at a different distance into it, is a
+        # distribution rather than an anecdote.
+        for n, delay in enumerate((0.30, 0.55, 0.85, 0.30, 0.55, 0.85)):
+            shell("input", "swipe", "540", "1500", "540", "600", "250")
+            time.sleep(delay)
+            judge(dev, f"{int(delay * 1000)}ms into a fling", results, pkg)
+            time.sleep(2.5)
+            if n % 3 == 2:
+                shell("input", "swipe", "540", "600", "540", "1500", "250")
+                time.sleep(2)
         judge(dev, "once it has settled", results, pkg)
-    bad = [(l, w, c) for l, w, c in results if w]
-    print(f"\n{len(results) - len(bad)}/{len(results)} moments had every transcription on its word")
-    if bad:
-        print("\nFAIL:")
-        for label, wrong, checked in bad:
-            print(f"    {label}: {wrong} of {checked}")
-        return 1
-    return 0
+    wrong = sum(w for _l, w, _c in results)
+    checked = sum(c for _l, _w, c in results)
+    clean = sum(1 for _l, w, _c in results if not w)
+    print(f"\n{wrong} of {checked} transcriptions were not on their word, "
+          f"over {len(results)} looks, {clean} of which were clean")
+    return 1 if wrong else 0
 
 
 if __name__ == "__main__":
