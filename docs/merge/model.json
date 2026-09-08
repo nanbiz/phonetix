@@ -1,168 +1,163 @@
 {
  "requirements": [
   {
-   "uid": "REQ-TRANSLATION-FIRST",
-   "tag": "REQ",
-   "title": "Translation first",
+   "relations": [
+    {
+     "role": "Realised by",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "Realised by",
+     "to": "VIEW-PAGE"
+    }
+   ],
    "statement": "The headline of every answer is the translation of the word into the reader's language, with IPA as a part of that answer rather than its point.",
    "status": "settled",
-   "relations": [
-    {
-     "role": "realised_by",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "realised_by",
-     "to": "VIEW-PAGE"
-    }
-   ]
+   "tag": "REQ",
+   "title": "Translation first",
+   "uid": "REQ-TRANSLATION-FIRST"
   },
   {
-   "uid": "REQ-IPA-ALWAYS",
-   "tag": "REQ",
-   "title": "IPA always in the card",
+   "relations": [
+    {
+     "role": "Realised by",
+     "to": "VIEW-CARD"
+    }
+   ],
    "statement": "Whatever else the card shows, it shows the IPA of the tapped spelling whenever any tier could produce one.",
    "status": "settled",
-   "relations": [
-    {
-     "role": "realised_by",
-     "to": "VIEW-CARD"
-    }
-   ]
+   "tag": "REQ",
+   "title": "IPA always in the card",
+   "uid": "REQ-IPA-ALWAYS"
   },
   {
-   "uid": "REQ-IPA-INLINE-TOGGLE",
-   "tag": "REQ",
-   "title": "Inline IPA is switchable",
+   "relations": [
+    {
+     "role": "Realised by",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "Realised by",
+     "to": "VIEW-SETTINGS"
+    }
+   ],
    "statement": "The in-page IPA layer can be turned on and off independently of the gloss layer.",
    "status": "settled",
-   "relations": [
-    {
-     "role": "realised_by",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "realised_by",
-     "to": "VIEW-SETTINGS"
-    }
-   ]
+   "tag": "REQ",
+   "title": "Inline IPA is switchable",
+   "uid": "REQ-IPA-INLINE-TOGGLE"
   },
   {
-   "uid": "REQ-LANGUAGE-PICK",
-   "tag": "REQ",
-   "title": "Reader picks a language",
-   "statement": "The reader chooses the target language, which may equal the page language, and can override a detected source language per block.",
-   "status": "settled",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SETTINGS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-UNKNOWN-LANG"
     }
-   ]
+   ],
+   "statement": "The reader chooses the target language, which may equal the page language, and can override a detected source language per block.",
+   "status": "settled",
+   "tag": "REQ",
+   "title": "Reader picks a language",
+   "uid": "REQ-LANGUAGE-PICK"
   },
   {
-   "uid": "REQ-PARITY",
-   "tag": "REQ",
-   "title": "Both surfaces carry the whole feature set",
+   "relations": [
+    {
+     "role": "Realised by",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "Realised by",
+     "to": "VIEW-LENS"
+    },
+    {
+     "role": "Realised by",
+     "to": "VIEW-PAGE"
+    }
+   ],
    "statement": "The browser extension and the Android app render the same states from the same core and the same tokens, including hover or lens translation.",
    "status": "settled",
+   "tag": "REQ",
+   "title": "Both surfaces carry the whole feature set",
+   "uid": "REQ-PARITY"
+  },
+  {
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     },
     {
-     "role": "realised_by",
-     "to": "VIEW-LENS"
+     "role": "Realised by",
+     "to": "VIEW-PAGE"
     },
     {
-     "role": "realised_by",
-     "to": "VIEW-PAGE"
+     "role": "Realised by",
+     "to": "VIEW-LENS"
     }
-   ]
-  },
-  {
-   "uid": "REQ-ONE-ANSWER",
-   "tag": "REQ",
-   "title": "One answer per word",
+   ],
    "statement": "The inline annotation, the card, the lens and the audio for a word derive from one Answer value produced once by the core, so they cannot disagree.",
    "status": "proposed",
-   "relations": [
-    {
-     "role": "realised_by",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "realised_by",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "realised_by",
-     "to": "VIEW-LENS"
-    }
-   ]
+   "tag": "REQ",
+   "title": "One answer per word",
+   "uid": "REQ-ONE-ANSWER"
   },
   {
-   "uid": "REQ-GUESS-LABELLED",
-   "tag": "REQ",
-   "title": "Machine guesses are labelled",
-   "statement": "Any gloss or IPA that came from a machine engine rather than a pack is marked as a guess, inline and in the card, in its own colour and with the word.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-GUESS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-PHRASE"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-PAGE-GLOSS"
     }
-   ]
+   ],
+   "statement": "Any gloss or IPA that came from a machine engine rather than a pack is marked as a guess, inline and in the card, in its own colour and with the word.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Machine guesses are labelled",
+   "uid": "REQ-GUESS-LABELLED"
   },
   {
-   "uid": "REQ-READABLE",
-   "tag": "REQ",
-   "title": "The page stays readable",
-   "statement": "Inline annotations are one short ruby line per word, sprinkled by frequency at a density the reader sets, so the page remains readable at every density below full.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-PAGE"
     }
-   ]
+   ],
+   "statement": "Inline annotations are one short ruby line per word, sprinkled by frequency at a density the reader sets, so the page remains readable at every density below full.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "The page stays readable",
+   "uid": "REQ-READABLE"
   },
   {
-   "uid": "REQ-PACK-ON-DEMAND",
-   "tag": "REQ",
-   "title": "Packs are prebuilt and fetched on demand",
-   "statement": "Packs are built in CI in one binary format: ipa and lex per source language from the English edition, with each sense carrying a build-time pivot into the English lemma's translations table, one xlat pack per target language shared by every source (none for English), and optional def packs for dense edition cells; a manifest publishes rows and a class per (source, target) pair; nothing is downloaded per pair and nothing is built on the device.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-PACKS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-NO-PACK"
     }
-   ]
+   ],
+   "statement": "Packs are built in CI in one binary format: ipa and lex per source language from the English edition, with each sense carrying a build-time pivot into the English lemma's translations table, one xlat pack per target language shared by every source (none for English), and optional def packs for dense edition cells; a manifest publishes rows and a class per (source, target) pair; nothing is downloaded per pair and nothing is built on the device.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Packs are prebuilt and fetched on demand",
+   "uid": "REQ-PACK-ON-DEMAND"
   },
   {
-   "uid": "REQ-FFI-BATCH",
-   "tag": "REQ",
-   "title": "The core is called per batch, never per frame",
-   "statement": "The shared core is crossed once per batch of new text runs and once per hover, tap or lens pass; geometry and per-frame tree reads never cross it.",
-   "status": "proposed",
    "relations": [
     {
      "role": "constrains",
@@ -172,78 +167,78 @@
      "role": "constrains",
      "to": "VIEW-LENS"
     }
-   ]
+   ],
+   "statement": "The shared core is crossed once per batch of new text runs and once per hover, tap or lens pass; geometry and per-frame tree reads never cross it.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "The core is called per batch, never per frame",
+   "uid": "REQ-FFI-BATCH"
   },
   {
-   "uid": "REQ-TOKENS",
-   "tag": "REQ",
-   "title": "One token set on both platforms",
-   "statement": "Every colour, size, radius and spacing of the answer surface is a named token declared once and generated into CSS custom properties and a Kotlin object.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SYMBOL"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-LENS"
     }
-   ]
+   ],
+   "statement": "Every colour, size, radius and spacing of the answer surface is a named token declared once and generated into CSS custom properties and a Kotlin object.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "One token set on both platforms",
+   "uid": "REQ-TOKENS"
   },
   {
-   "uid": "REQ-FORM-FACTORS",
-   "tag": "REQ",
-   "title": "One card, anchored or docked by space",
-   "statement": "The answer surface is one component: it anchors beside its word when the space there holds at least the Compact tier and otherwise docks full width to the nearest screen edge; the tier inside is chosen by the space either way.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     }
-   ]
+   ],
+   "statement": "The answer surface is one component: it anchors beside its word when the space there holds at least the Compact tier and otherwise docks full width to the nearest screen edge; the tier inside is chosen by the space either way.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "One card, anchored or docked by space",
+   "uid": "REQ-FORM-FACTORS"
   },
   {
-   "uid": "REQ-HOMOGRAPH",
-   "tag": "REQ",
-   "title": "Homographs are resolved or offered",
-   "statement": "A spelling with several readings is resolved in the core by three signals chained strongest first: the translation's alignment (which target span the word became, whenever a translation ran), the trained context classifier (about ten languages), then neighbour part-of-speech ranking from the same pack (any language); a decided-but-uncertain result shows the other reading as one quiet row, and the chooser appears only when confident signals contradict or none is confident, which the chooser-rate metric keeps rare.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-HOMOGRAPH"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-READING-DECIDED"
     }
-   ]
+   ],
+   "statement": "A spelling with several readings is resolved in the core by three signals chained strongest first: the translation's alignment (which target span the word became, whenever a translation ran), the trained context classifier (about ten languages), then neighbour part-of-speech ranking from the same pack (any language); a decided-but-uncertain result shows the other reading as one quiet row, and the chooser appears only when confident signals contradict or none is confident, which the chooser-rate metric keeps rare.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Homographs are resolved or offered",
+   "uid": "REQ-HOMOGRAPH"
   },
   {
-   "uid": "REQ-SYMBOL",
-   "tag": "REQ",
-   "title": "Every IPA symbol explains itself",
-   "statement": "Each IPA symbol in the card is a button opening its name, articulation diagram, Wikipedia link and audio.",
-   "status": "settled",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SYMBOL"
     }
-   ]
+   ],
+   "statement": "Each IPA symbol in the card is a button opening its name, articulation diagram, Wikipedia link and audio.",
+   "status": "settled",
+   "tag": "REQ",
+   "title": "Every IPA symbol explains itself",
+   "uid": "REQ-SYMBOL"
   },
   {
-   "uid": "REQ-SCREENSHOTS",
-   "tag": "REQ",
-   "title": "Every state is photographed and compared",
-   "statement": "Each state in this model has a rendered image on both platforms that a CI job actually compares, so a state that stops rendering fails the build.",
-   "status": "proposed",
    "relations": [
     {
      "role": "constrains",
@@ -261,144 +256,144 @@
      "role": "constrains",
      "to": "VIEW-PACKS"
     }
-   ]
+   ],
+   "statement": "Each state in this model has a rendered image on both platforms that a CI job actually compares, so a state that stops rendering fails the build.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Every state is photographed and compared",
+   "uid": "REQ-SCREENSHOTS"
   },
   {
-   "uid": "REQ-SETTINGS-SCOPES",
-   "tag": "REQ",
-   "title": "Every setting has a declared scope",
+   "relations": [
+    {
+     "role": "Realised by",
+     "to": "VIEW-SETTINGS"
+    }
+   ],
    "statement": "Each setting is per site (per app on Android), per language, or global, the scope is shown where the setting is, and nothing the shipping extension can set is lost: per-site on and off with a default, tooltip delay, animations, stress marks and narrow transcription as two settings, accent per language, and the dictionary host override.",
    "status": "proposed",
-   "relations": [
-    {
-     "role": "realised_by",
-     "to": "VIEW-SETTINGS"
-    }
-   ]
+   "tag": "REQ",
+   "title": "Every setting has a declared scope",
+   "uid": "REQ-SETTINGS-SCOPES"
   },
   {
-   "uid": "REQ-ONE-CURVE",
-   "tag": "REQ",
-   "title": "One frequency control on one curve",
-   "statement": "How many words get an inline annotation is one continuous control mapped through the sprinkle curve that lives in the core and is pinned by its vector fixtures; what the annotation shows is a separate choice and never bends the curve.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SETTINGS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-PAGE"
     }
-   ]
+   ],
+   "statement": "How many words get an inline annotation is one continuous control mapped through the sprinkle curve that lives in the core and is pinned by its vector fixtures; what the annotation shows is a separate choice and never bends the curve.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "One frequency control on one curve",
+   "uid": "REQ-ONE-CURVE"
   },
   {
-   "uid": "REQ-PER-RUN-LANGUAGE",
-   "tag": "REQ",
-   "title": "Source language is per run of text",
-   "statement": "Every block of a page is detected and annotated in its own language; the settings surface lists the languages found on the page and a correction is made from the block's card, never by forcing one language on the whole page.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SETTINGS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-UNKNOWN-LANG"
     }
-   ]
+   ],
+   "statement": "Every block of a page is detected and annotated in its own language; the settings surface lists the languages found on the page and a correction is made from the block's card, never by forcing one language on the whole page.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Source language is per run of text",
+   "uid": "REQ-PER-RUN-LANGUAGE"
   },
   {
-   "uid": "REQ-REPLACE-SPANS",
-   "tag": "REQ",
-   "title": "Replacement is by aligned phrase, never by word",
-   "statement": "In-place replacement swaps only spans whose alignment to the sentence translation is contiguous and closed on both sides, cut into minimal monotone units up to a span cap, and downgrades anything else to a ruby gloss; it needs an engine that exposes alignments and does not combine with the frequency slider.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-PAGE-REPLACE"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-SETTINGS-REPLACE"
     }
-   ]
+   ],
+   "statement": "In-place replacement swaps only spans whose alignment to the sentence translation is contiguous and closed on both sides, cut into minimal monotone units up to a span cap, and downgrades anything else to a ruby gloss; it needs an engine that exposes alignments and does not combine with the frequency slider.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Replacement is by aligned phrase, never by word",
+   "uid": "REQ-REPLACE-SPANS"
   },
   {
-   "uid": "REQ-SAME-ENGINE",
-   "tag": "REQ",
-   "title": "One translation engine and model on both surfaces",
-   "statement": "The browser and the Android app run the same Bergamot models through the same engine so a word gets the same guess on both, and both expose alignments for replace mode.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-GUESS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-PAGE-REPLACE"
     }
-   ]
+   ],
+   "statement": "The browser and the Android app run the same Bergamot models through the same engine so a word gets the same guess on both, and both expose alignments for replace mode.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "One translation engine and model on both surfaces",
+   "uid": "REQ-SAME-ENGINE"
   },
   {
-   "uid": "REQ-TIERS",
-   "tag": "REQ",
-   "title": "Compactness follows available space",
-   "statement": "The card has three named density tiers chosen by measuring the width and height it was given, with the thresholds in the token file and the same rule on both platforms (a container query in the browser, a constraint-measuring composable on Android); no layout is keyed to a platform.",
-   "status": "settled",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-TIER-FULL"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-TIER-COMPACT"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-TIER-STRIP"
     }
-   ]
+   ],
+   "statement": "The card has three named density tiers chosen by measuring the width and height it was given, with the thresholds in the token file and the same rule on both platforms (a container query in the browser, a constraint-measuring composable on Android); no layout is keyed to a platform.",
+   "status": "settled",
+   "tag": "REQ",
+   "title": "Compactness follows available space",
+   "uid": "REQ-TIERS"
   },
   {
-   "uid": "REQ-MOTION",
-   "tag": "REQ",
-   "title": "Motion decides what is filled in yet",
-   "statement": "While a drag moves the card is refilled from the batch answer (headline, pronunciation, grammar) and the rest is deferred; a pause of the dwell time fills the current tier; lifting commits to the settled word. This axis is independent of the tier.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-LENS-OVER-WORD"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-LENS"
     }
-   ]
+   ],
+   "statement": "While a drag moves the card is refilled from the batch answer (headline, pronunciation, grammar) and the rest is deferred; a pause of the dwell time fills the current tier; lifting commits to the settled word. This axis is independent of the tier.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Motion decides what is filled in yet",
+   "uid": "REQ-MOTION"
   },
   {
-   "uid": "REQ-THEMES",
-   "tag": "REQ",
-   "title": "Themes are palettes under semantic tokens",
-   "statement": "Every theme provides a light and a dark palette; components use only semantic roles aliased onto the palette; replace mode keeps the page's sampled colours; ruby colour is derived from the theme's hue to a 4.5:1 floor against the sampled background with a surface pill as fallback; the three IPA symbol kinds pass the contrast floor and stay apart under protanopia and deuteranopia simulation; a palette that fails the build's contrast rules does not ship.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-SETTINGS-ADVANCED"
     },
     {
@@ -409,94 +404,94 @@
      "role": "constrains",
      "to": "STATE-PAGE-GLOSS"
     }
-   ]
+   ],
+   "statement": "Every theme provides a light and a dark palette; components use only semantic roles aliased onto the palette; replace mode keeps the page's sampled colours; ruby colour is derived from the theme's hue to a 4.5:1 floor against the sampled background with a surface pill as fallback; the three IPA symbol kinds pass the contrast floor and stay apart under protanopia and deuteranopia simulation; a palette that fails the build's contrast rules does not ship.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Themes are palettes under semantic tokens",
+   "uid": "REQ-THEMES"
   },
   {
-   "uid": "REQ-THEME-SET",
-   "tag": "REQ",
-   "title": "Three themes, Paper by default",
-   "statement": "Paper for long reading (lowest chroma), Ink for low vision and sunlight (7:1 floor, 2 px borders, heavier weights), Classroom for learning sounds (strong symbol kinds, larger pronunciation line); each in both modes, shown on the card as specimen; the mode follows the system unless pinned.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-SETTINGS-ADVANCED"
     },
     {
      "role": "depends",
      "to": "REQ-THEMES"
     }
-   ]
+   ],
+   "statement": "Paper for long reading (lowest chroma), Ink for low vision and sunlight (7:1 floor, 2 px borders, heavier weights), Classroom for learning sounds (strong symbol kinds, larger pronunciation line); each in both modes, shown on the card as specimen; the mode follows the system unless pinned.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Three themes, Paper by default",
+   "uid": "REQ-THEME-SET"
   },
   {
-   "uid": "REQ-ESPEAK-EVERYWHERE",
-   "tag": "REQ",
-   "title": "espeak-ng on both surfaces",
-   "statement": "The last-resort phonemiser and the synthesised voice are espeak-ng on the browser and on Android alike, so no card state and no audio is degraded on one surface; per-language espeak data is fetched with that language's packs.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-GUESS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-NONE"
     },
     {
      "role": "depends",
      "to": "REQ-PARITY"
     }
-   ]
+   ],
+   "statement": "The last-resort phonemiser and the synthesised voice are espeak-ng on the browser and on Android alike, so no card state and no audio is degraded on one surface; per-language espeak data is fetched with that language's packs.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "espeak-ng on both surfaces",
+   "uid": "REQ-ESPEAK-EVERYWHERE"
   },
   {
-   "uid": "REQ-PAIR-HONESTY",
-   "tag": "REQ",
-   "title": "A pair is never called a dictionary when it is a guess",
-   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) from the share of top lemmas whose senses received a confident English pivot at a threshold with measured precision of at least 95 percent; the language picker, the pack manager and every card show that class, an ambiguous pivot yields no dictionary answer rather than a wrong one, and a machine-class pair is offered only with machine translation named as what it is.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-PACKS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-SETTINGS"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-CARD-VIA-ENGLISH"
     },
     {
      "role": "depends",
      "to": "REQ-GUESS-LABELLED"
     }
-   ]
+   ],
+   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) from the share of top lemmas whose senses received a confident English pivot at a threshold with measured precision of at least 95 percent; the language picker, the pack manager and every card show that class, an ambiguous pivot yields no dictionary answer rather than a wrong one, and a machine-class pair is offered only with machine translation named as what it is.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "A pair is never called a dictionary when it is a guess",
+   "uid": "REQ-PAIR-HONESTY"
   },
   {
-   "uid": "REQ-PROVENANCE-MARK",
-   "tag": "REQ",
-   "title": "Dictionary provenance carries the Wiktionary mark",
-   "statement": "The dictionary provenance badge is the serif W letterform of Wikipedia's mark alone, chosen by the owner, no word beside it at any tier: the glyph taken from the Wikipedia logo file pinned with its Commons page and licence in data/marks.json, never redrawn, typeset at 15 px in the badge's accent colour inside the same 22 px pill every other provenance value uses, so the DR-10 accent-on-accent-bg rule covers it; recorded fact: the W denotes Wikipedia while the data comes from Wiktionary, and the accessible name 'Source: Wiktionary, opens the entry' says the source; the other provenance values are words in pills of the same height.",
-   "status": "proposed",
    "relations": [
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "VIEW-CARD"
     },
     {
      "role": "constrains",
      "to": "REQ-THEMES"
     }
-   ]
+   ],
+   "statement": "The dictionary provenance badge is the serif W letterform of Wikipedia's mark alone, chosen by the owner, no word beside it at any tier: the glyph taken from the Wikipedia logo file pinned with its Commons page and licence in data/marks.json, never redrawn, typeset at 15 px in the badge's accent colour inside the same 22 px pill every other provenance value uses, so the DR-10 accent-on-accent-bg rule covers it; recorded fact: the W denotes Wikipedia while the data comes from Wiktionary, and the accessible name 'Source: Wiktionary, opens the entry' says the source; the other provenance values are words in pills of the same height.",
+   "status": "proposed",
+   "tag": "REQ",
+   "title": "Dictionary provenance carries the Wiktionary mark",
+   "uid": "REQ-PROVENANCE-MARK"
   },
   {
-   "uid": "REQ-OVERLAY-VOCABULARY",
-   "tag": "REQ",
-   "title": "The overlay can only paint over a word's box and make it tappable",
-   "statement": "On Android the overlay paints over another app's screen and cannot reflow it, so nothing is ever inserted between the app's lines; every inline form on both surfaces is defined inside the word's own painted box (its character-rect union, leading included), and a form that needs room above a word is browser-only unless it sits inside that box.",
-   "status": "settled",
    "relations": [
     {
      "role": "constrains",
@@ -507,39 +502,1045 @@
      "to": "STATE-PAGE-REPLACE"
     },
     {
-     "role": "realised_by",
+     "role": "Realised by",
      "to": "STATE-PAGE-GLOSS-INBOX"
     }
-   ]
+   ],
+   "statement": "On Android the overlay paints over another app's screen and cannot reflow it, so nothing is ever inserted between the app's lines; every inline form on both surfaces is defined inside the word's own painted box (its character-rect union, leading included), and a form that needs room above a word is browser-only unless it sits inside that box.",
+   "status": "settled",
+   "tag": "REQ",
+   "title": "The overlay can only paint over a word's box and make it tappable",
+   "uid": "REQ-OVERLAY-VOCABULARY"
+  }
+ ],
+ "states": [
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    }
+   ],
+   "renders": [
+    "page-off-phone.png",
+    "page-off-desktop.png"
+   ],
+   "sources": [
+    "ext/content/inline.ts",
+    "android/overlay/Overlay.kt"
+   ],
+   "statement": "No inline annotation; the card is still reachable by hover, tap or lens.",
+   "status": "Built",
+   "tag": "STATE",
+   "title": "Page off",
+   "uid": "STATE-PAGE-OFF"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ],
+   "renders": [
+    "page-gloss-phone.png",
+    "page-gloss-desktop.png"
+   ],
+   "sources": [
+    "ext/content/ruby.css",
+    "android/overlay/RubyGlossPainter.kt"
+   ],
+   "statement": "Sprinkled words carry a one-line gloss above their glyphs; in the browser the line makes room for it, elsewhere it takes the in-box form (Page gloss in box). Guesses are in the guess colour.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page gloss",
+   "uid": "STATE-PAGE-GLOSS"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-IPA-INLINE-TOGGLE"
+    }
+   ],
+   "renders": [
+    "page-gloss-ipa-phone.png",
+    "page-gloss-ipa-desktop.png"
+   ],
+   "sources": [
+    "ext/content/ruby.css",
+    "android/overlay/RubyIpaPainter.kt"
+   ],
+   "statement": "Sprinkled words carry the ruby gloss with a smaller IPA line under it.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page gloss and IPA",
+   "uid": "STATE-PAGE-GLOSS-IPA"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    }
+   ],
+   "renders": [
+    "page-ipa-phone.png",
+    "page-ipa-desktop.png"
+   ],
+   "sources": [
+    "ext/content/ruby.css",
+    "android/overlay/RubyIpaPainter.kt"
+   ],
+   "statement": "Sprinkled words carry only the ruby IPA line; this is also the only inline form for words in the target language.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page IPA",
+   "uid": "STATE-PAGE-IPA"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-REPLACE-SPANS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-OVERLAY-VOCABULARY"
+    }
+   ],
+   "renders": [
+    "page-replace-phone.png",
+    "page-replace-desktop.png"
+   ],
+   "sources": [
+    "ext/content/replace.ts",
+    "android/overlay/ReplacePainter.kt",
+    "lexcore/src/phrase_units.rs"
+   ],
+   "statement": "Each sentence is machine translated with alignments and cut into minimal monotone consistent phrase pairs; every pair up to the span cap is repainted in place as its target phrase in the page's own sampled colours, with a dotted rule on the bottom edge of its painted box as the swap cue. A unit over the cap is left untouched in the source language and made tappable, opening its phrase card; a mixed sentence therefore reads as target text with dotted rules and plain source text without them. Nothing is painted above any word. When no translation model is available the sentence stays untouched and the mode says so in its own chrome. The frequency slider does not apply.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page replace",
+   "uid": "STATE-PAGE-REPLACE"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-FFI-BATCH"
+    }
+   ],
+   "renders": [
+    "page-scanning-phone.png",
+    "page-scanning-desktop.png"
+   ],
+   "sources": [
+    "ext/content/inline.ts",
+    "android/overlay/Overlay.kt"
+   ],
+   "statement": "A batch is in flight; a small unobtrusive indicator shows and no ruby is painted until the batch returns.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page scanning",
+   "uid": "STATE-PAGE-SCANNING"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-TRANSLATION-FIRST"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-IPA-ALWAYS"
+    }
+   ],
+   "renders": [
+    "card-entry-phone.png",
+    "card-entry-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with the Wiktionary provenance badge (the mark alone, a link to the entry), pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card entry",
+   "uid": "STATE-CARD-ENTRY"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    }
+   ],
+   "renders": [
+    "card-form-phone.png",
+    "card-form-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "The spelling is an inflected form of a word with twelve senses: headline gloss for the applying sense with the Wiktionary badge, pronunciation line (synthesised), grammar line with the lemma prominent and the tapped form as the small part with its label, the example, two other senses and a ten-more count. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card form",
+   "uid": "STATE-CARD-FORM"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-HOMOGRAPH"
+    }
+   ],
+   "renders": [
+    "card-homograph-phone.png",
+    "card-homograph-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/homograph.rs"
+   ],
+   "statement": "The three homograph signals contradicted each other or none was confident (most often monolingual reading in a language without a classifier): a chooser listing each reading as its translation followed by its IPA and the part of speech at the row end; choosing one opens the entry. Drawn at the Full tier; expected to be rare.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card homograph",
+   "uid": "STATE-CARD-HOMOGRAPH"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-LANGUAGE-PICK"
+    }
+   ],
+   "renders": [
+    "card-mono-phone.png",
+    "card-mono-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "Source equals target: the applying definition is the headline, then pronunciation with the accent named, the grammar line, the example and the other definitions. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card mono",
+   "uid": "STATE-CARD-MONO"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ],
+   "renders": [
+    "card-guess-phone.png",
+    "card-guess-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "engines/bergamot",
+    "engines/espeak"
+   ],
+   "statement": "No pack entry: the machine-translated line as the headline marked as a guess, then a long IPA synthesised by espeak-ng, on both surfaces, that wraps within the pronunciation line with every symbol still reachable, a grammar line saying why, and the parts that are in the dictionary. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card guess",
+   "uid": "STATE-CARD-GUESS"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ],
+   "renders": [
+    "card-phrase-phone.png",
+    "card-phrase-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "Several selected words, or a replaced span tapped in replace mode: the machine translation as the headline marked as a guess, the source phrase in the grammar line, and per-word cards reachable from the phrase; no pronunciation line. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card phrase",
+   "uid": "STATE-CARD-PHRASE"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-IPA-ALWAYS"
+    }
+   ],
+   "renders": [
+    "card-ipa-only-phone.png",
+    "card-ipa-only-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "No lex pack for the pair but an IPA pack: the message in the headline slot, the pronunciation line, and an offer to fetch the lex pack with its size. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card IPA only",
+   "uid": "STATE-CARD-IPA-ONLY"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    }
+   ],
+   "renders": [
+    "card-none-phone.png",
+    "card-none-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "engines/espeak"
+   ],
+   "statement": "Nothing in the pack and no engine could answer: the message in the headline slot, the espeak-ng pronunciation (present on both surfaces), one sentence saying why. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card none",
+   "uid": "STATE-CARD-NONE"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PACK-ON-DEMAND"
+    }
+   ],
+   "renders": [
+    "card-no-pack-phone.png",
+    "card-no-pack-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "packs/manifest.ts"
+   ],
+   "statement": "No pack of any kind for the source: the message in the headline slot and one action to fetch the source's packs with their size, and the class the pair will have once fetched; no pronunciation line exists to show. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card no pack",
+   "uid": "STATE-CARD-NO-PACK"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-LANGUAGE-PICK"
+    }
+   ],
+   "renders": [
+    "card-unknown-lang-phone.png",
+    "card-unknown-lang-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/detect.rs"
+   ],
+   "statement": "The detector's confidence for the block is below threshold: the question in the headline slot and a short language picker seeded with the closest candidates, each carrying the class of its pair with the reader's language; the choice is remembered for the site. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card unknown language",
+   "uid": "STATE-CARD-UNKNOWN-LANG"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    }
+   ],
+   "renders": [
+    "card-loading-phone.png",
+    "card-loading-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "A pack is opening or an engine is answering: skeleton headline, pronunciation and grammar lines in the card's own frame. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card loading",
+   "uid": "STATE-CARD-LOADING"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SYMBOL"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-SYMBOL"
+    }
+   ],
+   "renders": [
+    "symbol-open-phone.png",
+    "symbol-open-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Symbol.svelte",
+    "android/card/SymbolPopover.kt",
+    "host/diagrams.ts",
+    "data/ipa-symbols.json"
+   ],
+   "statement": "One IPA symbol's popover: the symbol, its name, a one-sentence description, a 4:3 slot holding the sagittal cross-section image that the host fetches from Wikimedia Commons per symbol and hands over as a data URL, the Wikimedia recording, the Wikipedia article and the Seeing Speech films, anchored to the symbol in the card.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Symbol open",
+   "uid": "STATE-SYMBOL-OPEN"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-LENS"
+    }
+   ],
+   "renders": [
+    "lens-idle-phone.png",
+    "lens-idle-desktop.png"
+   ],
+   "sources": [
+    "android/card/Lens.kt"
+   ],
+   "statement": "The lens circle rests at the screen edge with no word under it.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Lens idle",
+   "uid": "STATE-LENS-IDLE"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-LENS"
+    },
+    {
+     "role": "shows",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-MOTION"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-ONE-ANSWER"
+    }
+   ],
+   "renders": [
+    "lens-over-word-phone.png",
+    "lens-over-word-desktop.png"
+   ],
+   "sources": [
+    "android/card/Lens.kt",
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt"
+   ],
+   "statement": "The lens is over a word: the card, pinned full width to the screen edge away from the finger's half, at the tier that half allows (Compact on a portrait phone), showing the rows a moving finger can use (headline, pronunciation, grammar) with the folded line standing in for what arrives when the finger stops.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Lens over word",
+   "uid": "STATE-LENS-OVER-WORD"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PACKS"
+    }
+   ],
+   "renders": [
+    "packs-ready-phone.png",
+    "packs-ready-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Packs.svelte",
+    "android/app/PacksScreen.kt"
+   ],
+   "statement": "The manifest is loaded: installed ipa and lex packs per source with version and size, the one xlat pack for the reader's language when it is not English, optional def packs, available packs with a fetch action, and for each source the class of its pair with the reader's language read from the manifest, never inferred.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Packs ready",
+   "uid": "STATE-PACKS-READY"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PACKS"
+    }
+   ],
+   "renders": [
+    "packs-downloading-phone.png",
+    "packs-downloading-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Packs.svelte",
+    "android/app/PacksScreen.kt"
+   ],
+   "statement": "A pack is being fetched: a progress bar with bytes done of total and a cancel action.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Packs downloading",
+   "uid": "STATE-PACKS-DOWNLOADING"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PACKS"
+    }
+   ],
+   "renders": [
+    "packs-error-phone.png",
+    "packs-error-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Packs.svelte",
+    "android/app/PacksScreen.kt"
+   ],
+   "statement": "A fetch failed or a checksum did not match: the reason in one sentence and a retry action.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Packs error",
+   "uid": "STATE-PACKS-ERROR"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SETTINGS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-ONE-CURVE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PER-RUN-LANGUAGE"
+    }
+   ],
+   "renders": [
+    "settings-ready-phone.png",
+    "settings-ready-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Settings.svelte",
+    "android/app/SettingsScreen.kt"
+   ],
+   "statement": "First screen: on for this site (per site; per app on Android) and the default for new sites beside it, the languages detected on this page as chips with the note that each block is annotated in its own language, your language with the class of the page's pair beside it (dictionary, partial or machine), the inline frequency slider with its curve ticks, the inline-shows chooser, pack status with a link to the manager, and the closed Advanced disclosure.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Settings ready",
+   "uid": "STATE-SETTINGS-READY"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SETTINGS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-SETTINGS-SCOPES"
+    }
+   ],
+   "renders": [
+    "settings-site-off-phone.png",
+    "settings-site-off-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Settings.svelte",
+    "android/app/SettingsScreen.kt"
+   ],
+   "statement": "The per-site switch is off for this host (or this app on Android): nothing is annotated here, the reading controls are dimmed under it, and the default for new sites stays editable beside the switch.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Settings site off",
+   "uid": "STATE-SETTINGS-SITE-OFF"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SETTINGS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-SETTINGS-SCOPES"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-THEME-SET"
+    }
+   ],
+   "renders": [
+    "settings-advanced-phone.png",
+    "settings-advanced-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Settings.svelte",
+    "android/app/SettingsScreen.kt",
+    "settings/keys.json"
+   ],
+   "statement": "The Advanced disclosure open: Full IPA as two switches whose labels say what on gives (Show stress marks, default off; Narrow detail, default on, matching the shipping extension), accent per language as one row per language the reader has packs for, browser timing (card delay with Instant, animations; absent where there is no pointer), Appearance (theme: Paper, Ink, Classroom; mode: system, light, dark; both global), translation engine, and the dictionary host override with a reset.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Settings advanced",
+   "uid": "STATE-SETTINGS-ADVANCED"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SETTINGS"
+    }
+   ],
+   "renders": [
+    "settings-service-off-phone.png",
+    "settings-service-off-desktop.png"
+   ],
+   "sources": [
+    "android/app/SettingsScreen.kt"
+   ],
+   "statement": "Android only: the accessibility service is not enabled, so the settings sit dimmed under one banner whose action opens the system setting; the per-site row reads per app here.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Settings service off",
+   "uid": "STATE-SETTINGS-SERVICE-OFF"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-SETTINGS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-REPLACE-SPANS"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-ONE-CURVE"
+    }
+   ],
+   "renders": [
+    "settings-replace-phone.png",
+    "settings-replace-desktop.png"
+   ],
+   "sources": [
+    "ext/popup/Settings.svelte",
+    "android/app/SettingsScreen.kt"
+   ],
+   "statement": "Inline shows is set to Replace: the frequency slider is retired and dimmed with the reason (Replace swaps every phrase that can be swapped safely and glosses the rest), and pack status names the engine that provides alignments; Replace is offered only when the engine on this device exposes alignments.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Settings replace",
+   "uid": "STATE-SETTINGS-REPLACE"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-TIERS"
+    }
+   ],
+   "renders": [
+    "card-tier-full-phone.png",
+    "card-tier-full-desktop.png"
+   ],
+   "sources": [
+    "ui/card/card.css",
+    "android/card/CardTier.kt",
+    "data/tokens.json"
+   ],
+   "statement": "The same twelve-sense entry given at least 320 by 280 px: every row of the face is present, the example and two other senses with the count, and both foot actions.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card tier full",
+   "uid": "STATE-CARD-TIER-FULL"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-TIERS"
+    }
+   ],
+   "renders": [
+    "card-tier-compact-phone.png",
+    "card-tier-compact-desktop.png"
+   ],
+   "sources": [
+    "ui/card/card.css",
+    "android/card/CardTier.kt",
+    "data/tokens.json"
+   ],
+   "statement": "The same entry given less than 280 px of height or less than 320 px of width but at least 240 by 160: the example and the other senses fold behind one line naming their count, the foot keeps the pair and one action.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card tier compact",
+   "uid": "STATE-CARD-TIER-COMPACT"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-TIERS"
+    }
+   ],
+   "renders": [
+    "card-tier-strip-phone.png",
+    "card-tier-strip-desktop.png"
+   ],
+   "sources": [
+    "ui/card/card.css",
+    "android/card/CardTier.kt",
+    "data/tokens.json"
+   ],
+   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge (the mark, as at every tier) and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card tier strip",
+   "uid": "STATE-CARD-TIER-STRIP"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-HOMOGRAPH"
+    }
+   ],
+   "renders": [
+    "card-reading-decided-phone.png",
+    "card-reading-decided-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/homograph.rs"
+   ],
+   "statement": "A homograph a signal decided without certainty: the entry card for the decided reading as usual, plus one quiet Other reading row under the grammar line with the other reading's gloss, IPA and part of speech, which opens that entry on tap; the reader is never stopped and asked. Drawn at the Full tier; the common case for a real homograph.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card reading decided",
+   "uid": "STATE-CARD-READING-DECIDED"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PAIR-HONESTY"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ],
+   "renders": [
+    "card-via-english-phone.png",
+    "card-via-english-desktop.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/resolve.rs"
+   ],
+   "statement": "The entry exists in the source pack but the English pivot found no confident translation into the reader's language (a partial or machine pair, or an ambiguous join for this sense): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, marked by the W badge and the words 'in English', then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Card via English",
+   "uid": "STATE-CARD-VIA-ENGLISH"
+  },
+  {
+   "relations": [
+    {
+     "role": "State of",
+     "to": "VIEW-PAGE"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-OVERLAY-VOCABULARY"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-PARITY"
+    }
+   ],
+   "renders": [
+    "page-gloss-inbox-phone.png",
+    "page-gloss-inbox-desktop.png"
+   ],
+   "sources": [
+    "android/overlay/RubyGlossPainter.kt",
+    "android/overlay/RubyIpaPainter.kt",
+    "ext/content/ruby.css"
+   ],
+   "statement": "The gloss and IPA forms as they are painted where no room can be made, which is always on Android and in the browser wherever reflow is refused: the annotation sits inside the word's own box, in the line's leading and over the glyph tops, on a translucent backing, at the size derived from the measured line height; when the line height leaves no room for even that size the word gets no annotation and stays tappable.",
+   "status": "proposed",
+   "tag": "STATE",
+   "title": "Page gloss in box",
+   "uid": "STATE-PAGE-GLOSS-INBOX"
+  }
+ ],
+ "stories": [
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-PAGE-GLOSS"
+    },
+    {
+     "role": "uses",
+     "to": "STATE-CARD-ENTRY"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-TRANSLATION-FIRST"
+    }
+   ],
+   "statement": "An English reader opens a German article, sees sprinkled English glosses above the harder words, hovers one and reads its senses with the IPA.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Read a German page in English",
+   "uid": "STORY-READ-GERMAN"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-CARD-FORM"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-PARITY"
+    }
+   ],
+   "statement": "A reader taps 'ging' in an Android app and the sheet says it is a form of 'gehen', the past tense, with the lemma's senses.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Tap an inflected form",
+   "uid": "STORY-TAP-FORM"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-CARD-GUESS"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-GUESS-LABELLED"
+    }
+   ],
+   "statement": "A reader hovers a rare compound; the card shows an espeak IPA and a machine-translated line marked as a guess.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Hit a word the pack lacks",
+   "uid": "STORY-UNKNOWN-WORD"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-CARD-NO-PACK"
+    },
+    {
+     "role": "uses",
+     "to": "STATE-PACKS-DOWNLOADING"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-PACK-ON-DEMAND"
+    }
+   ],
+   "statement": "A reader lands on a Portuguese page with Polish as target; the card offers the pack with its size and the pack manager shows the download.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Pick a pair with no pack yet",
+   "uid": "STORY-NO-PACK"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-PAGE-IPA"
+    },
+    {
+     "role": "uses",
+     "to": "STATE-CARD-MONO"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-IPA-INLINE-TOGGLE"
+    }
+   ],
+   "statement": "An English reader on an English page turns inline IPA on and gets pronunciations sprinkled over the text and definitions in the card.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Read in one's own language for the IPA",
+   "uid": "STORY-OWN-LANGUAGE"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-CARD-PHRASE"
+    }
+   ],
+   "statement": "A reader selects three words; the card shows the phrase translation as a guess and offers each word's own card.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Select a phrase",
+   "uid": "STORY-PHRASE"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-LENS-OVER-WORD"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-FFI-BATCH"
+    }
+   ],
+   "statement": "On Android the reader drags the lens across a chat message and reads the gloss of each word it passes without the chat app receiving any touch.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Browse a screen with the lens",
+   "uid": "STORY-LENS"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-CARD-HOMOGRAPH"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-HOMOGRAPH"
+    }
+   ],
+   "statement": "A reader taps 'lead' in a sentence about pipes; the classifier picks the metal, or the card offers both readings with their IPA.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Resolve a homograph",
+   "uid": "STORY-HOMOGRAPH"
+  },
+  {
+   "relations": [
+    {
+     "role": "uses",
+     "to": "STATE-SYMBOL-OPEN"
+    },
+    {
+     "role": "covers",
+     "to": "REQ-SYMBOL"
+    }
+   ],
+   "statement": "A reader clicks the 'ç' in the IPA of 'ich' and the popover names the voiceless palatal fricative with its diagram and audio.",
+   "status": "proposed",
+   "tag": "STORY",
+   "title": "Ask what a symbol is",
+   "uid": "STORY-SYMBOL"
   }
  ],
  "views": [
   {
-   "uid": "VIEW-PAGE",
-   "tag": "VIEW",
-   "title": "Annotated page",
-   "statement": "The inline layer over the page or app screen: sprinkled ruby glosses, optional ruby IPA, or in-place replacement, following the text as it scrolls.",
-   "status": "proposed",
-   "states": [
-    "Page off",
-    "Page gloss",
-    "Page gloss and IPA",
-    "Page IPA",
-    "Page gloss in box",
-    "Page replace",
-    "Page scanning"
-   ],
-   "renders": [
-    "surface-light-page.png",
-    "surface-dark-page.png"
-   ],
-   "sources": [
-    "ext/content/inline.ts",
-    "ext/content/ruby.css",
-    "android/overlay/RubyGlossPainter.kt",
-    "android/overlay/RubyIpaPainter.kt",
-    "android/overlay/ReplacePainter.kt"
-   ],
    "relations": [
     {
      "role": "renders",
@@ -553,48 +1554,34 @@
      "role": "renders",
      "to": "REQ-OVERLAY-VOCABULARY"
     }
-   ]
-  },
-  {
-   "uid": "VIEW-CARD",
-   "tag": "VIEW",
-   "title": "Answer card",
-   "statement": "The one answer surface, reached by hover, tap or lens, in this order: the applying sense as headline with provenance, the pronunciation line (IPA symbol by symbol, play control labelled recording or synthesised), the grammar line (lemma with article, part of speech, form label), example, other senses, foot; drawn at the Full, Compact or Strip tier by the space it is given.",
-   "status": "proposed",
-   "states": [
-    "Card entry",
-    "Card form",
-    "Card via English",
-    "Card homograph",
-    "Card reading decided",
-    "Card mono",
-    "Card guess",
-    "Card phrase",
-    "Card IPA only",
-    "Card none",
-    "Card no pack",
-    "Card unknown language",
-    "Card loading",
-    "Card tier full",
-    "Card tier compact",
-    "Card tier strip"
    ],
    "renders": [
-    "surface-light-card.png",
-    "surface-dark-card.png",
-    "surface-theme-paper-light.png",
-    "surface-theme-paper-dark.png",
-    "surface-theme-ink-light.png",
-    "surface-theme-ink-dark.png",
-    "surface-theme-classroom-light.png",
-    "surface-theme-classroom-dark.png"
+    "page-phone.png",
+    "page-desktop.png"
    ],
    "sources": [
-    "ui/card/Card.svelte",
-    "ui/card/card.css",
-    "android/card/CardSheet.kt",
-    "data/tokens.json"
+    "ext/content/inline.ts",
+    "ext/content/ruby.css",
+    "android/overlay/RubyGlossPainter.kt",
+    "android/overlay/RubyIpaPainter.kt",
+    "android/overlay/ReplacePainter.kt"
    ],
+   "statement": "The inline layer over the page or app screen: sprinkled ruby glosses, optional ruby IPA, or in-place replacement, following the text as it scrolls.",
+   "states": [
+    "Page off",
+    "Page gloss",
+    "Page gloss and IPA",
+    "Page IPA",
+    "Page gloss in box",
+    "Page replace",
+    "Page scanning"
+   ],
+   "status": "proposed",
+   "tag": "VIEW",
+   "title": "Annotated page",
+   "uid": "VIEW-PAGE"
+  },
+  {
    "relations": [
     {
      "role": "renders",
@@ -620,55 +1607,71 @@
      "role": "renders",
      "to": "REQ-THEMES"
     }
-   ]
-  },
-  {
-   "uid": "VIEW-SYMBOL",
-   "tag": "VIEW",
-   "title": "Symbol popover",
-   "statement": "The detail popover for one IPA symbol: name, articulation diagram, Wikipedia and Seeing Speech links, audio.",
-   "status": "proposed",
-   "states": [
-    "Symbol open"
    ],
    "renders": [
-    "surface-light-symbol.png",
-    "surface-dark-symbol.png"
+    "card-phone.png",
+    "card-desktop.png"
    ],
    "sources": [
-    "ui/card/Symbol.svelte",
-    "android/card/SymbolPopover.kt",
-    "data/ipa-symbols.json"
+    "ui/card/Card.svelte",
+    "ui/card/card.css",
+    "android/card/CardSheet.kt",
+    "data/tokens.json"
    ],
+   "statement": "The one answer surface, reached by hover, tap or lens, in this order: the applying sense as headline with provenance, the pronunciation line (IPA symbol by symbol, play control labelled recording or synthesised), the grammar line (lemma with article, part of speech, form label), example, other senses, foot; drawn at the Full, Compact or Strip tier by the space it is given.",
+   "states": [
+    "Card entry",
+    "Card form",
+    "Card via English",
+    "Card homograph",
+    "Card reading decided",
+    "Card mono",
+    "Card guess",
+    "Card phrase",
+    "Card IPA only",
+    "Card none",
+    "Card no pack",
+    "Card unknown language",
+    "Card loading",
+    "Card tier full",
+    "Card tier compact",
+    "Card tier strip"
+   ],
+   "status": "proposed",
+   "tag": "VIEW",
+   "title": "Answer card",
+   "uid": "VIEW-CARD"
+  },
+  {
    "relations": [
     {
      "role": "renders",
      "to": "REQ-SYMBOL"
     },
     {
-     "role": "opened_from",
+     "role": "Opened from",
      "to": "VIEW-CARD"
     }
-   ]
-  },
-  {
-   "uid": "VIEW-LENS",
-   "tag": "VIEW",
-   "title": "Lens",
-   "statement": "The draggable circle that aims at a word without taking touches from the app underneath; it owns its idle position and its aiming, and the answer it shows is VIEW-CARD at whatever tier the screen half away from the finger allows, with the motion axis deciding what is filled in yet.",
-   "status": "proposed",
-   "states": [
-    "Lens idle",
-    "Lens over word"
    ],
    "renders": [
-    "surface-light-lens.png",
-    "surface-dark-lens.png"
+    "symbol-phone.png",
+    "symbol-desktop.png"
    ],
    "sources": [
-    "android/card/Lens.kt",
-    "android/overlay/LensWindow.kt"
+    "ui/card/Symbol.svelte",
+    "android/card/SymbolPopover.kt",
+    "data/ipa-symbols.json"
    ],
+   "statement": "The detail popover for one IPA symbol: name, articulation diagram, Wikipedia and Seeing Speech links, audio.",
+   "states": [
+    "Symbol open"
+   ],
+   "status": "proposed",
+   "tag": "VIEW",
+   "title": "Symbol popover",
+   "uid": "VIEW-SYMBOL"
+  },
+  {
    "relations": [
     {
      "role": "renders",
@@ -682,29 +1685,26 @@
      "role": "renders",
      "to": "REQ-MOTION"
     }
-   ]
-  },
-  {
-   "uid": "VIEW-PACKS",
-   "tag": "VIEW",
-   "title": "Pack manager",
-   "statement": "The packs: ipa and lex per source language, one xlat pack per target (shared by every source, none for English), optional definitions packs where an edition is dense, with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
-   "status": "proposed",
-   "states": [
-    "Packs ready",
-    "Packs downloading",
-    "Packs error"
    ],
    "renders": [
-    "surface-light-packs.png",
-    "surface-dark-packs.png"
+    "lens-phone.png",
+    "lens-desktop.png"
    ],
    "sources": [
-    "ext/popup/Packs.svelte",
-    "android/app/PacksScreen.kt",
-    "packs/manifest.ts",
-    "packs/PackStore.kt"
+    "android/card/Lens.kt",
+    "android/overlay/LensWindow.kt"
    ],
+   "statement": "The draggable circle that aims at a word without taking touches from the app underneath; it owns its idle position and its aiming, and the answer it shows is VIEW-CARD at whatever tier the screen half away from the finger allows, with the motion axis deciding what is filled in yet.",
+   "states": [
+    "Lens idle",
+    "Lens over word"
+   ],
+   "status": "proposed",
+   "tag": "VIEW",
+   "title": "Lens",
+   "uid": "VIEW-LENS"
+  },
+  {
    "relations": [
     {
      "role": "renders",
@@ -714,30 +1714,29 @@
      "role": "renders",
      "to": "REQ-PAIR-HONESTY"
     }
-   ]
-  },
-  {
-   "uid": "VIEW-SETTINGS",
-   "tag": "VIEW",
-   "title": "Settings",
-   "statement": "The extension popup and the Android home screen: a first screen with this site (or app), the languages on this page, your language, one inline frequency slider, what inline shows, and pack status, plus an Advanced disclosure holding Full IPA, accent per language, browser timing, engine and data.",
-   "status": "proposed",
-   "states": [
-    "Settings ready",
-    "Settings site off",
-    "Settings replace",
-    "Settings advanced",
-    "Settings service off"
    ],
    "renders": [
-    "surface-light-settings.png",
-    "surface-dark-settings.png"
+    "packs-phone.png",
+    "packs-desktop.png"
    ],
    "sources": [
-    "ext/popup/Settings.svelte",
-    "android/app/SettingsScreen.kt",
-    "settings/keys.json"
+    "ext/popup/Packs.svelte",
+    "android/app/PacksScreen.kt",
+    "packs/manifest.ts",
+    "packs/PackStore.kt"
    ],
+   "statement": "The packs: ipa and lex per source language, one xlat pack per target (shared by every source, none for English), optional definitions packs where an edition is dense, with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
+   "states": [
+    "Packs ready",
+    "Packs downloading",
+    "Packs error"
+   ],
+   "status": "proposed",
+   "tag": "VIEW",
+   "title": "Pack manager",
+   "uid": "VIEW-PACKS"
+  },
+  {
    "relations": [
     {
      "role": "renders",
@@ -763,1033 +1762,28 @@
      "role": "opens",
      "to": "VIEW-PACKS"
     }
-   ]
-  }
- ],
- "states": [
-  {
-   "uid": "STATE-PAGE-OFF",
-   "tag": "STATE",
-   "title": "Page off",
-   "statement": "No inline annotation; the card is still reachable by hover, tap or lens.",
-   "status": "proposed",
+   ],
    "renders": [
-    "surface-light-page-off.png",
-    "surface-dark-page-off.png"
-   ],
-   "sources": [
-    "ext/content/inline.ts",
-    "android/overlay/Overlay.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-GLOSS",
-   "tag": "STATE",
-   "title": "Page gloss",
-   "statement": "Sprinkled words carry a one-line gloss above their glyphs; in the browser the line makes room for it, elsewhere it takes the in-box form (Page gloss in box). Guesses are in the guess colour.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-gloss.png",
-    "surface-dark-page-gloss.png"
-   ],
-   "sources": [
-    "ext/content/ruby.css",
-    "android/overlay/RubyGlossPainter.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-GUESS-LABELLED"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-GLOSS-IPA",
-   "tag": "STATE",
-   "title": "Page gloss and IPA",
-   "statement": "Sprinkled words carry the ruby gloss with a smaller IPA line under it.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-gloss-ipa.png",
-    "surface-dark-page-gloss-ipa.png"
-   ],
-   "sources": [
-    "ext/content/ruby.css",
-    "android/overlay/RubyIpaPainter.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-IPA-INLINE-TOGGLE"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-IPA",
-   "tag": "STATE",
-   "title": "Page IPA",
-   "statement": "Sprinkled words carry only the ruby IPA line; this is also the only inline form for words in the target language.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-ipa.png",
-    "surface-dark-page-ipa.png"
-   ],
-   "sources": [
-    "ext/content/ruby.css",
-    "android/overlay/RubyIpaPainter.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-REPLACE",
-   "tag": "STATE",
-   "title": "Page replace",
-   "statement": "Each sentence is machine translated with alignments and cut into minimal monotone consistent phrase pairs; every pair up to the span cap is repainted in place as its target phrase in the page's own sampled colours, with a dotted rule on the bottom edge of its painted box as the swap cue. A unit over the cap is left untouched in the source language and made tappable, opening its phrase card; a mixed sentence therefore reads as target text with dotted rules and plain source text without them. Nothing is painted above any word. When no translation model is available the sentence stays untouched and the mode says so in its own chrome. The frequency slider does not apply.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-replace.png",
-    "surface-dark-page-replace.png"
-   ],
-   "sources": [
-    "ext/content/replace.ts",
-    "android/overlay/ReplacePainter.kt",
-    "lexcore/src/phrase_units.rs"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-REPLACE-SPANS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-OVERLAY-VOCABULARY"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-SCANNING",
-   "tag": "STATE",
-   "title": "Page scanning",
-   "statement": "A batch is in flight; a small unobtrusive indicator shows and no ruby is painted until the batch returns.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-scanning.png",
-    "surface-dark-page-scanning.png"
-   ],
-   "sources": [
-    "ext/content/inline.ts",
-    "android/overlay/Overlay.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-FFI-BATCH"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-ENTRY",
-   "tag": "STATE",
-   "title": "Card entry",
-   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with the Wiktionary provenance badge (the mark alone, a link to the entry), pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-entry.png",
-    "surface-dark-card-entry.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-TRANSLATION-FIRST"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-IPA-ALWAYS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-FORM",
-   "tag": "STATE",
-   "title": "Card form",
-   "statement": "The spelling is an inflected form of a word with twelve senses: headline gloss for the applying sense with the Wiktionary badge, pronunciation line (synthesised), grammar line with the lemma prominent and the tapped form as the small part with its label, the example, two other senses and a ten-more count. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-form.png",
-    "surface-dark-card-form.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-HOMOGRAPH",
-   "tag": "STATE",
-   "title": "Card homograph",
-   "statement": "The three homograph signals contradicted each other or none was confident (most often monolingual reading in a language without a classifier): a chooser listing each reading as its translation followed by its IPA and the part of speech at the row end; choosing one opens the entry. Drawn at the Full tier; expected to be rare.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-homograph.png",
-    "surface-dark-card-homograph.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "lexcore/src/homograph.rs"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-HOMOGRAPH"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-MONO",
-   "tag": "STATE",
-   "title": "Card mono",
-   "statement": "Source equals target: the applying definition is the headline, then pronunciation with the accent named, the grammar line, the example and the other definitions. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-mono.png",
-    "surface-dark-card-mono.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-LANGUAGE-PICK"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-GUESS",
-   "tag": "STATE",
-   "title": "Card guess",
-   "statement": "No pack entry: the machine-translated line as the headline marked as a guess, then a long IPA synthesised by espeak-ng, on both surfaces, that wraps within the pronunciation line with every symbol still reachable, a grammar line saying why, and the parts that are in the dictionary. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-guess.png",
-    "surface-dark-card-guess.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "engines/bergamot",
-    "engines/espeak"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-GUESS-LABELLED"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-PHRASE",
-   "tag": "STATE",
-   "title": "Card phrase",
-   "statement": "Several selected words, or a replaced span tapped in replace mode: the machine translation as the headline marked as a guess, the source phrase in the grammar line, and per-word cards reachable from the phrase; no pronunciation line. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-phrase.png",
-    "surface-dark-card-phrase.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-GUESS-LABELLED"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-IPA-ONLY",
-   "tag": "STATE",
-   "title": "Card IPA only",
-   "statement": "No lex pack for the pair but an IPA pack: the message in the headline slot, the pronunciation line, and an offer to fetch the lex pack with its size. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-ipa-only.png",
-    "surface-dark-card-ipa-only.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-IPA-ALWAYS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-NONE",
-   "tag": "STATE",
-   "title": "Card none",
-   "statement": "Nothing in the pack and no engine could answer: the message in the headline slot, the espeak-ng pronunciation (present on both surfaces), one sentence saying why. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-none.png",
-    "surface-dark-card-none.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "engines/espeak"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-NO-PACK",
-   "tag": "STATE",
-   "title": "Card no pack",
-   "statement": "No pack of any kind for the source: the message in the headline slot and one action to fetch the source's packs with their size, and the class the pair will have once fetched; no pronunciation line exists to show. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-no-pack.png",
-    "surface-dark-card-no-pack.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "packs/manifest.ts"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-PACK-ON-DEMAND"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-UNKNOWN-LANG",
-   "tag": "STATE",
-   "title": "Card unknown language",
-   "statement": "The detector's confidence for the block is below threshold: the question in the headline slot and a short language picker seeded with the closest candidates, each carrying the class of its pair with the reader's language; the choice is remembered for the site. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-unknown-lang.png",
-    "surface-dark-card-unknown-lang.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "lexcore/src/detect.rs"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-LANGUAGE-PICK"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-LOADING",
-   "tag": "STATE",
-   "title": "Card loading",
-   "statement": "A pack is opening or an engine is answering: skeleton headline, pronunciation and grammar lines in the card's own frame. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-loading.png",
-    "surface-dark-card-loading.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SYMBOL-OPEN",
-   "tag": "STATE",
-   "title": "Symbol open",
-   "statement": "One IPA symbol's popover: the symbol, its name, a one-sentence description, a 4:3 slot holding the sagittal cross-section image that the host fetches from Wikimedia Commons per symbol and hands over as a data URL, the Wikimedia recording, the Wikipedia article and the Seeing Speech films, anchored to the symbol in the card.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-symbol-open.png",
-    "surface-dark-symbol-open.png"
-   ],
-   "sources": [
-    "ui/card/Symbol.svelte",
-    "android/card/SymbolPopover.kt",
-    "host/diagrams.ts",
-    "data/ipa-symbols.json"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SYMBOL"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-SYMBOL"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-LENS-IDLE",
-   "tag": "STATE",
-   "title": "Lens idle",
-   "statement": "The lens circle rests at the screen edge with no word under it.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-lens-idle.png",
-    "surface-dark-lens-idle.png"
-   ],
-   "sources": [
-    "android/card/Lens.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-LENS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-LENS-OVER-WORD",
-   "tag": "STATE",
-   "title": "Lens over word",
-   "statement": "The lens is over a word: the card, pinned full width to the screen edge away from the finger's half, at the tier that half allows (Compact on a portrait phone), showing the rows a moving finger can use (headline, pronunciation, grammar) with the folded line standing in for what arrives when the finger stops.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-lens-over-word.png",
-    "surface-dark-lens-over-word.png"
-   ],
-   "sources": [
-    "android/card/Lens.kt",
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-LENS"
-    },
-    {
-     "role": "shows",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-MOTION"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-ONE-ANSWER"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PACKS-READY",
-   "tag": "STATE",
-   "title": "Packs ready",
-   "statement": "The manifest is loaded: installed ipa and lex packs per source with version and size, the one xlat pack for the reader's language when it is not English, optional def packs, available packs with a fetch action, and for each source the class of its pair with the reader's language read from the manifest, never inferred.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-packs-ready.png",
-    "surface-dark-packs-ready.png"
-   ],
-   "sources": [
-    "ext/popup/Packs.svelte",
-    "android/app/PacksScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PACKS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PACKS-DOWNLOADING",
-   "tag": "STATE",
-   "title": "Packs downloading",
-   "statement": "A pack is being fetched: a progress bar with bytes done of total and a cancel action.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-packs-downloading.png",
-    "surface-dark-packs-downloading.png"
-   ],
-   "sources": [
-    "ext/popup/Packs.svelte",
-    "android/app/PacksScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PACKS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PACKS-ERROR",
-   "tag": "STATE",
-   "title": "Packs error",
-   "statement": "A fetch failed or a checksum did not match: the reason in one sentence and a retry action.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-packs-error.png",
-    "surface-dark-packs-error.png"
-   ],
-   "sources": [
-    "ext/popup/Packs.svelte",
-    "android/app/PacksScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PACKS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SETTINGS-READY",
-   "tag": "STATE",
-   "title": "Settings ready",
-   "statement": "First screen: on for this site (per site; per app on Android) and the default for new sites beside it, the languages detected on this page as chips with the note that each block is annotated in its own language, your language with the class of the page's pair beside it (dictionary, partial or machine), the inline frequency slider with its curve ticks, the inline-shows chooser, pack status with a link to the manager, and the closed Advanced disclosure.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-settings-ready.png",
-    "surface-dark-settings-ready.png"
-   ],
-   "sources": [
-    "ext/popup/Settings.svelte",
-    "android/app/SettingsScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SETTINGS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-ONE-CURVE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-PER-RUN-LANGUAGE"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SETTINGS-SITE-OFF",
-   "tag": "STATE",
-   "title": "Settings site off",
-   "statement": "The per-site switch is off for this host (or this app on Android): nothing is annotated here, the reading controls are dimmed under it, and the default for new sites stays editable beside the switch.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-settings-site-off.png",
-    "surface-dark-settings-site-off.png"
-   ],
-   "sources": [
-    "ext/popup/Settings.svelte",
-    "android/app/SettingsScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SETTINGS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-SETTINGS-SCOPES"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SETTINGS-ADVANCED",
-   "tag": "STATE",
-   "title": "Settings advanced",
-   "statement": "The Advanced disclosure open: Full IPA as two switches whose labels say what on gives (Show stress marks, default off; Narrow detail, default on, matching the shipping extension), accent per language as one row per language the reader has packs for, browser timing (card delay with Instant, animations; absent where there is no pointer), Appearance (theme: Paper, Ink, Classroom; mode: system, light, dark; both global), translation engine, and the dictionary host override with a reset.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-settings-advanced.png",
-    "surface-dark-settings-advanced.png"
+    "settings-phone.png",
+    "settings-desktop.png"
    ],
    "sources": [
     "ext/popup/Settings.svelte",
     "android/app/SettingsScreen.kt",
     "settings/keys.json"
    ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SETTINGS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-SETTINGS-SCOPES"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-THEME-SET"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SETTINGS-SERVICE-OFF",
-   "tag": "STATE",
-   "title": "Settings service off",
-   "statement": "Android only: the accessibility service is not enabled, so the settings sit dimmed under one banner whose action opens the system setting; the per-site row reads per app here.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-settings-service-off.png",
-    "surface-dark-settings-service-off.png"
+   "statement": "The extension popup and the Android home screen: a first screen with this site (or app), the languages on this page, your language, one inline frequency slider, what inline shows, and pack status, plus an Advanced disclosure holding Full IPA, accent per language, browser timing, engine and data.",
+   "states": [
+    "Settings ready",
+    "Settings site off",
+    "Settings replace",
+    "Settings advanced",
+    "Settings service off"
    ],
-   "sources": [
-    "android/app/SettingsScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SETTINGS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-SETTINGS-REPLACE",
-   "tag": "STATE",
-   "title": "Settings replace",
-   "statement": "Inline shows is set to Replace: the frequency slider is retired and dimmed with the reason (Replace swaps every phrase that can be swapped safely and glosses the rest), and pack status names the engine that provides alignments; Replace is offered only when the engine on this device exposes alignments.",
    "status": "proposed",
-   "renders": [
-    "surface-light-settings-replace.png",
-    "surface-dark-settings-replace.png"
-   ],
-   "sources": [
-    "ext/popup/Settings.svelte",
-    "android/app/SettingsScreen.kt"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-SETTINGS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-REPLACE-SPANS"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-ONE-CURVE"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-TIER-FULL",
-   "tag": "STATE",
-   "title": "Card tier full",
-   "statement": "The same twelve-sense entry given at least 320 by 280 px: every row of the face is present, the example and two other senses with the count, and both foot actions.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-tier-full.png",
-    "surface-dark-card-tier-full.png"
-   ],
-   "sources": [
-    "ui/card/card.css",
-    "android/card/CardTier.kt",
-    "data/tokens.json"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-TIERS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-TIER-COMPACT",
-   "tag": "STATE",
-   "title": "Card tier compact",
-   "statement": "The same entry given less than 280 px of height or less than 320 px of width but at least 240 by 160: the example and the other senses fold behind one line naming their count, the foot keeps the pair and one action.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-tier-compact.png",
-    "surface-dark-card-tier-compact.png"
-   ],
-   "sources": [
-    "ui/card/card.css",
-    "android/card/CardTier.kt",
-    "data/tokens.json"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-TIERS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-TIER-STRIP",
-   "tag": "STATE",
-   "title": "Card tier strip",
-   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge (the mark, as at every tier) and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-tier-strip.png",
-    "surface-dark-card-tier-strip.png"
-   ],
-   "sources": [
-    "ui/card/card.css",
-    "android/card/CardTier.kt",
-    "data/tokens.json"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-TIERS"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-READING-DECIDED",
-   "tag": "STATE",
-   "title": "Card reading decided",
-   "statement": "A homograph a signal decided without certainty: the entry card for the decided reading as usual, plus one quiet Other reading row under the grammar line with the other reading's gloss, IPA and part of speech, which opens that entry on tap; the reader is never stopped and asked. Drawn at the Full tier; the common case for a real homograph.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-reading-decided.png",
-    "surface-dark-card-reading-decided.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "lexcore/src/homograph.rs"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-HOMOGRAPH"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-CARD-VIA-ENGLISH",
-   "tag": "STATE",
-   "title": "Card via English",
-   "statement": "The entry exists in the source pack but the English pivot found no confident translation into the reader's language (a partial or machine pair, or an ambiguous join for this sense): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, marked by the W badge and the words 'in English', then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-card-via-english.png",
-    "surface-dark-card-via-english.png"
-   ],
-   "sources": [
-    "ui/card/Card.svelte",
-    "android/card/CardSheet.kt",
-    "lexcore/src/resolve.rs"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-CARD"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-PAIR-HONESTY"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-GUESS-LABELLED"
-    }
-   ]
-  },
-  {
-   "uid": "STATE-PAGE-GLOSS-INBOX",
-   "tag": "STATE",
-   "title": "Page gloss in box",
-   "statement": "The gloss and IPA forms as they are painted where no room can be made, which is always on Android and in the browser wherever reflow is refused: the annotation sits inside the word's own box, in the line's leading and over the glyph tops, on a translucent backing, at the size derived from the measured line height; when the line height leaves no room for even that size the word gets no annotation and stays tappable.",
-   "status": "proposed",
-   "renders": [
-    "surface-light-page-gloss-inbox.png",
-    "surface-dark-page-gloss-inbox.png"
-   ],
-   "sources": [
-    "android/overlay/RubyGlossPainter.kt",
-    "android/overlay/RubyIpaPainter.kt",
-    "ext/content/ruby.css"
-   ],
-   "relations": [
-    {
-     "role": "state_of",
-     "to": "VIEW-PAGE"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-OVERLAY-VOCABULARY"
-    },
-    {
-     "role": "satisfies",
-     "to": "REQ-PARITY"
-    }
-   ]
-  }
- ],
- "stories": [
-  {
-   "uid": "STORY-READ-GERMAN",
-   "tag": "STORY",
-   "title": "Read a German page in English",
-   "statement": "An English reader opens a German article, sees sprinkled English glosses above the harder words, hovers one and reads its senses with the IPA.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-PAGE-GLOSS"
-    },
-    {
-     "role": "uses",
-     "to": "STATE-CARD-ENTRY"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-TRANSLATION-FIRST"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-TAP-FORM",
-   "tag": "STORY",
-   "title": "Tap an inflected form",
-   "statement": "A reader taps 'ging' in an Android app and the sheet says it is a form of 'gehen', the past tense, with the lemma's senses.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-CARD-FORM"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-PARITY"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-UNKNOWN-WORD",
-   "tag": "STORY",
-   "title": "Hit a word the pack lacks",
-   "statement": "A reader hovers a rare compound; the card shows an espeak IPA and a machine-translated line marked as a guess.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-CARD-GUESS"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-GUESS-LABELLED"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-NO-PACK",
-   "tag": "STORY",
-   "title": "Pick a pair with no pack yet",
-   "statement": "A reader lands on a Portuguese page with Polish as target; the card offers the pack with its size and the pack manager shows the download.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-CARD-NO-PACK"
-    },
-    {
-     "role": "uses",
-     "to": "STATE-PACKS-DOWNLOADING"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-PACK-ON-DEMAND"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-OWN-LANGUAGE",
-   "tag": "STORY",
-   "title": "Read in one's own language for the IPA",
-   "statement": "An English reader on an English page turns inline IPA on and gets pronunciations sprinkled over the text and definitions in the card.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-PAGE-IPA"
-    },
-    {
-     "role": "uses",
-     "to": "STATE-CARD-MONO"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-IPA-INLINE-TOGGLE"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-PHRASE",
-   "tag": "STORY",
-   "title": "Select a phrase",
-   "statement": "A reader selects three words; the card shows the phrase translation as a guess and offers each word's own card.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-CARD-PHRASE"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-LENS",
-   "tag": "STORY",
-   "title": "Browse a screen with the lens",
-   "statement": "On Android the reader drags the lens across a chat message and reads the gloss of each word it passes without the chat app receiving any touch.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-LENS-OVER-WORD"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-FFI-BATCH"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-HOMOGRAPH",
-   "tag": "STORY",
-   "title": "Resolve a homograph",
-   "statement": "A reader taps 'lead' in a sentence about pipes; the classifier picks the metal, or the card offers both readings with their IPA.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-CARD-HOMOGRAPH"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-HOMOGRAPH"
-    }
-   ]
-  },
-  {
-   "uid": "STORY-SYMBOL",
-   "tag": "STORY",
-   "title": "Ask what a symbol is",
-   "statement": "A reader clicks the 'ç' in the IPA of 'ich' and the popover names the voiceless palatal fricative with its diagram and audio.",
-   "status": "proposed",
-   "relations": [
-    {
-     "role": "uses",
-     "to": "STATE-SYMBOL-OPEN"
-    },
-    {
-     "role": "covers",
-     "to": "REQ-SYMBOL"
-    }
-   ]
+   "tag": "VIEW",
+   "title": "Settings",
+   "uid": "VIEW-SETTINGS"
   }
  ]
 }

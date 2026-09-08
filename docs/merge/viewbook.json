@@ -1,0 +1,10 @@
+{
+  "title": "Phonetix and Taplex, merged",
+  "subtitle": "what the merged product shows, and what each surface has to do",
+  "shapes": ["phone", "desktop"],
+  "renders": {
+    "command": ["uv", "run", "--with", "websocket-client", "python", "tools/render-merge.py"],
+    "dir": "../..",
+    "statement": "cuts every declared state out of docs/merge/surface.html, in both modes, without a device"
+  }
+}
