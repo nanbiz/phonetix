@@ -137,3 +137,32 @@ answer while machine translation is labelled a guess. A dictionary tier that is 
 wrong one time in seven is arguably worse than one that says it is guessing, so if this cannot
 be raised, the honest options are to show the English pivot alongside the target word, or to
 mark pivoted glosses as the inference they are rather than as dictionary provenance.
+
+## Joining on the English gloss both sides already carry
+
+The pivot went looking for a target word inside the English lemma's translations. There is a
+better join, and it needs no translations at all: **every language's entries in the English
+edition are glossed in English**, so a source entry and a target entry can be matched to each
+other directly.
+
+Spanish `perro` glosses "dog". German `Hund` glosses "dog, hound". Spanish `silla` glosses
+"chair", German `Stuhl` glosses "a chair (to sit on)". Spanish `camino` glosses "way, route",
+German `Weg` glosses "route, way (to get from one place to another)".
+
+All three of the failures the naive pivot produced come out right this way, and the words that
+misled it separate cleanly: `Sessel` glosses "armchair, easy chair" and `Weise` glosses "way,
+manner", so neither is confusable with the gloss the Spanish word carried.
+
+This is why the earlier attempts failed. A translation's sense tag ("male canine") and an
+English lemma's definition ("a domesticated carnivorous mammal...") are a different register
+from a source gloss ("dog"). Two glosses written by the same community in the same dump are
+like for like, and a lexical match has something to work with.
+
+What it changes: a pair needs the target language's pack as well as the source's, since the
+join reads the target's own entries. That is still one pack per language rather than one per
+pair, so N packs serve every pair among them, and it drops the translations table, the sense
+distributions and the edition dimension all at once.
+
+Verified on hand-picked words only. Building it needs an index of the target language's glosses,
+which means the dumps rather than the per-word pages, and the sample to run is the same one:
+how often the best gloss match is the right word.
