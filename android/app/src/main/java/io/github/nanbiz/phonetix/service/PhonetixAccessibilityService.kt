@@ -1355,6 +1355,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     val r = it.rect
                     it.copy(rect = RectF(r.left, r.top + ahead, r.right, r.bottom + ahead))
                 }
+                // And where the line was taken to be, which is what every later pass measures
+                // its shift against. Carrying the words forward without carrying that leaves
+                // the two describing different moments, and the next pass puts the difference
+                // straight back: a line's words move by the shift measured from a baseline
+                // they no longer sit on.
+                p.measuredAt?.offset(0, ahead.toInt())
             }
         }
         if (stale) {
