@@ -127,10 +127,21 @@ carry a `translations` field: measured today on kaikki's per-word pages, "house"
 translations into 436 languages, each tagged with the sense string it belongs to, a sense
 weight and gender where the target has it. Its entries for non-English words carry no such
 field: Spanish "perro" and "libro" hold senses glossed in English and nothing more. So a
-Spanish word cannot be read straight into German; it can be **pivoted** in two hops inside the
-one edition: the Spanish sense gives an English gloss, and the English lemma for that gloss
-gives the German word. The join is on meaning, not on an identifier, and how lossy it is is
-the thing that has to be sampled.
+Spanish word cannot be read straight into German. Pivoting in two hops through the English
+lemma was tried and measured: coverage was total, precision about eighty-five percent, and the
+failures were confident wrong glosses (perro to Rüde, silla to Sessel, camino to Weise) rather
+than misses. Repairing it by matching the translation's sense tag, and then by its sense
+distribution, both measured worse.
+
+There is a join that needs no translations at all. **Every language's entries in this edition
+are glossed in English**, so a source entry and a target entry can be matched to each other
+directly: Spanish perro glosses "dog" and German Hund glosses "dog, hound"; Spanish silla
+glosses "chair" and German Stuhl glosses "a chair (to sit on)"; Spanish camino glosses "way,
+route" and German Weg glosses "route, way (to get from one place to another)". All three
+failures come out right, and the words that caused them separate cleanly, because Sessel
+glosses "armchair" and Weise glosses "way, manner". The earlier attempts were matching a source
+gloss against a different register - a translation's sense tag, or a full English definition -
+where two glosses from the same dump are like for like.
 
 ### Options
 
@@ -138,110 +149,65 @@ the thing that has to be sampled.
 |---|---|
 | Key by (source, edition), as first drafted | Bounded matrix, then mostly empty; most pairs are machine translation throughout while the interface implies a dictionary |
 | Key by source language, one extraction from the English edition per source, pivoting through English lemmas for every non-English target | One source pack serves every target through one shared translations asset; the join at the pivot is lossy and a wrong hop is a confident wrong gloss; senses are written in English unless an edition pack exists |
+| Key by source language, and join a pair on the English glosses both sides already carry | A pair needs the target's pack as well as the source's, so N packs rather than one, still linear in languages; no translations table, no sense distributions, no edition dimension; the match is between two glosses of the same register, which is the only join measured to separate the words that defeated the others |
 | Machine-translate the English glosses at build time into every target | Fabricates a dictionary out of guesses and hides the provenance DR-1 insists on |
 | Keep SQLite in the browser, or gzipped JSON, or on-phone builds | As in the first draft: two readers, no random access, or a gigabyte on the phone |
 
 ### Decision
 
-**A pack is keyed by source language and built from the English edition, and the target is
-reached through one shared pivot asset.** `lex-<src>` holds, per entry: lemma, part of speech,
-tags (gender among them), IPA and sounds, senses with English glosses, marks and examples,
-forms, and per sense a **pivot**: the English lemma and sense the build joined that gloss to,
-with the join's confidence, or nothing when the join was not confident. `xlat-<target>` is the
-translations table of the English lemmas sliced to one target language: keyed by (English
-lemma, sense), holding the target words with their sense weight and gender. It belongs to
-English lemmas alone, so it is **one asset per target shared by every source pack**, never
-anything per pair. A reader who picks target T downloads `xlat-T` once and every source pack
-they hold points into it. When the target is English no second hop exists: the English gloss
-is the answer, and `lex-<src>` alone serves the pair. The target language is a view over the
-pack plus the pivot; the card's headline for T is the pivot's target word when the pivot is
-confident, and the English gloss stays in the card as the anchor either way.
+**A pack is keyed by source language and built from the English edition, and a pair is served
+by holding both languages' packs and joining them on the English glosses they both carry.**
 
-The pivot is built, not looked up at runtime: the builder takes the headword phrase of each
-English gloss, finds the English lemma, and scores each of that lemma's translation senses
-against the gloss by token overlap weighted by the sense distribution; the best sense wins
-only when its margin over the runner-up clears a threshold in `data/`. **An ambiguous join
-yields no pivot, on purpose:** a wrong hop is a confident wrong gloss, which is worse than a
-miss, so the word falls to `via-en` (the machine guess into T as the headline, marked, with
-the English gloss beneath it) rather than to a plausible wrong dictionary answer. The
-threshold is set by the sample below, precision first.
+`lex-<src>` holds, per entry: lemma, part of speech, tags (gender among them), IPA and sounds,
+senses with their English glosses, marks and examples, and the forms index that resolves an
+inflected spelling to its lemma. It also holds a **gloss index**: every sense's English gloss,
+normalised, pointing back at the senses that carry it.
+
+That index is what makes a pair cost nothing to build. To answer a Spanish word for a German
+reader, the core takes the Spanish sense's English gloss and looks it up in the German pack's
+gloss index; the German senses that carry the same gloss give the German lemma. Nothing is
+built per pair, nothing is downloaded per pair, and the two packs were built independently
+without knowing about each other. N languages serve every pair among them.
+
+The join works because both glosses come out of the same dump, written by the same community
+in the same register: Spanish `perro` glosses "dog" and German `Hund` glosses "dog, hound";
+Spanish `silla` glosses "chair" and German `Stuhl` glosses "a chair (to sit on)"; Spanish
+`camino` glosses "way, route" and German `Weg` glosses "route, way (to get from one place to
+another)". The words that defeated the pivot separate here, since `Sessel` glosses "armchair"
+and `Weise` glosses "way, manner".
+
+Matching is on the gloss's head phrase after normalising: case, articles, the leading "to" of
+a verb, and the parenthesised part that qualifies rather than names. An exact match on the
+head phrase is the confident case. A partial one is scored, and **an ambiguous join yields no
+dictionary answer on purpose**, because a wrong match is a confident wrong gloss, which is
+worse than a miss: the word falls to the machine engine and is labelled a guess, with the
+English gloss shown as the anchor. The threshold is a parameter in `data/`, set by the sample
+below, precision first.
+
+When the target is English there is no join at all: the source sense's gloss is the answer,
+and `lex-<src>` alone serves the pair, which is also the case with the richest data.
 
 Edition packs survive only for what they are actually good for: **definitions written in the
-reader's own language**. `def-<src>-<edition>` is built from a non-English edition only for
-the cells the measurement shows dense (a build threshold of one hundred thousand senses, which
-today admits fourteen cells, French and Chinese first), and is optional on top of `lex-<src>`.
-Swedish and Arabic readers, and any target without an edition, are served by the translations
-view like everyone else.
-
-Every pair is **classed at build time from the sample**, and the class is what the product
-tells the reader. Classes, with thresholds to be tuned once the first sample exists:
-
-| Class | Sample result | What the reader gets |
-|---|---|---|
-| `dictionary` | at least 60 percent of the top twenty thousand lemmas have a confident pivot into T, at a threshold whose measured precision is at least 95 percent | translation-first as DR-1 describes; misses go to `via-en`, then the guess tier |
-| `partial` | 20 to 60 percent | dictionary where the pivot is confident; otherwise `via-en` (`STATE-CARD-VIA-ENGLISH`) |
-| `machine` | under 20 percent, or no lex pack for the source | machine translation throughout, said so in the picker, the pack manager and every card; the IPA pack and the English gloss still show where they exist |
-
-Source to English is `dictionary` by construction wherever the source pack exists, subject only
-to gloss coverage. The class is published in `packs.json` per (source, target) beside the pack
-rows, so the picker and the pack manager read it rather than infer it, and a reader is never
-told a pair is a dictionary when it is a guess. Every pair the engine can translate is
-offered, because the reader still has a page to read; what changes is the label and the
-promise. The classes matter more with a pivot than with a direct field, because the pivot will
-fail for some words in every pair.
-
-Layout (little-endian, sectioned, each section offset and length in the header):
-
-```
-header      magic "LXPK", format version, language, kind (ipa | lex | def | xlat), edition
-            for def packs, build date, entry count, section table
-keys        an FST (`fst` crate) over every spelling, lemma and inflected form alike,
-            NFC + case-folded; value = offset into `hits`
-hits        per spelling: list of (entry_id u32, form_label_id u16)
-ipa         per spelling: compact IPA string table for the inline layer
-entries     u32 offset table, then zstd-compressed blocks of ~64 KB; each block a run of
-            CBOR entries {lemma, pos, tags[], ipa[], sounds[], senses[{gloss, marks[],
-            examples[], pivot?{en_lemma_id, sense_id, confidence}}], freq_rank}
-xlat        `xlat-<target>` packs only: (en_lemma_id, sense_id) -> [{word, weight, gender}]
-labels      string table: form labels, sense marks, language codes
-```
-
-Delivery: built offline by a Rust CLI in CI from the kaikki per-language extracts, released as
-assets and through the existing pack-host URL; on-phone building is dropped. `packs.json`
-lists `{kind, lang, edition?, version, size, sha256, url}` rows (`ipa` and `lex` per source,
-`xlat` per target, `def` per dense cell) and a `pairs` table of `{src, target, class,
-pivot_share, pivot_precision}`. Reader access as in the first draft: memory-mapped on
-Android, read into WASM memory in the browser, pure-Rust zstd on both.
-
-### What has to be sampled before the format is frozen
-
-The lossy thing is the join at the pivot, so that is what the sample measures, in two parts.
-Coverage: for each of the 54 sources, the top twenty thousand lemmas by frequency rank, and per
-target the share of their senses that received a confident pivot, at each candidate threshold.
-Precision: the dense edition cells (French and Chinese editions above a hundred thousand
-senses for a source, and the English edition itself for source-to-English) are the ground
-truth; for each source with such a cell, three hundred pivoted senses per target are compared
-with the target edition's own gloss of the same lemma and sense, and a hop counts as wrong
-when the target word is not among that edition's words for the sense. Good enough is a
-threshold at which precision is at least 95 percent on every ground-truth cell; the coverage
-that threshold leaves is then what classes the pairs. Pairs with no ground-truth cell inherit
-the threshold, which is why the threshold is chosen conservative rather than per pair. The
-same job measures gloss coverage, IPA share and example share per source, the size of
-`lex-<src>` with pivots and of each `xlat-<target>`, all reported into the manifest.
+reader's own language** rather than glosses in English. `def-<src>-<edition>` is built from a
+non-English edition only for the cells the measurement shows dense, a build threshold of one
+hundred thousand senses, which today admits fourteen cells with French and Chinese first, and
+is optional on top of the two packs a pair already needs.
 
 ### Consequences
 
 - The builder and the reader are the same crate; a format change is a version bump and a
   rebuilt release, never a phone migration.
-- The pair matrix is no longer bounded by editions but by what the pivot sample finds; the
-  manifest's `pairs` table is the single source of truth for what a pair is, and the UI never
-  offers a pair without its class.
-- The card gains `STATE-CARD-VIA-ENGLISH`, which is also where an ambiguous pivot lands; the
-  picker and the pack manager show the class; the pack manager lists `ipa` and `lex` packs per
-  source, one `xlat` pack for the reader's target (none when it is English), and `def` packs
-  as optional extras.
-- Picking a target downloads one `xlat-<target>`; adding a source downloads its `lex` and
-  `ipa`; nothing is downloaded per pair.
+- The pair matrix is bounded by nothing but which packs the reader holds, since any two of them
+  make a pair. What varies is how well they join, which the sample measures per pair and the
+  manifest publishes as the pair's class, and the UI never offers a pair without it.
+- The card gains `STATE-CARD-VIA-ENGLISH`, which is where an ambiguous join lands: the machine
+  guess is the headline, marked, with the English gloss beneath it as the anchor.
+- The pack manager lists an `ipa` and a `lex` pack per language, and `def` packs as optional
+  extras. There is no per-target asset and no per-pair asset. Picking a target downloads that
+  language's `lex` pack, which is the same pack a reader of that language would hold as a
+  source, so a reader of German reading Spanish downloads the two packs and nothing else.
+- A language's pack is built once and serves that language as a source and as a target, so the
+  build has one job per language rather than one per pair or per target.
 - Taplex's foreground build service, its SQLite layer and its unsynchronised handle go away.
 - CI needs the pack job, the sample job, and a monthly refresh; sizes and shares are measured
   by those jobs, not estimated here.
