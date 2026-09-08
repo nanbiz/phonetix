@@ -31,9 +31,16 @@ conversation of wrapped messages.
   again. Watched through one drag: the shift froze at 555 pixels for six passes running with
   one to three of eight lines still alive. This is the right way round, since nothing on a word
   beats another word's pronunciation on it, but it is the cost, and the fix is not to bring the
-  strip read back: it is to find the lines arriving without walking the whole tree for them.
-  Walking from the scrolling container instead was tried once and was no cheaper, because
-  finding that container means asking each parent where it is.
+  strip read back as it was: it is to find the lines arriving without paying what that walk
+  paid. Measured since: on a page standing still the walk is cheap, `plan=21ms (ipc=10ms in 23
+  calls)`. It cost two to three hundred milliseconds mid-drag because every one of those round
+  trips was blocking on the app's own main thread while it laid itself out. So the lever is the
+  number of round trips, and the platform has one: `AccessibilityNodeInfo.getChild(index,
+  prefetchingStrategy)` from API 33 fetches a subtree in one call where `getChild(index)` costs
+  one call a node, and nothing here asks for prefetching today. Refreshing the nodes already
+  held is not the answer, because they are not recycled with new text during a drag: watched
+  through one, `gone=0` while `clipped=6`, so the lines simply leave and the arriving ones are
+  nodes never seen before.
 - Measured and settled, so do not revisit without better evidence than this: measuring lines
   that have never been measured while the page moves, which is what `MEASURE_MOVING_MAX`
   allows. Asking an app where a line's characters are takes about a quarter of a second. At
