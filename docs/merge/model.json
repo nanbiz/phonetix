@@ -151,7 +151,7 @@
      "to": "STATE-CARD-NO-PACK"
     }
    ],
-   "statement": "Packs are built in CI in one binary format: ipa and lex per source language from the English edition, with each sense carrying a build-time pivot into the English lemma's translations table, one xlat pack per target language shared by every source (none for English), and optional def packs for dense edition cells; a manifest publishes rows and a class per (source, target) pair; nothing is downloaded per pair and nothing is built on the device.",
+   "statement": "Packs are built in CI in one binary format: an ipa and a lex pack per language from the English edition, each lex pack carrying an index of its own English glosses, plus optional def packs where a non-English edition is dense. A pair is any two lex packs joined on those glosses, so nothing is built or downloaded per pair or per target.",
    "status": "proposed",
    "tag": "REQ",
    "title": "Packs are prebuilt and fetched on demand",
@@ -468,7 +468,7 @@
      "to": "REQ-GUESS-LABELLED"
     }
    ],
-   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) from the share of top lemmas whose senses received a confident English pivot at a threshold with measured precision of at least 95 percent; the language picker, the pack manager and every card show that class, an ambiguous pivot yields no dictionary answer rather than a wrong one, and a machine-class pair is offered only with machine translation named as what it is.",
+   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) from the share of top lemmas whose gloss joins the target pack confidently, at a threshold whose measured precision is at least 95 percent, and no surface offers a pair without showing its class.",
    "status": "proposed",
    "tag": "REQ",
    "title": "A pair is never called a dictionary when it is a guess",
@@ -1030,7 +1030,7 @@
     "ext/popup/Packs.svelte",
     "android/app/PacksScreen.kt"
    ],
-   "statement": "The manifest is loaded: installed ipa and lex packs per source with version and size, the one xlat pack for the reader's language when it is not English, optional def packs, available packs with a fetch action, and for each source the class of its pair with the reader's language read from the manifest, never inferred.",
+   "statement": "The manifest is loaded: installed ipa and lex packs per language with version and size, optional def packs, available packs with a fetch action, and for each pair the reader can form the class its join earned.",
    "status": "proposed",
    "tag": "STATE",
    "title": "Packs ready",
@@ -1339,7 +1339,7 @@
     "android/card/CardSheet.kt",
     "lexcore/src/resolve.rs"
    ],
-   "statement": "The entry exists in the source pack but the English pivot found no confident translation into the reader's language (a partial or machine pair, or an ambiguous join for this sense): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, marked by the W badge and the words 'in English', then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
+   "statement": "The entry exists in the source pack but its gloss does not join the target pack confidently (a partial or machine pair, or an ambiguous join for this sense): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss beneath it as the anchor.",
    "status": "proposed",
    "tag": "STATE",
    "title": "Card via English",
@@ -1725,7 +1725,7 @@
     "packs/manifest.ts",
     "packs/PackStore.kt"
    ],
-   "statement": "The packs: ipa and lex per source language, one xlat pack per target (shared by every source, none for English), optional definitions packs where an edition is dense, with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
+   "statement": "The packs: an ipa and a lex pack per language, each serving that language as a source and as a target, optional definitions packs where an edition is dense, with size, download progress and errors, and beside them what each pair the reader can form is worth.",
    "states": [
     "Packs ready",
     "Packs downloading",
