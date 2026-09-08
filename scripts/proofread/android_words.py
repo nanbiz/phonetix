@@ -43,6 +43,9 @@ PAGES = [
 STRAYS_ALLOWED = 0.05
 # How near in time a report of where the lines are has to be to be used for a reading.
 SAME_MOMENT_MS = 400
+# How far a transcription may sit from the line its word is on. A line of these pages is about
+# 55 pixels, so this is one: nearer than that and it is late, further and it is on other text.
+A_LINE = 55
 # Set from the command line, so the withholding can be turned off and its worth measured.
 KNOBS = {}
 
@@ -127,13 +130,26 @@ def was_drawing(spans, when, window=120):
 
 
 def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document=None):
+    """How far each transcription is from the line its own word is on.
+
+    Not "which line is under it": a transcription that lands in the gap between two lines, or
+    off the text altogether, is under no line at all - and asking it that way skipped exactly
+    those, which are the ones a reader complains about. Deliberately putting every
+    transcription two hundred pixels from its word made this say "nothing to judge" rather
+    than "all of them are wrong".
+
+    So the question is asked the other way round: the word this transcription names is on a
+    known line, that line is in a known place at that moment, and the distance between the two
+    is the answer. A transcription whose word is on no line the page reported is skipped, and
+    the count of those is reported so that skipping cannot hide anything either.
+    """
     reports = lines_over_time(log)
     spans = drawing(log)
     timeline = dev.scroll_timeline(log)
     frames = [f for f in dev.box_frames(log) if f[1]]
     if newest_only:
         frames = frames[-1:]
-    strays, checked, withheld = [], 0, 0
+    adrift, checked, withheld, unknown = [], 0, 0, 0
     for stamp, boxes in frames:
         lines = lines_at(reports, stamp, window)
         if not lines and document:
@@ -146,39 +162,46 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
             withheld += len(boxes)
             continue
         for box in boxes.values():
-            middle = (box["rect"][1] + box["rect"][3]) / 2
-            here = None
-            for i, (top, height, _) in enumerate(lines):
-                if top <= middle <= top + height:
-                    here = i
-                    break
-            if here is None:
+            word = box["word"].lower()
+            mine = [(top, height) for top, height, text in lines if word in text.lower().split()]
+            if not mine:
+                unknown += 1
                 continue
+            middle = (box["rect"][1] + box["rect"][3]) / 2
+            # The nearest place its own word is, since a page can hold the same word twice.
+            off = min(
+                0.0 if top <= middle <= top + height
+                else min(abs(middle - top), abs(middle - (top + height)))
+                for top, height in mine
+            )
             checked += 1
-            near = " ".join(
-                lines[j][2] for j in (here - 1, here, here + 1) if 0 <= j < len(lines)
-            ).lower()
-            if box["word"].lower() not in near:
-                strays.append((box["word"], lines[here][2][:24]))
+            if off > A_LINE:
+                adrift.append((box["word"], round(off)))
     if not checked:
-        print(f"  {label}: nothing to judge ({withheld} withheld)")
+        print(f"  {label}: nothing to judge ({withheld} withheld, {unknown} whose word the "
+              f"page did not report)")
         return None
-    share = len(strays) / checked
-    print(f"  {label}: {len(strays)} of {checked} ({100 * share:.0f}%) name a word that is not "
-          f"under them, {withheld} were withheld")
+    share = len(adrift) / checked
+    print(f"  {label}: {len(adrift)} of {checked} ({100 * share:.0f}%) are more than a line "
+          f"from their own word, {withheld} withheld, {unknown} unknown")
     r.check(
         share <= STRAYS_ALLOWED,
-        f"{label}: every transcription names a word that is under it",
-        f"{len(strays)} of {checked} do not, e.g. "
-        f"{', '.join(f'{w} on {on!r}' for w, on in strays[:3])}",
+        f"{label}: every transcription is on its own word",
+        f"{len(adrift)} of {checked} are not, e.g. "
+        f"{', '.join(f'{w} {d}px away' for w, d in adrift[:3])}",
     )
     return share
 
 
-# How many drags are judged before an answer is given. One drag is not a measurement: the same
-# page dragged four times running gave 44%, 45%, 73% and 16% on builds that differed in one
-# constant, which is a wider spread than anything being measured.
-DRAGS = 3
+# How many movements are judged before an answer is given, and how they are made.
+#
+# One is not a measurement: the same page dragged four times running gave 44%, 45%, 73% and
+# 16% on builds that differed in one constant. Part of that is the gesture - `input swipe`
+# does not deliver the same movement twice - so the page is asked to scroll itself by exactly
+# the same distance over exactly the same time instead, and the answer is the middle of five.
+DRAGS = 5
+MOVE_PX = 900
+MOVE_MS = 1300
 
 
 def a_page(r, dev, label, mode):
@@ -199,8 +222,10 @@ def a_page(r, dev, label, mode):
                   document=document)
 
         dev.clear_log()
-        shell("input", "swipe", "540", "1536", "540", "500", "1300")
-        time.sleep(1.5)
+        dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, rows=60,
+                    motion="linear", distance=MOVE_PX, duration=MOVE_MS, strokes=1, seed=1,
+                    **(KNOBS or {}))
+        time.sleep(MOVE_MS / 1000 + 0.2)
         log = dev.log()
         passes = [l for l in log.splitlines() if "follow=" in l]
         gaps = [int(m.group(1)) for m in

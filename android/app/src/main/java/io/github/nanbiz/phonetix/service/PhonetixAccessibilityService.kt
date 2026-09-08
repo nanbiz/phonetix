@@ -1021,6 +1021,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // transcription off the screen. That happened after a jump, where a surviving
             // line's words all landed outside the clip it was measured in, and the overlay
             // went blank on a page full of words.
+            if (PUT_THEM_WRONG_BY != 0f) {
+                val wronged = putThemWrong(moved)
+                moved.clear()
+                moved.addAll(wronged)
+            }
             if (moved.isEmpty()) blankFollows++ else blankFollows = 0
             if (ok && recycling && moved.isEmpty() && blankFollows <= BLANK_FOLLOWS) {
                 // Nothing verified yet on a recycling screen is not a failure; the next pass
@@ -1432,6 +1437,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
         }
 
+        if (PUT_THEM_WRONG_BY != 0f) {
+            val wronged = putThemWrong(painted)
+            painted.clear()
+            painted.addAll(wronged)
+        }
         // One line per pass naming every transcription and where it sits, so a test can
         // assert that a word moved exactly as far as the text under it did.
         if (BuildConfig.DEBUG) {
@@ -1523,6 +1533,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (!around.contains(at)) return
         p.askNode = holder
         p.askAt = around
+    }
+
+    /**
+     * Put every transcription somewhere it does not belong, if a test has asked.
+     *
+     * Applied to what is about to be drawn and logged, after every filter that decides which
+     * words are shown: injecting it earlier only made them be dropped for falling outside
+     * their line, which proves nothing about whether a misplaced one would be noticed.
+     */
+    private fun putThemWrong(boxes: List<WordBox>): List<WordBox> {
+        val by = PUT_THEM_WRONG_BY
+        if (by == 0f) return boxes
+        return boxes.map {
+            it.copy(rect = RectF(it.rect.left, it.rect.top + by, it.rect.right, it.rect.bottom + by))
+        }
     }
 
     private fun shiftOf(
@@ -2120,6 +2145,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How much of the window a line scrolls in its holder may fill and still count as a
          *  row worth asking instead of the line. */
         const val HOLDER_SHARE = 0.6f
+
+        /** How far every transcription is deliberately put from its word, so that a test can
+         *  show it notices. Zero in anything but a test. */
+        @Volatile
+        @JvmStatic
+        var PUT_THEM_WRONG_BY = 0f
 
         /** Two readings of the same text this close together are the same line. */
         const val LINE_SAME_PX = 24

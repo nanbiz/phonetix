@@ -404,6 +404,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.MotionLayer.followableMs =
                     i.getIntExtra("followableMs", 200).toLong()
             }
+            if (i.hasExtra("putThemWrongBy")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.PUT_THEM_WRONG_BY =
+                    i.getIntExtra("putThemWrongBy", 0).toFloat()
+            }
             if (i.hasExtra("useSaidScroll")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.USE_SAID_SCROLL =
                     i.getIntExtra("useSaidScroll", 1) != 0
