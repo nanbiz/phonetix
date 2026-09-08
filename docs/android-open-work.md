@@ -23,6 +23,12 @@ conversation of wrapped messages.
   than the one above it, about 38 pixels top to bottom - and the whole set lags the page by
   another 50 to 90. Carrying each line forward from its own moment was tried and measured
   better on a list, worse on a conversation, and inside the noise on paragraphs.
+- Tried and measured worse, so not in the code: carrying each line of a following pass forward
+  from its own read moment to the end of the pass (the full read already does this). Ten drags
+  each: 16 percent against 11 on a list, 48 against 49 on a conversation. And refusing to
+  measure a speed over an interval shorter than a frame, where whole-pixel bounds make the
+  answer several times the truth: better on a conversation (36 to 29) and a list (9 to 7),
+  worse on wrapped paragraphs (23 to 34).
 - [ ] **Four drags of one page cannot separate a ten point difference.** One run of one build
   gave 23, 54, 57 and 72 percent. Anything measured from here needs more drags than that.
 
