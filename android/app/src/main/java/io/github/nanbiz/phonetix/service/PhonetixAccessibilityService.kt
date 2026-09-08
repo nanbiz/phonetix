@@ -2173,22 +2173,28 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /**
          * How many lines a single read may measure from scratch while the page is moving.
          *
-         * Every one of them makes the app lay that line out again, which is why there is a
-         * limit at all. What it buys is the transcriptions on the lines scrolling into view:
-         * the share of a moving page's lines carrying one is about a fifth without this.
+         * None. Asking a line where its characters are makes the app lay that text out again,
+         * and on a page of any length that answer takes about a quarter of a second: three of
+         * them put a single following pass at a full second, during which the page travelled
+         * seven hundred pixels and every word on the screen was carried on a guess. The
+         * passes are what keeps the words on their text, and there were one to three of them
+         * in a drag instead of six to twenty.
          *
-         * Twelve, measured against six over three drags each: three fifths of the lines
-         * against under a half, and steadier - six ranged from a fifth to two thirds. It was
-         * set to six on an earlier measurement taken while a separate fault kept the colours
-         * from ever being read, which held back the very lines this was measuring.
+         * Measured across the three shapes of page, transcriptions more than a line from
+         * their own word: through a drag 81 to 26 percent on wrapped paragraphs, 78 to 42 on
+         * a conversation, 49 to 16 on a list; once settled 55, 18 and 29 percent to none at
+         * all. It costs coverage - a line that has never been measured is not drawn until the
+         * page stops, and fewer are carrying a transcription through the movement - and that
+         * is the trade: nothing on a word is better than somebody else's pronunciation on it.
          *
-         * What it costs the app is too small to see at this figure: the page reported 73 to
-         * 75 positions through a drag against 76 to 77 with none of this, in steps of the
-         * same size. Somewhere above it that stops being true.
+         * An earlier measurement put this at twelve. It was taken on fixtures barely taller
+         * than the screen, where a drag ran off the end of the page a third of the way
+         * through and the rest of it was judged as movement, and against a check that read
+         * the positions the service worked out rather than the ones the layer drew.
          */
         @Volatile
         @JvmStatic
-        var MEASURE_MOVING_MAX = 12
+        var MEASURE_MOVING_MAX = 0
 
         /** How many painted rectangles are kept for working out what covers what. A screen
          *  holds a hundred or so; beyond that they are old ones from before a scroll. */
