@@ -187,7 +187,18 @@ Ticked items are done and verified by a suite; the rest are not.
   places that decide whether the page is moving were made to ask one question. On the article
   page the same measure reads 50-82% a drag, 83-89% a fling, 78-88% standing still, and the
   typical transcription sits 8 to 14 pixels of the capture from its line, about a third of one.
-- [ ] **What is left of it: the lines arriving at the bottom.** What is
+- [ ] **Through a drag, a fifth to a third of what is on the screen names a word that is not
+  under it.** Reported from a phone as transcriptions frozen while the text moved under them,
+  and reproduced by `android_words.py` on a Compose conversation and on a page of wrapped
+  paragraphs. Standing still and once settled are clean; only the movement is wrong. The
+  moving layer withholds the words when it can tell it cannot place them - it asks whether the
+  app answers often enough, where it was expected to, and promptly - which took the middle drag
+  from 64-73% to about 20-30%. What is left is the app's own speed: that page gets eight follow
+  passes to nine hundred pixels of movement because single passes take six hundred
+  milliseconds, and between two passes that far apart the words are wherever the prediction put
+  them. Measured and reverted for making it no better: capping how far the words are carried on
+  one reading, and withholding them on the small windows as well as on the layer.
+- [ ] **What is left of the missing ones: the lines arriving at the bottom.** What is
   missing is the lines arriving at the bottom: they are not in the plan, and putting them
   there means reading the strip of screen they arrived in, which costs 130ms typically and
   400 at worst because finding them means asking every node on the way down where it is. Two
