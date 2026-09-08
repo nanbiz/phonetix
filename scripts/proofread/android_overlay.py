@@ -396,6 +396,40 @@ def check_finger(r, dev):
     )
 
 
+def check_on_its_word(r, dev):
+    """Every transcription is on the word it names, which nothing else here asks.
+
+    The rest of this suite measures whether the words moved as far as the text moved - a
+    difference between two positions - and every such difference survives moving every word by
+    the same amount. Put every transcription two hundred pixels from its word and all seven
+    thousand checks passed. This one asks where they landed, against the page's own account of
+    where its lines are.
+    """
+    from android_words import judge, lines_in_the_document
+
+    # Started clean, and the log emptied first. Where a line sits is reported in the
+    # document's own coordinates, and turning that into a place on the screen needs the page's
+    # scroll position at that moment - so a report left over from a page scrolled somewhere
+    # else says every transcription is in the wrong place when they are all in the right one.
+    shell("am", "force-stop", "io.github.nanbiz.phonetix")
+    time.sleep(2)
+    dev.enable_service()
+    dev.clear_log()
+    dev.surface(mode="essay", enable=1, density=3, allApps=1, marks=1, placed=1, scrollTo=0)
+    time.sleep(7)
+    document = lines_in_the_document(dev.log())
+    if not document:
+        r.check(False, "on its word: the page said where its lines are", "it said nothing")
+        return
+    judge(r, dev, dev.log(), "standing still, on its word", newest_only=True, window=20000,
+          document=document)
+    dev.clear_log()
+    shell("input", "swipe", "540", "1400", "540", "600", "900")
+    time.sleep(3.5)
+    judge(r, dev, dev.log(), "once it has stopped, on its word", newest_only=True, window=20000,
+          document=document)
+
+
 def main():
     dev = Device()
     print(f"device {dev.width}x{dev.height}")
@@ -416,6 +450,7 @@ def main():
     check_secure(r, dev)
     print("\na finger on the page")
     check_finger(r, dev)
+    check_on_its_word(r, dev)
 
     print(f"\n{r.passed}/{r.total} checks passed")
     if r.failures:
