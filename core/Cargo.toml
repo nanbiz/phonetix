@@ -1,5 +1,5 @@
 [workspace]
-members = ["wasm"]
+members = ["wasm", "android"]
 
 [package]
 name = "lexcore"

@@ -1,0 +1,12 @@
+[package]
+name = "lexcore-android"
+version = "0.1.0"
+edition = "2021"
+description = "The reading core as the overlay sees it."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lexcore = { path = ".." }
+jni = "0.21"
