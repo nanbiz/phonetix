@@ -97,12 +97,21 @@ def lines_at(reports, when, window):
 
 
 def drawing(log):
-    """When the moving layer was drawing anything, from its own account of itself."""
+    """When anything of ours was on the screen, from the service's own account.
+
+    Two things take the words off: the moving layer stops drawing when it cannot place them,
+    and the pass that hands them back to the small windows draws nothing when the reading it
+    would place them from is too old. Both have to be read, or a fix that withholds is
+    measured as though it had drawn.
+    """
     out = []
     for line in log.splitlines():
         m = re.search(r"LAYER (\d+) \S+ \d+ showing=(\d)", line)
         if m:
             out.append((int(m.group(1)), m.group(2) == "1"))
+        m = re.search(r"DREW none at (\d+)", line)
+        if m:
+            out.append((int(m.group(1)), False))
     return out
 
 
