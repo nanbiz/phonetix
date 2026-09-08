@@ -27,7 +27,7 @@ def main():
     from websocket import create_connection
     os.makedirs(IMG, exist_ok=True)
     chrome = subprocess.Popen(
-        ["chromium", "--headless", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
+        [os.environ.get("PHONETIX_CHROMIUM", "chromium"), "--headless", "--disable-gpu", "--no-sandbox", "--hide-scrollbars",
          f"--remote-debugging-port={PORT}", "--remote-allow-origins=*",
          "--window-size=1280,1200", "about:blank"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

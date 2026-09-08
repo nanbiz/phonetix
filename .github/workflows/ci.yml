@@ -85,6 +85,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: pnpm fetch:dict
       - run: pnpm build
+      # The merge book draws itself out of docs/merge/surface.html, so a state edited on the
+      # page without its picture being cut again leaves the book describing a screen nobody
+      # has looked at. A render that is missing already fails viewbook; this is what makes a
+      # stale one fail too, for the same reason the shared vectors are regenerated rather
+      # than trusted.
+      - name: The merge book's renders match its page
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: |
+          uv run --with websocket-client python tools/render-merge.py
+          git diff --exit-code docs/merge/img/
       - name: Integration suite
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
