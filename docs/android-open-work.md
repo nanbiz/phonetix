@@ -21,8 +21,19 @@ conversation of wrapped messages.
   ten drags of each. It was 49, 81 and 78. The last and largest step was to stop reading the
   strip of screen that has just scrolled into view while the page is moving: that read walks
   the app's node tree, two to three hundred milliseconds a time, two to four times in a drag,
-  and the following passes it starved are the only thing keeping the words on their text. It
-  cost nothing in what is drawn, because a stale reading is one the layer refuses to draw from.
+  and the following passes it starved are the only thing keeping the words on their text.
+  Over the same ten drags of a page it also drew more rather than less, because a stale reading
+  is one the layer refuses to draw from: the words were withheld on 75 to 862 samples with the
+  strip read and on 0 to 737 without it.
+- [ ] **A long drag now ends with little on the screen.** Nothing picks up the lines that scroll
+  in while the page moves, so once the lines the plan was made from have left, the shift stops
+  changing, the speed decays and the layer stops drawing until the page settles and is read
+  again. Watched through one drag: the shift froze at 555 pixels for six passes running with
+  one to three of eight lines still alive. This is the right way round, since nothing on a word
+  beats another word's pronunciation on it, but it is the cost, and the fix is not to bring the
+  strip read back: it is to find the lines arriving without walking the whole tree for them.
+  Walking from the scrolling container instead was tried once and was no cheaper, because
+  finding that container means asking each parent where it is.
 - Measured and settled, so do not revisit without better evidence than this: measuring lines
   that have never been measured while the page moves, which is what `MEASURE_MOVING_MAX`
   allows. Asking an app where a line's characters are takes about a quarter of a second. At
