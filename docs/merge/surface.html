@@ -368,6 +368,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .btn.secondary { background: var(--color-chip-bg); color: var(--color-ink); }
 .btn.danger { background: var(--color-danger-bg); color: var(--color-danger); }
 .btn-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.alt-reading { position: relative; display: flex; align-items: baseline; gap: var(--space-1) var(--space-2); flex-wrap: wrap; padding-right: var(--space-5) !important; width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-1) var(--space-3); cursor: pointer; }
+.alt-reading .alt-label { white-space: nowrap; font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-faint); }
+.alt-reading .r-ipa { font-family: var(--font-ipa); color: var(--color-ipa); font-size: var(--font-size-small); }
+.alt-reading .chev { position: absolute; right: var(--space-3); top: var(--space-1); color: var(--color-ink-faint); }
 .readings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .readings li { border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; cursor: pointer; }
 .readings li:hover { background: var(--color-surface-raised); }
@@ -581,6 +585,23 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
             <li><span class="r-tr">modern, contemporary</span><span class="r-ipa">[modɛʁn]</span><span class="chip r-pos">adjective</span></li>
             <li><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip r-pos">verb</span></li>
           </ul>
+        </div>
+        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-READING-DECIDED">
+      <div class="label"><b>STATE-CARD-READING-DECIDED</b> Card reading decided</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">modern, contemporary</span><span class="badge dict">Wiktionary</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">m</button><button class="sym v">o</button><button class="sym c">d</button><button class="sym v">ɛ</button><button class="sym c">ʁ</button><button class="sym c">n</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+          <div class="gram"><span class="lemma">modern</span><span class="chip">adjective</span><span class="g-sub">decided from the translation; another reading exists</span></div>
+          <button class="alt-reading"><span class="alt-label">Other reading</span><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip">verb</span><span class="chev">›</span></button>
+        </header>
+        <div class="card-body">
+          <p class="ex"><q>Ein modernes Gebäude.</q><span class="ex-tr">A modern building.</span></p>
         </div>
         <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
       </article>

@@ -212,12 +212,16 @@
    "uid": "REQ-HOMOGRAPH",
    "tag": "REQ",
    "title": "Homographs are resolved or offered",
-   "statement": "When a spelling has several readings, the classifier decides from context or the card offers the readings with their IPA and part of speech.",
+   "statement": "A spelling with several readings is resolved in the core by three signals chained strongest first: the translation's alignment (which target span the word became, whenever a translation ran), the trained context classifier (about ten languages), then neighbour part-of-speech ranking from the same pack (any language); a decided-but-uncertain result shows the other reading as one quiet row, and the chooser appears only when confident signals contradict or none is confident, which the chooser-rate metric keeps rare.",
    "status": "proposed",
    "relations": [
     {
      "role": "realised_by",
      "to": "STATE-CARD-HOMOGRAPH"
+    },
+    {
+     "role": "realised_by",
+     "to": "STATE-CARD-READING-DECIDED"
     }
    ]
   },
@@ -493,6 +497,7 @@
     "Card entry",
     "Card form",
     "Card homograph",
+    "Card reading decided",
     "Card mono",
     "Card guess",
     "Card phrase",
@@ -886,7 +891,7 @@
    "uid": "STATE-CARD-HOMOGRAPH",
    "tag": "STATE",
    "title": "Card homograph",
-   "statement": "The spelling has several readings the classifier could not separate: a chooser listing each reading as its translation followed by its IPA on the same line and the part of speech at the row end; choosing one opens the entry. Drawn at the Full tier.",
+   "statement": "The three homograph signals contradicted each other or none was confident (most often monolingual reading in a language without a classifier): a chooser listing each reading as its translation followed by its IPA and the part of speech at the row end; choosing one opens the entry. Drawn at the Full tier; expected to be rare.",
    "status": "proposed",
    "renders": [
     "surface-light-card-homograph.png",
@@ -1457,6 +1462,32 @@
     {
      "role": "satisfies",
      "to": "REQ-TIERS"
+    }
+   ]
+  },
+  {
+   "uid": "STATE-CARD-READING-DECIDED",
+   "tag": "STATE",
+   "title": "Card reading decided",
+   "statement": "A homograph a signal decided without certainty: the entry card for the decided reading as usual, plus one quiet Other reading row under the grammar line with the other reading's gloss, IPA and part of speech, which opens that entry on tap; the reader is never stopped and asked. Drawn at the Full tier; the common case for a real homograph.",
+   "status": "proposed",
+   "renders": [
+    "surface-light-card-reading-decided.png",
+    "surface-dark-card-reading-decided.png"
+   ],
+   "sources": [
+    "ui/card/Card.svelte",
+    "android/card/CardSheet.kt",
+    "lexcore/src/homograph.rs"
+   ],
+   "relations": [
+    {
+     "role": "state_of",
+     "to": "VIEW-CARD"
+    },
+    {
+     "role": "satisfies",
+     "to": "REQ-HOMOGRAPH"
     }
    ]
   }

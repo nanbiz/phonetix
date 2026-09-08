@@ -29,7 +29,7 @@ Answer states, in cascade order (first hit wins; lower tiers fill what higher ti
 |---|---|---|---|
 | `entry` | Lex pack, spelling is a lemma | headline gloss (and IPA if on) | full entry |
 | `form` | Lex pack `forms` table, spelling is an inflection | headline gloss of the lemma | full entry, plus "form of" line |
-| `homograph` | Lex pack has several entries; homograph classifier could not decide | gloss of the most frequent reading, marked | reading chooser, then the entry |
+| `homograph` | Lex pack has several entries and the three signals below disagree or none is confident | gloss of the most frequent reading, marked | reading chooser, then the entry |
 | `mono` | source == target, monolingual pack | IPA only (no gloss) | definitions instead of translations |
 | `guess` | No pack entry; MT engine answered | gloss, marked as guess | one line, "machine guess", IPA from espeak |
 | `phrase` | Reader selected several words; MT answered | nothing | phrase translation, guess, no IPA row |
@@ -68,8 +68,33 @@ hover (desktop), tap (Android and touch browsers), or by dragging the lens (Andr
 
 - The Answer type is the contract between core and both UIs; both surfaces render the same
   eleven states and nothing else.
-- A homograph chooser is part of the card. The classifier stays in the core; when it decides,
-  the chooser is skipped.
+- Homographs are resolved by three signals chained strongest first, all in the core, and the
+  chooser is the fallback when they fail: (1) **the translation's own alignment**: whenever
+  the sentence is being translated, for a gloss or for replace mode, the engine has already
+  resolved the word in context and DR-7's alignment says which target span the source word
+  became; "modern" aligned to "modern" is the adjective, aligned to "rot" is the verb; this is
+  free, language-pair wide, and outranks any classifier; (2) **the trained context
+  classifier**, which exists for about ten languages; (3) **neighbour part-of-speech
+  ranking**: the parts of speech of the adjacent words looked up in the same pack, language
+  independent, so it covers the languages the classifier does not. A signal is confident
+  when its margin over the runner-up clears a per-signal threshold in `data/`; the first
+  confident signal decides, later signals only confirm or contradict it. The chooser appears
+  only when the confident signals contradict each other or none is confident. In the
+  monolingual case there is no translation to read, so signals 2 and 3 carry it alone, with
+  the classifier deciding where it exists and neighbour ranking elsewhere; the chooser rate is
+  therefore higher there.
+- When a signal decided but was not certain (confident, but a second reading kept a
+  non-trivial share), the card is not a chooser: it shows the decided reading as usual and
+  adds one quiet "Other reading" row under the grammar line with the other reading's gloss,
+  IPA and part of speech, which opens that entry on tap (`STATE-CARD-READING-DECIDED`). This
+  is the common case for a real homograph; the chooser is the rare one.
+- Expected chooser rate, to be measured as the "chooser rate" metric per language:
+  homographs are a small share of tokens to begin with; with a translation running, the
+  alignment resolves nearly all of them, so the chooser should appear in well under one in a
+  hundred homograph lookups and a negligible share of all card openings; in monolingual
+  reading without a classifier, where only neighbour ranking is left, a few percent of
+  homograph lookups is the honest expectation. If measurement shows more, the thresholds are
+  wrong, not the design.
 - Selecting several words is a distinct gesture on both platforms (drag select in the browser,
   long-press then drag on Android) and always yields `phrase`.
 
