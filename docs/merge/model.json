@@ -144,7 +144,7 @@
    "uid": "REQ-PACK-ON-DEMAND",
    "tag": "REQ",
    "title": "Packs are prebuilt and fetched on demand",
-   "statement": "Packs are built in CI in one binary format, keyed by source language from the English edition with each entry's translations into every target, listed in a manifest with a class per (source, target) pair, and downloaded per source when the reader picks it; nothing is built on the device.",
+   "statement": "Packs are built in CI in one binary format: ipa and lex per source language from the English edition, with each sense carrying a build-time pivot into the English lemma's translations table, one xlat pack per target language shared by every source (none for English), and optional def packs for dense edition cells; a manifest publishes rows and a class per (source, target) pair; nothing is downloaded per pair and nothing is built on the device.",
    "status": "proposed",
    "relations": [
     {
@@ -453,7 +453,7 @@
    "uid": "REQ-PAIR-HONESTY",
    "tag": "REQ",
    "title": "A pair is never called a dictionary when it is a guess",
-   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) sampled from the pack's translations; the language picker, the pack manager and every card show that class, and a machine-class pair is offered only with machine translation named as what it is.",
+   "statement": "Every (source, target) pair carries a build-time class (dictionary, partial, machine) from the share of top lemmas whose senses received a confident English pivot at a threshold with measured precision of at least 95 percent; the language picker, the pack manager and every card show that class, an ambiguous pivot yields no dictionary answer rather than a wrong one, and a machine-class pair is offered only with machine translation named as what it is.",
    "status": "proposed",
    "relations": [
     {
@@ -478,7 +478,7 @@
    "uid": "REQ-PROVENANCE-MARK",
    "tag": "REQ",
    "title": "Dictionary provenance carries the Wiktionary mark",
-   "statement": "The dictionary provenance badge shows Wikimedia's small Wiktionary mark (an asset pinned with its file and licence in data/marks.json, never redrawn) at 16 px on a fixed white plate beside the word, is a link with an accessible name that opens the entry, drops to the word alone at the Strip tier, and sits in the same badge shape as the other provenance values, which have no mark.",
+   "statement": "The dictionary provenance badge is the serif W letterform of the Wiktionary logo alone, no word beside it at any tier: the glyph taken from the Wiktionary logo file pinned with its Commons page and licence in data/marks.json (never Wikipedia's mark, which would name the wrong project), typeset at 15 px in the badge's accent colour inside the same 22 px pill every other provenance value uses, so the DR-10 accent-on-accent-bg rule covers it; it is a link with the accessible name 'Source: Wiktionary, opens the entry'; the other provenance values are words in pills of the same height.",
    "status": "proposed",
    "relations": [
     {
@@ -662,7 +662,7 @@
    "uid": "VIEW-PACKS",
    "tag": "VIEW",
    "title": "Pack manager",
-   "statement": "The packs per source language (IPA, lex from the English edition, optional definitions packs where an edition is dense) with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
+   "statement": "The packs: ipa and lex per source language, one xlat pack per target (shared by every source, none for English), optional definitions packs where an edition is dense, with size, download progress and errors, and beside the reader's pairs the class each pair has: dictionary, partial or machine.",
    "status": "proposed",
    "states": [
     "Packs ready",
@@ -888,7 +888,7 @@
    "uid": "STATE-CARD-ENTRY",
    "tag": "STATE",
    "title": "Card entry",
-   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with the Wiktionary provenance badge (mark plus word, a link to the entry), pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
+   "statement": "The spelling is a lemma in the lex pack, one sense: headline gloss with the Wiktionary provenance badge (the mark alone, a link to the entry), pronunciation line with a human recording, grammar line with the lemma and its article and the plural, the example; no other-senses block. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-entry.png",
@@ -1242,7 +1242,7 @@
    "uid": "STATE-PACKS-READY",
    "tag": "STATE",
    "title": "Packs ready",
-   "statement": "The manifest is loaded: installed packs per source with version and size, available packs with a fetch action, and for each source the class of its pair with the reader's language (dictionary, partial, machine) read from the manifest, never inferred.",
+   "statement": "The manifest is loaded: installed ipa and lex packs per source with version and size, the one xlat pack for the reader's language when it is not English, optional def packs, available packs with a fetch action, and for each source the class of its pair with the reader's language read from the manifest, never inferred.",
    "status": "proposed",
    "renders": [
     "surface-light-packs-ready.png",
@@ -1490,7 +1490,7 @@
    "uid": "STATE-CARD-TIER-STRIP",
    "tag": "STATE",
    "title": "Card tier strip",
-   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge (the word alone, no mark) and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
+   "statement": "The same entry given less than 160 px of height or less than 240 px of width: only the headline with its badge (the mark, as at every tier) and the pronunciation line; a tap on the strip asks the host for more room and re-measures.",
    "status": "proposed",
    "renders": [
     "surface-light-card-tier-strip.png",
@@ -1542,7 +1542,7 @@
    "uid": "STATE-CARD-VIA-ENGLISH",
    "tag": "STATE",
    "title": "Card via English",
-   "statement": "The entry exists in the source pack but has no translation into the reader's language (a partial or machine pair): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
+   "statement": "The entry exists in the source pack but the English pivot found no confident translation into the reader's language (a partial or machine pair, or an ambiguous join for this sense): the machine guess into the target is the headline, marked as a guess, with the pack's English gloss directly beneath it as the dictionary anchor, marked by the W badge and the words 'in English', then pronunciation, grammar line and senses in English. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-via-english.png",

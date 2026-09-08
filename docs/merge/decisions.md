@@ -122,31 +122,49 @@ senses against the English edition's 875,726. Keyed by edition, most pairs would
 dictionary tier, and machine translation would carry the product, which DR-1 forbids by making
 machine output a labelled guess and the dictionary the answer.
 
-The English edition is the rich one for every source language, and a kaikki entry in it
-carries a `translations` field: the entry's translations into other languages. A Spanish word
-glossed into German can come from the English edition's Spanish entry and its German
-translation rather than from the German edition's thin Spanish section. **How dense that
-field is per source and target is unmeasured**: kaikki publishes no coverage of translations,
-IPA or definitions, so it has to be sampled from the dumps themselves (below).
+The English edition is the rich one for every source language, and its **English** lemmas
+carry a `translations` field: measured today on kaikki's per-word pages, "house" holds
+translations into 436 languages, each tagged with the sense string it belongs to, a sense
+weight and gender where the target has it. Its entries for non-English words carry no such
+field: Spanish "perro" and "libro" hold senses glossed in English and nothing more. So a
+Spanish word cannot be read straight into German; it can be **pivoted** in two hops inside the
+one edition: the Spanish sense gives an English gloss, and the English lemma for that gloss
+gives the German word. The join is on meaning, not on an identifier, and how lossy it is is
+the thing that has to be sampled.
 
 ### Options
 
 | Option | Cost |
 |---|---|
 | Key by (source, edition), as first drafted | Bounded matrix, then mostly empty; most pairs are machine translation throughout while the interface implies a dictionary |
-| Key by source language, one extraction from the English edition per source, with the `translations` field carrying every target | One rich pack per source serves every target; the pack is larger (all translations of every entry); density per target is unmeasured and will vary; senses are written in English unless an edition pack exists |
+| Key by source language, one extraction from the English edition per source, pivoting through English lemmas for every non-English target | One source pack serves every target through one shared translations asset; the join at the pivot is lossy and a wrong hop is a confident wrong gloss; senses are written in English unless an edition pack exists |
 | Machine-translate the English glosses at build time into every target | Fabricates a dictionary out of guesses and hides the provenance DR-1 insists on |
 | Keep SQLite in the browser, or gzipped JSON, or on-phone builds | As in the first draft: two readers, no random access, or a gigabyte on the phone |
 
 ### Decision
 
-**A pack is keyed by source language and built from the English edition.** `lex-<src>` holds,
-per entry: lemma, part of speech, tags (gender among them), IPA and sounds, senses with English
-glosses, marks and examples, forms, and the entry's `translations` grouped by target
-language. The target language is a **view over the pack**, not a key: the card's headline for
-target T is the entry's translation into T when the entry has one; the English gloss stays
-in the card as the anchor either way. `ipa-<src>` is the same format with only the IPA table,
-as before, and is unaffected by the measurement.
+**A pack is keyed by source language and built from the English edition, and the target is
+reached through one shared pivot asset.** `lex-<src>` holds, per entry: lemma, part of speech,
+tags (gender among them), IPA and sounds, senses with English glosses, marks and examples,
+forms, and per sense a **pivot**: the English lemma and sense the build joined that gloss to,
+with the join's confidence, or nothing when the join was not confident. `xlat-<target>` is the
+translations table of the English lemmas sliced to one target language: keyed by (English
+lemma, sense), holding the target words with their sense weight and gender. It belongs to
+English lemmas alone, so it is **one asset per target shared by every source pack**, never
+anything per pair. A reader who picks target T downloads `xlat-T` once and every source pack
+they hold points into it. When the target is English no second hop exists: the English gloss
+is the answer, and `lex-<src>` alone serves the pair. The target language is a view over the
+pack plus the pivot; the card's headline for T is the pivot's target word when the pivot is
+confident, and the English gloss stays in the card as the anchor either way.
+
+The pivot is built, not looked up at runtime: the builder takes the headword phrase of each
+English gloss, finds the English lemma, and scores each of that lemma's translation senses
+against the gloss by token overlap weighted by the sense distribution; the best sense wins
+only when its margin over the runner-up clears a threshold in `data/`. **An ambiguous join
+yields no pivot, on purpose:** a wrong hop is a confident wrong gloss, which is worse than a
+miss, so the word falls to `via-en` (the machine guess into T as the headline, marked, with
+the English gloss beneath it) rather than to a plausible wrong dictionary answer. The
+threshold is set by the sample below, precision first.
 
 Edition packs survive only for what they are actually good for: **definitions written in the
 reader's own language**. `def-<src>-<edition>` is built from a non-English edition only for
@@ -155,62 +173,75 @@ today admits fourteen cells, French and Chinese first), and is optional on top o
 Swedish and Arabic readers, and any target without an edition, are served by the translations
 view like everyone else.
 
-Because density is unmeasured, every pair is **classed at build time from a sample**, and the
-class is what the product tells the reader. The build takes the top twenty thousand lemmas of
-each source by frequency rank and counts, per target, the share carrying at least one
-translation. Classes, with thresholds to be tuned once the first sample exists:
+Every pair is **classed at build time from the sample**, and the class is what the product
+tells the reader. Classes, with thresholds to be tuned once the first sample exists:
 
 | Class | Sample result | What the reader gets |
 |---|---|---|
-| `dictionary` | at least 60 percent of the sampled lemmas have a translation into T | translation-first as DR-1 describes; misses go to the guess tier |
-| `partial` | 20 to 60 percent | dictionary where it has one; otherwise the machine guess into T as the headline, marked, with the English gloss beneath it as the anchor (`STATE-CARD-VIA-ENGLISH`) |
+| `dictionary` | at least 60 percent of the top twenty thousand lemmas have a confident pivot into T, at a threshold whose measured precision is at least 95 percent | translation-first as DR-1 describes; misses go to `via-en`, then the guess tier |
+| `partial` | 20 to 60 percent | dictionary where the pivot is confident; otherwise `via-en` (`STATE-CARD-VIA-ENGLISH`) |
 | `machine` | under 20 percent, or no lex pack for the source | machine translation throughout, said so in the picker, the pack manager and every card; the IPA pack and the English gloss still show where they exist |
 
-The class is published in `packs.json` per (source, target) beside the pack rows, so the
-picker and the pack manager read it rather than infer it, and a reader is never told a pair is
-a dictionary when it is a guess. Every pair the engine can translate is offered, because the
-reader still has a page to read; what changes is the label and the promise.
+Source to English is `dictionary` by construction wherever the source pack exists, subject only
+to gloss coverage. The class is published in `packs.json` per (source, target) beside the pack
+rows, so the picker and the pack manager read it rather than infer it, and a reader is never
+told a pair is a dictionary when it is a guess. Every pair the engine can translate is
+offered, because the reader still has a page to read; what changes is the label and the
+promise. The classes matter more with a pivot than with a direct field, because the pivot will
+fail for some words in every pair.
 
 Layout (little-endian, sectioned, each section offset and length in the header):
 
 ```
-header      magic "LXPK", format version, source lang, kind (ipa | lex | def), edition for
-            def packs, build date, entry count, section table
+header      magic "LXPK", format version, language, kind (ipa | lex | def | xlat), edition
+            for def packs, build date, entry count, section table
 keys        an FST (`fst` crate) over every spelling, lemma and inflected form alike,
             NFC + case-folded; value = offset into `hits`
 hits        per spelling: list of (entry_id u32, form_label_id u16)
 ipa         per spelling: compact IPA string table for the inline layer
 entries     u32 offset table, then zstd-compressed blocks of ~64 KB; each block a run of
             CBOR entries {lemma, pos, tags[], ipa[], sounds[], senses[{gloss, marks[],
-            examples[]}], translations{lang: [word]}, freq_rank}
+            examples[], pivot?{en_lemma_id, sense_id, confidence}}], freq_rank}
+xlat        `xlat-<target>` packs only: (en_lemma_id, sense_id) -> [{word, weight, gender}]
 labels      string table: form labels, sense marks, language codes
 ```
 
 Delivery: built offline by a Rust CLI in CI from the kaikki per-language extracts, released as
 assets and through the existing pack-host URL; on-phone building is dropped. `packs.json`
-lists `{kind, src, edition?, version, size, sha256, url}` rows and a `pairs` table of
-`{src, target, class, sampled_share}`. Reader access as in the first draft: memory-mapped on
+lists `{kind, lang, edition?, version, size, sha256, url}` rows (`ipa` and `lex` per source,
+`xlat` per target, `def` per dense cell) and a `pairs` table of `{src, target, class,
+pivot_share, pivot_precision}`. Reader access as in the first draft: memory-mapped on
 Android, read into WASM memory in the browser, pure-Rust zstd on both.
 
 ### What has to be sampled before the format is frozen
 
-One CI job over the per-language English-edition extracts: for each of the 54 sources, take
-the top twenty thousand lemmas by frequency rank, and for each target language count the share
-of lemmas with at least one `translations` entry into it, the share with IPA, and the share
-with at least one example. That table decides the class thresholds above, the size of a
-`lex-<src>` pack with translations included, and whether the `translations` field is dense
-enough to be the mechanism at all. If it is not dense for a source, that source's pairs are
-`partial` or `machine` and the product says so; the format does not change.
+The lossy thing is the join at the pivot, so that is what the sample measures, in two parts.
+Coverage: for each of the 54 sources, the top twenty thousand lemmas by frequency rank, and per
+target the share of their senses that received a confident pivot, at each candidate threshold.
+Precision: the dense edition cells (French and Chinese editions above a hundred thousand
+senses for a source, and the English edition itself for source-to-English) are the ground
+truth; for each source with such a cell, three hundred pivoted senses per target are compared
+with the target edition's own gloss of the same lemma and sense, and a hop counts as wrong
+when the target word is not among that edition's words for the sense. Good enough is a
+threshold at which precision is at least 95 percent on every ground-truth cell; the coverage
+that threshold leaves is then what classes the pairs. Pairs with no ground-truth cell inherit
+the threshold, which is why the threshold is chosen conservative rather than per pair. The
+same job measures gloss coverage, IPA share and example share per source, the size of
+`lex-<src>` with pivots and of each `xlat-<target>`, all reported into the manifest.
 
 ### Consequences
 
 - The builder and the reader are the same crate; a format change is a version bump and a
   rebuilt release, never a phone migration.
-- The pair matrix is no longer bounded by editions but by what the sample finds; the
+- The pair matrix is no longer bounded by editions but by what the pivot sample finds; the
   manifest's `pairs` table is the single source of truth for what a pair is, and the UI never
   offers a pair without its class.
-- The card gains `STATE-CARD-VIA-ENGLISH`; the picker and the pack manager show the class;
-  the pack manager lists packs per source, not per pair, with `def` packs as optional extras.
+- The card gains `STATE-CARD-VIA-ENGLISH`, which is also where an ambiguous pivot lands; the
+  picker and the pack manager show the class; the pack manager lists `ipa` and `lex` packs per
+  source, one `xlat` pack for the reader's target (none when it is English), and `def` packs
+  as optional extras.
+- Picking a target downloads one `xlat-<target>`; adding a source downloads its `lex` and
+  `ipa`; nothing is downloaded per pair.
 - Taplex's foreground build service, its SQLite layer and its unsynchronised handle go away.
 - CI needs the pack job, the sample job, and a monthly refresh; sizes and shares are measured
   by those jobs, not estimated here.
@@ -632,22 +663,31 @@ answer is the most prominent thing on the card and the transcription reads as it
 
 ### The provenance badge and the Wiktionary mark
 
-The dictionary badge carries the Wiktionary mark, not a drawing of it. The mark is a Wikimedia
-Foundation trademark used here nominatively, to say where the data came from; the file used,
-its Commons page and its licence are pinned in `data/marks.json` and shipped as an asset, so
-the question is settled there. Which mark: not the classic multilingual tile block, which
-turns to mud below about twenty pixels, but Wikimedia's own small-size Wiktionary mark, the
-one it ships for favicons, at `--mark-size` (16 px). The badge is mark plus the word
-"Wiktionary" at the Full and Compact tiers and the word alone at Strip, so the name is always
-present. Themes and modes: the mark is never recoloured; it sits on a fixed white plate
-(`--color-mark-plate`, the one colour token that is not themed) inside the badge, so on a
-dark ground it reads as a small white tile and the DR-10 contrast rules apply to the badge's
-text on the badge's background as before. Meaning: every provenance value uses the same badge
-shape and type, so the set reads as one row of labels; only the Wiktionary badge has a mark
-because only it has one, and "guess" and "synthesised" stay text in the guess colour. Name and
-operation: the badge is a link with the accessible name "Source: Wiktionary. Opens the entry
-on Wiktionary." and keyboard focus; the foot keeps its Wiktionary action as the primary way
-to the entry.
+The dictionary badge is the serif **W** letterform alone: no word beside it, no brackets, no
+tile block, no open book, at every density tier. The letterform is the W of the Wiktionary
+logo, not Wikipedia's mark: Wikipedia's W would say the wrong project even though it is the
+same Linux Libertine letterform, so `data/marks.json` pins the Wiktionary logo file on
+Wikimedia Commons (its exact file page and licence recorded and verified when pinned; the
+mark is a Wikimedia Foundation trademark used here nominatively to say where the data came
+from) and the asset is that file's W glyph, extracted, never redrawn. If extracting the glyph
+from the logo file proves impractical, the same letterform can be set from the Linux Libertine
+font under the OFL; that is a font, not Wikipedia's asset, and the record says so here rather
+than hiding it. The showcase typesets the same letterform from the font stack
+(`--font-mark`).
+
+Size, measured rather than assumed: the W was rendered at 12 to 18 px on all six palettes. A
+single serif letter survives small: it is identifiable at 13 px and comfortable at **15 px**,
+which is `--mark-size`, inside the 22 px pill (`--badge-height`) the other provenance values
+already use, so the row height did not have to change. Themes and modes: the W is a glyph,
+so it takes the badge's ink colour (accent) on the badge's ground (accent-bg) and the DR-10
+rule `accent/accentBg ≥ 4.5:1` covers it in every palette; no variant asset and no plate.
+Coherence: every provenance value is the same 22 px pill; the Wiktionary pill holds the W in
+the accent pair, the others ("guess", "synthesised") hold a word in small capitals in the
+guess pair, so the row reads as a row of provenance pills that differ by what they say, and
+the W reads as a wordmark-length label rather than a decoration. The via-English anchor uses
+the same W pill followed by "in English". Name and operation: the pill is a link with the
+accessible name "Source: Wiktionary. Opens the entry on Wiktionary." and keyboard focus; the
+foot keeps its Wiktionary action as the primary way to the entry.
 
 ### Consequences
 
