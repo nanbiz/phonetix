@@ -310,7 +310,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (::overlay.isInitialized) {
                 main.post {
                     overlay.beginMotion()
-                    if (USE_SAID_SCROLL && said != 0 && kotlin.math.abs(said) < SAID_TOO_FAR) {
+                    if (USE_SAID_SCROLL && kotlin.math.abs(said) >= SAID_TOO_SMALL &&
+                        kotlin.math.abs(said) < SAID_TOO_FAR
+                    ) {
                         overlay.told(said.toFloat())
                     }
                 }
@@ -2093,7 +2095,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
          */
         @Volatile
         @JvmStatic
-        var USE_SAID_SCROLL = false
+        var USE_SAID_SCROLL = true
+
+        /**
+         * Below this a reported scroll is a placeholder rather than a movement.
+         *
+         * A scroll view and a framework list report how far they moved in real pixels, and it
+         * arrives without being asked for, which is the best signal there is: through a fling
+         * the settings app reports 133, then 72, then 33, then 7, which is the deceleration
+         * itself. A Compose list reports one, every event, whatever it did. Believing that
+         * puts the speed at a fifth of a pixel a millisecond while the page is doing six, so
+         * the words stand still and the text flies past them.
+         *
+         * Judged on two apps nobody wrote for the test, against uiautomator's own reading of
+         * the screen: 3 of 171 transcriptions off their word with these deltas used, against
+         * 26 of 189 with them ignored.
+         */
+        const val SAID_TOO_SMALL = 2
 
         /** Past this, what a view says it scrolled by is not a scroll of a page: it is a
          *  jump, a relayout, or a number in units of its own. */
