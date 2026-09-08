@@ -49,12 +49,22 @@ def main():
             return cdp(ws, n[0], method, params)
         call("Page.enable")
         made = 0
+        wrote = set()
         for shape, width in (("phone", 390), ("desktop", 1280)):
             call("Emulation.setDeviceMetricsOverride", {
                 "width": width, "height": 1200, "deviceScaleFactor": 2, "mobile": False})
             call("Page.navigate", {"url": "file://" + PAGE})
             time.sleep(3.5)
-            made += cut(call, shape)
+            drawn, count = cut(call, shape)
+            wrote |= drawn
+            made += count
+        # Anything in the gallery this run did not draw is left over from a state that has been
+        # renamed or removed, so it goes. Swept after drawing rather than cleared before it, so
+        # a run that dies half way leaves the old pictures rather than none.
+        stale = sorted(f for f in os.listdir(IMG) if f.endswith(".png") and f not in wrote)
+        for f in stale:
+            os.remove(os.path.join(IMG, f))
+            print(f"swept, nothing draws it any more: {f}")
         print(f"wrote {made} images to {IMG}")
         return check()
     finally:
@@ -105,6 +115,7 @@ def cut(call, shape):
               })()
             """})["result"]["value"]
     made = 0
+    drawn = set()
     for uid, rects in boxes.items():
         slug = _re.sub(r"^(STATE|VIEW)-", "", uid).lower()
         rect = rects[0]
@@ -114,10 +125,12 @@ def cut(call, shape):
             "format": "png", "captureBeyondViewport": True,
             "clip": {"x": rect["x"], "y": rect["y"], "width": rect["w"],
                      "height": min(rect["h"], 4000), "scale": 1}})
-        with open(_os.path.join(IMG, f"{slug}-{shape}.png"), "wb") as f:
+        name = f"{slug}-{shape}.png"
+        with open(_os.path.join(IMG, name), "wb") as f:
             f.write(b64.b64decode(shot["data"]))
+        drawn.add(name)
         made += 1
-    return made
+    return drawn, made
 
 
 if __name__ == "__main__":
