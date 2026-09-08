@@ -35,10 +35,22 @@ APPS = [
     # being told anything.
     ("a Compose conversation", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity"),
 ]
+# Deliberately not here: a page whose text changes as fast as it can be read.
+#
+# That is the case the fault was described as, a chat with words showing up from below, and
+# this instrument cannot judge it. Reading the screen takes about a second, and a page writing
+# into itself has moved on by the time the reading is finished, so the tree and the overlay
+# describe two different screens and every difference between them reads as a fault. Pointed
+# at one, this reported sixteen of sixteen wrong on a page that was standing still.
+#
+# Judging it needs either a reading of the screen fast enough to be simultaneous, which
+# uiautomator is not, or a page that arrives in bursts and is still between them, which is
+# closer to what a chat does anyway. Neither is done yet.
 # What each app needs before it can be read, if anything.
 EXTRAS = {
-    "io.github.nanbiz.phonetix": ["--es", "mode", "chat", "--ei", "enable", "1",
-                                "--ei", "density", "3", "--ei", "allApps", "1"],
+    "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity": [
+        "--es", "mode", "chat", "--ei", "enable", "1",
+        "--ei", "density", "3", "--ei", "allApps", "1"],
 }
 # How far the middle of a transcription may sit outside the node whose text holds its word.
 #
@@ -174,7 +186,7 @@ def main():
     for name, activity in APPS:
         print(f"{name}:")
         pkg = activity.split("/")[0]
-        shell("am", "start", "-n", activity, *EXTRAS.get(pkg, []))
+        shell("am", "start", "-n", activity.split("#")[0], *EXTRAS.get(activity, []))
         time.sleep(5)
         judge(dev, "standing still", results, pkg)
         # A real gesture: a finger that lifts, so the app flings on after it.
