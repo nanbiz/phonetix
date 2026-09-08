@@ -166,3 +166,25 @@ distributions and the edition dimension all at once.
 Verified on hand-picked words only. Building it needs an index of the target language's glosses,
 which means the dumps rather than the per-word pages, and the sample to run is the same one:
 how often the best gloss match is the right word.
+
+## The recall side of the gloss join, sampled
+
+Twenty Spanish nouns with the German word each should reach, checking whether the German
+entry's own glosses share a head term with the Spanish entry's. **Twenty of twenty.**
+`perro`/`Hund` meet on "dog", `silla`/`Stuhl` on "chair", `camino`/`Weg` on "path", "route"
+and "way", `puente`/`Brücke` on "bridge", `llave`/`Schlüssel` on "key", `cocina`/`Küche` on
+"kitchen" and "cuisine".
+
+That is the half that decides whether the approach can work at all: if the right target word
+were not findable by its gloss, nothing else about the join would matter. Matching is on the
+head phrase, before any parenthesis, split on commas and semicolons, with the article and a
+verb's leading "to" removed.
+
+It is recall only. It says the right word is reachable, not that it is the one a search would
+pick out of everything else carrying the same gloss, and that is the precision question the
+defined sample still has to answer over a whole language rather than twenty hand-picked words.
+
+(Two things that made a first run read 15 of 20 were faults in the probe rather than the data:
+the German pages for Tür, Brücke, Küche and Schlüssel need their umlauts percent-encoded in
+the path, and "forest; woods; woodland" is one gloss holding three terms, so semicolons have to
+be split like commas.)
