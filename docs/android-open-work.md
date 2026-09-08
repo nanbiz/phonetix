@@ -213,6 +213,14 @@ Ticked items are done and verified by a suite; the rest are not.
     39 inside one drag.
   Where the number is real it now sets the layer's speed. Where it is not, nothing can be done
   with it.
+- [x] **Every suite is now answerable to a control**: `putThemWrongBy=200` puts every
+  transcription two hundred pixels from the word it names, after every filter that decides
+  what is drawn, and a suite that still passes cannot see the fault it claims to measure.
+  Asked of each: the photographs fail 9 checks, the features 10, the motion 8 - and the ink
+  suite and `android_overlay.py` pass unchanged. The overlay suite, seven thousand checks of
+  it, measures whether the words moved *as far as* the text did; shifting every word by the
+  same amount leaves every one of those differences untouched. Its greenness has never been
+  evidence that anything is on its word.
 - [ ] **The suite cannot resolve a change of thirty points on the moving case.** Three runs of
   one build gave the same page 4%, 37% and 41%; another gave 28%, 0% and 26%. Every conclusion
   about the movement drawn from a single run of it is worthless, and several were drawn that
