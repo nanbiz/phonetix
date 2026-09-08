@@ -113,3 +113,27 @@ source gloss means, is the approach worth measuring. String similarity is not.
 
 (Two rows of that sample are void: the test words were written without accents, so `rapido`
 found no entry and `sueno` matched a different word.)
+
+## Joining through the sense distribution does not fix it either
+
+Every translation carries `_dis1`, a distribution over the senses of the English lemma, so the
+second half of the join is answerable from the data. Tried: pick the English sense the source
+gloss means, then take the German translation whose distribution peaks on that sense. It picked
+Weise for camino through an English sense reading "Personal interaction", and "ins Rennen
+schicken" for correr through one reading "To strike (the ball)".
+
+The failure is in the first half, not the second. Deciding **which English sense a source gloss
+means** is the hard part: a source gloss is two or three words ("way, route", "chair") and an
+English sense is a full definition, so they share almost no vocabulary and a lexical match falls
+through to whichever sense came first.
+
+So both repairs measure worse than taking the first translation, and the naive join at about
+eighty-five percent is the best measured so far. What is needed is a way to say that "way,
+route" means one particular sense of "way", which is semantic matching rather than string
+comparison, and nothing in the data does it for us.
+
+That is worth weighing against what the tier is for. A dictionary answer is presented as the
+answer while machine translation is labelled a guess. A dictionary tier that is confidently
+wrong one time in seven is arguably worse than one that says it is guessing, so if this cannot
+be raised, the honest options are to show the English pivot alongside the target word, or to
+mark pivoted glosses as the inference they are rather than as dictionary provenance.
