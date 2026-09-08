@@ -1828,9 +1828,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Everything already held is brought up to where it now stands, so that one shift
         // describes lines read at two different moments.
         val already = HashSet<String>(held.size * 2)
+        // Which line of the app each held one is, so that meeting it again is recognised as
+        // the same line however far the carrying has taken it from where it really is.
+        val heldNodes = HashMap<Any, Planned>(held.size * 2)
         for (p in held) {
             p.rebase(lastShiftX, lastShiftY)
             p.measuredAt?.let { already.add(p.text + "@" + (it.top / LINE_SAME_PX)) }
+            heldNodes[Triple(p.node, p.from, p.length)] = p
         }
         val added = ArrayList<Planned>(held)
         var asked = 0
@@ -1841,6 +1845,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (!measureLine(p, allowedToAsk = asked < MEASURE_MOVING_MAX)) continue
             if (asked < MEASURE_MOVING_MAX) asked++
             val at = p.measuredAt ?: continue
+            // A line already held, met again. The strip to read is worked out from where the
+            // held lines are believed to be, so a belief that has drifted puts lines still on
+            // the plan inside it - and telling them apart by text and position kept both
+            // copies, because drifting far enough is exactly what makes the positions differ.
+            // A reader saw two pronunciations of one word, the stale one over other text: on a
+            // conversation, eleven of fifty-five transcriptions after a drag were a second
+            // copy a hundred and sixty pixels above the right one. The line just measured is
+            // the one that is right, so it replaces what was held.
+            val was = heldNodes[Triple(p.node, p.from, p.length)]
+            if (was != null) {
+                val where = added.indexOf(was)
+                if (where >= 0) added[where] = p
+                continue
+            }
             if (already.add(p.text + "@" + (at.top / LINE_SAME_PX))) added.add(p)
         }
         lastShiftY = 0f
