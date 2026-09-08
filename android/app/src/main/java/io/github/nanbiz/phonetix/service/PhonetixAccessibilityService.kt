@@ -175,11 +175,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         tooltip.hide()
                     }
                     overlay.applyTouchability()
+                    askForTheButton(s.useButton)
                     scrollOnly = false
                     schedule(0L)
                 }
             }
         }
+        askForTheButton(SettingsStore.current.useButton)
         // The accessibility button, which is the one place a reader can reach without leaving
         // what they are reading: it sits in the navigation bar or floats over the screen, and
         // it is where a service that changes what every app looks like belongs. The tile in
@@ -1552,6 +1554,29 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * Only where the holder is a row rather than a column. A shift is measured from an edge,
      * and a view spanning the document has both its edges off the screen.
      */
+    /**
+     * Ask the system for the accessibility button, or stop asking.
+     *
+     * The flag is declared in the service's XML, which is read once when the service is bound,
+     * so a reader who does not want the button cannot be served by that file alone. The same
+     * flags live in the info the service can hand back at runtime, and setting them there
+     * takes effect immediately: the button appears or goes away without the service being
+     * turned off and on again.
+     */
+    private fun askForTheButton(wanted: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        runCatching {
+            val info = serviceInfo ?: return
+            val flag = android.accessibilityservice.AccessibilityServiceInfo
+                .FLAG_REQUEST_ACCESSIBILITY_BUTTON
+            val has = (info.flags and flag) != 0
+            if (has == wanted) return
+            info.flags = if (wanted) info.flags or flag else info.flags and flag.inv()
+            serviceInfo = info
+            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "BUTTON asked=$wanted")
+        }.onFailure { android.util.Log.w("Phonetix", "could not change the button", it) }
+    }
+
     private fun rememberACheaperNode(p: Planned, at: android.graphics.Rect) {
         p.askNode = null
         p.askAt = null

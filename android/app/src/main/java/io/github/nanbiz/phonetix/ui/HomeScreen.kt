@@ -60,6 +60,7 @@ fun HomeScreen(
     onEnabled: (Boolean) -> Unit,
     onDensity: (Int) -> Unit,
     onTouchWords: (Boolean) -> Unit,
+    onUseButton: (Boolean) -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenApps: () -> Unit,
@@ -97,6 +98,7 @@ fun HomeScreen(
         )
 
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
+        ButtonCard(on = settings.useButton, onUseButton = onUseButton)
 
         AppsCard(settings = settings, onOpenApps = onOpenApps)
 
@@ -249,6 +251,35 @@ private fun StatusDot(on: Boolean) {
  * transcriptions. That is the whole of the trade, and it is put plainly here because a reader
  * who turns it on and then cannot scroll would have no way of guessing why.
  */
+@Composable
+private fun ButtonCard(on: Boolean, onUseButton: (Boolean) -> Unit) {
+    SectionCard(title = "The accessibility button") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (on) "A button switches it off and on" else "No button",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    if (on) {
+                        "The system puts a button in the navigation bar, or floating over " +
+                            "the screen. Tapping it turns the words off and on without " +
+                            "leaving what you are reading."
+                    } else {
+                        "Nothing is added to your screens. The switch in the notification " +
+                            "shade does the same job, two swipes away."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = on, onCheckedChange = onUseButton)
+        }
+    }
+}
+
 @Composable
 private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
     SectionCard(title = "Touching a word") {

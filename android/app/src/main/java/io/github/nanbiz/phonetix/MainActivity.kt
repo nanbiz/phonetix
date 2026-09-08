@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
                     onEnabled = SettingsStore::setEnabled,
                     onDensity = SettingsStore::setDensity,
                     onTouchWords = SettingsStore::setTouchWords,
+                    onUseButton = SettingsStore::setUseButton,
                     onOpenAccessibility = { openAccessibilitySettings() },
                     onOpenOverlay = { openOverlaySettings() },
                     onOpenApps = { showApps = true },
