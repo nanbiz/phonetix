@@ -149,9 +149,17 @@ Spanish `perro` glosses "dog". German `Hund` glosses "dog, hound". Spanish `sill
 "chair", German `Stuhl` glosses "a chair (to sit on)". Spanish `camino` glosses "way, route",
 German `Weg` glosses "route, way (to get from one place to another)".
 
-All three of the failures the naive pivot produced come out right this way, and the words that
-misled it separate cleanly: `Sessel` glosses "armchair, easy chair" and `Weise` glosses "way,
-manner", so neither is confusable with the gloss the Spanish word carried.
+All three of the failures the naive pivot produced come out right this way. The words that
+misled it are separated by **how much** they share rather than by whether they share anything,
+which is a distinction worth being exact about: `Sessel` glosses "armchair, easy chair", which
+offers no term the gloss "chair" carries, but `Weise` glosses "way, manner" and `camino` glosses
+"way, route", so those two do share a term. What tells `Weg` from `Weise` is that `Weg` glosses
+"route, way" and shares both. So the join is a count of shared terms and the decision is made by
+comparing counts, with no answer at all when the best does not clearly beat the runner up.
+
+Writing that as a test is what caught it: a first implementation asked whether a term was shared
+at all and matched `camino` to `Weise`, which is exactly the confident wrong answer the whole
+join is meant to avoid.
 
 This is why the earlier attempts failed. A translation's sense tag ("male canine") and an
 English lemma's definition ("a domesticated carnivorous mammal...") are a different register

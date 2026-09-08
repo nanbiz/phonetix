@@ -1,0 +1,10 @@
+[package]
+name = "lexcore"
+version = "0.1.0"
+edition = "2021"
+description = "The reading core: what a word means, how it is said, and which of them are worth annotating."
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
