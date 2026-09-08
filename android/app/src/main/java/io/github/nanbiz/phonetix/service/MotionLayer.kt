@@ -109,6 +109,10 @@ class MotionLayer(private val context: Context) {
         const val CARRY_LIMIT_PX = 400f
         /** How much further a steady movement is predicted into than a changing one. */
         const val STEADY = 2.5f
+
+        /** Below this the layer has stopped believing the speed it has, and what a page says
+         *  it moved is the only thing left that knows the page is moving. */
+        const val TRUST_ENOUGH = 0.5f
     }
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -259,6 +263,27 @@ class MotionLayer(private val context: Context) {
         // tens of milliseconds apart, so it replaces it and the carrying goes on smoothly.
         if (since in 8..400) {
             vy = (-dy / since).coerceIn(-Fixed.SANE_PX_PER_MS, Fixed.SANE_PX_PER_MS)
+        }
+        // And carried by what the page says it moved, not only at the speed that implies.
+        //
+        // A speed is only carried while the reading behind it is trusted, and under load no
+        // reading is: the words then follow about a fifth of the movement, so a page going
+        // twelve hundred pixels takes them two hundred and fifty. What the page reports is not
+        // a prediction to be distrusted, it is its own account of what already happened.
+        //
+        // Only while the layer has stopped believing its own speed, which is what starvation
+        // looks like from in here. When readings are arriving the frame below is already
+        // carrying the words correctly and this would move them a second time: applied
+        // always, it took the fast part of a fling on an idle machine from nothing wrong to
+        // nine per cent. Applied only when the reading behind the speed has gone stale, it is
+        // the difference between the words following a fifth of the movement and a third.
+        //
+        // The interval it covers is consumed, so the frame that follows integrates from now
+        // rather than from before this arrived, and the same movement is not counted twice.
+        if (trustAt(now) < Fixed.TRUST_ENOUGH) {
+            predictedY = (predictedY - dy).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
+            lastFrameAt = now
+            view?.let { it.translationY = predictedY }
         }
     }
 
