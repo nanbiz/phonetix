@@ -34,6 +34,12 @@ APPS = [
     # reports a scroll delta of one whatever it did, so the overlay has to follow it without
     # being told anything.
     ("a Compose conversation", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity"),
+    # A conversation being added to: a further message arrives every three seconds, so rows
+    # move to make room for it while the overlay is carrying words that belong to them. In
+    # bursts rather than continuously, because a page that never stops changing cannot be held
+    # against a reading of the screen that takes a second to take.
+    ("a conversation being added to",
+     "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity#growing"),
 ]
 # Deliberately not here: a page whose text changes as fast as it can be read.
 #
@@ -51,6 +57,9 @@ EXTRAS = {
     "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity": [
         "--es", "mode", "chat", "--ei", "enable", "1",
         "--ei", "density", "3", "--ei", "allApps", "1"],
+    "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity#growing": [
+        "--es", "mode", "chat", "--ei", "enable", "1", "--ei", "density", "3",
+        "--ei", "allApps", "1", "--ei", "growEvery", "3000"],
 }
 # How far the middle of a transcription may sit outside the node whose text holds its word.
 #
@@ -186,8 +195,19 @@ def main():
     for name, activity in APPS:
         print(f"{name}:")
         pkg = activity.split("/")[0]
+        # A fresh process for our own page, because the activity is already there from the
+        # look before and a second intent only reaches onNewIntent: the Compose content is not
+        # built again, so anything that shapes it is silently dropped and the look tests the
+        # page from last time. Force stopping takes the service with it, so it is turned back
+        # on afterwards.
+        if pkg == "io.github.nanbiz.phonetix":
+            shell("am", "force-stop", pkg)
+            time.sleep(1.5)
         shell("am", "start", "-n", activity.split("#")[0], *EXTRAS.get(activity, []))
-        time.sleep(5)
+        time.sleep(2)
+        if pkg == "io.github.nanbiz.phonetix":
+            dev.enable_service()
+        time.sleep(4)
         judge(dev, "standing still", results, pkg)
         # A real gesture: a finger that lifts, so the app flings on after it.
         # A fling is over in well under a second and one dump of the tree takes about that

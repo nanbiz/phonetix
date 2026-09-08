@@ -123,7 +123,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             root.addView(
                 // "chat" is the same list with a message in each row rather than a line,
                 // which is the shape of the app a reader watches.
-                LazyListPage.build(this, scope, asMessages = mode == "chat") { p ->
+                LazyListPage.build(
+                    this,
+                    scope,
+                    asMessages = mode == "chat",
+                    growEvery = intent.getIntExtra("growEvery", 0),
+                ) { p ->
                     composePage = p
                 },
                 FrameLayout.LayoutParams(

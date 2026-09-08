@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -78,11 +80,39 @@ object LazyListPage {
         context: Context,
         scope: CoroutineScope,
         asMessages: Boolean = false,
+        /**
+         * How often a further message arrives, in milliseconds, or zero for a page that does
+         * not grow.
+         *
+         * A conversation is not a fixed list: messages arrive at the bottom while the reader
+         * is scrolling, and the words the overlay is carrying belong to rows that have just
+         * moved to make room. Arriving in bursts rather than continuously is deliberate, and
+         * it is both what a chat actually does and the only shape a test can judge: reading
+         * the screen takes about a second, so a page that never stops changing cannot be held
+         * against any reading of it.
+         */
+        growEvery: Int = 0,
         onReady: (ScrollMotion.Page) -> Unit,
     ): View {
         val view = ComposeView(context)
         view.setContent {
             val state: LazyListState = rememberLazyListState()
+            val base = if (asMessages) MESSAGES else ROWS
+            // The rows on the page now. It starts as two thirds of them and the rest arrive,
+            // so a test sees a conversation being added to rather than a list that was always
+            // this long.
+            val shown = remember { mutableStateListOf<String>().also { it += base.take(base.size * 2 / 3) } }
+            if (growEvery > 0) {
+                LaunchedEffect(Unit) {
+                    var next = shown.size
+                    while (next < base.size) {
+                        kotlinx.coroutines.delay(growEvery.toLong())
+                        shown += base[next]
+                        android.util.Log.d("PhonetixTest", "ARRIVED ${'$'}next ${'$'}{base[next]}")
+                        next++
+                    }
+                }
+            }
             LaunchedEffect(state) {
                 onReady(page(view, state, scope))
                 // The page's own account of where it is, reported as it changes, which is the
@@ -96,7 +126,7 @@ object LazyListPage {
                     .fillMaxSize()
                     .background(ComposeColor(Color.BLACK)),
             ) {
-                items(if (asMessages) MESSAGES else ROWS) { row ->
+                items(shown) { row ->
                     Text(
                         text = row,
                         color = ComposeColor.White,
