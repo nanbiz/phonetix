@@ -17,30 +17,33 @@ conversation of wrapped messages.
   against the bounds the line had before the app laid it out again, two copies of a line kept
   when the strip read met one it was already carrying, and a following pass spending a second
   of a 1300ms drag asking a page where its characters are.
-- [ ] **Through a drag: 14 percent of transcriptions on a list, 25 on wrapped paragraphs, 46 on
-  a conversation, are more than a line from their own word.** Down from 49, 81 and 78. Within
-  one reading the lines fan out - each line lower on the screen further behind its own text
-  than the one above it, about 38 pixels top to bottom - and the whole set lags the page by
-  another 50 to 90. Carrying each line forward from its own moment was tried and measured
-  better on a list, worse on a conversation, and inside the noise on paragraphs.
-- Tried and measured worse, so not in the code: carrying each line of a following pass forward
-  from its own read moment to the end of the pass (the full read already does this). Ten drags
-  each: 16 percent against 11 on a list, 48 against 49 on a conversation. And refusing to
-  measure a speed over an interval shorter than a frame, where whole-pixel bounds make the
-  answer several times the truth: better on a conversation (36 to 29) and a list (9 to 7),
-  worse on wrapped paragraphs (23 to 34).
-- Also tried and measured worse, ten drags a page each: predicting from the first reading of a
-  movement (`predictFromFirst`), 44 percent against 36 on a conversation, which confirms the
-  older note that the first speed of a drag describes neither the still page nor the moving one.
-  And believing a measured speed in proportion to how long it was measured over, rather than
-  refusing short intervals outright: better on a conversation, 36 to 29, and worse everywhere
-  else, 23 to 35 on wrapped paragraphs and 9 to 15 on a list, and it broke the settled case on
-  paragraphs from none to 27 percent, because a speed that is smoothed never snaps to zero when
-  the page stops and the layer keeps carrying the words after the drag has ended.
+- [x] **Through a drag: 7 percent on a list, 16 on wrapped paragraphs, 7 on a conversation**,
+  ten drags of each. It was 49, 81 and 78. The last and largest step was to stop reading the
+  strip of screen that has just scrolled into view while the page is moving: that read walks
+  the app's node tree, two to three hundred milliseconds a time, two to four times in a drag,
+  and the following passes it starved are the only thing keeping the words on their text. It
+  cost nothing in what is drawn, because a stale reading is one the layer refuses to draw from.
+- Measured and settled, so do not revisit without better evidence than this: measuring lines
+  that have never been measured while the page moves, which is what `MEASURE_MOVING_MAX`
+  allows. Asking an app where a line's characters are takes about a quarter of a second. At
+  twelve, with the strip read already gone, a conversation went from 7 percent wrong to 20 with
+  three drags of ten above 85 percent, and the settled case broke on one drag in ten. It buys
+  coverage during the movement and costs correctness, which is the wrong way round: nothing on
+  a word is better than another word's pronunciation on it.
+- Tried and measured worse, ten drags a page each, so also settled: carrying each line of a
+  following pass forward from its own read moment; refusing a speed measured over less than a
+  frame; believing a speed in proportion to how long it was measured over, which broke the
+  settled case because a smoothed speed never snaps to zero when the page stops; and predicting
+  from the first reading of a movement, whose speed describes neither the still page nor the
+  moving one.
 - Three attempts on the speed estimate have now measured worse. On this evidence what is left
-  of the mid-drag error is not the speed.
+  of the mid-drag error is not the speed. What the diagnostics show is that the layer carries
+  nothing for the first two to four hundred milliseconds of a drag, by the rule that refuses to
+  predict from a first reading, and that its carry then saturates when readings arrive too far
+  apart for it to keep trusting them. Both are about how soon and how often a reading arrives.
 - [ ] **Four drags of one page cannot separate a ten point difference.** One run of one build
-  gave 23, 54, 57 and 72 percent. Anything measured from here needs more drags than that.
+  gave 23, 54, 57 and 72 percent. Ten drags of a page is the smallest honest comparison, and
+  `scripts/proofread/android_words.py` judges the layer's own frames rather than the readings.
 
 ## Scrolling
 
