@@ -193,6 +193,31 @@ non-English edition only for the cells the measurement shows dense, a build thre
 hundred thousand senses, which today admits fourteen cells with French and Chinese first, and
 is optional on top of the two packs a pair already needs.
 
+### The sample that sets the threshold
+
+What is measured, per pair of languages: for each sense of the top twenty thousand lemmas of
+the source, does its English gloss reach exactly one lemma of the target once the part of
+speech is applied, and is that lemma the right one. The threshold in `data/` is then set so
+that the joins it admits are right at least ninety-five percent of the time, precision first,
+and the share of senses that clear it is the pair's class.
+
+Measured so far, and written up in `coverage.md`:
+
+- **Recall**: twenty Spanish nouns against the German word each should reach. Twenty of twenty
+  share a gloss head term, so the right word is findable. That is the half that decides whether
+  the approach is possible at all.
+- **Ambiguity**: a tenth of the German dump, 20,061 entries, gives 26,482 gloss terms of which
+  eighty-one percent name exactly one lemma; the median is one lemma and the ninetieth
+  percentile two. Read that as a lower bound on how determinate the join is, since a fuller
+  index puts more lemmas behind each gloss.
+- Two narrowings come free and are part of the build rather than the measurement: the part of
+  speech, which separates a noun from a verb sharing a gloss ("book" against "buchen"), and the
+  other terms of a multi-term gloss ("way" alone reaches eight German lemmas, "way, route"
+  reaches Weg).
+
+What is not measured is the whole of one language against the whole of another, which needs the
+two dumps rather than the per-word pages, about a gigabyte each.
+
 ### Consequences
 
 - The builder and the reader are the same crate; a format change is a version bump and a
