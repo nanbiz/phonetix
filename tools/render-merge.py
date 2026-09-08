@@ -56,9 +56,36 @@ def main():
             time.sleep(3.5)
             made += cut(call, shape)
         print(f"wrote {made} images to {IMG}")
-        return 0
+        return check()
     finally:
         chrome.terminate()
+
+
+def check():
+    """The page and the model have to name the same states.
+
+    Pixels cannot be compared between machines, because the page asks for system font stacks
+    and a runner resolves them differently from this one, so every box comes out a different
+    size. What can be compared is which states exist: a state drawn on the page and never
+    declared, or declared and never drawn, is the mistake this catches, and it is the one that
+    left six views naming twelve pictures nobody produced.
+    """
+    with open(os.path.join(BOOK, "model.json"), encoding="utf-8") as f:
+        model = json.load(f)
+    declared = {r for kind in ("views", "states") for it in model[kind]
+                for r in it.get("renders", [])}
+    drawn = {n for n in os.listdir(IMG) if n.endswith(".png")}
+    missing = sorted(declared - drawn)
+    extra = sorted(drawn - declared)
+    for n in missing:
+        print(f"declared and not drawn: {n}")
+    for n in extra:
+        print(f"drawn and not declared: {n}")
+    if missing or extra:
+        print(f"{len(missing)} declared without a picture, {len(extra)} pictures nothing declares")
+        return 1
+    print(f"the page and the model name the same {len(declared)} renders")
+    return 0
 
 
 def cut(call, shape):
