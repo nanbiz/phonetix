@@ -1,0 +1,15 @@
+[package]
+name = "lexcore-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "The reading core as the browser sees it."
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+lexcore = { path = ".." }
+# Pinned to exactly the wasm-bindgen CLI that Nix provides. The two carry a schema
+# version that has to match exactly, and the CLI is the fixed point here because it is
+# declared in the system config rather than fetched per project.
+wasm-bindgen = "=0.2.121"
