@@ -423,6 +423,27 @@
      "to": "REQ-THEMES"
     }
    ]
+  },
+  {
+   "uid": "REQ-ESPEAK-EVERYWHERE",
+   "tag": "REQ",
+   "title": "espeak-ng on both surfaces",
+   "statement": "The last-resort phonemiser and the synthesised voice are espeak-ng on the browser and on Android alike, so no card state and no audio is degraded on one surface; per-language espeak data is fetched with that language's packs.",
+   "status": "proposed",
+   "relations": [
+    {
+     "role": "realised_by",
+     "to": "STATE-CARD-GUESS"
+    },
+    {
+     "role": "realised_by",
+     "to": "STATE-CARD-NONE"
+    },
+    {
+     "role": "depends",
+     "to": "REQ-PARITY"
+    }
+   ]
   }
  ],
  "views": [
@@ -916,7 +937,7 @@
    "uid": "STATE-CARD-GUESS",
    "tag": "STATE",
    "title": "Card guess",
-   "statement": "No pack entry: the machine-translated line as the headline marked as a guess, then a long synthesised IPA that wraps within the pronunciation line with every symbol still reachable, a grammar line saying why, and the parts that are in the dictionary. Drawn at the Full tier.",
+   "statement": "No pack entry: the machine-translated line as the headline marked as a guess, then a long IPA synthesised by espeak-ng, on both surfaces, that wraps within the pronunciation line with every symbol still reachable, a grammar line saying why, and the parts that are in the dictionary. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-guess.png",
@@ -925,8 +946,8 @@
    "sources": [
     "ui/card/Card.svelte",
     "android/card/CardSheet.kt",
-    "engines/bergamot-wasm/index.ts",
-    "engines/mlkit/MlKitTranslator.kt"
+    "engines/bergamot",
+    "engines/espeak"
    ],
    "relations": [
     {
@@ -993,7 +1014,7 @@
    "uid": "STATE-CARD-NONE",
    "tag": "STATE",
    "title": "Card none",
-   "statement": "Nothing in the pack and no engine could answer: the message in the headline slot, the synthesised pronunciation if espeak had one, one sentence saying why. Drawn at the Full tier.",
+   "statement": "Nothing in the pack and no engine could answer: the message in the headline slot, the espeak-ng pronunciation (present on both surfaces), one sentence saying why. Drawn at the Full tier.",
    "status": "proposed",
    "renders": [
     "surface-light-card-none.png",
@@ -1001,7 +1022,8 @@
    ],
    "sources": [
     "ui/card/Card.svelte",
-    "android/card/CardSheet.kt"
+    "android/card/CardSheet.kt",
+    "engines/espeak"
    ],
    "relations": [
     {

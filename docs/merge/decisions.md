@@ -220,8 +220,8 @@ The core exposes three calls, the same on both platforms:
 Payloads are records (uniffi) or a serialised struct (wasm-bindgen); a batch of a few hundred
 runs is one call and one serialisation each way. There is no per-word and no per-node call.
 
-Engines stay outside the core behind one port interface: espeak (WASM in the browser; absent
-on Android in v1, where `guess` IPA comes from the pack's nearest lemma or is empty), and
+Engines stay outside the core behind one port interface: **espeak-ng on both surfaces** (WASM
+in the browser, a native library on Android; see the paragraph after next), and
 **Bergamot on both surfaces**: the WASM build in the browser and a native arm64 build of
 `bergamot-translator` on Android, loading the same model files. This amends the first draft
 of this record, which had ML Kit on Android. Two facts changed it (DR-7): ML Kit returns an
@@ -234,6 +234,24 @@ which case CTranslate2 (documented Android support, `return_attention` for align
 fallback at the price of converted models and the larger per-pair download. ML Kit is off the
 plan. The `Translator` port carries alignments as part of its result on both surfaces.
 
+espeak-ng on Android. The first draft left it out, with `guess` and `none` on Android falling
+back to the pack's nearest lemma or nothing, and word audio to the system text-to-speech
+voice. Once the Marian build exists the project owns the NDK toolchain, per-ABI packaging and
+CI caching that espeak-ng needs, and espeak-ng is a small plain C library that is built for
+Android routinely elsewhere, so the marginal cost is one more CMake target. What it costs and
+how it is shipped: the library is a native `.so` per ABI, small next to Marian; the data the
+browser ships as 23 MB is not one blob but a language-independent core (phoneme tables and
+phondata) plus one dictionary file per language, and the per-language files are the bulk.
+The APK bundles the core and downloads `espeak-<lang>` as a manifest item beside the IPA and
+lex packs of that language, so the APK grows by the library and the core and each language
+by its own dictionary, all measured by the build. The data cannot be derived from the packs:
+espeak's dictionaries are rule tables, not Wiktionary lookups, which is exactly why it is the
+last tier; the IPA pack answers first and espeak only fills what the pack lacks. Audio is
+espeak's own synthesis on both surfaces, through Web Audio in the browser and AudioTrack on
+Android, so the same voice says the word everywhere; human recordings from the pack still win
+where they exist (DR-8). `guess` and `none` in DR-1 therefore hold on both surfaces as
+written.
+
 ### Consequences
 
 - Modules and their ownership are in `modules.md`. Data tables become authored JSON under
@@ -242,6 +260,7 @@ plan. The `Translator` port carries alignments as part of its result on both sur
 - Design tokens are one JSON file generating the CSS custom properties and a Kotlin object.
 - Safari on iOS needs `unsafe-eval` for WASM; it already would for espeak, so the core adds no
   new cost there.
+- Android carries espeak-ng natively; no state is degraded on Android relative to the browser.
 - The content script never links the core; it is a DOM scanner and a renderer.
 
 ---
