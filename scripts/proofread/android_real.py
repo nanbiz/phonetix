@@ -22,7 +22,7 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 
-from android_harness import Device, adb, shell
+from android_harness import SERIAL, Device, adb, shell
 
 # The apps to read. Each is on the device already and none of them knows about this.
 APPS = [
@@ -194,6 +194,20 @@ def main():
               "--ei", "useSaidScroll", said)
         time.sleep(2)
         print(f"(control: the app's own scroll deltas are {'used' if said != '0' else 'ignored'})")
+    # Busy work on the device, because the fault this is looking for is a starvation fault.
+    #
+    # Through a fling the overlay has to read the app faster than the page moves, and when it
+    # cannot, every line it was following leaves the screen before the next reading. On an idle
+    # emulator that never happens and every run is clean; the failures that were photographed
+    # appeared while the machine was loaded. A phone running a real app is the loaded case, so
+    # the load is part of the test rather than a thing to wait out.
+    busy = []
+    for _ in range(int(os.environ.get("PHONETIX_LOAD", "0"))):
+        busy.append(subprocess.Popen(
+            ["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+    if busy:
+        print(f"(the device is running {len(busy)} busy loops while this is measured)")
     results = []
     for name, activity in APPS:
         print(f"{name}:")
@@ -236,12 +250,28 @@ def main():
                 shell("input", "swipe", "540", "600", "540", "1500", "250")
                 time.sleep(2)
         judge(dev, "once it has settled", results, pkg)
-    wrong = sum(w for _l, w, _c in results)
+    # Reported per moment, not pooled. A look 300ms into a fling and one at 850ms are
+    # different questions - one catches the page at speed, the other after it has settled -
+    # and adding them together gave the same build 0 of 679 one run and 232 of 1124 the next,
+    # which made every comparison meaningless.
+    by_moment = {}
+    for label, wrong, checked in results:
+        moment = label.strip()
+        got = by_moment.setdefault(moment, [0, 0, 0])
+        got[0] += wrong
+        got[1] += checked
+        got[2] += 1
+    print()
+    total = 0
+    for moment, (wrong, checked, looks) in by_moment.items():
+        share = f"{100 * wrong / checked:.0f}%" if checked else "-"
+        print(f"  {moment:26} {wrong:4} of {checked:5} ({share:>4}) over {looks} looks")
+        total += wrong
     checked = sum(c for _l, _w, c in results)
-    clean = sum(1 for _l, w, _c in results if not w)
-    print(f"\n{wrong} of {checked} transcriptions were not on their word, "
-          f"over {len(results)} looks, {clean} of which were clean")
-    return 1 if wrong else 0
+    print(f"  {'every moment':26} {total:4} of {checked:5}")
+    for p in busy:
+        p.kill()
+    return 1 if total else 0
 
 
 if __name__ == "__main__":
