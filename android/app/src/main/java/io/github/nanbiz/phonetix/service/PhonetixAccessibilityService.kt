@@ -2,6 +2,7 @@ package io.github.nanbiz.phonetix.service
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.RectF
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -279,6 +280,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the moment one starts, and predicts between the measurements the loop below
         // feeds it.
         if (isScroll) {
+            // What the app says it scrolled by, against what it really moved, so a test can
+            // say whether these are worth carrying words on. They disagree - 1918 reported
+            // against 1440 real, once - and the question is whether they disagree by a
+            // constant, which could be learned, or unpredictably, which could not.
+            if (BuildConfig.DEBUG && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "SAIDSCROLL ${android.os.SystemClock.uptimeMillis()} " +
+                        "${event?.scrollDeltaY} from ${event?.packageName}",
+                )
+            }
             if (::tooltip.isInitialized) tooltip.hide()
             if (::overlay.isInitialized) main.post { overlay.beginMotion() }
             lastMotionAt = android.os.SystemClock.uptimeMillis()

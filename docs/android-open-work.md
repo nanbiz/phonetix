@@ -198,6 +198,15 @@ Ticked items are done and verified by a suite; the rest are not.
   milliseconds, and between two passes that far apart the words are wherever the prediction put
   them. Measured and reverted for making it no better: capping how far the words are carried on
   one reading, and withholding them on the small windows as well as on the layer.
+- [ ] **Following from something other than the app's answers.** Two ways were measured and
+  neither works. The display can be photographed by the service, but the system refuses more
+  than about three a second - back to back, one frame then thirteen refusals in thirty
+  milliseconds, all "interval time short"; ten of ten only at 350ms apart - against thirty
+  answers a second from the app. And a scroll event carries how far the view says it moved,
+  which is accurate on a ScrollView (997px reported against 991 real) and worthless on exactly
+  the pages that need it: a Compose list reports -1 per event and a ListView reports 0. The
+  only fast route to pixels is a screen recording, which needs the reader's consent and an
+  ongoing notification, and is a decision about what the app is rather than a fix.
 - [ ] **What is left of the missing ones: the lines arriving at the bottom.** What is
   missing is the lines arriving at the bottom: they are not in the plan, and putting them
   there means reading the strip of screen they arrived in, which costs 130ms typically and
