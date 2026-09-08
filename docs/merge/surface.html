@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Answer surface states</title>
+<style>
+/* ------------------------------------------------------------------
+   Design tokens. Every colour, size, radius and spacing used below is
+   declared here once; tokens.json mirrors these names for the Kotlin
+   side. Colour is two layers: a palette per theme and mode (--p-*),
+   and the semantic roles the components use (--color-*), aliased onto
+   the palette once. Sizes, spacing and radii are theme-independent
+   unless a theme block overrides a rule on purpose.
+   ------------------------------------------------------------------ */
+:root {
+  /* type */
+  --font-ui:   -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-ipa:  "Charis SIL", "Doulos SIL", "Gentium Plus", "Noto Serif", "DejaVu Serif", Georgia, serif;
+  --font-page: Georgia, "Noto Serif", "Times New Roman", serif;
+  --font-size-headline: 22px;
+  --font-size-lemma:  17px;
+  --font-size-ipa:    16px;
+  --font-size-ipa-lens: 13px;
+  --font-size-body:   15px;
+  --font-size-sense:  14px;
+  --font-size-small:  12px;
+  --font-size-label:  11px;
+  --font-size-page:   17px;
+  --font-size-lens:   14px;
+  --font-size-symbol: 32px;
+  --ruby-scale:       0.62;
+  --ruby-ipa-scale:   0.55;
+  --line-body:        1.45;
+  --line-page:        1.5;
+  --ruby-glyph-line:  1.15em;  /* the annotated word's own line box */
+  --ruby-room-1:      0.95em;   /* room above the word for one ruby line */
+  --ruby-room-2:      1.6em;  /* room for gloss plus IPA */
+  --ruby-overlap:     0.12em;  /* how far the ruby block reaches into the glyph line */
+  --weight-regular:   400;
+  --weight-medium:    500;
+  --weight-bold:      650;
+
+  /* space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* size */
+  --card-width:        360px;
+  --card-max-height:   60vh;
+  --popover-width:     300px;
+  --breakpoint-phone:  600px;   /* mirrored literally in the @media rule below */
+  --button-height:     36px;
+  --touch-target:      44px;
+  --icon-size:         20px;
+  --audio-size:        28px;
+  --lens-size:         56px;
+  --lens-ring:         3px;
+  --handle-width:      36px;
+  --handle-height:     4px;
+  --progress-height:   6px;
+  --toggle-width:      40px;
+  --toggle-height:     22px;
+  --skeleton-height:   12px;
+  --border-width:      1px;
+  --tier-full-min-width:    320px;  /* Full tier needs both minimums */
+  --tier-full-min-height:   400px;
+  --tier-compact-min-width: 240px;  /* below either Compact minimum the card is a Strip */
+  --tier-compact-min-height: 240px;
+  --motion-dwell:      150ms;  /* a drag that pauses this long counts as stopped */
+  --diagram-width:     96px;
+  --diagram-height:    72px;   /* 4:3 slot; the fetched image is letterboxed inside it */
+
+  /* radius */
+  --radius-card:   14px;
+  --radius-chip:   999px;
+  --radius-symbol: 6px;
+  --radius-button: 8px;
+  --radius-bar:    3px;
+
+  /* elevation */
+  --shadow-card:    0 8px 28px var(--color-shadow);
+  --shadow-popover: 0 6px 20px var(--color-shadow);
+}
+
+/* Palettes: one block per theme and mode. */
+.theme-paper.mode-light {
+  --p-page-bg: #f3f1ec;
+  --p-surface: #ffffff;
+  --p-surface-raised: #f8f7f3;
+  --p-ink: #1c1b19;
+  --p-ink-muted: #5e5a52;
+  --p-ink-faint: #767169;
+  --p-border: #e2ded5;
+  --p-accent: #2f6f9f;
+  --p-accent-ink: #ffffff;
+  --p-accent-bg: #e7f0f7;
+  --p-guess: #8a4f0c;
+  --p-guess-bg: #fbefdc;
+  --p-chip-bg: #ece9e2;
+  --p-chip-ink: #4a463f;
+  --p-ipa-consonant: #2f4f70;
+  --p-ipa-vowel: #8a4b12;
+  --p-ipa-other: #767169;
+  --p-ruby-hue: 210;
+  --p-skeleton: #e8e5de;
+  --p-danger: #a63a2a;
+  --p-danger-bg: #f9e6e2;
+  --p-shadow: rgba(20, 18, 14, 0.18);
+  --p-scrim: rgba(20, 18, 14, 0.06);
+  color-scheme: light;
+}
+.theme-paper.mode-dark {
+  --p-page-bg: #15161a;
+  --p-surface: #1f2126;
+  --p-surface-raised: #272a30;
+  --p-ink: #ecebe6;
+  --p-ink-muted: #aaa69d;
+  --p-ink-faint: #8e8a82;
+  --p-border: #33363d;
+  --p-accent: #7fb3dc;
+  --p-accent-ink: #10202e;
+  --p-accent-bg: #223543;
+  --p-guess: #e0a85a;
+  --p-guess-bg: #3a2d1a;
+  --p-chip-bg: #30333a;
+  --p-chip-ink: #d3d0c8;
+  --p-ipa-consonant: #a9c4dc;
+  --p-ipa-vowel: #e0b070;
+  --p-ipa-other: #8e8a82;
+  --p-ruby-hue: 210;
+  --p-skeleton: #2e3138;
+  --p-danger: #e58a7a;
+  --p-danger-bg: #3d2622;
+  --p-shadow: rgba(0, 0, 0, 0.55);
+  --p-scrim: rgba(255, 255, 255, 0.05);
+  color-scheme: dark;
+}
+.theme-ink.mode-light {
+  --p-page-bg: #ffffff;
+  --p-surface: #ffffff;
+  --p-surface-raised: #f2f2f2;
+  --p-ink: #000000;
+  --p-ink-muted: #1f1f1f;
+  --p-ink-faint: #3d3d3d;
+  --p-border: #000000;
+  --p-accent: #0028a8;
+  --p-accent-ink: #ffffff;
+  --p-accent-bg: #e3e8ff;
+  --p-guess: #6b3400;
+  --p-guess-bg: #ffe3c4;
+  --p-chip-bg: #e6e6e6;
+  --p-chip-ink: #000000;
+  --p-ipa-consonant: #0028a8;
+  --p-ipa-vowel: #6b3400;
+  --p-ipa-other: #1f1f1f;
+  --p-ruby-hue: 230;
+  --p-skeleton: #d9d9d9;
+  --p-danger: #a00000;
+  --p-danger-bg: #ffe0e0;
+  --p-shadow: rgba(0, 0, 0, 0.35);
+  --p-scrim: rgba(0, 0, 0, 0.08);
+  color-scheme: light;
+}
+.theme-ink.mode-dark {
+  --p-page-bg: #000000;
+  --p-surface: #000000;
+  --p-surface-raised: #161616;
+  --p-ink: #ffffff;
+  --p-ink-muted: #e6e6e6;
+  --p-ink-faint: #c4c4c4;
+  --p-border: #ffffff;
+  --p-accent: #9ecbff;
+  --p-accent-ink: #000000;
+  --p-accent-bg: #10284a;
+  --p-guess: #ffc36b;
+  --p-guess-bg: #3d2600;
+  --p-chip-bg: #262626;
+  --p-chip-ink: #ffffff;
+  --p-ipa-consonant: #9ecbff;
+  --p-ipa-vowel: #ffc36b;
+  --p-ipa-other: #e6e6e6;
+  --p-ruby-hue: 230;
+  --p-skeleton: #2a2a2a;
+  --p-danger: #ff9a8a;
+  --p-danger-bg: #3a1410;
+  --p-shadow: rgba(0, 0, 0, 0.8);
+  --p-scrim: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
+}
+.theme-classroom.mode-light {
+  --p-page-bg: #f6f3ea;
+  --p-surface: #fffdf7;
+  --p-surface-raised: #f4f0e4;
+  --p-ink: #1a1a1a;
+  --p-ink-muted: #4f4a42;
+  --p-ink-faint: #6f6a62;
+  --p-border: #ddd6c4;
+  --p-accent: #0f6e8c;
+  --p-accent-ink: #ffffff;
+  --p-accent-bg: #dff1f6;
+  --p-guess: #8a4f0c;
+  --p-guess-bg: #fbe9cf;
+  --p-chip-bg: #ebe6d8;
+  --p-chip-ink: #3e3a33;
+  --p-ipa-consonant: #1b4ea3;
+  --p-ipa-vowel: #b8410a;
+  --p-ipa-other: #5c5852;
+  --p-ruby-hue: 215;
+  --p-skeleton: #e6e1d3;
+  --p-danger: #a63a2a;
+  --p-danger-bg: #f9e6e2;
+  --p-shadow: rgba(30, 25, 10, 0.2);
+  --p-scrim: rgba(30, 25, 10, 0.06);
+  color-scheme: light;
+}
+.theme-classroom.mode-dark {
+  --p-page-bg: #14181c;
+  --p-surface: #1b2127;
+  --p-surface-raised: #232a31;
+  --p-ink: #f2f2f2;
+  --p-ink-muted: #b9b4aa;
+  --p-ink-faint: #948f86;
+  --p-border: #343c45;
+  --p-accent: #6fc3dd;
+  --p-accent-ink: #0c2530;
+  --p-accent-bg: #173640;
+  --p-guess: #f0b566;
+  --p-guess-bg: #3d2b12;
+  --p-chip-bg: #2c343c;
+  --p-chip-ink: #dcd8cf;
+  --p-ipa-consonant: #8ab4ff;
+  --p-ipa-vowel: #ffab70;
+  --p-ipa-other: #b5b0a7;
+  --p-ruby-hue: 215;
+  --p-skeleton: #2c343c;
+  --p-danger: #ff9a8a;
+  --p-danger-bg: #3d2622;
+  --p-shadow: rgba(0, 0, 0, 0.6);
+  --p-scrim: rgba(255, 255, 255, 0.06);
+  color-scheme: dark;
+}
+/* Semantic layer: components name roles, never colours. Adding a theme is a new
+   palette block above and nothing here changes. */
+[class*="theme-"] {
+  --color-page-bg: var(--p-page-bg);
+  --color-surface: var(--p-surface);
+  --color-surface-raised: var(--p-surface-raised);
+  --color-ink: var(--p-ink);
+  --color-ink-muted: var(--p-ink-muted);
+  --color-ink-faint: var(--p-ink-faint);
+  --color-border: var(--p-border);
+  --color-accent: var(--p-accent);
+  --color-accent-ink: var(--p-accent-ink);
+  --color-accent-bg: var(--p-accent-bg);
+  --color-guess: var(--p-guess);
+  --color-guess-bg: var(--p-guess-bg);
+  --color-chip-bg: var(--p-chip-bg);
+  --color-chip-ink: var(--p-chip-ink);
+  --color-ipa: var(--p-ipa-consonant);            /* delimiters and the line as a whole */
+  --color-ipa-consonant: var(--p-ipa-consonant);
+  --color-ipa-vowel: var(--p-ipa-vowel);
+  --color-ipa-other: var(--p-ipa-other);
+  --color-skeleton: var(--p-skeleton);
+  --color-danger: var(--p-danger);
+  --color-danger-bg: var(--p-danger-bg);
+  --color-shadow: var(--p-shadow);
+  --color-scrim: var(--p-scrim);
+  /* Ruby colours are derived at paint time from --ruby-hue and the sampled page
+     background (DR-10); the two below are the showcase's stand-ins for a white page. */
+  --ruby-hue: var(--p-ruby-hue);
+  --color-ruby-ink: var(--p-ipa-consonant);
+  --color-ruby-ipa: var(--p-ink-muted);
+}
+.theme-ink { --border-width: 2px; --weight-medium: 600; --weight-bold: 700; }
+.theme-classroom { --font-size-ipa: 19px; --font-size-ipa-lens: 15px; }
+
+/* ------------------------------------------------------------------
+   Showcase chrome (not part of the product surface)
+   ------------------------------------------------------------------ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { font-family: var(--font-ui); font-size: var(--font-size-body); line-height: var(--line-body); background: #f3f1ec; }
+.theme { background: var(--color-page-bg); color: var(--color-ink); padding: var(--space-5) var(--space-4) var(--space-6); }
+.theme > h1 { font-size: var(--font-size-head); font-weight: var(--weight-bold); margin: 0 0 var(--space-4); }
+.theme > h1 small { font-weight: var(--weight-regular); color: var(--color-ink-muted); font-size: var(--font-size-body); margin-left: var(--space-2); }
+.group-title { grid-column: 1 / -1; font-size: var(--font-size-small); font-weight: var(--weight-medium); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-ink-muted); margin: var(--space-4) 0 0; padding-bottom: var(--space-1); border-bottom: var(--border-width) solid var(--color-border); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-5) var(--space-4); align-items: start; }
+.state { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.state > .label { font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); display: flex; gap: var(--space-2); align-items: baseline; }
+.state > .label b { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-weight: var(--weight-medium); color: var(--color-accent); letter-spacing: 0; text-transform: none; }
+.stage { position: relative; }
+.specimen-bg { background: var(--color-page-bg); padding: var(--space-4); border-radius: var(--radius-card); }
+.specimen .purpose { margin: 0; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+
+/* ------------------------------------------------------------------
+   Page (inline layer)
+   ------------------------------------------------------------------ */
+.page { background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); padding: var(--space-4) var(--space-4) var(--space-3); font-family: var(--font-page); font-size: var(--font-size-page); line-height: var(--line-page); position: relative; overflow: hidden; }
+.page p { margin: 0; }
+.page.ruby p, .page.ruby-2 p { line-height: var(--line-page); }
+.w { position: relative; display: inline-block; line-height: var(--ruby-glyph-line); padding-top: var(--ruby-room-1); vertical-align: baseline; }
+.page.ruby-2 .w { padding-top: var(--ruby-room-2); }
+.w > .rb { position: absolute; left: 50%; bottom: calc(var(--ruby-glyph-line) - var(--ruby-overlap)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; font-family: var(--font-ui); line-height: 1.1; pointer-events: none; }
+.rb .gl { font-size: calc(1em * var(--ruby-scale)); color: var(--color-ruby-ink); }
+.rb .gl.guess { color: var(--color-guess); }
+.rb .ph { font-size: calc(1em * var(--ruby-ipa-scale)); font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
+.w.seen { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--border-width); text-underline-offset: 3px; }
+.rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }
+.page-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2); }
+.scan-pill { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-muted); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-chip); padding: 2px var(--space-2) 2px var(--space-2); display: inline-flex; align-items: center; gap: var(--space-1); }
+.scan-pill i { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--color-accent); border-right-color: transparent; display: inline-block; }
+.hover-cursor { display: block; text-align: right; font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); margin-top: var(--space-2); }
+
+/* ------------------------------------------------------------------
+   Card (answer surface)
+   ------------------------------------------------------------------ */
+.card { font-family: var(--font-ui); width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: var(--border-width) solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; }
+.card-handle { display: none; width: var(--handle-width); height: var(--handle-height); border-radius: var(--radius-bar); background: var(--color-border); margin: var(--space-2) auto 0; }
+.card-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
+.headline { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.headline .tr { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.2; flex: 1 1 auto; min-width: 0; }
+.headline .tr.def { font-size: var(--font-size-ipa); font-weight: var(--weight-medium); }
+.headline .tr.quiet { font-size: var(--font-size-body); font-weight: var(--weight-medium); color: var(--color-ink); }
+.audio { flex: 0 0 auto; width: var(--audio-size); height: var(--audio-size); border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-accent-ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; align-self: center; }
+.audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); fill: currentColor; margin-left: 2px; }
+.audio[disabled] { background: var(--color-chip-bg); color: var(--color-ink-faint); }
+.ipa-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); }
+.ipa { display: inline-flex; align-items: baseline; flex-wrap: wrap; }
+.ipa .delim { color: var(--color-ink-faint); }
+.sym { font: inherit; color: var(--color-ipa-other); background: none; border: none; padding: 0 1px; margin: 0; border-radius: var(--radius-symbol); cursor: pointer; line-height: 1.2; }
+.sym.c { color: var(--color-ipa-consonant); }
+.sym.v { color: var(--color-ipa-vowel); }
+.sym.o { color: var(--color-ipa-other); }
+.sym:hover, .sym.active { background: var(--color-accent-bg); }
+.ipa-note { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); }
+.ipa-note.guess { color: var(--color-guess); }
+.gram { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.gram .lemma { color: var(--color-ink); font-weight: var(--weight-medium); }
+.gram .lemma.prominent { font-size: var(--font-size-lemma); color: var(--color-accent); }
+.gram .g-sub { flex: 1 1 100%; }
+.chip { display: inline-flex; align-items: center; background: var(--color-chip-bg); color: var(--color-chip-ink); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); line-height: 1.6; white-space: nowrap; }
+.chip.mark { font-style: italic; font-weight: var(--weight-regular); }
+
+.card-body { padding: 0 var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; }
+.card-body:empty { display: none; }
+.badge { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; text-transform: uppercase; border-radius: var(--radius-chip); padding: 1px var(--space-2); line-height: 1.6; white-space: nowrap; flex: 0 0 auto; }
+.badge.dict { background: var(--color-accent-bg); color: var(--color-accent); }
+.badge.guess { background: var(--color-guess-bg); color: var(--color-guess); }
+.ex { margin: 0; padding-left: var(--space-2); border-left: 2px solid var(--color-border); color: var(--color-ink-muted); font-size: var(--font-size-small); }
+.ex q { quotes: none; color: var(--color-ink); }
+.ex .ex-tr { display: block; }
+.others { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--font-size-sense); }
+.others-label { font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-faint); }
+.others ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.others li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); }
+.others .more { align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
+.note { font-size: var(--font-size-sense); color: var(--color-ink-muted); margin: 0; }
+.note.strong { color: var(--color-ink); }
+.card-foot { border-top: var(--border-width) solid var(--color-border); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--font-size-label); color: var(--color-ink-faint); flex-wrap: wrap; }
+.card-foot .actions { display: flex; gap: var(--space-1); }
+.btn-text { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-accent); background: none; border: none; padding: var(--space-1) var(--space-2); border-radius: var(--radius-button); cursor: pointer; line-height: 1.4; }
+.btn { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); height: var(--button-height); padding: 0 var(--space-4); border-radius: var(--radius-button); border: none; background: var(--color-accent); color: var(--color-accent-ink); cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); }
+.btn.secondary { background: var(--color-chip-bg); color: var(--color-ink); }
+.btn.danger { background: var(--color-danger-bg); color: var(--color-danger); }
+.btn-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.readings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.readings li { border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; cursor: pointer; }
+.readings li:hover { background: var(--color-surface-raised); }
+.readings .r-ipa { font-family: var(--font-ipa); color: var(--color-ipa); font-size: var(--font-size-ipa); }
+.readings .r-tr { font-weight: var(--weight-medium); }
+.readings .r-pos { margin-left: auto; }
+.lang-picks { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.pick { font-family: var(--font-ui); font-size: var(--font-size-small); height: var(--button-height); padding: 0 var(--space-3); border-radius: var(--radius-chip); border: var(--border-width) solid var(--color-border); background: var(--color-surface); color: var(--color-ink); cursor: pointer; }
+.pick.primary { background: var(--color-accent-bg); border-color: var(--color-accent); color: var(--color-accent); }
+.words { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+.skeleton { height: var(--skeleton-height); border-radius: var(--radius-bar); background: var(--color-skeleton); }
+
+/* ------------------------------------------------------------------
+   Density tiers. The card measures the space it was given, not the
+   viewport: a container query here, the constraint-measuring
+   composable on Android. Full: everything. Compact: example and other
+   senses fold behind one line, the foot keeps one action. Strip: the
+   headline and the pronunciation line only. The thresholds are the
+   --tier-* tokens; @container cannot read custom properties, so the
+   same numbers are repeated literally below.
+   ------------------------------------------------------------------ */
+.space { container-type: size; container-name: card-space; border: var(--border-width) dashed var(--color-ink-faint); border-radius: var(--radius-card); padding: var(--space-2); box-sizing: content-box; position: relative; }
+.space::after { content: attr(data-space); position: absolute; right: var(--space-2); bottom: var(--space-1); font-size: var(--font-size-label); color: var(--color-ink-faint); font-family: var(--font-ui); }
+.space .card { max-width: none; }
+.fold { display: none; }
+@container card-space ((max-height: 399px) or (max-width: 319px)) {
+  .card .ex, .card .others, .card .btn-text.secondary-action { display: none; }
+  .card .fold { display: inline-flex; align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
+}
+@container card-space ((max-height: 239px) or (max-width: 239px)) {
+  .card .gram, .card .card-foot, .card .ipa-note, .card .card-body { display: none; }
+  .card .card-head { padding-bottom: var(--space-3); }
+}
+
+/* ------------------------------------------------------------------
+   Symbol popover
+   ------------------------------------------------------------------ */
+.popover { width: 100%; max-width: var(--popover-width); background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-popover); padding: var(--space-3) var(--space-4) var(--space-3); display: grid; grid-template-columns: var(--diagram-width) 1fr; gap: var(--space-2) var(--space-3); position: relative; margin-top: var(--space-3); }
+.popover::before { content: ""; position: absolute; top: calc(-1 * var(--space-2)); left: var(--space-5); width: var(--space-4); height: var(--space-4); background: var(--color-surface); border-left: var(--border-width) solid var(--color-border); border-top: var(--border-width) solid var(--color-border); transform: rotate(45deg); }
+.diagram { grid-row: 1 / span 2; width: var(--diagram-width); height: var(--diagram-height); border-radius: var(--radius-button); background: var(--color-surface-raised); border: var(--border-width) dashed var(--color-ink-faint); display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--font-ui); font-size: var(--font-size-label); line-height: 1.25; color: var(--color-ink-faint); padding: var(--space-1); }
+.pop-sym { font-family: var(--font-ipa); font-size: var(--font-size-symbol); line-height: 1; color: var(--color-ipa); display: flex; align-items: center; gap: var(--space-3); }
+.pop-name { font-size: var(--font-size-body); font-weight: var(--weight-medium); line-height: 1.3; }
+.pop-desc { grid-column: 1 / -1; margin: 0; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.pop-links { grid-column: 1 / -1; display: flex; gap: var(--space-1); flex-wrap: wrap; margin-left: calc(-1 * var(--space-2)); }
+
+/* ------------------------------------------------------------------
+   Lens
+   ------------------------------------------------------------------ */
+.screen { background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); padding: var(--space-4); font-family: var(--font-page); font-size: var(--font-size-page); line-height: var(--line-page); position: relative; overflow: hidden; min-height: 180px; }
+.screen p { margin: 0 0 var(--space-3); }
+.screen p:last-child { margin-bottom: 0; }
+.lens { position: absolute; width: var(--lens-size); height: var(--lens-size); border-radius: 50%; border: var(--lens-ring) solid var(--color-accent); background: var(--color-scrim); box-shadow: var(--shadow-popover); display: flex; align-items: center; justify-content: center; }
+.lens::after { content: ""; width: var(--space-2); height: var(--space-2); border-radius: 50%; background: var(--color-accent); }
+.lens.idle { right: calc(-1 * var(--lens-size) / 2); top: 50%; transform: translateY(-50%); opacity: 0.85; }
+/* The two placements below put the demo lens on the highlighted word; they are showcase
+   positions, not tokens. In the product the lens follows the finger. */
+.lens.over { left: 22px; top: 214px; }
+.lens-target { background: var(--color-accent-bg); border-radius: var(--radius-symbol); }
+.screen.tall { min-height: 320px; padding-top: 204px; }
+.card.moving { position: absolute; left: var(--space-3); right: var(--space-3); top: var(--space-3); width: auto; max-width: none; box-shadow: var(--shadow-popover); }
+.card.moving .card-head { padding-bottom: var(--space-2); }
+.card.moving .fold { display: inline-flex; align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
+
+/* ------------------------------------------------------------------
+   Packs and home (settings surfaces)
+   ------------------------------------------------------------------ */
+.panel { width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); overflow: hidden; }
+.panel h4 { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-body); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); min-height: var(--touch-target); }
+.row:last-child { border-bottom: none; }
+.row .r-name { font-weight: var(--weight-medium); }
+.row .r-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.row .r-act { grid-column: 2; grid-row: 1 / span 2; }
+.row .r-wide { grid-column: 1 / -1; }
+.progress { height: var(--progress-height); border-radius: var(--radius-bar); background: var(--color-skeleton); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 30%; background: var(--color-accent); border-radius: var(--radius-bar); }
+.alert { display: flex; gap: var(--space-2); align-items: flex-start; background: var(--color-danger-bg); color: var(--color-danger); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); font-size: var(--font-size-small); }
+.seg { display: inline-flex; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); overflow: hidden; }
+.seg span { padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); border-right: var(--border-width) solid var(--color-border); white-space: nowrap; }
+.seg span:last-child { border-right: none; }
+.seg span.on { background: var(--color-accent); color: var(--color-accent-ink); }
+.slider { width: 100%; accent-color: var(--color-accent); margin: 0; }
+.toggle { width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-surface); box-shadow: 0 1px 2px var(--color-shadow); }
+.toggle.on { background: var(--color-accent); }
+.toggle.on::after { left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
+.select { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
+.select::after { content: "⌄"; color: var(--color-ink-faint); }
+.scope-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-1); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); background: var(--color-surface-raised); border-bottom: var(--border-width) solid var(--color-border); }
+.scope-note { font-weight: var(--weight-regular); letter-spacing: 0; text-transform: none; color: var(--color-ink-faint); text-align: right; }
+.chips { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
+.ticks { display: flex; justify-content: space-between; font-size: var(--font-size-label); color: var(--color-ink-faint); margin-top: calc(-1 * var(--space-1)); }
+.disclosure .chev { font-size: var(--font-size-ipa); color: var(--color-ink-faint); line-height: 1; }
+.disclosure.open { background: var(--color-surface-raised); }
+.field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--font-size-small); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-1) 0 var(--space-3); height: var(--button-height); overflow: hidden; }
+.dim { opacity: 0.45; pointer-events: none; }
+.banner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-accent-bg); color: var(--color-ink); font-size: var(--font-size-small); border-bottom: var(--border-width) solid var(--color-border); }
+
+/* ------------------------------------------------------------------
+   Docked form. When the space beside the anchor cannot hold a Compact
+   card, the card docks full-width to the nearest screen edge; a narrow
+   viewport is the common case, so the showcase uses it as the trigger.
+   ------------------------------------------------------------------ */
+@media (max-width: 600px) {
+  .theme { padding-left: var(--space-3); padding-right: var(--space-3); }
+  .grid { grid-template-columns: 1fr; }
+  .card { max-width: none; border-radius: var(--radius-card) var(--radius-card) 0 0; border-bottom: none; max-height: var(--card-max-height); }
+  .card-handle { display: block; }
+  .card-body { overflow: auto; }
+  .popover, .panel { max-width: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="theme theme-paper mode-light" id="light">
+  <h1>Answer surface <small>light</small></h1>
+  <div class="grid" id="states">
+
+    <h2 class="group-title">VIEW-PAGE · Annotated page</h2>
+
+    <section class="state" data-uid="STATE-PAGE-OFF">
+      <div class="label"><b>STATE-PAGE-OFF</b> Page off</div>
+      <div class="page">
+        <p>Die Bibliothek öffnet morgens um neun Uhr, aber die meisten Studenten kommen erst gegen Mittag, wenn der Lesesaal schon voll ist.</p>
+        <span class="hover-cursor">hover, tap or lens opens the card</span>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-GLOSS">
+      <div class="label"><b>STATE-PAGE-GLOSS</b> Page gloss</div>
+      <div class="page ruby">
+        <p>Die <span class="w">Bibliothek<span class="rb"><span class="gl">library</span></span></span> öffnet morgens um neun Uhr, aber die <span class="w">meisten<span class="rb"><span class="gl">most</span></span></span> Studenten kommen erst gegen <span class="w seen">Mittag<span class="rb"><span class="gl">noon</span></span></span>, wenn der <span class="w">Lesesaal<span class="rb"><span class="gl guess">reading hall</span></span></span> schon voll ist.</p>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-GLOSS-IPA">
+      <div class="label"><b>STATE-PAGE-GLOSS-IPA</b> Page gloss and IPA</div>
+      <div class="page ruby-2">
+        <p>Die <span class="w">Bibliothek<span class="rb"><span class="gl">library</span><span class="ph">biblioteːk</span></span></span> öffnet morgens um neun Uhr, aber die <span class="w">meisten<span class="rb"><span class="gl">most</span><span class="ph">maɪ̯stn̩</span></span></span> Studenten kommen erst gegen <span class="w seen">Mittag<span class="rb"><span class="gl">noon</span><span class="ph">mɪtaːk</span></span></span>, wenn der <span class="w">Lesesaal<span class="rb"><span class="gl guess">reading hall</span><span class="ph">leːzəzaːl</span></span></span> schon voll ist.</p>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-IPA">
+      <div class="label"><b>STATE-PAGE-IPA</b> Page IPA</div>
+      <div class="page ruby">
+        <p>Die <span class="w">Bibliothek<span class="rb"><span class="ph">biblioteːk</span></span></span> öffnet morgens um neun Uhr, aber die <span class="w">meisten<span class="rb"><span class="ph">maɪ̯stn̩</span></span></span> Studenten kommen erst gegen <span class="w">Mittag<span class="rb"><span class="ph">mɪtaːk</span></span></span>, wenn der <span class="w">Lesesaal<span class="rb"><span class="ph">leːzəzaːl</span></span></span> schon voll ist.</p>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-REPLACE">
+      <div class="label"><b>STATE-PAGE-REPLACE</b> Page replace</div>
+      <div class="page ruby">
+        <p><span class="rep">The library</span> <span class="rep">opens</span> <span class="rep">at nine in the morning</span>, <span class="rep">but</span> <span class="rep">most students</span> <span class="rep">only come</span> <span class="rep">around</span> <span class="rep">noon</span>, <span class="rep">when</span> <span class="rep">the reading room</span> <span class="rep">is already full</span>. <span class="rep">That</span> <span class="w">hat<span class="rb"><span class="gl">has</span></span></span> <span class="w">mir<span class="rb"><span class="gl">me</span></span></span> <span class="w">den Tag<span class="rb"><span class="gl">the day</span></span></span> <span class="w">gerettet<span class="rb"><span class="gl">saved</span></span></span>.</p>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PAGE-SCANNING">
+      <div class="label"><b>STATE-PAGE-SCANNING</b> Page scanning</div>
+      <div class="page">
+        <div class="page-bar"><span class="scan-pill"><i></i> scanning</span></div>
+        <p>Die Bibliothek öffnet morgens um neun Uhr, aber die meisten Studenten kommen erst gegen Mittag, wenn der Lesesaal schon voll ist.</p>
+      </div>
+    </section>
+
+    <h2 class="group-title">VIEW-CARD · Answer card</h2>
+
+    <section class="state" data-uid="STATE-CARD-ENTRY">
+      <div class="label"><b>STATE-CARD-ENTRY</b> Card entry</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">a</button><button class="sym o">ː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+          <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+        </header>
+        <div class="card-body">
+          <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+        </div>
+        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-FORM">
+      <div class="label"><b>STATE-CARD-FORM</b> Card form</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+          <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
+        </header>
+        <div class="card-body">
+          <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
+          <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
+        </div>
+        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-HOMOGRAPH">
+      <div class="label"><b>STATE-CARD-HOMOGRAPH</b> Card homograph</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr quiet">Two readings, choose one</span></div>
+        </header>
+        <div class="card-body">
+          <ul class="readings">
+            <li><span class="r-tr">modern, contemporary</span><span class="r-ipa">[modɛʁn]</span><span class="chip r-pos">adjective</span></li>
+            <li><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip r-pos">verb</span></li>
+          </ul>
+        </div>
+        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-MONO">
+      <div class="label"><b>STATE-CARD-MONO</b> Card mono</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><span class="badge dict">Wiktionary</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">s</button><button class="sym v">ɛ</button><button class="sym c">ɹ</button><button class="sym v">ə</button><button class="sym c">n</button><button class="sym c">d</button><button class="sym v">ɪ</button><button class="sym c">p</button><button class="sym v">ɪ</button><button class="sym c">t</button><button class="sym v">i</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span><span class="ipa-note">General American</span></div>
+          <div class="gram"><span class="lemma">serendipity</span><span class="chip">noun</span></div>
+        </header>
+        <div class="card-body">
+          <p class="ex"><q>Finding the letter was pure serendipity.</q></p>
+          <div class="others"><span class="others-label">Other senses</span><ul><li>The faculty of making such discoveries. <span class="chip mark">uncountable</span></li></ul></div>
+        </div>
+        <footer class="card-foot"><span>English · lex-en-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-GUESS">
+      <div class="label"><b>STATE-CARD-GUESS</b> Card guess</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">library card renewal</span><span class="badge guess">guess</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><button class="sym c">s</button><button class="sym v">a</button><button class="sym v">ʊ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">v</button><button class="sym v">a</button><button class="sym v">ɪ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">f</button><button class="sym v">ɛ</button><button class="sym v">ɐ</button><button class="sym c">l</button><button class="sym v">ɛ</button><button class="sym c">ŋ</button><button class="sym v">ə</button><button class="sym c">ʁ</button><button class="sym v">ʊ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+          <div class="gram"><span class="g-sub">not in lex-de-en · machine translation of the whole word</span></div>
+        </header>
+        <div class="card-body">
+          <p class="note">Its parts are in the dictionary:</p>
+          <div class="words"><button class="pick">Bibliothek</button><button class="pick">Ausweis</button><button class="pick">Verlängerung</button></div>
+        </div>
+        <footer class="card-foot"><span>German → English · Bergamot de-en</span><span class="actions"><button class="btn-text">Report</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-PHRASE">
+      <div class="label"><b>STATE-CARD-PHRASE</b> Card phrase</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr">not until around noon</span><span class="badge guess">guess</span></div>
+          <div class="gram"><span class="lemma">erst gegen Mittag</span><span class="g-sub">machine translation of the selection</span></div>
+        </header>
+        <div class="card-body">
+          <p class="note">Each word has its own entry:</p>
+          <div class="words"><button class="pick">erst</button><button class="pick">gegen</button><button class="pick">Mittag</button></div>
+        </div>
+        <footer class="card-foot"><span>German → English · Bergamot de-en</span><span class="actions"><button class="btn-text">Report</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-IPA-ONLY">
+      <div class="label"><b>STATE-CARD-IPA-ONLY</b> Card IPA only</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr quiet">No German → English dictionary here yet</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span><span class="ipa-note">ipa-de</span></div>
+        </header>
+        <div class="card-body">
+          <div class="btn-row"><button class="btn">Fetch lex-de-en · 38 MB</button><button class="btn secondary">Not now</button></div>
+        </div>
+        <footer class="card-foot"><span>German → English</span><span class="actions"><button class="btn-text">Packs</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-NONE">
+      <div class="label"><b>STATE-CARD-NONE</b> Card none</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr quiet">Nothing found for this word</span></div>
+          <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym c">ʁ</button><button class="sym c">m</button><button class="sym c">p</button><button class="sym c">f</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+        </header>
+        <div class="card-body">
+          <p class="note">Not in lex-de-en, and the translation engine is not available offline.</p>
+        </div>
+        <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Search Wiktionary</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-NO-PACK">
+      <div class="label"><b>STATE-CARD-NO-PACK</b> Card no pack</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr quiet">No pack for Portuguese → Polish on this device</span></div>
+        </header>
+        <div class="card-body">
+          <div class="btn-row"><button class="btn">Fetch ipa-pt + lex-pt-pl · 41 MB</button><button class="btn secondary">Not now</button></div>
+        </div>
+        <footer class="card-foot"><span>Portuguese → Polish</span><span class="actions"><button class="btn-text">Packs</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-UNKNOWN-LANG">
+      <div class="label"><b>STATE-CARD-UNKNOWN-LANG</b> Card unknown language</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="headline"><span class="tr quiet">Which language is this block?</span></div>
+          <div class="gram"><span class="g-sub">not recognised; the choice is remembered for this site</span></div>
+        </header>
+        <div class="card-body">
+          <div class="lang-picks"><button class="pick primary">Dutch</button><button class="pick">Afrikaans</button><button class="pick">Czech</button><button class="pick">Other…</button></div>
+        </div>
+        <footer class="card-foot"><span>? → English</span><span class="actions"><button class="btn-text">Always ask</button></span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-LOADING">
+      <div class="label"><b>STATE-CARD-LOADING</b> Card loading</div>
+      <article class="card">
+        <div class="card-handle"></div>
+        <header class="card-head">
+          <div class="skeleton" style="width: 55%; height: calc(var(--skeleton-height) * 1.6)"></div>
+          <div class="skeleton" style="width: 40%"></div>
+          <div class="skeleton" style="width: 30%"></div>
+        </header>
+        <div class="card-body">
+          <div class="skeleton" style="width: 90%"></div>
+          <div class="skeleton" style="width: 75%"></div>
+        </div>
+        <footer class="card-foot"><span>Opening lex-de-en…</span></footer>
+      </article>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-TIER-FULL">
+      <div class="label"><b>STATE-CARD-TIER-FULL</b> Card tier full</div>
+      <div class="space" data-space="360 × 420" style="width: 360px; height: 420px; max-width: calc(100% - 2 * var(--space-2))">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+            <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
+            <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
+            <button class="btn-text fold">12 senses, 1 example</button>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-TIER-COMPACT">
+      <div class="label"><b>STATE-CARD-TIER-COMPACT</b> Card tier compact</div>
+      <div class="space" data-space="360 × 260" style="width: 360px; height: 260px; max-width: calc(100% - 2 * var(--space-2))">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+            <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
+            <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
+            <button class="btn-text fold">12 senses, 1 example</button>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-CARD-TIER-STRIP">
+      <div class="label"><b>STATE-CARD-TIER-STRIP</b> Card tier strip</div>
+      <div class="space" data-space="360 × 140" style="width: 360px; height: 140px; max-width: calc(100% - 2 * var(--space-2))">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">went</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note guess">synthesised</span></div>
+            <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
+            <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
+            <button class="btn-text fold">12 senses, 1 example</button>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+    </section>
+
+    <h2 class="group-title">VIEW-SYMBOL · Symbol popover</h2>
+
+    <section class="state" data-uid="STATE-SYMBOL-OPEN">
+      <div class="label"><b>STATE-SYMBOL-OPEN</b> Symbol open</div>
+      <div class="stage">
+        <div class="ipa-row" style="padding: 0 var(--space-4)"><span class="ipa"><span class="delim">[</span><button class="sym v">ɪ</button><button class="sym c active">ç</button><span class="delim">]</span></span><span class="ipa-note">ich</span></div>
+        <aside class="popover">
+          <div class="diagram" aria-label="articulation diagram slot">image<br>Wikimedia Commons<br>sagittal section</div>
+          <div class="pop-sym">ç <span class="chip">consonant</span></div>
+          <div class="pop-name">voiceless palatal fricative</div>
+          <p class="pop-desc">The tongue body rises toward the hard palate and air hisses through the gap; close to the h in English <i>hue</i>.</p>
+          <div class="pop-links"><button class="btn-text">Play recording</button><button class="btn-text">Wikipedia</button><button class="btn-text">Seeing Speech</button></div>
+        </aside>
+      </div>
+    </section>
+
+    <h2 class="group-title">VIEW-LENS · Lens</h2>
+
+    <section class="state" data-uid="STATE-LENS-IDLE">
+      <div class="label"><b>STATE-LENS-IDLE</b> Lens idle</div>
+      <div class="screen">
+        <p>Hast du den Schlüssel gefunden? Der Lesesaal ist bis 22 Uhr geöffnet.</p>
+        <p>Ja, er lag unter dem Tresen. Bis später!</p>
+        <div class="lens idle"></div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-LENS-OVER-WORD">
+      <div class="label"><b>STATE-LENS-OVER-WORD</b> Lens over word</div>
+      <div class="screen tall">
+        <article class="card moving">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span></div>
+          </header>
+          <div class="card-body"><button class="btn-text fold">1 sense, 1 example</button></div>
+        </article>
+        <p>Hast du den Schlüssel gefunden? Der <span class="lens-target">Lesesaal</span> ist bis 22 Uhr geöffnet.</p>
+        <p>Ja, er lag unter dem Tresen. Bis später!</p>
+        <div class="lens over"></div>
+      </div>
+    </section>
+
+    <h2 class="group-title">VIEW-PACKS · Pack manager</h2>
+
+    <section class="state" data-uid="STATE-PACKS-READY">
+      <div class="label"><b>STATE-PACKS-READY</b> Packs ready</div>
+      <div class="panel">
+        <h4>Packs</h4>
+        <div class="rows">
+          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+          <div class="row"><span class="r-name">German</span><span class="r-sub">ipa-de · 0.6 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 41 MB · 2026.09</span><button class="btn r-act">Fetch</button></div>
+          <div class="row"><span class="r-name">Bergamot de → en</span><span class="r-sub">translation model · 16 MB · installed</span><button class="btn-text r-act">Remove</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PACKS-DOWNLOADING">
+      <div class="label"><b>STATE-PACKS-DOWNLOADING</b> Packs downloading</div>
+      <div class="panel">
+        <h4>Packs</h4>
+        <div class="rows">
+          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 12.4 of 41 MB</span><button class="btn-text r-act">Cancel</button><div class="progress r-wide"><i></i></div></div>
+          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-PACKS-ERROR">
+      <div class="label"><b>STATE-PACKS-ERROR</b> Packs error</div>
+      <div class="panel">
+        <h4>Packs</h4>
+        <div class="rows">
+          <div class="row"><span class="r-name">Portuguese → Polish</span><span class="r-sub">lex-pt-pl · 41 MB</span><button class="btn r-act">Retry</button><div class="alert r-wide">Checksum did not match after download. The file was discarded.</div></div>
+          <div class="row"><span class="r-name">German → English</span><span class="r-sub">lex-de-en · 38 MB · 2026.09 · installed</span><button class="btn-text r-act">Remove</button></div>
+        </div>
+      </div>
+    </section>
+
+    <h2 class="group-title">VIEW-SETTINGS · Settings</h2>
+
+    <section class="state" data-uid="STATE-SETTINGS-READY">
+      <div class="label"><b>STATE-SETTINGS-READY</b> Settings ready</div>
+      <div class="panel">
+        <div class="rows">
+          <div class="scope-head">This site <span class="scope-note">per site · per app on Android</span></div>
+          <div class="row"><span class="r-name">On for this site</span><span class="r-sub">de.wikipedia.org</span><span class="toggle on r-act"></span></div>
+          <div class="row"><span class="r-name">New sites start on</span><span class="r-sub">the default for a site without its own switch</span><span class="toggle on r-act"></span></div>
+          <div class="row"><span class="r-name">On this page</span><span class="r-sub">each block in its own language; correct one from its card</span><span class="chips r-act"><span class="chip">German</span><span class="chip">English</span></span></div>
+          <div class="scope-head">Reading <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
+          <div class="row"><span class="r-name">Inline annotations</span><span class="r-sub">how many words, on one curve from none to all</span><input class="slider r-wide" type="range" min="0" max="100" value="35"><span class="ticks r-wide"><span>card only</span><span>some words</span><span>every word</span></span></div>
+          <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span class="on">Gloss</span><span>Gloss + IPA</span><span>IPA</span><span>Replace</span></span></div>
+          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de-en, ipa-de, ipa-en ready · Bergamot de→en</span><button class="btn-text r-act">Manage</button></div>
+          <div class="row disclosure"><span class="r-name">Advanced</span><span class="chev r-act">⌄</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-SETTINGS-SITE-OFF">
+      <div class="label"><b>STATE-SETTINGS-SITE-OFF</b> Settings site off</div>
+      <div class="panel">
+        <div class="rows">
+          <div class="scope-head">This site <span class="scope-note">per site · per app on Android</span></div>
+          <div class="row"><span class="r-name">On for this site</span><span class="r-sub">bank.example</span><span class="toggle r-act"></span></div>
+          <div class="row"><span class="r-name">New sites start on</span><span class="r-sub">the default for a site without its own switch</span><span class="toggle on r-act"></span></div>
+        </div>
+        <div class="rows dim">
+          <div class="scope-head">Reading <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
+          <div class="row"><span class="r-name">Inline annotations</span><span class="r-sub">how many words, on one curve from none to all</span><input class="slider r-wide" type="range" min="0" max="100" value="35"></div>
+          <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span class="on">Gloss</span><span>Gloss + IPA</span><span>IPA</span><span>Replace</span></span></div>
+          <div class="row disclosure"><span class="r-name">Advanced</span><span class="chev r-act">⌄</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-SETTINGS-REPLACE">
+      <div class="label"><b>STATE-SETTINGS-REPLACE</b> Settings replace</div>
+      <div class="panel">
+        <div class="rows">
+          <div class="scope-head">Reading <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
+          <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span>Gloss</span><span>Gloss + IPA</span><span>IPA</span><span class="on">Replace</span></span></div>
+          <div class="row dim"><span class="r-name">Inline annotations</span><span class="r-sub">not used by Replace: every phrase that can be swapped safely is swapped, the rest keep a gloss</span><input class="slider r-wide" type="range" min="0" max="100" value="35" disabled></div>
+          <div class="row"><span class="r-name">Packs</span><span class="r-sub">lex-de-en, ipa-de, ipa-en ready · Bergamot de→en with alignments</span><button class="btn-text r-act">Manage</button></div>
+          <div class="row disclosure"><span class="r-name">Advanced</span><span class="chev r-act">⌄</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-SETTINGS-ADVANCED">
+      <div class="label"><b>STATE-SETTINGS-ADVANCED</b> Settings advanced</div>
+      <div class="panel">
+        <div class="rows">
+          <div class="row disclosure open"><span class="r-name">Advanced</span><span class="chev r-act">⌃</span></div>
+          <div class="scope-head">Full IPA <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Show stress marks</span><span class="r-sub">on: <span style="font-family: var(--font-ipa)">ˈ</span> and <span style="font-family: var(--font-ipa)">ˌ</span> appear in every transcription</span><span class="toggle r-act"></span></div>
+          <div class="row"><span class="r-name">Narrow detail</span><span class="r-sub">on: [ ] with diacritics; off: broad / / without them</span><span class="toggle on r-act"></span></div>
+          <div class="scope-head">Accent <span class="scope-note">per language</span></div>
+          <div class="row"><span class="r-name">English</span><span class="select r-act">General American</span></div>
+          <div class="row"><span class="r-name">Portuguese</span><span class="select r-act">Brazil</span></div>
+          <div class="row"><span class="r-name">German</span><span class="select r-act">Standard</span></div>
+          <div class="scope-head">Browser <span class="scope-note">everywhere · absent on Android</span></div>
+          <div class="row"><span class="r-name">Card delay</span><span class="seg r-wide"><span class="on">Instant</span><span>150 ms</span><span>400 ms</span><span>800 ms</span></span></div>
+          <div class="row"><span class="r-name">Animations</span><span class="toggle on r-act"></span></div>
+          <div class="scope-head">Appearance <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Theme</span><span class="r-sub">Paper for reading, Ink for contrast, Classroom for learning sounds</span><span class="seg r-wide"><span class="on">Paper</span><span>Ink</span><span>Classroom</span></span></div>
+          <div class="row"><span class="r-name">Mode</span><span class="seg r-wide"><span class="on">System</span><span>Light</span><span>Dark</span></span></div>
+          <div class="scope-head">Engine and data <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Translation engine</span><span class="r-sub">on device; guesses are marked</span><span class="select r-act">Bergamot</span></div>
+          <div class="row"><span class="r-name">Dictionary host</span><span class="r-sub">serves packs.json and the packs it lists</span><span class="field r-wide">https://packs.example.net<button class="btn-text">Reset</button></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-SETTINGS-SERVICE-OFF">
+      <div class="label"><b>STATE-SETTINGS-SERVICE-OFF</b> Settings service off</div>
+      <div class="panel">
+        <div class="banner"><span>The accessibility service is off, so nothing is painted over other apps.</span><button class="btn">Enable</button></div>
+        <div class="rows dim">
+          <div class="scope-head">This app <span class="scope-note">per app</span></div>
+          <div class="row"><span class="r-name">On for this app</span><span class="r-sub">Chrome</span><span class="toggle on r-act"></span></div>
+          <div class="row"><span class="r-name">New apps start on</span><span class="r-sub">the default for an app without its own switch</span><span class="toggle on r-act"></span></div>
+          <div class="scope-head">Reading <span class="scope-note">everywhere</span></div>
+          <div class="row"><span class="r-name">Your language</span><span class="r-sub">glosses and card in this language</span><span class="select r-act">English</span></div>
+          <div class="row"><span class="r-name">Inline annotations</span><span class="r-sub">how many words, on one curve from none to all</span><input class="slider r-wide" type="range" min="0" max="100" value="35"></div>
+          <div class="row"><span class="r-name">Inline shows</span><span class="seg r-wide"><span class="on">Gloss</span><span>Gloss + IPA</span><span>IPA</span><span>Replace</span></span></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="theme theme-paper mode-dark" id="dark">
+  <h1>Answer surface <small>dark</small></h1>
+  <div class="grid" id="states-dark"></div>
+</div>
+
+<div class="theme theme-paper mode-light" id="themes">
+  <h1>Themes <small>three themes, each in both modes, the card as specimen</small></h1>
+  <div class="grid">
+    <section class="state specimen" data-theme="paper-light">
+      <div class="label"><b>THEME-PAPER</b> paper · light</div>
+      <div class="specimen-bg theme-paper mode-light">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">default · long reading, lowest chroma so the page stays dominant</p>
+    </section>
+    <section class="state specimen" data-theme="paper-dark">
+      <div class="label"><b>THEME-PAPER</b> paper · dark</div>
+      <div class="specimen-bg theme-paper mode-dark">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">default · long reading, lowest chroma so the page stays dominant</p>
+    </section>
+    <section class="state specimen" data-theme="ink-light">
+      <div class="label"><b>THEME-INK</b> ink · light</div>
+      <div class="specimen-bg theme-ink mode-light">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">contrast floor 7:1, 2 px borders, heavier weights; low vision and sunlight</p>
+    </section>
+    <section class="state specimen" data-theme="ink-dark">
+      <div class="label"><b>THEME-INK</b> ink · dark</div>
+      <div class="specimen-bg theme-ink mode-dark">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">contrast floor 7:1, 2 px borders, heavier weights; low vision and sunlight</p>
+    </section>
+    <section class="state specimen" data-theme="classroom-light">
+      <div class="label"><b>THEME-CLASSROOM</b> classroom · light</div>
+      <div class="specimen-bg theme-classroom mode-light">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">strong symbol kinds, 19 px pronunciation line; learning and teaching sounds</p>
+    </section>
+    <section class="state specimen" data-theme="classroom-dark">
+      <div class="label"><b>THEME-CLASSROOM</b> classroom · dark</div>
+      <div class="specimen-bg theme-classroom mode-dark">
+        <article class="card">
+          <header class="card-head">
+            <div class="headline"><span class="tr">reading room</span><span class="badge dict">Wiktionary</span></div>
+            <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><span class="ipa-note">recording</span></div>
+            <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
+          </header>
+          <div class="card-body">
+            <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
+            <div class="headline"><span class="tr quiet">library card renewal</span><span class="badge guess">guess</span></div>
+          </div>
+          <footer class="card-foot"><span>German → English · lex-de-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        </article>
+      </div>
+      <p class="purpose">strong symbol kinds, 19 px pronunciation line; learning and teaching sounds</p>
+    </section>
+  </div>
+</div>
+
+<script>
+  // The dark section renders the same markup as the light one; only the token mapping differs.
+  document.getElementById('states-dark').innerHTML = document.getElementById('states').innerHTML;
+</script>
+</body>
+</html>
