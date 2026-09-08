@@ -73,6 +73,18 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 moveTo = { y -> list.scrollListBy(y - listScroll()) },
             )
         }
+        // A RecyclerView is neither of the two, and reaching past it for the scroll view a
+        // recycling page does not have threw where the suite could not see it: the page died
+        // on the intent that starts a movement, so every scroll check on a list judged a
+        // screen with no app on it and reported that there was nothing to judge.
+        val rows = recycler
+        if (rows != null) {
+            return ScrollMotion.Page(
+                view = rows,
+                at = { recyclerAt },
+                moveTo = { y -> rows.scrollBy(0, y - recyclerAt) },
+            )
+        }
         return ScrollMotion.Page(
             view = scroller,
             at = { scroller.scrollY },
@@ -153,6 +165,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                         dy: Int,
                     ) {
                         recyclerAt += dy
+                        placedNow()
                         Log.d(TAG, "SCROLLY ${SystemClock.uptimeMillis()} $recyclerAt")
                     }
                 })
@@ -269,6 +282,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         // Where every line of this page is, whenever a test asks. Answered after the page has
         // been told where to scroll to, so it describes the page the test is about to look at.
         if (intent.getIntExtra("placed", 0) != 0) {
+            sayingWhereLinesAre = true
             window?.decorView?.postDelayed({ runCatching { placed() }.onFailure {
                 Log.d(TAG, "PLACED failed: $it")
             } }, 900)
@@ -319,7 +333,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             val v = intent.getIntExtra(EXTRA_FLING, 0)
             // A real fling, with the platform's own deceleration, which is the motion a
             // finger actually produces and nothing like a straight line.
-            scroller.post { scroller.fling(v) }
+            val rows = recycler
+            if (rows != null) rows.post { rows.fling(0, v) }
+            else if (::scroller.isInitialized) scroller.post { scroller.fling(v) }
         }
         if (intent.hasExtra(EXTRA_LIVE)) {
             startLiving(intent.getIntExtra(EXTRA_LIVE, 4000))
@@ -340,7 +356,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         if (intent.hasExtra(EXTRA_SMOOTH)) {
             val by = intent.getIntExtra(EXTRA_SMOOTH, 0)
             val list = listView
+            val rows = recycler
             if (list != null) list.post { list.smoothScrollByOffset(by / 100) }
+            else if (rows != null) rows.post { rows.smoothScrollBy(0, by) }
             else scroller.post { scroller.smoothScrollBy(0, by) }
         }
     }
@@ -542,6 +560,37 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
      * can tell a transcription on its own word from one left behind on somebody else's: both
      * are level with a line of text, which is all a photograph of a bar can see.
      */
+    /** Whether a test has asked this page to say where its lines are. */
+    private var sayingWhereLinesAre = false
+
+    /**
+     * Where each line of a recycling list is on the screen, now.
+     *
+     * A list that recycles hands a row to a different line as it scrolls, so what it said
+     * about its layout once is about rows that hold other text by the time a test reads it -
+     * and a check that matched a transcription against that report was matching it against
+     * text no longer there. This is the same report the Compose list gives as it moves.
+     */
+    private fun placedNow() {
+        val rows = recycler ?: return
+        if (!sayingWhereLinesAre) return
+        val at = IntArray(2)
+        val now = SystemClock.uptimeMillis()
+        for (i in 0 until rows.childCount) {
+            val child = rows.getChildAt(i) as? TextView ?: continue
+            val layout = child.layout ?: continue
+            val text = child.text?.toString().orEmpty()
+            child.getLocationOnScreen(at)
+            for (n in 0 until layout.lineCount) {
+                val top = at[1] + child.totalPaddingTop + layout.getLineTop(n)
+                val height = layout.getLineBottom(n) - layout.getLineTop(n)
+                val said = text.substring(layout.getLineStart(n), layout.getLineEnd(n)).trim()
+                if (said.isEmpty()) continue
+                Log.d(TAG, "PLACEDAT $now $top $height $said")
+            }
+        }
+    }
+
     private fun placed() {
         val found = ArrayList<TextView>(32)
         collectLines(window?.decorView, found)
@@ -558,7 +607,8 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         val scrolled = when {
             recycler != null -> recyclerAt
             listView != null -> listScroll()
-            else -> scroller.scrollY
+            ::scroller.isInitialized -> scroller.scrollY
+            else -> 0
         }
         // In the document's own coordinates, so a test can work out where a line was at any
         // moment from the scroll positions this page reports anyway. A recycling list hands
