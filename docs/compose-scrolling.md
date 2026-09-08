@@ -61,9 +61,14 @@ yields a direction and nothing else: not how far, not which item, not how many t
 - A reported delta of one pixel or less is the absence of a delta and has to be ignored rather
   than believed, which is what `SAID_TOO_SMALL` does. Believing it puts the speed at a fifth of
   a pixel a millisecond while a page is doing six.
-- A framework list or a scroll view hands over the real thing for free, and it is the best
-  signal available: through one fling the settings app reported 133, then 72, then 33, then 7,
-  which is the deceleration itself.
+- A framework list or a scroll view hands over the real thing for free: through one fling the
+  settings app reported 133, then 72, then 33, then 7, which is the deceleration itself.
+  Whether using it helps is **not established**. It was committed on a measurement of 26 of 189
+  transcriptions off their word with the deltas ignored against 3 of 171 with them used, and
+  that measurement came from a judge later found to have three faults in it. Measured again
+  once the judge could be made to fail on demand, both settings are clean on these apps: 0 of
+  679 and 0 of 682 with the deltas used, 0 of 700 without. The floor below stands on the source
+  rather than on that measurement.
 - For a Compose list there is no distance in the event, so distance has to be measured from the
   nodes themselves, and the event is worth only what TalkBack uses it for: that something moved,
   and which way.

@@ -40,8 +40,14 @@ EXTRAS = {
     "io.github.nanbiz.phonetix": ["--es", "mode", "chat", "--ei", "enable", "1",
                                 "--ei", "density", "3", "--ei", "allApps", "1"],
 }
-# How far a transcription may sit from the word it names before it is somebody else's.
-A_LINE = 55
+# How far the middle of a transcription may sit outside the node whose text holds its word.
+#
+# The middle rather than the whole box, because a transcription is drawn with a bleed around
+# the word and is taller than the letters, so demanding containment fails on every correctly
+# placed one. The node's own box rather than that box plus a line, because a row of a list is
+# already twice the height of its text and the extra line would forgive a transcription
+# sitting on the row above.
+SLACK = 8
 # How near in time the overlay's reading has to be to the reading of the screen. Without this
 # the last reading of an app is used whatever its age, so a page untouched for minutes can be
 # judged against a screen it never described.
@@ -119,8 +125,14 @@ def judge(dev, label, results, pkg):
         if word not in seen:
             gone.append(box["word"])
             continue
+        # The transcription has to sit inside the node whose text holds its word. That is the
+        # tightest thing this reading can honestly ask: it cannot say where a word is inside a
+        # wrapped message, but it can say the transcription is not in that message at all.
+        # Allowing a line of slack on top of the node's own box is too generous for a list
+        # row, whose box is already twice the height of its text, and would forgive a
+        # transcription sitting a row away.
         off = min(
-            0.0 if top - A_LINE <= middle <= bottom + A_LINE
+            0.0 if top - SLACK <= middle <= bottom + SLACK
             else min(abs(middle - top), abs(middle - bottom))
             for top, bottom in seen[word]
         )
