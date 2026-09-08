@@ -104,6 +104,23 @@ def lines_at(reports, when, window):
     return sorted((top, height, text) for text, (top, height) in seen.items())
 
 
+def layer_frames(log):
+    """Every frame the moving layer drew, and where it had carried the words to.
+
+    The rectangles the service logs are the ones it worked out at a reading. Between readings
+    the layer slides the whole set by a prediction of its own, so what a reader sees is the
+    rectangle plus that carry - and a check that read only the rectangles was judging numbers
+    that were never on the screen. Through a drag the two are eighty pixels apart on average
+    and once were two hundred.
+    """
+    out = []
+    for line in log.splitlines():
+        m = re.search(r"LAYER (\d+) (-?[\d.]+) \d+ showing=(\d)", line)
+        if m:
+            out.append((int(m.group(1)), float(m.group(2)), m.group(3) == "1"))
+    return out
+
+
 def drawing(log):
     """When anything of ours was on the screen, from the service's own account.
 
@@ -147,10 +164,26 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
     spans = drawing(log)
     timeline = dev.scroll_timeline(log)
     frames = [f for f in dev.box_frames(log) if f[1]]
+    # What was on the screen, moment by moment: every frame the layer drew, holding whichever
+    # reading it was drawing then, moved by however far it had carried it. Where the layer is
+    # not running there is nothing between one reading and the next, so the readings are the
+    # moments.
+    layers = [f for f in layer_frames(log) if frames and f[0] >= frames[0][0]]
+    if layers:
+        moments = []
+        i = 0
+        for when, carry, showing in layers:
+            while i + 1 < len(frames) and frames[i + 1][0] <= when:
+                i += 1
+            if frames[i][0] > when:
+                continue
+            moments.append((when, frames[i][1], carry, showing))
+    else:
+        moments = [(stamp, boxes, 0.0, True) for stamp, boxes in frames]
     if newest_only:
-        frames = frames[-1:]
+        moments = moments[-1:]
     adrift, checked, withheld, unknown = [], 0, 0, 0
-    for stamp, boxes in frames:
+    for stamp, boxes, carry, showing in moments:
         lines = lines_at(reports, stamp, window)
         if not lines and document:
             where = dev.scroll_at(timeline, stamp)
@@ -158,7 +191,7 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
                 lines = sorted((top - where, height, text) for top, height, text in document)
         if not lines:
             continue
-        if not was_drawing(spans, stamp):
+        if not showing or not was_drawing(spans, stamp):
             withheld += len(boxes)
             continue
         for box in boxes.values():
@@ -167,7 +200,7 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
             if not mine:
                 unknown += 1
                 continue
-            middle = (box["rect"][1] + box["rect"][3]) / 2
+            middle = (box["rect"][1] + box["rect"][3]) / 2 + carry
             # The nearest place its own word is, since a page can hold the same word twice.
             off = min(
                 0.0 if top <= middle <= top + height
