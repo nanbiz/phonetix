@@ -188,3 +188,41 @@ defined sample still has to answer over a whole language rather than twenty hand
 the German pages for Tür, Brücke, Küche and Schlüssel need their umlauts percent-encoded in
 the path, and "forest; woods; woodland" is one gloss holding three terms, so semicolons have to
 be split like commas.)
+
+## How ambiguous the gloss join is
+
+Streamed 125 MB of the German dump, which is page-ordered rather than alphabetical and so is a
+fair sample: 20,061 entries, about a tenth of the language, giving 26,482 distinct gloss head
+terms.
+
+**Eighty-one percent of gloss terms name exactly one lemma.** The median number of German
+lemmas behind a gloss term is one and the ninetieth percentile is two.
+
+| gloss term | German lemmas in the sample |
+| --- | --- |
+| dog | Hund |
+| kitchen | Küche |
+| island | Insel |
+| chair | Sessel, Stuhl |
+| book | Buch, buchen |
+| key | Schlüssel, Taste |
+| bridge | Brücke, Bridge |
+| city | Stadt, Kaliningrad |
+| forest | Forst, Heide, Wald |
+| way | eight, including Art, Fasson, Gang, Lauf, Manier, Tour |
+
+Two things narrow it further at no cost. Several pairs are a noun against a verb (book against
+buchen, water against bewässern) and the source entry carries its part of speech, so filtering
+on it removes them outright. And a source gloss usually carries more than one term: `camino`
+glosses "way, route", and while "way" alone reaches eight lemmas, the two together reach Weg.
+
+What is left hard is abstract vocabulary, where a single English word covers several senses that
+German splits. That is the same place any approach struggles, and the design already has the
+answer for it: an ambiguous join yields no dictionary answer, and the word is a labelled guess
+rather than a confident wrong one.
+
+Read the eighty-one percent as a lower bound on how determinate the join is and an upper bound
+on nothing: a tenth of the language holds fewer lemmas than the whole of it, so more of them
+will share a gloss when the full dump is indexed. The sample to run is still the whole language
+against a whole language, and it now has a shape: for each source sense, does the gloss reach
+exactly one target lemma after the part of speech is applied.
