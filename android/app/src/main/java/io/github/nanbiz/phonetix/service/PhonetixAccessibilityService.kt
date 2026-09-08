@@ -1264,6 +1264,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (placed == null && moving) measuredMoving++
             val rects = placed
                 ?: charRects(p.node, p.from, p.length)?.also { fresh ->
+                    againstWhereItIsNow(p, at)
                     layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
                 }
                 ?: run {
@@ -1517,6 +1518,24 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * says so rather than guessing.
      */
     /**
+     * Bring a line's rectangle up to the moment its characters were measured.
+     *
+     * Asking a line where its characters are makes the app lay that text out again, which
+     * takes long enough that a page being dragged has moved on by the time the answer comes
+     * back. The positions describe where the line is now; the rectangle read at the top of the
+     * pass describes where it was. Where each character sits inside its line is remembered as
+     * the difference between the two, so measuring against the older rectangle stores that
+     * travel as though it were part of the layout - and it is kept, so the line is drawn that
+     * far from its own text on every pass afterwards. One paragraph measured mid-drag was left
+     * a fifth of a screen above its own words, in the same place, run after run.
+     */
+    private fun againstWhereItIsNow(p: Planned, at: android.graphics.Rect) {
+        val now = android.graphics.Rect()
+        p.node.getBoundsInScreen(now)
+        if (!now.isEmpty) at.set(now)
+    }
+
+    /**
      * Remember a cheaper node to ask this line's position from, if there is one.
      *
      * The box holding a line answers faster than the line does, and moves with it: two
@@ -1687,12 +1706,36 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (placed == null && !allowedToAsk) return false
         val rects = placed
             ?: charRects(p.node, p.from, p.length)?.also { fresh ->
+                againstWhereItIsNow(p, at)
                 layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
             }
             ?: return false
         val made = ArrayList<WordBox>(p.picks.size)
         Transcriber.boxes(p.picks, rects, p.from, made)
-        if (remembered != null) p.node.getBoundsInScreen(at)
+        // Where the line is now, with its words brought along.
+        //
+        // A line placed from what it said last time has its words worked out against the
+        // rectangle read at the top of this call, and the rectangle kept as the line's own is
+        // read again here so that a later pass carries the words from as late a position as
+        // possible. Those are two moments, and on a moving page the page has travelled between
+        // them, so the words move by that difference too: without it one drag of six left a
+        // line's transcriptions short of their words.
+        if (remembered != null) {
+            val moved = android.graphics.Rect()
+            p.node.getBoundsInScreen(moved)
+            if (!moved.isEmpty) {
+                val by = (moved.top - at.top).toFloat()
+                if (by != 0f && kotlin.math.abs(by) <= CARRY_LIMIT_PX) {
+                    for (i in made.indices) {
+                        val r = made[i].rect
+                        made[i] = made[i].copy(
+                            rect = RectF(r.left, r.top + by, r.right, r.bottom + by),
+                        )
+                    }
+                }
+                at.set(moved)
+            }
+        }
         p.measuredAt = at
         // Only the words inside the window this line scrolls in.
         //
