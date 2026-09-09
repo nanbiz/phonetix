@@ -4,3 +4,5 @@
 {"word":"Sessel","pos":"noun","lang_code":"de","senses":[{"glosses":["armchair"]}],"sounds":[{"ipa":"/ˈzɛsl̩/"}]}
 {"word":"Weg","pos":"noun","lang_code":"de","senses":[{"glosses":["route, way (to get from one place to another)"]}],"sounds":[{"ipa":"/veːk/"}]}
 {"word":"Weise","pos":"noun","lang_code":"de","senses":[{"glosses":["way, manner"]}],"sounds":[{"ipa":"/ˈvaɪ̯zə/"}]}
+{"word":"Bank","pos":"noun","lang_code":"de","senses":[{"glosses":["bench"]}],"sounds":[{"ipa":"/baŋk/"}],"forms":[{"form":"Bänke","tags":["plural"]}]}
+{"word":"buchen","pos":"verb","lang_code":"de","senses":[{"glosses":["to bank"]}],"sounds":[{"ipa":"/ˈbuːxn̩/"}]}

@@ -35,11 +35,11 @@ fn main() {
         .unwrap_or(0);
     let mut pack = Builder::new(lang, Kind::Lex, built);
     let mut skipped = Skipped::default();
-    // A spelling can be claimed by two entries - the same word as a noun and as a verb - and
-    // the pack refuses the second. Which of them wins is decided here rather than there: the
-    // first, because the dump lists the commoner part of speech first.
+    // A spelling that is two words - "book" as a noun and as a verb - is two entries under one
+    // key, and the pack holds both. The order is the dump's, which lists the commoner part of
+    // speech first, so a reader who does not choose still meets the likely one first.
     let mut taken = 0usize;
-    let mut clashed = 0usize;
+    let mut refused = 0usize;
     for line in BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
         let Some(read) = read_line(&line, lang, &mut skipped) else {
@@ -47,7 +47,7 @@ fn main() {
         };
         match pack.add(read.entry, &read.forms) {
             Ok(_) => taken += 1,
-            Err(_) => clashed += 1,
+            Err(_) => refused += 1,
         }
     }
 
@@ -77,7 +77,7 @@ fn main() {
     );
     eprintln!(
         "{taken} entries, {} spellings, {} gloss terms, {} bytes. \
-Left out: {clashed} spellings already claimed, {} of another language, {} with nothing to \
+Left out: {refused} the pack would not take, {} of another language, {} with nothing to \
 show, {} without a word, {} unreadable.",
         counts.keys,
         counts.glosses,

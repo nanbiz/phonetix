@@ -28,8 +28,10 @@ WORK = os.environ.get("PHONETIX_WORK", "/tmp/phonetix-both")
 # Where the app can actually read a file, which is not the shared storage.
 ON_DEVICE = "/data/user/0/io.github.nanbiz.phonetix/files"
 
-# One word per branch of the cascade that two packs can reach on their own.
-WORDS = ["perro", "perros", "camino", "banco"]
+# One word per branch of the cascade that two packs can reach on their own: a lemma that
+# joins, a form of it, a gloss of several terms, a spelling that is two words, and a word
+# neither pack holds.
+WORDS = ["perro", "perros", "camino", "banco", "murciélago"]
 
 # A control. Asking the browser about a different reader's language makes the two sides
 # genuinely disagree, and a check that cannot be made to fail is not evidence: with this set,

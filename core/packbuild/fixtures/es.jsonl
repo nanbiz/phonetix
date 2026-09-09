@@ -4,3 +4,5 @@
 {"word":"Hund","pos":"noun","lang_code":"de","senses":[{"glosses":["dog"]}]}
 not json at all
 {"word":"nada","pos":"pron","lang_code":"es","senses":[{"tags":["form-of"]}]}
+{"word":"banco","pos":"noun","lang_code":"es","senses":[{"glosses":["bench"]},{"glosses":["a financial institution"]}],"sounds":[{"ipa":"/ˈbaŋ.ko/"}],"forms":[{"form":"bancos","tags":["plural"]}]}
+{"word":"banco","pos":"verb","lang_code":"es","senses":[{"glosses":["to bank"]}],"sounds":[{"ipa":"/ˈbaŋ.ko/"}]}
