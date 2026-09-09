@@ -60,7 +60,7 @@ jobs:
       - name: Verify the Chrome build
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:lex && pnpm test:cards
+        run: pnpm test:lex && pnpm test:cards && pnpm test:page
 
       - name: Package Chrome zip
         run: pnpm zip

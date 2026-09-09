@@ -2,26 +2,82 @@
 //
 // The host owns the core and the packs; a content script owns a document. Everything that
 // crosses between them is here, so the boundary is one file rather than a habit.
-import { defineExtensionMessaging } from '@webext-core/messaging';
+//
+// It is written on chrome.runtime directly. The boundary is four messages and a reply, and a
+// library in the middle of it was one more place for a message to disappear between a page and
+// a service worker with nothing to show for it.
 import type { Answer } from '@/core/answer';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
 
 export interface HostProtocol {
   /** Open a language's pack, fetching it from the configured host the first time. Returns
    *  the language the pack turned out to be for, or null when there is no pack to be had. */
-  openPack(data: { lang: string }): string | null;
+  openPack: { data: { lang: string }; reply: string | null };
   /** Which languages the core can answer for right now. */
-  languages(data: Record<string, never>): string[];
+  languages: { data: Record<string, never>; reply: string[] };
   /** What the core says about one word, read from source into target. */
-  lookUp(data: { word: string; source: string; target: string }): Answer;
+  lookUp: { data: { word: string; source: string; target: string }; reply: Answer };
   /** What a batch of runs gets drawn on it: one token per word, and the words the packs
    *  could not answer. */
-  annotate(data: {
-    runs: TextRun[];
-    source: string;
-    target: string;
-    options: AnnotateOptions;
-  }): Batch;
+  annotate: {
+    data: { runs: TextRun[]; source: string; target: string; options: AnnotateOptions };
+    reply: Batch;
+  };
 }
 
-export const { sendMessage, onMessage } = defineExtensionMessaging<HostProtocol>();
+type Named = keyof HostProtocol;
+
+/** What travels: the name of the question and its data, and nothing else. */
+interface Asked<K extends Named = Named> {
+  phonetix: K;
+  data: HostProtocol[K]['data'];
+}
+
+/** What comes back, so a thrown error on the far side arrives as one here. */
+type Answered<K extends Named> = { ok: HostProtocol[K]['reply'] } | { failed: string };
+
+function isAsked(message: unknown): message is Asked {
+  return typeof message === 'object' && message !== null && 'phonetix' in message;
+}
+
+/** Ask the host something. */
+export async function sendMessage<K extends Named>(
+  name: K,
+  data: HostProtocol[K]['data']
+): Promise<HostProtocol[K]['reply']> {
+  const asked: Asked<K> = { phonetix: name, data };
+  const answered = (await chrome.runtime.sendMessage(asked)) as Answered<K> | undefined;
+  if (!answered) throw new Error(`the host did not answer ${name}`);
+  if ('failed' in answered) throw new Error(answered.failed);
+  return answered.ok;
+}
+
+const handlers = new Map<Named, (data: unknown) => Promise<unknown>>();
+let listening = false;
+
+/**
+ * Answer one kind of question.
+ *
+ * One listener for all of them, because a listener per message type is a listener per type
+ * that has to decide whether a message is its own, and the ones that decide wrongly are the
+ * ones that answer twice.
+ */
+export function onMessage<K extends Named>(
+  name: K,
+  handle: (message: { data: HostProtocol[K]['data'] }) => Promise<HostProtocol[K]['reply']>
+): void {
+  handlers.set(name, (data) => handle({ data: data as HostProtocol[K]['data'] }));
+  if (listening) return;
+  listening = true;
+  chrome.runtime.onMessage.addListener((message, _sender, respond) => {
+    if (!isAsked(message)) return false;
+    const handler = handlers.get(message.phonetix);
+    if (!handler) return false;
+    handler(message.data)
+      .then((ok) => respond({ ok }))
+      .catch((e) => respond({ failed: String(e) }));
+    // The reply comes later, and a listener that does not say so has its channel closed
+    // before the answer is ready.
+    return true;
+  });
+}

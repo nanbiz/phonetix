@@ -112,10 +112,10 @@ def serve():
 
 
 def ask(cdp, session, message, tries=1):
-    """One message to the background, in the shape its messaging library speaks."""
+    """One message to the background, in the shape the host speaks."""
     expression = (
         "chrome.runtime.sendMessage(" + json.dumps(message) + ")"
-        ".then(r => JSON.stringify(r)).catch(e => JSON.stringify({err: String(e)}))"
+        ".then(r => JSON.stringify(r)).catch(e => JSON.stringify({failed: String(e)}))"
     )
     last = None
     for _ in range(tries):
@@ -123,10 +123,10 @@ def ask(cdp, session, message, tries=1):
             "expression": expression, "awaitPromise": True, "returnByValue": True,
         }, session=session)
         last = got.get("result", {}).get("value")
-        if last and '"err"' not in last:
+        if last and '"failed"' not in last:
             return json.loads(last)
         time.sleep(2)
-    return json.loads(last) if last else {"err": "no answer"}
+    return json.loads(last) if last else {"failed": "no answer"}
 
 
 def main():
@@ -157,33 +157,26 @@ def main():
 
         # Both packs, fetched from the host and opened in the core.
         for lang in ("es", "de"):
-            answer = ask(cdp, session, {
-                "id": 1, "type": "openPack", "data": {"lang": lang},
-                "timestamp": int(time.time() * 1000),
-            }, tries=6)
-            if answer.get("res") != lang:
+            answer = ask(cdp, session, {"phonetix": "openPack", "data": {"lang": lang}}, tries=6)
+            if answer.get("ok") != lang:
                 failures.append(f"{lang}: the pack did not open ({answer})")
 
-        got = ask(cdp, session, {
-            "id": 2, "type": "languages", "data": {},
-            "timestamp": int(time.time() * 1000),
-        })
-        if sorted(got.get("res") or []) != ["de", "es"]:
+        got = ask(cdp, session, {"phonetix": "languages", "data": {}})
+        if sorted(got.get("ok") or []) != ["de", "es"]:
             failures.append(f"the core holds {got.get('res')}, not both packs")
 
         # A batch of runs, the way a page asks: the core finds the words, decides which are
         # annotated and what each means, and the host draws exactly that.
         sentence = "El perro corre por el camino y descansa en el banco."
         batch = ask(cdp, session, {
-            "id": 4, "type": "annotate",
+            "phonetix": "annotate",
             "data": {
                 "runs": [{"id": 11, "text": sentence}],
                 "source": "es", "target": TARGET,
                 "options": {"mode": "gloss", "density": 1},
             },
-            "timestamp": int(time.time() * 1000),
         })
-        drawn = (batch.get("res") or {}).get("tokens")
+        drawn = (batch.get("ok") or {}).get("tokens")
         if not drawn:
             failures.append(f"the core annotated nothing ({batch})")
         else:
@@ -209,27 +202,22 @@ def main():
 
         # A sparse setting draws fewer of them, which is the reader's bar doing its one job.
         sparse = ask(cdp, session, {
-            "id": 5, "type": "annotate",
+            "phonetix": "annotate",
             "data": {
                 "runs": [{"id": 12, "text": sentence}],
                 "source": "es", "target": TARGET,
                 "options": {"mode": "gloss", "density": 50},
             },
-            "timestamp": int(time.time() * 1000),
         })
-        few = [t for t in ((sparse.get("res") or {}).get("tokens") or []) if t["inline"]]
+        few = [t for t in ((sparse.get("ok") or {}).get("tokens") or []) if t["inline"]]
         many = [t for t in (drawn or []) if t["inline"]]
         if drawn and len(few) >= len(many):
             failures.append(f"a sparse page drew {len(few)} of {len(many)}")
 
         # The words themselves, compared with what node got from the same bytes.
         for word in WORDS:
-            answer = ask(cdp, session, {
-                "id": 3, "type": "lookUp",
-                "data": {"word": word, "source": "es", "target": TARGET},
-                "timestamp": int(time.time() * 1000),
-            })
-            here = answer.get("res")
+            answer = ask(cdp, session, {"phonetix": "lookUp", "data": {"word": word, "source": "es", "target": TARGET}})
+            here = answer.get("ok")
             if here is None:
                 failures.append(f"{word}: the extension answered nothing ({answer})")
                 continue

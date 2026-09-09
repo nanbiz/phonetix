@@ -115,6 +115,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:cards
+      - name: A page is annotated, opens a card, and comes back
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:page
 
   # The reading core, which is one crate compiled twice: to WebAssembly for the extension and
   # to a native library for the overlay. Everything about what a word means, how it is said and

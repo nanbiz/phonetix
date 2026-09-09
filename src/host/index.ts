@@ -29,14 +29,23 @@ export function host(): void {
   });
 
   onMessage('annotate', async ({ data }) => {
-    // A page in a language with no pack is still annotated: the states say what each word
-    // reached, and a host that got no tokens could not tell a missing pack from a blank page.
-    await open(data.source).catch(() => null);
+    // Both packs, because a translation is a join between them: with only the source open
+    // every word would come back with its English gloss, which is the anchor rather than the
+    // answer. A page in a language with no pack is still annotated, since the states say what
+    // each word reached and a host with no tokens could not tell that from a blank page.
+    await Promise.all([
+      open(data.source).catch(() => null),
+      data.target === data.source ? null : open(data.target).catch(() => null),
+    ]);
     return annotate(data.runs, data.source, data.target, data.options);
   });
 
   onMessage('lookUp', async ({ data }) => {
     try {
+      await Promise.all([
+        open(data.source).catch(() => null),
+        data.target === data.source ? null : open(data.target).catch(() => null),
+      ]);
       return await lookUp(data.word, data.source, data.target);
     } catch (e) {
       console.warn(`[Phonetix] Lookup failed for ${data.word}:`, e);

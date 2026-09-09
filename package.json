@@ -23,7 +23,8 @@
     "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
     "test:features": "uv run python scripts/proofread/android_features.py",
     "test:lex": "uv run python scripts/proofread/lex_extension.py",
-    "test:cards": "uv run python scripts/proofread/card_states.py"
+    "test:cards": "uv run python scripts/proofread/card_states.py",
+    "test:page": "uv run python scripts/proofread/on_a_page.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
