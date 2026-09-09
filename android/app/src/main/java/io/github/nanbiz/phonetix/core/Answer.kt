@@ -1,0 +1,69 @@
+package io.github.nanbiz.phonetix.core
+
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * What the core says about one word.
+ *
+ * The core decides this once and both platforms draw it, so nothing here interprets: a field
+ * that is empty is empty because the cascade found nothing, and the card says so rather than
+ * filling it in. The shape is written in the core, in one place, and read here.
+ */
+data class Answer(
+    val state: State,
+    /** What the reader tapped, as it is written on the page. */
+    val spelling: String,
+    /** The dictionary form, where that is a different word from the one tapped. */
+    val lemma: String?,
+    val pos: String?,
+    val ipa: List<String>,
+    /** The answer in the reader's own language, best first. More than one is an ambiguity the
+     *  card shows rather than resolves. */
+    val says: List<String>,
+    /** What the word means in English, which anchors an answer a machine guessed. */
+    val glosses: List<String>,
+    val source: String,
+    val target: String,
+) {
+    /** How far the word got through the cascade, which is what the card draws from. */
+    enum class State {
+        Entry, Form, Homograph, Mono, Guess, Phrase, IpaOnly, None, NoPack, UnknownLang, Loading,
+        ;
+
+        companion object {
+            fun of(name: String): State =
+                entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: None
+        }
+    }
+
+    /** The sense that applies, which the card leads with. */
+    val headline: String?
+        get() = says.firstOrNull() ?: glosses.firstOrNull()
+
+    /** Whether anything was found at all, which decides between a card and a message. */
+    val found: Boolean
+        get() = headline != null || ipa.isNotEmpty()
+
+    companion object {
+        /** One answer, as the core wrote it. */
+        fun parse(json: String): Answer? {
+            val o = runCatching { JSONObject(json) }.getOrNull() ?: return null
+            fun list(name: String): List<String> {
+                val array = o.optJSONArray(name) ?: JSONArray()
+                return (0 until array.length()).mapNotNull { array.optString(it).ifEmpty { null } }
+            }
+            return Answer(
+                state = State.of(o.optString("state")),
+                spelling = o.optString("spelling"),
+                lemma = o.optString("lemma").ifEmpty { null }.takeIf { it != "null" },
+                pos = o.optString("pos").ifEmpty { null }.takeIf { it != "null" },
+                ipa = list("ipa"),
+                says = list("says"),
+                glosses = list("glosses"),
+                source = o.optString("source"),
+                target = o.optString("target"),
+            )
+        }
+    }
+}

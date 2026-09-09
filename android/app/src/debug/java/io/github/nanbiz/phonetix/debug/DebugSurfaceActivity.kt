@@ -17,6 +17,9 @@ import android.widget.ListView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 /**
  * The surfaces the overlay is tested against, and the ground truth for testing it.
@@ -118,6 +121,40 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
         val root = FrameLayout(this)
         root.setBackgroundColor(BACKGROUND)
+
+        if (mode == "card") {
+            // The answer surface on its own, over a page, which is how it is met. Several at
+            // once so the states can be judged against each other rather than one at a time.
+            val theme = io.github.nanbiz.phonetix.ui.Tokens.Theme.valueOf(
+                (intent.getStringExtra("cardTheme") ?: "PAPER").uppercase(),
+            )
+            val dark = intent.getIntExtra("cardDark", 0) != 0
+            val palette = io.github.nanbiz.phonetix.ui.Tokens.palette(theme, dark)
+            root.setBackgroundColor(palette.pageBg.toInt())
+            root.addView(
+                androidx.compose.ui.platform.ComposeView(this).apply {
+                    setContent {
+                        androidx.compose.foundation.layout.Column(
+                            modifier = cardPadding(),
+                            verticalArrangement = androidx.compose.foundation.layout.Arrangement
+                                .spacedBy(androidx.compose.ui.unit.Dp(16f)),
+                        ) {
+                            for (json in CardSamples.ALL) {
+                                io.github.nanbiz.phonetix.core.Answer.parse(json)?.let {
+                                    io.github.nanbiz.phonetix.ui.AnswerCard(it, palette)
+                                }
+                            }
+                        }
+                    }
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT,
+                ),
+            )
+            setContentView(root)
+            handle(intent)
+            return
+        }
 
         if (mode == "lazy" || mode == "chat") {
             // The kind of list a Compose app scrolls, which describes itself through
@@ -298,6 +335,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         }
         handle(intent)
     }
+
+    /** Room around the cards, so what is judged is the card and not the screen edge. */
+    /** Room around the cards, and a scroll, because the states are taller than a screen and
+     *  all of them are the point. */
+    @androidx.compose.runtime.Composable
+    private fun cardPadding(): androidx.compose.ui.Modifier =
+        androidx.compose.ui.Modifier
+            .verticalScroll(rememberScrollState())
+            .padding(androidx.compose.ui.unit.Dp(16f))
 
     private fun handle(intent: Intent?) {
         intent ?: return
