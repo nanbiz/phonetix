@@ -25,4 +25,34 @@ object Lex {
     /** The candidate sharing most, or -1 when the best does not clearly beat the rest, because
      *  an ambiguous match yields no dictionary answer rather than a confident wrong one. */
     external fun bestOf(source: String, candidates: Array<String>, margin: Int): Int
+
+    /**
+     * Make a core. What comes back is a pointer the calls below are handed, and it belongs to
+     * this side: nothing frees it but [close].
+     *
+     * One per service rather than one for the process, because two services sharing a global
+     * would share whatever packs either of them opened.
+     */
+    external fun open(): Long
+
+    /** Let a core go. Nothing may be asked of it afterwards. */
+    external fun close(core: Long)
+
+    /**
+     * Read a pack off the disk into a core, and say which language it turned out to be for.
+     * Empty when the file is not a pack this build can read.
+     *
+     * The path rather than the bytes: the pack is a file the app owns and can be tens of
+     * megabytes, and handing those through the boundary to read them back out is work with
+     * nothing to show for it.
+     */
+    external fun openPack(core: Long, path: String): String
+
+    /**
+     * What one word means, as JSON.
+     *
+     * JSON because an answer is a tree and the boundary carries text; the shape is written in
+     * one place in the core, so this side and the browser read the same one.
+     */
+    external fun lookUp(core: Long, spelling: String, source: String, target: String): String
 }

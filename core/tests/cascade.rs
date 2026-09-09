@@ -84,7 +84,13 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
     let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
     let open = Open { source: Some(&es), target: Some(&de), ipa_only: false };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
-    assert_eq!(got.says.first().map(String::as_str), Some("Weg"), "reached {:?}", got.says);
+    assert_eq!(got.says, vec!["Weg"], "Weise shares one term of the gloss and Weg shares two");
+    assert_eq!(
+        got.state,
+        AnswerState::Entry,
+        "a word the gloss reached through fewer of its terms is a worse answer, not a second \
+         one, and offering it beside the first would make every multi-term gloss ambiguous",
+    );
 }
 
 #[test]
@@ -136,12 +142,13 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
 
 #[test]
 fn no_pack_and_a_pronunciation_pack_are_different_answers() {
-    let open = Open { source: None, target: None, ipa_only: false };
+    // No pack at all, so nothing says what holds a pack's bytes here.
+    let open = Open::<&[u8]> { source: None, target: None, ipa_only: false };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
         AnswerState::NoPack,
     );
-    let offered = Open { source: None, target: None, ipa_only: true };
+    let offered = Open::<&[u8]> { source: None, target: None, ipa_only: true };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
         AnswerState::IpaOnly,

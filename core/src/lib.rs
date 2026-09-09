@@ -8,4 +8,5 @@
 
 pub mod answer;
 pub mod gloss;
+pub mod json;
 pub mod resolve;

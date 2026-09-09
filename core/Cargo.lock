@@ -192,6 +192,7 @@ version = "0.1.0"
 dependencies = [
  "jni",
  "lexcore",
+ "lexpack",
 ]
 
 [[package]]
@@ -199,6 +200,7 @@ name = "lexcore-wasm"
 version = "0.1.0"
 dependencies = [
  "lexcore",
+ "lexpack",
  "wasm-bindgen",
 ]
 

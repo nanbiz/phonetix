@@ -36,7 +36,7 @@ fn build(lang: &str, lines: &str) -> Vec<u8> {
 
 /// What the core will do with a word: its sense's English gloss, looked up in the other pack,
 /// best match first.
-fn reached(source: &Pack, target: &Pack, word: &str) -> Vec<String> {
+fn reached<D: AsRef<[u8]>>(source: &Pack<D>, target: &Pack<D>, word: &str) -> Vec<String> {
     let entry = source.lookup(word).expect("the source pack should hold this word");
     target
         .senses_matching(&entry.senses[0].gloss)

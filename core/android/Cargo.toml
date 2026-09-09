@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 lexcore = { path = ".." }
+lexpack = { path = "../pack" }
 jni = "0.21"

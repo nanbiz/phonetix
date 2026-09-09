@@ -54,19 +54,24 @@ impl Answer {
 }
 
 /// The packs a lookup may use. Either may be missing, and which is missing decides the state.
-pub struct Open<'a> {
+pub struct Open<'a, D: AsRef<[u8]>> {
     /// The language being read.
-    pub source: Option<&'a Pack<'a>>,
+    pub source: Option<&'a Pack<D>>,
     /// The reader's own language. The same pack as the source when a language is read in
     /// itself, and absent when the reader's language is English, which needs no join.
-    pub target: Option<&'a Pack<'a>>,
+    pub target: Option<&'a Pack<D>>,
     /// Whether a pronunciation pack is open for the source, which is what separates "no
     /// dictionary yet" from "nothing at all".
     pub ipa_only: bool,
 }
 
 /// Look one word up.
-pub fn look_up(spelling: &str, source: &Lang, target: &Lang, open: &Open) -> Answer {
+pub fn look_up<D: AsRef<[u8]>>(
+    spelling: &str,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Answer {
     let Some(pack) = open.source else {
         let state = if open.ipa_only { AnswerState::IpaOnly } else { AnswerState::NoPack };
         return Answer::nothing(state, spelling, source, target);
@@ -114,41 +119,55 @@ pub fn look_up(spelling: &str, source: &Lang, target: &Lang, open: &Open) -> Ans
     // tried, best first within each, because the first sense of a word is not always the one a
     // reader met.
     let mut says: Vec<String> = Vec::new();
+    let mut tied = false;
     for gloss in &glosses {
-        for ((which, _), _) in other.senses_matching(gloss) {
+        // Each word reached, and how many of the gloss's terms reached it. A word reached
+        // through two terms of "way, route" is a better answer than one reached through one,
+        // and that is the whole of what separates Weg from Weise.
+        let mut best: Vec<(String, usize)> = Vec::new();
+        for ((which, _), shared) in other.senses_matching(gloss) {
             let Some(reached) = other.entry(which) else { continue };
             // A noun is not answered with a verb that shares its gloss: "book" and "to book"
             // are the case this separates, and the part of speech is in both packs already.
             if !entry.pos.is_empty() && !reached.pos.is_empty() && reached.pos != entry.pos {
                 continue;
             }
-            if !says.contains(&reached.lemma) {
-                says.push(reached.lemma);
+            match best.iter_mut().find(|(lemma, _)| *lemma == reached.lemma) {
+                Some((_, had)) => *had = (*had).max(shared),
+                None => best.push((reached.lemma, shared)),
             }
         }
-        if !says.is_empty() {
-            break;
+        if best.is_empty() {
+            continue;
         }
+        let most = best.iter().map(|(_, shared)| *shared).max().unwrap_or(0);
+        // Only what the gloss reached best. A word the gloss reached through fewer of its
+        // terms is not a second answer, it is a worse one, and offering it beside the first
+        // would make every multi-term gloss look ambiguous.
+        says = best.into_iter().filter(|(_, shared)| *shared == most).map(|(l, _)| l).collect();
+        tied = says.len() > 1;
+        break;
     }
 
     let state = match (says.len(), inflected) {
         (0, _) => AnswerState::IpaOnly,
-        (1, true) => AnswerState::Form,
-        (1, false) => AnswerState::Entry,
-        // Two words reached equally well is the ambiguity the card shows rather than resolves.
-        _ => AnswerState::Homograph,
+        // Nothing in the data separates two words reached equally well, and the card shows
+        // both rather than picking one.
+        _ if tied => AnswerState::Homograph,
+        (_, true) => AnswerState::Form,
+        (_, false) => AnswerState::Entry,
     };
     finish(state, spelling, &entry, says, glosses, pack, source, target)
 }
 
 #[allow(clippy::too_many_arguments)]
-fn finish(
+fn finish<D: AsRef<[u8]>>(
     state: AnswerState,
     spelling: &str,
     entry: &Entry,
     says: Vec<String>,
     glosses: Vec<String>,
-    pack: &Pack,
+    pack: &Pack<D>,
     source: &Lang,
     target: &Lang,
 ) -> Answer {

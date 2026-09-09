@@ -41,11 +41,16 @@ pub enum PackError {
 }
 
 /// An open pack.
-pub struct Pack<'a> {
-    bytes: &'a [u8],
+///
+/// Generic over what holds the bytes, so the same reader serves a host that hands over a
+/// buffer it keeps and one that hands over a buffer it does not. The two indexes are copied
+/// out of it, because a transducer has to own a contiguous run and the alternative is a
+/// structure that points into itself.
+pub struct Pack<D: AsRef<[u8]>> {
+    bytes: D,
     header: Header,
-    keys: fst::Map<&'a [u8]>,
-    glosses: fst::Map<&'a [u8]>,
+    keys: fst::Map<Vec<u8>>,
+    glosses: fst::Map<Vec<u8>>,
     /// Where each block sits in the file, and where each entry sits inside its block.
     blocks: Vec<(u64, u64)>,
     starts: Vec<u32>,
@@ -54,8 +59,9 @@ pub struct Pack<'a> {
     warm: RefCell<Option<(usize, Vec<u8>)>>,
 }
 
-impl<'a> Pack<'a> {
-    pub fn open(bytes: &'a [u8]) -> Result<Pack<'a>, PackError> {
+impl<D: AsRef<[u8]>> Pack<D> {
+    pub fn open(held: D) -> Result<Pack<D>, PackError> {
+        let bytes = held.as_ref();
         if bytes.len() < MAGIC.len() || &bytes[..MAGIC.len()] != MAGIC {
             return Err(PackError::NotAPack);
         }
@@ -82,9 +88,9 @@ impl<'a> Pack<'a> {
         }
         let header = Header { format, lang, kind, built, entries, sections };
 
-        let keys = fst::Map::new(slice(bytes, header.at(Section::Keys)))
+        let keys = fst::Map::new(slice(bytes, header.at(Section::Keys)).to_vec())
             .map_err(|_| PackError::Corrupt("keys"))?;
-        let glosses = fst::Map::new(slice(bytes, header.at(Section::Glosses)))
+        let glosses = fst::Map::new(slice(bytes, header.at(Section::Glosses)).to_vec())
             .map_err(|_| PackError::Corrupt("glosses"))?;
 
         // Where every block is, and where every entry starts inside its own block. Both are
@@ -104,7 +110,7 @@ impl<'a> Pack<'a> {
             starts.push(varint::get(index, &mut at).ok_or(PackError::Corrupt("starts"))? as u32);
         }
 
-        Ok(Pack { bytes, header, keys, glosses, blocks, starts, warm: RefCell::new(None) })
+        Ok(Pack { bytes: held, header, keys, glosses, blocks, starts, warm: RefCell::new(None) })
     }
 
     pub fn lang(&self) -> &str {
@@ -150,7 +156,7 @@ impl<'a> Pack<'a> {
     pub fn senses_glossed(&self, term: &str) -> Vec<(u32, u32)> {
         let head = crate::gloss_head(term);
         let Some(at) = self.glosses.get(&head) else { return Vec::new() };
-        let hits = slice(self.bytes, self.header.at(Section::GlossHits));
+        let hits = slice(self.bytes.as_ref(), self.header.at(Section::GlossHits));
         let mut cursor = at as usize;
         let Some(count) = varint::get(hits, &mut cursor) else { return Vec::new() };
         let mut out = Vec::with_capacity(count as usize);
@@ -208,7 +214,7 @@ impl<'a> Pack<'a> {
         let (offset, length) = *self.blocks.get(which)?;
         let (base, _) = self.header.at(Section::Blocks);
         let from = (base + offset) as usize;
-        let raw = self.bytes.get(from..from + length as usize)?;
+        let raw = self.bytes.as_ref().get(from..from + length as usize)?;
         let plain = unpack(raw)?;
         *self.warm.borrow_mut() = Some((which, plain.clone()));
         Some(plain)

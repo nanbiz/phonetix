@@ -440,6 +440,37 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.PUT_THEM_WRONG_BY =
                     i.getIntExtra("putThemWrongBy", 0).toFloat()
             }
+            // The core, asked through the same path the overlay will use: a pack off the
+            // disk and a word looked up in it. What comes back is logged rather than shown,
+            // because what is being checked is that the answer crossed the boundary at all.
+            if (i.hasExtra("lexPack")) {
+                val core = io.github.nanbiz.phonetix.core.Lex.open()
+                val lang = io.github.nanbiz.phonetix.core.Lex.openPack(
+                    core, i.getStringExtra("lexPack").orEmpty(),
+                )
+                Log.d(TAG, "LEXPACK opened=$lang")
+                // A pair needs both languages' packs and nothing else, so the check that
+                // matters opens two.
+                if (i.hasExtra("lexPack2")) {
+                    val other = io.github.nanbiz.phonetix.core.Lex.openPack(
+                        core, i.getStringExtra("lexPack2").orEmpty(),
+                    )
+                    Log.d(TAG, "LEXPACK opened=$other")
+                }
+                val word = i.getStringExtra("lexWord").orEmpty()
+                if (word.isNotEmpty()) {
+                    Log.d(
+                        TAG,
+                        "LEXWORD " + io.github.nanbiz.phonetix.core.Lex.lookUp(
+                            core,
+                            word,
+                            i.getStringExtra("lexSource").orEmpty(),
+                            i.getStringExtra("lexTarget").orEmpty(),
+                        ),
+                    )
+                }
+                io.github.nanbiz.phonetix.core.Lex.close(core)
+            }
             if (i.hasExtra("markLines")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MARK_LINES =
                     i.getIntExtra("markLines", 0) != 0
