@@ -40,7 +40,17 @@ APPS = [
     # against a reading of the screen that takes a second to take.
     ("a conversation being added to",
      "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity#growing"),
+    # A real article in a real browser. Everything above is either a framework list on a
+    # near-empty screen or a page of ours, and neither is the shape of an app a reader
+    # actually reads in: this is a hundred and twenty pieces of text in a tree the overlay
+    # has no cooperation from, rendered by a process that is doing its own work, which is
+    # what makes its answers slow enough to be worth measuring against.
+    ("an article in the browser", "com.android.chrome/#article"),
 ]
+# Where an app has to be pointed at something rather than merely started.
+OPENS = {
+    "com.android.chrome/#article": "https://en.wikipedia.org/wiki/Phonetics",
+}
 # Deliberately not here: a page whose text changes as fast as it can be read.
 #
 # That is the case the fault was described as, a chat with words showing up from below, and
@@ -73,6 +83,10 @@ SLACK = 8
 # the last reading of an app is used whatever its age, so a page untouched for minutes can be
 # judged against a screen it never described.
 FRESH_MS = 3000
+# How near a drawn frame has to be to count as saying what was on the screen at that moment.
+# Wider than a frame, because the tree takes a moment to read; far narrower than FRESH_MS,
+# because a frame from the previous fling says nothing about a page standing still now.
+LAYER_FRESH_MS = 700
 
 
 def uptime_ms():
@@ -121,7 +135,34 @@ def words_on_screen(nodes):
     return where
 
 
-def judge(dev, label, results, pkg):
+def drawn_at(log, when):
+    """Whether the layer was actually showing anything at that moment, and where it had
+    carried the words to.
+
+    Counting only the transcriptions that were drawn answers "is a transcription on the wrong
+    word" and cannot answer "is there a transcription at all". A layer that takes itself off
+    the screen for the whole of a fling scores a clean nothing-wrong while showing a reader
+    nothing, which is indistinguishable from working and is what a page that does not follow
+    actually looks like. The frame nearest the moment says which of the two happened.
+
+    A page standing still has no layer at all - the words are back in their own small windows,
+    which is a different thing being on the screen - so only a frame from about this moment
+    counts. Without that bound the last frame of the previous fling answers for a still page.
+    """
+    best = None
+    for line in log.splitlines():
+        m = re.search(r"LAYER (\d+) (-?[\d.]+) \d+ showing=(\d)", line)
+        if not m:
+            continue
+        stamp = int(m.group(1))
+        if abs(stamp - when) > LAYER_FRESH_MS:
+            continue
+        if best is None or abs(stamp - when) < abs(best[0] - when):
+            best = (stamp, float(m.group(2)), m.group(3) == "1")
+    return best
+
+
+def judge(dev, label, results, pkg, covers=None):
     when = uptime_ms()
     nodes = tree()
     if len(nodes) < 3:
@@ -133,9 +174,18 @@ def judge(dev, label, results, pkg):
     # The last reading of this app is what is on the screen now.
     log = "\n".join(l for l in dev.log().splitlines() if f"BOXES " not in l or pkg in l)
     frames = [f for f in dev.box_frames(log) if f[1] and abs(f[0] - when) <= FRESH_MS]
-    if not frames:
-        print(f"  {label}: the overlay drew nothing on this app within "
-              f"{FRESH_MS}ms of the screen being read")
+    # What a reader had in front of them, counted whether or not anything was there. A moment
+    # with no transcriptions on it is the failure this suite could not see: it used to return
+    # here and leave the moment out of the score entirely, so a fling the overlay sat out
+    # scored the same as one it followed.
+    showing = drawn_at(log, when)
+    blank = not frames or (showing is not None and not showing[2])
+    if covers is not None:
+        covers.append((label, 0 if blank else 1))
+    if blank:
+        why = ("the overlay drew nothing on this app" if not frames
+               else "the layer had taken the words off the screen")
+        print(f"  {label}: {why}, so nothing was on the screen to be right or wrong")
         return
     _stamp, boxes = frames[-1]
     adrift, gone, checked = [], [], 0
@@ -188,6 +238,9 @@ def main():
         time.sleep(2)
         print(f"(control: every transcription is drawn {wrong_by}px from its word)")
     said = os.environ.get("PHONETIX_SAID")
+    # How many lines a read may measure while the page is moving. Left settable because it is
+    # the difference between a browser drawing nothing and a browser drawing its words.
+    moving = os.environ.get("PHONETIX_MEASURE_MOVING")
     if said is not None:
         shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
               "--es", "mode", "plain", "--ei", "enable", "1", "--ei", "allApps", "1",
@@ -209,6 +262,7 @@ def main():
     if busy:
         print(f"(the device is running {len(busy)} busy loops while this is measured)")
     results = []
+    covers = []
     for name, activity in APPS:
         print(f"{name}:")
         pkg = activity.split("/")[0]
@@ -230,12 +284,22 @@ def main():
                 extras += ["--ei", "putThemWrongBy", wrong_by]
             if said is not None:
                 extras += ["--ei", "useSaidScroll", said]
-        shell("am", "start", "-n", activity.split("#")[0], *extras)
+            if moving is not None:
+                extras += ["--ei", "measureMovingMax", moving]
+        opens = OPENS.get(activity)
+        if opens:
+            shell("am", "force-stop", pkg)
+            time.sleep(1)
+            shell("am", "start", "-a", "android.intent.action.VIEW", "-d", opens)
+            # A page has to arrive over the network before there is anything to read.
+            time.sleep(10)
+        else:
+            shell("am", "start", "-n", activity.split("#")[0], *extras)
         time.sleep(2)
         if pkg == "io.github.nanbiz.phonetix":
             dev.enable_service()
         time.sleep(4)
-        judge(dev, "standing still", results, pkg)
+        judge(dev, "standing still", results, pkg, covers)
         # A real gesture: a finger that lifts, so the app flings on after it.
         # A fling is over in well under a second and one dump of the tree takes about that
         # long, so a single look is one moment with a handful of words in it, which decides
@@ -244,12 +308,12 @@ def main():
         for n, delay in enumerate((0.30, 0.55, 0.85, 0.30, 0.55, 0.85)):
             shell("input", "swipe", "540", "1500", "540", "600", "250")
             time.sleep(delay)
-            judge(dev, f"{int(delay * 1000)}ms into a fling", results, pkg)
+            judge(dev, f"{int(delay * 1000)}ms into a fling", results, pkg, covers)
             time.sleep(2.5)
             if n % 3 == 2:
                 shell("input", "swipe", "540", "600", "540", "1500", "250")
                 time.sleep(2)
-        judge(dev, "once it has settled", results, pkg)
+        judge(dev, "once it has settled", results, pkg, covers)
     # Reported per moment, not pooled. A look 300ms into a fling and one at 850ms are
     # different questions - one catches the page at speed, the other after it has settled -
     # and adding them together gave the same build 0 of 679 one run and 232 of 1124 the next,
@@ -269,6 +333,20 @@ def main():
         total += wrong
     checked = sum(c for _l, _w, c in results)
     print(f"  {'every moment':26} {total:4} of {checked:5}")
+    # And separately, how often there was anything on the screen at all. A moment with no
+    # transcriptions on it cannot have a wrong one, so it scores perfectly above; here it
+    # scores as what it is.
+    print()
+    blank_moments = {}
+    for label, shown in covers:
+        got = blank_moments.setdefault(label.strip(), [0, 0])
+        got[0] += 1 - shown
+        got[1] += 1
+    blank_total = sum(b for b, _n in blank_moments.values())
+    for moment, (blank, looks) in blank_moments.items():
+        print(f"  {moment:26} {blank:4} of {looks:5} looks had nothing on the screen")
+    print(f"  {'every moment':26} {blank_total:4} of {len(covers):5} looks had nothing "
+          f"on the screen")
     for p in busy:
         p.kill()
     return 1 if total else 0

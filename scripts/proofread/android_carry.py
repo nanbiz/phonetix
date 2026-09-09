@@ -23,9 +23,21 @@ busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n;
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(load)]
 dev = Device()
+# Installing a build clears the accessibility grant, so without this the first runs measure a
+# device with no overlay on it at all and read as nought per cent followed.
+if not dev.enable_service():
+    print("the service will not start")
+    sys.exit(1)
 got = []
 try:
     for n in range(runs):
+        # Started fresh every run, because a swipe leaves the list where it stopped and an
+        # am start against an activity that is already top-most only reaches onNewIntent: the
+        # second run then flings a list that is already at the bottom, the page does not move,
+        # and nothing is measured. Five of six runs read as "the layer was not drawing at all"
+        # that way, and the one number that survived was taken for the answer.
+        shell("am", "force-stop", "com.android.settings")
+        time.sleep(1)
         shell("am", "start", "-n", "com.android.settings/.Settings")
         time.sleep(3)
         shell("logcat", "-c")
@@ -35,7 +47,10 @@ try:
         moved = sum(int(m) for m in re.findall(r"SAIDSCROLL \d+ dy=(-?\d+)", log)
                     if abs(int(m)) > 1)
         carried = [float(m) for m in re.findall(r"LAYER \d+ (-?[\d.]+) ", log)]
-        swing = (max(carried) - min(carried)) if carried else 0.0
+        if not carried:
+            print(f"  run {n + 1}: the layer was not drawing at all, skipped")
+            continue
+        swing = max(carried) - min(carried)
         if abs(moved) < 50:
             print(f"  run {n + 1}: the page barely moved ({moved}px), skipped")
             continue
