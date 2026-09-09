@@ -253,6 +253,10 @@ def judge(dev, label, results, pkg, covers=None):
           f"{f' (e.g. {gone[:3]})' if gone else ''}"
           f"{f' and {len(adrift)} are on other text' if adrift else ''}")
     results.append((label, wrong, checked))
+    if adrift:
+        far = sorted(o for _w, _d, _n, o in adrift)
+        print(f"      the middle one is {far[len(far) // 2]}px from its word, "
+              f"the worst {far[-1]}px")
 
 
 def main():

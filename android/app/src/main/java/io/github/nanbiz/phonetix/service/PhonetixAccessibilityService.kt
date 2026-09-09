@@ -324,8 +324,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             } else {
                 -1
             }
-            val carried = if (kotlin.math.abs(said) >= SAID_TOO_SMALL) said.toFloat()
-            else fromPseudoScroll(pseudo)
+            val exact = kotlin.math.abs(said) >= SAID_TOO_SMALL
+            val carried = if (exact) said.toFloat() else fromPseudoScroll(pseudo)
             if (BuildConfig.DEBUG && PROBE_TREE) {
                 android.util.Log.d(
                     "Phonetix", "CARRIED said=$said pseudo=$pseudo row=$rowHeight -> $carried",
@@ -337,7 +337,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (USE_SAID_SCROLL && kotlin.math.abs(carried) >= SAID_TOO_SMALL &&
                         kotlin.math.abs(carried) < SAID_TOO_FAR
                     ) {
-                        overlay.told(carried)
+                        overlay.told(carried, exact)
                     }
                 }
             }

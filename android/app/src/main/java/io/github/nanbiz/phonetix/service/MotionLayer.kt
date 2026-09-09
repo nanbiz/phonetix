@@ -278,7 +278,13 @@ class MotionLayer(private val context: Context) {
      * without being asked for and costs nothing, so it is worth more than a guess. The next
      * reading corrects whatever it got wrong, as it does for the guess.
      */
-    fun told(dy: Float) {
+    /**
+     * @param exact whether the page reported this distance or it was worked out from the
+     *   offset a list estimates for itself. A reported distance is an account of what
+     *   happened and replaces what the layer had guessed for the same stretch; an estimate is
+     *   another guess, and two guesses added together overshoot.
+     */
+    fun told(dy: Float, exact: Boolean) {
         if (view == null || dy == 0f) return
         val now = SystemClock.uptimeMillis()
         val since = (now - lastToldAt).coerceAtLeast(1)
@@ -301,20 +307,27 @@ class MotionLayer(private val context: Context) {
         // twelve hundred pixels takes them two hundred and fifty. What the page reports is not
         // a prediction to be distrusted, it is its own account of what already happened.
         //
-        // Only while the layer has stopped believing its own speed, which is what starvation
-        // looks like from in here. When readings are arriving the frame below is already
-        // carrying the words correctly and this would move them a second time: applied
-        // always, it took the fast part of a fling on an idle machine from nothing wrong to
-        // nine per cent. Applied only when the reading behind the speed has gone stale, it is
-        // the difference between the words following a fifth of the movement and a third.
+        // It replaces the guess rather than being added to it. Since the last reading the
+        // layer has been carrying the words at a speed it worked out; the page has now said
+        // what it actually did over that same stretch, and one of those two is an account and
+        // the other an estimate. Added on top, the movement is counted twice and the words
+        // overshoot - which is why this used to be applied only when the layer had already
+        // given up on its own speed, and why the words then rode a guess that is bounded at
+        // four hundred pixels through flings of twelve hundred. Measured on the settings app,
+        // the transcriptions that were on the wrong text mid-fling were a bounded three
+        // hundred and sixty pixels out, which is that bound and not a residual.
         //
         // The interval it covers is consumed, so the frame that follows integrates from now
-        // rather than from before this arrived, and the same movement is not counted twice.
-        if (trustAt(now) < Fixed.TRUST_ENOUGH) {
-            carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
-            lastFrameAt = now
-            view?.let { it.translationY = predictedY }
-        }
+        // rather than from before this arrived.
+        // An estimate only carries the words where the layer has already stopped believing
+        // its own speed, which is what a starved reading looks like from in here. Treated as
+        // an account, it took the share of transcriptions off their word on a Compose
+        // conversation from 7% to 11 and 13.
+        if (!exact && trustAt(now) >= Fixed.TRUST_ENOUGH) return
+        if (exact) guessedY = 0f
+        carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
+        lastFrameAt = now
+        view?.let { it.translationY = predictedY }
     }
 
     /** Take the words over from the small windows, at the positions they are already at. */
