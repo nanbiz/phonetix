@@ -7,7 +7,6 @@
   import type { Answer } from '@/core/answer';
   import AnswerCard from './AnswerCard.svelte';
   import SymbolSheet from './SymbolSheet.svelte';
-  import { describeSymbol } from '@/data/ipa-symbols';
 
   interface Props {
     answer: Answer;
@@ -23,6 +22,7 @@
   let { answer, diagram, onPlay, onPlayUrl, onOpen, onSymbol }: Props = $props();
 
   let opened = $state<string | null>(null);
+  let sound = $derived(answer.symbols.find((symbol) => symbol.token === opened) ?? null);
   let picture = $state<string | null>(null);
 
   async function ask(symbol: string) {
@@ -30,7 +30,9 @@
     opened = next;
     picture = null;
     onSymbol?.(next);
-    const file = next ? describeSymbol(next)?.diagram : undefined;
+    const file = next
+      ? answer.symbols.find((symbol) => symbol.token === next)?.diagram
+      : undefined;
     if (next && file && diagram) {
       const fetched = await diagram(file).catch(() => '');
       // Only if the reader is still on the same sound: a picture that arrives after they
@@ -41,6 +43,6 @@
 </script>
 
 <AnswerCard {answer} onSymbol={ask} {onPlay} {onOpen} />
-{#if opened}
-  <SymbolSheet symbol={opened} diagram={picture} onPlay={onPlayUrl} {onOpen} />
+{#if sound}
+  <SymbolSheet about={sound} diagram={picture} onPlay={onPlayUrl} {onOpen} />
 {/if}

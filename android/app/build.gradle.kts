@@ -61,14 +61,12 @@ val bundleVectors by tasks.registering(Copy::class) {
         }
     }
     from(vectors)
-    from(rootProject.file("../shared/ipa-symbols.json"))
     into(layout.buildDirectory.dir("vectors"))
 }
 
 tasks.withType<Test>().configureEach {
     dependsOn(bundleVectors)
     systemProperty("phonetix.vectors", layout.buildDirectory.file("vectors/sprinkle-vectors.json").get().asFile.path)
-    systemProperty("phonetix.symbols", layout.buildDirectory.file("vectors/ipa-symbols.json").get().asFile.path)
 }
 
 val bundleDictionaries by tasks.registering(Copy::class) {
@@ -81,7 +79,6 @@ val bundleDictionaries by tasks.registering(Copy::class) {
     }
     from(dict)
     from(common)
-    from(rootProject.file("../shared/ipa-symbols.json"))
     into(layout.projectDirectory.dir("src/main/assets"))
 }
 
@@ -103,12 +100,30 @@ val cargoNdk by tasks.registering(Exec::class) {
         "-o", file("src/main/jniLibs").absolutePath,
         "build", "--release", "-p", "lexcore-android",
     )
-    // A machine without the Rust toolchain still builds the app; the service checks whether
-    // the library loaded and degrades rather than crashing over somebody else's screen.
-    isIgnoreExitValue = true
 }
 
-tasks.named("preBuild") { dependsOn(cargoNdk) }
+/**
+ * The app does not build without the core.
+ *
+ * Everything about what a word means, how it is said and which words are annotated is decided
+ * in it, so an APK without the library is an app that cannot do its job. The build says so
+ * here rather than the app finding out on somebody's screen.
+ */
+val coreIsThere by tasks.registering {
+    dependsOn(cargoNdk)
+    val abis = listOf("x86_64", "arm64-v8a")
+    val libs = file("src/main/jniLibs")
+    doLast {
+        val missing = abis.filterNot { libs.resolve("$it/liblexcore_android.so").exists() }
+        require(missing.isEmpty()) {
+            "The core did not build for $missing. Install the Rust toolchain and cargo-ndk, " +
+                "or run `cargo ndk -t x86_64 -t arm64-v8a build --release -p lexcore-android` " +
+                "in ../core."
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(coreIsThere) }
 
 dependencies {
     implementation(libs.androidx.core.ktx)

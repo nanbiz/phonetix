@@ -18,6 +18,9 @@ data class Answer(
     val lemma: String?,
     val pos: String?,
     val ipa: List<String>,
+    /** The first transcription, symbol by symbol: the card offers each sound on its own and
+     *  holds no table to look them up in. */
+    val symbols: List<SymbolInfo>,
     /** The answer in the reader's own language, best first. More than one is an ambiguity the
      *  card shows rather than resolves. */
     val says: List<String>,
@@ -86,6 +89,8 @@ data class Answer(
             lemma = null,
             pos = null,
             ipa = if (ipa.isBlank()) emptyList() else listOf(ipa),
+            // The sounds of it, from the core: this side has no table of its own.
+            symbols = IpaSymbols.explain(ipa),
             says = emptyList(),
             glosses = emptyList(),
             example = null,
@@ -107,6 +112,23 @@ data class Answer(
                 lemma = o.optString("lemma").ifEmpty { null }.takeIf { it != "null" },
                 pos = o.optString("pos").ifEmpty { null }.takeIf { it != "null" },
                 ipa = list("ipa"),
+                symbols = (o.optJSONArray("symbols") ?: JSONArray()).let { array ->
+                    (0 until array.length()).mapNotNull { at ->
+                        array.optJSONObject(at)?.let { row ->
+                            fun text(name: String): String? = row.optString(name).ifEmpty { null }
+                            SymbolInfo(
+                                token = row.optString("token"),
+                                name = row.optString("name"),
+                                kind = row.optString("kind"),
+                                example = row.optString("example"),
+                                wiki = text("wiki"),
+                                audio = text("audio"),
+                                diagram = text("diagram"),
+                                seeing = text("seeing"),
+                            )
+                        }
+                    }
+                },
                 says = list("says"),
                 glosses = list("glosses"),
                 example = o.optString("example").ifEmpty { null }.takeIf { it != "null" },

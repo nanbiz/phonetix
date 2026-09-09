@@ -25,6 +25,9 @@ pub struct Answer {
     pub pos: Option<String>,
     /// How it is said, as the pack records it.
     pub ipa: Vec<String>,
+    /// The first transcription, symbol by symbol, so a card can offer each sound on its own
+    /// without a table of its own to look them up in.
+    pub symbols: Vec<crate::symbols::Symbol>,
     /// The answer in the reader's own language, best first. More than one means the join was
     /// ambiguous and the card says so rather than choosing.
     pub says: Vec<String>,
@@ -63,6 +66,7 @@ impl Answer {
             lemma: None,
             pos: None,
             ipa: Vec::new(),
+            symbols: Vec::new(),
             says: Vec::new(),
             glosses: Vec::new(),
             readings: Vec::new(),
@@ -271,6 +275,11 @@ fn finish<D: AsRef<[u8]>>(
         } else {
             Some(entry.pos.clone())
         },
+        symbols: entry
+            .ipa
+            .first()
+            .map(|ipa| crate::symbols::explain(ipa))
+            .unwrap_or_default(),
         ipa: entry.ipa.clone(),
         says,
         glosses,

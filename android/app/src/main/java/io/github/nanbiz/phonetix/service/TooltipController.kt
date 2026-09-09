@@ -130,7 +130,6 @@ class TooltipController(
     }
 
     fun show(box: WordBox) {
-        IpaSymbols.ensureLoaded(context)
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
@@ -310,7 +309,6 @@ class TooltipController(
      * in sight while the sound is being read about.
      */
     private fun build(box: WordBox): View {
-        IpaSymbols.ensureLoaded(context)
         val dark = box.background == 0 || isDark(box.background)
         val palette = Tokens.palette(Tokens.Theme.PAPER, dark)
         // The language is not known here yet: what the overlay holds is a transcription, and
@@ -352,130 +350,6 @@ class TooltipController(
             }
         }
         return fresh.view
-    }
-
-    private fun fill(box: WordBox, p: Palette) {
-        val rows = list ?: return
-        val at = scroller?.scrollY ?: 0
-        rows.removeAllViews()
-        for (s in IpaSymbols.explain(box.full)) {
-            rows.addView(symbolRow(s, p.onSurface, p.muted, p.accent, p.surface, p.line))
-        }
-        scroller?.let { sv ->
-            sv.post {
-                val room = (sv.getChildAt(0)?.height ?: 0) - sv.height
-                sv.scrollTo(0, at.coerceIn(0, room.coerceAtLeast(0)))
-            }
-        }
-        if (BuildConfig.DEBUG) view?.post { view?.let { card -> card.post { describe(card) } } }
-    }
-
-    private fun symbolRow(
-        s: SymbolInfo,
-        onSurface: Int,
-        muted: Int,
-        accent: Int,
-        surface: Int,
-        line: Int,
-    ): View {
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(8).roundToInt(), 0, dp(2).roundToInt())
-        }
-        row.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(TextView(context).apply {
-                text = s.token
-                setTextColor(accent)
-                typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                width = dp(38).roundToInt()
-            })
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                addView(TextView(context).apply {
-                    text = s.name
-                    setTextColor(onSurface)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                })
-                if (s.example.isNotEmpty()) {
-                    addView(TextView(context).apply {
-                        text = s.example
-                        setTextColor(muted)
-                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    })
-                }
-            })
-            if (s.audio != null) {
-                addView(pill("♪", accent, surface, line) { speaker.play(wikimediaFileUrl(s.audio)) })
-            }
-        })
-
-        // Tapping a symbol opens what the extension shows when you hover one: how the sound
-        // is made, and where to read more.
-        row.setOnClickListener {
-            expanded = if (expanded == s.token) null else s.token
-            shown?.let { box ->
-                fill(box, palette(box))
-                // The card is taller or shorter than it was, so where it sits is settled
-                // again rather than left half off the screen.
-                val card = view
-                if (card != null) {
-                    card.post {
-                        val lp = card.layoutParams as? WindowManager.LayoutParams ?: return@post
-                        place(card, lp, box)
-                    }
-                }
-            }
-        }
-
-        if (expanded == s.token) {
-            if (s.diagram != null) {
-                val image = ImageView(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(150).roundToInt(),
-                    )
-                    adjustViewBounds = true
-                    setPadding(0, dp(6).roundToInt(), 0, 0)
-                }
-                row.addView(image)
-                loadDiagram(s.diagram, image)
-            }
-            row.addView(LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(6).roundToInt(), 0, 0)
-                if (s.wiki != null) {
-                    addView(pill("Read about it", accent, surface, line) {
-                        open("https://en.wikipedia.org/wiki/${s.wiki}")
-                    })
-                }
-                if (s.seeing != null) {
-                    // The same sound filmed in a real mouth, which is the one thing a
-                    // sagittal drawing cannot show.
-                    addView(pill("See it said", accent, surface, line) {
-                        open("https://www.seeingspeech.ac.uk/ipa-charts/${s.seeing}")
-                    })
-                }
-            })
-            // Each word of the description is a fact of its own, and each has an article.
-            val terms = s.name.split(' ', ',').mapNotNull { w ->
-                val clean = w.trim(',', '(', ')')
-                IpaSymbols.termArticle(clean)?.let { clean to it }
-            }.distinctBy { it.first }
-            if (terms.isNotEmpty()) {
-                row.addView(LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    setPadding(0, dp(4).roundToInt(), 0, 0)
-                    for ((term, article) in terms.take(4)) {
-                        addView(pill(term, muted, surface, line) {
-                            open("https://en.wikipedia.org/wiki/$article")
-                        })
-                    }
-                })
-            }
-        }
-        return row
     }
 
     /** Sagittal sections are SVGs, so Wikimedia is asked to raster one at the right width. */

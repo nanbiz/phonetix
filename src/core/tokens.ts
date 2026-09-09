@@ -58,6 +58,10 @@ export interface AnnotateOptions {
   mode: InlineMode;
   /** One word in every N, from the reader's frequency bar. */
   density: number;
+  /** Narrow transcriptions rather than broad ones. */
+  narrow?: boolean;
+  /** Leave the stress marks off the line over a word. The card always shows them. */
+  hideStress?: boolean;
   /** Spellings the reader has opened a card for, which stay annotated afterwards. */
   seen?: string[];
 }

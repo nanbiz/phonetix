@@ -14,7 +14,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/data/ipa-symbols.ts';
+const SOURCE = 'data/ipa-symbols.json';
 const API = 'https://en.wikipedia.org/w/api.php';
 const WRITE = process.argv.includes('--write');
 
@@ -59,29 +59,18 @@ async function resolveTitle(name) {
   return null;
 }
 
-const source = fs.readFileSync(SOURCE, 'utf8');
-const entry = /^(\s*)'(?<sym>[^']+)':\s*\{\s*name:\s*'(?<name>[^']+)'(?<rest>.*)$/;
-
-const lines = source.split('\n');
-const out = [];
+const table = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 let linked = 0;
-let unlinked = [];
+const unlinked = [];
 
-for (const line of lines) {
-  const m = line.match(entry);
-  if (!m || line.includes('wiki:')) {
-    out.push(line);
-    continue;
-  }
-
-  const { sym, name, rest } = m.groups;
-  const title = await resolveTitle(name);
+for (const [sym, row] of Object.entries(table.symbols)) {
+  if (row.wiki) continue;
+  const title = await resolveTitle(row.name);
   if (title) {
     linked++;
-    out.push(line.replace(`name: '${name}'`, `name: '${name}', wiki: '${title.replace(/ /g, '_')}'`));
+    row.wiki = title.replace(/ /g, '_');
   } else {
-    unlinked.push(`${sym} (${name})`);
-    out.push(line);
+    unlinked.push(`${sym} (${row.name})`);
   }
   await new Promise(r => setTimeout(r, 300));   // be polite to the API
 }
@@ -90,7 +79,7 @@ console.log(`linked ${linked} symbols to their article`);
 if (unlinked.length) console.log(`no article for ${unlinked.length}: ${unlinked.join(', ')}`);
 
 if (WRITE) {
-  fs.writeFileSync(SOURCE, out.join('\n'));
+  fs.writeFileSync(SOURCE, JSON.stringify(table, null, 2) + '\n');
   console.log(`wrote ${SOURCE}`);
 } else {
   console.log('(dry run; pass --write to update the table)');

@@ -10,7 +10,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/data/ipa-symbols.ts';
+const SOURCE = 'data/ipa-symbols.json';
 const API = 'https://en.wikipedia.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const UA = 'phonetix-symbol-linker/1.0 (https://github.com/nanbiz/phonetix)';
@@ -116,33 +116,19 @@ async function diagramFor(title, name) {
   return null;
 }
 
-const source = fs.readFileSync(SOURCE, 'utf8');
-// Fields may appear in any order after the key, so name and wiki are matched
-// independently rather than assumed adjacent.
-const entry = /^\s*'(?<sym>[^']+)':\s*\{.*\bname:\s*'(?<name>[^']+)'.*\bwiki:\s*'(?<wiki>[^']+)'/;
-
-const lines = source.split('\n');
-const out = [];
+const table = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 let found = 0;
 const none = [];
 
-for (const line of lines) {
-  const m = line.match(entry);
-  if (!m || line.includes('diagram:')) {
-    out.push(line);
-    continue;
-  }
-
-  const { sym, name, wiki } = m.groups;
-  const file = (await seriesDiagram(sym)) ?? (await diagramFor(wiki.replace(/_/g, ' '), name));
+for (const [sym, row] of Object.entries(table.symbols)) {
+  if (row.diagram || !row.wiki) continue;
+  const file = (await seriesDiagram(sym)) ?? (await diagramFor(row.wiki.replace(/_/g, ' '), row.name));
   await new Promise(r => setTimeout(r, 250));
-
   if (file) {
     found++;
-    out.push(line.replace(`wiki: '${wiki}'`, `wiki: '${wiki}', diagram: '${file.replace(/'/g, "\\'")}'`));
+    row.diagram = file;
   } else {
-    none.push(`${sym} (${name})`);
-    out.push(line);
+    none.push(`${sym} (${row.name})`);
   }
 }
 
@@ -150,7 +136,7 @@ console.log(`found a diagram for ${found} sounds`);
 if (none.length) console.log(`none for ${none.length}: ${none.slice(0, 12).join(', ')}${none.length > 12 ? ' ...' : ''}`);
 
 if (WRITE) {
-  fs.writeFileSync(SOURCE, out.join('\n'));
+  fs.writeFileSync(SOURCE, JSON.stringify(table, null, 2) + '\n');
   console.log(`wrote ${SOURCE}`);
 } else {
   console.log('(dry run; pass --write to update the table)');

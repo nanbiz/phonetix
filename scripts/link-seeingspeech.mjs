@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/data/ipa-symbols.ts';
+const SOURCE = 'data/ipa-symbols.json';
 const UA = 'Mozilla/5.0 (phonetix-symbol-linker)';
 const WRITE = process.argv.includes('--write');
 
@@ -29,34 +29,22 @@ for (const chart of [1, 2, 3, 4]) {
 }
 console.log(`Seeing Speech knows ${chartOf.size} sounds across 4 charts`);
 
-const source = fs.readFileSync(SOURCE, 'utf8');
-const entry = /^(\s*)'(?<sym>[^']+)':\s*\{\s*name:\s*'(?<name>[^']+)'/;
-
-const lines = source.split('\n');
-const out = [];
+const table = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 let linked = 0;
 const none = [];
 
-for (const line of lines) {
-  const m = line.match(entry);
-  if (!m || line.includes('seeing:')) {
-    out.push(line);
-    continue;
-  }
-
-  const { sym, name } = m.groups;
-  // The film is keyed by the base sound's code point; a diacritic does not have its
-  // own film, so a modified symbol shares the base sound's.
+for (const [sym, row] of Object.entries(table.symbols)) {
+  if (row.seeing) continue;
+  // The film is keyed by the base sound's code point; a diacritic does not have its own
+  // film, so a modified symbol shares the base sound's.
   const base = [...sym].find(ch => chartOf.has(ch.codePointAt(0)));
   const cp = base?.codePointAt(0);
   const chart = cp != null ? chartOf.get(cp) : undefined;
-
   if (chart) {
     linked++;
-    out.push(line.replace(`name: '${name}'`, `name: '${name}', seeing: '?chart=${chart}#location=${cp}'`));
+    row.seeing = `?chart=${chart}#location=${cp}`;
   } else {
-    none.push(`${sym} (${name})`);
-    out.push(line);
+    none.push(`${sym} (${row.name})`);
   }
 }
 
@@ -64,7 +52,7 @@ console.log(`linked ${linked} sounds to Seeing Speech`);
 if (none.length) console.log(`no film for ${none.length}: ${none.slice(0, 16).join(', ')}${none.length > 16 ? ' ...' : ''}`);
 
 if (WRITE) {
-  fs.writeFileSync(SOURCE, out.join('\n'));
+  fs.writeFileSync(SOURCE, JSON.stringify(table, null, 2) + '\n');
   console.log(`wrote ${SOURCE}`);
 } else {
   console.log('(dry run; pass --write to update the table)');

@@ -134,7 +134,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         speaker = Speaker(this)
         tooltip = TooltipController(this, speaker) { r -> net.post(r) }
         overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
-        IpaSymbols.ensureLoaded(this)
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
         io.post { Eld.ensureLoaded(this) { schedule(0L) } }

@@ -14,13 +14,14 @@ use crate::resolve::Answer;
 pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
-\"ipa\":{},\"says\":{},\"glosses\":{},\"example\":{},\"readings\":{},\
+\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\"readings\":{},\
 \"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
         maybe(&answer.pos),
         strings(&answer.ipa),
+        symbols_of(&answer.symbols),
         strings(&answer.says),
         strings(&answer.glosses),
         maybe(&answer.example),
@@ -87,6 +88,28 @@ fn provenance(from: &Option<crate::answer::Provenance>) -> String {
     }
 }
 
+/// A transcription symbol by symbol, each with what is known about that sound.
+pub fn symbols_of(items: &[crate::symbols::Symbol]) -> String {
+    let inner: Vec<String> = items
+        .iter()
+        .map(|symbol| {
+            format!(
+                "{{\"token\":{},\"name\":{},\"kind\":{},\"example\":{},\"audio\":{},\
+\"wiki\":{},\"diagram\":{},\"seeing\":{}}}",
+                quoted(&symbol.token),
+                quoted(&symbol.name),
+                quoted(&symbol.kind),
+                quoted(&symbol.example),
+                quoted(&symbol.audio),
+                quoted(&symbol.wiki),
+                quoted(&symbol.diagram),
+                quoted(&symbol.seeing),
+            )
+        })
+        .collect();
+    format!("[{}]", inner.join(","))
+}
+
 /// The words a spelling is, where it is more than one.
 fn readings(items: &[crate::resolve::Reading]) -> String {
     let inner: Vec<String> = items
@@ -150,6 +173,7 @@ mod tests {
             lemma: None,
             pos: Some("noun".into()),
             ipa: vec!["ˈpe.ro".into()],
+            symbols: crate::symbols::explain("ˈpe.ro"),
             says: vec!["Hund".into()],
             glosses: vec!["dog".into()],
             readings: Vec::new(),

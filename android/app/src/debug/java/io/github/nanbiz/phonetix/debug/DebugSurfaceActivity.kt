@@ -130,7 +130,6 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             )
             val dark = intent.getIntExtra("cardDark", 0) != 0
             val palette = io.github.nanbiz.phonetix.ui.Tokens.palette(theme, dark)
-            io.github.nanbiz.phonetix.core.IpaSymbols.ensureLoaded(this)
             root.setBackgroundColor(palette.pageBg.toInt())
             root.addView(
                 androidx.compose.ui.platform.ComposeView(this).apply {

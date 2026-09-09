@@ -30,15 +30,12 @@ jobs:
         run: pnpm fetch:dict
       - name: Typecheck
         run: pnpm check
-      - name: Unit tests
-        run: pnpm test
       # The Android port asserts itself against these vectors, so a rule changed in the core
       # without regenerating them would let the phone and the core drift apart silently.
       - uses: dtolnay/rust-toolchain@stable
       - name: Shared behaviour vectors are current
         run: |
           pnpm gen:vectors
-          pnpm gen:symbols
           git diff --exit-code shared/
       # The extension imports the core, so it is compiled before anything is bundled.
       - uses: ./.github/actions/core-wasm

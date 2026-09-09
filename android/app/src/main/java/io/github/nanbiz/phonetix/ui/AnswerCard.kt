@@ -155,17 +155,23 @@ private fun Pronunciation(
         )
         // Symbol by symbol, because each one is a button: a reader who does not know a sound
         // is one tap from what it is, which is the whole of what the old tooltip was for.
-        for (symbol in symbolsOf(answer.ipa.first())) {
+        for (symbol in answer.symbols) {
             androidx.compose.material3.Text(
-                text = symbol,
-                color = Color(palette.ipaConsonant),
+                text = symbol.token,
+                color = Color(
+                    when (symbol.kind) {
+                        "vowel" -> palette.ipaVowel
+                        "consonant" -> palette.ipaConsonant
+                        else -> palette.ipaOther
+                    },
+                ),
                 fontSize = Tokens.Scale.fontSizeIpa.sp,
                 // No space between symbols: a transcription is one word and reads as one.
                 // Each is still its own target, which is what a tap needs, and the gaps that
                 // separated them made "/ˈpe.ro/" read as a row of letters.
                 modifier = Modifier
-                    .clickable { onSymbol(symbol) }
-                    .reported(symbol, report),
+                    .clickable { onSymbol(symbol.token) }
+                    .reported(symbol.token, report),
             )
         }
         androidx.compose.material3.Text(
@@ -366,27 +372,3 @@ private fun Badge(text: String, ink: Color, background: Color) {
     }
 }
 
-/**
- * A transcription split into the symbols a reader can ask about.
- *
- * A symbol is a base letter with whatever diacritics hang off it: those are not separate
- * sounds and splitting them apart would offer a reader a tap on a mark rather than on a sound.
- */
-internal fun symbolsOf(ipa: String): List<String> {
-    val out = mutableListOf<String>()
-    for (c in ipa) {
-        val combining = c.isWhitespace() ||
-            Character.getType(c).let {
-                it == Character.NON_SPACING_MARK.toInt() ||
-                    it == Character.COMBINING_SPACING_MARK.toInt() ||
-                    it == Character.MODIFIER_LETTER.toInt() ||
-                    it == Character.MODIFIER_SYMBOL.toInt()
-            }
-        if (combining && out.isNotEmpty()) {
-            out[out.size - 1] = out.last() + c
-        } else {
-            out.add(c.toString())
-        }
-    }
-    return out.filter { it.isNotBlank() }
-}

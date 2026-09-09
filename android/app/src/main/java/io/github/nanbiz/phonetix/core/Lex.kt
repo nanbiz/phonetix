@@ -14,9 +14,12 @@ package io.github.nanbiz.phonetix.core
  */
 object Lex {
 
-    /** Whether the native library is present, since a build without it must degrade rather
-     *  than crash the service that is painting somebody else's screen. */
-    val ready: Boolean = runCatching { System.loadLibrary("lexcore_android") }.isSuccess
+    init {
+        // The core is not optional: what a word means, how it is said and which words are
+        // annotated are all decided in it. A build that cannot load it is a broken build,
+        // and saying so here is better than a service that quietly shows nothing.
+        System.loadLibrary("lexcore_android")
+    }
 
     /** How many terms two English glosses share, which is how a word in one language is
      *  matched to a word in another. */
@@ -55,4 +58,12 @@ object Lex {
      * one place in the core, so this side and the browser read the same one.
      */
     external fun lookUp(core: Long, spelling: String, source: String, target: String): String
+
+    /** A transcription, symbol by symbol, as JSON: what each sound is called and where to
+     *  read about it. The table is the core's, so both platforms name a sound the same. */
+    external fun symbols(ipa: String): String
+
+    /** A transcription as it is shown over a word, given the reader's own settings. The card
+     *  always carries the full form. */
+    external fun display(ipa: String, narrow: Boolean, hideStress: Boolean): String
 }

@@ -99,6 +99,8 @@ pub struct AnnotateOptions {
     pub density: u32,
     /// Broad transcriptions or narrow ones.
     pub narrow: bool,
+    /// Whether the line over a word carries the stress marks. The card always does.
+    pub hide_stress: bool,
     pub accent: Option<String>,
     /// Spellings the reader has opened a card for, which stay annotated afterwards.
     pub seen: Vec<String>,

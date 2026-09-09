@@ -6,8 +6,8 @@
 // The module is the same crate the phone links: a word answered here and the same word
 // answered on the phone go through one cascade, so the two cannot drift into disagreeing
 // about what a word means.
-import init, { Core } from './wasm/lexcore.js';
-import type { Answer } from './answer';
+import init, { Core, display as shown, symbols as sounds } from './wasm/lexcore.js';
+import type { Answer, IpaSymbol } from './answer';
 import type { AnnotateOptions, Batch, TextRun } from './tokens';
 
 /** Where the compiled core sits in the extension's own package. */
@@ -102,6 +102,8 @@ export async function annotate(
       target,
       options.mode,
       options.density,
+      options.narrow ?? false,
+      options.hideStress ? 1 : 0,
       options.seen ?? []
     )
   ) as Batch;
@@ -139,6 +141,22 @@ export async function complete(
 export async function curve(): Promise<number[]> {
   const it = await coreReady();
   return Array.from(it.curve());
+}
+
+/** A transcription, symbol by symbol, for a surface that has no answer to read them off. */
+export async function symbolsOf(ipa: string): Promise<IpaSymbol[]> {
+  await coreReady();
+  return JSON.parse(sounds(ipa)) as IpaSymbol[];
+}
+
+/** A transcription as it is shown over a word. */
+export async function displayOf(
+  ipa: string,
+  narrow: boolean,
+  hideStress: boolean
+): Promise<string> {
+  await coreReady();
+  return shown(ipa, narrow, hideStress);
 }
 
 /** Give up a batch the host has finished drawing. */

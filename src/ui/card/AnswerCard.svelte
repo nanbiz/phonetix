@@ -8,7 +8,6 @@
   // The markup is the surface page's own and the stylesheet is generated from it, so this
   // card and the Compose card are the same card.
   import { headline as headlineOf, type Answer } from '@/core/answer';
-  import { describeSymbol, tokenizeIPA } from '@/data/ipa-symbols';
   import { named } from '@/data/languages';
   import PlayButton from './PlayButton.svelte';
   import SourceMark from './SourceMark.svelte';
@@ -24,9 +23,8 @@
   let { answer, onSymbol, onPlay, onOpen }: Props = $props();
 
   /** Which colour a symbol takes: the page colours vowels, consonants and the rest apart. */
-  function symbolClass(symbol: string): string {
-    const type = describeSymbol(symbol)?.type;
-    return type === 'vowel' ? 'sym v' : type === 'consonant' ? 'sym c' : 'sym o';
+  function symbolClass(kind: string): string {
+    return kind === 'vowel' ? 'sym v' : kind === 'consonant' ? 'sym c' : 'sym o';
   }
 
   /** Where a word's own page is, which is the same URL the phone builds. */
@@ -35,7 +33,9 @@
 
   let lead = $derived(headlineOf(answer));
   let chooses = $derived(answer.readings.length >= 2);
-  let symbols = $derived(answer.ipa.length > 0 ? tokenizeIPA(answer.ipa[0]) : []);
+  // The core split the transcription and said what each sound is; a card that split it
+  // again would be a second opinion about where one sound ends.
+  let symbols = $derived(answer.symbols);
   let rest = $derived(chooses ? [] : answer.glosses.slice(1));
   // A machine's answer is labelled one, and so is an English gloss standing in for an answer
   // the dictionary did not reach: unmarked, it reads as the translation rather than as the
@@ -83,8 +83,9 @@
             sound is one tap from what it is.
          --><!-- No space between them: a transcription is one word and reads as one.
          -->{#each symbols as symbol, i (i)}<button
-                class={symbolClass(symbol)}
-                onclick={() => onSymbol?.(symbol)}>{symbol}</button>{/each}<span
+                class={symbolClass(symbol.kind)}
+                title={symbol.name}
+                onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}<span
               class="delim">/</span>
           </span>
           <PlayButton label={`say ${answer.spelling}`} onplay={() => onPlay?.()} />

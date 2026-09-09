@@ -3,8 +3,7 @@
 // One instance and one place, because a pack is tens of megabytes and a copy per tab would
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
-import { annotate, complete, curve, lookUp, openLanguages } from '@/core';
-import { ofTranscription } from '@/core/answer';
+import { annotate, complete, curve, lookUp, openLanguages, symbolsOf } from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
 import { forget, get, held, offered, open } from './packs';
@@ -21,14 +20,7 @@ export function host(): void {
     }
   });
 
-  onMessage('languages', async () => {
-    try {
-      return await openLanguages();
-    } catch (e) {
-      console.warn('[Phonetix] The core did not start:', e);
-      return [];
-    }
-  });
+  onMessage('languages', async () => openLanguages());
 
   onMessage('annotate', async ({ data }) => {
     // Both packs, because a translation is a join between them: with only the source open
@@ -81,6 +73,8 @@ export function host(): void {
     }
   });
 
+  onMessage('symbols', async ({ data }) => symbolsOf(data.ipa));
+
   onMessage('fetch', async ({ data }) => {
     try {
       const res = await fetch(data.url);
@@ -102,18 +96,13 @@ export function host(): void {
   });
 
   onMessage('lookUp', async ({ data }) => {
-    try {
-      await Promise.all([
-        open(data.source).catch(() => null),
-        data.target === data.source ? null : open(data.target).catch(() => null),
-      ]);
-      return await lookUp(data.word, data.source, data.target);
-    } catch (e) {
-      console.warn(`[Phonetix] Lookup failed for ${data.word}:`, e);
-      // A cascade that could not run is not a cascade that found nothing. The state says
-      // which, so the card can offer the pack rather than claim the word does not exist.
-      return { ...ofTranscription(data.word, '', data.source), state: 'NoPack' as const };
-    }
+    // A missing pack is an answer the cascade gives; anything else is a fault, and it
+    // travels back as one rather than as a card claiming the word does not exist.
+    await Promise.all([
+      open(data.source),
+      data.target === data.source ? null : open(data.target),
+    ]);
+    return lookUp(data.word, data.source, data.target);
   });
 }
 

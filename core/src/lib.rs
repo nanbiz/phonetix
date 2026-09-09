@@ -13,3 +13,4 @@ pub mod json;
 pub mod resolve;
 pub mod segment;
 pub mod sprinkle;
+pub mod symbols;

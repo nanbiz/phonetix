@@ -18,6 +18,22 @@ export type AnswerState =
   | 'UnknownLang'
   | 'Loading';
 
+/** One symbol of a transcription, with what is known about that sound. */
+export interface IpaSymbol {
+  token: string;
+  name: string;
+  /** Vowel, consonant, suprasegmental or diacritic. */
+  kind: string;
+  /** A word it is heard in, empty where the table has none. */
+  example: string;
+  /** A recording, an article, a diagram, a film of a mouth. Empty where there is none: a row
+   *  that leads nowhere is worse than no row. */
+  audio: string;
+  wiki: string;
+  diagram: string;
+  seeing: string;
+}
+
 /** One of the words a spelling is. */
 export interface Reading {
   pos: string | null;
@@ -34,6 +50,9 @@ export interface Answer {
   lemma: string | null;
   pos: string | null;
   ipa: string[];
+  /** The first transcription, symbol by symbol: the card offers each sound on its own and
+   *  does not hold a table to look them up in. */
+  symbols: IpaSymbol[];
   /** The answer in the reader's own language, best first. More than one is an ambiguity the
    *  card shows rather than resolves. */
   says: string[];
@@ -79,6 +98,7 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
     lemma: null,
     pos: null,
     ipa: ipa.trim() === '' ? [] : [ipa],
+    symbols: [],
     says: [],
     glosses: [],
     example: null,

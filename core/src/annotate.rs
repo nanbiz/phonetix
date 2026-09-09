@@ -67,7 +67,12 @@ pub fn annotate<D: AsRef<[u8]>>(
                 .first()
                 .or_else(|| answer.glosses.first())
                 .map(|text| cut(text, GLOSS_LIMIT));
-            let ipa = answer.ipa.first().cloned();
+            // Shown the way the reader asked: the card always carries the full form, and
+            // the line over a word carries as much of it as they wanted.
+            let ipa = answer
+                .ipa
+                .first()
+                .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
 
             let index = tokens.len() as u32;
             if inline {
@@ -164,6 +169,7 @@ mod tests {
             mode,
             density,
             narrow: false,
+            hide_stress: false,
             accent: None,
             seen: Vec::new(),
         }

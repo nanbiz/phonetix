@@ -5,40 +5,45 @@
   // deeper rather than on the card's face. What is absent is absent: a symbol whose table row
   // has no diagram shows no diagram, rather than an empty frame that looks like something
   // failing to load.
-  import { describeSymbol, wikimediaAudioURL, type IPASymbolInfo } from '@/data/ipa-symbols';
+  import type { IpaSymbol } from '@/core/answer';
+
+  /** Where Commons keeps a file, which is the same URL the phone builds. */
+  const commons = (file: string) =>
+    `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`;
 
   interface Props {
-    /** The symbol the reader tapped, as it is written in the transcription. */
-    symbol: string;
+    /** The sound the reader tapped, as the core described it. */
+    about: IpaSymbol;
     /** A picture of the mouth making it, where the host could fetch one. */
     diagram?: string | null;
     onPlay?: (url: string) => void;
     onOpen?: (url: string) => void;
   }
 
-  let { symbol, diagram = null, onPlay, onOpen }: Props = $props();
+  let { about, diagram = null, onPlay, onOpen }: Props = $props();
 
-  let about = $derived<IPASymbolInfo | null>(describeSymbol(symbol));
   let links = $derived(
-    about
-      ? [
-          about.wiki ? { label: 'Wikipedia', url: about.wiki } : null,
-          about.seeing ? { label: 'Seeing Speech', url: about.seeing } : null,
-        ].filter((link): link is { label: string; url: string } => link !== null)
-      : []
+    [
+      about.wiki
+        ? { label: 'Wikipedia', url: `https://en.wikipedia.org/wiki/${about.wiki}` }
+        : null,
+      about.seeing
+        ? { label: 'Seeing Speech', url: `https://seeingspeech.ac.uk/${about.seeing}` }
+        : null,
+    ].filter((link): link is { label: string; url: string } => link !== null)
   );
 </script>
 
-{#if about}
+{#if about.name}
   <aside class="popover">
     {#if diagram}
       <!-- The mouth that makes it. Fetched by the host, because a page's own policy would
            refuse the load and because one picture is worth the round trip. -->
-      <img class="diagram" src={diagram} alt="how the mouth makes {symbol}" />
+      <img class="diagram" src={diagram} alt="how the mouth makes {about.token}" />
     {/if}
     <div class="pop-sym">
-      {symbol}
-      <span class="chip">{about.type}</span>
+      {about.token}
+      <span class="chip">{about.kind}</span>
     </div>
     <div class="pop-name">{about.name}</div>
     {#if about.example}
@@ -49,7 +54,7 @@
     <div class="pop-links">
       {#if about.audio}
         <!-- A person saying it, where Commons has a recording of one. -->
-        <button class="btn-text" onclick={() => onPlay?.(wikimediaAudioURL(about.audio!))}>
+        <button class="btn-text" onclick={() => onPlay?.(commons(about.audio))}>
           Play recording
         </button>
       {/if}

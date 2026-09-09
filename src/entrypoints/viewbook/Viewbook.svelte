@@ -5,6 +5,7 @@
   // and a card that needs a dictionary open before it can be seen is a card nobody can check
   // until everything else works.
   import Opened from '@/ui/card/Opened.svelte';
+  import { sendMessage } from '@/host/messages';
   import type { Answer } from '@/core/answer';
   import '@/ui/tokens.css';
   import '@/ui/card/card.css';
@@ -16,6 +17,7 @@
       lemma: null,
       pos: 'noun',
       ipa: ['ˈpe.ro'],
+      symbols: [],
       says: ['Hund'],
       glosses: ['dog'],
       example: null,
@@ -78,12 +80,31 @@
   ];
 
   const modes = ['light', 'dark'] as const;
+
+  // The sounds of each transcription come from the core, like everywhere else: a page that
+  // split them itself would be showing a card nobody else draws.
+  let drawn = $state(states);
+  $effect(() => {
+    void (async () => {
+      drawn = await Promise.all(
+        states.map(async (state) => ({
+          ...state,
+          answer: {
+            ...state.answer,
+            symbols: state.answer.ipa[0]
+              ? await sendMessage('symbols', { ipa: state.answer.ipa[0] })
+              : [],
+          },
+        }))
+      );
+    })();
+  });
 </script>
 
 <main>
   {#each modes as mode (mode)}
     <section class="theme-paper mode-{mode}" data-mode={mode}>
-      {#each states as state (state.uid)}
+      {#each drawn as state (state.uid)}
         <div class="slot" data-uid={state.uid}>
           <div class="label">{state.uid}</div>
           <Opened answer={state.answer} />

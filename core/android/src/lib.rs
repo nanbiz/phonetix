@@ -171,3 +171,41 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
     );
     env.new_string(lexcore::json::of(&answer)).unwrap_or(empty)
 }
+
+/// A transcription, symbol by symbol, as JSON.
+///
+/// The overlay's card offers every sound on its own, and what a sound is called is the core's
+/// answer: a table on this side would be the same table twice, which is how one sound ends up
+/// with two names.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_symbols<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    ipa: JString<'a>,
+) -> jni::objects::JString<'a> {
+    let empty = env.new_string("[]").expect("a string the vm can hold");
+    let Ok(ipa) = env.get_string(&ipa) else {
+        return empty;
+    };
+    let ipa: String = ipa.into();
+    let written = lexcore::json::symbols_of(&lexcore::symbols::explain(&ipa));
+    env.new_string(written).unwrap_or(empty)
+}
+
+/// A transcription as it is shown over a word, given what the reader asked for.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_display<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    ipa: JString<'a>,
+    narrow: jni::sys::jboolean,
+    hide_stress: jni::sys::jboolean,
+) -> jni::objects::JString<'a> {
+    let empty = env.new_string("").expect("a string the vm can hold");
+    let Ok(text) = env.get_string(&ipa) else {
+        return empty;
+    };
+    let text: String = text.into();
+    let shown = lexcore::symbols::display(&text, narrow != 0, hide_stress != 0);
+    env.new_string(shown).unwrap_or(empty)
+}

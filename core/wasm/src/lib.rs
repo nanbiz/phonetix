@@ -33,6 +33,18 @@ pub fn best_of(source: &str, candidates: Vec<String>, margin: usize) -> i32 {
     }
 }
 
+/// A transcription, symbol by symbol, as JSON.
+#[wasm_bindgen]
+pub fn symbols(ipa: &str) -> String {
+    lexcore::json::symbols_of(&lexcore::symbols::explain(ipa))
+}
+
+/// A transcription as it is shown over a word, given what the reader asked for.
+#[wasm_bindgen]
+pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
+    lexcore::symbols::display(ipa, narrow, hide_stress)
+}
+
 /// The core, holding whatever packs the host has given it.
 ///
 /// The bytes are taken rather than borrowed: a browser's buffer belongs to the garbage
@@ -116,6 +128,8 @@ impl Core {
         target: &str,
         mode: &str,
         density: u32,
+        narrow: bool,
+        hide_stress: u8,
         seen: Vec<String>,
     ) -> String {
         let runs: Vec<TextRun> = run_ids
@@ -145,7 +159,8 @@ impl Core {
                 _ => InlineMode::Off,
             },
             density,
-            narrow: false,
+            narrow,
+            hide_stress: hide_stress != 0,
             accent: None,
             seen,
         };

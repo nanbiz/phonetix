@@ -15,7 +15,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/data/ipa-symbols.ts';
+const SOURCE = 'data/ipa-symbols.json';
 const API = 'https://en.wikipedia.org/w/api.php';
 const UA = 'phonetix-symbol-linker/1.0 (https://github.com/nanbiz/phonetix)';
 const WRITE = process.argv.includes('--write');
@@ -59,7 +59,7 @@ async function exists(title) {
   return page.title;
 }
 
-const { IPA_SYMBOLS } = await import('../src/data/ipa-symbols.ts');
+const { symbols: IPA_SYMBOLS } = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 
 // Which kind of sound each term is used to describe, from our own table.
 const usage = new Map();
@@ -112,18 +112,7 @@ if (!WRITE) {
   process.exit(0);
 }
 
-const source = fs.readFileSync(SOURCE, 'utf8');
-const block = `
-/**
- * The article on each term a description is built from.
- *
- * A description stacks independent facts ("r-colored open-mid central vowel" is
- * r-colouring, a height, a backness and a vowel), so each term is linked on its
- * own rather than the phrase pointing at one of them. Resolved against Wikipedia
- * by scripts/link-terms.mjs; a term with no article is simply not a link.
- */
-export const TERM_LINKS: Record<string, string> = ${JSON.stringify(links, null, 2).replace(/"/g, "'")};
-`;
-
-fs.writeFileSync(SOURCE, source.trimEnd() + '\n' + block);
+const table = JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
+table.terms = links;
+fs.writeFileSync(SOURCE, JSON.stringify(table, null, 2) + '\n');
 console.log(`\nwrote ${SOURCE}`);
