@@ -119,6 +119,10 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: pnpm test:page
+      - name: Every setting changes what the reader sees
+        env:
+          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
+        run: pnpm test:settings
 
   # The reading core, which is one crate compiled twice: to WebAssembly for the extension and
   # to a native library for the overlay. Everything about what a word means, how it is said and

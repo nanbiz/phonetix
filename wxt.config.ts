@@ -30,6 +30,9 @@ export default defineConfig({
     name: 'Phonetix - Learn and Understand IPA',
     // The voice needs a document and a Chromium service worker has none, so on Chromium it
     // lives in an offscreen page. Firefox's background page has one and needs no permission.
+    // The toolbar button's tooltip, on both engines. Without it the settings view shipped as
+    // the literal "Default Popup Title".
+    action: { default_title: 'Phonetix' },
     permissions: browser === 'firefox' ? ['storage'] : ['storage', 'offscreen'],
     host_permissions: ['<all_urls>'],
     content_security_policy: {

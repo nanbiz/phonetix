@@ -23,6 +23,10 @@ export interface HostProtocol {
     data: { runs: TextRun[]; source: string; target: string; options: AnnotateOptions };
     reply: Batch;
   };
+  /** What each position of the reader's frequency bar means, as one word in every N. */
+  curve: { data: Record<string, never>; reply: number[] };
+  /** Which languages have a pack on this machine, and which of them are open. */
+  packs: { data: Record<string, never>; reply: { held: string[]; open: string[] } };
   /** Say one word: WAV bytes, because a page's own media policy can block an audio element
    *  loading a URL and cannot block Web Audio playing bytes. */
   speak: { data: { word: string; lang: string }; reply: number[] };

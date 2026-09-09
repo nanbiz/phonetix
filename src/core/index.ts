@@ -130,6 +130,17 @@ export async function complete(
   ) as Batch;
 }
 
+/**
+ * The reader's frequency bar, as the densities its positions mean.
+ *
+ * The whole bar at once, because a settings view says what each position means while the
+ * reader drags it, and asking across the boundary per step would be a message per pixel.
+ */
+export async function curve(): Promise<number[]> {
+  const it = await coreReady();
+  return Array.from(it.curve());
+}
+
 /** Give up a batch the host has finished drawing. */
 export async function dropBatch(batch: number): Promise<void> {
   const it = await coreReady();

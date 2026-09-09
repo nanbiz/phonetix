@@ -195,6 +195,18 @@ impl Core {
         written
     }
 
+    /// The reader's frequency bar, as the densities it maps to.
+    ///
+    /// A hundred and one steps, which is the whole bar: the settings view draws a slider and
+    /// needs to say what each position means, and asking across the boundary on every drag
+    /// step would be a message per pixel.
+    #[wasm_bindgen]
+    pub fn curve(&self) -> Vec<u32> {
+        (0..=100)
+            .map(|step| lexcore::sprinkle::density_for_pos(step as f64 / 100.0))
+            .collect()
+    }
+
     /// Give up a batch the host has finished drawing.
     #[wasm_bindgen(js_name = dropBatch)]
     pub fn drop_batch(&mut self, batch: u64) {

@@ -3,11 +3,11 @@
 // One instance and one place, because a pack is tens of megabytes and a copy per tab would
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
-import { annotate, complete, lookUp, openLanguages } from '@/core';
+import { annotate, complete, curve, lookUp, openLanguages } from '@/core';
 import { ofTranscription } from '@/core/answer';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
-import { open } from './packs';
+import { held, open } from './packs';
 import { audio, ipa } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
@@ -42,6 +42,10 @@ export function host(): void {
     const batch = await annotate(data.runs, data.source, data.target, data.options);
     return said(batch, data.source);
   });
+
+  onMessage('curve', async () => curve());
+
+  onMessage('packs', async () => ({ held: await held(), open: await openLanguages() }));
 
   onMessage('speak', async ({ data }) => {
     try {
