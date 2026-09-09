@@ -66,4 +66,13 @@ object Lex {
     /** A transcription as it is shown over a word, given the reader's own settings. The card
      *  always carries the full form. */
     external fun display(ipa: String, narrow: Boolean, hideStress: Boolean): String
+
+    /** Whether this occurrence of a word is one the inline layer draws. */
+    external fun picks(word: String, occurrence: Int, density: Int): Boolean
+
+    /** What a position on the reader's frequency bar means, as one word in every N. */
+    external fun densityForPos(position: Float): Int
+
+    /** Where on that bar a density sits. */
+    external fun posForDensity(density: Int): Float
 }

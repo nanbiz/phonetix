@@ -209,3 +209,44 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_display<'a>(
     let shown = lexcore::symbols::display(&text, narrow != 0, hide_stress != 0);
     env.new_string(shown).unwrap_or(empty)
 }
+
+/// Whether this occurrence of a word is one the inline layer draws.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_picks(
+    mut env: JNIEnv,
+    _class: JClass,
+    word: JString,
+    occurrence: jint,
+    density: jint,
+) -> jni::sys::jboolean {
+    let Ok(word) = env.get_string(&word) else {
+        return 0;
+    };
+    let word: String = word.into();
+    let picked = lexcore::sprinkle::picks(
+        &word.to_lowercase(),
+        occurrence.max(0) as u32,
+        density.max(1) as u32,
+    );
+    u8::from(picked)
+}
+
+/// What a position on the reader's frequency bar means, as one word in every N.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_densityForPos(
+    _env: JNIEnv,
+    _class: JClass,
+    position: jni::sys::jfloat,
+) -> jint {
+    lexcore::sprinkle::density_for_pos(position as f64) as jint
+}
+
+/// Where on that bar a density sits.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_posForDensity(
+    _env: JNIEnv,
+    _class: JClass,
+    density: jint,
+) -> jni::sys::jfloat {
+    lexcore::sprinkle::pos_for_density(density.max(1) as u32, 100) as jni::sys::jfloat
+}

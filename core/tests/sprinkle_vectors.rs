@@ -1,20 +1,17 @@
-//! The Rust sprinkle against the vectors the two platforms already agree on.
+//! The core's sprinkle against what the two platforms answered before it had it.
 //!
-//! The rule used to live in TypeScript, with the Android port asserting itself against vectors
-//! generated from it. It lives here now, and this is what says the move changed nothing: the
-//! same word, occurrence and density have to be picked the same way they were, or one setting
-//! would quietly mean two different pages.
+//! The rule was TypeScript with a Kotlin port asserting itself against generated vectors.
+//! It is the core's now, and these are the answers those two agreed on: the same word,
+//! occurrence and density have to be picked the same way, or one setting quietly means two
+//! different pages.
 
 use std::fs;
 
 use lexcore::sprinkle::{density_for_pos, picks, pos_for_density, DENSITY_MAX, DENSITY_MIN};
 
 fn vectors() -> serde_json::Value {
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../shared/sprinkle-vectors.json"
-    );
-    let text = fs::read_to_string(path).expect("shared/sprinkle-vectors.json is missing");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/sprinkle.json");
+    let text = fs::read_to_string(path).expect("core/tests/fixtures/sprinkle.json is missing");
     serde_json::from_str(&text).expect("the vectors are not JSON")
 }
 

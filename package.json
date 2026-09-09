@@ -18,7 +18,6 @@
     "fetch:dict": "node scripts/fetch-dictionaries.mjs",
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
-    "gen:vectors": "cd core && cargo run -q -p lexcore --bin vectors",
     "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
     "test:features": "uv run python scripts/proofread/android_features.py",
     "test:lex": "uv run python scripts/proofread/lex_extension.py",

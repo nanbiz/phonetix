@@ -1,16 +1,17 @@
-//! The core's symbols against the vectors both platforms already agreed on.
+//! The core's symbols against what the two platforms answered before it had them.
 //!
 //! Splitting a transcription, naming a symbol and deciding how much detail to show were
-//! written twice, once in TypeScript and once in Kotlin, with these vectors keeping the two
-//! honest. The logic is the core's now, and this is what says the move changed nothing.
+//! written twice, once in TypeScript and once in Kotlin, and these are the answers those two
+//! agreed on. Keeping them is what says the move into the core changed nothing, and what
+//! would say a later edit did.
 
 use std::fs;
 
 use lexcore::symbols::{describe, display, tokenize};
 
 fn vectors() -> serde_json::Value {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../shared/ipa-symbols.json");
-    let text = fs::read_to_string(path).expect("shared/ipa-symbols.json is missing");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/symbols.json");
+    let text = fs::read_to_string(path).expect("core/tests/fixtures/symbols.json is missing");
     serde_json::from_str(&text).expect("the vectors are not JSON")
 }
 
