@@ -1266,7 +1266,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 if (BuildConfig.DEBUG && waitedOut.add(pkg.orEmpty())) {
                     android.util.Log.d(
                         "Phonetix",
-                        "WAITING $pkg is never still, so its characters are never measured",
+                        "WAITING $pkg is never still, so its characters are never measured " +
+                            "(cap=$MEASURE_MOVING_MAX)",
                     )
                 }
                 p.boxes = emptyList(); continue
@@ -1303,11 +1304,32 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Drop anything the node's ancestors clip away rather than painting a word that
             // is behind something else.
             var w = before
+            var outside = 0
+            var hidden = 0
             for (i in before until boxes.size) {
                 val r = boxes[i].rect
-                val inside = r.left >= p.viewport.left - 1 && r.top >= p.viewport.top - 1 &&
-                    r.right <= p.viewport.right + 1 && r.bottom <= p.viewport.bottom + 1
-                if (inside && !covered(r, p.exit)) { boxes[w] = boxes[i]; w++ }
+                // In the window, rather than wholly within it. A character's box carries the
+                // font's ascent and descent, and an element that wraps its own text is exactly
+                // as tall as the text: the box then stands a pixel or two proud of the box
+                // that clips it, at the top and the bottom both. Demanding containment threw
+                // out every word of every web page for that couple of pixels, which is what a
+                // browser showing nothing at all looked like from in here. What this has to
+                // catch is a word scrolled out of its list or under a toolbar, and a word
+                // whose middle is outside the window is what that is.
+                val midX = (r.left + r.right) / 2
+                val midY = (r.top + r.bottom) / 2
+                val inside = midX >= p.viewport.left && midX <= p.viewport.right &&
+                    midY >= p.viewport.top && midY <= p.viewport.bottom
+                val behind = inside && covered(r, p.exit)
+                if (!inside) outside++ else if (behind) hidden++
+                if (inside && !behind) { boxes[w] = boxes[i]; w++ }
+            }
+            if (BuildConfig.DEBUG && PROBE_TREE) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "CLIP kept=${w - before} outside=$outside covered=$hidden " +
+                        "viewport=${p.viewport} of '${p.text.take(16)}'",
+                )
             }
             while (boxes.size > w) boxes.removeAt(boxes.size - 1)
             p.boxes = boxes.subList(before, boxes.size).toList()
@@ -1542,7 +1564,26 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private fun againstWhereItIsNow(p: Planned, at: android.graphics.Rect) {
         val now = android.graphics.Rect()
         p.node.getBoundsInScreen(now)
-        if (!now.isEmpty) at.set(now)
+        if (now.isEmpty) return
+        // The characters have just been measured where the line is now, and the boxes they
+        // are about to be tested against were read when the screen was walked, which on a
+        // page that is moving is a different screen. Carrying them by what the line itself
+        // travelled puts both on the same one.
+        //
+        // Without it, a word measured during a movement is tested against the window its line
+        // sat in a moment ago and thrown out for being outside it. That is why a page could
+        // only be read while it was standing still: measuring one that was moving produced
+        // character positions and then dropped every one of them. In a browser, whose page is
+        // handed over only while it is being touched, that meant nothing was ever drawn at
+        // all.
+        val dx = now.left - p.walkedAt.left
+        val dy = now.top - p.walkedAt.top
+        if (dx != 0 || dy != 0) {
+            p.clip.offset(dx, dy)
+            p.viewport.offset(dx, dy)
+            p.walkedAt.set(now)
+        }
+        at.set(now)
     }
 
     /**
@@ -1669,6 +1710,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** Where this node's subtree ends in draw order; anything that starts after it is
          *  painted on top of it. */
         val exit: Int,
+        /** Where the node itself was when the screen was walked, which is what says how far
+         *  everything above has travelled since. The clip and the viewport are the ancestors'
+         *  boxes, and on a page whose ancestors are its own scrolling elements - which is
+         *  every web page - those move with the line rather than standing still. */
+        val walkedAt: android.graphics.Rect,
 
     ) {
         /** Where the node sat when its characters were measured, and what came out. A
@@ -1782,6 +1828,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val now = Planned(
             p.node, picks.first().start, picks.last().end - picks.first().start + 1,
             picks, says, android.graphics.Rect(p.clip), android.graphics.Rect(p.viewport), p.exit,
+            android.graphics.Rect(p.walkedAt),
         )
         if (!measureLine(now, allowedToAsk = true)) return
         val c = colours.decide(
@@ -1893,6 +1940,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     Planned(
                         node, from, to - from + 1, picks, text,
                         android.graphics.Rect(clip), android.graphics.Rect(inherited), 0,
+                        android.graphics.Rect(bounds),
                     ),
                 )
                 budget.words -= picks.size
@@ -1902,6 +1950,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         mark = System.nanoTime()
         val n = node.childCount
         stats.ipcNs += System.nanoTime() - mark
+        if (BuildConfig.DEBUG && PROBE_TREE) {
+            android.util.Log.d(
+                "Phonetix",
+                "NODE ${node.className} kids=$n vis=$visible bounds=$bounds " +
+                    "text=${text?.take(24)} extras=${node.availableExtraData}",
+            )
+        }
         for (i in 0 until n) {
             mark = System.nanoTime()
             val child = node.getChild(i)
@@ -1916,7 +1971,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val was = out[plannedHere]
             out[plannedHere] = Planned(
                 was.node, was.from, was.length, was.picks, was.text, was.clip, was.viewport,
-                budget.order,
+                budget.order, was.walkedAt,
             )
         }
     }
@@ -2000,16 +2055,44 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * for instance - and those nodes are left alone rather than guessed at.
      */
     private fun charRects(node: AccessibilityNodeInfo, from: Int, length: Int): Array<RectF?>? {
+        // Asked for under whichever name the node itself offers.
+        //
+        // There are two spellings of this in the wild. The platform's own constant is
+        // "android.view.accessibility.extra...", and Chromium answers to the AndroidX one,
+        // "android.core.view.accessibility.extra...", which is what every page in every
+        // browser is drawn through. Asking under the platform name alone, the request simply
+        // returns false there: no character positions, so no word can be located, so nothing
+        // is drawn on any web page at all - standing still or scrolling.
+        val offered = node.availableExtraData.orEmpty()
+        val key = when {
+            PLATFORM_CHARS in offered -> PLATFORM_CHARS
+            ANDROIDX_CHARS in offered -> ANDROIDX_CHARS
+            // An app that advertises neither may still answer; the platform name is the one
+            // to try, and a refusal costs one call.
+            else -> PLATFORM_CHARS
+        }
+        val prefix = key.removeSuffix("_KEY")
         val args = Bundle().apply {
             putInt(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_START_INDEX, from)
             putInt(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_ARG_LENGTH, length)
+            // Under the matching spelling as well, because an app that names the key one way
+            // reads its arguments the same way, and a request whose arguments it cannot find
+            // is answered for character zero of length zero.
+            putInt("${prefix}_ARG_START_INDEX", from)
+            putInt("${prefix}_ARG_LENGTH", length)
         }
-        val ok = runCatching {
-            node.refreshWithExtraData(AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY, args)
-        }.getOrDefault(false)
-        val raw = if (!ok) null else node.extras?.getParcelableArray(
-            AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY
-        )
+        val ok = runCatching { node.refreshWithExtraData(key, args) }.getOrDefault(false)
+        val raw = if (!ok) null else node.extras?.getParcelableArray(key)
+        if (BuildConfig.DEBUG && PROBE_TREE) {
+            val here = android.graphics.Rect().also { node.getBoundsInScreen(it) }
+            val first = (raw?.firstOrNull { it is RectF && !(it as RectF).isEmpty }) as? RectF
+            android.util.Log.d(
+                "Phonetix",
+                "CHARS key=${key.takeLast(28)} ok=$ok got=${raw?.size} " +
+                    "real=${raw?.count { it is RectF && !(it as RectF).isEmpty }} " +
+                    "first=$first node=$here from=$from len=$length",
+            )
+        }
         if (raw == null) return null
         return Array(raw.size) { raw[it] as? RectF }
     }
@@ -2214,6 +2297,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  One is ordinary while a list hands rows around; several in a row means the plan
          *  describes a screen that is no longer there. */
         const val BLANK_FOLLOWS = 2
+        /** Whether every node the walk visits is named in the log, which is how a tree that
+         *  is not being handed to us at all is told from one being read and rejected. */
+        @Volatile
+        @JvmStatic
+        var PROBE_TREE = false
+
+        /** The two names this one request goes by. The platform defines the first; Chromium,
+         *  and so every page in every browser, answers only to the second. */
+        val PLATFORM_CHARS: String =
+            AccessibilityNodeInfo.EXTRA_DATA_TEXT_CHARACTER_LOCATION_KEY
+        const val ANDROIDX_CHARS =
+            "android.core.view.accessibility.extra.DATA_TEXT_CHARACTER_LOCATION_KEY"
+
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60
