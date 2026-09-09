@@ -21,8 +21,4 @@ object Frequency {
 
     fun label(d: Int): String =
         if (d <= DMIN) "Every word" else "1 in $d  ·  ${(100.0 / d).roundToInt()}%"
-
-    /** Whether this occurrence of a word is one of the annotated ones. */
-    fun picks(word: String, occurrence: Int, density: Int): Boolean =
-        Lex.picks(word, occurrence, density)
 }

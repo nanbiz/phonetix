@@ -15,8 +15,9 @@ import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Pick
+import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.SettingsStore
-import io.github.nanbiz.phonetix.core.Transcriber
+import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -672,7 +673,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val full = android.graphics.Rect(0, 0, Int.MAX_VALUE, Int.MAX_VALUE)
             val seen = ArrayList<Painted>(128)
             readBlockers()
-            plan(root!!, Transcriber(settings.density), fresh, budget, stats, full, seen)
+            plan(root!!, fresh, budget, stats, full, seen)
+            // What the core says about the whole screen, in one call: only the lines it found
+            // something in stay, and each keeps the span from its first chosen word to its
+            // last, because asking an app for a whole paragraph's character boxes costs it
+            // real layout work for words nothing will draw.
+            chooseWords(fresh, settings.density, budget)
             // A screen in a language this dictionary is not for is left alone. Judged after
             // the walk, because it is the whole of the screen that says what language it is
             // in - a line on its own says too little, and saying it confidently.
@@ -1358,7 +1364,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // now. If it has moved on, the picks describe a screen that is gone.
             if (reuse && p.node.text?.toString() != p.text) { stale = true; break }
             val before = boxes.size
-            Transcriber.boxes(p.picks, rects, p.from, boxes)
+            Placement.boxes(p.picks, rects, p.from, boxes)
             // Remember where this line was when its characters were measured, so a scroll
             // can carry its words rather than measuring them again.
             if (remembered != null) p.node.getBoundsInScreen(at)
@@ -1832,7 +1838,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             ?: return false
         val made = ArrayList<WordBox>(p.picks.size)
-        Transcriber.boxes(p.picks, rects, p.from, made)
+        Placement.boxes(p.picks, rects, p.from, made)
         // Where the line is now, with its words brought along.
         //
         // A line placed from what it said last time has its words worked out against the
@@ -1906,7 +1912,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private fun rewriteRow(p: Planned, says: String, into: MutableList<WordBox>) {
         if (says.isBlank() || says.length > MAX_TEXT) return
         if (rewrittenThisPass >= MEASURE_MOVING_MAX || !Dictionary.ready) return
-        val picks = Transcriber(SettingsStore.current.density).plan(says)
+        val picks = Reading.annotate(
+            listOf(says),
+            source = "en",
+            target = "en",
+            mode = "ipa",
+            density = SettingsStore.current.density,
+        ).filter { it.inline && it.ipa.isNotEmpty() }
+            .map { Pick(it.start, it.end - 1, it.spelling, it.ipa) }
         if (picks.isEmpty()) return
         rewrittenThisPass++
         val now = Planned(
@@ -1977,9 +1990,52 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var visits: Int = MAX_VISITS,
     )
 
+    /**
+     * Which words of a planned screen are drawn, and where they sit in their line.
+     *
+     * One call for the whole screen: how often a word has already appeared is what decides
+     * whether this occurrence is drawn, and a call per line would count each line from zero.
+     * Lines the core found nothing in are dropped, so nothing later pays to measure them.
+     */
+    private fun chooseWords(
+        planned: MutableList<Planned>,
+        density: Int,
+        budget: Budget,
+    ) {
+        if (planned.isEmpty()) return
+        val told = Reading.annotate(
+            planned.map { it.text },
+            source = "en",
+            target = "en",
+            mode = "ipa",
+            density = density,
+        )
+        val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
+        for (token in told) {
+            if (!token.inline || token.ipa.isEmpty()) continue
+            byRun.getOrPut(token.run) { ArrayList(4) }
+                .add(Pick(token.start, token.end - 1, token.spelling, token.ipa))
+        }
+        val kept = ArrayList<Planned>(byRun.size)
+        for ((at, line) in planned.withIndex()) {
+            val picks = byRun[at] ?: continue
+            if (picks.isEmpty()) continue
+            val from = picks.first().start
+            val to = picks.last().end
+            kept.add(
+                Planned(
+                    line.node, from, to - from + 1, picks, line.text, line.clip, line.viewport,
+                    line.exit, line.walkedAt,
+                ),
+            )
+            budget.words -= picks.size
+        }
+        planned.clear()
+        planned.addAll(kept)
+    }
+
     private fun plan(
         node: AccessibilityNodeInfo?,
-        t: Transcriber,
         out: MutableList<Planned>,
         budget: Budget,
         stats: Stats,
@@ -2022,29 +2078,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         if (!text.isNullOrBlank() && text.length <= MAX_TEXT) {
             budget.nodes--
-            mark = System.nanoTime()
-            val picks = t.plan(text)
             // Every line counts towards what language the screen is in, including the ones
             // that hold nothing worth transcribing: a page's German is mostly in its labels
             // and its buttons.
             stats.tongue.add(text)
-            stats.computeNs += System.nanoTime() - mark
-            if (picks.isNotEmpty()) {
-                // Only the span from the first chosen word to the last: asking for a whole
-                // paragraph's character boxes costs the app that owns it real layout work,
-                // and the words in between are not going to be drawn.
-                val from = picks.first().start
-                val to = picks.last().end
-                plannedHere = out.size
-                out.add(
-                    Planned(
-                        node, from, to - from + 1, picks, text,
-                        android.graphics.Rect(clip), android.graphics.Rect(inherited), 0,
-                        android.graphics.Rect(bounds),
-                    ),
-                )
-                budget.words -= picks.size
-            }
+            // Which of its words are worth drawing is decided later, for the whole screen at
+            // once: a word's turn depends on how often it has already appeared, and deciding
+            // node by node would count from zero on every line.
+            plannedHere = out.size
+            out.add(
+                Planned(
+                    node, 0, 0, emptyList(), text,
+                    android.graphics.Rect(clip), android.graphics.Rect(inherited), 0,
+                    android.graphics.Rect(bounds),
+                ),
+            )
         }
 
         mark = System.nanoTime()
@@ -2062,7 +2110,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val child = node.getChild(i)
             stats.ipcNs += System.nanoTime() - mark
             stats.calls++
-            plan(child, t, out, budget, stats, clip, painted)
+            plan(child, out, budget, stats, clip, painted)
             if (budget.nodes <= 0 || budget.words <= 0 || budget.visits <= 0) break
         }
         // The subtree is finished, so record where it ended: whatever is visited from here

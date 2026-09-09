@@ -16,6 +16,7 @@ rather than a card that looks wrong on one platform only.
 import json
 import os
 import re
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -417,6 +418,23 @@ def rust(text):
     return json.dumps(text, ensure_ascii=False)
 
 
+def rustfmt(text):
+    """Rust as rustfmt would leave it.
+
+    The file is generated and then formatted by the same tool the rest of the crate is, so a
+    `cargo fmt` does not rewrite it into something the generator would not produce and the
+    check for a stale table does not fail on whitespace forever.
+    """
+    try:
+        done = subprocess.run(
+            ["rustfmt", "--edition", "2021", "--emit", "stdout", "--quiet"],
+            input=text, capture_output=True, text=True, check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return text
+    return done.stdout
+
+
 def symbols_rust():
     """The IPA table as Rust, so the core needs no JSON parser to hold it.
 
@@ -489,7 +507,7 @@ def symbols_rust():
     for term in sorted(terms):
         lines.append(f"    ({rust(term)}, {rust(terms[term])}),")
     lines += ["];", ""]
-    return "\n".join(lines)
+    return rustfmt("\n".join(lines))
 
 
 def languages_ts():

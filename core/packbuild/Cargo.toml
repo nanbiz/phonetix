@@ -13,6 +13,7 @@ name = "packbuild"
 path = "src/main.rs"
 
 [dependencies]
+flate2 = "1.1.10"
 lexpack = { path = "../pack", features = ["write"] }
 # The dump is JSON lines. Streaming rather than loading: a language's extract runs to
 # gigabytes and the builder holds only what it is putting in the pack.

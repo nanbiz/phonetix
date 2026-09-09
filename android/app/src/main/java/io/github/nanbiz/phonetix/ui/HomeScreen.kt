@@ -45,7 +45,6 @@ import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.Frequency
 import io.github.nanbiz.phonetix.core.Settings
-import io.github.nanbiz.phonetix.core.Transcriber
 
 private const val PREVIEW_TEXT =
     "Reading a paragraph teaches pronunciation quietly, because every unfamiliar word " +
@@ -322,19 +321,23 @@ private fun Preview(density: Int, ready: Boolean) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val text = remember(density, ready) {
         if (!ready) null else buildAnnotatedString {
-            val tokens = Transcriber(density).tokens(PREVIEW_TEXT)
+            val tokens = io.github.nanbiz.phonetix.core.Reading.annotate(
+                listOf(PREVIEW_TEXT),
+                source = "en",
+                target = "en",
+                mode = "ipa",
+                density = density,
+            ).filter { it.inline && it.ipa.isNotEmpty() }
             var i = 0
             for (t in tokens) {
-                val at = PREVIEW_TEXT.indexOf(t.text, i)
+                val at = t.start
                 if (at > i) append(PREVIEW_TEXT.substring(i, at))
-                if (t.ipa != null) {
+                if (t.ipa.isNotEmpty()) {
                     withStyle(SpanStyle(color = gold, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)) {
                         append(t.ipa)
                     }
-                } else {
-                    append(t.text)
                 }
-                i = at + t.text.length
+                i = t.end
             }
             if (i < PREVIEW_TEXT.length) append(PREVIEW_TEXT.substring(i))
         }

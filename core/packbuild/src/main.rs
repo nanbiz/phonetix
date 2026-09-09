@@ -1,6 +1,7 @@
-//! Build one language's pack from its extract of the dump.
+//! Build one language's pack.
 //!
-//!   packbuild <language> <extract.jsonl> <out.lexpack>
+//!   packbuild <language> <extract.jsonl> <out.lexpack>       what its words mean
+//!   packbuild ipa <language> <words.json.gz> <out.lexpack>   how its words are said
 //!
 //! Reads the extract a line at a time and writes the pack, then prints the manifest row: what
 //! it holds, how big it is, and its checksum. A language's extract runs to gigabytes and the
@@ -16,8 +17,13 @@ use sha2::{Digest, Sha256};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.len() == 5 && args[1] == "ipa" {
+        pronunciations(&args[2], &args[3], &args[4]);
+        return;
+    }
     if args.len() != 4 {
         eprintln!("packbuild <language> <extract.jsonl> <out.lexpack>");
+        eprintln!("packbuild ipa <language> <words.json.gz> <out.lexpack>");
         std::process::exit(2);
     }
     let (lang, from, to) = (&args[1], &args[2], &args[3]);
@@ -87,4 +93,72 @@ show, {} without a word, {} unreadable.",
         skipped.nameless,
         skipped.unreadable,
     );
+}
+
+/// Build a pack of how a language's words are said.
+///
+/// The source is the table the app used to carry as a compressed map of word to
+/// transcription. It becomes a pack so that both platforms read a pronunciation the way they
+/// read everything else, through the same reader, rather than one of them holding a format of
+/// its own.
+fn pronunciations(lang: &str, from: &str, to: &str) {
+    let file = match File::open(from) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("cannot read {from}: {e}");
+            std::process::exit(1);
+        }
+    };
+    let words: std::collections::BTreeMap<String, String> =
+        match serde_json::from_reader(flate2::read::GzDecoder::new(BufReader::new(file))) {
+            Ok(words) => words,
+            Err(e) => {
+                eprintln!("cannot read {from}: {e}");
+                std::process::exit(1);
+            }
+        };
+
+    let built = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let mut pack = Builder::new(lang, Kind::Ipa, built);
+    let mut taken = 0;
+    for (word, ipa) in &words {
+        if word.is_empty() || ipa.is_empty() {
+            continue;
+        }
+        let entry = lexpack::Entry {
+            lemma: word.clone(),
+            pos: String::new(),
+            ipa: vec![ipa.clone()],
+            tags: Vec::new(),
+            senses: Vec::new(),
+        };
+        if pack.add::<&str>(entry, &[]).is_ok() {
+            taken += 1;
+        }
+    }
+    let counts = pack.counts();
+    let bytes = match pack.finish() {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            eprintln!("cannot build the pack: {e:?}");
+            std::process::exit(1);
+        }
+    };
+    if let Err(e) = File::create(to).and_then(|mut f| f.write_all(&bytes)) {
+        eprintln!("cannot write {to}: {e}");
+        std::process::exit(1);
+    }
+    let sum = Sha256::digest(&bytes);
+    println!(
+        "{{\"id\":\"ipa-{lang}\",\"lang\":\"{lang}\",\"built\":{built},\
+\"entries\":{},\"keys\":{},\"glosses\":0,\"bytes\":{},\"sha256\":\"{:x}\"}}",
+        counts.entries,
+        counts.keys,
+        bytes.len(),
+        sum,
+    );
+    eprintln!("{taken} of {} words, {} bytes", words.len(), bytes.len());
 }

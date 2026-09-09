@@ -75,4 +75,22 @@ object Lex {
 
     /** Where on that bar a density sits. */
     external fun posForDensity(density: Int): Float
+
+    /**
+     * Annotate a screenful of text: one token per word, as JSON.
+     *
+     * The whole screen in one call, because which words are annotated depends on how often
+     * each has already appeared; a call per node would count from zero each time and annotate
+     * the same word wherever it turned up.
+     */
+    external fun annotate(
+        core: Long,
+        texts: Array<String>,
+        source: String,
+        target: String,
+        mode: String,
+        density: Int,
+        narrow: Boolean,
+        hideStress: Boolean,
+    ): String
 }

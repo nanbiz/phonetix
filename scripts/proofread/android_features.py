@@ -19,8 +19,12 @@ class Results:
     def __init__(self):
         self.passed = 0
         self.failures = []
+        # Which checks actually ran, since a suite whose count drops has stopped asking
+        # something rather than started passing more.
+        self.asked = []
 
     def check(self, ok, name, detail=""):
+        self.asked.append(name)
         if ok:
             self.passed += 1
         else:
@@ -882,6 +886,9 @@ def main():
     check_settings_screen(r, dev)
     check_switch_in_ui(r, dev)
 
+    if os.environ.get("PHONETIX_LIST"):
+        for name in r.asked:
+            print(f"  ran: {name}")
     print(f"\n{r.passed}/{r.total} checks passed")
     if r.failures:
         print(f"\nFAIL - {len(r.failures)} problem(s):")

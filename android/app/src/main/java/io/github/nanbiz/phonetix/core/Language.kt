@@ -38,7 +38,7 @@ object Language {
         private var words = 0
 
         fun add(line: CharSequence) {
-            Transcriber.scanWords(line) { i, j -> if (j - i >= MIN_WORD) words++ }
+            Placement.scanWords(line) { i, j -> if (j - i >= MIN_WORD) words++ }
             if (text.length >= ENOUGH_TEXT) return
             if (text.isNotEmpty()) text.append(' ')
             text.append(line, 0, minOf(line.length, ENOUGH_TEXT - text.length))

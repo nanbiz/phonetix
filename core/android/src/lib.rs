@@ -250,3 +250,82 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_posForDensity(
 ) -> jni::sys::jfloat {
     lexcore::sprinkle::pos_for_density(density.max(1) as u32, 100) as jni::sys::jfloat
 }
+
+/// Annotate a screenful of text: one token per word, as JSON.
+///
+/// The whole screen at once rather than a node at a time, because which words are annotated
+/// depends on how often each has already appeared: counting from zero per node would annotate
+/// the same word every time it turned up.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    core: jlong,
+    texts: JObjectArray<'a>,
+    source: JString<'a>,
+    target: JString<'a>,
+    mode: JString<'a>,
+    density: jint,
+    narrow: jni::sys::jboolean,
+    hide_stress: jni::sys::jboolean,
+) -> jni::objects::JString<'a> {
+    let empty = env
+        .new_string("{\"batch\":0,\"tokens\":[],\"misses\":[]}")
+        .expect("a string the vm can hold");
+    let (Ok(source), Ok(target), Ok(mode)) = (
+        env.get_string(&source),
+        env.get_string(&target),
+        env.get_string(&mode),
+    ) else {
+        return empty;
+    };
+    let (source, target, mode): (String, String, String) =
+        (source.into(), target.into(), mode.into());
+    let Ok(count) = env.get_array_length(&texts) else {
+        return empty;
+    };
+    let mut runs = Vec::with_capacity(count as usize);
+    for at in 0..count {
+        let Ok(item) = env.get_object_array_element(&texts, at) else {
+            return empty;
+        };
+        let item = JString::from(item);
+        let Ok(text) = env.get_string(&item) else {
+            return empty;
+        };
+        runs.push(lexcore::answer::TextRun {
+            id: at as u32,
+            text: text.into(),
+            lang_hint: None,
+        });
+    }
+    let held = unsafe { &mut *(core as *mut Core) };
+    let open = lexcore::resolve::Open {
+        source: held.packs.get(&source),
+        target: held.packs.get(&target),
+        ipa_only: false,
+    };
+    let options = lexcore::answer::AnnotateOptions {
+        mode: match mode.as_str() {
+            "gloss" => lexcore::answer::InlineMode::Gloss,
+            "gloss+ipa" => lexcore::answer::InlineMode::GlossIpa,
+            "ipa" => lexcore::answer::InlineMode::Ipa,
+            "replace" => lexcore::answer::InlineMode::Replace,
+            _ => lexcore::answer::InlineMode::Off,
+        },
+        density: density.max(1) as u32,
+        narrow: narrow != 0,
+        hide_stress: hide_stress != 0,
+        accent: None,
+        seen: Vec::new(),
+    };
+    let (tokens, misses) = lexcore::annotate::annotate(
+        &runs,
+        &lexcore::answer::Lang(source),
+        &lexcore::answer::Lang(target),
+        &open,
+        &options,
+    );
+    let written = lexcore::json::batch(0, &tokens, &misses);
+    env.new_string(written).unwrap_or(empty)
+}

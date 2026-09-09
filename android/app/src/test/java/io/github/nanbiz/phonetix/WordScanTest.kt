@@ -1,6 +1,6 @@
 package io.github.nanbiz.phonetix
 
-import io.github.nanbiz.phonetix.core.Transcriber
+import io.github.nanbiz.phonetix.core.Placement
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -19,7 +19,7 @@ class WordScanTest {
 
     private fun scanned(text: String): List<String> {
         val out = ArrayList<String>()
-        Transcriber.scanWords(text) { i, j -> out.add(text.substring(i, j)) }
+        Placement.scanWords(text) { i, j -> out.add(text.substring(i, j)) }
         return out
     }
 
@@ -56,7 +56,7 @@ class WordScanTest {
     fun `spans line up with the text they name`() {
         val text = "don't read 2 paragraphs, read ‘pronunciation’ instead"
         val spans = ArrayList<Pair<Int, Int>>()
-        Transcriber.scanWords(text) { i, j -> spans.add(i to j) }
+        Placement.scanWords(text) { i, j -> spans.add(i to j) }
         for ((i, j) in spans) {
             // Every span must start on a letter and stop before a non-word character.
             assert(Character.isLetter(text[i])) { "span at $i does not start on a letter" }
