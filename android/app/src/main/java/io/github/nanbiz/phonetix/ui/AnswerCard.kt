@@ -19,8 +19,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Languages
+
+/** Told what a piece of a card says and where it landed. */
+typealias Reporter = (String, androidx.compose.ui.geometry.Rect) -> Unit
+
+/** Report this piece once it has been placed. */
+internal fun Modifier.reported(text: String, report: Reporter?): Modifier =
+    if (report == null) {
+        this
+    } else {
+        onGloballyPositioned { report(text, it.boundsInWindow()) }
+    }
 
 /**
  * The answer surface: what a reader gets when they stop at a word.
@@ -41,6 +54,15 @@ fun AnswerCard(
     modifier: Modifier = Modifier,
     onSymbol: (String) -> Unit = {},
     onPlay: () -> Unit = {},
+    /** Somewhere to send a reader who wants the whole entry. */
+    onOpen: (String) -> Unit = {},
+    /** Where each piece of the card ended up, once it has been laid out.
+     *
+     *  An overlay window is invisible to a tool reading the screen, so without this a check can
+     *  know the card was asked for and never that it drew anything or where its buttons are.
+     *  The bounds come from the layout rather than from what was intended, which is the whole
+     *  point of asking. */
+    report: Reporter? = null,
 ) {
     Column(
         modifier = modifier
@@ -51,11 +73,11 @@ fun AnswerCard(
         verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
     ) {
         if (!answer.found) {
-            Nothing(answer, palette)
+            Nothing(answer, palette, report)
             return@Column
         }
         if (answer.readings.size < 2) {
-            Headline(answer, palette)
+            Headline(answer, palette, report)
         } else {
             // Nothing leads: the reader is choosing between the readings below, and a headline
             // would be the card choosing for them.
@@ -66,16 +88,16 @@ fun AnswerCard(
             )
         }
         if (answer.ipa.isNotEmpty()) {
-            Pronunciation(answer, palette, onSymbol, onPlay)
+            Pronunciation(answer, palette, onSymbol, onPlay, report)
         }
         // Every reading, where the join reached more than one. The reader chooses by meaning,
         // so each is its own row: showing the first and dropping the rest would be the card
         // making exactly the choice it is here to avoid.
-        Readings(answer, palette)
-        Grammar(answer, palette)
-        Example(answer, palette)
-        OtherSenses(answer, palette)
-        Foot(answer, palette)
+        Readings(answer, palette, report)
+        Grammar(answer, palette, report)
+        Example(answer, palette, report)
+        OtherSenses(answer, palette, report)
+        Foot(answer, palette, report, onOpen)
     }
 }
 
@@ -86,14 +108,16 @@ fun AnswerCard(
  * trust a word is deciding it at the moment they read the word.
  */
 @Composable
-private fun Headline(answer: Answer, palette: Tokens.Palette) {
+private fun Headline(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.Text(
             text = answer.headline.orEmpty(),
             color = Color(palette.ink),
             fontSize = Tokens.Scale.fontSizeHeadline.sp,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .reported(answer.headline.orEmpty(), report),
         )
         // A machine's answer is labelled one. A wrong word wearing a dictionary's authority is
         // worse than an obvious guess.
@@ -121,6 +145,7 @@ private fun Pronunciation(
     palette: Tokens.Palette,
     onSymbol: (String) -> Unit,
     onPlay: () -> Unit,
+    report: Reporter?,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.Text(
@@ -138,7 +163,9 @@ private fun Pronunciation(
                 // No space between symbols: a transcription is one word and reads as one.
                 // Each is still its own target, which is what a tap needs, and the gaps that
                 // separated them made "/ˈpe.ro/" read as a row of letters.
-                modifier = Modifier.clickable { onSymbol(symbol) },
+                modifier = Modifier
+                    .clickable { onSymbol(symbol) }
+                    .reported(symbol, report),
             )
         }
         androidx.compose.material3.Text(
@@ -159,8 +186,18 @@ private fun Pronunciation(
                 text = "▸",
                 color = Color(palette.ink),
                 fontSize = Tokens.Scale.fontSizeBody.sp,
+                modifier = Modifier.reported("▸", report),
             )
         }
+        Box(Modifier.width(Tokens.Scale.space2.dp))
+        // What the audio will be, said rather than implied: a synthesised voice and a person
+        // saying a word are different things and a reader is owed which one they are getting.
+        androidx.compose.material3.Text(
+            text = "synthesised",
+            color = Color(palette.inkFaint),
+            fontSize = Tokens.Scale.fontSizeLabel.sp,
+            modifier = Modifier.reported("synthesised", report),
+        )
     }
 }
 
@@ -171,7 +208,7 @@ private fun Pronunciation(
  * memory and "ging" is what they happened to meet.
  */
 @Composable
-private fun Grammar(answer: Answer, palette: Tokens.Palette) {
+private fun Grammar(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     // Each reading carries its own part of speech at the end of its row, so repeating the
     // first one under them says nothing and reads as if it belonged to the last.
     if (answer.readings.size >= 2) return
@@ -181,10 +218,12 @@ private fun Grammar(answer: Answer, palette: Tokens.Palette) {
         if (answer.lemma != null) add("form: ${answer.spelling}")
     }
     if (parts.isEmpty()) return
+    val line = parts.joinToString("  ·  ")
     androidx.compose.material3.Text(
-        text = parts.joinToString("  ·  "),
+        text = line,
         color = Color(palette.inkMuted),
         fontSize = Tokens.Scale.fontSizeSmall.sp,
+        modifier = Modifier.reported(line, report),
     )
 }
 
@@ -195,13 +234,14 @@ private fun Grammar(answer: Answer, palette: Tokens.Palette) {
  * than another gloss does, and an invented sentence would settle it wrongly.
  */
 @Composable
-private fun Example(answer: Answer, palette: Tokens.Palette) {
+private fun Example(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     val example = answer.example ?: return
     androidx.compose.material3.Text(
         text = example,
         color = Color(palette.inkMuted),
         fontSize = Tokens.Scale.fontSizeSense.sp,
         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+        modifier = Modifier.reported(example, report),
     )
 }
 
@@ -212,7 +252,7 @@ private fun Example(answer: Answer, palette: Tokens.Palette) {
  * the full list made a card into a scroll.
  */
 @Composable
-private fun OtherSenses(answer: Answer, palette: Tokens.Palette) {
+private fun OtherSenses(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     val rest = answer.glosses.drop(1)
     if (rest.isEmpty()) return
     for (sense in rest.take(2)) {
@@ -220,6 +260,7 @@ private fun OtherSenses(answer: Answer, palette: Tokens.Palette) {
             text = sense,
             color = Color(palette.inkMuted),
             fontSize = Tokens.Scale.fontSizeSense.sp,
+            modifier = Modifier.reported(sense, report),
         )
     }
     if (rest.size > 2) {
@@ -238,7 +279,7 @@ private fun OtherSenses(answer: Answer, palette: Tokens.Palette) {
  * speech at the end of its own row. Nothing here decides which they met.
  */
 @Composable
-private fun Readings(answer: Answer, palette: Tokens.Palette) {
+private fun Readings(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     if (answer.readings.size < 2) return
     for (reading in answer.readings) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -260,9 +301,44 @@ private fun Readings(answer: Answer, palette: Tokens.Palette) {
     }
 }
 
-/** Always the same place: which languages this is, and out of which pack. */
+/**
+ * Always the same place: which languages this is, and the way onward.
+ *
+ * The link is always here whether or not a dictionary answered, because a reader who got
+ * nothing is the one most likely to want it.
+ */
 @Composable
-private fun Foot(answer: Answer, palette: Tokens.Palette) {
+private fun Foot(
+    answer: Answer,
+    palette: Tokens.Palette,
+    report: Reporter?,
+    onOpen: (String) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.Text(
+            text = "Wiktionary",
+            color = Color(palette.accent),
+            fontSize = Tokens.Scale.fontSizeLabel.sp,
+            modifier = Modifier
+                .clickable { onOpen(wiktionary(answer)) }
+                .reported("Wiktionary", report),
+        )
+        Box(Modifier.width(Tokens.Scale.space3.dp))
+        Pair(answer, palette)
+    }
+}
+
+/** Where a word's own page is, which is the same URL the extension builds. */
+internal fun wiktionary(answer: Answer): String {
+    val word = answer.lemma ?: answer.spelling
+    return "https://en.wiktionary.org/wiki/" + java.net.URLEncoder.encode(word, "UTF-8")
+}
+
+@Composable
+private fun Pair(answer: Answer, palette: Tokens.Palette) {
+    // Nothing where there is nothing to say. A build with no dictionary knows neither language,
+    // and an arrow between two blanks is a row that says only that a row was drawn.
+    if (answer.source.isBlank() || answer.target.isBlank()) return
     androidx.compose.material3.Text(
         // Named rather than tagged: a reader knows what Spanish is and does not have to know
         // what "es" is.
@@ -274,7 +350,7 @@ private fun Foot(answer: Answer, palette: Tokens.Palette) {
 
 /** What the card says when the cascade found nothing, which is one sentence and no empty rows. */
 @Composable
-private fun Nothing(answer: Answer, palette: Tokens.Palette) {
+private fun Nothing(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     androidx.compose.material3.Text(
         text = when (answer.state) {
             Answer.State.NoPack -> "No dictionary for ${Languages.english(answer.source)} yet"

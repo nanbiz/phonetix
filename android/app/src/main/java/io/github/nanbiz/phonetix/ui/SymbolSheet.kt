@@ -41,6 +41,8 @@ fun SymbolSheet(
     onPlay: () -> Unit = {},
     onOpen: (String) -> Unit = {},
     diagram: (@Composable () -> Unit)? = null,
+    /** Where each piece of the sheet ended up, for a check that cannot see an overlay window. */
+    report: Reporter? = null,
 ) {
     Column(
         modifier = modifier
@@ -57,6 +59,7 @@ fun SymbolSheet(
                 color = Color(palette.ipaConsonant),
                 fontSize = Tokens.Scale.fontSizeSymbol.sp,
                 fontWeight = FontWeight.Medium,
+                modifier = Modifier.reported(symbol.token, report),
             )
             Box(Modifier.width(Tokens.Scale.space4.dp))
             Column(Modifier.weight(1f)) {
@@ -64,12 +67,14 @@ fun SymbolSheet(
                     text = symbol.name,
                     color = Color(palette.ink),
                     fontSize = Tokens.Scale.fontSizeBody.sp,
+                    modifier = Modifier.reported(symbol.name, report),
                 )
                 if (symbol.example.isNotBlank()) {
                     Text(
                         text = symbol.example,
                         color = Color(palette.inkMuted),
                         fontSize = Tokens.Scale.fontSizeSense.sp,
+                        modifier = Modifier.reported(symbol.example, report),
                     )
                 }
             }
@@ -83,9 +88,10 @@ fun SymbolSheet(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "▸",
+                        text = "♪",
                         color = Color(palette.ink),
                         fontSize = Tokens.Scale.fontSizeBody.sp,
+                        modifier = Modifier.reported("♪", report),
                     )
                 }
             }
@@ -116,7 +122,9 @@ fun SymbolSheet(
                         text = label,
                         color = Color(palette.accent),
                         fontSize = Tokens.Scale.fontSizeSmall.sp,
-                        modifier = Modifier.clickable { onOpen(url) },
+                        modifier = Modifier
+                            .clickable { onOpen(url) }
+                            .reported(label, report),
                     )
                 }
             }

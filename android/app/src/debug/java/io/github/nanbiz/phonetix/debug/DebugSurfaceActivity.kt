@@ -526,6 +526,16 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 }
                 io.github.nanbiz.phonetix.core.Lex.close(core)
             }
+            // The card in the window it really lives in, asked for directly. A press held on a
+            // word is the way a reader opens one, and a test that has to reproduce a gesture to
+            // see the card is a test of the gesture.
+            if (i.hasExtra("cardOverlay")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running
+                    ?.showCardFor(
+                        i.getStringExtra("cardWord") ?: "paragraph",
+                        i.getStringExtra("cardIpa") ?: "ˈpæɹəɡɹæf",
+                    )
+            }
             if (i.hasExtra("markLines")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MARK_LINES =
                     i.getIntExtra("markLines", 0) != 0

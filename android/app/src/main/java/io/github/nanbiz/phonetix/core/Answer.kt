@@ -50,20 +50,50 @@ data class Answer(
         ;
 
         companion object {
+
             fun of(name: String): State =
                 entries.firstOrNull { it.name.equals(name, ignoreCase = true) } ?: None
         }
     }
 
-    /** The sense that applies, which the card leads with. */
+    /** The sense that applies, which the card leads with.
+     *
+     *  The word itself where there is no sense at all. The spelling is kept off the headline
+     *  because the answer takes that place and the page is already showing the word; with no
+     *  answer there is nothing else to lead with, and a headless card is worse than a repeated
+     *  word. */
     val headline: String?
-        get() = says.firstOrNull() ?: glosses.firstOrNull()
+        get() = says.firstOrNull()
+            ?: glosses.firstOrNull()
+            ?: spelling.takeIf { it.isNotBlank() && ipa.isNotEmpty() }
 
     /** Whether anything was found at all, which decides between a card and a message. */
     val found: Boolean
         get() = headline != null || ipa.isNotEmpty()
 
     companion object {
+        /**
+         * What is known about a word when all that is known is how it is said.
+         *
+         * A build with no dictionary pack still has the transcriptions the app ships with, and
+         * that is a real answer to "how do I say this" even though it answers nothing about
+         * meaning. It is the same state as a pack that has not been fetched yet, because from a
+         * reader's side it is the same situation.
+         */
+        fun ofTranscription(spelling: String, ipa: String, source: String): Answer = Answer(
+            state = State.IpaOnly,
+            spelling = spelling,
+            lemma = null,
+            pos = null,
+            ipa = if (ipa.isBlank()) emptyList() else listOf(ipa),
+            says = emptyList(),
+            glosses = emptyList(),
+            example = null,
+            readings = emptyList(),
+            source = source,
+            target = source,
+        )
+
         /** One answer, as the core wrote it. */
         fun parse(json: String): Answer? {
             val o = runCatching { JSONObject(json) }.getOrNull() ?: return null

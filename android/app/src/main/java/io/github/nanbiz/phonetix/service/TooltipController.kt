@@ -20,7 +20,12 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import io.github.nanbiz.phonetix.BuildConfig
+import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.IpaSymbols
+import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.ui.AnswerCard
+import io.github.nanbiz.phonetix.ui.SymbolSheet
+import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.core.SymbolInfo
 import io.github.nanbiz.phonetix.core.WordBox
 import io.github.nanbiz.phonetix.core.wikimediaFileUrl
@@ -47,6 +52,61 @@ class TooltipController(
     private val wm = context.getSystemService(WindowManager::class.java)
     private val main = Handler(Looper.getMainLooper())
     private var view: View? = null
+
+    /** What lets a Compose view live in a window this service put up. One at a time, because
+     *  one card is open at a time. */
+    private var host: OverlayHost? = null
+
+    /**
+     * What the card actually laid out, and where.
+     *
+     * An overlay window is invisible to a tool reading the screen, so without this a check can
+     * know the card was asked for and never that it drew anything or where its buttons ended
+     * up. The bounds are the ones the layout settled on, reported as each piece is placed and
+     * written out once the placing has stopped.
+     */
+    private val placed = LinkedHashMap<String, android.graphics.Rect>()
+
+    /** Where the window itself is, so what is reported is where a finger has to go rather than
+     *  where a piece sits inside a window nothing outside can see. */
+    private val onScreen = IntArray(2)
+
+    private val writeOut = Runnable {
+        val out = StringBuilder("CARD ")
+        view?.let { v ->
+            val at = IntArray(2)
+            v.getLocationOnScreen(at)
+            out.append("card@").append(at[0]).append(',').append(at[1]).append(',')
+                .append(v.width).append(',').append(v.height)
+                .append(" scrollable=0 ")
+        }
+        for ((key, r) in placed) {
+            val text = key.substringBeforeLast('@')
+            out.append('[').append(text.replace(' ', '\u00b7')).append('@')
+                .append(r.left).append(',').append(r.top).append(',')
+                .append(r.width()).append(',').append(r.height()).append("] ")
+        }
+        android.util.Log.d("Phonetix", out.toString())
+    }
+
+    private val laidOut: (String, androidx.compose.ui.geometry.Rect) -> Unit = { text, where ->
+        view?.getLocationOnScreen(onScreen)
+        // Keyed by where it landed as well as by what it says: a transcription repeats its
+        // symbols, and keying by the text alone kept only the last of each, which reads as a
+        // transcription with letters missing.
+        placed["$text@${where.left.roundToInt()},${where.top.roundToInt()}"] =
+            android.graphics.Rect(
+                where.left.roundToInt() + onScreen[0],
+                where.top.roundToInt() + onScreen[1],
+                where.right.roundToInt() + onScreen[0],
+                where.bottom.roundToInt() + onScreen[1],
+            )
+        // Once, after the last piece has landed, rather than once per piece.
+        view?.let { v ->
+            v.removeCallbacks(writeOut)
+            v.postDelayed(writeOut, 120)
+        }
+    }
     /** The scrolling list of symbols, refilled in place when a row opens or closes. */
     private var list: LinearLayout? = null
     private var scroller: ScrollView? = null
@@ -88,6 +148,10 @@ class TooltipController(
             android.util.Log.d("Phonetix", "TOOLTIP closed")
         }
         speaker.stop()
+        // Before the view leaves the window: a Compose view torn down after its lifecycle has
+        // ended leaks the composition it was holding.
+        host?.hidden()
+        host = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
         list = null
@@ -97,8 +161,11 @@ class TooltipController(
     }
 
     private fun render(box: WordBox) {
+        host?.hidden()
+        host = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
+        placed.clear()
 
         val card = build(box)
         card.accessibilityDelegate = mute
@@ -139,6 +206,7 @@ class TooltipController(
         runCatching { wm.addView(card, lp) }
             .onSuccess {
                 view = card
+                host?.shown()
                 card.post {
                     place(card, lp, box)
                     // What the card actually laid out, once it has been measured and moved
@@ -232,101 +300,60 @@ class TooltipController(
         )
     }
 
+    /**
+     * The card, drawn from one Answer and the generated tokens, which is the same card the
+     * browser draws from the same values.
+     *
+     * The transcription alone is what a build with no dictionary pack has, and it is a real
+     * answer to how a word is said even though it answers nothing about meaning. A tap on a
+     * symbol opens what that sound is, below the card rather than over it, so the word stays
+     * in sight while the sound is being read about.
+     */
     private fun build(box: WordBox): View {
-        val p = palette(box)
-        val surface = p.surface
-        val onSurface = p.onSurface
-        val muted = p.muted
-        val accent = p.accent
-        val line = p.line
-
-        val root = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(surface)
-                cornerRadius = dp(18)
-                setStroke(dp(1).roundToInt(), line)
+        IpaSymbols.ensureLoaded(context)
+        val dark = box.background == 0 || isDark(box.background)
+        val palette = Tokens.palette(Tokens.Theme.PAPER, dark)
+        // The language is not known here yet: what the overlay holds is a transcription, and
+        // which language it is comes from the core once a pack is open.
+        val answer = Answer.ofTranscription(box.word, box.full, "")
+        val fresh = OverlayHost(context)
+        host = fresh
+        fresh.view.setContent {
+            val opened = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<String?>(null)
             }
-            setPadding(dp(18).roundToInt(), dp(14).roundToInt(), dp(18).roundToInt(), dp(14).roundToInt())
-            elevation = dp(10)
-        }
-
-        // Header: the word, and the phone saying it.
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                addView(TextView(context).apply {
-                    text = box.word
-                    setTextColor(muted)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                })
-                addView(TextView(context).apply {
-                    text = box.full
-                    setTextColor(accent)
-                    typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
-                })
-            })
-            if (speaker.canSpeak) {
-                addView(pill("Say it", accent, surface, line) { speaker.say(box.word) })
-            }
-        })
-
-        root.addView(divider(line))
-
-        // One row per symbol, and the row opens into the detail the extension shows. The
-        // list grows to what it holds and stops at a fraction of the screen, so a word of
-        // three sounds is a short card rather than a tall one with a gap in it, and a long
-        // one scrolls instead of running off the bottom.
-        val rows = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        list = rows
-        val scroll = BoundedScrollView(
-            context, (context.resources.displayMetrics.heightPixels * 0.42f).roundToInt(),
-        ).apply {
-            isVerticalScrollBarEnabled = true
-            isScrollbarFadingEnabled = false
-            // How far the list has actually been scrolled. An overlay window is invisible to
-            // uiautomator, so this is the only way a test can tell a card that scrolls under
-            // the finger from one that does not.
-            if (BuildConfig.DEBUG) {
-                setOnScrollChangeListener { _, _, y, _, _ ->
-                    android.util.Log.d("Phonetix", "CARDSCROLL y=$y")
+            androidx.compose.foundation.layout.Column(
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement
+                    .spacedBy(androidx.compose.ui.unit.Dp(Tokens.Scale.space2)),
+            ) {
+                AnswerCard(
+                    answer = answer,
+                    palette = palette,
+                    report = if (BuildConfig.DEBUG) laidOut else null,
+                    onOpen = { open(it) },
+                    // A second tap on the same symbol closes it: the sheet is a detail about
+                    // the word on screen, not a place to end up in.
+                    onSymbol = { symbol ->
+                        opened.value = if (opened.value == symbol) null else symbol
+                    },
+                    onPlay = { speaker.say(box.word) },
+                )
+                opened.value?.let { symbol ->
+                    IpaSymbols.describe(symbol)?.let { about ->
+                        SymbolSheet(
+                            symbol = about,
+                            palette = palette,
+                            report = if (BuildConfig.DEBUG) laidOut else null,
+                            onPlay = { about.audio?.let { speaker.play(wikimediaFileUrl(it)) } },
+                            onOpen = { open(it) },
+                        )
+                    }
                 }
             }
-            // The list is what scrolls, so it is the view whose events would otherwise be
-            // heard by the service as the screen moving.
-            accessibilityDelegate = mute
-            addView(rows)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            )
         }
-        scroller = scroll
-        fill(box, p)
-        root.addView(scroll)
-
-        root.addView(divider(line))
-        root.addView(LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            addView(pill("Wiktionary", accent, surface, line) {
-                open("https://en.wiktionary.org/wiki/${Uri.encode(box.word.lowercase())}")
-            })
-            addView(pill("Close", muted, surface, line) { hide() })
-        })
-        return root
+        return fresh.view
     }
 
-    /**
-     * Fill the list of symbols, keeping the card and where it is scrolled to.
-     *
-     * Opening a row used to build the whole card again and put up a new window for it, which
-     * threw away the scroll position, fetched the diagram a second time, and moved the card
-     * out from under the finger that had just tapped it.
-     */
     private fun fill(box: WordBox, p: Palette) {
         val rows = list ?: return
         val at = scroller?.scrollY ?: 0

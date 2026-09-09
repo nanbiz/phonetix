@@ -185,24 +185,59 @@ def check_tooltip(r, dev):
         f"{sum(1 for w, h in sizes if w <= 0 or h <= 0)} of {len(sizes)} measured to nothing",
     )
     r.check(word in texts, "card: the word itself is on it", f"laid out: {texts[:6]}")
+    # The transcription is laid out symbol by symbol, because each symbol is a button. What has
+    # to be true is that those symbols are the transcription, in order, with nothing lost: a
+    # card that dropped one would still look like a transcription.
+    missing = [c for c in opened.group(2) if not any(c in t for t in texts)]
     r.check(
-        any(opened.group(2) == t for t in texts),
-        "card: the transcription is on it",
-        f"expected {opened.group(2)} among {texts[:6]}",
+        not missing,
+        "card: every symbol of the transcription is on it",
+        f"{missing} of {opened.group(2)} missing from {texts[:12]}",
     )
-    # The extension's tooltip names each sound and gives a word it is heard in; so must this.
-    named = [t for t in texts if any(
-        k in t for k in ("plosive", "fricative", "vowel", "approximant", "nasal", "stress", "lateral")
-    )]
-    r.check(named, "card: it names the sounds", f"no descriptions among {texts[:8]}")
-    examples = [t for t in texts if t.startswith('"') and " in " in t]
-    r.check(examples, "card: it gives a word for each sound", f"no examples among {texts[:8]}")
-    r.check("Say it" in texts, "card: it offers to say the word", str(texts[:6]))
+    # The audio, and what it is: a synthesised voice and a person saying a word are different
+    # things, and a reader is owed which one a control will play.
+    r.check(
+        "▸" in texts,
+        "card: it offers to say the word",
+        str(texts[:8]),
+    )
+    r.check(
+        any(t in ("synthesised", "recording") for t in texts),
+        "card: it says what the audio will be",
+        str(texts[:8]),
+    )
     r.check("Wiktionary" in texts, "card: it links onward", str(texts[:6]))
 
-    # The recording button, tapped where the card said it put it.
-    play = [m for m in laid_out if m[0] == "♪"]
-    if r.check(bool(play), "card: a sound has a recording to play", "no play buttons on the card"):
+    # What a sound is lives one tap under the word rather than on the card's face, because it is
+    # about a sound and the card is about a word. Tapping a symbol is what opens it.
+    symbols = [m for m in laid_out if len(m[0]) <= 2 and m[0] in opened.group(2)]
+    if r.check(bool(symbols), "card: its symbols are reachable", f"none among {texts[:10]}"):
+        _, sx, sy, sw, sh = symbols[len(symbols) // 2]
+        dev.clear_log()
+        shell("input", "tap", str(int(sx) + int(sw) // 2), str(int(sy) + int(sh) // 2))
+        time.sleep(2.5)
+        # Spaces travel as a middle dot, since a space would end the item in the line.
+        sheet = [t.replace("\u00b7", " ") for t in re.findall(r"\[([^@\]]+)@", dev.log())]
+        named = [t for t in sheet if any(
+            k in t for k in
+            ("plosive", "fricative", "vowel", "approximant", "nasal", "stress", "lateral")
+        )]
+        r.check(named, "sound: it is named", f"laid out after the tap: {sheet[:10]}")
+        r.check(
+            any('"' in t and " in " in t for t in sheet),
+            "sound: it gives a word it is heard in",
+            f"no example among {sheet[:10]}",
+        )
+        r.check(
+            any(t in ("Wikipedia", "Seeing Speech") for t in sheet),
+            "sound: it links onward",
+            f"no links among {sheet[:10]}",
+        )
+
+    # The recording button, tapped where the sheet said it put it.
+    play = [m for m in re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", dev.log())
+            if m[0] == "♪"]
+    if play:
         _, x, y, w, h = play[0]
         dev.clear_log()
         shell("input", "tap", str(int(x) + int(w) // 2), str(int(y) + int(h) // 2))
@@ -239,19 +274,17 @@ def check_tooltip(r, dev):
     dev.clear_log()
     fresh_card = re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", scrolled)
     rows = fresh_card or laid_out
-    names = [m for m in rows if any(
-        k in m[0] for k in ("plosive", "fricative", "vowel", "approximant", "nasal", "lateral")
-    )]
-    if r.check(bool(names), "card: there is a sound to open", "no named sound on the card"):
-        _, x, y, w, h = names[0]
+    names = [m for m in rows if len(m[0]) <= 2 and m[0] in opened.group(2)]
+    if r.check(bool(names), "card: there is a sound to open", "no symbol on the card"):
+        _, x, y, w, h = names[len(names) // 2]
         shell("input", "tap", str(int(x) + int(w) // 2), str(int(y) + int(h) // 2))
         time.sleep(2.5)
         opened_row = dev.log()
         r.check("TOOLTIP closed" not in opened_row, "card: opening a sound keeps the card",
                 "the card was rebuilt or closed")
-        detail = re.findall(r"\[([^@\]]+)@", opened_row)
+        detail = [t.replace("\u00b7", " ") for t in re.findall(r"\[([^@\]]+)@", opened_row)]
         r.check(
-            any("Read" in t or "See" in t for t in detail),
+            any(t in ("Wikipedia", "Seeing Speech") for t in detail),
             "card: an opened sound shows what to read and watch",
             f"laid out after the tap: {detail[:8]}",
         )

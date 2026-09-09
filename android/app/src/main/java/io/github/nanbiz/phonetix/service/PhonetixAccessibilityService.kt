@@ -1885,6 +1885,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * are measured if this pass has room to ask - the same allowance the strip read works to,
      * since both are asking a moving app to lay text out again.
      */
+    /**
+     * Show the card for a made-up word, in the window it really lives in.
+     *
+     * A reader opens one by holding a press on a word, and a check that has to reproduce that
+     * gesture is a check of the gesture rather than of the card. This asks for the card itself,
+     * so what is looked at is what a reader would see.
+     */
+    fun showCardFor(word: String, ipa: String) {
+        if (!::tooltip.isInitialized) return
+        val middle = resources.displayMetrics.widthPixels / 2f
+        val box = WordBox(
+            rect = android.graphics.RectF(middle - 120f, 400f, middle + 120f, 460f),
+            ipa = ipa,
+            full = ipa,
+            word = word,
+        )
+        main.post { tooltip.show(box) }
+    }
+
     private fun rewriteRow(p: Planned, says: String, into: MutableList<WordBox>) {
         if (says.isBlank() || says.length > MAX_TEXT) return
         if (rewrittenThisPass >= MEASURE_MOVING_MAX || !Dictionary.ready) return
