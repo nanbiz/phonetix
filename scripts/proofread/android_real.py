@@ -89,6 +89,18 @@ FRESH_MS = 3000
 LAYER_FRESH_MS = 700
 
 
+_screen = [0]
+
+
+def screen_height():
+    """How tall the screen is, so a word carried past its edge can be told from one on it."""
+    if not _screen[0]:
+        out = shell("wm", "size")
+        m = re.search(r"(\d+)x(\d+)", out)
+        _screen[0] = int(m.group(2)) if m else 1920
+    return _screen[0]
+
+
 def uptime_ms():
     """The clock the service stamps its readings with."""
     out = shell("cat", "/proc/uptime").strip().split()
@@ -151,14 +163,16 @@ def drawn_at(log, when):
     """
     best = None
     for line in log.splitlines():
-        m = re.search(r"LAYER (\d+) (-?[\d.]+) \d+ showing=(\d)", line)
+        m = re.search(r"LAYER (\d+) (-?[\d.]+) (\d+) showing=(\d)", line)
         if not m:
             continue
         stamp = int(m.group(1))
         if abs(stamp - when) > LAYER_FRESH_MS:
             continue
         if best is None or abs(stamp - when) < abs(best[0] - when):
-            best = (stamp, float(m.group(2)), m.group(3) == "1")
+            # The reading this frame was drawn from is named in the frame, because the carry
+            # is measured from that reading's positions and means nothing against any other.
+            best = (stamp, float(m.group(2)), m.group(4) == "1", int(m.group(3)))
     return best
 
 
@@ -187,11 +201,31 @@ def judge(dev, label, results, pkg, covers=None):
                else "the layer had taken the words off the screen")
         print(f"  {label}: {why}, so nothing was on the screen to be right or wrong")
         return
+    # The reading the drawn frame was drawn from, rather than merely the newest one: the carry
+    # below is a distance from that reading's positions.
+    drew_from = showing[3] if showing is not None else None
+    if drew_from is not None:
+        paired = [f for f in frames if f[0] == drew_from]
+        if paired:
+            frames = paired
     _stamp, boxes = frames[-1]
-    adrift, gone, checked = [], [], 0
+    # Where the words were drawn, not where they were read.
+    #
+    # A reading says where a line was when it was read; the layer then carries the words on
+    # from there, and on a page being flung that is hundreds of pixels. Judging the reading's
+    # positions judges a screen nobody saw - and it judged them as correct exactly when the
+    # layer was carrying them wrongly, which is the failure this suite exists to catch.
+    carried = showing[1] if showing is not None else 0.0
+    adrift, gone, offscreen, checked = [], [], 0, 0
     for box in boxes.values():
         word = box["word"].lower()
-        middle = (box["rect"][1] + box["rect"][3]) / 2
+        middle = (box["rect"][1] + box["rect"][3]) / 2 + carried
+        # A word carried off the screen has gone there with its own text, which is where it
+        # belongs. It is not on the screen to be right or wrong about, so it is neither
+        # counted nor forgiven: only what a reader can see is judged.
+        if middle < 0 or middle > screen_height():
+            offscreen += 1
+            continue
         checked += 1
         if word not in seen:
             gone.append(box["word"])
@@ -214,6 +248,7 @@ def judge(dev, label, results, pkg, covers=None):
     for word, drawn, (top, bottom), off in adrift:
         print(f"      {word}: drawn at y={drawn}, its word is in {top}..{bottom}, {off}px out")
     print(f"  {label}: {wrong} of {checked} are not on their word"
+          f"{f' ({offscreen} were carried off the screen)' if offscreen else ''}"
           f"{f', {len(gone)} name a word that is not on the screen at all' if gone else ''}"
           f"{f' (e.g. {gone[:3]})' if gone else ''}"
           f"{f' and {len(adrift)} are on other text' if adrift else ''}")
