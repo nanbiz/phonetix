@@ -4,6 +4,7 @@
   // Every control here is one setting: the panel, its rows and the controls in them are the
   // design page's own, so the settings a reader meets in a browser and the ones on a phone are
   // the same surface.
+  import { accentsOf } from '@/data/accents';
   import { LANGUAGES } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
   import type { Settings } from '@/settings';
@@ -19,6 +20,8 @@
     change: <K extends keyof Settings>(name: K, value: Settings[K]) => void;
     /** The site the reader is on, so it can be switched off without switching everything off. */
     site?: string;
+    /** What the page being read turned out to be in, which decides the accents on offer. */
+    pageLang?: string;
     onSite?: (on: boolean) => void;
     /** Fetch a language's dictionary, or give one up. */
     get?: (lang: string) => void;
@@ -27,10 +30,12 @@
     fetching?: string | null;
   }
 
-  let { settings, curve, packs, change, get, forget, fetching = null, site = '', onSite }:
+  let { settings, curve, packs, change, get, forget, fetching = null, site = '', pageLang = '', onSite }:
     Props = $props();
 
   let here = $derived(site !== '' && !settings.off.includes(site));
+  // What the page is in decides which accents there are to choose between.
+  let accents = $derived(accentsOf(settings.source || pageLang || ''));
 
   /** A size a reader can weigh, since the whole point of a dictionary row is deciding
    *  whether to spend it. */
@@ -169,6 +174,28 @@
         </select>
       </span>
     </div>
+
+    {#if accents.length > 0}
+      <div class="row">
+        <!-- Only where there is something real to offer: a voice that exists, or a rule that
+             holds for the whole vocabulary. A list of accents that all sound the same would
+             be a list of promises. -->
+        <span class="r-name">Accent</span>
+        <span class="r-act">
+          <select
+            class="select"
+            aria-label="accent"
+            value={settings.accent}
+            onchange={(e) => change('accent', (e.currentTarget as HTMLSelectElement).value)}
+          >
+            <option value="">as the dictionary gives it</option>
+            {#each accents as accent (accent.id)}
+              <option value={accent.id}>{accent.name}</option>
+            {/each}
+          </select>
+        </span>
+      </div>
+    {/if}
 
     <div class="row">
       <span class="r-name">Transcriptions</span>

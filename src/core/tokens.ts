@@ -62,6 +62,8 @@ export interface AnnotateOptions {
   narrow?: boolean;
   /** Leave the stress marks off the line over a word. The card always shows them. */
   hideStress?: boolean;
+  /** The accent the reader wants, where its difference from the standard is a rule. */
+  accent?: string;
   /** Spellings the reader has opened a card for, which stay annotated afterwards. */
   seen?: string[];
 }

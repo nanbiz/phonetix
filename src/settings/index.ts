@@ -24,6 +24,9 @@ export interface Settings {
   narrow: boolean;
   /** Leave the stress marks off the line over a word. */
   hideStress: boolean;
+  /** The accent to read in, as a language tag: en-us, es-419, de-ch. Empty is the standard
+   *  one, which is what most readers want and what a dictionary lists first. */
+  accent: string;
   /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
    *  wants this on the web does not want to name every site it should work on. */
   off: string[];
@@ -37,6 +40,7 @@ export const DEFAULTS: Settings = {
   source: '',
   narrow: false,
   hideStress: true,
+  accent: '',
   off: [],
 };
 
@@ -47,6 +51,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   density: 'local:density',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
+  accent: 'local:accent',
   narrow: 'local:narrow',
   hideStress: 'local:hideStress',
   off: 'local:sitesOff',

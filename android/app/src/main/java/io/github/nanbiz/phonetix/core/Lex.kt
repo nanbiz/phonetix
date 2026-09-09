@@ -92,6 +92,7 @@ object Lex {
         density: Int,
         narrow: Boolean,
         hideStress: Boolean,
+        accent: String,
     ): String
 
     /** Read the language model into a core; the count of languages, or 0 when it is not one. */

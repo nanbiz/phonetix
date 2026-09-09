@@ -54,7 +54,7 @@ export interface HostProtocol {
   fetch: { data: { url: string }; reply: number[] };
   /** Say one word: WAV bytes, because a page's own media policy can block an audio element
    *  loading a URL and cannot block Web Audio playing bytes. */
-  speak: { data: { word: string; lang: string }; reply: number[] };
+  speak: { data: { word: string; lang: string; accent?: string }; reply: number[] };
 }
 
 type Named = keyof HostProtocol;

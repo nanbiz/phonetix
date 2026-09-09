@@ -9,6 +9,7 @@ import {
 } from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
+import { voiceOf } from '@/data/accents';
 import { forget, get, held, offered, open } from './packs';
 import { audio, ipa } from './voice';
 
@@ -106,7 +107,7 @@ export function host(): void {
 
   onMessage('speak', async ({ data }) => {
     try {
-      return await audio(data.lang, data.word);
+      return await audio(voiceOf(data.lang, data.accent ?? ''), data.word);
     } catch (e) {
       console.warn(`[Phonetix] Nothing said ${data.word}:`, e);
       return [];

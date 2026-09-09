@@ -271,6 +271,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
     density: jint,
     narrow: jni::sys::jboolean,
     hide_stress: jni::sys::jboolean,
+    accent: JString<'a>,
 ) -> jni::objects::JString<'a> {
     let empty = env
         .new_string("{\"batch\":0,\"tokens\":[],\"misses\":[]}")
@@ -319,7 +320,11 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         density: density.max(1) as u32,
         narrow: narrow != 0,
         hide_stress: hide_stress != 0,
-        accent: None,
+        accent: env
+            .get_string(&accent)
+            .ok()
+            .map(|it| it.into())
+            .filter(|it: &String| !it.is_empty()),
         seen: Vec::new(),
     };
     let (tokens, misses) = lexcore::annotate::annotate(

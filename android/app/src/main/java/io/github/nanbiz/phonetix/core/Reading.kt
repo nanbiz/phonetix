@@ -40,6 +40,7 @@ object Reading {
         density: Int,
         narrow: Boolean = false,
         hideStress: Boolean = true,
+        accent: String = "",
     ): List<Annotated> {
         if (core == 0L || texts.isEmpty()) {
             if (io.github.nanbiz.phonetix.BuildConfig.DEBUG && core == 0L) {
@@ -49,6 +50,7 @@ object Reading {
         }
         val written = Lex.annotate(
             core, texts.toTypedArray(), source, target, mode, density, narrow, hideStress,
+            accent,
         )
         val batch = JSONObject(written)
         val tokens = batch.optJSONArray("tokens") ?: JSONArray()

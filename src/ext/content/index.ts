@@ -141,6 +141,7 @@ async function draw(): Promise<void> {
         density: settings.density,
         narrow: settings.narrow,
         hideStress: settings.hideStress,
+        accent: settings.accent,
         seen: asked,
       },
     });
@@ -188,7 +189,7 @@ async function recorded(url: string): Promise<void> {
  * Web Audio playing bytes it was handed.
  */
 async function speak(word: string, lang: string): Promise<void> {
-  await play(await sendMessage('speak', { word, lang }));
+  await play(await sendMessage('speak', { word, lang, accent: settings.accent }));
 }
 
 /** Play bytes through Web Audio, which is what a page's media policy cannot refuse. */
@@ -230,6 +231,8 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
     recorded: Boolean(recording),
     onPlay: () => {
       if (recording) void recorded(commons(recording));
+      // The accent's own voice where the reader chose one, since a synthesised word is
+      // said by whichever voice is asked for.
       else void speak(token.spelling, source);
     },
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
@@ -295,9 +298,25 @@ function follow(): void {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
+/**
+ * What the page turned out to be in, for a settings view asking.
+ *
+ * The page is the one that read itself, and a view that guessed again could offer accents
+ * for a language nothing on screen is in.
+ */
+function answerAsked(): void {
+  chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
+    const asked = message as { phonetix?: string };
+    if (asked?.phonetix !== 'pageLanguage') return false;
+    respond({ ok: pageLanguage() });
+    return true;
+  });
+}
+
 /** Start reading this document. */
 export async function session(): Promise<void> {
   settings = await current();
+  answerAsked();
   gestures();
   follow();
   watch(async (fresh) => {
@@ -312,6 +331,7 @@ export async function session(): Promise<void> {
       was.target !== fresh.target ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||
+      was.accent !== fresh.accent ||
       was.hideStress !== fresh.hideStress ||
       was.off.join() !== fresh.off.join()
     ) {

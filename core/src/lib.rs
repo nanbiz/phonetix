@@ -6,6 +6,7 @@
 //! each platform, because a DOM and an accessibility tree have nothing in common; deciding
 //! what to draw is here, where neither platform can reach the pack bytes any other way.
 
+pub mod accent;
 pub mod annotate;
 pub mod answer;
 pub mod detect;

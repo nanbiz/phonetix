@@ -57,6 +57,12 @@ pub fn read_wiktionary(wikitext: &str, lang: &str) -> String {
     }
 }
 
+/// A transcription in an accent, where that accent's difference is a rule.
+#[wasm_bindgen(js_name = inAccent)]
+pub fn in_accent(ipa: &str, accent: &str, word: &str) -> String {
+    lexcore::accent::apply(ipa, accent, word)
+}
+
 /// The core, holding whatever packs the host has given it.
 ///
 /// The bytes are taken rather than borrowed: a browser's buffer belongs to the garbage
@@ -68,7 +74,7 @@ pub struct Core {
     model: Option<lexcore::detect::Model>,
     /// The batches the host is still drawing, kept so that what its engines answer joins the
     /// same tokens rather than a second set the host stitched together itself.
-    batches: HashMap<u64, Vec<Token>>,
+    batches: HashMap<u64, (Vec<Token>, AnnotateOptions)>,
     next_batch: u64,
 }
 
@@ -191,6 +197,7 @@ impl Core {
         density: u32,
         narrow: bool,
         hide_stress: u8,
+        accent: String,
         seen: Vec<String>,
     ) -> String {
         let runs: Vec<TextRun> = run_ids
@@ -222,7 +229,11 @@ impl Core {
             density,
             narrow,
             hide_stress: hide_stress != 0,
-            accent: None,
+            accent: if accent.is_empty() {
+                None
+            } else {
+                Some(accent)
+            },
             seen,
         };
         let (tokens, misses) = annotate(
@@ -235,7 +246,7 @@ impl Core {
         let id = self.next_batch;
         self.next_batch += 1;
         let written = lexcore::json::batch(id, &tokens, &misses);
-        self.batches.insert(id, tokens);
+        self.batches.insert(id, (tokens, options));
         written
     }
 
@@ -252,7 +263,7 @@ impl Core {
         ipas: Vec<String>,
         engine: &str,
     ) -> String {
-        let Some(mut tokens) = self.batches.remove(&batch) else {
+        let Some((mut tokens, options)) = self.batches.remove(&batch) else {
             return lexcore::json::batch(batch, &[], &[]);
         };
         let results: Vec<EngineResult> = indices
@@ -265,9 +276,9 @@ impl Core {
                 engine: engine.to_string(),
             })
             .collect();
-        complete(&mut tokens, &results);
+        complete(&mut tokens, &results, &options);
         let written = lexcore::json::batch(batch, &tokens, &[]);
-        self.batches.insert(batch, tokens);
+        self.batches.insert(batch, (tokens, options));
         written
     }
 

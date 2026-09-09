@@ -22,11 +22,31 @@
   let fetching = $state<string | null>(null);
   /** The site the reader is looking at, so it can be switched off on its own. */
   let site = $state('');
+  /** What the page being read is in, which decides which accents there are to choose. */
+  let pageLang = $state('');
 
   async function load() {
     settings = await current();
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    // The page the reader is on, which is not always the active tab: the settings view can
+    // itself be open as a tab, and a view that then described itself would offer a site
+    // switch for the extension and accents for nothing.
+    const active = await chrome.tabs.query({ active: true, currentWindow: true });
+    const readable = (url?: string) => Boolean(url && /^https?:/.test(url));
+    let tab = active.find((it) => readable(it.url));
+    if (!tab) {
+      const all = await chrome.tabs.query({});
+      tab = all
+        .filter((it) => readable(it.url))
+        .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0];
+    }
     site = tab?.url ? new URL(tab.url).hostname : '';
+    // Asked of the page rather than guessed: it is the one that read itself.
+    pageLang = tab?.id
+      ? await chrome.tabs
+          .sendMessage(tab.id, { phonetix: 'pageLanguage', data: {} })
+          .then((r: { ok?: string } | undefined) => r?.ok ?? '')
+          .catch(() => '')
+      : '';
     // The bar's meaning and the machine's dictionaries both come from the host: a settings
     // view that decided either of them itself would be a second opinion.
     curve = await sendMessage('curve', {}).catch(() => []);
@@ -68,6 +88,7 @@
       {forget}
       {fetching}
       {site}
+      {pageLang}
       onSite={(on) => {
         if (settings) void setSite(settings, site, on).then(load);
       }}

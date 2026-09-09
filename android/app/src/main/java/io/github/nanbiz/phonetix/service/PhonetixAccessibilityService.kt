@@ -2050,6 +2050,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             target = settings.target.ifEmpty { source },
             mode = settings.layer,
             density = settings.density,
+            accent = settings.accent,
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
         for (token in told) {

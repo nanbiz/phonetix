@@ -67,12 +67,14 @@ pub fn annotate<D: AsRef<[u8]>>(
                 .first()
                 .or_else(|| answer.glosses.first())
                 .map(|text| cut(text, GLOSS_LIMIT));
-            // Shown the way the reader asked: the card always carries the full form, and
-            // the line over a word carries as much of it as they wanted.
-            let ipa = answer
-                .ipa
-                .first()
-                .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
+            // Shown the way the reader asked: in their accent where that is a rule rather
+            // than a dictionary of its own, and carrying as much of the detail as they wanted.
+            // The card always has the full form.
+            let accent = options.accent.as_deref().unwrap_or("");
+            let ipa = answer.ipa.first().map(|ipa| {
+                let said = crate::accent::apply(ipa, accent, &spelling);
+                crate::symbols::display(&said, options.narrow, options.hide_stress)
+            });
 
             let index = tokens.len() as u32;
             if inline {
@@ -115,12 +117,12 @@ fn missing(mode: InlineMode, has_gloss: bool, has_ipa: bool) -> Option<Need> {
     }
 }
 
-/// Fill in what the host's engines answered.
+/// Fill in what the host's engines answered, shown the way everything else is.
 ///
 /// An engine's answer is marked as one. A reader deciding whether to trust a word is owed the
 /// difference between a dictionary and a machine, and the state and the provenance both carry
 /// it so neither the inline layer nor the card can lose it.
-pub fn complete(tokens: &mut [Token], results: &[EngineResult]) {
+pub fn complete(tokens: &mut [Token], results: &[EngineResult], options: &AnnotateOptions) {
     for result in results {
         let Some(token) = tokens.get_mut(result.token_index as usize) else {
             continue;
@@ -133,7 +135,16 @@ pub fn complete(tokens: &mut [Token], results: &[EngineResult]) {
             });
         }
         if let Some(ipa) = &result.ipa {
-            token.ipa = Some(ipa.clone());
+            // Shown the way a pack's own transcription would be: in the reader's accent, at
+            // the detail they asked for. An engine's answer that skipped this came out in a
+            // different notation from the word beside it.
+            let accent = options.accent.as_deref().unwrap_or("");
+            let said = crate::accent::apply(ipa, accent, &token.spelling);
+            token.ipa = Some(crate::symbols::display(
+                &said,
+                options.narrow,
+                options.hide_stress,
+            ));
             // A transcription a machine spoke is still a machine's, but it says nothing about
             // what the word means, so it does not turn a dictionary answer into a guess.
             if token.gloss.is_none() {
@@ -291,6 +302,7 @@ mod tests {
                 ipa: None,
                 engine: "bergamot".into(),
             }],
+            &options(InlineMode::Gloss, 1),
         );
         assert_eq!(tokens[0].gloss.as_deref(), Some("Hund"));
         assert_eq!(tokens[0].state, AnswerState::Guess);

@@ -26,7 +26,7 @@ CORE = os.path.join(ROOT, "core")
 WORK = os.environ.get("PHONETIX_WORK", "/tmp/phonetix-on-a-page")
 PORT = int(os.environ.get("PHONETIX_PAGE_PORT", "8924"))
 
-SENTENCE = "El perro corre por el camino y descansa en el banco del parque."
+SENTENCE = "El perro corre por el camino y descansa en el banco de la calle."
 # The same sentence with nothing declaring what it is in: the extension has to work that out
 # rather than assume, which is what the detector in the core is for.
 UNDECLARED = (
@@ -211,8 +211,8 @@ def main():
         if pairs.get("camino") != "Weg":
             failures.append(f"camino carries {pairs.get('camino')!r}, not its answer")
         # A word the packs cannot answer is left plain rather than given an empty annotation.
-        if pairs.get("parque"):
-            failures.append(f"parque was given {pairs['parque']!r} from nowhere")
+        if pairs.get("calle"):
+            failures.append(f"calle was given {pairs['calle']!r} from nowhere")
         if painted["inCode"]:
             failures.append("code was annotated")
         if painted["inNav"]:
@@ -308,11 +308,11 @@ def main():
         spoken = evaluate(cdp, page, """
             (() => {
               const words = [...document.querySelectorAll('.px-w')];
-              const found = words.find(w => w.textContent.includes('parque'));
+              const found = words.find(w => w.textContent.includes('calle'));
               return found ? ((found.querySelector('.px-ph') || {}).textContent || '') : 'no word';
             })()
         """)
-        print(f"  parque is said {spoken!r}")
+        print(f"  calle is said {spoken!r}")
         if not spoken or spoken == "no word":
             failures.append(f"a word no pack holds got no transcription ({spoken!r})")
 

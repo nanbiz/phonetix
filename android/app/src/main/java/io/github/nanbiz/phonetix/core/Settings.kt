@@ -33,6 +33,8 @@ data class Settings(
     val target: String = "",
     /** What is drawn over a word: "ipa", "gloss", "gloss+ipa" or "replace". */
     val layer: String = "gloss+ipa",
+    /** The accent to read in, where its difference from the standard is a rule. */
+    val accent: String = "",
     /** Where the dictionaries come from. The reader's own, and nowhere in the source. */
     val packHost: String = "",
     /**
@@ -61,6 +63,7 @@ object SettingsStore {
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
+    private const val K_ACCENT = "accent"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -82,6 +85,7 @@ object SettingsStore {
             layer = p.getString(K_LAYER, "gloss+ipa") ?: "gloss+ipa",
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
+            accent = p.getString(K_ACCENT, "") ?: "",
         )
     }
 
@@ -98,6 +102,7 @@ object SettingsStore {
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
+            ?.putString(K_ACCENT, next.accent)
             ?.apply()
     }
 
@@ -109,6 +114,7 @@ object SettingsStore {
     fun setLayer(v: String) = update { it.copy(layer = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
+    fun setAccent(v: String) = update { it.copy(accent = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }

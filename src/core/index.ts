@@ -109,6 +109,7 @@ export async function annotate(
       options.density,
       options.narrow ?? false,
       options.hideStress ? 1 : 0,
+      options.accent ?? '',
       options.seen ?? []
     )
   ) as Batch;

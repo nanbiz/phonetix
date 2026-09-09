@@ -219,6 +219,48 @@ def main():
         else:
             failures.append(f"no dictionary was held to give up: {held_before}")
 
+        # An accent whose difference is a rule changes the transcriptions on the page.
+        # Every word again first: the bar was left at its sparse end by the check above, and
+        # a page with nothing on it says nothing about accents.
+        control(cdp, view, "(() => { const s = document.querySelector('.slider');"
+                           "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        control(cdp, view, "[...document.querySelectorAll('.seg span')]"
+                           ".find(s => s.textContent.trim() === 'sound').click()")
+        def sound_of(word):
+            said = evaluate(cdp, page, """
+                (() => {
+                  const box = [...document.querySelectorAll('.px-w')]
+                    .find(w => w.textContent.includes(%r));
+                  return box ? ((box.querySelector('.px-ph') || {}).textContent || '') : '';
+                })()
+            """ % word)
+            return said or ""
+
+        before = sound_of("calle")
+        picked = evaluate(cdp, view, """
+            (() => {
+              const rows = [...document.querySelectorAll('.row')];
+              const row = rows.find(r => r.querySelector('.r-name')?.textContent.trim()
+                                          === 'Accent');
+              if (!row) return 'no accent row';
+              const select = row.querySelector('select');
+              const option = [...select.options].find(o => o.textContent.includes('Latin'));
+              if (!option) return 'no Latin American option';
+              select.value = option.value;
+              select.dispatchEvent(new Event('change', {bubbles: true}));
+              return option.value;
+            })()
+        """)
+        time.sleep(3)
+        after = sound_of("calle")
+        print(f"  accent {picked}: calle said {before!r} -> {after!r}")
+        if picked and picked.startswith("no "):
+            failures.append(f"the view offers no accent to pick ({picked})")
+        elif not before:
+            failures.append("the word the accent changes was not on the page")
+        elif before == after:
+            failures.append(f"picking an accent left calle as {before!r}")
+
         # One site, rather than everywhere: switched off here, the page is bare, and the
         # extension is still on for everything else.
         control(cdp, view, """

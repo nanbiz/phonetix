@@ -1,0 +1,113 @@
+{
+  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists.",
+  "accents": {
+    "en": [
+      {
+        "id": "en-gb",
+        "name": "British",
+        "voice": "en-gb-x-rp"
+      },
+      {
+        "id": "en-us",
+        "name": "American",
+        "voice": "en-us",
+        "rule": true
+      },
+      {
+        "id": "en-gb-scotland",
+        "name": "Scottish",
+        "voice": "en-gb-scotland"
+      },
+      {
+        "id": "en-au",
+        "name": "Australian",
+        "voice": "en-au"
+      },
+      {
+        "id": "en-029",
+        "name": "Caribbean",
+        "voice": "en-029"
+      },
+      {
+        "id": "en-ca",
+        "name": "Canadian",
+        "voice": "en-us",
+        "rule": true
+      }
+    ],
+    "es": [
+      {
+        "id": "es",
+        "name": "Spain",
+        "voice": "es"
+      },
+      {
+        "id": "es-419",
+        "name": "Latin America",
+        "voice": "es-419",
+        "rule": true
+      },
+      {
+        "id": "es-ar",
+        "name": "Rioplatense",
+        "voice": "es-419",
+        "rule": true
+      }
+    ],
+    "de": [
+      {
+        "id": "de",
+        "name": "Germany",
+        "voice": "de"
+      },
+      {
+        "id": "de-ch",
+        "name": "Switzerland",
+        "voice": "de",
+        "rule": true
+      },
+      {
+        "id": "de-at",
+        "name": "Austria",
+        "voice": "de",
+        "rule": true
+      }
+    ],
+    "pt": [
+      {
+        "id": "pt",
+        "name": "Portugal",
+        "voice": "pt"
+      },
+      {
+        "id": "pt-br",
+        "name": "Brazil",
+        "voice": "pt-br"
+      }
+    ],
+    "fr": [
+      {
+        "id": "fr",
+        "name": "France",
+        "voice": "fr"
+      },
+      {
+        "id": "fr-ca",
+        "name": "Canada",
+        "voice": "fr-ca"
+      }
+    ],
+    "vi": [
+      {
+        "id": "vi",
+        "name": "Northern",
+        "voice": "vi"
+      },
+      {
+        "id": "vi-vn-x-central",
+        "name": "Central",
+        "voice": "vi-vn-x-central"
+      }
+    ]
+  }
+}
