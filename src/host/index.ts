@@ -7,14 +7,14 @@ import { annotate, complete, curve, lookUp, openLanguages } from '@/core';
 import { ofTranscription } from '@/core/answer';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
-import { held, open } from './packs';
+import { forget, get, held, offered, open } from './packs';
 import { audio, ipa } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
   onMessage('openPack', async ({ data }) => {
     try {
-      return await open(data.lang);
+      return await get(data.lang);
     } catch (e) {
       console.warn(`[Phonetix] No pack for ${data.lang}:`, e);
       return null;
@@ -45,7 +45,30 @@ export function host(): void {
 
   onMessage('curve', async () => curve());
 
-  onMessage('packs', async () => ({ held: await held(), open: await openLanguages() }));
+  onMessage('packs', async () => ({
+    held: await held(),
+    open: await openLanguages(),
+    // What is on offer is asked for rather than remembered: a reader who changed where their
+    // dictionaries come from means it from that moment.
+    offered: await offered().catch((e) => {
+      console.warn('[Phonetix] No list of packs:', e);
+      return [];
+    }),
+  }));
+
+  onMessage('getPack', async ({ data }) => {
+    try {
+      return await get(data.lang);
+    } catch (e) {
+      console.warn(`[Phonetix] Could not fetch the ${data.lang} pack:`, e);
+      return null;
+    }
+  });
+
+  onMessage('forgetPack', async ({ data }) => {
+    await forget(data.lang);
+    return true;
+  });
 
   onMessage('diagram', async ({ data }) => {
     try {

@@ -107,6 +107,24 @@ def main():
         if panel["width"] < 300:
             failures.append(f"the view measured {panel['width']}px wide")
 
+        # The dictionaries, fetched the way a reader fetches them: from the list, by name,
+        # one button each. Nothing arrives because a page happened to be in that language.
+        for _ in range(4):
+            got = evaluate(cdp, view, """
+                (() => {
+                  const row = [...document.querySelectorAll('.row')].find(
+                    r => (r.querySelector('.r-act .btn-text') || {}).textContent
+                          ?.trim() === 'get');
+                  if (!row) return 'none left';
+                  row.querySelector('.btn-text').click();
+                  return row.querySelector('.r-name').textContent.trim();
+                })()
+            """)
+            if got == "none left":
+                break
+            print(f"  fetching {got}")
+            time.sleep(4)
+
         # The page starts annotated, in the language it is written in, because nothing has been
         # chosen to read into yet.
         before = wait_for(cdp, page, "document.querySelectorAll('.px-w').length", lambda v: v)
@@ -161,6 +179,45 @@ def main():
                 f"the bar changed nothing: {dense['count']} dense, {sparse['count']} sparse")
         if "1" not in (told or ""):
             failures.append(f"the dense end says {told!r}")
+
+        # The dictionaries a reader can have, and the two things to do with one.
+        offered = wait_for(cdp, view, """
+            (() => {
+              const rows = [...document.querySelectorAll('.row')]
+                .filter(r => r.querySelector('.r-act .btn-text'));
+              if (rows.length === 0) return null;
+              return JSON.stringify(rows.map(r => ({
+                name: r.querySelector('.r-name').textContent.trim(),
+                about: r.querySelector('.r-sub').textContent.trim(),
+                action: r.querySelector('.r-act .btn-text').textContent.trim(),
+              })));
+            })()
+        """, lambda v: v is not None)
+        listed = json.loads(offered or "[]")
+        print(f"  dictionaries offered: {[(d['name'], d['action']) for d in listed]}")
+        if len(listed) != 2:
+            failures.append(f"the view offers {listed}")
+        elif not all(
+            "words" in row["about"] and any(u in row["about"] for u in (" B", "KB", "MB"))
+            for row in listed
+        ):
+            failures.append(f"a dictionary row says nothing about its cost: {listed}")
+
+        # Giving one up: the row offers it back, and the page loses the answers it gave.
+        held_before = json.loads(offered)
+        if any(row["action"] == "remove" for row in held_before):
+            control(cdp, view, "[...document.querySelectorAll('.row .r-act .btn-text')]"
+                               ".find(b => b.textContent.trim() === 'remove').click()")
+            time.sleep(2)
+            after = json.loads(evaluate(cdp, view, """
+                (() => JSON.stringify([...document.querySelectorAll('.row .r-act .btn-text')]
+                  .map(b => b.textContent.trim())))()
+            """) or "[]")
+            print(f"  after giving one up: {after}")
+            if after.count("get") < 1:
+                failures.append(f"a dictionary given up is not offered back: {after}")
+        else:
+            failures.append(f"no dictionary was held to give up: {held_before}")
 
         # And the switch takes it all away.
         control(cdp, view, "document.querySelector('.toggle').click()")

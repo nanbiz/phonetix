@@ -7,18 +7,32 @@
   import { LANGUAGES } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
   import type { Settings } from '@/settings';
+  import type { Offered } from '@/host/packs';
 
   interface Props {
     settings: Settings;
     /** The densities the bar's positions mean, from the core, so the number a reader sees is
      *  the number the annotation is decided by. */
     curve: number[];
-    /** Which languages have a pack on this machine, and which are open. */
-    packs: { held: string[]; open: string[] };
+    /** Which languages have a pack here, which are open, and what can be fetched. */
+    packs: { held: string[]; open: string[]; offered: Offered[] };
     change: <K extends keyof Settings>(name: K, value: Settings[K]) => void;
+    /** Fetch a language's dictionary, or give one up. */
+    get?: (lang: string) => void;
+    forget?: (lang: string) => void;
+    /** Which language is being fetched right now, so the row can say so. */
+    fetching?: string | null;
   }
 
-  let { settings, curve, packs, change }: Props = $props();
+  let { settings, curve, packs, change, get, forget, fetching = null }: Props = $props();
+
+  /** A size a reader can weigh, since the whole point of a dictionary row is deciding
+   *  whether to spend it. */
+  function size(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+    if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${bytes} B`;
+  }
 
   const layers: { value: Layer; label: string }[] = [
     { value: 'off', label: 'nothing' },
@@ -136,16 +150,35 @@
 
     <div class="row">
       <span class="r-name">Dictionaries</span>
-      <!-- What is actually here, rather than what could be fetched: a reader deciding whether
-           to trust an answer is deciding it against the dictionaries the machine has. -->
       <span class="r-sub">
-        {#if packs.held.length === 0}
-          none yet
+        {#if packs.offered.length === 0}
+          <!-- The list comes from wherever the reader said their dictionaries live, and that
+               is theirs to set: an extension that went looking on its own would be an
+               extension deciding who to talk to. -->
+          no source for them yet
         {:else}
-          {packs.held.map((code) => LANGUAGES[code]?.english ?? code).join(', ')}
+          {packs.held.length} of {packs.offered.length} here, {packs.open.length} open
         {/if}
       </span>
-      <span class="r-act"><span class="chip">{packs.open.length} open</span></span>
     </div>
+
+    <!-- One row per dictionary: what it is, what it costs, and the one thing to do with it. -->
+    {#each packs.offered as pack (pack.lang)}
+      <div class="row">
+        <span class="r-name">{LANGUAGES[pack.lang]?.english ?? pack.lang}</span>
+        <span class="r-sub">
+          {pack.entries.toLocaleString()} words · {size(pack.bytes)}
+        </span>
+        <span class="r-act">
+          {#if fetching === pack.lang}
+            <span class="chip">fetching</span>
+          {:else if packs.held.includes(pack.lang)}
+            <button class="btn-text" onclick={() => forget?.(pack.lang)}>remove</button>
+          {:else}
+            <button class="btn-text" onclick={() => get?.(pack.lang)}>get</button>
+          {/if}
+        </span>
+      </div>
+    {/each}
   </div>
 </div>

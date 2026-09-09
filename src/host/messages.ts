@@ -8,6 +8,7 @@
 // a service worker with nothing to show for it.
 import type { Answer } from '@/core/answer';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
+import type { Offered } from './packs';
 
 export interface HostProtocol {
   /** Open a language's pack, fetching it from the configured host the first time. Returns
@@ -25,8 +26,15 @@ export interface HostProtocol {
   };
   /** What each position of the reader's frequency bar means, as one word in every N. */
   curve: { data: Record<string, never>; reply: number[] };
-  /** Which languages have a pack on this machine, and which of them are open. */
-  packs: { data: Record<string, never>; reply: { held: string[]; open: string[] } };
+  /** Which languages have a pack on this machine, which of them are open, and what the
+   *  reader's host has to offer. */
+  packs: {
+    data: Record<string, never>;
+    reply: { held: string[]; open: string[]; offered: Offered[] };
+  };
+  /** Fetch a language's pack and open it, or give one up. */
+  getPack: { data: { lang: string }; reply: string | null };
+  forgetPack: { data: { lang: string }; reply: boolean };
   /** A picture of the mouth making a sound, as a data URL: a page's own policy would refuse
    *  the load, and the host has no such policy. */
   diagram: { data: { file: string; width: number }; reply: string };

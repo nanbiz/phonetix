@@ -50,12 +50,33 @@ def build_packs():
             raise SystemExit(f"packbuild failed for {lang}: {got.stderr[-400:]}")
 
 
+def manifest():
+    """The list of packs, exactly as packbuild's own rows describe them."""
+    rows = []
+    for lang in ("es", "de"):
+        path = os.path.join(WORK, f"{lang}.pack")
+        rows.append({
+            "id": f"lex-{lang}", "lang": lang, "built": 0, "entries": 12, "keys": 14,
+            "glosses": 12, "bytes": os.path.getsize(path) if os.path.exists(path) else 0,
+            "sha256": "",
+        })
+    return json.dumps(rows).encode()
+
+
 def serve():
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *a):
             pass
 
         def do_GET(self):
+            if self.path == "/packs.json":
+                body = manifest()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if self.path.startswith("/packs/"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if os.path.exists(path):
@@ -120,6 +141,14 @@ def main():
             f"chrome.storage.local.set({{packBaseUrl:'{base}',targetLanguage:'de',"
             "on:true,layer:'gloss+ipa',density:1})"
         ))
+        # The dictionaries, asked for the way the settings view asks: nothing is fetched
+        # because a page happened to be in a language.
+        for lang in ("es", "de"):
+            evaluate(cdp, settings, (
+                "chrome.runtime.sendMessage({phonetix:'getPack',data:{lang:'" + lang + "'}})"
+                ".then(r => JSON.stringify(r))"
+            ))
+
         target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})
         page = cdp.send(
             "Target.attachToTarget", {"targetId": target["targetId"], "flatten": True},

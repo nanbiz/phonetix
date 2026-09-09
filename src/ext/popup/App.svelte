@@ -7,24 +7,43 @@
   import Settings from '@/ui/settings/Settings.svelte';
   import { current, set, type Settings as Chosen } from '@/settings';
   import { sendMessage } from '@/host/messages';
+  import type { Offered } from '@/host/packs';
   import '@/ui/tokens.css';
   import '@/ui/settings/settings.css';
 
   let settings = $state<Chosen | null>(null);
   let curve = $state<number[]>([]);
-  let packs = $state<{ held: string[]; open: string[] }>({ held: [], open: [] });
+  let packs = $state<{ held: string[]; open: string[]; offered: Offered[] }>({
+    held: [],
+    open: [],
+    offered: [],
+  });
+  /** Which dictionary is being fetched, so its row says so rather than looking dead. */
+  let fetching = $state<string | null>(null);
 
   async function load() {
     settings = await current();
     // The bar's meaning and the machine's dictionaries both come from the host: a settings
     // view that decided either of them itself would be a second opinion.
     curve = await sendMessage('curve', {}).catch(() => []);
-    packs = await sendMessage('packs', {}).catch(() => ({ held: [], open: [] }));
+    packs = await sendMessage('packs', {}).catch(() => ({ held: [], open: [], offered: [] }));
   }
 
   function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
     if (settings) settings = { ...settings, [name]: value };
     void set(name, value);
+  }
+
+  async function get(lang: string) {
+    fetching = lang;
+    await sendMessage('getPack', { lang }).catch(() => null);
+    fetching = null;
+    await load();
+  }
+
+  async function forget(lang: string) {
+    await sendMessage('forgetPack', { lang }).catch(() => false);
+    await load();
   }
 
   void load();
@@ -36,7 +55,7 @@
 
 <main class="theme-paper mode-{dark ? 'dark' : 'light'}">
   {#if settings}
-    <Settings {settings} {curve} {packs} {change} />
+    <Settings {settings} {curve} {packs} {change} {get} {forget} {fetching} />
   {/if}
 </main>
 
