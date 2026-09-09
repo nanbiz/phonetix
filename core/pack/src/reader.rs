@@ -162,6 +162,31 @@ impl<'a> Pack<'a> {
         out
     }
 
+    /// Which senses this whole gloss reaches, best first, with how many of its terms each
+    /// matched.
+    ///
+    /// The head term alone is not the answer where a gloss has more than one: "way" reaches
+    /// both Weg and Weise, and "way, route" reaches Weg. Every term is looked up and the
+    /// senses are scored by how many of them they share, which is the narrowing DR-2 gets for
+    /// free from the data rather than from a measurement.
+    ///
+    /// Ties are left as ties. A gloss that reaches two lemmas equally well is the ambiguity the
+    /// core refuses to guess through, and deciding it here would hide exactly the case that
+    /// has to fall to the machine engine and be labelled a guess.
+    pub fn senses_matching(&self, gloss: &str) -> Vec<((u32, u32), usize)> {
+        let mut score: std::collections::HashMap<(u32, u32), usize> =
+            std::collections::HashMap::new();
+        for term in crate::gloss_terms(gloss) {
+            for hit in self.senses_glossed(&term) {
+                *score.entry(hit).or_insert(0) += 1;
+            }
+        }
+        let mut out: Vec<((u32, u32), usize)> = score.into_iter().collect();
+        // Best first, and stable among equals so a tie reads the same way twice.
+        out.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+        out
+    }
+
     /// Every spelling in the pack, in order. For tests and for the builder's own checks.
     pub fn spellings(&self) -> Vec<String> {
         use fst::Streamer;

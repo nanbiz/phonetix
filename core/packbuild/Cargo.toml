@@ -1,0 +1,20 @@
+[package]
+name = "packbuild"
+version = "0.1.0"
+edition = "2021"
+description = "Turns one language's extract of the dump into a pack, and says what it made."
+
+[lib]
+name = "packbuild"
+path = "src/lib.rs"
+
+[[bin]]
+name = "packbuild"
+path = "src/main.rs"
+
+[dependencies]
+lexpack = { path = "../pack", features = ["write"] }
+# The dump is JSON lines. Streaming rather than loading: a language's extract runs to
+# gigabytes and the builder holds only what it is putting in the pack.
+serde_json = "1"
+sha2 = "0.10"

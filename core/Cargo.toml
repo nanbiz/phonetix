@@ -1,5 +1,5 @@
 [workspace]
-members = ["pack", "wasm", "android"]
+members = ["pack", "packbuild", "wasm", "android"]
 
 [package]
 name = "lexcore"
