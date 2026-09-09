@@ -307,13 +307,37 @@ class PhonetixAccessibilityService : AccessibilityService() {
             } else {
                 0
             }
+            // What a list that reports no distance still reports: where it has got to.
+            //
+            // A Compose list fills in no delta at all, and its bounds do not move during a
+            // fling either - twenty readings running put every word at the same pixel while
+            // the page travelled seven hundred - so there is nothing to measure a speed from
+            // and the words stood still on a moving page. The one thing it does report is
+            // scrollY, and it moves continuously.
+            //
+            // It is not in pixels. A lazy list has no scroll offset to give, so it estimates
+            // one as its first visible item's index times five hundred plus how far into that
+            // item it has scrolled, which is real pixels. Undoing that needs the height of an
+            // item, which is on the screen to be measured.
+            val pseudo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                event?.scrollY ?: -1
+            } else {
+                -1
+            }
+            val carried = if (kotlin.math.abs(said) >= SAID_TOO_SMALL) said.toFloat()
+            else fromPseudoScroll(pseudo)
+            if (BuildConfig.DEBUG && PROBE_TREE) {
+                android.util.Log.d(
+                    "Phonetix", "CARRIED said=$said pseudo=$pseudo row=$rowHeight -> $carried",
+                )
+            }
             if (::overlay.isInitialized) {
                 main.post {
                     overlay.beginMotion()
-                    if (USE_SAID_SCROLL && kotlin.math.abs(said) >= SAID_TOO_SMALL &&
-                        kotlin.math.abs(said) < SAID_TOO_FAR
+                    if (USE_SAID_SCROLL && kotlin.math.abs(carried) >= SAID_TOO_SMALL &&
+                        kotlin.math.abs(carried) < SAID_TOO_FAR
                     ) {
-                        overlay.told(said.toFloat())
+                        overlay.told(carried)
                     }
                 }
             }
@@ -784,6 +808,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (now.isEmpty) { gone++; continue }
                     alive++
                     val shift = shiftOf(was, now, a.viewport)
+                    if (BuildConfig.DEBUG && PROBE_TREE) {
+                        // What the same line says when it is found again from the root rather
+                        // than refreshed in place. If those two disagree, a refreshed node is
+                        // answering about a screen that is gone.
+                        android.util.Log.d(
+                            "Phonetix",
+                            "ASKED holder=${holder != null} was=$was now=$now " +
+                                "measuredAt=${a.measuredAt} shift=$shift " +
+                                "of '${a.text.take(14)}'",
+                        )
+                    }
                     if (shift == null) { unreadable++; continue }
                     shifts.add(Triple(shift.first, shift.second, readingAt))
                 }
@@ -1499,6 +1534,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.util.Log.d("Phonetix", sb.toString())
         }
 
+        // How far apart the lines of this screen sit, which is what an item boundary in an
+        // estimated scroll offset is worth. The gap between neighbours rather than a line's own
+        // height: a message is one line of a list whether it wraps over one row or four, and it
+        // is the message the list counts.
+        val tops = planned.mapNotNull { it.measuredAt?.top }.sorted()
+        if (tops.size >= 2) {
+            val gaps = tops.zipWithNext { a, b -> (b - a).toFloat() }.filter { it > 1f }.sorted()
+            if (gaps.isNotEmpty()) rowHeight = gaps[gaps.size / 2]
+        }
+
         // A full read is also a measurement of where the lines are, so it can see for itself
         // that the page has moved since the last one. Without this the loop stopped every
         // time the plan had to be rebuilt and waited for an event to start it again, and a
@@ -2094,6 +2139,48 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * not report them - a Compose or Canvas-drawn surface that exposes text but no layout,
      * for instance - and those nodes are left alone rather than guessed at.
      */
+    /** How tall one item of the list in front is, from the spacing of the lines just read.
+     *  What an estimated offset's item boundaries are worth in pixels. */
+    @Volatile private var rowHeight = 0f
+
+    /** The last estimated offset a lazy list reported, and the pixels it was taken to mean. */
+    @Volatile private var lastPseudo = -1
+    @Volatile private var lastPseudoAt = 0L
+
+    /**
+     * How far a list that reports no distance has actually moved, from the offset it estimates.
+     *
+     * A lazy list cannot say where it is scrolled to - its items are not all measured - so it
+     * offers its first visible item's index times five hundred, plus how far into that item it
+     * has gone, which is in pixels. Five hundred is a stand-in for an item's height, so the
+     * estimate advances in real pixels within an item and jumps at every boundary. Undone with
+     * the height the items actually are, which the lines on the screen give: an item boundary
+     * is worth that height rather than five hundred.
+     *
+     * Returns nothing when there is no previous reading to compare against, when the list has
+     * jumped further than a couple of screens (the plan is stale anyway and the next reading
+     * settles it), or when no item height has been measured yet.
+     */
+    private fun fromPseudoScroll(pseudo: Int): Float {
+        val was = lastPseudo
+        val now = android.os.SystemClock.uptimeMillis()
+        val since = now - lastPseudoAt
+        lastPseudo = pseudo
+        lastPseudoAt = now
+        if (pseudo < 0 || was < 0 || pseudo == was) return 0f
+        // A gap long enough that the page has been somewhere else in between.
+        if (since > PSEUDO_STALE_MS) return 0f
+        val height = rowHeight
+        if (height <= 0f) return 0f
+        fun real(p: Int): Float {
+            val item = p / LAZY_ITEM_UNITS
+            val into = p % LAZY_ITEM_UNITS
+            return item * height + into.coerceAtMost(height.toInt()).toFloat()
+        }
+        val moved = real(pseudo) - real(was)
+        return if (kotlin.math.abs(moved) >= SAID_TOO_FAR) 0f else moved
+    }
+
     private fun charRects(node: AccessibilityNodeInfo, from: Int, length: Int): Array<RectF?>? {
         // Asked for under whichever name the node itself offers.
         //
@@ -2234,6 +2321,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
          * the screen: 3 of 171 transcriptions off their word with these deltas used, against
          * 26 of 189 with them ignored.
          */
+        /** What a lazy list counts one item as, when it has no real height to give. Chosen by
+         *  the toolkit, not by us: it is the five hundred in its own estimate. */
+        const val LAZY_ITEM_UNITS = 500
+        /** Two estimates further apart in time than this are not one movement. */
+        const val PSEUDO_STALE_MS = 400L
         const val SAID_TOO_SMALL = 2
 
         /** Past this, what a view says it scrolled by is not a scroll of a page: it is a

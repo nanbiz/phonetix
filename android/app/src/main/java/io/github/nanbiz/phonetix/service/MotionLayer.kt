@@ -426,11 +426,23 @@ class MotionLayer(private val context: Context) {
         // thirty milliseconds after the last one. Both mistakes inflate the speed, and it came
         // out at twice to eight times the speed the page was really going.
         val fresh = speed.coerceIn(-Fixed.SANE_PX_PER_MS, Fixed.SANE_PX_PER_MS)
-        val bigger = maxOf(kotlin.math.abs(fresh), kotlin.math.abs(vy))
-        steadiness = if (bigger < 0.05f) 0f
-        else (1f - kotlin.math.abs(fresh - vy) / bigger).coerceIn(0f, 1f)
-        // Blended, so one odd reading does not throw the speed about.
-        vy = 0.4f * vy + 0.6f * fresh
+        // No speed at all is not a speed of nothing.
+        //
+        // A reading measures how fast the page is going by asking a line where it is twice.
+        // Some pages cannot answer that: a Compose list reports every word at the same pixel
+        // for the whole of a fling and only jumps when it is over, so the reading comes back
+        // with nothing rather than with a number. Blended in as zero, arriving every twenty
+        // milliseconds, it crushed whatever the page's own scroll reports had established, and
+        // the words stood still on a page travelling eight hundred pixels. What a page that
+        // has really stopped looks like is a speed that stops being renewed, and the trust
+        // above already lets that fade.
+        if (fresh != 0f) {
+            val bigger = maxOf(kotlin.math.abs(fresh), kotlin.math.abs(vy))
+            steadiness = if (bigger < 0.05f) 0f
+            else (1f - kotlin.math.abs(fresh - vy) / bigger).coerceIn(0f, 1f)
+            // Blended, so one odd reading does not throw the speed about.
+            vy = 0.4f * vy + 0.6f * fresh
+        }
         vx = 0f
 
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {

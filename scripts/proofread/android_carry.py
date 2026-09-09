@@ -28,9 +28,48 @@ dev = Device()
 if not dev.enable_service():
     print("the service will not start")
     sys.exit(1)
+# Which page is flung. The settings app reports how far it scrolled and is measured against
+# that; a Compose list reports nothing at all - a scroll event there carries -1 whatever it
+# did - so it is measured against the position the page itself logs. That is the case a reader
+# in a Compose app is in, and it is not the case the reported-scroll work touches.
+compose = os.environ.get("PHONETIX_COMPOSE") is not None
 got = []
 try:
     for n in range(runs):
+        if compose:
+            shell("am", "force-stop", "io.github.nanbiz.phonetix")
+            time.sleep(1.5)
+            shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+                  "--es", "mode", "chat", "--ei", "enable", "1", "--ei", "density", "3",
+                  "--ei", "allApps", "1",
+                  "--ei", "measureMovingMax",
+                  os.environ.get("PHONETIX_MEASURE_MOVING", "0"))
+            time.sleep(2)
+            dev.enable_service()
+            # A Compose page has to compose itself and then be read once before there is a plan
+            # to carry, and the overlay is not running until there is. Measured at three
+            # seconds, most runs reported no layer at all while the same swipe by hand carried
+            # the words a third of the way.
+            time.sleep(5)
+            shell("logcat", "-c")
+            shell("input", "swipe", "540", "1500", "540", "600", "250")
+            time.sleep(2.5)
+            log = dev.log()
+            where = [int(m) for m in re.findall(r"SCROLLY \d+ (-?\d+)", log)]
+            moved = (max(where) - min(where)) if where else 0
+            carried = [float(m) for m in re.findall(r"LAYER \d+ (-?[\d.]+) ", log)]
+            if not carried:
+                print(f"  run {n + 1}: the layer was not drawing at all, skipped")
+                continue
+            swing = max(carried) - min(carried)
+            if abs(moved) < 50:
+                print(f"  run {n + 1}: the page barely moved ({moved}px), skipped")
+                continue
+            got.append(swing / abs(moved))
+            print(f"  run {n + 1}: page moved {abs(moved):5}px, layer carried {swing:7.1f}px"
+                  f"  ({100 * swing / abs(moved):5.1f}%)")
+            time.sleep(2)
+            continue
         # Started fresh every run, because a swipe leaves the list where it stopped and an
         # am start against an activity that is already top-most only reaches onNewIntent: the
         # second run then flings a list that is already at the bottom, the page does not move,
