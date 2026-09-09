@@ -216,6 +216,30 @@ def main():
         if drawn and len(few) >= len(many):
             failures.append(f"a sparse page drew {len(few)} of {len(many)}")
 
+        # A word the page capitalised is the word the dictionary holds.
+        #
+        # Not compared against node, because both sides are the same crate and would agree on
+        # answering nothing. A page capitalises the first word of a sentence and every word of
+        # a heading, so this asks for the answer itself: the same one the lowercase spelling
+        # gets, and not an inflected form of it.
+        plain = ask(cdp, session, {"phonetix": "lookUp",
+                                   "data": {"word": "perro", "source": "es", "target": TARGET}})
+        capital = ask(cdp, session, {"phonetix": "lookUp",
+                                     "data": {"word": "Perro", "source": "es",
+                                              "target": TARGET}})
+        here, shouted = plain.get("ok"), capital.get("ok")
+        if not shouted or not shouted.get("ipa"):
+            failures.append(f"a capitalised word answered nothing ({capital})")
+        else:
+            if shouted.get("ipa") != (here or {}).get("ipa"):
+                failures.append(f"Perro says {shouted.get('ipa')} and perro {here.get('ipa')}")
+            if shouted.get("lemma"):
+                failures.append(
+                    f"Perro is offered as a form of {shouted['lemma']!r}, which it is not")
+            if shouted.get("spelling") != "Perro":
+                failures.append("the answer is about a word the reader did not point at")
+            print(f"  {'Perro':12} {shouted['state']:10} {shouted['ipa']}")
+
         # The words themselves, compared with what node got from the same bytes.
         for word in WORDS:
             answer = ask(cdp, session, {"phonetix": "lookUp", "data": {"word": word, "source": "es", "target": TARGET}})

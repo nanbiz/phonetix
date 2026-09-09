@@ -695,6 +695,18 @@ def check_a_real_app(r, dev):
         "a real app: they wear its own colours",
         f"{sum(1 for b in boxes.values() if not b['sampled'])} of {len(boxes)} fell back",
     )
+    # The words a real app's screen is actually made of. Almost all of its text is a heading
+    # or a label in title case, and while the cascade compared spellings byte for byte every
+    # one of those missed the dictionary: the screen came back nearly bare and every check
+    # here still passed, because each of them asks about words written the way a dump keys
+    # them. So this asks about the capitalised ones specifically.
+    capitalised = [b["word"] for b in boxes.values() if b["word"][:1].isupper()]
+    r.check(
+        len(capitalised) >= 3,
+        "a real app: the words it capitalises are transcribed too",
+        f"only {len(capitalised)} of {len(boxes)} transcribed words begin with a capital, "
+        f"on a screen whose every label is title case: {sorted(capitalised)[:8]}",
+    )
     # And they survive being scrolled, which is a different list implementation from any of
     # the pages here.
     shell("input", "swipe", "540", "1400", "540", "800", "400")
