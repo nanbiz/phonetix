@@ -102,6 +102,10 @@ impl Core {
     /// The runs arrive as three parallel arrays rather than as JSON, because the host has them
     /// as arrays already and serialising a page's text to parse it straight back is a copy of
     /// every word for nothing. An empty language hint means the batch's own source language.
+    // Nine arguments because that is what one pass over a page needs and the boundary carries
+    // values rather than objects: a struct here would be a JavaScript object marshalled into
+    // Rust, which is the copy this signature exists to avoid.
+    #[allow(clippy::too_many_arguments)]
     #[wasm_bindgen]
     pub fn annotate(
         &mut self,
