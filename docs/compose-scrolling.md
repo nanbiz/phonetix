@@ -56,6 +56,40 @@ TalkBack's `ScrollEventInterpreter.java` decides scroll direction in three tiers
 carries a Compose list is the middle tier, comparing the pseudo-offset between events. That
 yields a direction and nothing else: not how far, not which item, not how many there are.
 
+## The bounds do not move while the page does
+
+Measured on 2026-09-09, on a LazyColumn of fixed-height rows driven by a real finger swipe,
+with the page's own `firstVisibleItemIndex * itemHeight + firstVisibleItemScrollOffset`
+recorded as ground truth at every change.
+
+Through a fling in which the page travelled from 5 to 770 pixels, every reading the service
+took reported the same word at exactly the same pixel: twenty consecutive readings of
+`sapphire` at `330,289`, and then, once the fling was over, a different set of words at a
+different fixed position. Asking a line where it is with `refresh()` returned the bounds it had
+when the plan was made, and went on doing so for lines that had left the screen altogether -
+`3 almond blanket` answered from `44,107..1036,281` while a `uiautomator` dump of the same
+moment showed it gone. Eighteen follow passes of one fling each measured a shift of exactly
+zero.
+
+So a Compose list cannot be watched moving. The consequence for anything that carries words
+between readings is total rather than partial: the speed measured by comparing two readings is
+always nought, so a layer that carries at that speed carries at nothing, and the words stand
+still on a page travelling eight hundred pixels. Measured, ten flings: 0% of the movement
+followed, on every one.
+
+Two things do not explain it and were tested rather than assumed. `AccessibilityService.
+clearCache()` before each pass changes nothing, so it is not the client-side node cache.
+Fetching `rootInActiveWindow` before asking changes nothing either. A full walk of the tree
+*does* return current positions, which is why placement at rest is unaffected: it is `refresh()`
+on a node already held that answers with the old screen.
+
+What is left is the pseudo-offset. It moves continuously - 1510, 1608, 3083, 3176, 3219, 3238,
+3501 through one fling - and it can be turned back into pixels, because the formula above is
+known: an item boundary in it is worth five hundred units and one real item height, and the
+remainder within an item is already in pixels. The item height is on the screen to be measured.
+Done that way, a fling came out in pieces of 118, 646, 75, 47, 14 and 2 pixels against 785
+really travelled.
+
 ## What follows for this overlay
 
 - A reported delta of one pixel or less is the absence of a delta and has to be ignored rather
@@ -69,9 +103,16 @@ yields a direction and nothing else: not how far, not which item, not how many t
   once the judge could be made to fail on demand, both settings are clean on these apps: 0 of
   679 and 0 of 682 with the deltas used, 0 of 700 without. The floor below stands on the source
   rather than on that measurement.
-- For a Compose list there is no distance in the event, so distance has to be measured from the
-  nodes themselves, and the event is worth only what TalkBack uses it for: that something moved,
-  and which way.
+- For a Compose list there is no distance in the event, and the nodes cannot supply one either
+  while the page is moving, for the reason above. The pseudo-offset converted with a measured
+  item height is the only continuous signal there is. It is an estimate and is treated as one:
+  it carries the words only where the layer has already stopped believing its own speed, and a
+  reported distance from an app that gives one is treated as an account instead and replaces
+  what was guessed for the same stretch.
+- Which of the two applies is decided by the event's own delta being exactly undefined rather
+  than merely small. An app that fills the field in reports its offset in real pixels too, and
+  putting that through the conversion inflates it: the settings app's words were carried 124%
+  of what it moved.
 - `CollectionInfo` on a node is populated properly by Compose with the real item count, and is a
   better channel than the scroll event for anything about position in a list. Nothing here uses
   it yet.

@@ -16,6 +16,7 @@ it knows it cannot follow the app, and a word withheld is not a word on the wron
 
   PHONETIX_ANDROID_SERIAL=emulator-5600 uv run python scripts/proofread/android_words.py
 """
+import os
 import re
 import statistics
 import sys
@@ -243,7 +244,10 @@ def judge(r, dev, log, label, newest_only=False, window=SAME_MOMENT_MS, document
 # 16% on builds that differed in one constant. Part of that is the gesture - `input swipe`
 # does not deliver the same movement twice - so the page is asked to scroll itself by exactly
 # the same distance over exactly the same time instead, and the answer is the middle of five.
-DRAGS = 5
+# How many drags each page is put through. Five is enough to see a page that is badly
+# broken and not enough to tell two builds apart: the same build's middle drag has read 10%
+# and 30% on the same page. Raised from the environment when a comparison needs settling.
+DRAGS = int(os.environ.get("PHONETIX_DRAGS", "5"))
 MOVE_PX = 900
 MOVE_MS = 1300
 
