@@ -219,6 +219,34 @@ def main():
         else:
             failures.append(f"no dictionary was held to give up: {held_before}")
 
+        # One site, rather than everywhere: switched off here, the page is bare, and the
+        # extension is still on for everything else.
+        control(cdp, view, """
+            (() => {
+              const rows = [...document.querySelectorAll('.row')];
+              const row = rows.find(r => r.querySelector('.r-name')
+                                          ?.textContent.trim().startsWith('On '));
+              if (!row) return 'no row';
+              row.querySelector('.toggle').click();
+              return row.querySelector('.r-name').textContent.trim();
+            })()
+        """)
+        time.sleep(2)
+        here = words(cdp, page)
+        still_on = evaluate(cdp, view, """
+            (() => {
+              const rows = [...document.querySelectorAll('.row')];
+              const master = rows.find(r => r.querySelector('.r-name')
+                                             ?.textContent.trim() === 'Annotate what I read');
+              return master.querySelector('.toggle').classList.contains('on');
+            })()
+        """)
+        print(f"  switched off for this site: {here['count']} words, still on elsewhere: {still_on}")
+        if here["count"] != 0:
+            failures.append(f"{here['count']} annotations survived switching the site off")
+        if not still_on:
+            failures.append("switching one site off switched the extension off everywhere")
+
         # And the switch takes it all away.
         control(cdp, view, "document.querySelector('.toggle').click()")
         off = words(cdp, page)

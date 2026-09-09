@@ -6,7 +6,7 @@
 // chose.
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
-import { current, watch, type Settings } from '@/settings';
+import { allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
 import { hide, inside, show, showing } from './card';
 import { isPainted, paint, unpaint, wordAt } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
@@ -16,13 +16,8 @@ import { scan, type ScannedRun } from './scan';
 /** How long the cursor rests on a word before its card opens, in milliseconds. */
 const REST = 200;
 
-let settings: Settings = {
-  on: true,
-  layer: 'gloss',
-  density: 12,
-  target: '',
-  source: '',
-};
+// Until the stored ones are read, which is one await away.
+let settings: Settings = DEFAULTS;
 /** Words the reader has opened a card for, which stay annotated afterwards. */
 const asked: string[] = [];
 let opening: ReturnType<typeof setTimeout> | null = null;
@@ -102,7 +97,9 @@ async function draw(): Promise<void> {
   painting = true;
   try {
     unpaint();
-    if (!settings.on || settings.layer === 'off') {
+    // A site the reader switched off is a site this does nothing on, which is not the same
+    // as the extension being off everywhere.
+    if (!allowed(settings, location.hostname) || settings.layer === 'off') {
       state('off');
       return;
     }
@@ -119,7 +116,13 @@ async function draw(): Promise<void> {
       runs: runs.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
       target: settings.target || source,
-      options: { mode: settings.layer, density: settings.density, seen: asked },
+      options: {
+        mode: settings.layer,
+        density: settings.density,
+        narrow: settings.narrow,
+        hideStress: settings.hideStress,
+        seen: asked,
+      },
     });
     const byRun = new Map<number, Token[]>();
     for (const token of batch.tokens) {
@@ -268,9 +271,12 @@ export async function session(): Promise<void> {
       was.layer !== fresh.layer ||
       was.density !== fresh.density ||
       was.target !== fresh.target ||
-      was.source !== fresh.source
+      was.source !== fresh.source ||
+      was.narrow !== fresh.narrow ||
+      was.hideStress !== fresh.hideStress ||
+      was.off.join() !== fresh.off.join()
     ) {
-      if (!fresh.on && isPainted()) unpaint();
+      if (!allowed(fresh, location.hostname) && isPainted()) unpaint();
       else await draw();
     }
   });

@@ -17,6 +17,9 @@
     /** Which languages have a pack here, which are open, and what can be fetched. */
     packs: { held: string[]; open: string[]; offered: Offered[] };
     change: <K extends keyof Settings>(name: K, value: Settings[K]) => void;
+    /** The site the reader is on, so it can be switched off without switching everything off. */
+    site?: string;
+    onSite?: (on: boolean) => void;
     /** Fetch a language's dictionary, or give one up. */
     get?: (lang: string) => void;
     forget?: (lang: string) => void;
@@ -24,7 +27,10 @@
     fetching?: string | null;
   }
 
-  let { settings, curve, packs, change, get, forget, fetching = null }: Props = $props();
+  let { settings, curve, packs, change, get, forget, fetching = null, site = '', onSite }:
+    Props = $props();
+
+  let here = $derived(site !== '' && !settings.off.includes(site));
 
   /** A size a reader can weigh, since the whole point of a dictionary row is deciding
    *  whether to spend it. */
@@ -80,6 +86,22 @@
         ></button>
       </span>
     </div>
+
+    {#if site}
+      <div class="row">
+        <!-- One site, rather than everywhere: a reader who does not want this on their bank
+             does not want to switch it off on the web. -->
+        <span class="r-name">On {site}</span>
+        <span class="r-act">
+          <button
+            class="toggle {here ? 'on' : ''}"
+            aria-label="on {site}"
+            aria-pressed={here}
+            onclick={() => onSite?.(!here)}
+          ></button>
+        </span>
+      </div>
+    {/if}
 
     <div class="row">
       <span class="r-name">Show over a word</span>
@@ -145,6 +167,44 @@
             <option value={language.code}>{language.english}</option>
           {/each}
         </select>
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="r-name">Transcriptions</span>
+      <span class="r-sub">
+        {settings.narrow ? 'every detail of how it is said' : 'the sounds that tell words apart'}
+      </span>
+      <span class="r-act">
+        <span class="seg">
+          <span
+            class={settings.narrow ? '' : 'on'}
+            role="button"
+            tabindex="0"
+            onclick={() => change('narrow', false)}
+            onkeydown={(e) => e.key === 'Enter' && change('narrow', false)}
+          >broad</span>
+          <span
+            class={settings.narrow ? 'on' : ''}
+            role="button"
+            tabindex="0"
+            onclick={() => change('narrow', true)}
+            onkeydown={(e) => e.key === 'Enter' && change('narrow', true)}
+          >narrow</span>
+        </span>
+      </span>
+    </div>
+
+    <div class="row">
+      <span class="r-name">Stress marks</span>
+      <span class="r-sub">over a word; the card always shows them</span>
+      <span class="r-act">
+        <button
+          class="toggle {settings.hideStress ? '' : 'on'}"
+          aria-label="stress marks"
+          aria-pressed={!settings.hideStress}
+          onclick={() => change('hideStress', !settings.hideStress)}
+        ></button>
       </span>
     </div>
 

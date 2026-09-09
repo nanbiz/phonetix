@@ -20,6 +20,13 @@ export interface Settings {
   target: string;
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
+  /** Narrow transcriptions rather than broad ones. The card always shows the full form. */
+  narrow: boolean;
+  /** Leave the stress marks off the line over a word. */
+  hideStress: boolean;
+  /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
+   *  wants this on the web does not want to name every site it should work on. */
+  off: string[];
 }
 
 export const DEFAULTS: Settings = {
@@ -28,6 +35,9 @@ export const DEFAULTS: Settings = {
   density: 12,
   target: '',
   source: '',
+  narrow: false,
+  hideStress: true,
+  off: [],
 };
 
 /** Where each setting lives, as the storage key it is watched under. */
@@ -37,6 +47,9 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   density: 'local:density',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
+  narrow: 'local:narrow',
+  hideStress: 'local:hideStress',
+  off: 'local:sitesOff',
 };
 
 /** Everything the reader has chosen, with the defaults filled in. */
@@ -64,6 +77,17 @@ export function watch(told: (settings: Settings) => void): () => void {
     storage.watch(KEYS[name], async () => told(await current()))
   );
   return () => stop.forEach((off) => off());
+}
+
+/** Whether this site is one the reader switched off. */
+export function allowed(settings: Settings, host: string): boolean {
+  return settings.on && !settings.off.includes(host);
+}
+
+/** Switch this site on or off, leaving the rest as they are. */
+export async function setSite(settings: Settings, host: string, on: boolean): Promise<void> {
+  const off = on ? settings.off.filter((name) => name !== host) : [...settings.off, host];
+  await set('off', [...new Set(off)]);
 }
 
 /** Change one setting, which every listener hears. */

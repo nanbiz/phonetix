@@ -48,7 +48,11 @@ export default defineConfig({
     // The toolbar button's tooltip, on both engines. Without it the settings view shipped as
     // the literal "Default Popup Title".
     action: { default_title: 'Phonetix' },
-    permissions: browser === 'firefox' ? ['storage'] : ['storage', 'offscreen'],
+    // tabs, only to know which site the settings view is being opened over: a switch for
+    // this site is not a switch at all if it cannot tell which site that is.
+    permissions: browser === 'firefox'
+      ? ['storage', 'tabs']
+      : ['storage', 'tabs', 'offscreen'],
     host_permissions: ['<all_urls>'],
     content_security_policy: {
       extension_pages:

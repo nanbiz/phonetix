@@ -5,7 +5,7 @@
   // changed: every surface watches the same keys, so a page annotates itself again without
   // being told by this one.
   import Settings from '@/ui/settings/Settings.svelte';
-  import { current, set, type Settings as Chosen } from '@/settings';
+  import { current, set, setSite, type Settings as Chosen } from '@/settings';
   import { sendMessage } from '@/host/messages';
   import type { Offered } from '@/host/packs';
   import '@/ui/tokens.css';
@@ -20,9 +20,13 @@
   });
   /** Which dictionary is being fetched, so its row says so rather than looking dead. */
   let fetching = $state<string | null>(null);
+  /** The site the reader is looking at, so it can be switched off on its own. */
+  let site = $state('');
 
   async function load() {
     settings = await current();
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    site = tab?.url ? new URL(tab.url).hostname : '';
     // The bar's meaning and the machine's dictionaries both come from the host: a settings
     // view that decided either of them itself would be a second opinion.
     curve = await sendMessage('curve', {}).catch(() => []);
@@ -55,7 +59,19 @@
 
 <main class="theme-paper mode-{dark ? 'dark' : 'light'}">
   {#if settings}
-    <Settings {settings} {curve} {packs} {change} {get} {forget} {fetching} />
+    <Settings
+      {settings}
+      {curve}
+      {packs}
+      {change}
+      {get}
+      {forget}
+      {fetching}
+      {site}
+      onSite={(on) => {
+        if (settings) void setSite(settings, site, on).then(load);
+      }}
+    />
   {/if}
 </main>
 
