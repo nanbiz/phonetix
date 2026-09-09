@@ -17,6 +17,8 @@ from android_harness import SERIAL, Device, shell
 load = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 tries = int(sys.argv[2]) if len(sys.argv) > 2 else 12
 out = sys.argv[3] if len(sys.argv) > 3 else "/tmp/dead.log"
+# Load left behind by a run that was cut short, which would otherwise be measured as well.
+subprocess.run(["adb", "-s", SERIAL, "shell", "pkill -f 'while true'"], capture_output=True)
 busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(load)]

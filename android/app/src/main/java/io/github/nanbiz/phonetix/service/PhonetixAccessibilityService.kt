@@ -325,7 +325,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 -1
             }
             val exact = kotlin.math.abs(said) >= SAID_TOO_SMALL
-            val carried = if (exact) said.toFloat() else fromPseudoScroll(pseudo)
+            // The estimate is for lists that report no distance at all, which they mark with
+            // the undefined value rather than with a small one. An app that fills this in
+            // reports its offset in pixels too, and putting that through the conversion below
+            // inflated it: the settings app's words were carried 124% of what it moved.
+            val carried = when {
+                exact -> said.toFloat()
+                said == UNDEFINED_SCROLL -> fromPseudoScroll(pseudo)
+                else -> 0f
+            }
             if (BuildConfig.DEBUG && PROBE_TREE) {
                 android.util.Log.d(
                     "Phonetix", "CARRIED said=$said pseudo=$pseudo row=$rowHeight -> $carried",
@@ -2323,6 +2331,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
          */
         /** What a lazy list counts one item as, when it has no real height to give. Chosen by
          *  the toolkit, not by us: it is the five hundred in its own estimate. */
+        /** What a scroll event carries when the view did not fill the distance in. */
+        const val UNDEFINED_SCROLL = -1
         const val LAZY_ITEM_UNITS = 500
         /** Two estimates further apart in time than this are not one movement. */
         const val PSEUDO_STALE_MS = 400L

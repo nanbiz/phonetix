@@ -323,8 +323,7 @@ class MotionLayer(private val context: Context) {
         // its own speed, which is what a starved reading looks like from in here. Treated as
         // an account, it took the share of transcriptions off their word on a Compose
         // conversation from 7% to 11 and 13.
-        if (!exact && trustAt(now) >= Fixed.TRUST_ENOUGH) return
-        if (exact) guessedY = 0f
+        guessedY = 0f
         carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
         lastFrameAt = now
         view?.let { it.translationY = predictedY }

@@ -19,6 +19,11 @@ from android_harness import SERIAL, Device, shell
 # it is not - while this one is continuous and a handful of runs settles it.
 load = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 runs = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+# Any load left behind by a run that was cut short. Each of these is a core of the emulator
+# gone, they outlive the run that started them when it does not reach its own cleanup, and a
+# device carrying several rounds of them is not the device the question is about: the same
+# build read 0%, 67%, 71%, 89% and 124% as they piled up.
+subprocess.run(["adb", "-s", SERIAL, "shell", "pkill -f 'while true'"], capture_output=True)
 busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(load)]
