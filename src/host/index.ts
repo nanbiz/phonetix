@@ -47,6 +47,28 @@ export function host(): void {
 
   onMessage('packs', async () => ({ held: await held(), open: await openLanguages() }));
 
+  onMessage('diagram', async ({ data }) => {
+    try {
+      return await drawing(data.file, data.width);
+    } catch (e) {
+      console.warn(`[Phonetix] No diagram for ${data.file}:`, e);
+      // Nothing rather than a broken picture: the sheet shows no diagram slot at all when
+      // there is none, which reads better than a frame with a failure in it.
+      return '';
+    }
+  });
+
+  onMessage('fetch', async ({ data }) => {
+    try {
+      const res = await fetch(data.url);
+      if (!res.ok) throw new Error(String(res.status));
+      return Array.from(new Uint8Array(await res.arrayBuffer()));
+    } catch (e) {
+      console.warn(`[Phonetix] Nothing fetched from ${data.url}:`, e);
+      return [];
+    }
+  });
+
   onMessage('speak', async ({ data }) => {
     try {
       return await audio(data.lang, data.word);
@@ -97,4 +119,26 @@ async function said(batch: Batch, lang: string): Promise<Batch> {
     .filter((result) => result.ipa);
   if (results.length === 0) return batch;
   return complete(batch.batch, results, 'espeak');
+}
+
+/**
+ * A sagittal section of the mouth making a sound, as a data URL.
+ *
+ * Commons serves these as SVG, so the file is asked for at a width and comes back as a
+ * raster: a page cannot be handed an SVG it did not fetch itself, and the sheet wants one
+ * size anyway. Fetched here because the page's own policy would refuse the load.
+ */
+async function drawing(file: string, width: number): Promise<string> {
+  const url =
+    `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}` +
+    `?width=${width}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(String(res.status));
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let binary = '';
+  for (let at = 0; at < bytes.length; at += 8192) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + 8192));
+  }
+  const type = res.headers.get('content-type') ?? 'image/png';
+  return `data:${type};base64,${btoa(binary)}`;
 }

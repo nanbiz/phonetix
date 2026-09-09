@@ -5,7 +5,7 @@
 // same Answer the phone's card is drawn from.
 import { mount, unmount } from 'svelte';
 
-import AnswerCard from '@/ui/card/AnswerCard.svelte';
+import Opened from '@/ui/card/Opened.svelte';
 import type { Answer } from '@/core/answer';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
@@ -68,13 +68,21 @@ function place(at: DOMRect): void {
 
 /** What the card can be asked to do, which is the session's business rather than the card's. */
 export interface CardActions {
-  onSymbol?: (symbol: string) => void;
+  /** Say the word the card is about. */
   onPlay?: () => void;
+  /** Play a recording of one sound, which is a file rather than a synthesised voice. */
+  onPlayUrl?: (url: string) => void;
+  /** A picture of the mouth making a sound, from wherever the host can reach it. */
+  diagram?: (file: string) => Promise<string>;
   onOpen?: (url: string) => void;
 }
 
+/** Where the card is anchored, so it can be put back in place when it changes height. */
+let anchor: DOMRect = new DOMRect();
+
 /** Show one answer, anchored to the word it is about. */
 export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): void {
+  anchor = at;
   const { frame: box } = build();
   const key = `${answer.spelling}:${answer.state}`;
   if (drawn && about === key) {
@@ -83,13 +91,17 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   }
   hide();
   const { frame: fresh } = build();
-  drawn = mount(AnswerCard, {
+  drawn = mount(Opened, {
     target: fresh,
     props: {
       answer,
-      onSymbol: actions.onSymbol,
+      diagram: actions.diagram,
       onPlay: actions.onPlay,
+      onPlayUrl: actions.onPlayUrl,
       onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
+      // A sheet opening under the card makes it taller, and a card that grew where it stood
+      // can end up hanging off the bottom of the window.
+      onSymbol: () => requestAnimationFrame(() => place(anchor)),
     },
   });
   about = key;

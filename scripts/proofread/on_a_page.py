@@ -215,6 +215,44 @@ def main():
             if open_card["left"] < 0 or open_card["top"] < 0:
                 failures.append(f"the card is off screen at {open_card['left']},{open_card['top']}")
 
+        # A tap on a symbol opens what that sound is, under the card rather than over it.
+        symbol = evaluate(cdp, page, """
+            (() => {
+              const host = document.getElementById('phonetix-card-host');
+              const sym = host.shadowRoot.querySelectorAll('.sym')[1];
+              if (!sym) return null;
+              sym.click();
+              return 'tapped';
+            })()
+        """)
+        sheet = wait_for(cdp, page, """
+            (() => {
+              const host = document.getElementById('phonetix-card-host');
+              const sheet = host.shadowRoot.querySelector('.popover');
+              if (!sheet) return null;
+              const card = host.shadowRoot.querySelector('.card').getBoundingClientRect();
+              const box = sheet.getBoundingClientRect();
+              return JSON.stringify({
+                name: (sheet.querySelector('.pop-name') || {}).textContent || '',
+                kind: (sheet.querySelector('.chip') || {}).textContent || '',
+                links: [...sheet.querySelectorAll('.btn-text')].map(b => b.textContent.trim()),
+                below: Math.round(box.top) >= Math.round(card.bottom) - 2,
+                width: Math.round(box.width),
+              });
+            })()
+        """, lambda v: v is not None, tries=10)
+        if not symbol or not sheet:
+            failures.append(f"tapping a symbol opened nothing ({symbol!r}, {sheet!r})")
+        else:
+            sound = json.loads(sheet)
+            print(f"  the sound: {sound['name']!r} ({sound['kind']}), {sound['links']}")
+            if not sound["name"]:
+                failures.append("the sound is not named")
+            if not any(l in ("Wikipedia", "Seeing Speech") for l in sound["links"]):
+                failures.append(f"the sound links nowhere ({sound['links']})")
+            if not sound["below"]:
+                failures.append("the sound opened over the card rather than under it")
+
         # A word no pack holds still gets a transcription, from the voice rather than from a
         # dictionary, and the annotation says which by its own state.
         spoken = evaluate(cdp, page, """

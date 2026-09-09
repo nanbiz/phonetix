@@ -27,6 +27,11 @@ export interface HostProtocol {
   curve: { data: Record<string, never>; reply: number[] };
   /** Which languages have a pack on this machine, and which of them are open. */
   packs: { data: Record<string, never>; reply: { held: string[]; open: string[] } };
+  /** A picture of the mouth making a sound, as a data URL: a page's own policy would refuse
+   *  the load, and the host has no such policy. */
+  diagram: { data: { file: string; width: number }; reply: string };
+  /** Any sound from the network, as bytes: a recording of a sound made by a person. */
+  fetch: { data: { url: string }; reply: number[] };
   /** Say one word: WAV bytes, because a page's own media policy can block an audio element
    *  loading a URL and cannot block Web Audio playing bytes. */
   speak: { data: { word: string; lang: string }; reply: number[] };

@@ -109,6 +109,16 @@ async function draw(): Promise<void> {
   }
 }
 
+/** How wide a picture of a mouth is asked for, which is what the sheet gives it. */
+const DIAGRAM_WIDTH = 192;
+
+/** Play a sound somebody recorded, fetched by the host for the same reason as everything
+ *  else that comes from the network. */
+async function recorded(url: string): Promise<void> {
+  const bytes = await sendMessage('fetch', { url }).catch(() => [] as number[]);
+  await play(bytes);
+}
+
 /**
  * Say a word out loud.
  *
@@ -117,7 +127,11 @@ async function draw(): Promise<void> {
  * Web Audio playing bytes it was handed.
  */
 async function speak(word: string, lang: string): Promise<void> {
-  const bytes = await sendMessage('speak', { word, lang });
+  await play(await sendMessage('speak', { word, lang }));
+}
+
+/** Play bytes through Web Audio, which is what a page's media policy cannot refuse. */
+async function play(bytes: number[]): Promise<void> {
   if (bytes.length === 0) return;
   const context = new AudioContext();
   const sound = await context.decodeAudioData(new Uint8Array(bytes).buffer);
@@ -142,6 +156,10 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
   if (!asked.includes(key)) asked.push(key);
   show(answer, element.getBoundingClientRect(), {
     onPlay: () => void speak(token.spelling, source),
+    // A recording of one sound is a file somebody made, not a voice: it is fetched by the
+    // host, because the page's own policy would refuse the load.
+    onPlayUrl: (url) => void recorded(url),
+    diagram: (file) => sendMessage('diagram', { file, width: DIAGRAM_WIDTH }),
   });
 }
 

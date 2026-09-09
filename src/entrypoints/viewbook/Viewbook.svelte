@@ -4,7 +4,7 @@
   // The answers are made here rather than looked up: what is being looked at is the card,
   // and a card that needs a dictionary open before it can be seen is a card nobody can check
   // until everything else works.
-  import AnswerCard from '@/ui/card/AnswerCard.svelte';
+  import Opened from '@/ui/card/Opened.svelte';
   import type { Answer } from '@/core/answer';
   import '@/ui/tokens.css';
   import '@/ui/card/card.css';
@@ -86,7 +86,7 @@
       {#each states as state (state.uid)}
         <div class="slot" data-uid={state.uid}>
           <div class="label">{state.uid}</div>
-          <AnswerCard answer={state.answer} />
+          <Opened answer={state.answer} />
         </div>
       {/each}
     </section>
