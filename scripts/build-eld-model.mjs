@@ -108,7 +108,7 @@ const out = Buffer.concat([
   head, codesLength, codesBuf, averages, bytes, counts, alphabetBuf,
   keys, starts, langs, scores,
 ]);
-const where = new URL('../android/app/src/main/assets/eld.bin', import.meta.url);
+const where = new URL('../assets/eld.bin', import.meta.url);
 writeFileSync(where, out);
 console.log(
   `${size}: ${packed.length} ngrams, ${pairs} pairs, ${codes.length} languages, ` +

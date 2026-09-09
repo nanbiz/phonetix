@@ -39,11 +39,43 @@ function state(said: string): void {
   document.documentElement.dataset.phonetix = said;
 }
 
-/** What the page says it is written in, or what the reader said it is. */
-function pageLanguage(): string {
+/** What the reader said this page is, what the page says it is, or nothing yet. */
+function declaredLanguage(): string {
   if (settings.source) return settings.source;
   const declared = document.documentElement.lang || document.body.lang;
-  return declared.trim().split('-')[0].toLowerCase() || 'en';
+  return declared.trim().split('-')[0].toLowerCase();
+}
+
+/** What the page turned out to be in, once the core has read some of it. */
+let detected = '';
+
+/**
+ * Which language this page is in.
+ *
+ * A page that declares one is taken at its word, because a page's author knows. A page that
+ * declares nothing is read: the alternative is assuming English, which is how a German page
+ * ends up covered in English pronunciations.
+ */
+function pageLanguage(): string {
+  return declaredLanguage() || detected || 'en';
+}
+
+/**
+ * Ask the core what the page is in, from as much of it as says anything.
+ *
+ * The whole visible text rather than one line: a line on its own says too little, and the
+ * detector says so rather than guessing, so a screen of labels would come back as nothing.
+ */
+async function readLanguage(runs: ScannedRun[]): Promise<void> {
+  if (declaredLanguage() || detected) return;
+  const sample = runs
+    .map((run) => run.text.trim())
+    .filter((text) => text.length > 0)
+    .join(' ')
+    .slice(0, 1000);
+  if (sample.length < 20) return;
+  const guess = await sendMessage('detect', { text: sample }).catch(() => null);
+  if (guess?.reliable && guess.language) detected = guess.language;
 }
 
 /** The stylesheet the annotations are drawn by, put in the page once. */
@@ -79,6 +111,7 @@ async function draw(): Promise<void> {
       state('nothing to read');
       return;
     }
+    await readLanguage(runs);
     const source = pageLanguage();
     state(`asking about ${runs.length} runs`);
     const batch = await sendMessage('annotate', {

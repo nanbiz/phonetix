@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = path.join(root, 'core');
@@ -74,6 +75,16 @@ run('wasm-bindgen', [
 const built = path.join(glueDir, 'lexcore_bg.wasm');
 fs.renameSync(built, path.join(binaryDir, 'lexcore_bg.wasm'));
 fs.rmSync(path.join(glueDir, 'lexcore_bg.wasm.d.ts'), { force: true });
+
+// The language model the core reads, unpacked into the extension's own package: the core
+// takes it as it is, and a browser fetching it from the network would be a browser asking
+// somebody about what its reader is reading.
+const model = path.join(root, 'assets', 'eld.bin.gz');
+if (fs.existsSync(model)) {
+  fs.writeFileSync(path.join(binaryDir, 'eld.bin'), zlib.gunzipSync(fs.readFileSync(model)));
+} else {
+  throw new Error(`Missing ${model}. Run node scripts/build-eld-model.mjs first.`);
+}
 
 const size = fs.statSync(path.join(binaryDir, 'lexcore_bg.wasm')).size;
 console.log(`core: ${(size / 1024).toFixed(0)} KB of WebAssembly, glue in src/core/wasm`);

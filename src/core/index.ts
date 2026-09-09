@@ -143,6 +143,47 @@ export async function curve(): Promise<number[]> {
   return Array.from(it.curve());
 }
 
+/** Where the language model sits in the extension's own package. */
+const MODEL = 'core/eld.bin';
+
+let told: Promise<number> | null = null;
+
+/**
+ * Give the core the language model, once.
+ *
+ * Fetched from the extension rather than the network: what a reader is reading is not
+ * something to ask anyone else about.
+ */
+export function modelReady(): Promise<number> {
+  if (!told) {
+    told = (async () => {
+      const it = await coreReady();
+      const res = await fetch(chrome.runtime.getURL(MODEL as never));
+      if (!res.ok) throw new Error(`${res.status} reading the language model`);
+      return it.openModel(new Uint8Array(await res.arrayBuffer()));
+    })().catch((e) => {
+      told = null;
+      throw e;
+    });
+  }
+  return told;
+}
+
+/** What language a piece of text is in. */
+export async function detect(text: string): Promise<Guess> {
+  const it = await coreReady();
+  await modelReady();
+  return JSON.parse(it.detect(text)) as Guess;
+}
+
+/** What the detector found, and whether it is worth acting on. */
+export interface Guess {
+  language: string | null;
+  /** False for text that says too little: a tab, a button, a name. */
+  reliable: boolean;
+  scores: Record<string, number>;
+}
+
 /** A transcription, symbol by symbol, for a surface that has no answer to read them off. */
 export async function symbolsOf(ipa: string): Promise<IpaSymbol[]> {
   await coreReady();

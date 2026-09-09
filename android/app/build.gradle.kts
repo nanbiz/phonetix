@@ -69,7 +69,15 @@ val bundleDictionaries by tasks.registering(Exec::class) {
         "ipa", "en", dict.absolutePath, out.absolutePath)
 }
 
-tasks.named("preBuild") { dependsOn(bundleDictionaries) }
+/** The language model, which is a build input like the dictionary beside it. */
+val bundleModel by tasks.registering(Copy::class) {
+    val model = rootProject.file("../assets/eld.bin.gz")
+    doFirst { require(model.exists()) { "Missing ${model.path}" } }
+    from(model)
+    into(layout.projectDirectory.dir("src/main/assets"))
+}
+
+tasks.named("preBuild") { dependsOn(bundleDictionaries, bundleModel) }
 
 // The native core, built from ../../core rather than committed.
 //

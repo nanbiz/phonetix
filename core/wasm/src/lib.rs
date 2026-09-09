@@ -52,6 +52,8 @@ pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
 #[wasm_bindgen]
 pub struct Core {
     packs: HashMap<String, Pack<Vec<u8>>>,
+    /// The language model, where the host has given it one. Detection is off until it has.
+    model: Option<lexcore::detect::Model>,
     /// The batches the host is still drawing, kept so that what its engines answer joins the
     /// same tokens rather than a second set the host stitched together itself.
     batches: HashMap<u64, Vec<Token>>,
@@ -64,6 +66,7 @@ impl Core {
     pub fn new() -> Core {
         Core {
             packs: HashMap::new(),
+            model: None,
             batches: HashMap::new(),
             next_batch: 1,
         }
@@ -77,6 +80,29 @@ impl Core {
         let lang = pack.lang().to_string();
         self.packs.insert(lang.clone(), pack);
         Ok(lang)
+    }
+
+    /// Take the language model's bytes.
+    #[wasm_bindgen(js_name = openModel)]
+    pub fn open_model(&mut self, bytes: Vec<u8>) -> Result<usize, JsError> {
+        let model =
+            lexcore::detect::Model::open(&bytes).map_err(|e| JsError::new(&format!("{e:?}")))?;
+        let languages = model.languages().len();
+        self.model = Some(model);
+        Ok(languages)
+    }
+
+    /// What language a piece of text is in, as JSON, or nothing when no model is open.
+    #[wasm_bindgen]
+    pub fn detect(&self, text: &str) -> String {
+        match &self.model {
+            Some(model) => lexcore::json::guess(&model.detect(text)),
+            None => lexcore::json::guess(&lexcore::detect::Guess {
+                language: None,
+                reliable: false,
+                scores: Vec::new(),
+            }),
+        }
     }
 
     #[wasm_bindgen(js_name = closePack)]

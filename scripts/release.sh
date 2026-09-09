@@ -90,7 +90,9 @@ export GH_TOKEN="$token"
 
 git add package.json
 git commit -m "$version"
-git tag "$tag"
+# Annotated, because --follow-tags pushes those and silently leaves a lightweight tag
+# behind, which is how a release ends up with everything built and nothing to hang it on.
+git tag -a "$tag" -m "$tag"
 git -c credential.helper='!f(){ echo username=nanbiz; echo password=$GH_TOKEN; };f' push origin main --follow-tags
 
 gh release create "$tag" --title "$tag" --generate-notes "${artifacts[@]}"

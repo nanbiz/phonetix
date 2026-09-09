@@ -88,6 +88,21 @@ fn provenance(from: &Option<crate::answer::Provenance>) -> String {
     }
 }
 
+/// What language a text was found to be in, and what every language scored.
+pub fn guess(guess: &crate::detect::Guess) -> String {
+    let scores: Vec<String> = guess
+        .scores
+        .iter()
+        .map(|(code, score)| format!("{}:{score}", quoted(code)))
+        .collect();
+    format!(
+        "{{\"language\":{},\"reliable\":{},\"scores\":{{{}}}}}",
+        maybe(&guess.language),
+        guess.reliable,
+        scores.join(",")
+    )
+}
+
 /// A transcription symbol by symbol, each with what is known about that sound.
 pub fn symbols_of(items: &[crate::symbols::Symbol]) -> String {
     let inner: Vec<String> = items

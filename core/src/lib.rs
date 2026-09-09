@@ -8,6 +8,7 @@
 
 pub mod annotate;
 pub mod answer;
+pub mod detect;
 pub mod gloss;
 pub mod json;
 pub mod resolve;

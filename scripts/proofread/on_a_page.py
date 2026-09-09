@@ -27,6 +27,13 @@ WORK = os.environ.get("PHONETIX_WORK", "/tmp/phonetix-on-a-page")
 PORT = int(os.environ.get("PHONETIX_PAGE_PORT", "8924"))
 
 SENTENCE = "El perro corre por el camino y descansa en el banco del parque."
+# The same sentence with nothing declaring what it is in: the extension has to work that out
+# rather than assume, which is what the detector in the core is for.
+UNDECLARED = (
+    "<!doctype html><html><meta charset='utf-8'>"
+    "<body><main><p id='prose'>" + SENTENCE + "</p></main></body></html>"
+).encode()
+
 PAGE = (
     "<!doctype html><html lang='es'><meta charset='utf-8'>"
     "<body><main><p id='prose'>" + SENTENCE + "</p>"
@@ -89,11 +96,12 @@ def serve():
                     return
                 self.send_error(404)
                 return
+            body = UNDECLARED if self.path.startswith("/undeclared") else PAGE
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(PAGE)))
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(PAGE)
+            self.wfile.write(body)
 
     # Threaded, because the page and the pack are fetched at the same time: the browser holds
     # the page's connection open while the service worker asks for the pack, and a
@@ -311,6 +319,25 @@ def main():
         print(f"  the voice made {said.get('length', 0)} bytes for perro")
         if not said.get("length"):
             failures.append(f"the voice said nothing ({said})")
+
+        # A page that says nothing about its language is read rather than assumed English.
+        undeclared = cdp.send("Target.createTarget", {"url": f"{base}/undeclared.html"})
+        other = cdp.send(
+            "Target.attachToTarget", {"targetId": undeclared["targetId"], "flatten": True},
+        )["sessionId"]
+        cdp.send("Runtime.enable", session=other)
+        found = wait_for(cdp, other, """
+            (() => {
+              const words = [...document.querySelectorAll('.px-w')];
+              const glosses = words.map(w => (w.querySelector('.px-gl') || {}).textContent || '')
+                                   .filter(Boolean);
+              return glosses.length ? JSON.stringify(glosses) : null;
+            })()
+        """, lambda v: v is not None, tries=25)
+        print(f"  a page that declares nothing: {json.loads(found or '[]')[:4]}")
+        if not found or "Hund" not in found:
+            failures.append(f"an undeclared Spanish page was not read as Spanish ({found})")
+        cdp.send("Target.closeTarget", {"targetId": undeclared["targetId"]})
 
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")

@@ -93,4 +93,10 @@ object Lex {
         narrow: Boolean,
         hideStress: Boolean,
     ): String
+
+    /** Read the language model into a core; the count of languages, or 0 when it is not one. */
+    external fun openModel(core: Long, path: String): Int
+
+    /** What language a piece of text is in, as JSON. */
+    external fun detect(core: Long, text: String): String
 }

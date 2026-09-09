@@ -68,6 +68,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_bestOf(
 /// frees it explicitly.
 struct Core {
     packs: std::collections::HashMap<String, lexpack::Pack<Vec<u8>>>,
+    /// The language model, where the overlay has given it one.
+    model: Option<lexcore::detect::Model>,
 }
 
 /// Make one. The pointer it returns is what every call below is given back.
@@ -78,6 +80,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_open(
 ) -> jlong {
     let core = Box::new(Core {
         packs: std::collections::HashMap::new(),
+        model: None,
     });
     Box::into_raw(core) as jlong
 }
@@ -327,5 +330,56 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         &options,
     );
     let written = lexcore::json::batch(0, &tokens, &misses);
+    env.new_string(written).unwrap_or(empty)
+}
+
+/// Read the language model off the disk into a core. Returns how many languages it knows,
+/// or 0 when the file is not a model.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openModel(
+    mut env: JNIEnv,
+    _class: JClass,
+    core: jlong,
+    path: JString,
+) -> jint {
+    let Ok(path) = env.get_string(&path) else {
+        return 0;
+    };
+    let path: String = path.into();
+    let Ok(bytes) = std::fs::read(path) else {
+        return 0;
+    };
+    let Ok(model) = lexcore::detect::Model::open(&bytes) else {
+        return 0;
+    };
+    let held = unsafe { &mut *(core as *mut Core) };
+    let languages = model.languages().len() as jint;
+    held.model = Some(model);
+    languages
+}
+
+/// What language a piece of text is in, as JSON.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_detect<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    core: jlong,
+    text: JString<'a>,
+) -> jni::objects::JString<'a> {
+    let nothing = lexcore::json::guess(&lexcore::detect::Guess {
+        language: None,
+        reliable: false,
+        scores: Vec::new(),
+    });
+    let empty = env.new_string(&nothing).expect("a string the vm can hold");
+    let Ok(text) = env.get_string(&text) else {
+        return empty;
+    };
+    let text: String = text.into();
+    let held = unsafe { &mut *(core as *mut Core) };
+    let written = match &held.model {
+        Some(model) => lexcore::json::guess(&model.detect(&text)),
+        None => nothing,
+    };
     env.new_string(written).unwrap_or(empty)
 }
