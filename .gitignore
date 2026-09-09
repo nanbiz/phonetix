@@ -20,6 +20,9 @@ __pycache__/
 src/core/wasm/
 public/core/
 
+# Built from assets/dictionaries by the app's own build, like the native library beside it
+android/app/src/main/assets/ipa-en.pack
+
 # Android app
 android/.gradle/
 android/build/
