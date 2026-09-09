@@ -147,10 +147,11 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
 }
 
 #[test]
-fn two_words_reached_equally_well_are_left_to_the_reader() {
-    // Bank and Sitzbank are both glossed "bench" and nothing in the data separates them. The
-    // card shows both rather than picking, because a wrong word wearing a dictionary's
-    // authority is worse than an obvious choice.
+fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
+    // Bank and Sitzbank are both glossed "bench" and nothing in the data separates them.
+    // Offering both would be the confident wrong answer this join is shaped to avoid, twice
+    // over, so the dictionary says nothing and the English gloss stands as the anchor above
+    // whatever the host's engine guesses.
     let es = spanish();
     let de = german();
     let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
@@ -160,8 +161,14 @@ fn two_words_reached_equally_well_are_left_to_the_reader() {
         ipa_only: false,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
-    assert_eq!(got.state, AnswerState::Homograph);
-    assert!(got.says.contains(&"Bank".to_string()) && got.says.contains(&"Sitzbank".to_string()));
+    assert_eq!(got.state, AnswerState::IpaOnly);
+    assert!(got.says.is_empty(), "reached {:?}", got.says);
+    assert_eq!(
+        got.glosses,
+        vec!["bench"],
+        "the anchor a reader is left with"
+    );
+    assert_eq!(got.ipa, vec!["ˈbaŋ.ko"]);
 }
 
 #[test]

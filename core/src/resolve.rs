@@ -168,11 +168,16 @@ pub fn look_up<D: AsRef<[u8]>>(
         break;
     }
 
+    // A gloss that reaches two words equally well is not two answers. Nothing in the data
+    // separates them, so the dictionary has nothing to say: handing both to a reader dressed as
+    // an answer is the confident wrong answer this whole join is shaped to avoid, only twice
+    // over. The word falls to the host's engine and the English gloss stands as the anchor
+    // above whatever that guesses.
+    if tied {
+        says.clear();
+    }
     let state = match (says.len(), inflected) {
         (0, _) => AnswerState::IpaOnly,
-        // Nothing in the data separates two words reached equally well, and the card shows
-        // both rather than picking one.
-        _ if tied => AnswerState::Homograph,
         (_, true) => AnswerState::Form,
         (_, false) => AnswerState::Entry,
     };

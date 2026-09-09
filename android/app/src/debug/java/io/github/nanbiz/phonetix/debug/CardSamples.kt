@@ -22,9 +22,10 @@ object CardSamples {
            "ipa":["ˈbaŋ.ko"],"says":["Bank"],
            "glosses":["bench","a financial institution","a shoal of fish","a workbench"],
            "source":"es","target":"de"}""",
-        // Two words reached equally well, which the card shows rather than resolving.
-        """{"state":"Homograph","spelling":"banco","lemma":null,"pos":"noun",
-           "ipa":["ˈbaŋ.ko"],"says":["Bank","Sitzbank"],"glosses":["bench"],
+        // A join that reached two words equally well, which is no dictionary answer at all:
+        // the English gloss is the anchor and the engine has not answered yet.
+        """{"state":"IpaOnly","spelling":"banco","lemma":null,"pos":"noun",
+           "ipa":["ˈbaŋ.ko"],"says":[],"glosses":["bench"],
            "source":"es","target":"de"}""",
         // A machine's answer, labelled.
         """{"state":"Guess","spelling":"ornitorrinco","lemma":null,"pos":"noun",

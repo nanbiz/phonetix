@@ -86,11 +86,16 @@ private fun Headline(answer: Answer, palette: Tokens.Palette) {
         )
         // A machine's answer is labelled one. A wrong word wearing a dictionary's authority is
         // worse than an obvious guess.
+        //
+        // And so is an English gloss sitting where the answer goes. Where the dictionary
+        // reached nothing in the reader's language, what is left is the word's English
+        // meaning, and unmarked it reads as the translation rather than as the anchor it is.
         val guessed = answer.state == Answer.State.Guess
-        if (guessed || answer.state == Answer.State.Homograph) {
+        val anchor = answer.says.isEmpty() && answer.glosses.isNotEmpty()
+        if (guessed || anchor) {
             Box(Modifier.width(Tokens.Scale.space3.dp))
             Badge(
-                text = if (guessed) "guess" else "several",
+                text = if (guessed) "guess" else "in English",
                 ink = Color(if (guessed) palette.guess else palette.inkMuted),
                 background = Color(if (guessed) palette.guessBg else palette.chipBg),
             )
