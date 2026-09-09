@@ -6,9 +6,13 @@
 # spending a month of runner minutes in a week.
 #
 #   scripts/ci.sh            everything
+#   scripts/ci.sh fast       seconds: the tables, the core, the types. Nothing boots a browser
 #   scripts/ci.sh core       the reading core alone
 #   scripts/ci.sh browser    the extension and the checks that drive it
 #   scripts/ci.sh android    the app and its unit tests
+#
+# The fast tier is what belongs in front of a commit. The rest boots browsers and builds an
+# app, which is worth doing before a push and not worth doing between two edits.
 #
 # `act -j build` runs the workflow itself in Docker, which is what to use after editing it.
 set -euo pipefail
@@ -28,6 +32,13 @@ step() {
     failed+=("$name")
   fi
 }
+
+if [[ "$what" == fast ]]; then
+  step "the tables both platforms read are current" uv run python tools/gen_types.py --check
+  step "the core's tests" cargo test --workspace --manifest-path core/Cargo.toml
+  step "the core's formatting" cargo fmt --all --check --manifest-path core/Cargo.toml
+  step "the extension typechecks" pnpm check
+fi
 
 if [[ "$what" == all || "$what" == core ]]; then
   step "the tables both platforms read are current" uv run python tools/gen_types.py --check
@@ -52,8 +63,8 @@ if [[ "$what" == all || "$what" == browser ]]; then
 fi
 
 if [[ "$what" == all || "$what" == android ]]; then
-  step "the app's tests" ./gradlew --no-daemon -p android testDebugUnitTest -q
-  step "the app builds" ./gradlew --no-daemon -p android assembleDebug -q
+  step "the app's tests" ./android/gradlew --no-daemon -p android testDebugUnitTest -q
+  step "the app builds" ./android/gradlew --no-daemon -p android assembleDebug -q
 fi
 
 printf '\n'

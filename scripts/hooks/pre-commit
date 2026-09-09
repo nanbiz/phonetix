@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# The checks that are worth waiting for before a commit: the generated tables, the core's
+# tests, its formatting, and whether the extension typechecks. Two or three seconds.
+#
+# Everything that boots a browser or builds an app is left for `pnpm ci`, because a gate that
+# costs four minutes is a gate that gets skipped.
+#
+# Installed by scripts/hooks/install.sh; `git commit --no-verify` skips it.
+exec "$(git rev-parse --show-toplevel)/scripts/ci.sh" fast

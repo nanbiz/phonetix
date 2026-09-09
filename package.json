@@ -25,7 +25,9 @@
     "test:page": "uv run python scripts/proofread/on_a_page.py",
     "test:settings": "uv run python scripts/proofread/settings_view.py",
     "ci": "scripts/ci.sh",
-    "release": "scripts/release.sh"
+    "release": "scripts/release.sh",
+    "ci:fast": "scripts/ci.sh fast",
+    "hooks": "scripts/hooks/install.sh"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
