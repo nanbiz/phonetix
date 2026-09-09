@@ -130,6 +130,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             )
             val dark = intent.getIntExtra("cardDark", 0) != 0
             val palette = io.github.nanbiz.phonetix.ui.Tokens.palette(theme, dark)
+            io.github.nanbiz.phonetix.core.IpaSymbols.ensureLoaded(this)
             root.setBackgroundColor(palette.pageBg.toInt())
             root.addView(
                 androidx.compose.ui.platform.ComposeView(this).apply {
@@ -142,6 +143,14 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                             for (json in CardSamples.ALL) {
                                 io.github.nanbiz.phonetix.core.Answer.parse(json)?.let {
                                     io.github.nanbiz.phonetix.ui.AnswerCard(it, palette)
+                                }
+                            }
+                            // The sound a symbol is, which is what a tap on one opens. Shown
+                            // beside the cards so the two read as one family rather than as
+                            // two designs.
+                            for (token in listOf("ʃ", "ŋ", "ɐ")) {
+                                io.github.nanbiz.phonetix.core.IpaSymbols.describe(token)?.let {
+                                    io.github.nanbiz.phonetix.ui.SymbolSheet(it, palette)
                                 }
                             }
                         }
