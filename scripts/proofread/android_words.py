@@ -299,11 +299,18 @@ def a_page(r, dev, label, mode):
             r.check(False, f"{label}, {name}: there was something to judge", "nothing was")
             continue
         middle = statistics.median(got)
+        # The middle drag alone is not enough to compare two builds by: on one page the same
+        # build's middle drag has read 10% and 30%. The quarter points say how much of that is
+        # the page and how much is the run.
+        order = sorted(got)
+        low = order[len(order) // 4]
+        high = order[(3 * len(order)) // 4]
         r.check(
             middle <= STRAYS_ALLOWED,
             f"{label}, {name}: every transcription names a word that is under it",
             f"the middle drag of {len(got)} had {100 * middle:.0f}% naming a word that is not "
-            f"under them (the drags: {', '.join(f'{100 * g:.0f}%' for g in got)})",
+            f"under them, the middle half {100 * low:.0f}% to {100 * high:.0f}% "
+            f"(the drags: {', '.join(f'{100 * g:.0f}%' for g in got)})",
         )
 
 
