@@ -108,7 +108,7 @@ fn read(lang: &str, body: &str) -> Said {
         // A recording is named either by the audio template or inside a language's own
         // pronunciation template, which writes it as "audio:File.wav". Spanish and Italian
         // use the second and would otherwise come back with no recording at all.
-        for file in sounds(&template) {
+        for file in sounds(template) {
             if !said.audio.contains(&file) {
                 said.audio.push(file);
             }

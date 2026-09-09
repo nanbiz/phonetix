@@ -37,6 +37,8 @@ if [[ "$what" == fast ]]; then
   step "the tables both platforms read are current" uv run python tools/gen_types.py --check
   step "the core's tests" cargo test --workspace --manifest-path core/Cargo.toml
   step "the core's formatting" cargo fmt --all --check --manifest-path core/Cargo.toml
+  step "the core's lints" \
+    cargo clippy --workspace --all-targets --manifest-path core/Cargo.toml -- -D warnings
   step "the extension typechecks" pnpm check
 fi
 
