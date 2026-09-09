@@ -1,10 +1,17 @@
 name: CI
 
+# Not on every push. The same checks run locally in seconds against a toolchain that is
+# already there (scripts/ci.sh, or `act` for the workflow itself), and a runner repeating them
+# on every commit spends a month of minutes in a week.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
+
+# One run per branch: a push that lands while an older run is still going makes that run
+# pointless, and paying for it does not make it less so.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:

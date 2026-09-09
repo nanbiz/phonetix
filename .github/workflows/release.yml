@@ -1,11 +1,11 @@
 name: Release
 
-# Tag a version to build, sign and publish it:
-#   pnpm version minor && git push --follow-tags
+# Releases are built where the code is: scripts/release.sh does everything below on a machine
+# that already has the toolchains, and puts the same artifacts on the same release. This is
+# kept for a release made from somewhere else, and runs only when asked.
+#
 # AMO rejects a version it has already seen, so the tag must be a new version.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:

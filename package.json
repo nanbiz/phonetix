@@ -23,7 +23,9 @@
     "test:lex": "uv run python scripts/proofread/lex_extension.py",
     "test:cards": "uv run python scripts/proofread/card_states.py",
     "test:page": "uv run python scripts/proofread/on_a_page.py",
-    "test:settings": "uv run python scripts/proofread/settings_view.py"
+    "test:settings": "uv run python scripts/proofread/settings_view.py",
+    "ci": "scripts/ci.sh",
+    "release": "scripts/release.sh"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
