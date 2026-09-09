@@ -10,7 +10,7 @@ NixOS notes: Playwright's pip binaries break (libstdc++), and a chromium
 Run (needs sandbox disabled for chromium + pure-python websocket not required):
   uv run python scripts/proofread/harness.py --corpus scripts/proofread/corpus.txt
 """
-import argparse, base64, json, os, subprocess, sys, time
+import argparse, base64, json, os, shutil, subprocess, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXT = os.path.join(ROOT, ".output", "chrome-mv3")
@@ -38,10 +38,17 @@ class PipeCDP:
         self.fc_r, self.fc_w = os.pipe()   # chrome -> parent (chrome fd 4)
         for fd in (self.tc_r, self.fc_w):
             os.set_inheritable(fd, True)
+        # A profile of its own, thrown away afterwards. Without one every check ran in the
+        # browser's default profile and inherited whatever the last one left in extension
+        # storage - and the last thing the settings check does is switch the extension off
+        # for the site, so the next run started with it off and saw a page with nothing on
+        # it. It also means these checks never touch a profile the user has open.
+        self.profile = tempfile.mkdtemp(prefix="phonetix-chrome-")
         args = [
             os.environ.get("PHONETIX_CHROMIUM", "chromium"),
             "--headless=new", "--no-sandbox", "--disable-gpu",
             "--disable-dev-shm-usage", "--remote-debugging-pipe",
+            f"--user-data-dir={self.profile}",
             "--no-first-run", "--no-default-browser-check",
             "--window-size=1280,2000", "--force-device-scale-factor=1",
             # Recent Chrome ignores --load-extension unless this kill switch is off.
@@ -145,6 +152,7 @@ class PipeCDP:
             self.proc.terminate(); self.proc.wait(timeout=5)
         except Exception:
             self.proc.kill()
+        shutil.rmtree(getattr(self, "profile", ""), ignore_errors=True)
 
 
 def visit(cdp, url, settle=8.0, shot=True):
