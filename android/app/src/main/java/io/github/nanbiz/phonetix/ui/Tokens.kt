@@ -53,6 +53,7 @@ object Tokens {
         const val rubyIpaScale = 0.55f
         const val rubyScale = 0.62f
         const val skeletonHeight = 12.0f
+        const val sourceMarkSize = 14.0f
         const val space1 = 4.0f
         const val space2 = 8.0f
         const val space3 = 12.0f

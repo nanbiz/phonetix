@@ -79,21 +79,18 @@ fun SymbolSheet(
                 }
             }
             if (symbol.audio != null) {
-                Box(
-                    Modifier
-                        .size(Tokens.Scale.audioSize.dp)
-                        .clip(RoundedCornerShape(Tokens.Scale.audioSize.dp))
-                        .background(Color(palette.chipBg))
-                        .clickable { onPlay() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "♪",
-                        color = Color(palette.ink),
-                        fontSize = Tokens.Scale.fontSizeBody.sp,
-                        modifier = Modifier.reported("♪", report),
-                    )
-                }
+                PlayButton(
+                    palette = palette,
+                    description = "play a recording of ${symbol.name}",
+                    onClick = onPlay,
+                    report = report,
+                    // Its own name, because the card behind it has a play button too and a
+                    // check tapping one has to know which it reached.
+                    key = "play-recording",
+                )
+                Box(Modifier.width(Tokens.Scale.space2.dp))
+                // A person said this one, unlike the word on the card, which a machine spoke.
+                RecordingMark(palette, report = report)
             }
         }
 

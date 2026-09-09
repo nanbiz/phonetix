@@ -174,30 +174,17 @@ private fun Pronunciation(
             fontSize = Tokens.Scale.fontSizeIpa.sp,
         )
         Box(Modifier.width(Tokens.Scale.space3.dp))
-        Box(
-            Modifier
-                .size(Tokens.Scale.audioSize.dp)
-                .clip(RoundedCornerShape(Tokens.Scale.audioSize.dp))
-                .background(Color(palette.chipBg))
-                .clickable { onPlay() },
-            contentAlignment = Alignment.Center,
-        ) {
-            androidx.compose.material3.Text(
-                text = "▸",
-                color = Color(palette.ink),
-                fontSize = Tokens.Scale.fontSizeBody.sp,
-                modifier = Modifier.reported("▸", report),
-            )
-        }
-        Box(Modifier.width(Tokens.Scale.space2.dp))
-        // What the audio will be, said rather than implied: a synthesised voice and a person
-        // saying a word are different things and a reader is owed which one they are getting.
-        androidx.compose.material3.Text(
-            text = "synthesised",
-            color = Color(palette.inkFaint),
-            fontSize = Tokens.Scale.fontSizeLabel.sp,
-            modifier = Modifier.reported("synthesised", report),
+        PlayButton(
+            palette = palette,
+            description = "say ${answer.spelling}",
+            onClick = onPlay,
+            report = report,
         )
+        Box(Modifier.width(Tokens.Scale.space2.dp))
+        // What the audio will be, shown rather than spelled out: a synthesised voice and a
+        // person saying a word are different things and a reader is owed which one they are
+        // getting, but that is a property of the button beside it and not a line of the card.
+        SynthesisedMark(palette, report = report)
     }
 }
 

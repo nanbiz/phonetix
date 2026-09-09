@@ -195,15 +195,16 @@ def check_tooltip(r, dev):
         f"{missing} of {opened.group(2)} missing from {texts[:12]}",
     )
     # The audio, and what it is: a synthesised voice and a person saying a word are different
-    # things, and a reader is owed which one a control will play.
+    # things, and a reader is owed which one a control will play. Both are drawn rather than
+    # written, so what is checked is the mark reporting itself under its own name.
     r.check(
-        "▸" in texts,
+        "play" in texts,
         "card: it offers to say the word",
         str(texts[:8]),
     )
     r.check(
         any(t in ("synthesised", "recording") for t in texts),
-        "card: it says what the audio will be",
+        "card: it shows what the audio will be",
         str(texts[:8]),
     )
     r.check("Wiktionary" in texts, "card: it links onward", str(texts[:6]))
@@ -236,7 +237,7 @@ def check_tooltip(r, dev):
 
     # The recording button, tapped where the sheet said it put it.
     play = [m for m in re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", dev.log())
-            if m[0] == "♪"]
+            if m[0] == "play-recording"]
     if play:
         _, x, y, w, h = play[0]
         dev.clear_log()
