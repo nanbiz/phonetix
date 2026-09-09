@@ -108,9 +108,11 @@ def main():
         raise SystemExit("the service would not start")
     dev.set_enabled(True)
     dev.clear_log()
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-          "--es", "packHost", base, "--es", "target", "de", "--es", "layer", "gloss+ipa",
-          "--es", "mode", "spanish", "--ei", "enable", "1", "--ei", "density", "1")
+    # Through the harness, which insists the page is really in front: the app's own screen is
+    # an activity of the same app, and with it on top a bare `am start` delivers the intent to
+    # the task behind it and reports success.
+    dev.surface(mode="spanish", packHost=base, target="de", layer="gloss+ipa",
+                enable=1, density=1)
     time.sleep(8)
     # What is written over each word, which is the whole question here.
     drawn = re.findall(r"DRAWN (.*)", dev.log())

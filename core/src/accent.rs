@@ -7,8 +7,12 @@
 //!
 //! Which is which is not a preference. Wiktionary tags almost no Spanish word for accent,
 //! while seseo and yeísmo hold for all of them; it tags a few hundred German words for
-//! Switzerland, where no Swiss pronunciation lexicon exists at all. An accent that has a pack
-//! must not also have rules here, or its shift is applied twice.
+//! Switzerland, where no Swiss pronunciation lexicon exists at all.
+//!
+//! An accent can have both, and American does: twenty-seven thousand words of data over a
+//! vocabulary of a hundred and ninety thousand. The cascade decides which speaks for a word -
+//! the pack where it holds the word, these rules where it does not - so a reading the data
+//! spelled out is never shifted a second time.
 
 /// One shift: what to replace, what with, and the spelling it is limited to.
 struct Rule {

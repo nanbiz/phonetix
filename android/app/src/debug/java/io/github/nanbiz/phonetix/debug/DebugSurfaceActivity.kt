@@ -520,6 +520,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                             word,
                             i.getStringExtra("lexSource").orEmpty(),
                             i.getStringExtra("lexTarget").orEmpty(),
+                            i.getStringExtra("lexAccent").orEmpty(),
                         ),
                     )
                 }
@@ -552,6 +553,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             if (i.hasExtra("layer")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setLayer(
                     i.getStringExtra("layer").orEmpty(),
+                )
+            }
+            if (i.hasExtra("accent")) {
+                // "none" rather than an empty string, as with the reading language above.
+                val wanted = i.getStringExtra("accent").orEmpty()
+                io.github.nanbiz.phonetix.core.SettingsStore.setAccent(
+                    if (wanted == "none") "" else wanted,
                 )
             }
             if (i.hasExtra("lens")) {
@@ -854,6 +862,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 "El perro corre por el camino",
                 "El banco del parque esta libre",
                 "El perro descansa en el camino",
+                // A word an accent says differently, so a check has something to see: the
+                // [ʝ] of "silla" is [ʃ] in Rioplatense and nowhere else.
+                "La silla del banco es nueva",
                 "Un banco y un perro y un camino",
             )) {
                 addView(line(text, Color.WHITE, BACKGROUND))

@@ -19,7 +19,7 @@
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
     "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
-    "test:features": "uv run python scripts/proofread/android_features.py",
+    "test:features": "uv run scripts/proofread/android_features.py",
     "test:lex": "uv run python scripts/proofread/lex_extension.py",
     "test:cards": "uv run python scripts/proofread/card_states.py",
     "test:page": "uv run python scripts/proofread/on_a_page.py",
@@ -29,7 +29,8 @@
     "ci:fast": "scripts/ci.sh fast",
     "hooks": "scripts/hooks/install.sh",
     "test:translates": "uv run python scripts/proofread/android_translates.py",
-    "test:lens": "uv run python scripts/proofread/android_lens.py"
+    "test:lens": "uv run python scripts/proofread/android_lens.py",
+    "test:accent": "uv run python scripts/proofread/android_accent.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",

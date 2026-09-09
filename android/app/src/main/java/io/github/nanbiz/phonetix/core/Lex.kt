@@ -56,8 +56,18 @@ object Lex {
      *
      * JSON because an answer is a tree and the boundary carries text; the shape is written in
      * one place in the core, so this side and the browser read the same one.
+     *
+     * The accent is passed with the languages because it changes the answer: the core says a
+     * word the way the reader's accent says it, from that accent's pack where it has one and
+     * from its rule where it does not. Empty for the standard reading.
      */
-    external fun lookUp(core: Long, spelling: String, source: String, target: String): String
+    external fun lookUp(
+        core: Long,
+        spelling: String,
+        source: String,
+        target: String,
+        accent: String,
+    ): String
 
     /** A transcription, symbol by symbol, as JSON: what each sound is called and where to
      *  read about it. The table is the core's, so both platforms name a sound the same. */

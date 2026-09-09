@@ -319,7 +319,9 @@ class TooltipController(
         // already had, which is what the card then shows.
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
-        val answer = Reading.lookUp(box.word, source, settings.target.ifEmpty { source })
+        val answer = Reading.lookUp(
+            box.word, source, settings.target.ifEmpty { source }, settings.accent,
+        )
             ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)
         // What a person recorded, where Wiktionary has one: a recording is what a reader

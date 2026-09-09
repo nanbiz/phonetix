@@ -82,7 +82,8 @@ fn a_lemma_that_joins_is_an_entry() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -112,7 +113,8 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Form);
@@ -133,7 +135,8 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
     assert_eq!(
@@ -162,7 +165,8 @@ fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::IpaOnly);
@@ -183,7 +187,8 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         source: Some(&es),
         target: Some(&es),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(got.state, AnswerState::Mono);
@@ -204,7 +209,8 @@ fn a_reader_of_english_needs_no_join_at_all() {
         source: Some(&es),
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -220,7 +226,8 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::None);
@@ -234,7 +241,8 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         source: None,
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
@@ -244,7 +252,8 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         source: None,
         target: None,
         ipa_only: true,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
@@ -271,7 +280,8 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         source: Some(&es),
         target: Some(&de),
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::IpaOnly);
@@ -306,7 +316,8 @@ fn the_applying_senses_example_comes_with_the_answer() {
         source: Some(&es),
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.example.as_deref(), Some("El perro ladra."));
@@ -320,7 +331,8 @@ fn a_sense_with_no_example_invents_none() {
         source: Some(&es),
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("en"), &open).example,
@@ -349,7 +361,8 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         source: Some(&es),
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Homograph);
@@ -368,47 +381,55 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         source: Some(&es),
         target: None,
         ipa_only: false,
-        accent: None,
+        accent: "",
+        accent_pack: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert!(got.readings.is_empty(), "nothing to choose between");
     assert_eq!(got.state, AnswerState::Entry);
 }
 
-/// A word an accent has its own reading of comes back in that reading.
+/// A word an accent has its own reading of comes back in that reading, unshifted.
 ///
 /// This is the half of an accent that is data rather than a rule: a few thousand words a
-/// dictionary tags for one country. What it must not do is fight the rules, so an accent with
-/// a pack is not also given a rule, and the word it holds wins over the standard one.
+/// dictionary tags for one country. Where it speaks, it is the last word, and the rule table
+/// must not touch what it said. "cut" is the case that shows it: American data writes the
+/// vowel [ɐ], and the American rule turns a standard [ɐ] into [ɚ] because a standard
+/// transcription that carries one is a British r. Applied on top of the data it would make
+/// the word rhyme with "curt".
 #[test]
 fn an_accent_with_a_word_of_its_own_says_it_that_way() {
     let mut base = Builder::new("en", Kind::Ipa, 0);
-    base.add::<&str>(
-        Entry {
-            lemma: "schedule".into(),
-            pos: String::new(),
-            ipa: vec!["ˈʃɛdjuːl".into()],
-            tags: Vec::new(),
-            senses: Vec::new(),
-        },
-        &[],
-    )
-    .expect("the pack takes it");
-    let base = Pack::open(base.finish().expect("written")).expect("opens");
-
-    let mut american = Builder::new("en-us", Kind::Ipa, 0);
-    american
-        .add::<&str>(
+    for (lemma, ipa) in [("schedule", "ˈʃɛdjuːl"), ("cut", "kʌt")] {
+        base.add::<&str>(
             Entry {
-                lemma: "schedule".into(),
+                lemma: lemma.into(),
                 pos: String::new(),
-                ipa: vec!["ˈskɛdʒuːl".into()],
+                ipa: vec![ipa.into()],
                 tags: Vec::new(),
                 senses: Vec::new(),
             },
             &[],
         )
         .expect("the pack takes it");
+    }
+    let base = Pack::open(base.finish().expect("written")).expect("opens");
+
+    let mut american = Builder::new("en-us", Kind::Ipa, 0);
+    for (lemma, ipa) in [("schedule", "ˈskɛdʒuːl"), ("cut", "kɐt")] {
+        american
+            .add::<&str>(
+                Entry {
+                    lemma: lemma.into(),
+                    pos: String::new(),
+                    ipa: vec![ipa.into()],
+                    tags: Vec::new(),
+                    senses: Vec::new(),
+                },
+                &[],
+            )
+            .expect("the pack takes it");
+    }
     let american = Pack::open(american.finish().expect("written")).expect("opens");
 
     let standard = look_up(
@@ -419,7 +440,8 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             source: Some(&base),
             target: Some(&base),
             ipa_only: false,
-            accent: None,
+            accent: "",
+            accent_pack: None,
         },
     );
     assert_eq!(standard.ipa, ["ˈʃɛdjuːl"]);
@@ -432,23 +454,44 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             source: Some(&base),
             target: Some(&base),
             ipa_only: false,
-            accent: Some(&american),
+            accent: "en-us",
+            accent_pack: Some(&american),
         },
     );
     assert_eq!(said.ipa, ["ˈskɛdʒuːl"]);
     // And the symbols come with it, since a card offers each sound of what it shows.
     assert_eq!(said.symbols.first().map(|s| s.token.as_str()), Some("ˈ"));
+
+    // The one the rule would have shifted had it run over the data.
+    let cut = look_up(
+        "cut",
+        &Lang("en".into()),
+        &Lang("en".into()),
+        &Open {
+            source: Some(&base),
+            target: Some(&base),
+            ipa_only: false,
+            accent: "en-us",
+            accent_pack: Some(&american),
+        },
+    );
+    assert_eq!(cut.ipa, ["kɐt"]);
 }
 
-/// A word the accent has nothing of its own for keeps the standard reading.
+/// A word the accent's pack says nothing about is left to the accent's rule.
+///
+/// Which is the point of having both. A pack for one country holds a few thousand words and a
+/// language has hundreds of thousands, so nearly every word a reader meets is answered by the
+/// rule, and an accent with a pack that stopped ruling the rest would be an accent that showed
+/// up on one word in fifty.
 #[test]
-fn an_accent_that_says_nothing_about_a_word_leaves_it_alone() {
+fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
     let mut base = Builder::new("en", Kind::Ipa, 0);
     base.add::<&str>(
         Entry {
             lemma: "water".into(),
             pos: String::new(),
-            ipa: vec!["ˈwɔːtə".into()],
+            ipa: vec!["ˈwɔːtɐ".into()],
             tags: Vec::new(),
             senses: Vec::new(),
         },
@@ -471,8 +514,26 @@ fn an_accent_that_says_nothing_about_a_word_leaves_it_alone() {
             source: Some(&base),
             target: Some(&base),
             ipa_only: false,
-            accent: Some(&empty),
+            accent: "en-us",
+            accent_pack: Some(&empty),
         },
     );
-    assert_eq!(said.ipa, ["ˈwɔːtə"]);
+    assert_eq!(said.ipa, ["ˈwɔːtɚ"]);
+    // The symbols are of what is shown, not of what the standard pack held.
+    assert_eq!(said.symbols.last().map(|s| s.token.as_str()), Some("ɚ"));
+
+    // And an accent with no pack at all is still an accent: most of them have none.
+    let ruled = look_up(
+        "water",
+        &Lang("en".into()),
+        &Lang("en".into()),
+        &Open {
+            source: Some(&base),
+            target: Some(&base),
+            ipa_only: false,
+            accent: "en-us",
+            ..Default::default()
+        },
+    );
+    assert_eq!(ruled.ipa, ["ˈwɔːtɚ"]);
 }

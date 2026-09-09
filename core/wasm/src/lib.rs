@@ -166,11 +166,8 @@ impl Core {
             source: self.packs.get(source),
             target: self.packs.get(target),
             ipa_only: false,
-            accent: if accent.is_empty() {
-                None
-            } else {
-                self.packs.get(accent)
-            },
+            accent,
+            accent_pack: self.packs.get(accent),
         };
         lexcore::json::of(&look_up(
             spelling,
@@ -222,9 +219,8 @@ impl Core {
             source: self.packs.get(source),
             target: self.packs.get(target),
             ipa_only: false,
-            // A word this accent has its own reading of is said its way; the rule below is
-            // for accents that have no such words, and an accent never has both.
-            accent: self.packs.get(&accent),
+            accent: &accent,
+            accent_pack: self.packs.get(&accent),
         };
         let options = AnnotateOptions {
             mode: match mode {
@@ -240,7 +236,7 @@ impl Core {
             accent: if accent.is_empty() {
                 None
             } else {
-                Some(accent)
+                Some(accent.clone())
             },
             seen,
         };

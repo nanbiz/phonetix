@@ -88,10 +88,23 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// Whether a pronunciation pack is open for the source, which is what separates "no
     /// dictionary yet" from "nothing at all".
     pub ipa_only: bool,
-    /// The reader's accent, where that accent differs word by word rather than by a rule.
-    /// A word it holds is said its way; a word it does not is said the standard way, which
-    /// is what an overlay of a few thousand words is for.
-    pub accent: Option<&'a Pack<D>>,
+    /// The accent the reader asked to hear the language in, as a code. Empty for the standard.
+    pub accent: &'a str,
+    /// That accent's own pack, where it has one. A few thousand words a dictionary tagged for
+    /// one country, which is the half of an accent that no rule can produce.
+    pub accent_pack: Option<&'a Pack<D>>,
+}
+
+impl<D: AsRef<[u8]>> Default for Open<'_, D> {
+    fn default() -> Self {
+        Open {
+            source: None,
+            target: None,
+            ipa_only: false,
+            accent: "",
+            accent_pack: None,
+        }
+    }
 }
 
 /// Look one word up.
@@ -120,18 +133,38 @@ pub fn look_up<D: AsRef<[u8]>>(
         .iter()
         .map(|entry| resolve_one(spelling, entry, source, target, pack, open.target))
         .collect();
-    // How this reader's accent says it, where the accent has a word of its own for it.
-    if let Some(accent) = open.accent {
-        let said = accent
-            .lookup_one(spelling)
-            .or_else(|| accent.lookup_one(&answers[0].lemma.clone().unwrap_or_default()))
+    // How this reader's accent says it, decided here so that the inline layer, the card, the
+    // lens and the audio cannot show four different transcriptions of the same word.
+    //
+    // An accent is two things and this is where they meet. Where its own pack holds the word,
+    // that reading wins outright and no rule touches it: the data already is the accent, and
+    // shifting it again would move a sound the dictionary put there deliberately. Where the
+    // pack says nothing - which is most of a vocabulary, since a pack of a few thousand words
+    // is what a dictionary tags for a country - the rule stands in, because a rule reaches
+    // every word including the ones no data set lists.
+    if !open.accent.is_empty() {
+        let said = open
+            .accent_pack
+            .and_then(|pack| {
+                pack.lookup_one(spelling)
+                    .or_else(|| pack.lookup_one(&answers[0].lemma.clone().unwrap_or_default()))
+            })
             .map(|entry| entry.ipa)
             .filter(|ipa| !ipa.is_empty());
-        if let Some(ipa) = said {
-            for answer in answers.iter_mut() {
-                answer.symbols = crate::symbols::explain(&ipa[0]);
-                answer.ipa = ipa.clone();
-            }
+        for answer in answers.iter_mut() {
+            answer.ipa = match &said {
+                Some(ipa) => ipa.clone(),
+                None => answer
+                    .ipa
+                    .iter()
+                    .map(|ipa| crate::accent::apply(ipa, open.accent, spelling))
+                    .collect(),
+            };
+            answer.symbols = answer
+                .ipa
+                .first()
+                .map(|ipa| crate::symbols::explain(ipa))
+                .unwrap_or_default();
         }
     }
     // The commonest word first, which the dump lists first, so a reader who does not choose

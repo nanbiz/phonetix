@@ -83,9 +83,9 @@ object Reading {
      * handed a transcription: with no pack for the pair the cascade says so, and the card
      * shows what it does know.
      */
-    fun lookUp(word: String, source: String, target: String): Answer? {
+    fun lookUp(word: String, source: String, target: String, accent: String = ""): Answer? {
         if (core == 0L || word.isBlank()) return null
-        val written = runCatching { Lex.lookUp(core, word, source, target) }.getOrNull()
+        val written = runCatching { Lex.lookUp(core, word, source, target, accent) }.getOrNull()
             ?: return null
         return Answer.parse(written)
     }

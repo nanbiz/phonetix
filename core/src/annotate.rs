@@ -67,14 +67,13 @@ pub fn annotate<D: AsRef<[u8]>>(
                 .first()
                 .or_else(|| answer.glosses.first())
                 .map(|text| cut(text, GLOSS_LIMIT));
-            // Shown the way the reader asked: in their accent where that is a rule rather
-            // than a dictionary of its own, and carrying as much of the detail as they wanted.
-            // The card always has the full form.
-            let accent = options.accent.as_deref().unwrap_or("");
-            let ipa = answer.ipa.first().map(|ipa| {
-                let said = crate::accent::apply(ipa, accent, &spelling);
-                crate::symbols::display(&said, options.narrow, options.hide_stress)
-            });
+            // Carrying as much of the detail as the reader asked for; the card always has the
+            // full form. The accent is already in what the cascade answered, and applying it
+            // again here would shift a word its accent's own pack had already spelled out.
+            let ipa = answer
+                .ipa
+                .first()
+                .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
 
             let index = tokens.len() as u32;
             if inline {
@@ -195,12 +194,7 @@ mod tests {
     }
 
     fn nothing_open<'a>() -> Open<'a, Vec<u8>> {
-        Open {
-            source: None,
-            target: None,
-            ipa_only: false,
-            accent: None,
-        }
+        Open::default()
     }
 
     #[test]

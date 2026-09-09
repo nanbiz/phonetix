@@ -1,5 +1,5 @@
 {
-  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent has one or the other, never both: a word carrying its accent from a pack must not be shifted again by a rule.",
+  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent can have both, and the good ones do: the pack answers the words it holds and the rule answers everything else, which is most of a vocabulary. The cascade keeps them apart, so a word the pack spelled out is never shifted again.",
   "accents": {
     "en": [
       {
@@ -18,7 +18,8 @@
       {
         "id": "en-gb-scotland",
         "name": "Scottish",
-        "voice": "en-gb-scotland"
+        "voice": "en-gb-scotland",
+        "words": 2387
       },
       {
         "id": "en-au",
@@ -114,7 +115,8 @@
       {
         "id": "vi-vn-x-central",
         "name": "Central",
-        "voice": "vi-vn-x-central"
+        "voice": "vi-vn-x-central",
+        "words": 24634
       }
     ]
   }
