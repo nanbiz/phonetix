@@ -75,9 +75,17 @@ else
   echo "== no Mozilla keys in the environment; the Firefox build goes up unsigned"
 fi
 
+# This version's zips by name, not everything in the directory. The output directory keeps
+# what earlier releases built, and a glob over all of it put three versions of the extension
+# on one release for a reader to choose between.
 artifacts=("$apk")
-for zip in "$out"/*-chrome.zip "$out"/*-firefox.zip; do
-  [[ -e "$zip" ]] && artifacts+=("$zip")
+for zip in "$out/phonetix-$version-chrome.zip" "$out/phonetix-$version-firefox.zip"; do
+  if [[ -e "$zip" ]]; then
+    artifacts+=("$zip")
+  else
+    echo "the build produced no $zip" >&2
+    exit 1
+  fi
 done
 [[ -n "$signed" ]] && artifacts+=("$signed")
 
