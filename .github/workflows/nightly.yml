@@ -27,6 +27,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: pnpm fetch:dict
+      # The extension imports the core, so it is compiled before anything is bundled.
+      - uses: ./.github/actions/core-wasm
       - run: pnpm build
       - name: End-to-end suite (real sites)
         env:

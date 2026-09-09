@@ -40,6 +40,8 @@ jobs:
           pnpm gen:vectors
           pnpm gen:symbols
           git diff --exit-code shared/
+      # The extension imports the core, so it is compiled before anything is bundled.
+      - uses: ./.github/actions/core-wasm
       - name: Build (Chrome)
         run: pnpm build
       - name: Build (Firefox)
@@ -84,6 +86,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: pnpm fetch:dict
+      # The extension imports the core, so it is compiled before anything is bundled.
+      - uses: ./.github/actions/core-wasm
       - run: pnpm build
       # The merge book draws itself out of docs/merge/surface.html, so the page and the model
       # have to name the same states: one drawn and never declared, or declared and never

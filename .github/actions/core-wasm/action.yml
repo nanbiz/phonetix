@@ -1,0 +1,24 @@
+name: Build the core for the browser
+description: >
+  Compile the reading core to WebAssembly and generate its glue. Every extension build needs
+  this, because the bundle imports the module that answers words, so it is one step declared
+  once rather than four copies drifting apart.
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: core
+    # Pinned to the version the crate is built against: wasm-bindgen and its CLI carry a
+    # schema version that has to match exactly, and a mismatch produces a module that fails
+    # at instantiation rather than at build time.
+    - uses: taiki-e/install-action@v2
+      with:
+        tool: wasm-bindgen-cli@0.2.121
+    - name: Build the core
+      shell: bash
+      run: pnpm build:core

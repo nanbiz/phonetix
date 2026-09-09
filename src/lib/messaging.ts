@@ -1,5 +1,6 @@
 import { defineExtensionMessaging } from '@webext-core/messaging';
 import type { Language, PhonemeResult } from './types';
+import type { Answer } from './answer';
 
 export interface WiktionaryInfo {
   exists: boolean;
@@ -38,6 +39,14 @@ interface ProtocolMap {
   fetchAudio(data: { url: string }): number[];
   /** Synthesize a word to WAV bytes, played in the content script through Web Audio. */
   synthesizeAudio(data: { word: string; voice: string }): number[];
+  /** Open a language's dictionary pack in the core, fetching it from the configured host
+   *  the first time. Returns the language the pack turned out to be for, or null when there
+   *  is no pack to be had. */
+  openLexPack(data: { lang: string }): string | null;
+  /** Which languages the core can answer for right now. */
+  lexLanguages(data: Record<string, never>): string[];
+  /** What the core says about one word, read from source into target. */
+  lookUpWord(data: { word: string; source: string; target: string }): Answer;
 }
 
 export const { sendMessage, onMessage } = defineExtensionMessaging<ProtocolMap>();

@@ -1,6 +1,10 @@
 import { onMessage } from '@/lib/messaging';
 import type { WiktionaryInfo } from '@/lib/messaging';
-import { getCachedBatch, setCachedBatch, getCachedDict, setCachedDict } from '@/lib/cache';
+import {
+  getCachedBatch, setCachedBatch, getCachedDict, setCachedDict, getCachedPack, setCachedPack,
+} from '@/lib/cache';
+import { lookUp, openLanguages, openPack } from '@/lib/core';
+import { ofTranscription } from '@/lib/answer';
 import { normalizeIpa } from '@/lib/ipa-normalize';
 import { ACCENTS, voiceForAccent } from '@/lib/accents';
 import { Languages, WiktionaryLanguages, LANG_NAME_TO_CODE } from '@/lib/types';
@@ -742,4 +746,69 @@ export default defineBackground(() => {
     });
     return bytes ?? [];
   });
+
+  // ─── the core ───────────────────────────────────────────────────────
+  // One core, here, because a pack is tens of megabytes and a copy per tab would be a copy
+  // per tab. Everything a page shows about a word comes through these three.
+
+  onMessage('openLexPack', async ({ data }) => {
+    try {
+      return await openLexPack(data.lang);
+    } catch (e) {
+      console.warn(`[Phonetix] No pack for ${data.lang}:`, e);
+      return null;
+    }
+  });
+
+  onMessage('lexLanguages', async () => {
+    try {
+      return await openLanguages();
+    } catch (e) {
+      console.warn('[Phonetix] The core did not start:', e);
+      return [];
+    }
+  });
+
+  onMessage('lookUpWord', async ({ data }) => {
+    try {
+      return await lookUp(data.word, data.source, data.target);
+    } catch (e) {
+      console.warn(`[Phonetix] Lookup failed for ${data.word}:`, e);
+      // A cascade that could not run is not a cascade that found nothing: the state says
+      // which, so the card can offer the pack rather than claim the word does not exist.
+      return { ...ofTranscription(data.word, '', data.source), state: 'NoPack' as const };
+    }
+  });
 });
+
+/**
+ * A language's dictionary pack, opened in the core.
+ *
+ * Downloaded once from the host the reader configured and then kept, because the reader who
+ * needs a dictionary offline is the reader on a train. The pack says which language it is
+ * for, and that is what comes back: a file named de.pack holding Spanish would otherwise
+ * answer Spanish words to a reader who asked for German.
+ */
+async function openLexPack(lang: string): Promise<string | null> {
+  if ((await openLanguages()).includes(lang)) return lang;
+
+  const cached = await getCachedPack(lang);
+  if (cached) return openPack(cached);
+
+  let base: string | undefined;
+  try {
+    base = (await storage.getItem<string>('local:packBaseUrl'))?.replace(/\/+$/, '');
+  } catch {
+    base = undefined;   // storage unavailable is not a reason to fail the lookup
+  }
+  if (!base) return null;
+
+  const res = await fetch(`${base}/packs/${lang}.pack`);
+  if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  // Opened before it is kept: bytes that are not a pack throw here, and a file that cannot
+  // be read is worse than no file once it is in the cache.
+  const opened = await openPack(bytes);
+  await setCachedPack(opened, bytes);
+  return opened;
+}
