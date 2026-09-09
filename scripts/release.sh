@@ -5,8 +5,10 @@
 # release is the only thing the workflow was really needed for, so the artifacts are built
 # where the code is and uploaded to the release that holds them.
 #
-#   scripts/release.sh 0.39.0        build it, tag it, upload it
-#   scripts/release.sh 0.39.0 --dry  build it and stop, nothing tagged or pushed
+#   scripts/release.sh 0.39.0            build it, tag it, upload it
+#   scripts/release.sh 0.39.0 --dry      build it and stop, nothing tagged or pushed
+#   scripts/release.sh 0.39.0 --checked  skip the checks, for when they have just run on
+#                                        this same tree and nothing has changed since
 #
 # The Firefox add-on is signed by Mozilla, which needs MOZ_API_KEY and MOZ_API_SECRET in the
 # environment; without them the xpi is left unsigned and the release says which artifacts it
@@ -31,8 +33,12 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-echo "== the checks"
-scripts/ci.sh
+if [[ "$dry" == "--checked" ]]; then
+  echo "== the checks were run separately"
+else
+  echo "== the checks"
+  scripts/ci.sh
+fi
 
 echo "== the version"
 node -e '
