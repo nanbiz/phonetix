@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
                     onEnabled = SettingsStore::setEnabled,
                     onDensity = SettingsStore::setDensity,
                     onTarget = SettingsStore::setTarget,
+                    onLens = SettingsStore::setLens,
                     onLayer = SettingsStore::setLayer,
                     onTouchWords = SettingsStore::setTouchWords,
                     onOpenAccessibility = { openAccessibilitySettings() },

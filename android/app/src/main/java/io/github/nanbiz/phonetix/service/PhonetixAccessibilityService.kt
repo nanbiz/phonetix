@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
+    private lateinit var lens: LensController
     private lateinit var tooltip: TooltipController
     private lateinit var speaker: Speaker
     private lateinit var io: Handler
@@ -137,6 +138,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         speaker = Speaker(this)
         tooltip = TooltipController(this, speaker) { r -> net.post(r) }
         overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
+        // The lens: a way to read a word that does not take the screen's touches. A
+        // transcription that can be tapped swallows the swipe that began on it, and on a page
+        // of text that is most of the page, so the alternative is one small window the reader
+        // drags over what they want to know about.
+        lens = LensController(
+            this,
+            wordAt = { x, y -> overlay.wordAt(x, y) },
+            onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
+        )
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
         io.post { Eld.ensureLoaded(this) { schedule(0L) } }
@@ -176,6 +186,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         overlay.hideNow()
                         tooltip.hide()
                     }
+                    // The lens is up whenever there is something to read with it.
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d(
+                            "Phonetix",
+                            "LENS enabled=${s.enabled} wanted=${s.lens} up=${lens.showing}",
+                        )
+                    }
+                    if (s.enabled && s.lens) lens.show() else lens.hide()
                     overlay.applyTouchability()
                     scrollOnly = false
                     schedule(0L)

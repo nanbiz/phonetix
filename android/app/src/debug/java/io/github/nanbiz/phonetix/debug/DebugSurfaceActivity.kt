@@ -550,6 +550,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     i.getStringExtra("layer").orEmpty(),
                 )
             }
+            if (i.hasExtra("lens")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setLens(
+                    i.getIntExtra("lens", 1) != 0,
+                )
+            }
             if (i.hasExtra("markLines")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MARK_LINES =
                     i.getIntExtra("markLines", 0) != 0

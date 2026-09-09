@@ -68,6 +68,7 @@ fun HomeScreen(
     onTarget: (String) -> Unit,
     onLayer: (String) -> Unit,
     onTouchWords: (Boolean) -> Unit,
+    onLens: (Boolean) -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenApps: () -> Unit,
@@ -106,6 +107,7 @@ fun HomeScreen(
 
         ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
         DictionariesCard(settings = settings)
+        LensCard(on = settings.lens, onLens = onLens)
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
         AppsCard(settings = settings, onOpenApps = onOpenApps)
 
@@ -414,6 +416,30 @@ private fun DictionariesCard(settings: Settings) {
                     }) { Text("Get") }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The lens, and why it is the way in.
+ *
+ * The transcriptions lie over the words. Making them touchable is one way to ask about a
+ * word and costs every swipe that starts on one; the lens costs nothing and is dragged to
+ * whatever the reader wants to know about.
+ */
+@Composable
+private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
+    SectionCard(title = "The lens") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Drag it over a word", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "It asks what it passes over and takes none of the screen's touches",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = on, onCheckedChange = onLens)
         }
     }
 }

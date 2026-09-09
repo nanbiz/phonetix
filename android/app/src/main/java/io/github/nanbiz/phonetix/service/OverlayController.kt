@@ -40,6 +40,25 @@ class OverlayController(
     private var lastRendered: List<WordBox> = emptyList()
 
     /**
+     * The word under a point on the screen, or nothing when the point is on no word.
+     *
+     * What the lens is dragged over: it does not take the app's touches, so it has to ask
+     * what it is passing rather than being told by a tap.
+     */
+    fun wordAt(x: Float, y: Float): WordBox? =
+        lastRendered.firstOrNull { it.rect.contains(x, y) }
+            ?: lastRendered.minByOrNull { box ->
+                val dx = x - box.rect.centerX()
+                val dy = y - box.rect.centerY()
+                // Near enough to be what the reader meant: a lens is wider than a word and
+                // sits between two of them as often as on one.
+                if (kotlin.math.abs(dy) > box.rect.height()) Float.MAX_VALUE else dx * dx + dy * dy
+            }?.takeIf { box ->
+                kotlin.math.abs(y - box.rect.centerY()) <= box.rect.height() &&
+                    kotlin.math.abs(x - box.rect.centerX()) <= box.rect.width()
+            }
+
+    /**
      * While the screen is moving the whole set rides on one layer instead of a window each:
      * carrying a dozen windows would be a dozen calls to the window manager every frame,
      * and the layer moves by shifting a canvas. The small windows come back when it stops,

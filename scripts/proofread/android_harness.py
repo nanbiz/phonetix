@@ -67,8 +67,16 @@ class Device:
         return "Success" in adb("install", "-r", apk, timeout=300)
 
     def enable_service(self):
-        """Grant both permissions. Note an install clears the accessibility one."""
+        """Grant both permissions. Note an install clears the accessibility one.
+
+        Written as an off-then-on, because naming the service while accessibility is already
+        on leaves the setting saying the service is enabled and the system never binding it:
+        a suite then measures a screen nothing is annotating and reports the app as doing
+        nothing, which is a fault in the suite and not in the app.
+        """
         shell("appops", "set", PKG, "SYSTEM_ALERT_WINDOW", "allow")
+        shell("settings", "put", "secure", "accessibility_enabled", "0")
+        time.sleep(1)
         shell("settings", "put", "secure", "enabled_accessibility_services", SERVICE)
         shell("settings", "put", "secure", "accessibility_enabled", "1")
         for _ in range(20):

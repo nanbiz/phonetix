@@ -861,6 +861,12 @@ def main():
         print("FAIL - the accessibility service will not start")
         sys.exit(1)
     warm(dev)
+    # The reader's own choices, put back to what this suite measures against: a run that
+    # followed one leaving a target language behind counted the words of an English page that
+    # were being answered in German, and reported the frequency bar as broken.
+    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+          "--es", "target", "", "--es", "layer", "ipa", "--ei", "enable", "1")
+    time.sleep(2)
 
     r = Results()
     print("the frequency bar")

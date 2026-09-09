@@ -28,7 +28,8 @@
     "release": "scripts/release.sh",
     "ci:fast": "scripts/ci.sh fast",
     "hooks": "scripts/hooks/install.sh",
-    "test:translates": "uv run python scripts/proofread/android_translates.py"
+    "test:translates": "uv run python scripts/proofread/android_translates.py",
+    "test:lens": "uv run python scripts/proofread/android_lens.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",

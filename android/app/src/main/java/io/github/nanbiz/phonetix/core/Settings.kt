@@ -35,6 +35,14 @@ data class Settings(
     val layer: String = "gloss+ipa",
     /** Where the dictionaries come from. The reader's own, and nowhere in the source. */
     val packHost: String = "",
+    /**
+     * The lens: a small window dragged over a word to be told what it means.
+     *
+     * On by default, because it is the only way to ask about a word without the overlay
+     * taking the screen's touches, and an app whose answers cannot be reached is an app that
+     * only decorates.
+     */
+    val lens: Boolean = true,
 )
 
 /**
@@ -52,6 +60,7 @@ object SettingsStore {
     private const val K_TARGET = "target"
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
+    private const val K_LENS = "lens"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -72,6 +81,7 @@ object SettingsStore {
             target = p.getString(K_TARGET, "") ?: "",
             layer = p.getString(K_LAYER, "gloss+ipa") ?: "gloss+ipa",
             packHost = p.getString(K_HOST, "") ?: "",
+            lens = p.getBoolean(K_LENS, true),
         )
     }
 
@@ -87,6 +97,7 @@ object SettingsStore {
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
+            ?.putBoolean(K_LENS, next.lens)
             ?.apply()
     }
 
@@ -97,6 +108,7 @@ object SettingsStore {
     fun setTarget(v: String) = update { it.copy(target = v) }
     fun setLayer(v: String) = update { it.copy(layer = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
+    fun setLens(v: Boolean) = update { it.copy(lens = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }
