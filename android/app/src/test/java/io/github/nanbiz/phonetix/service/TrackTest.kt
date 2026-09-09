@@ -33,25 +33,32 @@ class TrackTest {
 
     @Test
     fun a_movement_that_is_slowing_is_not_carried_at_the_speed_it_had() {
-        // A fling decelerating hard, sampled every hundred milliseconds, asked about two
-        // hundred past the last sample. That is the case a real page puts the layer in: a view
-        // reports its scrolling about ten times a second whatever it is doing, so the news is
-        // always old, and the speed it implies is always the speed of a moment that is over.
+        // A fling still going, sampled every hundred milliseconds, asked about two hundred past
+        // the last sample. That is the case a real page puts the layer in: a view reports where
+        // it has got to about ten times a second whatever it is doing, so the news is always
+        // old, and the speed it implies is the average of an interval that is over rather than
+        // the speed now.
+        val speed = 6f
+        val decay = 0.006f
         val track = Track()
         for (step in 0..5) {
             val at = 1000L + step * 100L
-            track.add(at, fling(1000L, 5f, 0.01f, at))
+            track.add(at, fling(1000L, speed, decay, at))
         }
         val when_ = track.latestAt + 200L
-        val truth = fling(1000L, 5f, 0.01f, when_)
+        val truth = fling(1000L, speed, decay, when_)
         val fitted = track.at(when_)
-        val flat = track.latest + track.speed(track.latestAt) * 200f
+        // What the layer did before there was a model: the speed over the last interval,
+        // carried on unchanged.
+        val lastInterval =
+            (fling(1000L, speed, decay, 1500L) - fling(1000L, speed, decay, 1400L)) / 100f
+        val flat = track.latest + lastInterval * 200f
         assertTrue(
             "the fit should be nearer the truth than carrying the last speed on: " +
                 "fit ${fitted - truth}, flat ${flat - truth}",
             kotlin.math.abs(fitted - truth) < kotlin.math.abs(flat - truth),
         )
-        assertEquals(truth, fitted, 40f)
+        assertEquals(truth, fitted, 15f)
     }
 
     @Test

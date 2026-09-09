@@ -282,7 +282,8 @@ class MotionLayer(private val context: Context) {
         if (!io.github.nanbiz.phonetix.BuildConfig.DEBUG) return
         android.util.Log.d(
             "Phonetix",
-            "LAYER $now $predictedY $lastMeasureAt showing=${if (wasStale) 0 else 1}",
+            "LAYER $now $predictedY $lastMeasureAt showing=${if (wasStale) 0 else 1} " +
+                "page=${track.at(now)} anchor=$pageAtReading",
         )
     }
 
@@ -521,12 +522,17 @@ class MotionLayer(private val context: Context) {
         // words a couple of hundred pixels ahead of the text in the opening frames of every
         // scroll. The second measurement is of the movement itself, and prediction starts
         // there.
-        // A page that reports nothing about its own scrolling still moves, and this reading
-        // measured how fast: that measurement is the only sample of it there will ever be, so
-        // it becomes one. Where the page does report, its own reports are the samples and this
-        // would be the same movement counted twice.
+        // The reading is a sample too, and the better one where it has anything to say.
+        //
+        // Only where the page reports nothing about itself. A reading's speed comes from one
+        // line asked where it is twice, and it runs high: measured against a page reporting its
+        // own position, samples taken from it put the words a fifth further along than the page
+        // had actually gone, and every frame until the next correction was drawn there. Where
+        // the page does report, its own account is the one to fit; where it does not - a list
+        // whose bounds do not move while it does - the reading is all there is.
+        val wasAtReading = pageAtReading
         if (!reportedSince && measurements > 0 && speed != 0f && at > lastMeasureAt) {
-            page += -speed * (at - lastMeasureAt)
+            page = wasAtReading + -speed * (at - lastMeasureAt)
             track.add(at, page)
         }
         // The words on the layer are correct for the page as it stood when this reading was

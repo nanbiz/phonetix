@@ -41,6 +41,9 @@ class Track {
          *  are noise. */
         const val SANE_PX_PER_MS = 12f
 
+        /** How many samples the window needs before the fit is run past its newest one. */
+        const val ENOUGH_TO_GUESS = 3
+
         /** The fastest a speed may be taken to be decaying: an eighth of it every
          *  millisecond, which is a fling over in a few frames. */
         const val MOST_DECAY = 0.125f
@@ -103,7 +106,13 @@ class Track {
         // Past what the samples can speak to, the page is left where it was last known to be
         // rather than run on into a guess.
         if (ahead > REACH_MS) return latest
-        val (speed, decay) = fit() ?: return latest
+        // And a movement described by two samples is a direction, not a curve. Extrapolating
+        // one is how a page that reports itself rarely and in lumps - a lazy list, whose whole
+        // account of a fling is half a dozen numbers - had the words thrown past the text
+        // between its reports. Interpolating between samples is still fine, because that is
+        // describing rather than guessing.
+        if (ahead > 0f && samples() < ENOUGH_TO_GUESS) return latest
+        val (from, speed, decay) = fit() ?: return latest
         val moved = if (decay <= 0f) {
             speed * ahead
         } else {
@@ -111,8 +120,13 @@ class Track {
             // has been covered by now.
             speed / decay * (1f - kotlin.math.exp(-decay * ahead))
         }
+        // The line the samples make, not the last of them: one sample is a page's position at
+        // one instant and carries whatever noise that instant had, and anchoring every frame to
+        // it puts that noise on the screen. The fit already says where the page was at the
+        // newest moment, having weighed all of the samples for it.
+        //
         // Backwards is not something a page does at the end of a fling, whatever a fit says.
-        return latest + when {
+        return latest + from + when {
             speed > 0f -> moved.coerceAtLeast(0f)
             speed < 0f -> moved.coerceAtMost(0f)
             else -> 0f
@@ -121,7 +135,7 @@ class Track {
 
     /** How fast the page is going at this moment, in pixels a millisecond. */
     fun speed(when_: Long): Float {
-        val (speed, decay) = fit() ?: return 0f
+        val (_, speed, decay) = fit() ?: return 0f
         val ahead = (when_ - latestAt).toFloat().coerceIn(-WINDOW_MS, REACH_MS)
         return if (decay <= 0f) speed else speed * kotlin.math.exp(-decay * ahead)
     }
@@ -136,7 +150,7 @@ class Track {
      * slope is the rate. A page whose intervals are not falling has no decay to fit and is
      * carried at the speed it has.
      */
-    private fun fit(): Pair<Float, Float>? {
+    private fun fit(): Triple<Float, Float, Float>? {
         if (count < 2) return null
         var s0 = 0.0
         var s1 = 0.0
@@ -162,6 +176,9 @@ class Track {
         val det = s0 * s2 - s1 * s1
         if (kotlin.math.abs(det) < 1e-9) return null
         val average = ((s0 * p1 - s1 * p0) / det).toFloat()
+        // Where the line says the page was at the newest sample's moment, which is not
+        // necessarily where that sample said it was.
+        val from = ((s2 * p0 - s1 * p1) / det).toFloat()
         val decay = decay(used)
         // With a decay in hand the window's average speed can be corrected to the speed at its
         // newest end. Without one there is nothing to correct it by, and an average over three
@@ -169,8 +186,8 @@ class Track {
         // about ten times a second, so a window holds three or four samples and the average of
         // them lags a fling badly. The newest interval is then the better answer, being the
         // only part of the window that is about now.
-        val here = if (decay > 0f) average * correction(decay) else recent() ?: average
-        return sane(here) to decay
+        val here = if (decay > 0f) average * correction(decay) else average
+        return Triple(from, sane(here), decay)
     }
 
     /**
@@ -186,16 +203,6 @@ class Track {
         // Both are relative to the speed at the start of the window, so their ratio is what
         // the newest end is worth in terms of the average.
         return if (average <= 1e-6f) 1f else (ending / average).coerceIn(0.2f, 1f)
-    }
-
-    /** The speed over the newest interval, which is the least stale thing the samples hold. */
-    private fun recent(): Float? {
-        if (count < 2) return null
-        val newer = slot(0)
-        val older = slot(1)
-        val span = (at[newer] - at[older]).toFloat()
-        if (span <= 0f) return null
-        return (where[newer] - where[older]) / span
     }
 
     /** The rate the interval speeds are falling at, or nothing when they are not. */
