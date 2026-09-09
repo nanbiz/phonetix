@@ -34,6 +34,15 @@ UNDECLARED = (
     "<body><main><p id='prose'>" + SENTENCE + "</p></main></body></html>"
 ).encode()
 
+# A page mostly in one language with a line in another, which is the ordinary shape of a
+# video title on a foreign page.
+MIXED = (
+    "<!doctype html><html lang='es'><meta charset='utf-8'><body><main>"
+    "<p id='prose'>" + SENTENCE + "</p>"
+    "<p id='other'>The dictionary answers immediately and the page carries on reading</p>"
+    "</main></body></html>"
+).encode()
+
 PAGE = (
     "<!doctype html><html lang='es'><meta charset='utf-8'>"
     "<body><main><p id='prose'>" + SENTENCE + "</p>"
@@ -96,7 +105,11 @@ def serve():
                     return
                 self.send_error(404)
                 return
-            body = UNDECLARED if self.path.startswith("/undeclared") else PAGE
+            body = (
+                UNDECLARED if self.path.startswith("/undeclared")
+                else MIXED if self.path.startswith("/mixed")
+                else PAGE
+            )
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
@@ -338,6 +351,33 @@ def main():
         if not found or "Hund" not in found:
             failures.append(f"an undeclared Spanish page was not read as Spanish ({found})")
         cdp.send("Target.closeTarget", {"targetId": undeclared["targetId"]})
+
+        # A line in another language is read as that language, rather than as the page's.
+        mixed = cdp.send("Target.createTarget", {"url": f"{base}/mixed.html"})
+        other = cdp.send(
+            "Target.attachToTarget", {"targetId": mixed["targetId"], "flatten": True},
+        )["sessionId"]
+        cdp.send("Runtime.enable", session=other)
+        lines = wait_for(cdp, other, """
+            (() => {
+              const said = (id) => [...document.getElementById(id).querySelectorAll('.px-w')]
+                .map(w => (w.querySelector('.px-ph') || {}).textContent || '')
+                .filter(Boolean);
+              const spanish = said('prose'), english = said('other');
+              return spanish.length && english.length
+                ? JSON.stringify({spanish, english}) : null;
+            })()
+        """, lambda v: v is not None, tries=25)
+        read = json.loads(lines or '{"spanish": [], "english": []}')
+        print(f"  the Spanish line: {read['spanish'][:3]}")
+        print(f"  the English line: {read['english'][:3]}")
+        # "the" is said one way in English and is not a Spanish word at all: a line read as
+        # the page's language would come back with the page's sounds.
+        if not read["english"]:
+            failures.append("the English line was not transcribed at all")
+        elif read["english"][:1] == read["spanish"][:1]:
+            failures.append("both lines came back with the same sounds")
+        cdp.send("Target.closeTarget", {"targetId": mixed["targetId"]})
 
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")

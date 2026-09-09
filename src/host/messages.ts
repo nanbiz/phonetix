@@ -43,6 +43,8 @@ export interface HostProtocol {
   detect: { data: { text: string }; reply: Guess };
   /** What a page is in, by the rule that decides how much text is enough. */
   readScreen: { data: { text: string }; reply: Screen };
+  /** What each run of a page is in, since a page is not always in one language. */
+  readRuns: { data: { texts: string[] }; reply: Screen[] };
   /** A transcription, symbol by symbol, for a surface with no answer to read them off. */
   symbols: { data: { ipa: string }; reply: IpaSymbol[] };
   /** What Wiktionary says about a word: a transcription a person wrote, and a recording of

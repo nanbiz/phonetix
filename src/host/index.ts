@@ -4,8 +4,8 @@
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
 import {
-  annotate, complete, curve, detect, lookUp, openLanguages, readScreen, readWiktionary,
-  symbolsOf, type Said,
+  annotate, complete, curve, detect, lookUp, openLanguages, readRuns, readScreen,
+  readWiktionary, symbolsOf, type Said,
 } from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
@@ -82,6 +82,8 @@ export function host(): void {
 
   onMessage('readScreen', async ({ data }) => readScreen(data.text));
 
+  onMessage('readRuns', async ({ data }) => readRuns(data.texts));
+
   onMessage('enrich', async ({ data }) => {
     try {
       return await fromWiktionary(data.word, data.lang);
@@ -133,18 +135,33 @@ export function host(): void {
 async function said(batch: Batch, lang: string): Promise<Batch> {
   const wanted = batch.misses.filter((miss) => miss.need !== 'Gloss');
   if (wanted.length === 0) return batch;
-  const words = [...new Set(wanted.map((miss) => batch.tokens[miss.token]?.spelling ?? ''))]
-    .filter(Boolean);
-  let spoken: Record<string, string>;
-  try {
-    spoken = await ipa(lang, words);
-  } catch (e) {
-    console.warn('[Phonetix] The voice did not answer:', e);
-    return batch;
+  // By the language of the word rather than of the page. A page is not always in one: an
+  // English line on a Spanish page read with the Spanish voice comes back saying "the" as
+  // "te", which is a pronunciation of a word nobody was reading.
+  const byLang = new Map<string, string[]>();
+  for (const miss of wanted) {
+    const token = batch.tokens[miss.token];
+    if (!token) continue;
+    const spoken = token.lang || lang;
+    const words = byLang.get(spoken) ?? [];
+    if (!words.includes(token.spelling)) words.push(token.spelling);
+    byLang.set(spoken, words);
+  }
+  const spoken = new Map<string, Record<string, string>>();
+  for (const [voice, words] of byLang) {
+    try {
+      spoken.set(voice, await ipa(voice, words));
+    } catch (e) {
+      console.warn(`[Phonetix] The ${voice} voice did not answer:`, e);
+    }
   }
   const results = wanted
-    .map((miss) => ({ token: miss.token, ipa: spoken[batch.tokens[miss.token]?.spelling ?? ''] }))
-    .filter((result) => result.ipa);
+    .map((miss) => {
+      const token = batch.tokens[miss.token];
+      const said = token ? spoken.get(token.lang || lang)?.[token.spelling] : undefined;
+      return { token: miss.token, ipa: said };
+    })
+    .filter((result): result is { token: number; ipa: string } => Boolean(result.ipa));
   if (results.length === 0) return batch;
   return complete(batch.batch, results, 'espeak');
 }

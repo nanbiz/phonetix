@@ -60,10 +60,19 @@ function readable(element: Element): boolean {
   return true;
 }
 
-/** The language an element declares, or nothing when it inherits the page's. */
+/**
+ * The language this run's own element declares, or nothing when it only inherits the page's.
+ *
+ * The page's own language is not a run's: every run on a page would carry it, and a line that
+ * is in another language could then never be read as that language, which is exactly the case
+ * this exists for.
+ */
 function declared(node: Text): string | undefined {
   const element = node.parentElement?.closest('[lang]');
-  const lang = element?.getAttribute('lang')?.trim().split('-')[0].toLowerCase();
+  if (!element || element === document.documentElement || element === document.body) {
+    return undefined;
+  }
+  const lang = element.getAttribute('lang')?.trim().split('-')[0].toLowerCase();
   return lang || undefined;
 }
 

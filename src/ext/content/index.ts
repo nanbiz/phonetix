@@ -74,6 +74,25 @@ async function readLanguage(runs: ScannedRun[]): Promise<void> {
   if (read?.language) detected = read.language;
 }
 
+/**
+ * What each run is in, where it says enough to tell.
+ *
+ * A page is not always in one language: an English video title on a German page is English,
+ * and transcribing it as German tells a reader a word is said in a way nobody says it. A run
+ * that says too little keeps whatever the page turned out to be, since three words are not a
+ * language.
+ */
+async function readEachRun(runs: ScannedRun[]): Promise<void> {
+  const worth = runs.filter((run) => !run.lang && run.text.trim().length >= 24);
+  if (worth.length === 0) return;
+  const read = await sendMessage('readRuns', { texts: worth.map((run) => run.text) })
+    .catch(() => null);
+  if (!read) return;
+  read.forEach((said, at) => {
+    if (said.language) worth[at].lang = said.language;
+  });
+}
+
 /** The stylesheet the annotations are drawn by, put in the page once. */
 function styles(): void {
   if (document.getElementById('phonetix-inline-style')) return;
@@ -110,6 +129,7 @@ async function draw(): Promise<void> {
       return;
     }
     await readLanguage(runs);
+    await readEachRun(runs);
     const source = pageLanguage();
     state(`asking about ${runs.length} runs`);
     const batch = await sendMessage('annotate', {

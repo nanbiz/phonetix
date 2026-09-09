@@ -117,6 +117,23 @@ impl Core {
         }
     }
 
+    /// What each run of text is in, judged on its own.
+    ///
+    /// A page is not always in one language: an English video title on a German page is
+    /// English, and transcribing it as German is how a reader is told a word is said in a way
+    /// nobody says it. Each run that says enough answers for itself; the rest are left to the
+    /// caller, which knows what the page as a whole turned out to be.
+    #[wasm_bindgen(js_name = readRuns)]
+    pub fn read_runs(&self, texts: Vec<String>) -> String {
+        let each: Vec<String> = texts
+            .iter()
+            .map(|text| {
+                lexcore::json::screen(&lexcore::detect::read_screen(self.model.as_ref(), text))
+            })
+            .collect();
+        format!("[{}]", each.join(","))
+    }
+
     /// What a screenful of text is in, and whether it said enough to judge.
     #[wasm_bindgen(js_name = readScreen)]
     pub fn read_screen(&self, text: &str) -> String {

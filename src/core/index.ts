@@ -201,6 +201,18 @@ export async function readScreen(text: string): Promise<Screen> {
   return JSON.parse(it.readScreen(text)) as Screen;
 }
 
+/**
+ * What each run of text is in, judged on its own.
+ *
+ * A page is not always in one language, and a run that says too little says so rather than
+ * guessing: the caller then falls back to what the page as a whole turned out to be.
+ */
+export async function readRuns(texts: string[]): Promise<Screen[]> {
+  const it = await coreReady();
+  await modelReady();
+  return JSON.parse(it.readRuns(texts)) as Screen[];
+}
+
 /** What the detector found, and whether it is worth acting on. */
 export interface Guess {
   language: string | null;
