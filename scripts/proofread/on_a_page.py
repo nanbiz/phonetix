@@ -43,9 +43,15 @@ MIXED = (
     "</main></body></html>"
 ).encode()
 
+# A heading, because a page's headings are where its capitals are, and a heading is written
+# in title case whatever the language does. The words in it are ordinary dictionary words
+# wearing a capital they got from the page.
+HEADING = "Perro y Camino"
+
 PAGE = (
     "<!doctype html><html lang='es'><meta charset='utf-8'>"
-    "<body><main><p id='prose'>" + SENTENCE + "</p>"
+    "<body><main><h1 id='head'>" + HEADING + "</h1>"
+    "<p id='prose'>" + SENTENCE + "</p>"
     "<pre id='code'>const perro = 1;</pre>"
     "<nav><a href='#'>perro</a></nav>"
     "</main></body></html>"
@@ -210,6 +216,13 @@ def main():
             failures.append(f"perro carries {pairs.get('perro')!r}, not its answer")
         if pairs.get("camino") != "Weg":
             failures.append(f"camino carries {pairs.get('camino')!r}, not its answer")
+        # The heading. A page capitalises its headings whatever the language does, and while
+        # the cascade compared spellings byte for byte every one of them went unanswered - on
+        # a real page that is most of what a reader looks at first.
+        if pairs.get("Perro") != "Hund":
+            failures.append(f"the heading's Perro carries {pairs.get('Perro')!r}, not its answer")
+        if pairs.get("Camino") != "Weg":
+            failures.append(f"the heading's Camino carries {pairs.get('Camino')!r}, not its answer")
         # A word the packs cannot answer is left plain rather than given an empty annotation.
         if pairs.get("calle"):
             failures.append(f"calle was given {pairs['calle']!r} from nowhere")
