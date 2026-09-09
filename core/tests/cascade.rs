@@ -537,3 +537,51 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
     );
     assert_eq!(ruled.ipa, ["ˈwɔːtɚ"]);
 }
+
+/// A word capitalised by the page is still the word the dictionary holds.
+///
+/// A page capitalises for reasons of its own: the first word of a sentence, every word of a
+/// heading, a list of labels in title case. Nearly all the text on a real app's screen is one
+/// of those, and while the cascade compared spellings byte for byte, nearly all of it answered
+/// nothing at all - the screen came back almost bare, which is what a reader saw.
+#[test]
+fn a_word_the_page_capitalised_is_the_same_word() {
+    let es = spanish();
+    let de = german();
+    let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
+    let open = Open {
+        source: Some(&es),
+        target: Some(&de),
+        ..Default::default()
+    };
+    let got = look_up("Perro", &lang("es"), &lang("de"), &open);
+    assert_eq!(got.state, AnswerState::Entry);
+    assert_eq!(got.says, vec!["Hund"]);
+    assert_eq!(got.ipa, vec!["ˈpe.ro"]);
+    // What the reader is looking at, not what the dictionary keys it under.
+    assert_eq!(got.spelling, "Perro");
+    // And it is not an inflected form of itself, which is what a card would otherwise say.
+    assert_eq!(got.lemma, None);
+
+    // A heading shouts, and that is still the same word.
+    let shouted = look_up("CAMINO", &lang("es"), &lang("de"), &open);
+    assert_eq!(shouted.says, vec!["Weg"]);
+}
+
+/// Case that belongs to the language is not the page's to undo.
+///
+/// German capitalises every noun, so "Bank" and "bank" are two different words wherever both
+/// exist. The spelling as written is tried first for exactly this reason.
+#[test]
+fn a_language_that_capitalises_its_nouns_keeps_the_distinction() {
+    let de = german();
+    let de = Pack::open(&de).unwrap();
+    let open = Open {
+        source: Some(&de),
+        target: Some(&de),
+        ..Default::default()
+    };
+    let got = look_up("Bank", &lang("de"), &lang("de"), &open);
+    assert_eq!(got.ipa, vec!["baŋk"]);
+    assert_eq!(got.lemma, None, "the noun as the language writes it");
+}

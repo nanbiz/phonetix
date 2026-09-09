@@ -107,6 +107,36 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
     }
 }
 
+/// A spelling as the page wrote it, or failing that as the language writes it.
+///
+/// A page capitalises for its own reasons: the first word of a sentence, every word of a
+/// heading, a list of settings written in title case. The dump keys a word the way the
+/// language spells it, so "Search" at the top of a screen is not in it and "search" is - and a
+/// reader looking at a real app's screen, where most text is a label or a heading, saw nearly
+/// nothing answered.
+///
+/// As written first, because case is not always the page's doing: German capitalises every
+/// noun, so "Bank" and "bank" are two different words and the pack holds both.
+fn lookup_either_case<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Vec<Entry> {
+    let found = pack.lookup(spelling);
+    if !found.is_empty() {
+        return found;
+    }
+    let lowered = spelling.to_lowercase();
+    if lowered == spelling {
+        return Vec::new();
+    }
+    pack.lookup(&lowered)
+}
+
+/// Whether two spellings are the same word, which case alone does not decide.
+///
+/// A word met at the start of a sentence is not an inflected form of itself, and reporting it
+/// as one puts "Search" on a card as a form of "search".
+fn same_word(one: &str, other: &str) -> bool {
+    one == other || one.to_lowercase() == other.to_lowercase()
+}
+
 /// Look one word up.
 pub fn look_up<D: AsRef<[u8]>>(
     spelling: &str,
@@ -122,7 +152,7 @@ pub fn look_up<D: AsRef<[u8]>>(
         };
         return Answer::nothing(state, spelling, source, target);
     };
-    let found = pack.lookup(spelling);
+    let found = lookup_either_case(pack, spelling);
     if found.is_empty() {
         // The pack is open and does not hold the word. That is a miss for the engines, not a
         // missing pack, and the card says so differently.
@@ -146,8 +176,14 @@ pub fn look_up<D: AsRef<[u8]>>(
         let said = open
             .accent_pack
             .and_then(|pack| {
-                pack.lookup_one(spelling)
-                    .or_else(|| pack.lookup_one(&answers[0].lemma.clone().unwrap_or_default()))
+                lookup_either_case(pack, spelling)
+                    .into_iter()
+                    .next()
+                    .or_else(|| {
+                        lookup_either_case(pack, &answers[0].lemma.clone().unwrap_or_default())
+                            .into_iter()
+                            .next()
+                    })
             })
             .map(|entry| entry.ipa)
             .filter(|ipa| !ipa.is_empty());
@@ -199,7 +235,7 @@ fn resolve_one<D: AsRef<[u8]>>(
 ) -> Answer {
     // A spelling that is not the lemma got here through the forms index, and the reader is
     // owed the connection: they tapped "perros" and the answer is about "perro".
-    let inflected = entry.lemma != spelling;
+    let inflected = !same_word(&entry.lemma, spelling);
     let glosses: Vec<String> = entry.senses.iter().map(|s| s.gloss.clone()).collect();
     // The first sense's, because that is the sense the card leads with.
     let example = entry.senses.first().and_then(|s| s.example.clone());
@@ -316,7 +352,7 @@ fn finish<D: AsRef<[u8]>>(
     Answer {
         state,
         spelling: spelling.to_string(),
-        lemma: if entry.lemma == spelling {
+        lemma: if same_word(&entry.lemma, spelling) {
             None
         } else {
             Some(entry.lemma.clone())
