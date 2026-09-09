@@ -107,6 +107,19 @@ class MotionLayer(private val context: Context) {
         /** And however fast it is going, the words are never carried further than this from
          *  where they were last measured. */
         const val CARRY_LIMIT_PX = 400f
+
+        /**
+         * Except when the page said how far it went, which is not a prediction to be guarded
+         * against but its own account of what happened.
+         *
+         * The limit above is there so a speed worked out from readings cannot throw the words
+         * across the screen when it is wrong. A reported scroll cannot be wrong in that way,
+         * and holding it to the same limit is why the words followed only a third of a
+         * movement: a fling moves twelve hundred pixels and four hundred was all they were
+         * allowed. Words carried past the edge have gone with their text, which is where they
+         * belong; a few screens is enough to bound anything pathological.
+         */
+        const val TOLD_LIMIT_PX = 6000f
         /** How much further a steady movement is predicted into than a changing one. */
         const val STEADY = 2.5f
 
@@ -128,7 +141,20 @@ class MotionLayer(private val context: Context) {
     /** When the last measurement reached this layer, as against when it was taken. */
     private var lastArrivedAt = 0L
     private var predictedX = 0f
-    private var predictedY = 0f
+
+    /**
+     * Where the words are drawn, as two separate things that must not be confused.
+     *
+     * [guessedY] is what the layer worked out for itself from the speed of the last readings,
+     * and it is bounded: a speed can be wrong, and a wrong speed run far enough throws the
+     * words across the screen. [carriedY] is what the page itself reported having scrolled,
+     * which is not a guess about the future but an account of what already happened, and
+     * holding it to the same bound is why the words followed a third of a fling. Summed, they
+     * are what is on the screen.
+     */
+    private var guessedY = 0f
+    private var carriedY = 0f
+    private val predictedY: Float get() = guessedY + carriedY
     private var lastFrameAt = 0L
     /** How far apart the measurements have been coming, smoothed: how long a speed of
      *  theirs is worth believing. */
@@ -169,7 +195,11 @@ class MotionLayer(private val context: Context) {
             // the text they belong to, until a reading caught up with them.
             val trust = trustAt(now)
             predictedX += vx * dt * trust
-            predictedY = (predictedY + vy * dt * trust)
+            // The guess is bounded and what the page reported is not, so the bound is applied
+            // to the guess alone. Applied to the sum, it pulled back everything a reported
+            // scroll had carried the words by: a page that says it went twelve hundred pixels
+            // had its words hauled back to four hundred on the very next frame.
+            guessedY = (guessedY + vy * dt * trust)
                 .coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
             // Moved, not redrawn. Recording the whole set again every frame was work the
             // display did sixty times a second and, on a machine with no real GPU, enough
@@ -281,7 +311,7 @@ class MotionLayer(private val context: Context) {
         // The interval it covers is consumed, so the frame that follows integrates from now
         // rather than from before this arrived, and the same movement is not counted twice.
         if (trustAt(now) < Fixed.TRUST_ENOUGH) {
-            predictedY = (predictedY - dy).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
+            carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
             lastFrameAt = now
             view?.let { it.translationY = predictedY }
         }
@@ -291,7 +321,7 @@ class MotionLayer(private val context: Context) {
     fun start(current: List<WordBox>) {
         boxes = current
         vx = 0f; vy = 0f
-        predictedX = 0f; predictedY = 0f
+        predictedX = 0f; guessedY = 0f; carriedY = 0f
         gap = Fixed.GAP_MAX_MS
         measurements = 0
         steadiness = 0f
@@ -430,7 +460,10 @@ class MotionLayer(private val context: Context) {
         // words a couple of hundred pixels ahead of the text in the opening frames of every
         // scroll. The second measurement is of the movement itself, and prediction starts
         // there.
-        predictedY = if (measurements < 2 && !predictFromFirst) 0f
+        // A reading says where the words actually are, so everything carried since the last one
+        // has been accounted for and both terms start again from it.
+        carriedY = 0f
+        guessedY = if (measurements < 2 && !predictFromFirst) 0f
         else (vy * late).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
         lastFrameAt = now
         view?.set(boxes)
