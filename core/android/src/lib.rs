@@ -36,14 +36,22 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_bestOf(
     candidates: JObjectArray,
     margin: jint,
 ) -> jint {
-    let Ok(source) = env.get_string(&source) else { return -1 };
+    let Ok(source) = env.get_string(&source) else {
+        return -1;
+    };
     let source: String = source.into();
-    let Ok(len) = env.get_array_length(&candidates) else { return -1 };
+    let Ok(len) = env.get_array_length(&candidates) else {
+        return -1;
+    };
     let mut owned: Vec<String> = Vec::with_capacity(len as usize);
     for i in 0..len {
-        let Ok(item) = env.get_object_array_element(&candidates, i) else { return -1 };
+        let Ok(item) = env.get_object_array_element(&candidates, i) else {
+            return -1;
+        };
         let item = JString::from(item);
-        let Ok(text) = env.get_string(&item) else { return -1 };
+        let Ok(text) = env.get_string(&item) else {
+            return -1;
+        };
         owned.push(text.into());
     }
     let refs: Vec<&str> = owned.iter().map(|s| s.as_str()).collect();
@@ -68,7 +76,9 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_open(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let core = Box::new(Core { packs: std::collections::HashMap::new() });
+    let core = Box::new(Core {
+        packs: std::collections::HashMap::new(),
+    });
     Box::into_raw(core) as jlong
 }
 
@@ -98,16 +108,22 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openPack<'a>(
     core: jlong,
     path: JString,
 ) -> jni::objects::JString<'a> {
-    let empty = env.new_string("").unwrap_or_else(|_| JString::from(unsafe {
-        jni::objects::JObject::from_raw(std::ptr::null_mut())
-    }));
+    let empty = env.new_string("").unwrap_or_else(|_| {
+        JString::from(unsafe { jni::objects::JObject::from_raw(std::ptr::null_mut()) })
+    });
     if core == 0 {
         return empty;
     }
-    let Ok(path) = env.get_string(&path) else { return empty };
+    let Ok(path) = env.get_string(&path) else {
+        return empty;
+    };
     let path: String = path.into();
-    let Ok(bytes) = std::fs::read(&path) else { return empty };
-    let Ok(pack) = lexpack::Pack::open(bytes) else { return empty };
+    let Ok(bytes) = std::fs::read(&path) else {
+        return empty;
+    };
+    let Ok(pack) = lexpack::Pack::open(bytes) else {
+        return empty;
+    };
     let lang = pack.lang().to_string();
     // Safety: as above.
     let core = unsafe { &mut *(core as *mut Core) };
@@ -125,15 +141,17 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
     source: JString,
     target: JString,
 ) -> jni::objects::JString<'a> {
-    let empty = env.new_string("").unwrap_or_else(|_| JString::from(unsafe {
-        jni::objects::JObject::from_raw(std::ptr::null_mut())
-    }));
+    let empty = env.new_string("").unwrap_or_else(|_| {
+        JString::from(unsafe { jni::objects::JObject::from_raw(std::ptr::null_mut()) })
+    });
     if core == 0 {
         return empty;
     }
-    let (Ok(spelling), Ok(source), Ok(target)) =
-        (env.get_string(&spelling), env.get_string(&source), env.get_string(&target))
-    else {
+    let (Ok(spelling), Ok(source), Ok(target)) = (
+        env.get_string(&spelling),
+        env.get_string(&source),
+        env.get_string(&target),
+    ) else {
         return empty;
     };
     let (spelling, source, target): (String, String, String) =

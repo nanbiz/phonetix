@@ -182,6 +182,38 @@ jobs:
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/stale_reveal.py firefox
           PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/hover_stability.py firefox
 
+  # The reading core, which is one crate compiled twice: to WebAssembly for the extension and
+  # to a native library for the overlay. Everything about what a word means, how it is said and
+  # how a pack is read lives here, so this is the job that keeps the two platforms from
+  # answering differently. The two target builds are part of it because a crate that compiles
+  # for the host and not for a phone is a crate that only half exists.
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown, aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Tests
+        working-directory: core
+        run: cargo test --workspace
+      - name: Formatting and lints
+        working-directory: core
+        run: |
+          cargo fmt --all --check
+          cargo clippy --workspace --all-targets -- -D warnings
+      # The reader has to compile for a browser and for a phone, and the writer only ever runs
+      # here, which is why compression is behind a feature the reader does not turn on.
+      - name: The reader builds for the browser
+        working-directory: core
+        run: cargo build -p lexcore --target wasm32-unknown-unknown
+      - name: The reader builds for the phone
+        working-directory: core
+        run: cargo build -p lexcore --target aarch64-linux-android
+
   # The Android app. Its unit tests are what keep the port agreeing with the extension: the
   # sprinkle rule, the display form of a transcription and the symbol table are asserted
   # against vectors the extension generates, so a rule changed on one side without the other

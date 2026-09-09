@@ -86,7 +86,14 @@ impl<D: AsRef<[u8]>> Pack<D> {
             }
             *slot = (offset, length);
         }
-        let header = Header { format, lang, kind, built, entries, sections };
+        let header = Header {
+            format,
+            lang,
+            kind,
+            built,
+            entries,
+            sections,
+        };
 
         let keys = fst::Map::new(slice(bytes, header.at(Section::Keys)).to_vec())
             .map_err(|_| PackError::Corrupt("keys"))?;
@@ -110,7 +117,15 @@ impl<D: AsRef<[u8]>> Pack<D> {
             starts.push(varint::get(index, &mut at).ok_or(PackError::Corrupt("starts"))? as u32);
         }
 
-        Ok(Pack { bytes: held, header, keys, glosses, blocks, starts, warm: RefCell::new(None) })
+        Ok(Pack {
+            bytes: held,
+            header,
+            keys,
+            glosses,
+            blocks,
+            starts,
+            warm: RefCell::new(None),
+        })
     }
 
     pub fn lang(&self) -> &str {
@@ -155,14 +170,22 @@ impl<D: AsRef<[u8]>> Pack<D> {
     /// confident wrong answer the format is shaped to avoid.
     pub fn senses_glossed(&self, term: &str) -> Vec<(u32, u32)> {
         let head = crate::gloss_head(term);
-        let Some(at) = self.glosses.get(&head) else { return Vec::new() };
+        let Some(at) = self.glosses.get(&head) else {
+            return Vec::new();
+        };
         let hits = slice(self.bytes.as_ref(), self.header.at(Section::GlossHits));
         let mut cursor = at as usize;
-        let Some(count) = varint::get(hits, &mut cursor) else { return Vec::new() };
+        let Some(count) = varint::get(hits, &mut cursor) else {
+            return Vec::new();
+        };
         let mut out = Vec::with_capacity(count as usize);
         for _ in 0..count {
-            let Some(entry) = varint::get(hits, &mut cursor) else { break };
-            let Some(sense) = varint::get(hits, &mut cursor) else { break };
+            let Some(entry) = varint::get(hits, &mut cursor) else {
+                break;
+            };
+            let Some(sense) = varint::get(hits, &mut cursor) else {
+                break;
+            };
             out.push((entry as u32, sense as u32));
         }
         out
@@ -245,10 +268,24 @@ fn read_entry(bytes: &[u8], at: &mut usize) -> Option<Entry> {
         let gloss = varint::get_str(bytes, at)?;
         let marks = read_strings(bytes, at)?;
         let has_example = varint::get(bytes, at)?;
-        let example = if has_example == 1 { Some(varint::get_str(bytes, at)?) } else { None };
-        out.push(Sense { gloss, marks, example });
+        let example = if has_example == 1 {
+            Some(varint::get_str(bytes, at)?)
+        } else {
+            None
+        };
+        out.push(Sense {
+            gloss,
+            marks,
+            example,
+        });
     }
-    Some(Entry { lemma, pos, tags, ipa, senses: out })
+    Some(Entry {
+        lemma,
+        pos,
+        tags,
+        ipa,
+        senses: out,
+    })
 }
 
 fn read_strings(bytes: &[u8], at: &mut usize) -> Option<Vec<String>> {
@@ -266,7 +303,10 @@ mod tests {
 
     #[test]
     fn a_file_that_is_not_a_pack_is_refused() {
-        assert!(matches!(Pack::open(b"not a pack at all"), Err(PackError::NotAPack)));
+        assert!(matches!(
+            Pack::open(b"not a pack at all"),
+            Err(PackError::NotAPack)
+        ));
         assert!(matches!(Pack::open(b""), Err(PackError::NotAPack)));
     }
 

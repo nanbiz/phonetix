@@ -73,7 +73,11 @@ pub fn look_up<D: AsRef<[u8]>>(
     open: &Open<D>,
 ) -> Answer {
     let Some(pack) = open.source else {
-        let state = if open.ipa_only { AnswerState::IpaOnly } else { AnswerState::NoPack };
+        let state = if open.ipa_only {
+            AnswerState::IpaOnly
+        } else {
+            AnswerState::NoPack
+        };
         return Answer::nothing(state, spelling, source, target);
     };
     let Some(entry) = pack.lookup(spelling) else {
@@ -97,7 +101,16 @@ pub fn look_up<D: AsRef<[u8]>>(
         } else {
             AnswerState::Entry
         };
-        return finish(state, spelling, &entry, glosses.clone(), glosses, pack, source, target);
+        return finish(
+            state,
+            spelling,
+            &entry,
+            glosses.clone(),
+            glosses,
+            pack,
+            source,
+            target,
+        );
     }
 
     let Some(other) = open.target else {
@@ -126,7 +139,9 @@ pub fn look_up<D: AsRef<[u8]>>(
         // and that is the whole of what separates Weg from Weise.
         let mut best: Vec<(String, usize)> = Vec::new();
         for ((which, _), shared) in other.senses_matching(gloss) {
-            let Some(reached) = other.entry(which) else { continue };
+            let Some(reached) = other.entry(which) else {
+                continue;
+            };
             // A noun is not answered with a verb that shares its gloss: "book" and "to book"
             // are the case this separates, and the part of speech is in both packs already.
             if !entry.pos.is_empty() && !reached.pos.is_empty() && reached.pos != entry.pos {
@@ -144,7 +159,11 @@ pub fn look_up<D: AsRef<[u8]>>(
         // Only what the gloss reached best. A word the gloss reached through fewer of its
         // terms is not a second answer, it is a worse one, and offering it beside the first
         // would make every multi-term gloss look ambiguous.
-        says = best.into_iter().filter(|(_, shared)| *shared == most).map(|(l, _)| l).collect();
+        says = best
+            .into_iter()
+            .filter(|(_, shared)| *shared == most)
+            .map(|(l, _)| l)
+            .collect();
         tied = says.len() > 1;
         break;
     }
@@ -174,12 +193,22 @@ fn finish<D: AsRef<[u8]>>(
     Answer {
         state,
         spelling: spelling.to_string(),
-        lemma: if entry.lemma == spelling { None } else { Some(entry.lemma.clone()) },
-        pos: if entry.pos.is_empty() { None } else { Some(entry.pos.clone()) },
+        lemma: if entry.lemma == spelling {
+            None
+        } else {
+            Some(entry.lemma.clone())
+        },
+        pos: if entry.pos.is_empty() {
+            None
+        } else {
+            Some(entry.pos.clone())
+        },
         ipa: entry.ipa.clone(),
         says,
         glosses,
-        provenance: Some(Provenance::Dictionary { pack: format!("lex-{}", pack.lang()) }),
+        provenance: Some(Provenance::Dictionary {
+            pack: format!("lex-{}", pack.lang()),
+        }),
         source: source.clone(),
         target: target.clone(),
     }

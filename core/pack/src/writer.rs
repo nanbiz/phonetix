@@ -45,20 +45,25 @@ impl Builder {
     ///
     /// The gloss index is filled here rather than in a pass of its own, because every term of
     /// every sense is wanted and the sense is in hand.
-    pub fn add<S: AsRef<str>>(&mut self, entry: Entry, forms: &[S])
-        -> Result<u32, WriteError>
-    {
+    pub fn add<S: AsRef<str>>(&mut self, entry: Entry, forms: &[S]) -> Result<u32, WriteError> {
         let which = self.entries.len() as u32;
-        let spellings = std::iter::once(entry.lemma.as_str())
-            .chain(forms.iter().map(|f| f.as_ref()));
+        let spellings =
+            std::iter::once(entry.lemma.as_str()).chain(forms.iter().map(|f| f.as_ref()));
         for spelling in spellings {
-            if self.keys.insert(spelling.to_string(), which as u64).is_some() {
+            if self
+                .keys
+                .insert(spelling.to_string(), which as u64)
+                .is_some()
+            {
                 return Err(WriteError::DuplicateKey(spelling.to_string()));
             }
         }
         for (number, sense) in entry.senses.iter().enumerate() {
             for term in crate::gloss_terms(&sense.gloss) {
-                self.glosses.entry(term).or_default().push((which, number as u32));
+                self.glosses
+                    .entry(term)
+                    .or_default()
+                    .push((which, number as u32));
             }
         }
         self.entries.push(entry);
@@ -173,9 +178,13 @@ impl Builder {
 fn build_index<'a, I: Iterator<Item = (&'a str, u64)>>(pairs: I) -> Result<Vec<u8>, WriteError> {
     let mut builder = fst::MapBuilder::memory();
     for (key, value) in pairs {
-        builder.insert(key, value).map_err(|e| WriteError::Index(e.to_string()))?;
+        builder
+            .insert(key, value)
+            .map_err(|e| WriteError::Index(e.to_string()))?;
     }
-    builder.into_inner().map_err(|e| WriteError::Index(e.to_string()))
+    builder
+        .into_inner()
+        .map_err(|e| WriteError::Index(e.to_string()))
 }
 
 fn write_entry(out: &mut Vec<u8>, entry: &Entry) {

@@ -45,7 +45,9 @@ pub struct Core {
 impl Core {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Core {
-        Core { packs: HashMap::new() }
+        Core {
+            packs: HashMap::new(),
+        }
     }
 
     /// Take a pack's bytes. Returns the language it turned out to be for, or throws when the
@@ -79,7 +81,12 @@ impl Core {
             target: self.packs.get(target),
             ipa_only: false,
         };
-        lexcore::json::of(&look_up(spelling, &Lang(source.into()), &Lang(target.into()), &open))
+        lexcore::json::of(&look_up(
+            spelling,
+            &Lang(source.into()),
+            &Lang(target.into()),
+            &open,
+        ))
     }
 }
 

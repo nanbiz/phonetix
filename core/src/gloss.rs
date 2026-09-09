@@ -21,7 +21,11 @@ pub fn terms(gloss: &str) -> Vec<String> {
     head.split([',', ';'])
         .filter_map(|part| {
             let term = normalise(part);
-            if term.is_empty() { None } else { Some(term) }
+            if term.is_empty() {
+                None
+            } else {
+                Some(term)
+            }
         })
         .collect()
 }
@@ -65,7 +69,7 @@ pub fn best_of(source: &str, candidates: &[&str], margin: usize) -> Option<usize
         .map(|(i, c)| (overlap(source, c), i))
         .filter(|(score, _)| *score > 0)
         .collect();
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.sort_by_key(|scored| std::cmp::Reverse(scored.0));
     match scored.as_slice() {
         [] => None,
         [(_, only)] => Some(*only),
@@ -87,20 +91,27 @@ mod tests {
         assert!(overlap(perro, "dog, hound") > overlap(perro, "male dog"));
         // silla: Stuhl against Sessel.
         let silla = "chair";
-        assert!(overlap(silla, "a chair (to sit on)")
-            > overlap(silla, "armchair, easy chair (comfortable chair with arms)"));
+        assert!(
+            overlap(silla, "a chair (to sit on)")
+                > overlap(silla, "armchair, easy chair (comfortable chair with arms)")
+        );
         // camino: Weg against Weise. Both offer "way", which is why one shared term decides
         // nothing and the count is what tells them apart.
         let camino = "way, route";
-        assert!(overlap(camino, "route, way (to get from one place to another)")
-            > overlap(camino, "way, manner"));
+        assert!(
+            overlap(camino, "route, way (to get from one place to another)")
+                > overlap(camino, "way, manner")
+        );
     }
 
     /// Picking between candidates, and refusing to when the best is not clearly best.
     #[test]
     fn picks_the_best_and_refuses_a_tie() {
         let camino = "way, route";
-        let candidates = ["way, manner", "route, way (to get from one place to another)"];
+        let candidates = [
+            "way, manner",
+            "route, way (to get from one place to another)",
+        ];
         assert_eq!(best_of(camino, &candidates, 1), Some(1));
 
         // Two candidates sharing as much as each other name nothing the reader can rely on.
@@ -113,7 +124,10 @@ mod tests {
     /// "forest" unable to meet "forest; woods; woodland".
     #[test]
     fn splits_on_semicolons_as_well_as_commas() {
-        assert_eq!(terms("forest; woods; woodland"), ["forest", "woods", "woodland"]);
+        assert_eq!(
+            terms("forest; woods; woodland"),
+            ["forest", "woods", "woodland"]
+        );
         assert_eq!(overlap("forest", "forest; woods; woodland"), 1);
     }
 
@@ -121,7 +135,10 @@ mod tests {
     #[test]
     fn drops_what_a_parenthesis_qualifies() {
         assert_eq!(terms("key (to open doors)"), ["key"]);
-        assert_eq!(terms("book (collection of sheets of paper bound together)"), ["book"]);
+        assert_eq!(
+            terms("book (collection of sheets of paper bound together)"),
+            ["book"]
+        );
     }
 
     /// An infinitive on one side and a bare verb on the other are the same word.

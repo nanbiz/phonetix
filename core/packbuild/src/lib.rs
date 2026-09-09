@@ -53,8 +53,16 @@ pub fn read_line(line: &str, lang: &str, skipped: &mut Skipped) -> Option<Read> 
             return None;
         }
     }
-    let word = value.get("word").and_then(|v| v.as_str()).unwrap_or("").trim();
-    let pos = value.get("pos").and_then(|v| v.as_str()).unwrap_or("").trim();
+    let word = value
+        .get("word")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
+    let pos = value
+        .get("pos")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .trim();
     if word.is_empty() || pos.is_empty() {
         skipped.nameless += 1;
         return None;
@@ -85,9 +93,17 @@ pub fn read_line(line: &str, lang: &str, skipped: &mut Skipped) -> Option<Read> 
 /// recording, a rhyme or a respelling instead, and each of those is somebody else's field.
 fn pronunciations(value: &Value) -> Vec<String> {
     let mut out = Vec::new();
-    for sound in value.get("sounds").and_then(|v| v.as_array()).into_iter().flatten() {
+    for sound in value
+        .get("sounds")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+    {
         if let Some(ipa) = sound.get("ipa").and_then(|v| v.as_str()) {
-            let ipa = ipa.trim().trim_matches(|c| c == '/' || c == '[' || c == ']').trim();
+            let ipa = ipa
+                .trim()
+                .trim_matches(|c| c == '/' || c == '[' || c == ']')
+                .trim();
             if !ipa.is_empty() && !out.iter().any(|had: &String| had == ipa) {
                 out.push(ipa.to_string());
             }
@@ -99,11 +115,18 @@ fn pronunciations(value: &Value) -> Vec<String> {
 /// What the word means, in English, which is what joins two packs into a pair.
 fn senses(value: &Value) -> Vec<Sense> {
     let mut out = Vec::new();
-    for sense in value.get("senses").and_then(|v| v.as_array()).into_iter().flatten() {
+    for sense in value
+        .get("senses")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+    {
         // A sense with no gloss is a cross reference or a form-of stub: it carries no meaning
         // of its own and nothing can be joined to it.
         let glosses = strings(sense.get("glosses"));
-        let Some(gloss) = glosses.first() else { continue };
+        let Some(gloss) = glosses.first() else {
+            continue;
+        };
         if gloss.trim().is_empty() {
             continue;
         }
@@ -130,15 +153,24 @@ fn senses(value: &Value) -> Vec<Sense> {
 /// as an error.
 fn forms(value: &Value, word: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    for form in value.get("forms").and_then(|v| v.as_array()).into_iter().flatten() {
-        let Some(spelling) = form.get("form").and_then(|v| v.as_str()) else { continue };
+    for form in value
+        .get("forms")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+    {
+        let Some(spelling) = form.get("form").and_then(|v| v.as_str()) else {
+            continue;
+        };
         let spelling = spelling.trim();
         if spelling.is_empty() || spelling == word || spelling == "-" {
             continue;
         }
         // A table header the extractor kept as a form, which is a label rather than a word.
         if form.get("tags").is_some_and(|tags| {
-            strings(Some(tags)).iter().any(|t| t == "table-tags" || t == "inflection-template")
+            strings(Some(tags))
+                .iter()
+                .any(|t| t == "table-tags" || t == "inflection-template")
         }) {
             continue;
         }
@@ -153,7 +185,10 @@ fn strings(value: Option<&Value>) -> Vec<String> {
     value
         .and_then(|v| v.as_array())
         .map(|list| {
-            list.iter().filter_map(|v| v.as_str()).map(|s| s.trim().to_string()).collect()
+            list.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.trim().to_string())
+                .collect()
         })
         .unwrap_or_default()
 }
@@ -184,7 +219,10 @@ mod tests {
         assert_eq!(read.entry.senses.len(), 2);
         assert_eq!(read.entry.senses[0].gloss, "dog");
         assert_eq!(read.entry.senses[0].marks, vec!["masculine"]);
-        assert_eq!(read.entry.senses[0].example.as_deref(), Some("El perro ladra."));
+        assert_eq!(
+            read.entry.senses[0].example.as_deref(),
+            Some("El perro ladra.")
+        );
         assert_eq!(read.entry.senses[1].gloss, "a despicable person");
         // The lemma reaches itself, a table header is not a word, and a form is not repeated.
         assert_eq!(read.forms, vec!["perros"]);
@@ -209,7 +247,8 @@ mod tests {
     #[test]
     fn a_word_with_nothing_to_show_is_skipped() {
         let mut skipped = Skipped::default();
-        let stub = r#"{"word":"perro","pos":"noun","lang_code":"es","senses":[{"tags":["form-of"]}]}"#;
+        let stub =
+            r#"{"word":"perro","pos":"noun","lang_code":"es","senses":[{"tags":["form-of"]}]}"#;
         assert!(read_line(stub, "es", &mut skipped).is_none());
         assert_eq!(skipped.empty, 1);
         let nameless = r#"{"pos":"noun","lang_code":"es","senses":[{"glosses":["dog"]}]}"#;
@@ -221,7 +260,8 @@ mod tests {
     fn a_word_with_no_senses_but_a_pronunciation_is_kept() {
         // An ipa pack is exactly this: how a word is said, and nothing about what it means.
         let mut skipped = Skipped::default();
-        let sound = r#"{"word":"perro","pos":"noun","lang_code":"es","sounds":[{"ipa":"/ˈpe.ro/"}]}"#;
+        let sound =
+            r#"{"word":"perro","pos":"noun","lang_code":"es","sounds":[{"ipa":"/ˈpe.ro/"}]}"#;
         let read = read_line(sound, "es", &mut skipped).unwrap();
         assert!(read.entry.senses.is_empty());
         assert_eq!(read.entry.ipa, vec!["ˈpe.ro"]);

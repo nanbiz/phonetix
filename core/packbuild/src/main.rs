@@ -29,7 +29,10 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let built = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    let built = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
     let mut pack = Builder::new(lang, Kind::Lex, built);
     let mut skipped = Skipped::default();
     // A spelling can be claimed by two entries - the same word as a noun and as a verb - and
@@ -39,7 +42,9 @@ fn main() {
     let mut clashed = 0usize;
     for line in BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
-        let Some(read) = read_line(&line, lang, &mut skipped) else { continue };
+        let Some(read) = read_line(&line, lang, &mut skipped) else {
+            continue;
+        };
         match pack.add(read.entry, &read.forms) {
             Ok(_) => taken += 1,
             Err(_) => clashed += 1,

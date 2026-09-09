@@ -102,7 +102,10 @@ mod tests {
         assert!(text.contains("ˈzɪt͡sbaŋk"));
         assert!(text.contains("a\\\"b\\\\c"), "{text}");
         assert!(text.contains("\\n"), "{text}");
-        assert!(!text.contains('\n'), "a real break would end the line the host reads");
+        assert!(
+            !text.contains('\n'),
+            "a real break would end the line the host reads"
+        );
     }
 
     #[test]

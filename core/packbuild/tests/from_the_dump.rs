@@ -30,14 +30,20 @@ fn build(lang: &str, lines: &str) -> Vec<u8> {
             pack.add(read.entry, &read.forms).unwrap();
         }
     }
-    assert_eq!(skipped, Skipped::default(), "nothing here should be skipped");
+    assert_eq!(
+        skipped,
+        Skipped::default(),
+        "nothing here should be skipped"
+    );
     pack.finish().unwrap()
 }
 
 /// What the core will do with a word: its sense's English gloss, looked up in the other pack,
 /// best match first.
 fn reached<D: AsRef<[u8]>>(source: &Pack<D>, target: &Pack<D>, word: &str) -> Vec<String> {
-    let entry = source.lookup(word).expect("the source pack should hold this word");
+    let entry = source
+        .lookup(word)
+        .expect("the source pack should hold this word");
     target
         .senses_matching(&entry.senses[0].gloss)
         .iter()
@@ -60,7 +66,11 @@ fn two_languages_extracted_apart_make_a_pair() {
         let got = reached(&es, &de, word);
         // Best first: a gloss of several terms reaches the word that shares most of them, and
         // the near miss it used to be confused with comes below it or not at all.
-        assert_eq!(got.first().map(String::as_str), Some(wanted), "{word} reached {got:?}");
+        assert_eq!(
+            got.first().map(String::as_str),
+            Some(wanted),
+            "{word} reached {got:?}"
+        );
         assert_ne!(got.first().map(String::as_str), Some(refused));
     }
 }
@@ -83,7 +93,11 @@ fn an_inflected_spelling_from_the_dump_reaches_its_lemma() {
     let pack = Pack::open(&bytes).unwrap();
     assert_eq!(pack.lookup("perros").unwrap().lemma, "perro");
     assert_eq!(pack.lookup("sillas").unwrap().lemma, "silla");
-    assert_eq!(pack.lookup("Hunde"), None, "a German form is not in the Spanish pack");
+    assert_eq!(
+        pack.lookup("Hunde"),
+        None,
+        "a German form is not in the Spanish pack"
+    );
 }
 
 #[test]

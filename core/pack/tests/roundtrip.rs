@@ -10,7 +10,11 @@ use lexpack::{Builder, Entry, Kind, Pack, Sense};
 const NO_FORMS: [&str; 0] = [];
 
 fn sense(gloss: &str) -> Sense {
-    Sense { gloss: gloss.to_string(), marks: Vec::new(), example: None }
+    Sense {
+        gloss: gloss.to_string(),
+        marks: Vec::new(),
+        example: None,
+    }
 }
 
 fn word(lemma: &str, pos: &str, ipa: &str, glosses: &[&str]) -> Entry {
@@ -25,21 +29,49 @@ fn word(lemma: &str, pos: &str, ipa: &str, glosses: &[&str]) -> Entry {
 
 fn spanish() -> Vec<u8> {
     let mut pack = Builder::new("es", Kind::Lex, 1_757_000_000);
-    pack.add(word("perro", "noun", "ˈpe.ro", &["dog"]), &["perros"]).unwrap();
-    pack.add(word("silla", "noun", "ˈsi.ʝa", &["chair"]), &["sillas"]).unwrap();
-    pack.add(word("camino", "noun", "kaˈmi.no", &["way, route"]), &["caminos"]).unwrap();
+    pack.add(word("perro", "noun", "ˈpe.ro", &["dog"]), &["perros"])
+        .unwrap();
+    pack.add(word("silla", "noun", "ˈsi.ʝa", &["chair"]), &["sillas"])
+        .unwrap();
+    pack.add(
+        word("camino", "noun", "kaˈmi.no", &["way, route"]),
+        &["caminos"],
+    )
+    .unwrap();
     pack.finish().unwrap()
 }
 
 fn german() -> Vec<u8> {
     let mut pack = Builder::new("de", Kind::Lex, 1_757_000_000);
-    pack.add(word("Hund", "noun", "hʊnt", &["dog, hound"]), &["Hunde", "Hundes"]).unwrap();
-    pack.add(word("Rüde", "noun", "ˈʁyːdə", &["male dog"]), &["Rüden"]).unwrap();
-    pack.add(word("Stuhl", "noun", "ʃtuːl", &["a chair (to sit on)"]), &["Stühle"]).unwrap();
-    pack.add(word("Sessel", "noun", "ˈzɛsl̩", &["armchair"]), &NO_FORMS).unwrap();
-    pack.add(word("Weg", "noun", "veːk", &["route, way (to get from one place to another)"]),
-             &["Wege"]).unwrap();
-    pack.add(word("Weise", "noun", "ˈvaɪ̯zə", &["way, manner"]), &["Weisen"]).unwrap();
+    pack.add(
+        word("Hund", "noun", "hʊnt", &["dog, hound"]),
+        &["Hunde", "Hundes"],
+    )
+    .unwrap();
+    pack.add(word("Rüde", "noun", "ˈʁyːdə", &["male dog"]), &["Rüden"])
+        .unwrap();
+    pack.add(
+        word("Stuhl", "noun", "ʃtuːl", &["a chair (to sit on)"]),
+        &["Stühle"],
+    )
+    .unwrap();
+    pack.add(word("Sessel", "noun", "ˈzɛsl̩", &["armchair"]), &NO_FORMS)
+        .unwrap();
+    pack.add(
+        word(
+            "Weg",
+            "noun",
+            "veːk",
+            &["route, way (to get from one place to another)"],
+        ),
+        &["Wege"],
+    )
+    .unwrap();
+    pack.add(
+        word("Weise", "noun", "ˈvaɪ̯zə", &["way, manner"]),
+        &["Weisen"],
+    )
+    .unwrap();
     pack.finish().unwrap()
 }
 
@@ -64,7 +96,10 @@ fn an_inflected_spelling_reaches_its_lemma() {
     let pack = Pack::open(&bytes).unwrap();
     assert_eq!(pack.lookup("perros").unwrap().lemma, "perro");
     assert_eq!(pack.lookup("caminos").unwrap().lemma, "camino");
-    assert!(pack.lookup("perrito").is_none(), "a word the pack does not hold is a miss");
+    assert!(
+        pack.lookup("perrito").is_none(),
+        "a word the pack does not hold is a miss"
+    );
 }
 
 #[test]
@@ -79,8 +114,10 @@ fn the_words_that_defeated_the_pivot_join_correctly() {
     for (spanish_word, expected) in [("perro", "Hund"), ("silla", "Stuhl"), ("camino", "Weg")] {
         let source = es.lookup(spanish_word).unwrap();
         let hits = de.senses_glossed(&source.senses[0].gloss);
-        let reached: Vec<String> =
-            hits.iter().map(|(entry, _)| de.entry(*entry).unwrap().lemma).collect();
+        let reached: Vec<String> = hits
+            .iter()
+            .map(|(entry, _)| de.entry(*entry).unwrap().lemma)
+            .collect();
         assert!(
             reached.contains(&expected.to_string()),
             "{spanish_word} should reach {expected}, reached {reached:?}"
@@ -103,7 +140,10 @@ fn the_confident_wrong_answers_are_not_reached() {
         .iter()
         .map(|(entry, _)| de.entry(*entry).unwrap().lemma)
         .collect();
-    assert!(!reached.contains(&"Rüde".to_string()), "reached {reached:?}");
+    assert!(
+        !reached.contains(&"Rüde".to_string()),
+        "reached {reached:?}"
+    );
 
     let silla = es.lookup("silla").unwrap();
     let reached: Vec<String> = de
@@ -111,7 +151,10 @@ fn the_confident_wrong_answers_are_not_reached() {
         .iter()
         .map(|(entry, _)| de.entry(*entry).unwrap().lemma)
         .collect();
-    assert!(!reached.contains(&"Sessel".to_string()), "reached {reached:?}");
+    assert!(
+        !reached.contains(&"Sessel".to_string()),
+        "reached {reached:?}"
+    );
 }
 
 #[test]
@@ -125,8 +168,10 @@ fn a_gloss_term_that_reaches_two_words_says_so() {
         .iter()
         .map(|(entry, _)| de.entry(*entry).unwrap().lemma)
         .collect();
-    assert!(reached.contains(&"Weg".to_string()) && reached.contains(&"Weise".to_string()),
-            "reached {reached:?}");
+    assert!(
+        reached.contains(&"Weg".to_string()) && reached.contains(&"Weise".to_string()),
+        "reached {reached:?}"
+    );
 }
 
 #[test]
@@ -136,8 +181,16 @@ fn a_pack_bigger_than_one_block_still_answers() {
     let mut pack = Builder::new("xx", Kind::Lex, 0);
     let count = lexpack::ENTRIES_PER_BLOCK * 3 + 7;
     for n in 0..count {
-        pack.add(word(&format!("word{n:04}"), "noun", "x", &[&format!("meaning{n}")]),
-                 &NO_FORMS).unwrap();
+        pack.add(
+            word(
+                &format!("word{n:04}"),
+                "noun",
+                "x",
+                &[&format!("meaning{n}")],
+            ),
+            &NO_FORMS,
+        )
+        .unwrap();
     }
     let bytes = pack.finish().unwrap();
     let read = Pack::open(&bytes).unwrap();
@@ -152,8 +205,11 @@ fn a_pack_bigger_than_one_block_still_answers() {
 #[test]
 fn a_spelling_claimed_twice_is_refused_rather_than_silently_dropped() {
     let mut pack = Builder::new("xx", Kind::Lex, 0);
-    pack.add(word("book", "noun", "bʊk", &["a book"]), &NO_FORMS).unwrap();
-    assert!(pack.add(word("book", "verb", "bʊk", &["to book"]), &NO_FORMS).is_err());
+    pack.add(word("book", "noun", "bʊk", &["a book"]), &NO_FORMS)
+        .unwrap();
+    assert!(pack
+        .add(word("book", "verb", "bʊk", &["to book"]), &NO_FORMS)
+        .is_err());
 }
 
 #[test]
