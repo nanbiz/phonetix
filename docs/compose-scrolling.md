@@ -117,6 +117,26 @@ really travelled.
   better channel than the scroll event for anything about position in a list. Nothing here uses
   it yet.
 
+## How this is measured, after a day of measuring it wrongly
+
+Every instrument here reads the service's own log, and the log records where the service
+believes it put the words. Where that belief is wrong the measurement agrees with the mistake.
+Measured on 2026-09-09: one suite reported nothing wrong in 1024 judgements while a photograph
+of the same moment carried two transcriptions sitting on the wrong paragraph, and another
+judged fifteen hundred transcriptions through a drag of a Compose page whose screen was
+carrying none at all.
+
+`android_pixels.py` asks the screen instead. The page paints each line's number into its own
+background; the overlay paints, on each word it draws, the number of the line it believes that
+word came from; a screenshot holds both and the check compares two colours. Nothing is read
+from the log and no text is recognised.
+
+It disagrees with the log-based measures where it matters. Carrying the words by a fit of the
+page's last few hundred milliseconds against carrying them at the speed of the last interval,
+ten looks part way into a drag of each page: 99% against 84% of transcriptions over their own
+line on one list, 89% against 100% on another, 95% against 92% across both. The log-based
+drift measure had called the same two builds level to slightly worse.
+
 ## Nobody has written this down
 
 There is no public issue, no Stack Overflow answer and no developer guide describing any of
