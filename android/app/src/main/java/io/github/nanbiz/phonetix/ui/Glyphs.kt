@@ -96,7 +96,7 @@ fun SynthesisedMark(
         modifier
             .size(Tokens.Scale.sourceMarkSize.dp)
             .semantics { contentDescription = "synthesised voice" }
-            .reported("synthesised", report),
+            .reported("sound=synthesised", report),
     ) {
         val unit = size.minDimension / 20f
         // A four-pointed spark: the mark generated things carry across current interfaces.
@@ -123,16 +123,20 @@ fun RecordingMark(
         modifier
             .size(Tokens.Scale.sourceMarkSize.dp)
             .semantics { contentDescription = "recording of a speaker" }
-            .reported("recording", report),
+            .reported("sound=recording", report),
     ) {
         val unit = size.minDimension / 20f
         val ink = Color(palette.inkFaint)
-        val line = Stroke(width = 1.8f * unit)
+        val line = Stroke(width = 1.6f * unit)
+        // Narrower and taller than a mic is usually drawn. The head is a capsule, and what
+        // makes it read as one rather than as a ring is the straight part of its sides: at
+        // the size this mark is drawn, a 6-by-10 head leaves about two pixels of straight
+        // edge, and the whole thing came out looking like a lollipop.
         drawRoundRect(
             color = ink,
-            topLeft = Offset(7f * unit, 2f * unit),
-            size = Size(6f * unit, 10f * unit),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3f * unit),
+            topLeft = Offset(7.5f * unit, 1.5f * unit),
+            size = Size(5f * unit, 11f * unit),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.5f * unit),
             style = line,
         )
         drawArc(

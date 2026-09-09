@@ -149,8 +149,10 @@
 
     <footer class="card-foot">
       <!-- Nothing where there is nothing to say: an arrow between two blanks is a line
-           saying only that a line was drawn. -->
-      <span>{answer.source && answer.target ? `${named(answer.source)} → ${named(answer.target)}` : ''}</span>
+           saying only that a line was drawn, and one language read into itself is the same
+           word twice, which is what a reader sees until they choose a language to read into. -->
+      <span>{answer.source && answer.target && answer.source !== answer.target
+        ? `${named(answer.source)} → ${named(answer.target)}` : ''}</span>
       <span class="actions">
         <!-- Always here, whether or not a dictionary answered: a reader who got nothing is
              the one most likely to want it. -->

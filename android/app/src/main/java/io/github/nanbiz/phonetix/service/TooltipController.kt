@@ -70,6 +70,9 @@ class TooltipController(
      */
     private val placed = LinkedHashMap<String, android.graphics.Rect>()
 
+    /** What the marks that say where a sound comes from report themselves under. */
+    private val SOUND_MARK = "sound="
+
     /** Where the window itself is, so what is reported is where a finger has to go rather than
      *  where a piece sits inside a window nothing outside can see. */
     private val onScreen = IntArray(2)
@@ -94,6 +97,13 @@ class TooltipController(
 
     private val laidOut: (String, androidx.compose.ui.geometry.Rect) -> Unit = { text, where ->
         view?.getLocationOnScreen(onScreen)
+        // A card carries one sound mark, so the one that arrives replaces the one before it.
+        // A recording is looked for while the card is already up, so the mark changes from
+        // the machine's to the person's by recomposition - and without this both stayed in
+        // the report, at the same coordinates, leaving it saying the audio was both.
+        if (text.startsWith(SOUND_MARK)) {
+            placed.keys.removeAll { it.startsWith(SOUND_MARK) }
+        }
         // Keyed by where it landed as well as by what it says: a transcription repeats its
         // symbols, and keying by the text alone kept only the last of each, which reads as a
         // transcription with letters missing.

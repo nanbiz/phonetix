@@ -334,8 +334,11 @@ internal fun wiktionary(answer: Answer): String {
 @Composable
 private fun Pair(answer: Answer, palette: Tokens.Palette) {
     // Nothing where there is nothing to say. A build with no dictionary knows neither language,
-    // and an arrow between two blanks is a row that says only that a row was drawn.
+    // and an arrow between two blanks is a row that says only that a row was drawn. Nor is one
+    // language read into itself a pair: "English → English" is the same word said twice, which
+    // is what a reader sees whenever they have chosen no language to read into.
     if (answer.source.isBlank() || answer.target.isBlank()) return
+    if (answer.source == answer.target) return
     androidx.compose.material3.Text(
         // Named rather than tagged: a reader knows what Spanish is and does not have to know
         // what "es" is.

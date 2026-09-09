@@ -185,6 +185,12 @@ def check_tooltip(r, dev):
     r.check(len(opened.group(2)) > 0, "card: it shows the full transcription", "empty")
 
     # What the card actually laid out, not merely that it was asked for.
+    #
+    # The last report only. A card settles more than once - it goes up with a machine's voice
+    # and is told about a person's recording a moment later - and pooling every report of a
+    # run reads as a card carrying both at once, which is a card that never existed.
+    reports = re.findall(r"CARD .*", log)
+    log = reports[-1] if reports else log
     laid_out = re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", log)
     r.check(bool(laid_out), "card: it renders something", "the card reported no laid-out content")
     texts = [t.replace("\u00b7", " ") for t, *_ in laid_out]
@@ -212,10 +218,14 @@ def check_tooltip(r, dev):
         "card: it offers to say the word",
         str(texts[:8]),
     )
+    # Exactly one, and it says which. A recording is looked for while the card is already up,
+    # so the mark changes by recomposition, and the report used to carry both at once - which
+    # made this check pass whatever the card was actually showing.
+    marks = [t for t in texts if t.startswith("sound=")]
     r.check(
-        any(t in ("synthesised", "recording") for t in texts),
-        "card: it shows what the audio will be",
-        str(texts[:8]),
+        len(marks) == 1,
+        "card: it shows what the audio will be, and only one thing",
+        f"marks on the card: {marks}",
     )
     r.check("Wiktionary" in texts, "card: it links onward", str(texts[:6]))
 
