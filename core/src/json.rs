@@ -103,6 +103,16 @@ pub fn guess(guess: &crate::detect::Guess) -> String {
     )
 }
 
+/// What a screenful of text was found to be in.
+pub fn screen(screen: &crate::detect::Screen) -> String {
+    format!(
+        "{{\"language\":{},\"words\":{},\"enough\":{}}}",
+        maybe(&screen.language),
+        screen.words,
+        screen.enough
+    )
+}
+
 /// A transcription symbol by symbol, each with what is known about that sound.
 pub fn symbols_of(items: &[crate::symbols::Symbol]) -> String {
     let inner: Vec<String> = items

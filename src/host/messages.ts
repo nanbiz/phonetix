@@ -7,7 +7,7 @@
 // library in the middle of it was one more place for a message to disappear between a page and
 // a service worker with nothing to show for it.
 import type { Answer, IpaSymbol } from '@/core/answer';
-import type { Guess } from '@/core';
+import type { Guess, Screen } from '@/core';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
 import type { Offered } from './packs';
 
@@ -41,6 +41,8 @@ export interface HostProtocol {
   diagram: { data: { file: string; width: number }; reply: string };
   /** What language a piece of text is in, and whether that is worth acting on. */
   detect: { data: { text: string }; reply: Guess };
+  /** What a page is in, by the rule that decides how much text is enough. */
+  readScreen: { data: { text: string }; reply: Screen };
   /** A transcription, symbol by symbol, for a surface with no answer to read them off. */
   symbols: { data: { ipa: string }; reply: IpaSymbol[] };
   /** Any sound from the network, as bytes: a recording of a sound made by a person. */

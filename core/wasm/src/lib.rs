@@ -105,6 +105,12 @@ impl Core {
         }
     }
 
+    /// What a screenful of text is in, and whether it said enough to judge.
+    #[wasm_bindgen(js_name = readScreen)]
+    pub fn read_screen(&self, text: &str) -> String {
+        lexcore::json::screen(&lexcore::detect::read_screen(self.model.as_ref(), text))
+    }
+
     #[wasm_bindgen(js_name = closePack)]
     pub fn close_pack(&mut self, lang: &str) {
         self.packs.remove(lang);

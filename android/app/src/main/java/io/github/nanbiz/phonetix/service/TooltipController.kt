@@ -21,8 +21,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Answer
-import io.github.nanbiz.phonetix.core.IpaSymbols
+import io.github.nanbiz.phonetix.core.Language
+import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.ui.AnswerCard
 import io.github.nanbiz.phonetix.ui.SymbolSheet
 import io.github.nanbiz.phonetix.ui.Tokens
@@ -311,9 +313,14 @@ class TooltipController(
     private fun build(box: WordBox): View {
         val dark = box.background == 0 || isDark(box.background)
         val palette = Tokens.palette(Tokens.Theme.PAPER, dark)
-        // The language is not known here yet: what the overlay holds is a transcription, and
-        // which language it is comes from the core once a pack is open.
-        val answer = Answer.ofTranscription(box.word, box.full, "")
+        // What the word means, asked of the cascade in the languages the reader is reading
+        // between. Where no pack answers, what comes back is the transcription the overlay
+        // already had, which is what the card then shows.
+        val settings = SettingsStore.current
+        val source = box.language.ifEmpty { Language.OURS }
+        val answer = Reading.lookUp(box.word, source, settings.target.ifEmpty { source })
+            ?.takeIf { it.found }
+            ?: Answer.ofTranscription(box.word, box.full, source)
         val fresh = OverlayHost(context)
         host = fresh
         fresh.view.setContent {

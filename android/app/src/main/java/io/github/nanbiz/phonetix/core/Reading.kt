@@ -61,4 +61,18 @@ object Reading {
             }
         }
     }
+
+    /**
+     * What one word means, as the cascade answers it.
+     *
+     * The card is the surface that shows a translation, so it asks for one rather than being
+     * handed a transcription: with no pack for the pair the cascade says so, and the card
+     * shows what it does know.
+     */
+    fun lookUp(word: String, source: String, target: String): Answer? {
+        if (core == 0L || word.isBlank()) return null
+        val written = runCatching { Lex.lookUp(core, word, source, target) }.getOrNull()
+            ?: return null
+        return Answer.parse(written)
+    }
 }

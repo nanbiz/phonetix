@@ -45,6 +45,13 @@ import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.Frequency
 import io.github.nanbiz.phonetix.core.Settings
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.heightIn
+import kotlinx.coroutines.launch
+import io.github.nanbiz.phonetix.core.SettingsStore
+import androidx.compose.material3.OutlinedTextField
 
 private const val PREVIEW_TEXT =
     "Reading a paragraph teaches pronunciation quietly, because every unfamiliar word " +
@@ -58,6 +65,8 @@ fun HomeScreen(
     dictionaryReady: Boolean,
     onEnabled: (Boolean) -> Unit,
     onDensity: (Int) -> Unit,
+    onTarget: (String) -> Unit,
+    onLayer: (String) -> Unit,
     onTouchWords: (Boolean) -> Unit,
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
@@ -95,6 +104,8 @@ fun HomeScreen(
             onDensity = onDensity,
         )
 
+        ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
+        DictionariesCard(settings = settings)
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
         AppsCard(settings = settings, onOpenApps = onOpenApps)
 
@@ -247,6 +258,166 @@ private fun StatusDot(on: Boolean) {
  * transcriptions. That is the whole of the trade, and it is put plainly here because a reader
  * who turns it on and then cannot scroll would have no way of guessing why.
  */
+/**
+ * What the reader is reading, and what they want over a word.
+ *
+ * Without a language to read into, a word can only answer with how it is said: the dictionary
+ * needs to know which language the answer should come back in. That is the whole product, so
+ * it is asked for here rather than buried.
+ */
+@Composable
+private fun ReadingCard(
+    settings: Settings,
+    onTarget: (String) -> Unit,
+    onLayer: (String) -> Unit,
+) {
+    SectionCard(title = "Reading into") {
+        val named = remember {
+            io.github.nanbiz.phonetix.core.Languages.all()
+                .map { it to io.github.nanbiz.phonetix.core.Languages.english(it) }
+                .sortedBy { it.second }
+        }
+        var open by remember { mutableStateOf(false) }
+        val chosen = settings.target.ifEmpty { null }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (chosen == null) {
+                    "Nothing yet - words answer with how they are said"
+                } else {
+                    io.github.nanbiz.phonetix.core.Languages.english(chosen)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { open = true }) { Text(if (chosen == null) "Choose" else "Change") }
+        }
+        if (open) {
+            // A plain list rather than a menu: sixty languages in a dropdown is a list that
+            // scrolls off the screen either way, and this one can be read.
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 260.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                for ((code, english) in named) {
+                    TextButton(onClick = { onTarget(code); open = false }) {
+                        Text(english, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("Over a word", style = MaterialTheme.typography.labelLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            for ((value, label) in listOf(
+                "gloss" to "meaning",
+                "gloss+ipa" to "both",
+                "ipa" to "sound",
+                "replace" to "in place",
+            )) {
+                TextButton(onClick = { onLayer(value) }) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (settings.layer == value) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The dictionaries this phone has, and the ones it could have.
+ *
+ * Nothing is fetched because a screen happened to be in a language: a dictionary is tens of
+ * megabytes, and which ones are worth that is the reader's decision.
+ */
+@Composable
+private fun DictionariesCard(settings: Settings) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var held by remember { mutableStateOf(io.github.nanbiz.phonetix.core.Packs.held(context)) }
+    var offered by remember {
+        mutableStateOf(emptyList<io.github.nanbiz.phonetix.core.Offered>())
+    }
+    var busy by remember { mutableStateOf("") }
+    var host by remember { mutableStateOf(settings.packHost) }
+
+    androidx.compose.runtime.LaunchedEffect(settings.packHost) {
+        offered = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            io.github.nanbiz.phonetix.core.Packs.offered(settings.packHost)
+        }
+    }
+
+    SectionCard(title = "Dictionaries") {
+        OutlinedTextField(
+            value = host,
+            onValueChange = { host = it },
+            label = { Text("Where they come from") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (host != settings.packHost) {
+            TextButton(onClick = { SettingsStore.setPackHost(host) }) { Text("Use this") }
+        }
+        if (offered.isEmpty()) {
+            Text(
+                if (settings.packHost.isBlank()) {
+                    "No source for them yet"
+                } else {
+                    "Nothing offered there"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        for (pack in offered) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        io.github.nanbiz.phonetix.core.Languages.english(pack.lang),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "${pack.entries} words · ${pack.bytes / 1024 / 1024} MB",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                when {
+                    busy == pack.lang -> Text(
+                        "fetching",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    pack.lang in held -> TextButton(onClick = {
+                        io.github.nanbiz.phonetix.core.Packs.forget(context, pack.lang)
+                        held = io.github.nanbiz.phonetix.core.Packs.held(context)
+                    }) { Text("Remove") }
+                    else -> TextButton(onClick = {
+                        busy = pack.lang
+                        scope.launch {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                io.github.nanbiz.phonetix.core.Packs.get(
+                                    context, settings.packHost, pack.lang,
+                                )
+                            }
+                            held = io.github.nanbiz.phonetix.core.Packs.held(context)
+                            busy = ""
+                        }
+                    }) { Text("Get") }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
     SectionCard(title = "Touching a word") {

@@ -73,9 +73,10 @@ async function readLanguage(runs: ScannedRun[]): Promise<void> {
     .filter((text) => text.length > 0)
     .join(' ')
     .slice(0, 1000);
-  if (sample.length < 20) return;
-  const guess = await sendMessage('detect', { text: sample }).catch(() => null);
-  if (guess?.reliable && guess.language) detected = guess.language;
+  // How much is enough is the core's rule, not a number chosen here: the phone reads a screen
+  // by the same one.
+  const read = await sendMessage('readScreen', { text: sample }).catch(() => null);
+  if (read?.language) detected = read.language;
 }
 
 /** The stylesheet the annotations are drawn by, put in the page once. */

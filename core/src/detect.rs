@@ -284,6 +284,57 @@ impl Model {
     }
 }
 
+/// What a screenful of text is in, and whether it said enough to be worth asking.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Screen {
+    /// The language, or nothing when the text was too short or the detector was unsure.
+    pub language: Option<String>,
+    /// How many words it had to go on.
+    pub words: usize,
+    /// Whether there was enough text to judge at all. Below this a caller keeps doing
+    /// whatever it did before, rather than acting on a guess made from three labels.
+    pub enough: bool,
+}
+
+/// Below this there is not enough on a screen to judge it by.
+const ENOUGH_WORDS: usize = 8;
+/// Shorter than this is not a word for this purpose, matching what gets annotated.
+const MIN_WORD: usize = 2;
+
+/// What a screenful of text is in.
+///
+/// One rule for both platforms, thresholds included: a phone that needed eight words and a
+/// browser that needed three would annotate the same screen differently, which is exactly the
+/// drift that putting the detector here was for.
+pub fn read_screen(model: Option<&Model>, text: &str) -> Screen {
+    let words = words(text)
+        .iter()
+        .filter(|word| word.len() >= MIN_WORD)
+        .count();
+    if words < ENOUGH_WORDS {
+        return Screen {
+            language: None,
+            words,
+            enough: false,
+        };
+    }
+    let Some(model) = model else {
+        return Screen {
+            language: None,
+            words,
+            enough: true,
+        };
+    };
+    let guess = model.detect(text);
+    Screen {
+        // Only a finding the detector itself calls reliable: it says when a text told it too
+        // little, and a caller acting on the rest would be acting on noise.
+        language: if guess.reliable { guess.language } else { None },
+        words,
+        enough: true,
+    }
+}
+
 /// The words of a text, lowercased, cut at everything that is not a letter.
 fn words(text: &str) -> Vec<Vec<u8>> {
     let mut out = Vec::new();

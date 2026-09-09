@@ -35,20 +35,20 @@ object Language {
      */
     class Screen {
         private val text = StringBuilder(ENOUGH_TEXT)
-        private var words = 0
 
         fun add(line: CharSequence) {
-            Placement.scanWords(line) { i, j -> if (j - i >= MIN_WORD) words++ }
             if (text.length >= ENOUGH_TEXT) return
             if (text.isNotEmpty()) text.append(' ')
             text.append(line, 0, minOf(line.length, ENOUGH_TEXT - text.length))
         }
 
-        /** What the screen is in, or nothing when it did not say. */
+        /** What the screen is in, or nothing when it did not say.
+         *
+         *  The rule is the core's, thresholds included: a phone that wanted eight words and
+         *  a browser that wanted three would treat the same screen differently. */
         fun read(): Reading {
-            if (words < ENOUGH_WORDS) return Reading(null, words)
-            val guess = Eld.detect(text)
-            return Reading(if (guess.reliable) guess.language else null, words)
+            val read = Eld.readScreen(text)
+            return Reading(read.language, read.words)
         }
     }
 
@@ -60,10 +60,6 @@ object Language {
 
     /** Shorter than this is not a word for these purposes, matching what is transcribed. */
     const val MIN_WORD = 2
-
-    /** Below this there is not enough on the screen to judge it by, and the words are
-     *  transcribed as they were before any of this could tell one language from another. */
-    const val ENOUGH_WORDS = 8
 
     /** How much of a screen is read. A detector looks at the first thousand characters. */
     const val ENOUGH_TEXT = 1000

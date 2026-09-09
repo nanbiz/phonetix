@@ -535,6 +535,21 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                         i.getStringExtra("cardIpa") ?: "ˈpæɹəɡɹæf",
                     )
             }
+            if (i.hasExtra("packHost")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setPackHost(
+                    i.getStringExtra("packHost").orEmpty(),
+                )
+            }
+            if (i.hasExtra("target")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setTarget(
+                    i.getStringExtra("target").orEmpty(),
+                )
+            }
+            if (i.hasExtra("layer")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setLayer(
+                    i.getStringExtra("layer").orEmpty(),
+                )
+            }
             if (i.hasExtra("markLines")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MARK_LINES =
                     i.getIntExtra("markLines", 0) != 0
@@ -823,6 +838,17 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             }
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "spanish") {
+            // A page in a language the reader is reading out of, for the thing the whole
+            // merge was for: what its words mean, in the language they are reading into.
+            for (text in listOf(
+                "El perro corre por el camino",
+                "El banco del parque esta libre",
+                "El perro descansa en el camino",
+                "Un banco y un perro y un camino",
+            )) {
+                addView(line(text, Color.WHITE, BACKGROUND))
+            }
         } else if (mode == "german") {
             // A page in a language the dictionary is not for. Nothing on it should be
             // transcribed: an English pronunciation put on a German word is not a

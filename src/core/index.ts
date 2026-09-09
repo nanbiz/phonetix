@@ -176,6 +176,26 @@ export async function detect(text: string): Promise<Guess> {
   return JSON.parse(it.detect(text)) as Guess;
 }
 
+/** What a screenful of text is in, and whether it said enough to judge. */
+export interface Screen {
+  language: string | null;
+  words: number;
+  /** False when there was too little text to judge at all. */
+  enough: boolean;
+}
+
+/**
+ * What a page is in, by the core's own rule.
+ *
+ * How much text is enough and how sure the detector has to be are decided there, so a page
+ * and a screen holding the same words are read the same way.
+ */
+export async function readScreen(text: string): Promise<Screen> {
+  const it = await coreReady();
+  await modelReady();
+  return JSON.parse(it.readScreen(text)) as Screen;
+}
+
 /** What the detector found, and whether it is worth acting on. */
 export interface Guess {
   language: string | null;

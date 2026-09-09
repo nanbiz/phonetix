@@ -99,4 +99,10 @@ object Lex {
 
     /** What language a piece of text is in, as JSON. */
     external fun detect(core: Long, text: String): String
+
+    /** What a screenful of text is in, and whether it said enough to judge. */
+    external fun readScreen(core: Long, text: String): String
+
+    /** Give up a pack, so a dictionary the reader deleted stops answering. */
+    external fun closePack(core: Long, lang: String)
 }

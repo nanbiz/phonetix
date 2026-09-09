@@ -3,7 +3,9 @@
 // One instance and one place, because a pack is tens of megabytes and a copy per tab would
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
-import { annotate, complete, curve, detect, lookUp, openLanguages, symbolsOf } from '@/core';
+import {
+  annotate, complete, curve, detect, lookUp, openLanguages, readScreen, symbolsOf,
+} from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
 import { forget, get, held, offered, open } from './packs';
@@ -76,6 +78,8 @@ export function host(): void {
   onMessage('symbols', async ({ data }) => symbolsOf(data.ipa));
 
   onMessage('detect', async ({ data }) => detect(data.text));
+
+  onMessage('readScreen', async ({ data }) => readScreen(data.text));
 
   onMessage('fetch', async ({ data }) => {
     try {

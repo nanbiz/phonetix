@@ -14,6 +14,8 @@ data class WordBox(
     /** The whole transcription, marks and all, which is what the tooltip shows. */
     val full: String,
     val word: String,
+    /** What the screen this word came from was found to be in. */
+    val language: String = "",
     val background: Int = 0,
     val ink: Int = 0,
     /** Which line of the page this word came from, where the page numbers its lines. Only a

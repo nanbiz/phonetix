@@ -64,3 +64,32 @@ fn every_text_is_read_the_way_eld_read_it() {
         &wrong[..wrong.len().min(6)]
     );
 }
+
+#[test]
+fn a_screen_with_too_little_on_it_is_not_judged() {
+    let model = model();
+    let read = lexcore::detect::read_screen(Some(&model), "Save Cancel Open");
+    assert!(!read.enough, "three labels are not a screen");
+    assert_eq!(read.language, None);
+}
+
+#[test]
+fn a_screen_with_enough_on_it_says_what_it_is() {
+    let model = model();
+    let read = lexcore::detect::read_screen(
+        Some(&model),
+        "Der Lesesaal ist bis zweiundzwanzig Uhr geoeffnet und die Buecher bleiben hier",
+    );
+    assert!(read.enough);
+    assert_eq!(read.language.as_deref(), Some("de"));
+}
+
+#[test]
+fn a_screen_read_without_a_model_says_only_how_much_it_had() {
+    let read = lexcore::detect::read_screen(
+        None,
+        "The dictionary answers immediately and the page carries on reading",
+    );
+    assert!(read.enough);
+    assert_eq!(read.language, None);
+}

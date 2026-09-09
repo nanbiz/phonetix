@@ -23,6 +23,18 @@ data class Settings(
      * opens its card, at the cost of the swipes that start on one.
      */
     val touchWords: Boolean = false,
+    /**
+     * The language the reader is reading into.
+     *
+     * Empty until they choose one, and with nothing chosen a word answers with how it is
+     * said and nothing about what it means: the dictionary needs to know which language the
+     * answer should come back in.
+     */
+    val target: String = "",
+    /** What is drawn over a word: "ipa", "gloss", "gloss+ipa" or "replace". */
+    val layer: String = "gloss+ipa",
+    /** Where the dictionaries come from. The reader's own, and nowhere in the source. */
+    val packHost: String = "",
 )
 
 /**
@@ -37,6 +49,9 @@ object SettingsStore {
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
+    private const val K_TARGET = "target"
+    private const val K_LAYER = "layer"
+    private const val K_HOST = "pack_host"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -54,6 +69,9 @@ object SettingsStore {
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, false),
+            target = p.getString(K_TARGET, "") ?: "",
+            layer = p.getString(K_LAYER, "gloss+ipa") ?: "gloss+ipa",
+            packHost = p.getString(K_HOST, "") ?: "",
         )
     }
 
@@ -66,6 +84,9 @@ object SettingsStore {
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
+            ?.putString(K_TARGET, next.target)
+            ?.putString(K_LAYER, next.layer)
+            ?.putString(K_HOST, next.packHost)
             ?.apply()
     }
 
@@ -73,6 +94,9 @@ object SettingsStore {
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
+    fun setTarget(v: String) = update { it.copy(target = v) }
+    fun setLayer(v: String) = update { it.copy(layer = v) }
+    fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }

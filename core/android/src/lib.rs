@@ -383,3 +383,43 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_detect<'a>(
     };
     env.new_string(written).unwrap_or(empty)
 }
+
+/// What a screenful of text is in, as JSON.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_readScreen<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    core: jlong,
+    text: JString<'a>,
+) -> jni::objects::JString<'a> {
+    let nothing = lexcore::json::screen(&lexcore::detect::Screen {
+        language: None,
+        words: 0,
+        enough: false,
+    });
+    let empty = env.new_string(&nothing).expect("a string the vm can hold");
+    let Ok(text) = env.get_string(&text) else {
+        return empty;
+    };
+    let text: String = text.into();
+    let held = unsafe { &mut *(core as *mut Core) };
+    let read = lexcore::detect::read_screen(held.model.as_ref(), &text);
+    env.new_string(lexcore::json::screen(&read))
+        .unwrap_or(empty)
+}
+
+/// Give up a pack, so a dictionary the reader deleted stops answering.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_closePack(
+    mut env: JNIEnv,
+    _class: JClass,
+    core: jlong,
+    lang: JString,
+) {
+    let Ok(lang) = env.get_string(&lang) else {
+        return;
+    };
+    let lang: String = lang.into();
+    let held = unsafe { &mut *(core as *mut Core) };
+    held.packs.remove(&lang);
+}

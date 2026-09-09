@@ -16,7 +16,9 @@ import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Pick
 import io.github.nanbiz.phonetix.core.Reading
+import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlinx.coroutines.cancel
@@ -209,7 +211,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
             }.onFailure { android.util.Log.w("Phonetix", "no accessibility button", it) }
         }
-        Dictionary.ensureLoaded(this) { schedule(0L) }
+        Dictionary.ensureLoaded(this) {
+            Packs.openHeld(this)
+            schedule(0L)
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -678,11 +683,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // something in stay, and each keeps the span from its first chosen word to its
             // last, because asking an app for a whole paragraph's character boxes costs it
             // real layout work for words nothing will draw.
-            chooseWords(fresh, settings.density, budget)
-            // A screen in a language this dictionary is not for is left alone. Judged after
-            // the walk, because it is the whole of the screen that says what language it is
-            // in - a line on its own says too little, and saying it confidently.
-            if (!Language.ours(stats.tongue.read())) fresh.clear()
+            // What the screen is in, judged from the whole of it rather than a line: a line
+            // says too little, and says it confidently. Nothing is left out for being in the
+            // wrong language any more - a screen the packs cannot answer comes back with
+            // nothing to draw, which is the same outcome decided in one place.
+            val screen = stats.tongue.read()
+            chooseWords(fresh, settings, screen.language, budget)
             planned = fresh
             cachedPlan = fresh
             cachedPackage = pkg
@@ -1579,6 +1585,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     .append(if (b.background != 0 && b.ink != 0) 1 else 0).append(' ')
             }
             android.util.Log.d("Phonetix", sb.toString())
+            // And what is actually written over each of them. The line above is geometry; a
+            // check that a reader is being told what a word means has to see the words.
+            val said = StringBuilder("DRAWN ")
+            for (b in painted) said.append(b.word).append('=').append(b.ipa).append(' ')
+            android.util.Log.d("Phonetix", said.toString())
         }
 
         // How far apart the lines of this screen sit, which is what an item boundary in an
@@ -1999,22 +2010,35 @@ class PhonetixAccessibilityService : AccessibilityService() {
      */
     private fun chooseWords(
         planned: MutableList<Planned>,
-        density: Int,
+        settings: Settings,
+        screenLanguage: String?,
         budget: Budget,
     ) {
         if (planned.isEmpty()) return
+        // What the screen is in, what the reader reads into, and what they asked to see over
+        // a word. All three were hardcoded to English and a transcription once, which is how
+        // an app whose whole point is translation showed nothing but pronunciations.
+        val source = screenLanguage ?: Language.OURS
         val told = Reading.annotate(
             planned.map { it.text },
-            source = "en",
-            target = "en",
-            mode = "ipa",
-            density = density,
+            source = source,
+            target = settings.target.ifEmpty { source },
+            mode = settings.layer,
+            density = settings.density,
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
         for (token in told) {
-            if (!token.inline || token.ipa.isEmpty()) continue
+            // What is drawn is what the reader asked for: the meaning where there is one, the
+            // transcription otherwise, and nothing at all where the core found neither.
+            if (!token.inline) continue
+            val shown = when (settings.layer) {
+                "gloss", "replace" -> token.gloss
+                "ipa" -> token.ipa
+                else -> token.gloss.ifEmpty { token.ipa }
+            }
+            if (shown.isEmpty()) continue
             byRun.getOrPut(token.run) { ArrayList(4) }
-                .add(Pick(token.start, token.end - 1, token.spelling, token.ipa))
+                .add(Pick(token.start, token.end - 1, token.spelling, shown))
         }
         val kept = ArrayList<Planned>(byRun.size)
         for ((at, line) in planned.withIndex()) {
