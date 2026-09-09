@@ -29,6 +29,23 @@ def adb(*args, timeout=90):
     ).stdout
 
 
+def wait_until_quiet(limit=1.5, seconds=90):
+    """Hold until the device is not still working through somebody else's load.
+
+    A run that puts the device under load and then measures it has to start from the same
+    place every time, and it does not: the load a previous run left behind decays over
+    minutes, so the same build measured 97% of a movement followed after a long gap and 67%
+    when run straight afterwards. Neither was about the build.
+    """
+    for _ in range(seconds):
+        out = shell("uptime")
+        m = re.search(r"load average:\s*([\d.]+)", out)
+        if m and float(m.group(1)) <= limit:
+            return True
+        time.sleep(1)
+    return False
+
+
 def shell(*args, timeout=90):
     return adb("shell", *args, timeout=timeout)
 

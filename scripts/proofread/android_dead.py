@@ -12,13 +12,17 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import SERIAL, Device, shell
+from android_harness import SERIAL, Device, shell, wait_until_quiet
 
 load = int(sys.argv[1]) if len(sys.argv) > 1 else 4
 tries = int(sys.argv[2]) if len(sys.argv) > 2 else 12
 out = sys.argv[3] if len(sys.argv) > 3 else "/tmp/dead.log"
 # Load left behind by a run that was cut short, which would otherwise be measured as well.
 subprocess.run(["adb", "-s", SERIAL, "shell", "pkill -f 'while true'"], capture_output=True)
+# And the load a previous run left decays over minutes, so a run started straight after
+# another measures a busier device than one started after a pause.
+if not wait_until_quiet():
+    print("the device is still busy; measuring anyway")
 busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(load)]

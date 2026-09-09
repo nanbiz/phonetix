@@ -12,7 +12,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import SERIAL, Device, shell
+from android_harness import SERIAL, Device, shell, wait_until_quiet
 
 # Load first, because on an idle emulator the overlay always keeps up and this always reads
 # 100 percent. Six runs, because the outcome measure is bimodal - a run is either starved or
@@ -24,6 +24,10 @@ runs = int(sys.argv[2]) if len(sys.argv) > 2 else 6
 # device carrying several rounds of them is not the device the question is about: the same
 # build read 0%, 67%, 71%, 89% and 124% as they piled up.
 subprocess.run(["adb", "-s", SERIAL, "shell", "pkill -f 'while true'"], capture_output=True)
+# And the load a previous run left decays over minutes, so a run started straight after
+# another measures a busier device than one started after a pause.
+if not wait_until_quiet():
+    print("the device is still busy; measuring anyway")
 busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(load)]
