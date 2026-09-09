@@ -24,6 +24,7 @@ import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.ui.AnswerCard
 import io.github.nanbiz.phonetix.ui.SymbolSheet
@@ -321,6 +322,15 @@ class TooltipController(
         val answer = Reading.lookUp(box.word, source, settings.target.ifEmpty { source })
             ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)
+        // What a person recorded, where Wiktionary has one: a recording is what a reader
+        // trusts, and a machine reading a transcription is not the same thing. Asked for off
+        // the main thread, and the card is told once it has an answer.
+        val recorded = androidx.compose.runtime.mutableStateOf<String?>(null)
+        io.execute {
+            val said = Wiktionary.about(box.word, source)
+            val file = said?.audio?.firstOrNull()
+            if (file != null) main.post { recorded.value = file }
+        }
         val fresh = OverlayHost(context)
         host = fresh
         fresh.view.setContent {
@@ -341,7 +351,12 @@ class TooltipController(
                     onSymbol = { symbol ->
                         opened.value = if (opened.value == symbol) null else symbol
                     },
-                    onPlay = { speaker.say(box.word) },
+                    recorded = recorded.value != null,
+                    onPlay = {
+                        val file = recorded.value
+                        if (file != null) speaker.play(wikimediaFileUrl(file))
+                        else speaker.say(box.word)
+                    },
                 )
                 opened.value?.let { symbol ->
                     IpaSymbols.describe(symbol)?.let { about ->

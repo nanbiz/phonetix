@@ -45,6 +45,18 @@ pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
     lexcore::symbols::display(ipa, narrow, hide_stress)
 }
 
+/// What a Wiktionary page says about a word in one language, as JSON.
+///
+/// Reading the page is the same work on both platforms; fetching it is each host's own, so
+/// only the reading is here.
+#[wasm_bindgen(js_name = readWiktionary)]
+pub fn read_wiktionary(wikitext: &str, lang: &str) -> String {
+    match lexcore::wiktionary::parse(wikitext, Some(lang)) {
+        Some(said) => lexcore::json::said(&said),
+        None => "null".to_string(),
+    }
+}
+
 /// The core, holding whatever packs the host has given it.
 ///
 /// The bytes are taken rather than borrowed: a browser's buffer belongs to the garbage

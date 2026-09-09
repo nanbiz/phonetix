@@ -146,6 +146,10 @@ async function draw(): Promise<void> {
   }
 }
 
+/** Where Commons keeps a file, which is the same URL the phone builds. */
+const commons = (file: string) =>
+  `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`;
+
 /** How wide a picture of a mouth is asked for, which is what the sheet gives it. */
 const DIAGRAM_WIDTH = 192;
 
@@ -191,8 +195,23 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
   if (!element.isConnected) return;
   const key = token.spelling.toLowerCase();
   if (!asked.includes(key)) asked.push(key);
-  show(answer, element.getBoundingClientRect(), {
-    onPlay: () => void speak(token.spelling, source),
+  // What a person recorded, where Wiktionary has one: a recording is what a reader trusts,
+  // and a machine reading a transcription is not the same thing.
+  const said = await sendMessage('enrich', { word: token.spelling, lang: source })
+    .catch(() => null);
+  const recording = said?.audio[0];
+  if (!element.isConnected) return;
+  // A transcription a person wrote, where the pack had none.
+  const shown = answer.ipa.length === 0 && said?.ipa.length
+    ? { ...answer, ipa: [said.ipa[0]], symbols: await sendMessage('symbols', { ipa: said.ipa[0] })
+        .catch(() => answer.symbols) }
+    : answer;
+  show(shown, element.getBoundingClientRect(), {
+    recorded: Boolean(recording),
+    onPlay: () => {
+      if (recording) void recorded(commons(recording));
+      else void speak(token.spelling, source);
+    },
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
     // host, because the page's own policy would refuse the load.
     onPlayUrl: (url) => void recorded(url),

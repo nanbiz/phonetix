@@ -6,7 +6,12 @@
 // The module is the same crate the phone links: a word answered here and the same word
 // answered on the phone go through one cascade, so the two cannot drift into disagreeing
 // about what a word means.
-import init, { Core, display as shown, symbols as sounds } from './wasm/lexcore.js';
+import init, {
+  Core,
+  display as shown,
+  readWiktionary as readPage,
+  symbols as sounds,
+} from './wasm/lexcore.js';
 import type { Answer, IpaSymbol } from './answer';
 import type { AnnotateOptions, Batch, TextRun } from './tokens';
 
@@ -202,6 +207,21 @@ export interface Guess {
   /** False for text that says too little: a tab, a button, a name. */
   reliable: boolean;
   scores: Record<string, number>;
+}
+
+/** What a Wiktionary page says about a word: a transcription a person wrote, and recordings
+ *  of people saying it. */
+export interface Said {
+  lang: string;
+  ipa: string[];
+  /** Commons file names. */
+  audio: string[];
+}
+
+/** Read a page the host fetched. */
+export async function readWiktionary(wikitext: string, lang: string): Promise<Said | null> {
+  await coreReady();
+  return JSON.parse(readPage(wikitext, lang)) as Said | null;
 }
 
 /** A transcription, symbol by symbol, for a surface that has no answer to read them off. */

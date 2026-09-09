@@ -865,7 +865,7 @@ def main():
     # followed one leaving a target language behind counted the words of an English page that
     # were being answered in German, and reported the frequency bar as broken.
     shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-          "--es", "target", "", "--es", "layer", "ipa", "--ei", "enable", "1")
+          "--es", "target", "none", "--es", "layer", "ipa", "--ei", "enable", "1")
     time.sleep(2)
 
     r = Results()

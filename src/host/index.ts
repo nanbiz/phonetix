@@ -4,7 +4,8 @@
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
 import {
-  annotate, complete, curve, detect, lookUp, openLanguages, readScreen, symbolsOf,
+  annotate, complete, curve, detect, lookUp, openLanguages, readScreen, readWiktionary,
+  symbolsOf, type Said,
 } from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
@@ -80,6 +81,15 @@ export function host(): void {
   onMessage('detect', async ({ data }) => detect(data.text));
 
   onMessage('readScreen', async ({ data }) => readScreen(data.text));
+
+  onMessage('enrich', async ({ data }) => {
+    try {
+      return await fromWiktionary(data.word, data.lang);
+    } catch (e) {
+      console.warn(`[Phonetix] Wiktionary said nothing about ${data.word}:`, e);
+      return null;
+    }
+  });
 
   onMessage('fetch', async ({ data }) => {
     try {
@@ -159,4 +169,27 @@ async function drawing(file: string, width: number): Promise<string> {
   }
   const type = res.headers.get('content-type') ?? 'image/png';
   return `data:${type};base64,${btoa(binary)}`;
+}
+
+/** What has already been asked about, so a reader hovering a word twice asks once. */
+const asked = new Map<string, Said | null>();
+
+/**
+ * What Wiktionary says about a word.
+ *
+ * A pack holds what the dump held, and the dump is a snapshot. The page carries two things
+ * worth more than anything in it: a transcription a person wrote and a recording of a person
+ * saying the word. The page is fetched here, because a page's own policy would refuse it, and
+ * read by the core, because reading it is the same work on both platforms.
+ */
+async function fromWiktionary(word: string, lang: string): Promise<Said | null> {
+  const key = `${lang}:${word.toLowerCase()}`;
+  if (asked.has(key)) return asked.get(key) ?? null;
+  const url =
+    'https://en.wiktionary.org/w/index.php?action=raw&title=' + encodeURIComponent(word);
+  const res = await fetch(url);
+  // A word with no page is an ordinary answer, not a failure: most words have no recording.
+  const said = res.ok ? await readWiktionary(await res.text(), lang) : null;
+  asked.set(key, said);
+  return said;
 }

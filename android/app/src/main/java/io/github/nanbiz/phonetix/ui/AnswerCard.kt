@@ -53,6 +53,8 @@ fun AnswerCard(
     palette: Tokens.Palette,
     modifier: Modifier = Modifier,
     onSymbol: (String) -> Unit = {},
+    /** Whether what the play button plays is a person rather than a machine. */
+    recorded: Boolean = false,
     onPlay: () -> Unit = {},
     /** Somewhere to send a reader who wants the whole entry. */
     onOpen: (String) -> Unit = {},
@@ -88,7 +90,7 @@ fun AnswerCard(
             )
         }
         if (answer.ipa.isNotEmpty()) {
-            Pronunciation(answer, palette, onSymbol, onPlay, report)
+            Pronunciation(answer, palette, onSymbol, recorded, onPlay, report)
         }
         // Every reading, where the join reached more than one. The reader chooses by meaning,
         // so each is its own row: showing the first and dropping the rest would be the card
@@ -144,6 +146,7 @@ private fun Pronunciation(
     answer: Answer,
     palette: Tokens.Palette,
     onSymbol: (String) -> Unit,
+    recorded: Boolean,
     onPlay: () -> Unit,
     report: Reporter?,
 ) {
@@ -182,7 +185,7 @@ private fun Pronunciation(
         Box(Modifier.width(Tokens.Scale.space3.dp))
         PlayButton(
             palette = palette,
-            description = "say ${answer.spelling}",
+            description = if (recorded) "hear ${answer.spelling}" else "say ${answer.spelling}",
             onClick = onPlay,
             report = report,
         )
@@ -190,7 +193,8 @@ private fun Pronunciation(
         // What the audio will be, shown rather than spelled out: a synthesised voice and a
         // person saying a word are different things and a reader is owed which one they are
         // getting, but that is a property of the button beside it and not a line of the card.
-        SynthesisedMark(palette, report = report)
+        if (recorded) RecordingMark(palette, report = report)
+        else SynthesisedMark(palette, report = report)
     }
 }
 

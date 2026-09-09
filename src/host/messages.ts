@@ -7,7 +7,7 @@
 // library in the middle of it was one more place for a message to disappear between a page and
 // a service worker with nothing to show for it.
 import type { Answer, IpaSymbol } from '@/core/answer';
-import type { Guess, Screen } from '@/core';
+import type { Guess, Said, Screen } from '@/core';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
 import type { Offered } from './packs';
 
@@ -45,6 +45,9 @@ export interface HostProtocol {
   readScreen: { data: { text: string }; reply: Screen };
   /** A transcription, symbol by symbol, for a surface with no answer to read them off. */
   symbols: { data: { ipa: string }; reply: IpaSymbol[] };
+  /** What Wiktionary says about a word: a transcription a person wrote, and a recording of
+   *  a person saying it, neither of which is in a pack. */
+  enrich: { data: { word: string; lang: string }; reply: Said | null };
   /** Any sound from the network, as bytes: a recording of a sound made by a person. */
   fetch: { data: { url: string }; reply: number[] };
   /** Say one word: WAV bytes, because a page's own media policy can block an audio element

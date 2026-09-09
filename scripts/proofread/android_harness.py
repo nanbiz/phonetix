@@ -75,14 +75,21 @@ class Device:
         nothing, which is a fault in the suite and not in the app.
         """
         shell("appops", "set", PKG, "SYSTEM_ALERT_WINDOW", "allow")
-        shell("settings", "put", "secure", "accessibility_enabled", "0")
-        time.sleep(1)
-        shell("settings", "put", "secure", "enabled_accessibility_services", SERVICE)
-        shell("settings", "put", "secure", "accessibility_enabled", "1")
-        for _ in range(20):
-            if "Phonetix transcriptions" in shell("dumpsys", "accessibility"):
-                return True
-            time.sleep(0.5)
+        # Tried more than once: after an install the system will accept the setting, report
+        # the service as enabled, and never bind it. What says it is really running is the
+        # bound list, so that is what is waited for, and the toggle is done again when it
+        # does not appear.
+        for attempt in range(4):
+            shell("settings", "put", "secure", "accessibility_enabled", "0")
+            time.sleep(1)
+            shell("settings", "put", "secure", "enabled_accessibility_services", SERVICE)
+            shell("settings", "put", "secure", "accessibility_enabled", "1")
+            for _ in range(16):
+                dump = shell("dumpsys", "accessibility")
+                bound = dump.split("Bound services:", 1)[-1].split("\n", 1)[0]
+                if "Phonetix transcriptions" in bound:
+                    return True
+                time.sleep(0.5)
         return False
 
     def set_enabled(self, on):

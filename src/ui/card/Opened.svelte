@@ -10,6 +10,8 @@
 
   interface Props {
     answer: Answer;
+    /** A recording of a person saying the word, where the host found one. */
+    recorded?: boolean;
     /** A picture of the mouth making a sound, fetched by the host that can reach it. */
     diagram?: (file: string) => Promise<string>;
     onPlay?: () => void;
@@ -19,7 +21,8 @@
     onSymbol?: (symbol: string | null) => void;
   }
 
-  let { answer, diagram, onPlay, onPlayUrl, onOpen, onSymbol }: Props = $props();
+  let { answer, recorded = false, diagram, onPlay, onPlayUrl, onOpen, onSymbol }: Props =
+    $props();
 
   let opened = $state<string | null>(null);
   let sound = $derived(answer.symbols.find((symbol) => symbol.token === opened) ?? null);
@@ -42,7 +45,7 @@
   }
 </script>
 
-<AnswerCard {answer} onSymbol={ask} {onPlay} {onOpen} />
+<AnswerCard {answer} {recorded} onSymbol={ask} {onPlay} {onOpen} />
 {#if sound}
   <SymbolSheet about={sound} diagram={picture} onPlay={onPlayUrl} {onOpen} />
 {/if}

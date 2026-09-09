@@ -113,6 +113,16 @@ pub fn screen(screen: &crate::detect::Screen) -> String {
     )
 }
 
+/// What a Wiktionary page says about a word in one language.
+pub fn said(said: &crate::wiktionary::Said) -> String {
+    format!(
+        "{{\"lang\":{},\"ipa\":{},\"audio\":{}}}",
+        quoted(&said.lang),
+        strings(&said.ipa),
+        strings(&said.audio)
+    )
+}
+
 /// A transcription symbol by symbol, each with what is known about that sound.
 pub fn symbols_of(items: &[crate::symbols::Symbol]) -> String {
     let inner: Vec<String> = items

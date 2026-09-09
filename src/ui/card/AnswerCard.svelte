@@ -14,13 +14,15 @@
 
   interface Props {
     answer: Answer;
+    /** A recording of a person saying the word, where one was found. */
+    recorded?: boolean;
     /** A sound the reader asked about, which belongs one tap under the word. */
     onSymbol?: (symbol: string) => void;
     onPlay?: () => void;
     onOpen?: (url: string) => void;
   }
 
-  let { answer, onSymbol, onPlay, onOpen }: Props = $props();
+  let { answer, recorded = false, onSymbol, onPlay, onOpen }: Props = $props();
 
   /** Which colour a symbol takes: the page colours vowels, consonants and the rest apart. */
   function symbolClass(kind: string): string {
@@ -88,8 +90,11 @@
                 onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}<span
               class="delim">/</span>
           </span>
-          <PlayButton label={`say ${answer.spelling}`} onplay={() => onPlay?.()} />
-          <SourceMark kind="synthesised" />
+          <PlayButton
+            label={recorded ? `hear ${answer.spelling}` : `say ${answer.spelling}`}
+            onplay={() => onPlay?.()}
+          />
+          <SourceMark kind={recorded ? 'recording' : 'synthesised'} />
         </div>
       {/if}
 

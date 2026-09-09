@@ -423,3 +423,22 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_closePack(
     let held = unsafe { &mut *(core as *mut Core) };
     held.packs.remove(&lang);
 }
+
+/// What a Wiktionary page says about a word in one language, as JSON.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_readWiktionary<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    wikitext: JString<'a>,
+    lang: JString<'a>,
+) -> jni::objects::JString<'a> {
+    let empty = env.new_string("null").expect("a string the vm can hold");
+    let (Ok(wikitext), Ok(lang)) = (env.get_string(&wikitext), env.get_string(&lang)) else {
+        return empty;
+    };
+    let (wikitext, lang): (String, String) = (wikitext.into(), lang.into());
+    match lexcore::wiktionary::parse(&wikitext, Some(&lang)) {
+        Some(said) => env.new_string(lexcore::json::said(&said)).unwrap_or(empty),
+        None => empty,
+    }
+}

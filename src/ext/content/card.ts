@@ -68,6 +68,8 @@ function place(at: DOMRect): void {
 
 /** What the card can be asked to do, which is the session's business rather than the card's. */
 export interface CardActions {
+  /** Whether what the play button plays is a person rather than a machine. */
+  recorded?: boolean;
   /** Say the word the card is about. */
   onPlay?: () => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
@@ -84,7 +86,7 @@ let anchor: DOMRect = new DOMRect();
 export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): void {
   anchor = at;
   const { frame: box } = build();
-  const key = `${answer.spelling}:${answer.state}`;
+  const key = `${answer.spelling}:${answer.state}:${actions.recorded ?? false}`;
   if (drawn && about === key) {
     place(at);
     return;
@@ -95,6 +97,7 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
     target: fresh,
     props: {
       answer,
+      recorded: actions.recorded ?? false,
       diagram: actions.diagram,
       onPlay: actions.onPlay,
       onPlayUrl: actions.onPlayUrl,

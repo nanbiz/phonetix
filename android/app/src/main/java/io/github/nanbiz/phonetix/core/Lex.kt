@@ -105,4 +105,7 @@ object Lex {
 
     /** Give up a pack, so a dictionary the reader deleted stops answering. */
     external fun closePack(core: Long, lang: String)
+
+    /** What a Wiktionary page says about a word in one language, as JSON. */
+    external fun readWiktionary(wikitext: String, lang: String): String
 }

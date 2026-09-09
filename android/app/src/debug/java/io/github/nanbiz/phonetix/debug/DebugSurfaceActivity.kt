@@ -541,8 +541,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 )
             }
             if (i.hasExtra("target")) {
+                // "none" rather than an empty string: a shell drops an empty extra and the
+                // next argument lands in its place, which once left the app reading into a
+                // language called "--es".
+                val wanted = i.getStringExtra("target").orEmpty()
                 io.github.nanbiz.phonetix.core.SettingsStore.setTarget(
-                    i.getStringExtra("target").orEmpty(),
+                    if (wanted == "none") "" else wanted,
                 )
             }
             if (i.hasExtra("layer")) {
