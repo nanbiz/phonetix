@@ -55,14 +55,21 @@ class MotionLayer(private val context: Context) {
 
         /** How long a measured speed is carried at full strength, and how long it takes to
          *  fade to nothing after that, both as multiples of the gap between measurements.
-         *  Settable so a test can sweep them against photographs of a real swipe. */
+         *
+         *  A quarter of a gap and a half, which is far less than the one and two they were.
+         *  Those were set against a measure that answers yes or no about each transcription
+         *  and reports a share, and the same build's share moves by twenty points between
+         *  runs, so nothing that was swept against it was ever really measured. Against the
+         *  error in pixels, which moves by two: the middle frame of a drag is 12 to 16 pixels
+         *  out here against 16 to 21 at the old values, and 72 to 74 per cent of frames are
+         *  within half a line of text against 65 to 66. */
         @Volatile
         @JvmStatic
-        var coastGaps = 1.0f
+        var coastGaps = 0.25f
 
         @Volatile
         @JvmStatic
-        var fadeGaps = 2.0f
+        var fadeGaps = 0.5f
 
         /** How much further a movement whose speed is not changing is carried. */
         @Volatile

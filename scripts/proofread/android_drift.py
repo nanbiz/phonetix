@@ -83,6 +83,13 @@ def drift(log):
 
 
 def main():
+    # Knobs passed through to the page, which sets them on the service: the point of a measure
+    # this steady is that a constant can be swept against it and the answer believed.
+    knobs = {}
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            key, value = arg.split("=", 1)
+            knobs[key] = int(value)
     dev = Device()
     if not dev.enable_service():
         print("the service will not start")
@@ -92,14 +99,15 @@ def main():
         for n in range(DRAGS):
             shell("am", "force-stop", "io.github.nanbiz.phonetix")
             time.sleep(1.5)
-            dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, rows=60)
+            dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, rows=60,
+                        **knobs)
             time.sleep(2)
             dev.enable_service()
             time.sleep(5)
             dev.clear_log()
             dev.surface(mode=mode, enable=1, density=3, allApps=1, marks=1, rows=60,
                         motion="linear", distance=MOVE_PX, duration=MOVE_MS, strokes=1,
-                        seed=1)
+                        seed=1, **knobs)
             time.sleep(MOVE_MS / 1000 + 0.2)
             got, dark = drift(dev.log())
             errors += got
