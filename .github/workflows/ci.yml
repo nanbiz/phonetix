@@ -96,9 +96,9 @@ jobs:
       # deciding them. The phone cannot read a stylesheet, so the same declarations are written
       # out as data and as a Kotlin object; this fails when the page has moved on without them,
       # which is the drift that makes a card look right in a browser and wrong on a phone.
-      - name: Both platforms have the same design tokens
+      - name: Both platforms have the same tokens and tables
         run: |
-          uv run python tools/tokens.py --check
+          uv run python tools/gen_types.py --check
       - name: The merge book's page and model name the same states
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Answer
+import io.github.nanbiz.phonetix.core.Languages
 
 /**
  * The answer surface: what a reader gets when they stop at a word.
@@ -212,7 +213,9 @@ private fun Readings(answer: Answer, palette: Tokens.Palette) {
 @Composable
 private fun Foot(answer: Answer, palette: Tokens.Palette) {
     androidx.compose.material3.Text(
-        text = "${answer.source} → ${answer.target}",
+        // Named rather than tagged: a reader knows what Spanish is and does not have to know
+        // what "es" is.
+        text = "${Languages.english(answer.source)} → ${Languages.english(answer.target)}",
         color = Color(palette.inkFaint),
         fontSize = Tokens.Scale.fontSizeLabel.sp,
     )
@@ -223,7 +226,7 @@ private fun Foot(answer: Answer, palette: Tokens.Palette) {
 private fun Nothing(answer: Answer, palette: Tokens.Palette) {
     androidx.compose.material3.Text(
         text = when (answer.state) {
-            Answer.State.NoPack -> "No dictionary for ${answer.source} yet"
+            Answer.State.NoPack -> "No dictionary for ${Languages.english(answer.source)} yet"
             Answer.State.UnknownLang -> "Not sure what language this is"
             Answer.State.Loading -> "Looking it up"
             else -> "Nothing found for ${answer.spelling}"
