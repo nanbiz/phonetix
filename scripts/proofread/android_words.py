@@ -284,6 +284,15 @@ def a_page(r, dev, label, mode):
               f"{len([l for l in log.splitlines() if 'BAND ' in l])} strips")
         if share is not None:
             wrong.append(share)
+            # A drag that went badly is worth keeping, because the badness is not spread
+            # evenly: the same page reads 8% on one drag and 66% on the next, and the bad ones
+            # are the ones with half the usual number of passes in them. The log is the only
+            # thing that says what the missing passes were doing.
+            if share >= float(os.environ.get("PHONETIX_KEEP_WORSE_THAN", "1")):
+                kept = f"/tmp/drag-{mode}-{round_number + 1}-{100 * share:.0f}pc.log"
+                with open(kept, "w") as f:
+                    f.write(log)
+                print(f"      kept the log of this one at {kept}")
         time.sleep(3)
         # A page that has stopped stops saying where its lines are, so what it last said is
         # from the end of the movement. Nudged by a pixel, which makes it say where everything

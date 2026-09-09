@@ -1191,6 +1191,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     lastMotionAt = android.os.SystemClock.uptimeMillis()
                     if (!overlay.inMotion) main.post { overlay.beginMotion() }
                     startFollowing()
+                } else if (onTheMove()) {
+                    // A pass that measured nothing is not a page that has stopped, and the
+                    // handover below already says so: an app too busy to have laid itself out
+                    // again hands back the positions it gave last time. Letting that stop the
+                    // loop meant one such pass mid-drag left nothing scheduled, and on a page
+                    // whose scroll events arrive every ninety milliseconds nothing ran until
+                    // the next one. Measured on a drag of a page of paragraphs: a gap of 141ms
+                    // between readings where the passes either side cost 12 and 53.
+                    //
+                    // The clock is not touched, only the loop kept running, so this cannot
+                    // hold the following open on a page that really has stopped.
+                    startFollowing()
                 }
                 // Still moving: hand the measurement to the layer, which corrects both the
                 // position and the speed it is carrying them at. Once the scrolling has
