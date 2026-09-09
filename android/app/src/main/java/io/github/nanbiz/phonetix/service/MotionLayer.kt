@@ -159,9 +159,28 @@ class MotionLayer(private val context: Context) {
      * holding it to the same bound is why the words followed a third of a fling. Summed, they
      * are what is on the screen.
      */
-    private var guessedY = 0f
+    /**
+     * Where the page has been, and where that says it is now.
+     *
+     * Every report of the page's own position is a sample, and what the words are carried by
+     * between reports is what a fit of the last few hundred milliseconds says about this
+     * instant. That replaces carrying them at the speed of the last interval, which through a
+     * fling is always the speed of a moment that is over: too fast at the end of one and too
+     * slow at the start.
+     */
+    private val track = Track()
+
+    /** The page's own position, as far as it has reported: the running total of what it has
+     *  said it scrolled. Its zero is whenever this movement began and means nothing else. */
+    private var page = 0f
+
+    /** Where that total stood when the last reading was taken, which is the position the words
+     *  on the layer are correct for. */
+    private var pageAtReading = 0f
+
+    /** How far the words are carried from where the last reading put them. */
     private var carriedY = 0f
-    private val predictedY: Float get() = guessedY + carriedY
+    private val predictedY: Float get() = carriedY
     private var lastFrameAt = 0L
     /** How far apart the measurements have been coming, smoothed: how long a speed of
      *  theirs is worth believing. */
@@ -194,20 +213,13 @@ class MotionLayer(private val context: Context) {
             val now = SystemClock.uptimeMillis()
             val dt = (now - lastFrameAt).coerceIn(0, 48).toFloat()
             lastFrameAt = now
-            // A measurement says where the words were and how fast they were going, and that
-            // is worth carrying for about as long as it takes the next one to arrive. Past
-            // that the speed is a guess about a page nobody has looked at, so it is let go of
-            // rather than run on: a page that stopped between two strokes used to have its
-            // words carried on at the speed of the stroke that ended, hundreds of pixels off
-            // the text they belong to, until a reading caught up with them.
-            val trust = trustAt(now)
-            predictedX += vx * dt * trust
-            // The guess is bounded and what the page reported is not, so the bound is applied
-            // to the guess alone. Applied to the sum, it pulled back everything a reported
-            // scroll had carried the words by: a page that says it went twelve hundred pixels
-            // had its words hauled back to four hundred on the very next frame.
-            guessedY = (guessedY + vy * dt * trust)
-                .coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
+            // What the page's own account of itself says about this instant, held against
+            // what it said when the words were last read. Nothing is integrated frame by
+            // frame: the fit already knows where the page is at any moment inside the reach of
+            // its samples, and asking it is the same answer however often the frames come.
+            predictedX += vx * dt
+            carriedY = (-(track.at(now) - pageAtReading))
+                .coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
             // Moved, not redrawn. Recording the whole set again every frame was work the
             // display did sixty times a second and, on a machine with no real GPU, enough
             // to starve the very reads that tell the layer where the words have got to: a
@@ -320,44 +332,16 @@ class MotionLayer(private val context: Context) {
     fun told(dy: Float, exact: Boolean) {
         if (view == null || dy == 0f) return
         val now = SystemClock.uptimeMillis()
-        val since = (now - lastToldAt).coerceAtLeast(1)
         lastToldAt = now
-        // Not a jump. The layer is already carrying the words at the speed it believes the
-        // page is going, and adding what the page says it moved on top of that counts the
-        // same movement twice - which is worse than not knowing: on the one page that reports
-        // this in pixels, doing it that way took the share of transcriptions naming a word
-        // that is not under them from 43% to 65%.
-        //
-        // What the page says is a better speed than the one worked out from readings taken
-        // tens of milliseconds apart, so it replaces it and the carrying goes on smoothly.
-        if (since in 8..400) {
-            vy = (-dy / since).coerceIn(-Fixed.SANE_PX_PER_MS, Fixed.SANE_PX_PER_MS)
-        }
-        // And carried by what the page says it moved, not only at the speed that implies.
-        //
-        // A speed is only carried while the reading behind it is trusted, and under load no
-        // reading is: the words then follow about a fifth of the movement, so a page going
-        // twelve hundred pixels takes them two hundred and fifty. What the page reports is not
-        // a prediction to be distrusted, it is its own account of what already happened.
-        //
-        // It replaces the guess rather than being added to it. Since the last reading the
-        // layer has been carrying the words at a speed it worked out; the page has now said
-        // what it actually did over that same stretch, and one of those two is an account and
-        // the other an estimate. Added on top, the movement is counted twice and the words
-        // overshoot - which is why this used to be applied only when the layer had already
-        // given up on its own speed, and why the words then rode a guess that is bounded at
-        // four hundred pixels through flings of twelve hundred. Measured on the settings app,
-        // the transcriptions that were on the wrong text mid-fling were a bounded three
-        // hundred and sixty pixels out, which is that bound and not a residual.
-        //
-        // The interval it covers is consumed, so the frame that follows integrates from now
-        // rather than from before this arrived.
-        // An estimate only carries the words where the layer has already stopped believing
-        // its own speed, which is what a starved reading looks like from in here. Treated as
-        // an account, it took the share of transcriptions off their word on a Compose
-        // conversation from 7% to 11 and 13.
-        guessedY = 0f
-        carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
+        // A report is not a jump and not a speed: it is one more sample of where the page has
+        // got to, and what it is worth is decided by the fit along with all the others. Adding
+        // it to the drawing directly counted the same movement twice; taking the speed it
+        // implies and running with that assumed the page is still doing what it did over the
+        // interval the report covers, which is the whole of what went wrong through a fling.
+        page += dy
+        track.add(now, page)
+        carriedY = (-(track.at(now) - pageAtReading))
+            .coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
         lastFrameAt = now
         view?.let { it.translationY = predictedY }
         drew(now)
@@ -367,7 +351,10 @@ class MotionLayer(private val context: Context) {
     fun start(current: List<WordBox>) {
         boxes = current
         vx = 0f; vy = 0f
-        predictedX = 0f; guessedY = 0f; carriedY = 0f
+        track.clear()
+        page = 0f
+        pageAtReading = 0f
+        predictedX = 0f; carriedY = 0f
         gap = Fixed.GAP_MAX_MS
         measurements = 0
         steadiness = 0f
@@ -534,6 +521,18 @@ class MotionLayer(private val context: Context) {
         // words a couple of hundred pixels ahead of the text in the opening frames of every
         // scroll. The second measurement is of the movement itself, and prediction starts
         // there.
+        // A page that reports nothing about its own scrolling still moves, and this reading
+        // measured how fast: that measurement is the only sample of it there will ever be, so
+        // it becomes one. Where the page does report, its own reports are the samples and this
+        // would be the same movement counted twice.
+        if (!reportedSince && measurements > 0 && speed != 0f && at > lastMeasureAt) {
+            page += -speed * (at - lastMeasureAt)
+            track.add(at, page)
+        }
+        // The words on the layer are correct for the page as it stood when this reading was
+        // taken, so that is where the carrying starts from.
+        pageAtReading = track.at(at)
+
         // A reading says where the words actually are, so everything carried since the last one
         // has been accounted for and both terms start again from it.
         //
@@ -544,9 +543,10 @@ class MotionLayer(private val context: Context) {
         // that is not moving. Measured on a page of paragraphs standing still after a drag,
         // 26, 18, 68 and 32 per cent of the transcriptions off their word where it had been
         // nothing at all.
-        carriedY = 0f
-        guessedY = if (measurements < 2 && !predictFromFirst) 0f
-        else (vy * late).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)
+        // Plus however far the page has gone in the time the answer took to arrive, which the
+        // fit knows because the reports kept coming while it was in flight.
+        carriedY = (-(track.at(now + late) - pageAtReading))
+            .coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
         lastFrameAt = now
         view?.set(boxes)
         view?.let { v -> v.translationY = predictedY }
