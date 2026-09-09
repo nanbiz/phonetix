@@ -235,17 +235,29 @@ class MotionLayer(private val context: Context) {
             // readings the service takes are what it knows; between them the words are where
             // this puts them, and a test that only ever saw the readings could not tell a
             // transcription riding its word from one sliding off it.
-            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-                // Named by the reading it is drawing, so that what was on the screen can be
-                // held against the positions it was drawn from rather than against whichever
-                // reading happens to be nearest in time.
-                android.util.Log.d(
-                    "Phonetix",
-                    "LAYER $now $predictedY $lastMeasureAt showing=${if (wasStale) 0 else 1}",
-                )
-            }
+            // Named by the reading it is drawing, so that what was on the screen can be held
+            // against the positions it was drawn from rather than against whichever reading
+            // happens to be nearest in time.
+            drew(now)
             Choreographer.getInstance().postFrameCallback(this)
         }
+    }
+
+    /**
+     * Say where the words have just been put, whoever put them there.
+     *
+     * The layer is moved from three places: the frame callback, a page reporting a scroll, and
+     * a fresh reading. Only the first of them used to record it, and it is the one that stops
+     * running when the device is busy - so a fling that arrived as eight scroll reports and one
+     * frame was recorded as one position, and a measure reading those recordings called it a
+     * fling the words did not follow at all. They had followed; nothing had written it down.
+     */
+    private fun drew(now: Long) {
+        if (!io.github.nanbiz.phonetix.BuildConfig.DEBUG) return
+        android.util.Log.d(
+            "Phonetix",
+            "LAYER $now $predictedY $lastMeasureAt showing=${if (wasStale) 0 else 1}",
+        )
     }
 
     /**
@@ -327,6 +339,7 @@ class MotionLayer(private val context: Context) {
         carriedY = (carriedY - dy).coerceIn(-Fixed.TOLD_LIMIT_PX, Fixed.TOLD_LIMIT_PX)
         lastFrameAt = now
         view?.let { it.translationY = predictedY }
+        drew(now)
     }
 
     /** Take the words over from the small windows, at the positions they are already at. */
@@ -492,6 +505,7 @@ class MotionLayer(private val context: Context) {
         lastFrameAt = now
         view?.set(boxes)
         view?.let { v -> v.translationY = predictedY }
+        drew(now)
     }
 
     /** Hand the words back to the small windows and stop drawing. */
