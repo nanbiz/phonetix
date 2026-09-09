@@ -23,6 +23,9 @@ export interface HostProtocol {
     data: { runs: TextRun[]; source: string; target: string; options: AnnotateOptions };
     reply: Batch;
   };
+  /** Say one word: WAV bytes, because a page's own media policy can block an audio element
+   *  loading a URL and cannot block Web Audio playing bytes. */
+  speak: { data: { word: string; lang: string }; reply: number[] };
 }
 
 type Named = keyof HostProtocol;

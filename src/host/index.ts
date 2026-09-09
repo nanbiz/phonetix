@@ -3,10 +3,12 @@
 // One instance and one place, because a pack is tens of megabytes and a copy per tab would
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
-import { annotate, lookUp, openLanguages } from '@/core';
+import { annotate, complete, lookUp, openLanguages } from '@/core';
 import { ofTranscription } from '@/core/answer';
+import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
 import { open } from './packs';
+import { audio, ipa } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
@@ -37,7 +39,17 @@ export function host(): void {
       open(data.source).catch(() => null),
       data.target === data.source ? null : open(data.target).catch(() => null),
     ]);
-    return annotate(data.runs, data.source, data.target, data.options);
+    const batch = await annotate(data.runs, data.source, data.target, data.options);
+    return said(batch, data.source);
+  });
+
+  onMessage('speak', async ({ data }) => {
+    try {
+      return await audio(data.lang, data.word);
+    } catch (e) {
+      console.warn(`[Phonetix] Nothing said ${data.word}:`, e);
+      return [];
+    }
   });
 
   onMessage('lookUp', async ({ data }) => {
@@ -54,4 +66,31 @@ export function host(): void {
       return { ...ofTranscription(data.word, '', data.source), state: 'NoPack' as const };
     }
   });
+}
+
+/**
+ * Fill in how the words no pack could say are said.
+ *
+ * The core asks for what it is missing rather than the host deciding to be helpful: a word a
+ * pack answered keeps the pronunciation the dictionary recorded, and only the rest reach the
+ * engine. What comes back goes through the core, so that it is marked as synthesised in the
+ * one place that decides what a reader is told.
+ */
+async function said(batch: Batch, lang: string): Promise<Batch> {
+  const wanted = batch.misses.filter((miss) => miss.need !== 'Gloss');
+  if (wanted.length === 0) return batch;
+  const words = [...new Set(wanted.map((miss) => batch.tokens[miss.token]?.spelling ?? ''))]
+    .filter(Boolean);
+  let spoken: Record<string, string>;
+  try {
+    spoken = await ipa(lang, words);
+  } catch (e) {
+    console.warn('[Phonetix] The voice did not answer:', e);
+    return batch;
+  }
+  const results = wanted
+    .map((miss) => ({ token: miss.token, ipa: spoken[batch.tokens[miss.token]?.spelling ?? ''] }))
+    .filter((result) => result.ipa);
+  if (results.length === 0) return batch;
+  return complete(batch.batch, results, 'espeak');
 }

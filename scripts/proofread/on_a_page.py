@@ -118,7 +118,7 @@ def main():
         time.sleep(2)
         evaluate(cdp, settings, (
             f"chrome.storage.local.set({{packBaseUrl:'{base}',targetLanguage:'de',"
-            "on:true,layer:'gloss',density:1})"
+            "on:true,layer:'gloss+ipa',density:1})"
         ))
         target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})
         page = cdp.send(
@@ -214,6 +214,36 @@ def main():
             # A card off the screen is a card nobody can read.
             if open_card["left"] < 0 or open_card["top"] < 0:
                 failures.append(f"the card is off screen at {open_card['left']},{open_card['top']}")
+
+        # A word no pack holds still gets a transcription, from the voice rather than from a
+        # dictionary, and the annotation says which by its own state.
+        spoken = evaluate(cdp, page, """
+            (() => {
+              const words = [...document.querySelectorAll('.px-w')];
+              const found = words.find(w => w.textContent.includes('parque'));
+              return found ? ((found.querySelector('.px-ph') || {}).textContent || '') : 'no word';
+            })()
+        """)
+        print(f"  parque is said {spoken!r}")
+        if not spoken or spoken == "no word":
+            failures.append(f"a word no pack holds got no transcription ({spoken!r})")
+
+        # The play button on the card makes bytes: what a reader hears is synthesised where
+        # the engine is and played where there is a page. Asked from an extension page,
+        # because a page's own world has no way to reach the host and should not have one.
+        heard = evaluate(cdp, settings, """
+            (async () => {
+              try {
+                const bytes = await chrome.runtime.sendMessage(
+                  {phonetix: 'speak', data: {word: 'perro', lang: 'es'}});
+                return JSON.stringify({length: (bytes.ok || []).length});
+              } catch (e) { return JSON.stringify({failed: String(e)}); }
+            })()
+        """)
+        said = json.loads(heard) if heard else {"failed": "no answer"}
+        print(f"  the voice made {said.get('length', 0)} bytes for perro")
+        if not said.get("length"):
+            failures.append(f"the voice said nothing ({said})")
 
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")

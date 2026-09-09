@@ -109,6 +109,24 @@ async function draw(): Promise<void> {
   }
 }
 
+/**
+ * Say a word out loud.
+ *
+ * The bytes are made in the host, where the engine is, and played here, where there is a
+ * page: a page's own media policy can refuse an element loading a sound and cannot refuse
+ * Web Audio playing bytes it was handed.
+ */
+async function speak(word: string, lang: string): Promise<void> {
+  const bytes = await sendMessage('speak', { word, lang });
+  if (bytes.length === 0) return;
+  const context = new AudioContext();
+  const sound = await context.decodeAudioData(new Uint8Array(bytes).buffer);
+  const source = context.createBufferSource();
+  source.buffer = sound;
+  source.connect(context.destination);
+  source.start();
+}
+
 /** Open the card for a word the reader stopped at. */
 async function open(element: HTMLElement, token: Token): Promise<void> {
   const source = token.lang || pageLanguage();
@@ -122,7 +140,9 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
   if (!element.isConnected) return;
   const key = token.spelling.toLowerCase();
   if (!asked.includes(key)) asked.push(key);
-  show(answer, element.getBoundingClientRect());
+  show(answer, element.getBoundingClientRect(), {
+    onPlay: () => void speak(token.spelling, source),
+  });
 }
 
 function gestures(): void {

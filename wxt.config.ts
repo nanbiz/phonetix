@@ -28,7 +28,9 @@ export default defineConfig({
   modules: ['@wxt-dev/module-svelte'],
   manifest: ({ browser }) => ({
     name: 'Phonetix - Learn and Understand IPA',
-    permissions: ['storage'],
+    // The voice needs a document and a Chromium service worker has none, so on Chromium it
+    // lives in an offscreen page. Firefox's background page has one and needs no permission.
+    permissions: browser === 'firefox' ? ['storage'] : ['storage', 'offscreen'],
     host_permissions: ['<all_urls>'],
     content_security_policy: {
       extension_pages:
