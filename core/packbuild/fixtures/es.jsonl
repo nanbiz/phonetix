@@ -1,0 +1,6 @@
+{"word":"perro","pos":"noun","lang_code":"es","senses":[{"glosses":["dog"],"examples":[{"text":"El perro ladra."}]}],"sounds":[{"ipa":"/ˈpe.ro/"}],"forms":[{"form":"perros","tags":["plural"]}]}
+{"word":"silla","pos":"noun","lang_code":"es","senses":[{"glosses":["chair"]}],"sounds":[{"ipa":"/ˈsi.ʝa/"}],"forms":[{"form":"sillas","tags":["plural"]}]}
+{"word":"camino","pos":"noun","lang_code":"es","senses":[{"glosses":["way, route"]}],"sounds":[{"ipa":"/kaˈmi.no/"}],"forms":[{"form":"caminos"}]}
+{"word":"Hund","pos":"noun","lang_code":"de","senses":[{"glosses":["dog"]}]}
+not json at all
+{"word":"nada","pos":"pron","lang_code":"es","senses":[{"tags":["form-of"]}]}
