@@ -230,6 +230,13 @@ class MotionLayer(private val context: Context) {
             if (stale != wasStale) {
                 wasStale = stale
                 v.visibility = if (stale) View.INVISIBLE else View.VISIBLE
+                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "SHOWN ${!stale} followable=$followable age=${now - lastMeasureAt} " +
+                            "apart=$arrivedApart out=$drewOut",
+                    )
+                }
             }
             // What is on the screen this frame, which is the only thing a reader sees. The
             // readings the service takes are what it knows; between them the words are where
@@ -265,6 +272,13 @@ class MotionLayer(private val context: Context) {
      * to nothing once it is twice the usual gap old.
      */
     private fun trustAt(now: Long): Float {
+        // A speed of nothing is nothing to trust. On a list whose bounds do not move while it
+        // does, every reading measures a speed of nought, so the layer has no speed of its own
+        // at any point in a fling - and a full trust in that nought was what kept the page's
+        // own estimate of where it had got to from being used at all for the first gap after
+        // each reading. With readings arriving every forty milliseconds and the gap about the
+        // same, that was most of the movement.
+        if (vy == 0f) return 0f
         val age = (now - lastMeasureAt).toFloat()
         // A page whose last two readings gave the same speed is being carried along steadily,
         // and the next moment of it is worth predicting further into: it is a page that has
@@ -393,7 +407,16 @@ class MotionLayer(private val context: Context) {
      * reset to the truth, so error cannot accumulate the way it did when the scroll event's
      * own delta was believed.
      */
-    fun measured(current: List<WordBox>, at: Long, speed: Float) {
+    /**
+     * @param movedSince whether this reading found the lines anywhere new. A reading that did
+     *   not cannot say whether the drawing has gone wrong: on a list whose bounds do not move
+     *   while it does, every reading through a fling repeats the positions the plan was made
+     *   with, so whatever the layer has carried the words by reads as exactly that much error.
+     *   The better it followed, the more error it appeared to have, and past half a line of it
+     *   the layer takes the words off the screen: measured through a Compose fling, twenty-one
+     *   frames with nothing on them against twelve with the words.
+     */
+    fun measured(current: List<WordBox>, at: Long, speed: Float, movedSince: Boolean) {
         val now = SystemClock.uptimeMillis()
         // How far out the words were, just before this reading landed.
         //
@@ -407,7 +430,14 @@ class MotionLayer(private val context: Context) {
         // layer stops drawing until a reading lands where it was expected.
         val was = boxes.firstOrNull { old -> current.any { it.word == old.word } }
         val same = if (was == null) null else current.first { it.word == was.word }
-        if (was != null && same != null && measurements > 0) {
+        // And not while the page has reported scrolling that this reading may not show yet.
+        // The layer moved because the page said it had moved; a reading taken from an app
+        // whose bounds lag behind its own scrolling then differs from the drawing by exactly
+        // the distance the page reported, and that is not the drawing being wrong. Measured on
+        // a Compose fling: 126 pixels of "error" against a reading that was itself behind, and
+        // the words taken off the screen for it.
+        val reportedSince = lastToldAt > lastMeasureAt
+        if (movedSince && !reportedSince && was != null && same != null && measurements > 0) {
             drewOut = kotlin.math.abs((was.rect.top + predictedY) - same.rect.top)
         }
         // An app worth following answers often, and where it is expected to. Neither on its
@@ -499,6 +529,14 @@ class MotionLayer(private val context: Context) {
         // there.
         // A reading says where the words actually are, so everything carried since the last one
         // has been accounted for and both terms start again from it.
+        //
+        // Including a reading that found the lines exactly where it left them. Keeping the
+        // carry through those was tried, for the sake of a list whose bounds do not move while
+        // it does: it also keeps it through a page that has genuinely stopped, whose readings
+        // agree for that reason, and the words then sit at the last carried offset over text
+        // that is not moving. Measured on a page of paragraphs standing still after a drag,
+        // 26, 18, 68 and 32 per cent of the transcriptions off their word where it had been
+        // nothing at all.
         carriedY = 0f
         guessedY = if (measurements < 2 && !predictFromFirst) 0f
         else (vy * late).coerceIn(-Fixed.CARRY_LIMIT_PX, Fixed.CARRY_LIMIT_PX)

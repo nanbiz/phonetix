@@ -331,7 +331,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // inflated it: the settings app's words were carried 124% of what it moved.
             val carried = when {
                 exact -> said.toFloat()
-                said == UNDEFINED_SCROLL -> fromPseudoScroll(pseudo)
+                said == UNDEFINED_SCROLL -> fromPseudoScroll(pseudo, event?.packageName?.toString())
                 else -> 0f
             }
             if (BuildConfig.DEBUG && PROBE_TREE) {
@@ -1238,7 +1238,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d("Phonetix", sb.toString())
                 }
                 main.post {
-                    if (moving && overlay.inMotion) overlay.motionMeasured(moved, readAt, speedY)
+                    if (moving && overlay.inMotion) {
+                        overlay.motionMeasured(moved, readAt, speedY, shifted)
+                    }
                     else overlay.endMotion(moved)
                     android.util.Log.d(
                         "Phonetix",
@@ -2166,6 +2168,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** The last estimated offset a lazy list reported, and the pixels it was taken to mean. */
     @Volatile private var lastPseudo = -1
     @Volatile private var lastPseudoAt = 0L
+    /** Which app the remembered offset belongs to. Two apps' offsets have nothing to do with
+     *  each other, and a list's is meaningless once a different one is in front. */
+    @Volatile private var lastPseudoPkg: String? = null
 
     /**
      * How far a list that reports no distance has actually moved, from the offset it estimates.
@@ -2177,19 +2182,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * the height the items actually are, which the lines on the screen give: an item boundary
      * is worth that height rather than five hundred.
      *
-     * Returns nothing when there is no previous reading to compare against, when the list has
+     * The offset is remembered across movements rather than only within one, because it is an
+     * absolute position and not a step. A list's first scroll event of a fling arrives well
+     * after the fling has started - measured, 471 pixels and 120 milliseconds in - and it is
+     * the only news of that stretch there will ever be, since the bounds do not move either.
+     * Held against the last offset seen, that first event accounts for the whole of it; held
+     * against nothing, half a fling went unreported.
+     *
+     * Returns nothing when this app has not reported an offset before, when the list has
      * jumped further than a couple of screens (the plan is stale anyway and the next reading
      * settles it), or when no item height has been measured yet.
      */
-    private fun fromPseudoScroll(pseudo: Int): Float {
-        val was = lastPseudo
-        val now = android.os.SystemClock.uptimeMillis()
-        val since = now - lastPseudoAt
+    private fun fromPseudoScroll(pseudo: Int, pkg: String?): Float {
+        val was = if (pkg == lastPseudoPkg) lastPseudo else -1
         lastPseudo = pseudo
-        lastPseudoAt = now
+        lastPseudoAt = android.os.SystemClock.uptimeMillis()
+        lastPseudoPkg = pkg
         if (pseudo < 0 || was < 0 || pseudo == was) return 0f
-        // A gap long enough that the page has been somewhere else in between.
-        if (since > PSEUDO_STALE_MS) return 0f
         val height = rowHeight
         if (height <= 0f) return 0f
         fun real(p: Int): Float {
@@ -2346,8 +2355,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** What a scroll event carries when the view did not fill the distance in. */
         const val UNDEFINED_SCROLL = -1
         const val LAZY_ITEM_UNITS = 500
-        /** Two estimates further apart in time than this are not one movement. */
-        const val PSEUDO_STALE_MS = 400L
         const val SAID_TOO_SMALL = 2
 
         /** Past this, what a view says it scrolled by is not a scroll of a page: it is a

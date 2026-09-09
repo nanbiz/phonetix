@@ -46,20 +46,37 @@ got = []
 try:
     for n in range(runs):
         if compose:
-            shell("am", "force-stop", "io.github.nanbiz.phonetix")
-            time.sleep(1.5)
-            shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-                  "--es", "mode", "chat", "--ei", "enable", "1", "--ei", "density", "3",
-                  "--ei", "allApps", "1",
-                  "--ei", "measureMovingMax",
-                  os.environ.get("PHONETIX_MEASURE_MOVING", "0"))
-            time.sleep(2)
-            dev.enable_service()
-            # A Compose page has to compose itself and then be read once before there is a plan
-            # to carry, and the overlay is not running until there is. Measured at three
-            # seconds, most runs reported no layer at all while the same swipe by hand carried
-            # the words a third of the way.
-            time.sleep(5)
+            # Started once, then flung repeatedly, which is what a reader does. Restarting the
+            # app for every fling measured a first fling every time, and a first fling is the
+            # one case a lazy list cannot be followed through: its scroll events are the only
+            # news of where it has got to, the first of them arrives 471 pixels into the
+            # movement, and until one has arrived there is nothing to hold the next against.
+            # Measured across four flings of one session: 27% of the first followed, then
+            # 100%, then 109%.
+            if n == 0:
+                shell("am", "force-stop", "io.github.nanbiz.phonetix")
+                time.sleep(1.5)
+                shell("am", "start", "-n",
+                      "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+                      "--es", "mode", "chat", "--ei", "enable", "1", "--ei", "density", "3",
+                      "--ei", "allApps", "1",
+                      "--ei", "measureMovingMax",
+                      os.environ.get("PHONETIX_MEASURE_MOVING", "0"))
+                time.sleep(2)
+                dev.enable_service()
+                # A Compose page has to compose itself and then be read once before there is a
+                # plan to carry, and the overlay is not running until there is. Measured at
+                # three seconds, most runs reported no layer at all while the same swipe by
+                # hand carried the words a third of the way.
+                time.sleep(5)
+            # Back to the top first, so every measured fling is the same fling and the list
+            # never simply runs out. Not measured itself: it is movement like any other and
+            # leaves the page reporting where it is, which is the state a reader's second
+            # fling starts from.
+            if n > 0:
+                for _ in range(3):
+                    shell("input", "swipe", "540", "600", "540", "1600", "150")
+                time.sleep(1.5)
             shell("logcat", "-c")
             shell("input", "swipe", "540", "1500", "540", "600", "250")
             time.sleep(2.5)

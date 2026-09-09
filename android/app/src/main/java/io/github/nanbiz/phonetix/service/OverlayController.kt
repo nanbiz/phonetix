@@ -56,9 +56,9 @@ class OverlayController(
      * @param speed how fast the page was going when they were read, in pixels a millisecond,
      *   measured by the read itself rather than worked out again from these positions
      */
-    fun motionMeasured(boxes: List<WordBox>, at: Long, speed: Float) {
+    fun motionMeasured(boxes: List<WordBox>, at: Long, speed: Float, movedSince: Boolean) {
         lastRendered = boxes
-        motion.measured(boxes, at, speed)
+        motion.measured(boxes, at, speed, movedSince)
     }
 
     /** The page says it has moved by this much since it last said so. */
