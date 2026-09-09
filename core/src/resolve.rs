@@ -88,6 +88,10 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// Whether a pronunciation pack is open for the source, which is what separates "no
     /// dictionary yet" from "nothing at all".
     pub ipa_only: bool,
+    /// The reader's accent, where that accent differs word by word rather than by a rule.
+    /// A word it holds is said its way; a word it does not is said the standard way, which
+    /// is what an overlay of a few thousand words is for.
+    pub accent: Option<&'a Pack<D>>,
 }
 
 /// Look one word up.
@@ -116,6 +120,20 @@ pub fn look_up<D: AsRef<[u8]>>(
         .iter()
         .map(|entry| resolve_one(spelling, entry, source, target, pack, open.target))
         .collect();
+    // How this reader's accent says it, where the accent has a word of its own for it.
+    if let Some(accent) = open.accent {
+        let said = accent
+            .lookup_one(spelling)
+            .or_else(|| accent.lookup_one(&answers[0].lemma.clone().unwrap_or_default()))
+            .map(|entry| entry.ipa)
+            .filter(|ipa| !ipa.is_empty());
+        if let Some(ipa) = said {
+            for answer in answers.iter_mut() {
+                answer.symbols = crate::symbols::explain(&ipa[0]);
+                answer.ipa = ipa.clone();
+            }
+        }
+    }
     // The commonest word first, which the dump lists first, so a reader who does not choose
     // still gets the likely one.
     let mut first = answers.remove(0);

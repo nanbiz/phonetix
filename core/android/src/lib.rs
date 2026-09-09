@@ -165,6 +165,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         source: core.packs.get(&source),
         target: core.packs.get(&target),
         ipa_only: false,
+        accent: None,
     };
     let answer = lexcore::resolve::look_up(
         &spelling,
@@ -304,10 +305,18 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         });
     }
     let held = unsafe { &mut *(core as *mut Core) };
+    let accent_pack = env
+        .get_string(&accent)
+        .ok()
+        .map(|it| -> String { it.into() })
+        .filter(|it| !it.is_empty());
     let open = lexcore::resolve::Open {
         source: held.packs.get(&source),
         target: held.packs.get(&target),
         ipa_only: false,
+        // A word this accent has its own reading of is said its way; the rules are for
+        // accents that have no such words, and an accent never has both.
+        accent: accent_pack.as_ref().and_then(|it| held.packs.get(it)),
     };
     let options = lexcore::answer::AnnotateOptions {
         mode: match mode.as_str() {
@@ -320,11 +329,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         density: density.max(1) as u32,
         narrow: narrow != 0,
         hide_stress: hide_stress != 0,
-        accent: env
-            .get_string(&accent)
-            .ok()
-            .map(|it| it.into())
-            .filter(|it: &String| !it.is_empty()),
+        accent: accent_pack.clone(),
         seen: Vec::new(),
     };
     let (tokens, misses) = lexcore::annotate::annotate(

@@ -80,9 +80,14 @@ export async function openLanguages(): Promise<string[]> {
  * The answer arrives as JSON because an Answer is a tree and the boundary carries text. Its
  * shape is written once, in the core, and mirrored in [Answer].
  */
-export async function lookUp(spelling: string, source: string, target: string): Promise<Answer> {
+export async function lookUp(
+  spelling: string,
+  source: string,
+  target: string,
+  accent = ''
+): Promise<Answer> {
   const it = await coreReady();
-  return JSON.parse(it.lookUp(spelling, source, target)) as Answer;
+  return JSON.parse(it.lookUp(spelling, source, target, accent)) as Answer;
 }
 
 /**

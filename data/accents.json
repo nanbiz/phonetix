@@ -1,17 +1,19 @@
 {
-  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists.",
+  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent has one or the other, never both: a word carrying its accent from a pack must not be shifted again by a rule.",
   "accents": {
     "en": [
       {
         "id": "en-gb",
         "name": "British",
-        "voice": "en-gb-x-rp"
+        "voice": "en-gb-x-rp",
+        "words": 12237
       },
       {
         "id": "en-us",
         "name": "American",
         "voice": "en-us",
-        "rule": true
+        "rule": true,
+        "words": 27044
       },
       {
         "id": "en-gb-scotland",
@@ -21,7 +23,8 @@
       {
         "id": "en-au",
         "name": "Australian",
-        "voice": "en-au"
+        "voice": "en-au",
+        "words": 4272
       },
       {
         "id": "en-029",
@@ -32,7 +35,8 @@
         "id": "en-ca",
         "name": "Canadian",
         "voice": "en-us",
-        "rule": true
+        "rule": true,
+        "words": 3315
       }
     ],
     "es": [
@@ -64,25 +68,29 @@
         "id": "de-ch",
         "name": "Switzerland",
         "voice": "de",
-        "rule": true
+        "rule": true,
+        "words": 420
       },
       {
         "id": "de-at",
         "name": "Austria",
         "voice": "de",
-        "rule": true
+        "rule": true,
+        "words": 1007
       }
     ],
     "pt": [
       {
         "id": "pt",
         "name": "Portugal",
-        "voice": "pt"
+        "voice": "pt",
+        "words": 56594
       },
       {
         "id": "pt-br",
         "name": "Brazil",
-        "voice": "pt-br"
+        "voice": "pt-br",
+        "words": 57356
       }
     ],
     "fr": [

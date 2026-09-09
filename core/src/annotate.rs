@@ -199,6 +199,7 @@ mod tests {
             source: None,
             target: None,
             ipa_only: false,
+            accent: None,
         }
     }
 

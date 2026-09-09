@@ -161,11 +161,16 @@ impl Core {
 
     /// One word, as JSON, because an Answer is a tree and the boundary carries text.
     #[wasm_bindgen(js_name = lookUp)]
-    pub fn look_up(&self, spelling: &str, source: &str, target: &str) -> String {
+    pub fn look_up(&self, spelling: &str, source: &str, target: &str, accent: &str) -> String {
         let open = Open {
             source: self.packs.get(source),
             target: self.packs.get(target),
             ipa_only: false,
+            accent: if accent.is_empty() {
+                None
+            } else {
+                self.packs.get(accent)
+            },
         };
         lexcore::json::of(&look_up(
             spelling,
@@ -217,6 +222,9 @@ impl Core {
             source: self.packs.get(source),
             target: self.packs.get(target),
             ipa_only: false,
+            // A word this accent has its own reading of is said its way; the rule below is
+            // for accents that have no such words, and an accent never has both.
+            accent: self.packs.get(&accent),
         };
         let options = AnnotateOptions {
             mode: match mode {

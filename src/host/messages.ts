@@ -18,7 +18,10 @@ export interface HostProtocol {
   /** Which languages the core can answer for right now. */
   languages: { data: Record<string, never>; reply: string[] };
   /** What the core says about one word, read from source into target. */
-  lookUp: { data: { word: string; source: string; target: string }; reply: Answer };
+  lookUp: {
+    data: { word: string; source: string; target: string; accent?: string };
+    reply: Answer;
+  };
   /** What a batch of runs gets drawn on it: one token per word, and the words the packs
    *  could not answer. */
   annotate: {

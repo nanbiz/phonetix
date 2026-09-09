@@ -210,6 +210,7 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
     word: token.spelling,
     source,
     target: settings.target || source,
+    accent: settings.accent,
   });
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.

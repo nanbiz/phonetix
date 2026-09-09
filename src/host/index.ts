@@ -34,6 +34,7 @@ export function host(): void {
     await Promise.all([
       open(data.source).catch(() => null),
       data.target === data.source ? null : open(data.target).catch(() => null),
+      data.options.accent ? open(data.options.accent).catch(() => null) : null,
     ]);
     const batch = await annotate(data.runs, data.source, data.target, data.options);
     return said(batch, data.source);
@@ -120,8 +121,10 @@ export function host(): void {
     await Promise.all([
       open(data.source),
       data.target === data.source ? null : open(data.target),
+      // The accent's own words, where that accent is one that has them.
+      data.accent ? open(data.accent).catch(() => null) : null,
     ]);
-    return lookUp(data.word, data.source, data.target);
+    return lookUp(data.word, data.source, data.target, data.accent ?? '');
   });
 }
 
