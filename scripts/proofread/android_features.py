@@ -686,6 +686,13 @@ def check_a_real_app(r, dev):
     bystander is dropped before anything is read or logged, so nothing anywhere said so.
     """
     reset(dev)
+    # From the app's own front page, not from wherever it was left. Its search screen belongs
+    # to a second package, so it survives stopping the settings app and it is what
+    # `am start` restores - a screen with two words on it, which reads as the overlay having
+    # stopped working.
+    shell("am", "force-stop", "com.android.settings")
+    shell("am", "force-stop", "com.google.android.settings.intelligence")
+    time.sleep(1.5)
     shell("am", "start", "-a", "android.settings.SETTINGS")
     time.sleep(4)
     if not r.check("settings" in dev.top_activity().lower(),
@@ -739,10 +746,16 @@ def check_a_real_app(r, dev):
         shell("input", "swipe", "540", "1400", "540", "500", "1300")
         time.sleep(3.0)
         covered.append(rows_of_ours(dev, "scrolled"))
+    # As a share of the rows that carry text at all, not as a count. A count compares this
+    # screen with the one before it, and scrolling a list reaches its end: the last screen of
+    # the settings app is mostly empty, so a run that dragged that far reported the overlay as
+    # having stopped working when it had merely run out of words to work on.
+    shares = [ours / text if text else 0.0 for ours, text in covered]
     r.check(
-        min(covered) >= covered[0] * KEPT_AFTER_SCROLLING,
+        min(shares) >= shares[0] * KEPT_AFTER_SCROLLING,
         "a real app: it still carries them after scrolling",
-        f"rows of the screen carrying a transcription, before and after each drag: {covered}",
+        "share of the screen's text rows carrying a transcription, before and after each "
+        f"drag: {[f'{s:.0%}' for s in shares]} of {[text for _, text in covered]} rows",
     )
 
     # Pressing a word for its card is checked on this repository's own page, where the words
@@ -753,30 +766,58 @@ def check_a_real_app(r, dev):
     # its sounds and scrolls through them.
 
 
-# How much of what a settled screen carries has to survive a drag and its aftermath. Not all
-# of it: a screen scrolled to a different place has different words on it, and some of them are
-# ones this dictionary has nothing for.
+# How much of a screen's text has to keep its transcriptions through a drag and its aftermath.
+# Not all of it: a screen scrolled to a different place has different words on it, and some of
+# them are ones this dictionary has nothing for.
 KEPT_AFTER_SCROLLING = 0.7
 
 
+def drawn_again(dev, within=12.0):
+    """Wait until the overlay is drawing again, and say whether it got there."""
+    until = time.time() + within
+    while time.time() < until:
+        if dev.boxes():
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def rows_of_ours(dev, where):
-    """How many rows of the screen carry something the overlay drew."""
+    """Rows of the screen the overlay drew on, and rows that carry any text at all.
+
+    Both, because one without the other says nothing. There are no marks to count in someone
+    else's app, so the same screen is photographed twice - once as the reader sees it and once
+    with the service switched off - and the rows that differ are ours. The second photograph
+    is also what says how much text was there to work on, which is what the first has to be
+    judged against: a list scrolled to its end is mostly empty, and an overlay drawing nothing
+    on nothing is not an overlay that stopped.
+    """
     from PIL import Image, ImageChops
+    # Photographed once the overlay has actually drawn again, not after a fixed wait. This
+    # reading switches the service off to get the bare screen and back on afterwards, and a
+    # service just switched on has read nothing yet: a fixed sleep photographed the gap and
+    # reported the overlay as having lost the screen when it was still finding it.
+    drawn_again(dev)
     ours = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-ours")).convert("RGB")
     shell("settings", "put", "secure", "enabled_accessibility_services", "none")
     time.sleep(3.5)
     bare = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-bare")).convert("RGB")
     dev.enable_service()
-    time.sleep(3.0)
+    drawn_again(dev)
     diff = ImageChops.difference(ours, bare)
     width, height = diff.size
-    rows = 0
+    rows, text = 0, 0
     for y in range(0, height, 2):
-        for x in range(0, width, 2):
-            if sum(diff.getpixel((x, y))) > 60:
-                rows += 1
-                break
-    return rows
+        if any(sum(diff.getpixel((x, y))) > 60 for x in range(0, width, 2)):
+            rows += 1
+        # Against the row's own left edge, which is margin on every screen this reads: a page
+        # is not one colour, so a single background taken for the whole screen calls a card's
+        # edge text.
+        margin = bare.getpixel((2, y))
+        if any(sum(abs(a - b) for a, b in zip(bare.getpixel((x, y)), margin)) > 60
+               for x in range(0, width, 2)):
+            text += 1
+    return rows, text
 
 
 def close(got, want, tolerance=60):
