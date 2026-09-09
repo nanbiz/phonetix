@@ -14,7 +14,7 @@ use crate::resolve::Answer;
 pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
-\"ipa\":{},\"says\":{},\"glosses\":{},\"source\":{},\"target\":{}}}",
+\"ipa\":{},\"says\":{},\"glosses\":{},\"example\":{},\"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
@@ -22,6 +22,7 @@ pub fn of(answer: &Answer) -> String {
         strings(&answer.ipa),
         strings(&answer.says),
         strings(&answer.glosses),
+        maybe(&answer.example),
         quoted(&answer.source.0),
         quoted(&answer.target.0),
     )
@@ -75,6 +76,7 @@ mod tests {
             ipa: vec!["ˈpe.ro".into()],
             says: vec!["Hund".into()],
             glosses: vec!["dog".into()],
+            example: Some("El perro ladra.".into()),
             provenance: None,
             source: Lang("es".into()),
             target: Lang("de".into()),
@@ -89,6 +91,7 @@ mod tests {
         assert!(text.contains("\"lemma\":null"));
         assert!(text.contains("\"says\":[\"Hund\"]"));
         assert!(text.contains("\"ipa\":[\"ˈpe.ro\"]"));
+        assert!(text.contains("\"example\":\"El perro ladra.\""));
     }
 
     #[test]

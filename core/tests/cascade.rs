@@ -269,3 +269,49 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
     assert_eq!(got.glosses, vec!["platypus"]);
     assert_eq!(got.ipa, vec!["oɾ.ni.toˈrin.ko"]);
 }
+
+#[test]
+fn the_applying_senses_example_comes_with_the_answer() {
+    // One line of the word in use is worth more than a second gloss, and the dump has it: the
+    // cascade was dropping it on the floor.
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add(
+        Entry {
+            lemma: "perro".into(),
+            pos: "noun".into(),
+            tags: Vec::new(),
+            ipa: vec!["ˈpe.ro".into()],
+            senses: vec![Sense {
+                gloss: "dog".into(),
+                marks: Vec::new(),
+                example: Some("El perro ladra.".into()),
+            }],
+        },
+        &[] as &[&str],
+    )
+    .unwrap();
+    let bytes = pack.finish().unwrap();
+    let es = Pack::open(&bytes).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+    };
+    let got = look_up("perro", &lang("es"), &lang("en"), &open);
+    assert_eq!(got.example.as_deref(), Some("El perro ladra."));
+}
+
+#[test]
+fn a_sense_with_no_example_invents_none() {
+    let es = spanish();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+    };
+    assert_eq!(
+        look_up("perro", &lang("es"), &lang("en"), &open).example,
+        None
+    );
+}

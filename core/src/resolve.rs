@@ -31,6 +31,10 @@ pub struct Answer {
     /// What the word means, in English, which is the anchor the card shows when the join is
     /// ambiguous or absent.
     pub glosses: Vec<String>,
+    /// The applying sense's example, where the dump had one. One line of the word in use is
+    /// worth more than a second gloss, and a made-up sentence would be worth less than
+    /// nothing, so this is empty rather than invented.
+    pub example: Option<String>,
     pub provenance: Option<Provenance>,
     pub source: Lang,
     pub target: Lang,
@@ -46,6 +50,7 @@ impl Answer {
             ipa: Vec::new(),
             says: Vec::new(),
             glosses: Vec::new(),
+            example: None,
             provenance: None,
             source: source.clone(),
             target: target.clone(),
@@ -90,6 +95,8 @@ pub fn look_up<D: AsRef<[u8]>>(
     // owed the connection: they tapped "perros" and the answer is about "perro".
     let inflected = entry.lemma != spelling;
     let glosses: Vec<String> = entry.senses.iter().map(|s| s.gloss.clone()).collect();
+    // The first sense's, because that is the sense the card leads with.
+    let example = entry.senses.first().and_then(|s| s.example.clone());
 
     // Read in its own language, or read by a reader of English: either way the source pack
     // answers alone and there is no join to be ambiguous about.
@@ -107,6 +114,7 @@ pub fn look_up<D: AsRef<[u8]>>(
             &entry,
             glosses.clone(),
             glosses,
+            example,
             pack,
             source,
             target,
@@ -122,6 +130,7 @@ pub fn look_up<D: AsRef<[u8]>>(
             &entry,
             Vec::new(),
             glosses,
+            example,
             pack,
             source,
             target,
@@ -181,7 +190,9 @@ pub fn look_up<D: AsRef<[u8]>>(
         (_, true) => AnswerState::Form,
         (_, false) => AnswerState::Entry,
     };
-    finish(state, spelling, &entry, says, glosses, pack, source, target)
+    finish(
+        state, spelling, &entry, says, glosses, example, pack, source, target,
+    )
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -191,6 +202,7 @@ fn finish<D: AsRef<[u8]>>(
     entry: &Entry,
     says: Vec<String>,
     glosses: Vec<String>,
+    example: Option<String>,
     pack: &Pack<D>,
     source: &Lang,
     target: &Lang,
@@ -211,6 +223,7 @@ fn finish<D: AsRef<[u8]>>(
         ipa: entry.ipa.clone(),
         says,
         glosses,
+        example,
         provenance: Some(Provenance::Dictionary {
             pack: format!("lex-{}", pack.lang()),
         }),

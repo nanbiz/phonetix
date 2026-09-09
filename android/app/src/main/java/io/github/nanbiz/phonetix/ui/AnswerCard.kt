@@ -63,6 +63,7 @@ fun AnswerCard(
         // making exactly the choice it is here to avoid.
         Readings(answer, palette)
         Grammar(answer, palette)
+        Example(answer, palette)
         OtherSenses(answer, palette)
         Foot(answer, palette)
     }
@@ -171,6 +172,23 @@ private fun Grammar(answer: Answer, palette: Tokens.Palette) {
         text = parts.joinToString("  ·  "),
         color = Color(palette.inkMuted),
         fontSize = Tokens.Scale.fontSizeSmall.sp,
+    )
+}
+
+/**
+ * The word in use, where the dump had a line of it.
+ *
+ * One line and only when there is one: a sense in context settles which sense applies faster
+ * than another gloss does, and an invented sentence would settle it wrongly.
+ */
+@Composable
+private fun Example(answer: Answer, palette: Tokens.Palette) {
+    val example = answer.example ?: return
+    androidx.compose.material3.Text(
+        text = example,
+        color = Color(palette.inkMuted),
+        fontSize = Tokens.Scale.fontSizeSense.sp,
+        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
     )
 }
 

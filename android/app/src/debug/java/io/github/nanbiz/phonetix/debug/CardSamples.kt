@@ -12,7 +12,7 @@ object CardSamples {
         // A word that joined: one answer, one sense, nothing to disambiguate.
         """{"state":"Entry","spelling":"perro","lemma":null,"pos":"noun",
            "ipa":["ˈpe.ro"],"says":["Hund"],"glosses":["dog"],
-           "source":"es","target":"de"}""",
+           "example":"El perro ladra.","source":"es","target":"de"}""",
         // A form: the lemma is what to memorise and the tapped word is the small part.
         """{"state":"Form","spelling":"perros","lemma":"perro","pos":"noun",
            "ipa":["ˈpe.ro"],"says":["Hund"],"glosses":["dog"],

@@ -23,6 +23,9 @@ data class Answer(
     val says: List<String>,
     /** What the word means in English, which anchors an answer a machine guessed. */
     val glosses: List<String>,
+    /** The applying sense's example, where the dump had one. Never invented: a made-up
+     *  sentence would be worth less than nothing. */
+    val example: String?,
     val source: String,
     val target: String,
 ) {
@@ -61,6 +64,7 @@ data class Answer(
                 ipa = list("ipa"),
                 says = list("says"),
                 glosses = list("glosses"),
+                example = o.optString("example").ifEmpty { null }.takeIf { it != "null" },
                 source = o.optString("source"),
                 target = o.optString("target"),
             )
