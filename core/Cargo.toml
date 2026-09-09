@@ -11,3 +11,9 @@ description = "The reading core: what a word means, how it is said, and which of
 crate-type = ["lib"]
 
 [dependencies]
+# The pack is what the cascade reads; the core cannot reach a word any other way.
+lexpack = { path = "pack" }
+
+[dev-dependencies]
+# The cascade is tested against packs built the way a real one is.
+lexpack = { path = "pack", features = ["write"] }

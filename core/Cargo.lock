@@ -182,6 +182,9 @@ dependencies = [
 [[package]]
 name = "lexcore"
 version = "0.1.0"
+dependencies = [
+ "lexpack",
+]
 
 [[package]]
 name = "lexcore-android"
