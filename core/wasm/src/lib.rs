@@ -7,7 +7,8 @@
 
 use std::collections::HashMap;
 
-use lexcore::answer::Lang;
+use lexcore::annotate::{annotate, complete};
+use lexcore::answer::{AnnotateOptions, EngineResult, InlineMode, Lang, TextRun, Token};
 use lexcore::resolve::{look_up, Open};
 use lexpack::Pack;
 use wasm_bindgen::prelude::*;
@@ -39,6 +40,10 @@ pub fn best_of(source: &str, candidates: Vec<String>, margin: usize) -> i32 {
 #[wasm_bindgen]
 pub struct Core {
     packs: HashMap<String, Pack<Vec<u8>>>,
+    /// The batches the host is still drawing, kept so that what its engines answer joins the
+    /// same tokens rather than a second set the host stitched together itself.
+    batches: HashMap<u64, Vec<Token>>,
+    next_batch: u64,
 }
 
 #[wasm_bindgen]
@@ -47,6 +52,8 @@ impl Core {
     pub fn new() -> Core {
         Core {
             packs: HashMap::new(),
+            batches: HashMap::new(),
+            next_batch: 1,
         }
     }
 
@@ -87,6 +94,107 @@ impl Core {
             &Lang(target.into()),
             &open,
         ))
+    }
+
+    /// Annotate a batch of runs: one token per word, and the misses the host's engines should
+    /// try to fill.
+    ///
+    /// The runs arrive as three parallel arrays rather than as JSON, because the host has them
+    /// as arrays already and serialising a page's text to parse it straight back is a copy of
+    /// every word for nothing. An empty language hint means the batch's own source language.
+    #[wasm_bindgen]
+    pub fn annotate(
+        &mut self,
+        run_ids: Vec<u32>,
+        texts: Vec<String>,
+        hints: Vec<String>,
+        source: &str,
+        target: &str,
+        mode: &str,
+        density: u32,
+        seen: Vec<String>,
+    ) -> String {
+        let runs: Vec<TextRun> = run_ids
+            .iter()
+            .zip(texts.iter())
+            .enumerate()
+            .map(|(at, (id, text))| TextRun {
+                id: *id,
+                text: text.clone(),
+                lang_hint: hints
+                    .get(at)
+                    .filter(|hint| !hint.is_empty())
+                    .map(|hint| Lang(hint.clone())),
+            })
+            .collect();
+        let open = Open {
+            source: self.packs.get(source),
+            target: self.packs.get(target),
+            ipa_only: false,
+        };
+        let options = AnnotateOptions {
+            mode: match mode {
+                "gloss" => InlineMode::Gloss,
+                "gloss+ipa" => InlineMode::GlossIpa,
+                "ipa" => InlineMode::Ipa,
+                "replace" => InlineMode::Replace,
+                _ => InlineMode::Off,
+            },
+            density,
+            narrow: false,
+            accent: None,
+            seen,
+        };
+        let (tokens, misses) = annotate(
+            &runs,
+            &Lang(source.into()),
+            &Lang(target.into()),
+            &open,
+            &options,
+        );
+        let id = self.next_batch;
+        self.next_batch += 1;
+        let written = lexcore::json::batch(id, &tokens, &misses);
+        self.batches.insert(id, tokens);
+        written
+    }
+
+    /// Fill in what the host's engines answered, and hand back the batch it belongs to.
+    ///
+    /// A batch the core no longer holds comes back empty rather than throwing: the reader has
+    /// moved on, and a page that scrolled away is not an error.
+    #[wasm_bindgen]
+    pub fn complete(
+        &mut self,
+        batch: u64,
+        indices: Vec<u32>,
+        glosses: Vec<String>,
+        ipas: Vec<String>,
+        engine: &str,
+    ) -> String {
+        let Some(mut tokens) = self.batches.remove(&batch) else {
+            return lexcore::json::batch(batch, &[], &[]);
+        };
+        let results: Vec<EngineResult> = indices
+            .iter()
+            .enumerate()
+            .map(|(at, index)| EngineResult {
+                token_index: *index,
+                gloss: glosses.get(at).filter(|text| !text.is_empty()).cloned(),
+                ipa: ipas.get(at).filter(|text| !text.is_empty()).cloned(),
+                engine: engine.to_string(),
+            })
+            .collect();
+        complete(&mut tokens, &results);
+        let written = lexcore::json::batch(batch, &tokens, &[]);
+        self.batches.insert(batch, tokens);
+        written
+    }
+
+    /// Give up a batch the host has finished drawing.
+    #[wasm_bindgen(js_name = dropBatch)]
+    pub fn drop_batch(&mut self, batch: u64) {
+        self.batches.remove(&batch);
     }
 }
 

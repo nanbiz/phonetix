@@ -49,7 +49,7 @@ android {
  * build time so the app has exactly one source for them and the repository keeps one copy.
  */
 /**
- * The behaviour vectors generated from src/data/sprinkle.ts. They are read by
+ * The behaviour vectors generated from the core's own sprinkle rule. They are read by
  * SprinkleParityTest, which is the thing that keeps this port and the extension agreeing
  * about which words get transcribed.
  */
@@ -57,8 +57,7 @@ val bundleVectors by tasks.registering(Copy::class) {
     val vectors = rootProject.file("../shared/sprinkle-vectors.json")
     doFirst {
         require(vectors.exists()) {
-            "Missing ${vectors.path}. Run `node --experimental-strip-types " +
-                "scripts/gen-sprinkle-vectors.ts` in the repository root."
+            "Missing ${vectors.path}. Run `pnpm gen:vectors` in the repository root."
         }
     }
     from(vectors)

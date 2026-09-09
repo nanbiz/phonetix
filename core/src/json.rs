@@ -30,6 +30,63 @@ pub fn of(answer: &Answer) -> String {
     )
 }
 
+/// A batch of tokens and the misses in it, as the host reads them.
+///
+/// One object rather than two calls, because the host draws the tokens and asks its engines
+/// about the misses in the same pass, and two calls could disagree about which batch they
+/// were describing.
+pub fn batch(id: u64, tokens: &[crate::answer::Token], misses: &[crate::answer::Miss]) -> String {
+    let drawn: Vec<String> = tokens.iter().map(token).collect();
+    let asked: Vec<String> = misses
+        .iter()
+        .map(|miss| {
+            format!(
+                "{{\"token\":{},\"need\":\"{:?}\"}}",
+                miss.token_index, miss.need
+            )
+        })
+        .collect();
+    format!(
+        "{{\"batch\":{},\"tokens\":[{}],\"misses\":[{}]}}",
+        id,
+        drawn.join(","),
+        asked.join(",")
+    )
+}
+
+/// One word of a run, with everything needed to draw it.
+fn token(token: &crate::answer::Token) -> String {
+    format!(
+        "{{\"run\":{},\"start\":{},\"end\":{},\"spelling\":{},\"lang\":{},\
+\"state\":\"{:?}\",\"gloss\":{},\"ipa\":{},\"inline\":{},\"provenance\":{}}}",
+        token.run_id,
+        token.start,
+        token.end,
+        quoted(&token.spelling),
+        quoted(&token.lang.0),
+        token.state,
+        maybe(&token.gloss),
+        maybe(&token.ipa),
+        token.inline,
+        provenance(&token.provenance),
+    )
+}
+
+/// Where an answer came from, which the interface shows and never hides.
+fn provenance(from: &Option<crate::answer::Provenance>) -> String {
+    use crate::answer::Provenance;
+    match from {
+        None => "null".to_string(),
+        Some(Provenance::Dictionary { pack }) => {
+            format!("{{\"kind\":\"dictionary\",\"pack\":{}}}", quoted(pack))
+        }
+        Some(Provenance::Guess { engine }) => {
+            format!("{{\"kind\":\"guess\",\"engine\":{}}}", quoted(engine))
+        }
+        Some(Provenance::Synthesised) => "{\"kind\":\"synthesised\"}".to_string(),
+    }
+}
+
 /// The words a spelling is, where it is more than one.
 fn readings(items: &[crate::resolve::Reading]) -> String {
     let inner: Vec<String> = items

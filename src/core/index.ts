@@ -8,6 +8,7 @@
 // about what a word means.
 import init, { Core } from './wasm/lexcore.js';
 import type { Answer } from './answer';
+import type { AnnotateOptions, Batch, TextRun } from './tokens';
 
 /** Where the compiled core sits in the extension's own package. */
 const BINARY = 'core/lexcore_bg.wasm';
@@ -77,4 +78,60 @@ export async function openLanguages(): Promise<string[]> {
 export async function lookUp(spelling: string, source: string, target: string): Promise<Answer> {
   const it = await coreReady();
   return JSON.parse(it.lookUp(spelling, source, target)) as Answer;
+}
+
+/**
+ * What a batch of runs gets drawn on it.
+ *
+ * The runs cross as parallel arrays because that is how the host holds them already, and
+ * serialising a page's text only to parse it straight back would copy every word for nothing.
+ */
+export async function annotate(
+  runs: TextRun[],
+  source: string,
+  target: string,
+  options: AnnotateOptions
+): Promise<Batch> {
+  const it = await coreReady();
+  return JSON.parse(
+    it.annotate(
+      new Uint32Array(runs.map((run) => run.id)),
+      runs.map((run) => run.text),
+      runs.map((run) => run.lang ?? ''),
+      source,
+      target,
+      options.mode,
+      options.density,
+      options.seen ?? []
+    )
+  ) as Batch;
+}
+
+/**
+ * Fill in what an engine answered about the words the packs missed.
+ *
+ * The results go back to the core rather than being drawn beside its tokens, so one answer
+ * still drives the page, the card and the audio.
+ */
+export async function complete(
+  batch: number,
+  results: { token: number; gloss?: string; ipa?: string }[],
+  engine: string
+): Promise<Batch> {
+  const it = await coreReady();
+  return JSON.parse(
+    it.complete(
+      BigInt(batch),
+      new Uint32Array(results.map((r) => r.token)),
+      results.map((r) => r.gloss ?? ''),
+      results.map((r) => r.ipa ?? ''),
+      engine
+    )
+  ) as Batch;
+}
+
+/** Give up a batch the host has finished drawing. */
+export async function dropBatch(batch: number): Promise<void> {
+  const it = await coreReady();
+  it.dropBatch(BigInt(batch));
 }

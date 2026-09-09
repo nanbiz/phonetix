@@ -90,6 +90,20 @@ pub enum InlineMode {
     Replace,
 }
 
+/// What the reader asked the inline layer to show, which is a setting rather than a platform's
+/// habit: the same choice means the same thing in a browser and on a phone.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AnnotateOptions {
+    pub mode: InlineMode,
+    /// One word in every N, from the reader's frequency bar.
+    pub density: u32,
+    /// Broad transcriptions or narrow ones.
+    pub narrow: bool,
+    pub accent: Option<String>,
+    /// Spellings the reader has opened a card for, which stay annotated afterwards.
+    pub seen: Vec<String>,
+}
+
 /// What a word the core could not answer needs from the host's engines.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Need {

@@ -171,6 +171,57 @@ def main():
         if sorted(got.get("res") or []) != ["de", "es"]:
             failures.append(f"the core holds {got.get('res')}, not both packs")
 
+        # A batch of runs, the way a page asks: the core finds the words, decides which are
+        # annotated and what each means, and the host draws exactly that.
+        sentence = "El perro corre por el camino y descansa en el banco."
+        batch = ask(cdp, session, {
+            "id": 4, "type": "annotate",
+            "data": {
+                "runs": [{"id": 11, "text": sentence}],
+                "source": "es", "target": TARGET,
+                "options": {"mode": "gloss", "density": 1},
+            },
+            "timestamp": int(time.time() * 1000),
+        })
+        drawn = (batch.get("res") or {}).get("tokens")
+        if not drawn:
+            failures.append(f"the core annotated nothing ({batch})")
+        else:
+            words = [t["spelling"] for t in drawn]
+            if words != sentence.replace(".", "").split():
+                failures.append(f"the words of the run came back as {words}")
+            # Every token has to say where it is, in the host's own indexing, or the page
+            # would be annotated in the wrong places.
+            for token in drawn:
+                if sentence[token["start"]:token["end"]] != token["spelling"]:
+                    failures.append(
+                        f"{token['spelling']!r} claims {token['start']}..{token['end']}, "
+                        f"which is {sentence[token['start']:token['end']]!r}")
+            perro = next((t for t in drawn if t["spelling"] == "perro"), None)
+            says = "Hund" if TARGET == "de" else "dog"
+            if not perro or perro.get("gloss") != says:
+                failures.append(f"perro was annotated {perro and perro.get('gloss')!r}")
+            if not perro or not perro.get("inline"):
+                failures.append("nothing was drawn at the densest setting")
+            print(f"\n  {len(drawn)} words annotated, "
+                  f"{sum(1 for t in drawn if t['inline'])} of them drawn, "
+                  f"{sum(1 for t in drawn if t['gloss'])} answered")
+
+        # A sparse setting draws fewer of them, which is the reader's bar doing its one job.
+        sparse = ask(cdp, session, {
+            "id": 5, "type": "annotate",
+            "data": {
+                "runs": [{"id": 12, "text": sentence}],
+                "source": "es", "target": TARGET,
+                "options": {"mode": "gloss", "density": 50},
+            },
+            "timestamp": int(time.time() * 1000),
+        })
+        few = [t for t in ((sparse.get("res") or {}).get("tokens") or []) if t["inline"]]
+        many = [t for t in (drawn or []) if t["inline"]]
+        if drawn and len(few) >= len(many):
+            failures.append(f"a sparse page drew {len(few)} of {len(many)}")
+
         # The words themselves, compared with what node got from the same bytes.
         for word in WORDS:
             answer = ask(cdp, session, {
