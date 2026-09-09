@@ -6,6 +6,9 @@
 
 use lexpack::{Builder, Entry, Kind, Pack, Sense};
 
+/// No inflected forms, spelled so the compiler knows which kind of nothing it is.
+const NO_FORMS: [&str; 0] = [];
+
 fn sense(gloss: &str) -> Sense {
     Sense { gloss: gloss.to_string(), marks: Vec::new(), example: None }
 }
@@ -33,7 +36,7 @@ fn german() -> Vec<u8> {
     pack.add(word("Hund", "noun", "hʊnt", &["dog, hound"]), &["Hunde", "Hundes"]).unwrap();
     pack.add(word("Rüde", "noun", "ˈʁyːdə", &["male dog"]), &["Rüden"]).unwrap();
     pack.add(word("Stuhl", "noun", "ʃtuːl", &["a chair (to sit on)"]), &["Stühle"]).unwrap();
-    pack.add(word("Sessel", "noun", "ˈzɛsl̩", &["armchair"]), &[]).unwrap();
+    pack.add(word("Sessel", "noun", "ˈzɛsl̩", &["armchair"]), &NO_FORMS).unwrap();
     pack.add(word("Weg", "noun", "veːk", &["route, way (to get from one place to another)"]),
              &["Wege"]).unwrap();
     pack.add(word("Weise", "noun", "ˈvaɪ̯zə", &["way, manner"]), &["Weisen"]).unwrap();
@@ -133,8 +136,8 @@ fn a_pack_bigger_than_one_block_still_answers() {
     let mut pack = Builder::new("xx", Kind::Lex, 0);
     let count = lexpack::ENTRIES_PER_BLOCK * 3 + 7;
     for n in 0..count {
-        pack.add(word(&format!("word{n:04}"), "noun", "x", &[&format!("meaning{n}")]), &[])
-            .unwrap();
+        pack.add(word(&format!("word{n:04}"), "noun", "x", &[&format!("meaning{n}")]),
+                 &NO_FORMS).unwrap();
     }
     let bytes = pack.finish().unwrap();
     let read = Pack::open(&bytes).unwrap();
@@ -149,8 +152,8 @@ fn a_pack_bigger_than_one_block_still_answers() {
 #[test]
 fn a_spelling_claimed_twice_is_refused_rather_than_silently_dropped() {
     let mut pack = Builder::new("xx", Kind::Lex, 0);
-    pack.add(word("book", "noun", "bʊk", &["a book"]), &[]).unwrap();
-    assert!(pack.add(word("book", "verb", "bʊk", &["to book"]), &[]).is_err());
+    pack.add(word("book", "noun", "bʊk", &["a book"]), &NO_FORMS).unwrap();
+    assert!(pack.add(word("book", "verb", "bʊk", &["to book"]), &NO_FORMS).is_err());
 }
 
 #[test]
