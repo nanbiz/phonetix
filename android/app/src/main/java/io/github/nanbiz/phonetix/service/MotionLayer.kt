@@ -330,10 +330,17 @@ class MotionLayer(private val context: Context) {
      *   happened and replaces what the layer had guessed for the same stretch; an estimate is
      *   another guess, and two guesses added together overshoot.
      */
-    fun told(dy: Float, exact: Boolean) {
+    /**
+     * @param when_ the moment the page is describing, which is when the event was made rather
+     *   than when it reached this process. A sample timestamped on arrival says the page was
+     *   there later than it was, and a fit of samples all late by the same amount describes a
+     *   page that is behind the real one by exactly that: photographed mid-drag, every
+     *   transcription on the screen a row behind its word.
+     */
+    fun told(dy: Float, exact: Boolean, when_: Long) {
         if (view == null || dy == 0f) return
-        val now = SystemClock.uptimeMillis()
-        lastToldAt = now
+        val now = when_.coerceAtMost(SystemClock.uptimeMillis())
+        lastToldAt = SystemClock.uptimeMillis()
         // A report is not a jump and not a speed: it is one more sample of where the page has
         // got to, and what it is worth is decided by the fit along with all the others. Adding
         // it to the drawing directly counted the same movement twice; taking the speed it

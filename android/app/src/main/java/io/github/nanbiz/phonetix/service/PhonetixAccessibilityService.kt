@@ -337,13 +337,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "Phonetix", "CARRIED said=$said pseudo=$pseudo row=$rowHeight -> $carried",
                 )
             }
+            // When the page was where this event says it was, which is not when we hear about
+            // it: an accessibility event carries the moment it was made.
+            val told = event?.eventTime ?: android.os.SystemClock.uptimeMillis()
+            if (BuildConfig.DEBUG && PROBE_TREE) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "LATE ${android.os.SystemClock.uptimeMillis() - told}ms",
+                )
+            }
             if (::overlay.isInitialized) {
                 main.post {
                     overlay.beginMotion()
                     if (USE_SAID_SCROLL && kotlin.math.abs(carried) >= SAID_TOO_SMALL &&
                         kotlin.math.abs(carried) < SAID_TOO_FAR
                     ) {
-                        overlay.told(carried, exact)
+                        overlay.told(carried, exact, told)
                     }
                 }
             }

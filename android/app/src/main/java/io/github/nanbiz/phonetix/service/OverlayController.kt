@@ -62,7 +62,7 @@ class OverlayController(
     }
 
     /** The page says it has moved by this much since it last said so. */
-    fun told(dy: Float, exact: Boolean) = motion.told(dy, exact)
+    fun told(dy: Float, exact: Boolean, at: Long) = motion.told(dy, exact, at)
 
     fun endMotion(boxes: List<WordBox>) {
         motion.stop()

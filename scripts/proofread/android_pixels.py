@@ -110,7 +110,7 @@ def main():
     if not dev.enable_service():
         print("the service will not start")
         return 1
-    total = [0, 0, 0]
+    total = [0, 0, 0, 0, 0]
     for label, mode in PAGES:
         right, wrong, unplaced, blank = 0, 0, 0, 0
         # Per look, because the total hides the shape: a page is not eight per cent wrong all
@@ -155,6 +155,10 @@ def main():
                               f"at {shot}")
         shown = right + wrong
         share = f"{100 * right / shown:.0f}%" if shown else "-"
+        # The count that matters is of moments a reader would call broken, not the pooled
+        # share: a page is right nearly always and then wholly wrong for one moment, and how
+        # many chips happened to be on the screen for each look moves the pooled share about
+        # far more than the fault does.
         bad = sum(1 for l in looks if l < 0.5)
         print(f"  {label:20} {shown:4} transcriptions on the screen mid-drag, "
               f"{share:>4} of them over their own line"
@@ -164,10 +168,13 @@ def main():
         total[0] += right
         total[1] += wrong
         total[2] += unplaced
+        total[3] += bad
+        total[4] += len(looks)
     shown = total[0] + total[1]
     if shown:
         print(f"  {'every page':20} {shown:4} transcriptions, "
-              f"{100 * total[0] / shown:.0f}% over their own line")
+              f"{100 * total[0] / shown:.0f}% over their own line, "
+              f"{total[3]} of {total[4]} looks mostly wrong")
     return 0
 
 
