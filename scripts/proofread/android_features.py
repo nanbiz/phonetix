@@ -599,14 +599,35 @@ def check_shade(r, dev):
         time.sleep(3.5)
     # Given a few looks: closing the shade puts the page back and the screen has to be read
     # again before anything is drawn on it, which is a read of the whole tree.
+    # What the shade leaves in front is the system's business: on this emulator it restores
+    # the app's own settings screen rather than the page that was being read. The page is
+    # asked for again when that happens, since what is being checked is that the overlay
+    # draws again after the shade, not which task the system chose to restore.
+    resumed = shell("dumpsys", "activity", "activities")
+    if "DebugSurfaceActivity" not in (
+        re.search(r"ResumedActivity[^\n]*", resumed).group(0) if "ResumedActivity" in resumed
+        else ""
+    ):
+        show(dev, mode="unique", density=3, scrollTo=200, settle=3)
+
     back = {}
-    for _ in range(5):
+    for _ in range(8):
+        dev.clear_log()
+        # Asked for again on each look: what comes back from the shade is a screen the
+        # service has to read afresh, and a look that only reads the log sees the last pass
+        # rather than this one.
+        shell("input", "swipe", "540", "1200", "540", "1150", "300")
+        time.sleep(2.0)
         back = dev.boxes()
         if back:
             break
-        time.sleep(2.5)
+    # Which screen came back, since "nothing was drawn" means one thing when the page
+    # returned and another when the shade left the app's own settings in front of it.
+    resumed = shell("dumpsys", "activity", "activities")
+    found = re.search(r"ResumedActivity[^\n]*?(\S+/\S+)", resumed)
+    where = found.group(1) if found else "nothing that says what it is"
     r.check(bool(back), "the shade: they come back when it is closed",
-            "the page came back bare")
+            f"the page came back bare; what was in front was {where}")
 
 
 def page_is_dark(dev, into="/tmp/phonetix-theme"):

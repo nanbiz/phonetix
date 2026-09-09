@@ -41,12 +41,24 @@ object Reading {
         narrow: Boolean = false,
         hideStress: Boolean = true,
     ): List<Annotated> {
-        if (core == 0L || texts.isEmpty()) return emptyList()
+        if (core == 0L || texts.isEmpty()) {
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG && core == 0L) {
+                android.util.Log.d("Phonetix", "ANNOTATE asked with no core open")
+            }
+            return emptyList()
+        }
         val written = Lex.annotate(
             core, texts.toTypedArray(), source, target, mode, density, narrow, hideStress,
         )
         val batch = JSONObject(written)
         val tokens = batch.optJSONArray("tokens") ?: JSONArray()
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "ANNOTATED ${tokens.length()} tokens from ${texts.size} lines, " +
+                    "first=${tokens.optJSONObject(0)}",
+            )
+        }
         return (0 until tokens.length()).mapNotNull { at ->
             tokens.optJSONObject(at)?.let { row ->
                 Annotated(

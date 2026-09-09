@@ -2037,6 +2037,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // a word. All three were hardcoded to English and a transcription once, which is how
         // an app whose whole point is translation showed nothing but pronunciations.
         val source = screenLanguage ?: Language.OURS
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "READING source=$source target=${settings.target} layer=${settings.layer} " +
+                    "lines=${planned.size} first=${planned.firstOrNull()?.text?.take(40)}",
+            )
+        }
         val told = Reading.annotate(
             planned.map { it.text },
             source = source,
@@ -2246,21 +2253,34 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private fun readBlockers() {
         val found = ArrayList<android.graphics.Rect>(2)
         runCatching {
+            // Only what is actually above the app being read. The notification shade stays in
+            // the window list after it is closed, reporting the whole screen, and counting it
+            // meant every word on the page was judged to be behind something and none was
+            // drawn: the page came back bare from the shade and stayed that way.
+            val above = windows
+                .filter { it.isActive || it.isFocused }
+                .maxOfOrNull { it.layer } ?: Int.MIN_VALUE
             for (w in windows) {
                 val type = w.type
                 val isOverlay = type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD ||
                     type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM ||
                     type == android.view.accessibility.AccessibilityWindowInfo.TYPE_SPLIT_SCREEN_DIVIDER
-                if (!isOverlay) continue
+                if (!isOverlay || w.layer <= above) continue
                 val r = android.graphics.Rect()
                 w.getBoundsInScreen(r)
-                // Ours is a window too, and it is a system overlay by type. Anything the size
-                // of one word is one of ours; a keyboard is not.
+                // Ours is a window too, and it is a system overlay by type: the transcriptions
+                // themselves, the card, and the lens. None of them blocks anything, because
+                // they are what is being drawn.
+                if (ours(w)) continue
                 if (!r.isEmpty && r.height() > MIN_BLOCKER) found.add(r)
             }
         }
         blockers = found
     }
+
+    /** Whether a window is one of ours, which nothing of ours is hidden by. */
+    private fun ours(w: android.view.accessibility.AccessibilityWindowInfo): Boolean =
+        runCatching { w.root?.packageName?.toString() == packageName }.getOrDefault(false)
 
     /**
      * The per-character screen rectangles for a node's text. Returns null when the app does
