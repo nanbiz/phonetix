@@ -100,6 +100,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
     private var living = false
     private var mode = "plain"
 
+    /** Whether the page paints each line's number into its own background, for the check that
+     *  is made of pixels alone. */
+    private var marking = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mode = intent?.getStringExtra(EXTRA_MODE) ?: "plain"
@@ -157,6 +161,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     override fun onBindViewHolder(holder: Holder, position: Int) {
                         holder.line.text =
                             "$position ${TestWords.DISTINCT[position % TestWords.DISTINCT.size]}"
+                        if (marking) {
+                            holder.line.setBackgroundColor(
+                                io.github.nanbiz.phonetix.service.Marks.page(position),
+                            )
+                        }
                     }
                 }
                 setBackgroundColor(BACKGROUND)
@@ -204,6 +213,14 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                         // that read alike could be told apart by nothing but position, which
                         // is the thing being measured.
                         row.text = "$position ${getItem(position)}"
+                        // The line's number, painted where a photograph of the screen can read
+                        // it back: this is the truth a pixel check holds the overlay's belief
+                        // against.
+                        if (marking) {
+                            row.setBackgroundColor(
+                                io.github.nanbiz.phonetix.service.Marks.page(position),
+                            )
+                        }
                         return row
                     }
                 }
@@ -422,6 +439,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             if (i.hasExtra("putThemWrongBy")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.PUT_THEM_WRONG_BY =
                     i.getIntExtra("putThemWrongBy", 0).toFloat()
+            }
+            if (i.hasExtra("markLines")) {
+                io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.MARK_LINES =
+                    i.getIntExtra("markLines", 0) != 0
+                marking = i.getIntExtra("markLines", 0) != 0
             }
             if (i.hasExtra("probeTree")) {
                 io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.PROBE_TREE =

@@ -129,5 +129,48 @@ class ChipPainter {
         ink.color = fg
         val fm = ink.fontMetrics
         canvas.drawText(label, where.centerX(), where.centerY() - (fm.ascent + fm.descent) / 2f, ink)
+        // Last, so the chip's own background does not cover it.
+        markLine(canvas, where, box)
     }
+
+    /**
+     * A patch of colour naming the line this word came from, drawn on the word itself.
+     *
+     * The page paints the same number into its own background, so a photograph of the screen
+     * holds both: what the overlay believes and what is actually there. Comparing them needs no
+     * log and no reading of the text, which is what makes it the one check here that cannot
+     * agree with a mistake the overlay is making.
+     */
+    private fun markLine(canvas: Canvas, where: RectF, box: WordBox) {
+        if (!io.github.nanbiz.phonetix.BuildConfig.DEBUG) return
+        if (box.line < 0) return
+        mark.color = Marks.believed(box.line)
+        canvas.drawRect(
+            where.left, where.top, where.left + Marks.SIZE, where.top + Marks.SIZE, mark,
+        )
+    }
+
+    private val mark = android.graphics.Paint()
+}
+
+/** How a line's number is written into a colour, and read back out of one. */
+object Marks {
+    /** Big enough to survive a screenshot being looked at, small enough not to cover the word. */
+    const val SIZE = 10f
+
+    /** How many numbers one channel carries, and how far apart they are. */
+    private const val STEPS = 12
+    private const val APART = 18
+
+    /** The colour a page paints behind the line numbered this. Dark, because the fixture's
+     *  text is white. */
+    fun page(line: Int): Int = android.graphics.Color.rgb(
+        24 + (line % STEPS) * APART, 24, 24 + ((line / STEPS) % STEPS) * APART,
+    )
+
+    /** The colour the overlay paints on a word it believes came from the line numbered this.
+     *  Full green, which no page colour has, so the two are told apart by that alone. */
+    fun believed(line: Int): Int = android.graphics.Color.rgb(
+        24 + (line % STEPS) * APART, 220, 24 + ((line / STEPS) % STEPS) * APART,
+    )
 }

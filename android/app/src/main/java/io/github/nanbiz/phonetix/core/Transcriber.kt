@@ -16,6 +16,11 @@ data class WordBox(
     val word: String,
     val background: Int = 0,
     val ink: Int = 0,
+    /** Which line of the page this word came from, where the page numbers its lines. Only a
+     *  test fixture does, and only a debug build reads it: it is what lets a check made of
+     *  pixels alone ask whether the line the overlay believes a word is on is the line the
+     *  word is actually over, without believing anything the overlay says. */
+    val line: Int = -1,
 )
 
 /** One token of a line of text: the word, and its transcription when it was picked. */

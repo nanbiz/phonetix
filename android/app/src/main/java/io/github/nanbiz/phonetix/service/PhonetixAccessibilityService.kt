@@ -1388,6 +1388,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             while (boxes.size > w) boxes.removeAt(boxes.size - 1)
             p.boxes = boxes.subList(before, boxes.size).toList()
+            // Which line of the page these came from, where the page says so by numbering its
+            // lines. Only a test fixture does that, and it is what lets a check made of pixels
+            // alone compare the line the overlay believes a word is on against the line the
+            // word is drawn over.
+            if (BuildConfig.DEBUG && MARK_LINES) {
+                val numbered = p.text.takeWhile { it.isDigit() }.toIntOrNull()
+                if (numbered != null) {
+                    p.boxes = p.boxes.map { it.copy(line = numbered) }
+                    for (i in before until boxes.size) {
+                        boxes[i] = boxes[i].copy(line = numbered)
+                    }
+                }
+            }
         }
         // How fast the page went during this read, measured by the read itself: the first
         // line that was measured is asked once more at the end, and the distance it has
@@ -2434,6 +2447,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  One is ordinary while a list hands rows around; several in a row means the plan
          *  describes a screen that is no longer there. */
         const val BLANK_FOLLOWS = 2
+        /** Whether the words carry the number of the line they came from, and the overlay
+         *  paints it. For the check that is made of pixels alone. */
+        @Volatile
+        @JvmStatic
+        var MARK_LINES = false
+
         /** Whether every node the walk visits is named in the log, which is how a tree that
          *  is not being handed to us at all is told from one being read and rejected. */
         @Volatile
