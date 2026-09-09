@@ -48,7 +48,7 @@ pnpm build
 pnpm build:firefox
 pnpm zip
 pnpm zip:firefox
-./gradlew --no-daemon -p android assembleDebug -q
+./android/gradlew --no-daemon -p android assembleDebug -q
 
 out=".output"
 apk="$out/phonetix-$tag-android-debug.apk"

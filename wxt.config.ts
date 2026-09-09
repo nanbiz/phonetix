@@ -25,6 +25,21 @@ export default defineConfig({
     build: { minify: false },
   }),
   srcDir: 'src',
+  // AMO wants the source of a build it signs, and the default sweep takes the repository with
+  // it: the Rust build directory, the fetched dictionaries and the espeak data made an 850 MB
+  // archive that took ten minutes to write. What a reviewer needs is the source.
+  zip: {
+    excludeSources: [
+      'core/target/**',
+      'assets/**',
+      'public/espeak/**',
+      'public/core/**',
+      'android/**',
+      'docs/**',
+      'scripts/proofread/**',
+      '**/*.pack',
+    ],
+  },
   modules: ['@wxt-dev/module-svelte'],
   manifest: ({ browser }) => ({
     name: 'Phonetix - Learn and Understand IPA',
