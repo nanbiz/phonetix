@@ -10,6 +10,12 @@
   node in the tree is a round trip into that app, and those round trips are almost all of
   the latency; the decorative containers that flag pulls in carry no text worth reading.
 
+  The accessibility button is deliberately not requested. A service that asks for it is
+  presented as a shortcut rather than as a service: its page in Settings then offers only
+  "shortcut, off" and no switch to turn the service on at all, which leaves it unusable on a
+  phone where that shortcut has not been set up. The shade tile is the trigger instead, and a
+  reader who wants the button can bind it from the same page.
+
   notificationTimeout is zero rather than the usual 100ms: it is how often the system is
   allowed to hand us anything at all, and at 100ms a fling delivered one or two events in
   its whole length, so the transcriptions were re-read twice during a movement of two
@@ -18,7 +24,7 @@
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows|flagRequestAccessibilityButton"
+    android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:canTakeScreenshot="true"
     android:description="@string/service_description"

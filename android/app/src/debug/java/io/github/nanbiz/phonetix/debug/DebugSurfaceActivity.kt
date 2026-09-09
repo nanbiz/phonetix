@@ -467,11 +467,6 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 DebugMarks.on = i.getIntExtra("marks", 0) != 0
                 window?.decorView?.invalidate()
             }
-            if (i.hasExtra("useButton")) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setUseButton(
-                    i.getIntExtra("useButton", 1) != 0,
-                )
-            }
             if (i.hasExtra("touchWords")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setTouchWords(
                     i.getIntExtra("touchWords", 0) != 0,

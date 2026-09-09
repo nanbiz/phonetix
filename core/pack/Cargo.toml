@@ -1,0 +1,26 @@
+[package]
+name = "lexpack"
+version = "0.1.0"
+edition = "2021"
+description = "The pack format: one file per language, read the same way in a browser and on a phone."
+
+[dependencies]
+# A finite state transducer for the key index. Pure Rust, so the same index code compiles to
+# WebAssembly and to every Android ABI; the alternative, a sorted table with binary search,
+# would hold every spelling in full rather than sharing their prefixes.
+fst = "0.4"
+# Decompression is pure Rust for the same reason: the reference zstd library is C, and the
+# reader has to run in a browser. Compression is the writer's job and the writer only runs in
+# CI on a real machine, so it may use the C one.
+ruzstd = "0.7"
+
+[dev-dependencies]
+zstd = "0.13"
+
+[features]
+# Writing a pack. Off by default so a reader build carries no compressor at all.
+write = ["dep:zstd"]
+
+[dependencies.zstd]
+version = "0.13"
+optional = true

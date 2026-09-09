@@ -23,15 +23,6 @@ data class Settings(
      * opens its card, at the cost of the swipes that start on one.
      */
     val touchWords: Boolean = false,
-    /**
-     * Whether the system's accessibility button is asked for.
-     *
-     * It sits in the navigation bar, or floats over the screen, and taps switch the overlay
-     * off and on without leaving what is being read. Some readers do not want a button on
-     * every screen, and the shade tile does the same job, so this can be turned off: the
-     * service drops the flag from its own info at runtime and the button goes away.
-     */
-    val useButton: Boolean = true,
 )
 
 /**
@@ -46,7 +37,6 @@ object SettingsStore {
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
-    private const val K_BUTTON = "use_button"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -64,7 +54,6 @@ object SettingsStore {
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, false),
-            useButton = p.getBoolean(K_BUTTON, true),
         )
     }
 
@@ -77,7 +66,6 @@ object SettingsStore {
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
-            ?.putBoolean(K_BUTTON, next.useButton)
             ?.apply()
     }
 
@@ -85,7 +73,6 @@ object SettingsStore {
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
-    fun setUseButton(v: Boolean) = update { it.copy(useButton = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }
