@@ -120,6 +120,17 @@ class Track {
             // has been covered by now.
             speed / decay * (1f - kotlin.math.exp(-decay * ahead))
         }
+        // And never faster than the page has actually been seen to go.
+        //
+        // A fit can come out steeper than any interval it was fitted to, which is fine for
+        // describing the samples and wrong for running past them: photographed mid-drag, the
+        // moments where a page went wrong were not a little wrong, they were every
+        // transcription on the screen a full row above its word, the words having travelled
+        // further than the text. Extrapolation is held to the fastest the samples themselves
+        // ever showed.
+        val ceiling = fastest() * kotlin.math.abs(ahead)
+        val held = if (ahead > 0f && ceiling > 0f) moved.coerceIn(-ceiling, ceiling) else moved
+
         // The line the samples make, not the last of them: one sample is a page's position at
         // one instant and carries whatever noise that instant had, and anchoring every frame to
         // it puts that noise on the screen. The fit already says where the page was at the
@@ -127,8 +138,8 @@ class Track {
         //
         // Backwards is not something a page does at the end of a fling, whatever a fit says.
         return latest + from + when {
-            speed > 0f -> moved.coerceAtLeast(0f)
-            speed < 0f -> moved.coerceAtMost(0f)
+            speed > 0f -> held.coerceAtLeast(0f)
+            speed < 0f -> held.coerceAtMost(0f)
             else -> 0f
         }
     }
@@ -203,6 +214,21 @@ class Track {
         // Both are relative to the speed at the start of the window, so their ratio is what
         // the newest end is worth in terms of the average.
         return if (average <= 1e-6f) 1f else (ending / average).coerceIn(0.2f, 1f)
+    }
+
+    /** The fastest any interval in the window actually went, in pixels a millisecond. */
+    private fun fastest(): Float {
+        var most = 0f
+        for (i in 0 until count - 1) {
+            val newer = slot(i)
+            val older = slot(i + 1)
+            val span = (at[newer] - at[older]).toFloat()
+            if (span <= 0f) continue
+            if (latestAt - at[older] > WINDOW_MS) break
+            val rate = kotlin.math.abs((where[newer] - where[older]) / span)
+            if (rate > most) most = rate
+        }
+        return most
     }
 
     /** The rate the interval speeds are falling at, or nothing when they are not. */

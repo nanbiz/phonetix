@@ -23,7 +23,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from android_harness import SERIAL, Device, shell
 
 PAGES = [("a list", "recycler"), ("a recycling list", "list")]
-SHOTS = int(os.environ.get("PHONETIX_SHOTS", "6"))
+# How many drags each page is put through. Each is looked at three times.
+DRAGS = int(os.environ.get("PHONETIX_SHOTS", "6"))
 # The same drag the other suites use.
 MOVE_PX = 900
 MOVE_MS = 1300
@@ -34,6 +35,8 @@ BASE = 24
 # Full green marks the overlay's own patch; no page colour has any.
 BELIEVED_GREEN = 220
 PAGE_GREEN = 24
+# Where to keep a look that went wrong, if anywhere.
+KEEP = os.environ.get("PHONETIX_KEEP")
 
 
 def decode(red, blue):
@@ -96,6 +99,13 @@ def judge(image):
 
 
 def main():
+    # Knobs passed through to the page, which sets them on the service, so a constant can be
+    # swept against the one measure here that does not read the service's own account.
+    knobs = {}
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            key, value = arg.split("=", 1)
+            knobs[key] = int(value)
     dev = Device()
     if not dev.enable_service():
         print("the service will not start")
@@ -103,29 +113,54 @@ def main():
     total = [0, 0, 0]
     for label, mode in PAGES:
         right, wrong, unplaced, blank = 0, 0, 0, 0
-        for _ in range(SHOTS):
+        # Per look, because the total hides the shape: a page is not eight per cent wrong all
+        # the time, it is right nearly always and then wholly wrong for one moment of one drag.
+        looks = []
+        for _ in range(DRAGS):
             shell("am", "force-stop", "io.github.nanbiz.phonetix")
             time.sleep(1.5)
-            dev.surface(mode=mode, enable=1, density=3, allApps=1, markLines=1, rows=60)
+            dev.surface(mode=mode, enable=1, density=3, allApps=1, markLines=1, rows=60,
+                        **knobs)
             time.sleep(2)
             dev.enable_service()
             time.sleep(5)
             dev.surface(mode=mode, enable=1, density=3, allApps=1, markLines=1, rows=60,
-                        motion="linear", distance=MOVE_PX, duration=MOVE_MS, strokes=1, seed=1)
-            # Part way into the movement, which is where the words are hardest to keep on.
-            time.sleep(MOVE_MS / 2000)
-            got = judge(screen())
-            if got[0] + got[1] == 0:
-                blank += 1
-            right += got[0]
-            wrong += got[1]
-            unplaced += got[2]
+                        motion="linear", distance=MOVE_PX, duration=MOVE_MS, strokes=1,
+                        seed=1, **knobs)
+            # Several moments of the same drag rather than one. A screenshot catches one
+            # instant, and which instant it is moves the answer by eight points between runs of
+            # the same build; the moments through a drag are what is being asked about anyway.
+            began = time.time()
+            for share_of_it in (0.25, 0.5, 0.75):
+                wait = MOVE_MS / 1000 * share_of_it - (time.time() - began)
+                if wait > 0:
+                    time.sleep(wait)
+                picture = screen()
+                got = judge(picture)
+                if got[0] + got[1] == 0:
+                    blank += 1
+                right += got[0]
+                wrong += got[1]
+                unplaced += got[2]
+                if got[0] + got[1] > 0:
+                    share_right = got[0] / (got[0] + got[1])
+                    looks.append(share_right)
+                    # A look where nearly everything is wrong is not a worse average, it is a
+                    # moment a reader would see as broken, and it is the only thing worth
+                    # looking at. Kept so it can be.
+                    if share_right < 0.5 and KEEP:
+                        shot = f"{KEEP}/wrong-{mode}-{len(looks)}.png"
+                        picture.save(shot)
+                        print(f"      kept a look that was {100 * share_right:.0f}% right "
+                              f"at {shot}")
         shown = right + wrong
         share = f"{100 * right / shown:.0f}%" if shown else "-"
+        bad = sum(1 for l in looks if l < 0.5)
         print(f"  {label:20} {shown:4} transcriptions on the screen mid-drag, "
               f"{share:>4} of them over their own line"
-              f"{f', {blank} looks had none at all' if blank else ''}"
-              f"{f', {unplaced} on no line the page painted' if unplaced else ''}")
+              f"{f', {blank} of {3 * DRAGS} looks had none at all' if blank else ''}"
+              f"{f', {unplaced} on no line the page painted' if unplaced else ''}"
+              f"{f', {bad} of {len(looks)} looks mostly wrong' if bad else ''}")
         total[0] += right
         total[1] += wrong
         total[2] += unplaced
