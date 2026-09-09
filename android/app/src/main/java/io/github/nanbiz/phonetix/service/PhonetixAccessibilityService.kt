@@ -1320,7 +1320,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 val midY = (r.top + r.bottom) / 2
                 val inside = midX >= p.viewport.left && midX <= p.viewport.right &&
                     midY >= p.viewport.top && midY <= p.viewport.bottom
-                val behind = inside && covered(r, p.exit)
+                val behind = inside && covered(r, p.exit, p.clip)
                 if (!inside) outside++ else if (behind) hidden++
                 if (inside && !behind) { boxes[w] = boxes[i]; w++ }
             }
@@ -1526,6 +1526,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
+                    "unseen=${stats.unseen} cut=${stats.clipped} " +
                     "bounds=${t2 - t1}ms calls=${planned.size} colour=${colourMs}ms " +
                     "render=${android.os.SystemClock.uptimeMillis() - t3}ms boxes=${boxes.size} " +
                     "coloured=${painted.count { it.background != 0 }} during=$during " +
@@ -1843,7 +1844,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
-    private class Painted(val enter: Int, val rect: android.graphics.Rect)
+    private class Painted(
+        val enter: Int,
+        val rect: android.graphics.Rect,
+        /** Whether the node carries text of its own. Text does not hide text: two pieces of
+         *  text in one flow share the visual line where one ends and the next begins, so
+         *  their boxes overlap without either covering anything. */
+        val holdsText: Boolean,
+    )
 
 
     /**
@@ -1867,6 +1875,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var ipcNs: Long = 0,
         var computeNs: Long = 0,
         var calls: Int = 0,
+        /** Subtrees the walk refused to enter: one whose node said it could not be seen, and
+         *  one whose node's box did not meet what its ancestors allow. Each takes everything
+         *  below it with it. */
+        var unseen: Int = 0,
+        var clipped: Int = 0,
         /** The text of the screen, for deciding what language it is in. */
         val tongue: Language.Screen = Language.Screen(),
     )
@@ -1909,15 +1922,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val text = if (visible) node.text?.toString() else null
         stats.ipcNs += System.nanoTime() - mark
         stats.calls++
-        if (!visible) return
+        // Counted rather than merely obeyed: this one return decides how much of a screen is
+        // ever seen, and on a web page it refuses most of it. Descending anyway was measured
+        // and is not worth it - the text under an invisible container is reported invisible
+        // too, so it costs 381 calls against 101 and finds not one more word.
+        if (!visible) { stats.unseen++; return }
         val clip = android.graphics.Rect(inherited)
-        if (!bounds.isEmpty && !clip.intersect(bounds)) return
+        if (!bounds.isEmpty && !clip.intersect(bounds)) { stats.clipped++; return }
 
         // Anything with its own area can end up covering what was drawn before it. A layer
         // spanning most of the screen is a backdrop rather than something that hides a
-        // word, so it is not counted.
+        // word, so it is not counted. Only what can actually be seen covers anything.
         if (!bounds.isEmpty && !isBackdrop(bounds)) {
-            painted.add(Painted(enter, android.graphics.Rect(bounds)))
+            painted.add(Painted(enter, android.graphics.Rect(bounds), !text.isNullOrBlank()))
         }
 
         if (!text.isNullOrBlank() && text.length <= MAX_TEXT) {
@@ -1954,7 +1971,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.util.Log.d(
                 "Phonetix",
                 "NODE ${node.className} kids=$n vis=$visible bounds=$bounds " +
-                    "text=${text?.take(24)} extras=${node.availableExtraData}",
+                    "text=${node.text?.toString()?.take(24)} extras=${node.availableExtraData}",
             )
         }
         for (i in 0 until n) {
@@ -2007,7 +2024,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * says a word about it. Draw order does. Anything whose subtree begins after this
      * node's ended is on top, and a word it overlaps is not on screen to be replaced.
      */
-    private fun covered(word: RectF, exit: Int): Boolean {
+    private fun covered(word: RectF, exit: Int, within: android.graphics.Rect? = null): Boolean {
         val w = android.graphics.Rect(
             word.left.toInt(), word.top.toInt(), word.right.toInt(), word.bottom.toInt(),
         )
@@ -2018,7 +2035,30 @@ class PhonetixAccessibilityService : AccessibilityService() {
         for (r in blockers) if (android.graphics.Rect.intersects(r, w)) return true
         for (p in cachedPainted) {
             if (p.enter < exit) continue
-            if (android.graphics.Rect.intersects(p.rect, w)) return true
+            // Text that flows around this line rather than over it.
+            //
+            // A paragraph on a web page is a run of sibling nodes - some text, a link, more
+            // text - and each reports a box spanning every visual line it touches. Where one
+            // ends and the next begins is a single visual line belonging to both, so their
+            // boxes overlap and the later one, by draw order alone, covers the earlier one's
+            // last words. Measured on an article, one to four words of every line were thrown
+            // away for being behind the paragraph that follows them.
+            //
+            // What this has to catch is a bar the page scrolls under, and a bar is a
+            // container: its text, if it has any, is in a child. So a box that carries text
+            // itself is in the flow rather than over it.
+            if (p.holdsText) continue
+            if (within != null && within.contains(p.rect)) continue
+            if (android.graphics.Rect.intersects(p.rect, w)) {
+                if (BuildConfig.DEBUG && PROBE_TREE) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "OVER word=$w is under ${p.rect} entered=${p.enter} exit=$exit " +
+                            "within=$within",
+                    )
+                }
+                return true
+            }
         }
         return false
     }
