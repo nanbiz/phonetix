@@ -12,8 +12,14 @@ A photograph then holds both, and the check is a comparison of two colours: the 
 word and the one on it. Nothing is read from the log, no text is recognised, and a wrong
 belief cannot hide, because the page's colour does not come from the overlay.
 
-  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run python scripts/proofread/android_pixels.py
+  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run scripts/proofread/android_pixels.py
 """
+# The image library is declared here rather than asked of the caller: a check that needs
+# it fails halfway through otherwise, after the emulator has already been driven.
+# /// script
+# dependencies = ["pillow"]
+# ///
+
 import os
 import subprocess
 import sys

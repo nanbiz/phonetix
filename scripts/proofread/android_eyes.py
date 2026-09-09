@@ -13,8 +13,14 @@ a movement. Each frame is then read on its own: every transcription bar in it ha
 with a line bar, or it is sitting between the lines of the page, which is exactly what a
 reader complains about. Nothing the service says is consulted.
 
-  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run --with pillow python scripts/proofread/android_eyes.py
+  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run scripts/proofread/android_eyes.py
 """
+# The image library is declared here rather than asked of the caller: a check that needs
+# it fails halfway through otherwise, after the emulator has already been driven.
+# /// script
+# dependencies = ["pillow"]
+# ///
+
 import os
 import shutil
 import sys

@@ -5,8 +5,14 @@ The overlay suite drives a page in motion. This one drives the decisions a reade
 tapping a word, moving the frequency bar, choosing which apps to see transcriptions in -
 and checks the overlay actually obeys them on a device rather than in a unit test.
 
-  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run python scripts/proofread/android_features.py
+  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run scripts/proofread/android_features.py
 """
+# The image library is declared here rather than asked of the caller: a check that needs
+# it fails halfway through otherwise, after the emulator has already been driven.
+# /// script
+# dependencies = ["pillow"]
+# ///
+
 import os
 import re
 import sys

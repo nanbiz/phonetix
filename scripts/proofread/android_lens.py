@@ -28,13 +28,14 @@ def main():
     failures = []
 
     dev.clear_log()
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-          "--es", "mode", "spanish", "--ei", "enable", "1", "--ei", "density", "1",
-          "--ei", "touchWords", "0", "--ei", "lens", "0")
+    # Through the harness rather than a bare `am start`: the app's own screen is an activity
+    # of the same app, and with it in front the intent is delivered to the task instead of to
+    # the page, which reports success and changes nothing. The page is then never told to
+    # annotate and the lens is never told to appear.
+    dev.surface(mode="spanish", enable=1, density=1, touchWords=0, lens=0)
     time.sleep(4)
     # Asked for again, so it says where it parked in a log this run can see.
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-          "--es", "mode", "spanish", "--ei", "enable", "1", "--ei", "lens", "1")
+    dev.surface(mode="spanish", enable=1, lens=1)
     time.sleep(3)
     boxes = dev.boxes()
     if not boxes:

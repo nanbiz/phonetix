@@ -15,8 +15,14 @@ says it drew, how far its ink stands from its own background, and separately - o
 framebuffer, owing nothing to our bookkeeping - how far the darkest pixels of the drawn word
 stand from the commonest ones around them.
 
-  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run --with pillow python scripts/proofread/android_ink.py
+  PHONETIX_ANDROID_SERIAL=emulator-5600 uv run scripts/proofread/android_ink.py
 """
+# The image library is declared here rather than asked of the caller: a check that needs
+# it fails halfway through otherwise, after the emulator has already been driven.
+# /// script
+# dependencies = ["pillow"]
+# ///
+
 import os
 import re
 import sys
