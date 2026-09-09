@@ -73,6 +73,10 @@ def judge(image):
             if line is not None:
                 truth[y] = line
     right, wrong, unplaced = 0, 0, 0
+    # By how many lines, and which way. A whole screen out by exactly one line is a list that
+    # has recycled its rows under the overlay; a spread of distances is the words being carried
+    # to the wrong place.
+    off = []
     seen = set()
     for y in range(0, height, 2):
         for x in range(0, width, 2):
@@ -95,7 +99,8 @@ def judge(image):
                 right += 1
             else:
                 wrong += 1
-    return right, wrong, unplaced
+                off.append(believed - here)
+    return right, wrong, unplaced, off
 
 
 def main():
@@ -116,6 +121,7 @@ def main():
         # Per look, because the total hides the shape: a page is not eight per cent wrong all
         # the time, it is right nearly always and then wholly wrong for one moment of one drag.
         looks = []
+        misses = []
         for _ in range(DRAGS):
             shell("am", "force-stop", "io.github.nanbiz.phonetix")
             time.sleep(1.5)
@@ -137,6 +143,7 @@ def main():
                     time.sleep(wait)
                 picture = screen()
                 got = judge(picture)
+                misses += got[3]
                 if got[0] + got[1] == 0:
                     blank += 1
                 right += got[0]
@@ -165,6 +172,11 @@ def main():
               f"{f', {blank} of {3 * DRAGS} looks had none at all' if blank else ''}"
               f"{f', {unplaced} on no line the page painted' if unplaced else ''}"
               f"{f', {bad} of {len(looks)} looks mostly wrong' if bad else ''}")
+        if misses:
+            from collections import Counter
+            common = Counter(misses).most_common(4)
+            print("      how far out, in lines: "
+                  + ", ".join(f"{d:+d} ({n})" for d, n in common))
         total[0] += right
         total[1] += wrong
         total[2] += unplaced
