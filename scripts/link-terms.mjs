@@ -15,7 +15,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/lib/ipa-symbols.ts';
+const SOURCE = 'src/data/ipa-symbols.ts';
 const API = 'https://en.wikipedia.org/w/api.php';
 const UA = 'phonetix-symbol-linker/1.0 (https://github.com/nanbiz/phonetix)';
 const WRITE = process.argv.includes('--write');
@@ -59,7 +59,7 @@ async function exists(title) {
   return page.title;
 }
 
-const { IPA_SYMBOLS } = await import('../src/lib/ipa-symbols.ts');
+const { IPA_SYMBOLS } = await import('../src/data/ipa-symbols.ts');
 
 // Which kind of sound each term is used to describe, from our own table.
 const usage = new Map();

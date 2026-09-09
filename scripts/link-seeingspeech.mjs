@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/lib/ipa-symbols.ts';
+const SOURCE = 'src/data/ipa-symbols.ts';
 const UA = 'Mozilla/5.0 (phonetix-symbol-linker)';
 const WRITE = process.argv.includes('--write');
 

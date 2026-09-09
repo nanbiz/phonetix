@@ -140,30 +140,32 @@ def main():
     extid = cdp.ensure_extension()
     failures = []
     try:
-        target = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/popup.html"})
+        target = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/viewbook.html"})
         session = cdp.send(
             "Target.attachToTarget", {"targetId": target["targetId"], "flatten": True},
         )["sessionId"]
         cdp.send("Runtime.enable", session=session)
         time.sleep(3)
 
-        # The host, written the way the popup writes it. Nothing about it is in the source.
+        # The host and the reader's own language, written the way the popup writes them.
+        # Nothing about the host is in the source.
         cdp.send("Runtime.evaluate", {
-            "expression": f"chrome.storage.local.set({{packBaseUrl:'{base}'}})",
+            "expression": f"chrome.storage.local.set({{packBaseUrl:'{base}',"
+                          f"targetLanguage:'de',selectedLanguage:'es'}})",
             "awaitPromise": True, "returnByValue": True,
         }, session=session)
 
         # Both packs, fetched from the host and opened in the core.
         for lang in ("es", "de"):
             answer = ask(cdp, session, {
-                "id": 1, "type": "openLexPack", "data": {"lang": lang},
+                "id": 1, "type": "openPack", "data": {"lang": lang},
                 "timestamp": int(time.time() * 1000),
             }, tries=6)
             if answer.get("res") != lang:
                 failures.append(f"{lang}: the pack did not open ({answer})")
 
         got = ask(cdp, session, {
-            "id": 2, "type": "lexLanguages", "data": {},
+            "id": 2, "type": "languages", "data": {},
             "timestamp": int(time.time() * 1000),
         })
         if sorted(got.get("res") or []) != ["de", "es"]:
@@ -172,7 +174,7 @@ def main():
         # The words themselves, compared with what node got from the same bytes.
         for word in WORDS:
             answer = ask(cdp, session, {
-                "id": 3, "type": "lookUpWord",
+                "id": 3, "type": "lookUp",
                 "data": {"word": word, "source": "es", "target": TARGET},
                 "timestamp": int(time.time() * 1000),
             })

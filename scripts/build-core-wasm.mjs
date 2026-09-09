@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const core = path.join(root, 'core');
-const glueDir = path.join(root, 'src', 'lib', 'core');
+const glueDir = path.join(root, 'src', 'core', 'wasm');
 const binaryDir = path.join(root, 'public', 'core');
 
 function run(command, args, options = {}) {
@@ -76,4 +76,4 @@ fs.renameSync(built, path.join(binaryDir, 'lexcore_bg.wasm'));
 fs.rmSync(path.join(glueDir, 'lexcore_bg.wasm.d.ts'), { force: true });
 
 const size = fs.statSync(path.join(binaryDir, 'lexcore_bg.wasm')).size;
-console.log(`core: ${(size / 1024).toFixed(0)} KB of WebAssembly, glue in src/lib/core`);
+console.log(`core: ${(size / 1024).toFixed(0)} KB of WebAssembly, glue in src/core/wasm`);

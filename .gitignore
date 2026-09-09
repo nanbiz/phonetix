@@ -7,7 +7,7 @@ node_modules
 public/espeak/
 
 # Built from kaikki.org data (run: pnpm build:dict)
-public/dictionaries/
+assets/dictionaries/
 
 # Large data files (research/build artifacts, not extension runtime)
 scripts/data/
@@ -17,7 +17,7 @@ scripts/proofread/out/
 __pycache__/
 
 # The core, compiled for the browser (run: pnpm build:core)
-src/lib/core/
+src/core/wasm/
 public/core/
 
 # Android app

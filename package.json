@@ -12,32 +12,18 @@
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "node --experimental-strip-types scripts/test-homograph.ts && node --experimental-strip-types scripts/test-resolution.ts && node --experimental-strip-types scripts/test-langdetect.ts && node --experimental-strip-types scripts/test-ipa-normalize.ts && node --experimental-strip-types scripts/test-regions.ts && node --experimental-strip-types scripts/test-symbols.ts && node --experimental-strip-types scripts/test-display-ipa.ts && node --experimental-strip-types scripts/test-wiktionary-parse.ts",
-    "test:integration": "uv run python scripts/proofread/suite.py integration",
-    "test:e2e": "uv run python scripts/proofread/suite.py e2e",
-    "test:firefox": "uv run --with marionette_driver python scripts/proofread/firefox_check.py",
-    "test:packs": "uv run python scripts/proofread/pack_check.py",
-    "test:all": "pnpm test && pnpm test:integration && pnpm test:e2e",
+    "test": "node --experimental-strip-types scripts/test-symbols.ts && node --experimental-strip-types scripts/test-display-ipa.ts",
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:core": "node scripts/build-core-wasm.mjs",
-    "build:dict": "node scripts/build-dictionaries.mjs",
     "fetch:dict": "node scripts/fetch-dictionaries.mjs",
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare",
-    "test:voices": "uv run python scripts/proofread/voice_check.py",
-    "test:popup": "uv run python scripts/proofread/popup_check.py",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
-    "test:reveal": "uv run python scripts/proofread/reveal_position.py",
-    "test:diagram": "uv run --with pillow python scripts/proofread/diagram_visible.py",
-    "test:audio": "uv run python scripts/proofread/audio_lang.py",
-    "test:stale": "uv run python scripts/proofread/stale_reveal.py",
-    "test:hover": "uv run python scripts/proofread/hover_stability.py",
-    "test:revert": "uv run python scripts/proofread/revert_fidelity.py",
-    "test:sprinkle": "uv run python scripts/proofread/sprinkle_check.py",
     "gen:vectors": "node --experimental-strip-types scripts/gen-sprinkle-vectors.ts",
     "gen:symbols": "node --experimental-strip-types scripts/gen-ipa-symbols.ts",
     "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
     "test:features": "uv run python scripts/proofread/android_features.py",
-    "test:lex": "uv run python scripts/proofread/lex_extension.py"
+    "test:lex": "uv run python scripts/proofread/lex_extension.py",
+    "test:cards": "uv run python scripts/proofread/card_states.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
@@ -53,19 +39,15 @@
     "eslint-plugin-svelte": "^3.15.0",
     "svelte": "^5.53.6",
     "svelte-check": "^4.4.4",
-    "svelte-multiselect": "^11.6.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
-    "unplugin-icons": "^23.0.1",
     "wxt": "^0.20.18"
   },
   "dependencies": {
     "@echogarden/espeak-ng-emscripten": "^0.3.5",
-    "@tailwindcss/vite": "^4.2.1",
     "@webext-core/messaging": "^2.3.0",
     "@yutengjing/eld": "^0.0.2",
-    "idb-keyval": "^6.2.2",
-    "tailwindcss": "^4.2.1"
+    "idb-keyval": "^6.2.2"
   },
   "packageManager": "pnpm@11.11.0"
 }

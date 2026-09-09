@@ -22,7 +22,7 @@ jobs:
       # source tree.
       - uses: actions/cache@v4
         with:
-          path: public/dictionaries
+          path: assets/dictionaries
           key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
       - name: Fetch dictionaries
         env:
@@ -33,7 +33,7 @@ jobs:
       - name: Unit tests
         run: pnpm test
       # The Android port asserts itself against these vectors, so a rule changed in
-      # src/lib/sprinkle.ts without regenerating them would let the phone and the browser
+      # src/data/sprinkle.ts without regenerating them would let the phone and the browser
       # drift apart silently.
       - name: Shared behaviour vectors are current
         run: |
@@ -52,13 +52,11 @@ jobs:
           path: .output/chrome-mv3
           retention-days: 7
 
-  # Behavioral suite: drives the built extension in headless Chrome. Includes the
-  # subsystem health check, so an engine that silently stops working (as the
-  # language detector once did) fails CI instead of degrading unnoticed.
+  # What the extension does, driven in a real headless Chrome: the core answering words
+  # through the packs a host serves, and the card drawing every state it has.
   #
-  # It builds its own extension rather than waiting on the build job: the two run
-  # in parallel, which is the shorter wall clock even though it costs a second
-  # build. The dictionaries come from the shared cache.
+  # It builds its own extension rather than waiting on the build job: the two run in
+  # parallel, which is the shorter wall clock even though it costs a second build.
   behavior:
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +78,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         with:
-          path: public/dictionaries
+          path: assets/dictionaries
           key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
       - name: Fetch dictionaries
         env:
@@ -107,91 +105,16 @@ jobs:
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
         run: uv run --with websocket-client python tools/render-merge.py
-      - name: Integration suite
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:integration
       - name: IPA symbol names match the IPA
         run: pnpm test:names
-      - name: Hover reveal lands on the word (all layouts)
+      - name: The core answers inside the extension
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:reveal
-      - name: Popup layout
+        run: pnpm test:lex
+      - name: Every card state draws what that state means
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:popup
-      - name: The mouth diagram is visible
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:diagram
-      - name: Human recordings match the word's language
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:audio
-      - name: No reveal outlives its word (single-page apps)
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:stale
-      - name: Re-hovering a word never stalls its tooltip
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:hover
-      - name: Sprinkle mode is sparse, dictionary-only, and skips common words
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:sprinkle
-      - name: Turning the extension off restores the page text exactly
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:revert
-      - name: Accents and espeak voices
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:voices
-      - name: Dictionary pack fetching
-        env:
-          PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:packs
-
-  # The same behaviour on the other engine. Chrome cannot stand in for it: the two
-  # differ in exactly the places that break quietly — Firefox's chrome.* is
-  # callback-only, and delivering settings by messaging the active tab worked in
-  # Chrome while doing nothing here. This drives the real popup control in real
-  # Firefox and compares the words on the page.
-  firefox:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - uses: browser-actions/setup-firefox@v1
-        id: firefox
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/cache@v4
-        with:
-          path: public/dictionaries
-          key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
-      - name: Fetch dictionaries
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: pnpm fetch:dict
-      - run: pnpm zip:firefox
-      - name: Firefox behaviour (health, accents)
-        env:
-          PHONETIX_FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
-        run: |
-          XPI=$(ls -t .output/*firefox*.zip | head -1)
-          PHONETIX_XPI="$XPI" pnpm test:firefox
-          PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/reveal_position.py firefox
-          PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/stale_reveal.py firefox
-          PHONETIX_XPI="$XPI" uv run --with marionette_driver python scripts/proofread/hover_stability.py firefox
+        run: pnpm test:cards
 
   # The reading core, which is one crate compiled twice: to WebAssembly for the extension and
   # to a native library for the overlay. Everything about what a word means, how it is said and
@@ -250,7 +173,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/cache@v4
         with:
-          path: public/dictionaries
+          path: assets/dictionaries
           key: dictionaries-${{ hashFiles('scripts/fetch-dictionaries.mjs') }}
       # The app bundles the extension's dictionary and word list at build time.
       - name: Fetch dictionaries

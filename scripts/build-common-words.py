@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate public/common-words.json: the most frequent words per language.
+"""Generate assets/common-words.json: the most frequent words per language.
 
 Sprinkle mode transcribes a sparse subset of a page's words. Left to a blind hash it
 picks function words as often as content words, so half of what it marks is "the",
@@ -18,9 +18,9 @@ import re
 from wordfreq import available_languages, top_n_list
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "public", "common-words.json")
+OUT = os.path.join(ROOT, "assets", "common-words.json")
 
-# Every language phonetix resolves (src/lib/types.ts Languages).
+# Every language phonetix resolves (data/languages.json).
 PHONETIX_LANGS = (
     "en de es fr af ar bg bn bs ca cs cy da el eo et eu fa fi ga hi hr hu hy id is "
     "it ja ka kk ko ku la lt lv mk ml ms my nl no pl pt ro ru sk sl sq sr sv sw ta "

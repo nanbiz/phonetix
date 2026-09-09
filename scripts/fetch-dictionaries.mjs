@@ -1,4 +1,4 @@
-// Download the prebuilt IPA dictionaries into public/dictionaries.
+// Download the prebuilt IPA dictionaries into assets/dictionaries.
 //
 // The dictionaries are large binary data, so they are not committed. They are
 // published as a release asset instead. Building them from scratch needs the
@@ -15,7 +15,7 @@ const TAG = "data-v3";
 const ASSET = "dictionaries.tar.gz";
 const URL = `https://github.com/nanbiz/phonetix/releases/download/${TAG}/${ASSET}`;
 
-const outDir = path.join(process.cwd(), "public", "dictionaries");
+const outDir = path.join(process.cwd(), "assets", "dictionaries");
 const force = process.argv.includes("--force");
 
 if (!force && fs.existsSync(outDir) && fs.readdirSync(outDir).some((f) => f.endsWith(".json.gz"))) {
@@ -59,4 +59,4 @@ if (!accents) {
 console.log(`${accents} accent overlays`);
 
 const n = fs.readdirSync(outDir).filter((f) => f.endsWith(".json.gz")).length;
-console.log(`extracted ${n} dictionaries into public/dictionaries`);
+console.log(`extracted ${n} dictionaries into assets/dictionaries`);

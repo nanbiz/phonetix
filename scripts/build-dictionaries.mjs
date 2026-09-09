@@ -7,7 +7,7 @@
  *
  * Downloads the ~2.3GB gzipped JSONL, streams through it, extracts
  * word + lang_code + first IPA from sounds[], groups by language,
- * and writes gzipped JSON to public/dictionaries/{lang}.json.gz
+ * and writes gzipped JSON to assets/dictionaries/{lang}.json.gz
  */
 
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
@@ -20,7 +20,7 @@ import { Writable } from 'stream';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const OUT_DIR = join(ROOT, 'public', 'dictionaries');
+const OUT_DIR = join(ROOT, 'assets', 'dictionaries');
 const CACHE_DIR = join(ROOT, '.cache');
 const DUMP_URL = 'https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz';
 const DUMP_FILE = join(CACHE_DIR, 'raw-wiktextract-data.jsonl.gz');

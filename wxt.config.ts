@@ -1,6 +1,4 @@
 import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
-import Icons from 'unplugin-icons/vite';
 import fs from 'fs';
 import path from 'path';
 
@@ -25,36 +23,21 @@ export default defineConfig({
     // from stalling in review for weeks. The bundle is tiny next to the espeak data, so
     // there is no meaningful size cost.
     build: { minify: false },
-    plugins: [
-      tailwindcss(),
-      Icons({
-        autoInstall: true,
-        compiler: 'svelte',
-      }),
-    ],
   }),
   srcDir: 'src',
   modules: ['@wxt-dev/module-svelte'],
-  // offscreen is a Chromium-only API; Firefox runs espeak in its background page.
   manifest: ({ browser }) => ({
     name: 'Phonetix - Learn and Understand IPA',
-    // The toolbar-button tooltip, on both engines (WXT maps action → browser_action
-    // on Firefox MV2). Without this it shipped as the literal "Default Popup Title".
-    action: { default_title: 'Phonetix - Learn and Understand IPA' },
-    permissions: browser === 'firefox' ? ['storage'] : ['storage', 'offscreen'],
+    permissions: ['storage'],
     host_permissions: ['<all_urls>'],
-    // The content script reads the common-word list (sprinkle mode) straight from the
-    // extension, so it has to be reachable from the page's own context.
-    web_accessible_resources: [
-      { resources: ['common-words.json'], matches: ['<all_urls>'] },
-    ],
     content_security_policy: {
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     },
     // Floors the store review + install can rely on. Firefox is 140 because that is
     // where the built-in data-consent manifest below is honoured (it otherwise needs
-    // 125 for Intl.Segmenter). Chrome: the offscreen document (used to run espeak) needs 109.
+    // 125 for Intl.Segmenter). Chrome 109 is where a service worker may instantiate
+    // WebAssembly under the policy below, which is how the core runs at all.
     //
     // data_collection_permissions declares that the add-on transmits website content:
     // the word under the cursor is sent to Wiktionary/Wikimedia to fetch its IPA, audio,

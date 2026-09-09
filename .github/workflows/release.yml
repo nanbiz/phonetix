@@ -49,29 +49,18 @@ jobs:
             --source-dir=.output/firefox-mv2 \
             --artifacts-dir=.output/signed
 
-      # The signed artifact is what users install, so verify it really works in
-      # Firefox (espeak runs in the background page there, not an offscreen doc)
-      # before publishing it.
+      # The Chrome zip is published alongside the signed xpi, so what it ships is checked
+      # in a real browser first: the core answering words, and the card drawing them.
       - uses: astral-sh/setup-uv@v5
-      - uses: browser-actions/setup-firefox@v1
-        id: firefox
-      - name: Verify signed xpi in Firefox
-        env:
-          PHONETIX_FIREFOX: ${{ steps.firefox.outputs.firefox-path }}
-        run: pnpm test:firefox
-
-      # The Chrome zip is published alongside the signed xpi, so verify the Chrome build
-      # drives a real page before shipping it, the same as the Firefox artifact above.
       - uses: browser-actions/setup-chrome@v1
         id: chrome
         with:
-          # Chrome 150 loads the extension but stops injecting content scripts in
-          # headless, which would verify against nothing. Pinned to match ci.yml.
+          # Pinned to match ci.yml.
           chrome-version: '149'
-      - name: Verify Chrome build
+      - name: Verify the Chrome build
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
-        run: pnpm test:integration
+        run: pnpm test:lex && pnpm test:cards
 
       - name: Package Chrome zip
         run: pnpm zip

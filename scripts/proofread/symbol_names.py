@@ -3,7 +3,7 @@
 
 The tooltip tells the reader what a sound is. A name written from recollection is
 worse than none: it reads as authoritative and can be wrong, and nothing in the
-build would notice. Each name in src/lib/ipa-symbols.ts is therefore checked here
+build would notice. Each name in src/data/ipa-symbols.ts is therefore checked here
 against the ipapy database, which carries the IPA's own descriptors.
 
 The check is containment, not equality: our names are the readable form of the

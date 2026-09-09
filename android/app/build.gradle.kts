@@ -45,11 +45,11 @@ android {
 
 /**
  * The dictionary and the common-word list are the extension's own data, fetched into
- * public/dictionaries by `pnpm fetch:dict` rather than committed. They are copied in at
+ * assets/dictionaries by `pnpm fetch:dict` rather than committed. They are copied in at
  * build time so the app has exactly one source for them and the repository keeps one copy.
  */
 /**
- * The behaviour vectors the extension generates from src/lib/sprinkle.ts. They are read by
+ * The behaviour vectors generated from src/data/sprinkle.ts. They are read by
  * SprinkleParityTest, which is the thing that keeps this port and the extension agreeing
  * about which words get transcribed.
  */
@@ -73,8 +73,8 @@ tasks.withType<Test>().configureEach {
 }
 
 val bundleDictionaries by tasks.registering(Copy::class) {
-    val dict = rootProject.file("../public/dictionaries/en.json.gz")
-    val common = rootProject.file("../public/common-words.json")
+    val dict = rootProject.file("../assets/dictionaries/en.json.gz")
+    val common = rootProject.file("../assets/common-words.json")
     doFirst {
         require(dict.exists()) {
             "Missing ${dict.path}. Run `pnpm fetch:dict` in the repository root first."

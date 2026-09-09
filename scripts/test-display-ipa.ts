@@ -1,7 +1,7 @@
 // The inline broad/narrow + stress display. The tooltip always shows the full form;
 // this decides what the page text is reduced to, and a wrong regex silently changes
 // every transcription a reader sees, so it is pinned here.
-import { displayIpa, NARROW_DETAIL, STRESS_MARKS } from '../src/lib/display-ipa.ts';
+import { displayIpa, NARROW_DETAIL, STRESS_MARKS } from '../src/data/display-ipa.ts';
 
 let pass = 0, fail = 0;
 function check(name: string, got: string, want: string) {

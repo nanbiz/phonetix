@@ -10,7 +10,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/lib/ipa-symbols.ts';
+const SOURCE = 'src/data/ipa-symbols.ts';
 const API = 'https://en.wikipedia.org/w/api.php';
 const COMMONS = 'https://commons.wikimedia.org/w/api.php';
 const UA = 'phonetix-symbol-linker/1.0 (https://github.com/nanbiz/phonetix)';

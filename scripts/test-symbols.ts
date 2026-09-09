@@ -14,8 +14,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 
-import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA } from '../src/lib/ipa-symbols.ts';
-import { normalizeIpa } from '../src/lib/ipa-normalize.ts';
+import { IPA_SYMBOLS, TERM_LINKS, describeSymbol, tokenizeIPA } from '../src/data/ipa-symbols.ts';
+import { normalizeIpa } from '../src/data/ipa-normalize.ts';
 
 /** Composed symbols: the description must carry the diacritic, not drop it. */
 const COMPOSED: [string, string][] = [
@@ -87,7 +87,7 @@ if (!badTerms.length) {
 }
 
 // Sweep the real data: what share of the symbols on screen have no description?
-const dirs = ['public/dictionaries', 'public/dictionaries/accents'];
+const dirs = ['assets/dictionaries', 'assets/dictionaries/accents'];
 const files: string[] = [];
 for (const dir of dirs) {
   if (!fs.existsSync(dir)) continue;

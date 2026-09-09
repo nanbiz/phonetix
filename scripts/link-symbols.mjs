@@ -14,7 +14,7 @@
 
 import fs from 'node:fs';
 
-const SOURCE = 'src/lib/ipa-symbols.ts';
+const SOURCE = 'src/data/ipa-symbols.ts';
 const API = 'https://en.wikipedia.org/w/api.php';
 const WRITE = process.argv.includes('--write');
 
