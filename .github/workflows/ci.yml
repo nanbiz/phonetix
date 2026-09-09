@@ -92,6 +92,13 @@ jobs:
       # asks for system font stacks and a runner resolves them differently from a developer's
       # machine, so every box would come out a different size and the check would be red for
       # a reason that is nobody's fault.
+      # Every colour, size and radius is declared once, on the page a person looks at when
+      # deciding them. The phone cannot read a stylesheet, so the same declarations are written
+      # out as data and as a Kotlin object; this fails when the page has moved on without them,
+      # which is the drift that makes a card look right in a browser and wrong on a phone.
+      - name: Both platforms have the same design tokens
+        run: |
+          uv run python tools/tokens.py --check
       - name: The merge book's page and model name the same states
         env:
           PHONETIX_CHROMIUM: ${{ steps.chrome.outputs.chrome-path }}
