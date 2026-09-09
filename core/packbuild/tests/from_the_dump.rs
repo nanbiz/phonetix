@@ -42,7 +42,7 @@ fn build(lang: &str, lines: &str) -> Vec<u8> {
 /// best match first.
 fn reached<D: AsRef<[u8]>>(source: &Pack<D>, target: &Pack<D>, word: &str) -> Vec<String> {
     let entry = source
-        .lookup(word)
+        .lookup_one(word)
         .expect("the source pack should hold this word");
     target
         .senses_matching(&entry.senses[0].gloss)
@@ -91,11 +91,10 @@ fn the_pair_works_in_both_directions() {
 fn an_inflected_spelling_from_the_dump_reaches_its_lemma() {
     let bytes = build("es", SPANISH);
     let pack = Pack::open(&bytes).unwrap();
-    assert_eq!(pack.lookup("perros").unwrap().lemma, "perro");
-    assert_eq!(pack.lookup("sillas").unwrap().lemma, "silla");
-    assert_eq!(
-        pack.lookup("Hunde"),
-        None,
+    assert_eq!(pack.lookup_one("perros").unwrap().lemma, "perro");
+    assert_eq!(pack.lookup_one("sillas").unwrap().lemma, "silla");
+    assert!(
+        pack.lookup("Hunde").is_empty(),
         "a German form is not in the Spanish pack"
     );
 }
@@ -105,5 +104,5 @@ fn the_transcription_survives_the_whole_way() {
     let bytes = build("es", SPANISH);
     let pack = Pack::open(&bytes).unwrap();
     // The delimiters belong to the notation and are not part of what is shown.
-    assert_eq!(pack.lookup("perro").unwrap().ipa, vec!["ˈpe.ro"]);
+    assert_eq!(pack.lookup_one("perro").unwrap().ipa, vec!["ˈpe.ro"]);
 }

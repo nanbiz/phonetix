@@ -82,7 +82,7 @@ fn a_word_comes_back_as_it_went_in() {
     assert_eq!(pack.lang(), "es");
     assert_eq!(pack.kind(), Kind::Lex);
     assert_eq!(pack.len(), 3);
-    let perro = pack.lookup("perro").unwrap();
+    let perro = pack.lookup_one("perro").unwrap();
     assert_eq!(perro.lemma, "perro");
     assert_eq!(perro.pos, "noun");
     assert_eq!(perro.ipa, vec!["ˈpe.ro"]);
@@ -94,10 +94,10 @@ fn a_word_comes_back_as_it_went_in() {
 fn an_inflected_spelling_reaches_its_lemma() {
     let bytes = spanish();
     let pack = Pack::open(&bytes).unwrap();
-    assert_eq!(pack.lookup("perros").unwrap().lemma, "perro");
-    assert_eq!(pack.lookup("caminos").unwrap().lemma, "camino");
+    assert_eq!(pack.lookup_one("perros").unwrap().lemma, "perro");
+    assert_eq!(pack.lookup_one("caminos").unwrap().lemma, "camino");
     assert!(
-        pack.lookup("perrito").is_none(),
+        pack.lookup("perrito").is_empty(),
         "a word the pack does not hold is a miss"
     );
 }
@@ -112,7 +112,7 @@ fn the_words_that_defeated_the_pivot_join_correctly() {
     // What the core will do: take the source sense's English gloss and look it up in the
     // target's gloss index.
     for (spanish_word, expected) in [("perro", "Hund"), ("silla", "Stuhl"), ("camino", "Weg")] {
-        let source = es.lookup(spanish_word).unwrap();
+        let source = es.lookup_one(spanish_word).unwrap();
         let hits = de.senses_glossed(&source.senses[0].gloss);
         let reached: Vec<String> = hits
             .iter()
@@ -134,7 +134,7 @@ fn the_confident_wrong_answers_are_not_reached() {
     // Ruede glosses "male dog" and Sessel "armchair", so neither shares a head term with the
     // Spanish sense; Weise glosses "way, manner" and does share one with "way, route", which is
     // what the further terms of the gloss are for and is left to the core to score.
-    let perro = es.lookup("perro").unwrap();
+    let perro = es.lookup_one("perro").unwrap();
     let reached: Vec<String> = de
         .senses_glossed(&perro.senses[0].gloss)
         .iter()
@@ -145,7 +145,7 @@ fn the_confident_wrong_answers_are_not_reached() {
         "reached {reached:?}"
     );
 
-    let silla = es.lookup("silla").unwrap();
+    let silla = es.lookup_one("silla").unwrap();
     let reached: Vec<String> = de
         .senses_glossed(&silla.senses[0].gloss)
         .iter()
@@ -196,20 +196,28 @@ fn a_pack_bigger_than_one_block_still_answers() {
     let read = Pack::open(&bytes).unwrap();
     assert_eq!(read.len(), count);
     for n in [0, 1, 63, 64, 65, 127, 128, count - 1] {
-        let entry = read.lookup(&format!("word{n:04}")).unwrap();
+        let entry = read.lookup_one(&format!("word{n:04}")).unwrap();
         assert_eq!(entry.lemma, format!("word{n:04}"));
         assert_eq!(entry.senses[0].gloss, format!("meaning{n}"));
     }
 }
 
 #[test]
-fn a_spelling_claimed_twice_is_refused_rather_than_silently_dropped() {
+fn a_spelling_that_is_two_words_reaches_both() {
+    // "book" is a noun and a verb. A pack that could hold only one of them would lose half of
+    // every language's commonest words, and which of the two a reader met is decided by what
+    // is around it rather than by the pack.
     let mut pack = Builder::new("xx", Kind::Lex, 0);
-    pack.add(word("book", "noun", "bʊk", &["a book"]), &NO_FORMS)
+    pack.add(word("book", "noun", "bʊk", &["a bound volume"]), &NO_FORMS)
         .unwrap();
-    assert!(pack
-        .add(word("book", "verb", "bʊk", &["to book"]), &NO_FORMS)
-        .is_err());
+    pack.add(word("book", "verb", "bʊk", &["to reserve"]), &NO_FORMS)
+        .unwrap();
+    let bytes = pack.finish().unwrap();
+    let read = Pack::open(&bytes).unwrap();
+    let both = read.lookup("book");
+    assert_eq!(both.len(), 2);
+    assert_eq!(both[0].pos, "noun");
+    assert_eq!(both[1].pos, "verb");
 }
 
 #[test]
@@ -217,6 +225,6 @@ fn an_empty_pack_opens_and_holds_nothing() {
     let pack = Builder::new("xx", Kind::Lex, 0).finish().unwrap();
     let read = Pack::open(&pack).unwrap();
     assert!(read.is_empty());
-    assert!(read.lookup("anything").is_none());
+    assert!(read.lookup("anything").is_empty());
     assert!(read.senses_glossed("anything").is_empty());
 }

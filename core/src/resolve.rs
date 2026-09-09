@@ -31,6 +31,10 @@ pub struct Answer {
     /// What the word means, in English, which is the anchor the card shows when the join is
     /// ambiguous or absent.
     pub glosses: Vec<String>,
+    /// Each word this spelling is, where it is more than one. "book" is a noun and a verb, and
+    /// which of them a reader met is theirs to say: the card offers the readings and the
+    /// cascade does not choose.
+    pub readings: Vec<Reading>,
     /// The applying sense's example, where the dump had one. One line of the word in use is
     /// worth more than a second gloss, and a made-up sentence would be worth less than
     /// nothing, so this is empty rather than invented.
@@ -38,6 +42,17 @@ pub struct Answer {
     pub provenance: Option<Provenance>,
     pub source: Lang,
     pub target: Lang,
+}
+
+/// One of the words a spelling is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Reading {
+    pub pos: Option<String>,
+    pub ipa: Vec<String>,
+    /// What this reading answers with, in the reader's language where the join reached one.
+    pub says: Vec<String>,
+    /// And in English, which is what a reader is left with when it did not.
+    pub glosses: Vec<String>,
 }
 
 impl Answer {
@@ -50,6 +65,7 @@ impl Answer {
             ipa: Vec::new(),
             says: Vec::new(),
             glosses: Vec::new(),
+            readings: Vec::new(),
             example: None,
             provenance: None,
             source: source.clone(),
@@ -85,12 +101,47 @@ pub fn look_up<D: AsRef<[u8]>>(
         };
         return Answer::nothing(state, spelling, source, target);
     };
-    let Some(entry) = pack.lookup(spelling) else {
+    let found = pack.lookup(spelling);
+    if found.is_empty() {
         // The pack is open and does not hold the word. That is a miss for the engines, not a
         // missing pack, and the card says so differently.
         return Answer::nothing(AnswerState::None, spelling, source, target);
-    };
+    }
 
+    let mut answers: Vec<Answer> = found
+        .iter()
+        .map(|entry| resolve_one(spelling, entry, source, target, pack, open.target))
+        .collect();
+    // The commonest word first, which the dump lists first, so a reader who does not choose
+    // still gets the likely one.
+    let mut first = answers.remove(0);
+    if answers.is_empty() {
+        return first;
+    }
+    // Several words under one spelling. The card shows them and the reader picks: nothing here
+    // knows which of "book" they met, and guessing would be the confident wrong answer again.
+    first.readings = std::iter::once(&first)
+        .chain(answers.iter())
+        .map(|answer| Reading {
+            pos: answer.pos.clone(),
+            ipa: answer.ipa.clone(),
+            says: answer.says.clone(),
+            glosses: answer.glosses.clone(),
+        })
+        .collect();
+    first.state = AnswerState::Homograph;
+    first
+}
+
+/// One of the words a spelling is, resolved on its own.
+fn resolve_one<D: AsRef<[u8]>>(
+    spelling: &str,
+    entry: &Entry,
+    source: &Lang,
+    target: &Lang,
+    pack: &Pack<D>,
+    other: Option<&Pack<D>>,
+) -> Answer {
     // A spelling that is not the lemma got here through the forms index, and the reader is
     // owed the connection: they tapped "perros" and the answer is about "perro".
     let inflected = entry.lemma != spelling;
@@ -111,7 +162,7 @@ pub fn look_up<D: AsRef<[u8]>>(
         return finish(
             state,
             spelling,
-            &entry,
+            entry,
             glosses.clone(),
             glosses,
             example,
@@ -121,13 +172,13 @@ pub fn look_up<D: AsRef<[u8]>>(
         );
     }
 
-    let Some(other) = open.target else {
+    let Some(other) = other else {
         // The reader's language has no pack, so the English gloss is all there is. It is shown
         // as the anchor and the engines are asked for the rest.
         return finish(
             AnswerState::IpaOnly,
             spelling,
-            &entry,
+            entry,
             Vec::new(),
             glosses,
             example,
@@ -191,7 +242,7 @@ pub fn look_up<D: AsRef<[u8]>>(
         (_, false) => AnswerState::Entry,
     };
     finish(
-        state, spelling, &entry, says, glosses, example, pack, source, target,
+        state, spelling, entry, says, glosses, example, pack, source, target,
     )
 }
 
@@ -223,6 +274,7 @@ fn finish<D: AsRef<[u8]>>(
         ipa: entry.ipa.clone(),
         says,
         glosses,
+        readings: Vec::new(),
         example,
         provenance: Some(Provenance::Dictionary {
             pack: format!("lex-{}", pack.lang()),

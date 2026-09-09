@@ -148,10 +148,34 @@ impl<D: AsRef<[u8]>> Pack<D> {
         self.header.entries == 0
     }
 
-    /// The entry a spelling names, whether it is the lemma or an inflected form of it.
-    pub fn lookup(&self, spelling: &str) -> Option<Entry> {
-        let which = self.keys.get(spelling)?;
-        self.entry(which as u32)
+    /// Every entry a spelling names, whether it is their lemma or an inflected form of one.
+    ///
+    /// Several, because a spelling is regularly several words: "book" is a noun and a verb, and
+    /// which of them a reader met is decided by what is around it rather than here.
+    pub fn lookup(&self, spelling: &str) -> Vec<Entry> {
+        let Some(at) = self.keys.get(spelling) else {
+            return Vec::new();
+        };
+        let hits = slice(self.bytes.as_ref(), self.header.at(Section::KeyHits));
+        let mut cursor = at as usize;
+        let Some(count) = varint::get(hits, &mut cursor) else {
+            return Vec::new();
+        };
+        let mut out = Vec::with_capacity(count as usize);
+        for _ in 0..count {
+            let Some(which) = varint::get(hits, &mut cursor) else {
+                break;
+            };
+            if let Some(entry) = self.entry(which as u32) {
+                out.push(entry);
+            }
+        }
+        out
+    }
+
+    /// The first entry a spelling names, for a caller that has already decided it wants one.
+    pub fn lookup_one(&self, spelling: &str) -> Option<Entry> {
+        self.lookup(spelling).into_iter().next()
     }
 
     /// One entry by number.

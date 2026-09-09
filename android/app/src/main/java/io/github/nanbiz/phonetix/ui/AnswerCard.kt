@@ -54,7 +54,17 @@ fun AnswerCard(
             Nothing(answer, palette)
             return@Column
         }
-        Headline(answer, palette)
+        if (answer.readings.size < 2) {
+            Headline(answer, palette)
+        } else {
+            // Nothing leads: the reader is choosing between the readings below, and a headline
+            // would be the card choosing for them.
+            androidx.compose.material3.Text(
+                text = "${answer.spelling} is more than one word",
+                color = Color(palette.inkMuted),
+                fontSize = Tokens.Scale.fontSizeBody.sp,
+            )
+        }
         if (answer.ipa.isNotEmpty()) {
             Pronunciation(answer, palette, onSymbol, onPlay)
         }
@@ -162,6 +172,9 @@ private fun Pronunciation(
  */
 @Composable
 private fun Grammar(answer: Answer, palette: Tokens.Palette) {
+    // Each reading carries its own part of speech at the end of its row, so repeating the
+    // first one under them says nothing and reads as if it belonged to the last.
+    if (answer.readings.size >= 2) return
     val parts = buildList {
         answer.lemma?.let { add(it) }
         answer.pos?.let { add(it) }
@@ -218,17 +231,32 @@ private fun OtherSenses(answer: Answer, palette: Tokens.Palette) {
     }
 }
 
-/** The other words this reached, where it reached more than one. */
+/**
+ * The words this spelling is, where it is more than one.
+ *
+ * A reader chooses by meaning, so each reading leads with what it means and carries its part of
+ * speech at the end of its own row. Nothing here decides which they met.
+ */
 @Composable
 private fun Readings(answer: Answer, palette: Tokens.Palette) {
-    val rest = answer.says.drop(1)
-    if (rest.isEmpty()) return
-    for (reading in rest) {
-        androidx.compose.material3.Text(
-            text = reading,
-            color = Color(palette.ink),
-            fontSize = Tokens.Scale.fontSizeLemma.sp,
-        )
+    if (answer.readings.size < 2) return
+    for (reading in answer.readings) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Text(
+                text = reading.headline.orEmpty(),
+                color = Color(palette.ink),
+                fontSize = Tokens.Scale.fontSizeLemma.sp,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            reading.pos?.let {
+                Box(Modifier.width(Tokens.Scale.space2.dp))
+                androidx.compose.material3.Text(
+                    text = it,
+                    color = Color(palette.inkFaint),
+                    fontSize = Tokens.Scale.fontSizeLabel.sp,
+                )
+            }
+        }
     }
 }
 

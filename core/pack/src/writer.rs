@@ -9,9 +9,6 @@ use crate::{varint, Counts, Entry, Kind, Section, ENTRIES_PER_BLOCK, FORMAT, MAG
 
 #[derive(Debug)]
 pub enum WriteError {
-    /// Two entries claim the same spelling. The dump has one lemma per (word, part of speech),
-    /// so this is the builder's caller merging them wrongly rather than the data.
-    DuplicateKey(String),
     /// The key index would not build, which at this point can only be a key out of order.
     Index(String),
     Compress(String),
@@ -23,8 +20,9 @@ pub struct Builder {
     kind: Kind,
     built: u64,
     entries: Vec<Entry>,
-    /// Spelling to entry number, kept sorted because the index is built in order.
-    keys: BTreeMap<String, u64>,
+    /// Spelling to the entries it reaches, kept sorted because the index is built in order.
+    /// Several, because "book" is a noun and a verb and the pack holds both.
+    keys: BTreeMap<String, Vec<u32>>,
     /// Gloss term to the senses that carry it, likewise.
     glosses: BTreeMap<String, Vec<(u32, u32)>>,
 }
@@ -50,12 +48,11 @@ impl Builder {
         let spellings =
             std::iter::once(entry.lemma.as_str()).chain(forms.iter().map(|f| f.as_ref()));
         for spelling in spellings {
-            if self
-                .keys
-                .insert(spelling.to_string(), which as u64)
-                .is_some()
-            {
-                return Err(WriteError::DuplicateKey(spelling.to_string()));
+            let reached = self.keys.entry(spelling.to_string()).or_default();
+            // A form listed twice for the same entry is the dump repeating itself, not a
+            // second word.
+            if !reached.contains(&which) {
+                reached.push(which);
             }
         }
         for (number, sense) in entry.senses.iter().enumerate() {
@@ -99,7 +96,17 @@ impl Builder {
             packed.extend_from_slice(&block);
         }
 
-        let keys = build_index(self.keys.iter().map(|(k, v)| (k.as_str(), *v)))?;
+        // Where each spelling's run of entries sits, and the runs themselves.
+        let mut key_hits: Vec<u8> = Vec::new();
+        let mut key_index: Vec<(&str, u64)> = Vec::with_capacity(self.keys.len());
+        for (spelling, reached) in self.keys.iter() {
+            key_index.push((spelling.as_str(), key_hits.len() as u64));
+            varint::put(&mut key_hits, reached.len() as u64);
+            for which in reached {
+                varint::put(&mut key_hits, *which as u64);
+            }
+        }
+        let keys = build_index(key_index.into_iter())?;
 
         // Where each gloss term's run of senses sits, and the runs themselves.
         let mut hits: Vec<u8> = Vec::new();
@@ -133,6 +140,7 @@ impl Builder {
             hits.len() as u64,
             packed.len() as u64,
             index.len() as u64,
+            key_hits.len() as u64,
         ];
         let mut sections = [(0u64, 0u64); SECTIONS];
         let mut header_len = self.header(&sections).len() as u64;
@@ -156,6 +164,7 @@ impl Builder {
         out.extend_from_slice(&hits);
         out.extend_from_slice(&packed);
         out.extend_from_slice(&index);
+        out.extend_from_slice(&key_hits);
         debug_assert_eq!(sections[Section::Keys as usize].0, header_len);
         Ok(out)
     }

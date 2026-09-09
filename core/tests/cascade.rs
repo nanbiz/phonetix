@@ -315,3 +315,48 @@ fn a_sense_with_no_example_invents_none() {
         None
     );
 }
+
+#[test]
+fn a_spelling_that_is_two_words_offers_both_readings() {
+    // "banco" in Spanish is a bench and a bank, and nothing about the word says which a reader
+    // met. The cascade offers both rather than picking, which is what the homograph state is
+    // for; picking would be the confident wrong answer in its oldest form.
+    let mut source = Builder::new("es", Kind::Lex, 0);
+    source
+        .add(word("banco", "noun", "ˈbaŋ.ko", &["bench"]), &[] as &[&str])
+        .unwrap();
+    source
+        .add(
+            word("banco", "verb", "ˈbaŋ.ko", &["to bank"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let es = source.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+    };
+    let got = look_up("banco", &lang("es"), &lang("en"), &open);
+    assert_eq!(got.state, AnswerState::Homograph);
+    assert_eq!(got.readings.len(), 2);
+    assert_eq!(got.readings[0].pos.as_deref(), Some("noun"));
+    assert_eq!(got.readings[0].says, vec!["bench"]);
+    assert_eq!(got.readings[1].pos.as_deref(), Some("verb"));
+    assert_eq!(got.readings[1].says, vec!["to bank"]);
+}
+
+#[test]
+fn a_spelling_that_is_one_word_offers_no_choice() {
+    let es = spanish();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+    };
+    let got = look_up("perro", &lang("es"), &lang("en"), &open);
+    assert!(got.readings.is_empty(), "nothing to choose between");
+    assert_eq!(got.state, AnswerState::Entry);
+}

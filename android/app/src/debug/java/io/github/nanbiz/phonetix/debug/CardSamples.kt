@@ -27,6 +27,13 @@ object CardSamples {
         """{"state":"IpaOnly","spelling":"banco","lemma":null,"pos":"noun",
            "ipa":["ˈbaŋ.ko"],"says":[],"glosses":["bench"],
            "source":"es","target":"de"}""",
+        // A spelling that is two words, which the reader chooses between.
+        """{"state":"Homograph","spelling":"banco","lemma":null,"pos":"noun",
+           "ipa":["ˈbaŋ.ko"],"says":["Bank"],"glosses":["bench"],
+           "readings":[{"pos":"noun","ipa":["ˈbaŋ.ko"],"says":["Bank"],"glosses":["bench"]},
+                       {"pos":"verb","ipa":["ˈbaŋ.ko"],"says":["buchen"],
+                        "glosses":["to bank"]}],
+           "source":"es","target":"de"}""",
         // A machine's answer, labelled.
         """{"state":"Guess","spelling":"ornitorrinco","lemma":null,"pos":"noun",
            "ipa":["oɾ.ni.toˈrin.ko"],"says":["Schnabeltier"],"glosses":["platypus"],

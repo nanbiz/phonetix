@@ -27,7 +27,7 @@ pub const MAGIC: &[u8; 8] = b"LEXPACK\x01";
 
 /// The format itself, not the data in it. A reader refuses a version it was not written
 /// against, and packs are rebuilt and re-released rather than migrated on a device.
-pub const FORMAT: u32 = 1;
+pub const FORMAT: u32 = 2;
 
 /// How many entries share one compressed block.
 ///
@@ -40,7 +40,10 @@ pub const ENTRIES_PER_BLOCK: usize = 64;
 /// The sections of the file, in the order the header lists them.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Section {
-    /// Spelling to entry number: every lemma, and every inflected form the dump resolves.
+    /// Spelling to a run of entry numbers: every lemma, and every inflected form the dump
+    /// resolves. A run rather than one number, because a spelling is regularly several words -
+    /// "book" is a noun and a verb, and a pack that could hold only one of them would lose half
+    /// of every language's commonest words.
     Keys = 0,
     /// Normalised English gloss head to a run of senses that carry it. This is the whole of
     /// what makes a language pair cost nothing to build.
@@ -52,10 +55,13 @@ pub enum Section {
     /// Where each block starts and how long it is, and where each entry starts inside its
     /// block once decompressed.
     BlockIndex = 4,
+    /// The runs the key index points at: how many entries a spelling reaches, then their
+    /// numbers.
+    KeyHits = 5,
 }
 
 /// How many sections there are, which is what the header's table is sized by.
-pub const SECTIONS: usize = 5;
+pub const SECTIONS: usize = 6;
 
 /// What kind of pack this is: the transcriptions alone, or the whole lexicon.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

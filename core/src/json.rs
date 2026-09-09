@@ -14,7 +14,8 @@ use crate::resolve::Answer;
 pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
-\"ipa\":{},\"says\":{},\"glosses\":{},\"example\":{},\"source\":{},\"target\":{}}}",
+\"ipa\":{},\"says\":{},\"glosses\":{},\"example\":{},\"readings\":{},\
+\"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
@@ -23,9 +24,27 @@ pub fn of(answer: &Answer) -> String {
         strings(&answer.says),
         strings(&answer.glosses),
         maybe(&answer.example),
+        readings(&answer.readings),
         quoted(&answer.source.0),
         quoted(&answer.target.0),
     )
+}
+
+/// The words a spelling is, where it is more than one.
+fn readings(items: &[crate::resolve::Reading]) -> String {
+    let inner: Vec<String> = items
+        .iter()
+        .map(|reading| {
+            format!(
+                "{{\"pos\":{},\"ipa\":{},\"says\":{},\"glosses\":{}}}",
+                maybe(&reading.pos),
+                strings(&reading.ipa),
+                strings(&reading.says),
+                strings(&reading.glosses),
+            )
+        })
+        .collect();
+    format!("[{}]", inner.join(","))
 }
 
 fn strings(items: &[String]) -> String {
@@ -76,11 +95,35 @@ mod tests {
             ipa: vec!["ˈpe.ro".into()],
             says: vec!["Hund".into()],
             glosses: vec!["dog".into()],
+            readings: Vec::new(),
             example: Some("El perro ladra.".into()),
             provenance: None,
             source: Lang("es".into()),
             target: Lang("de".into()),
         }
+    }
+
+    #[test]
+    fn the_words_a_spelling_is_are_all_there() {
+        let mut answer = an_answer();
+        answer.readings = vec![
+            crate::resolve::Reading {
+                pos: Some("noun".into()),
+                ipa: vec!["bʊk".into()],
+                says: vec!["Buch".into()],
+                glosses: vec!["a bound volume".into()],
+            },
+            crate::resolve::Reading {
+                pos: Some("verb".into()),
+                ipa: vec!["bʊk".into()],
+                says: vec!["buchen".into()],
+                glosses: vec!["to reserve".into()],
+            },
+        ];
+        let text = of(&answer);
+        assert!(text.contains("\"readings\":[{"), "{text}");
+        assert!(text.contains("\"says\":[\"Buch\"]"));
+        assert!(text.contains("\"says\":[\"buchen\"]"));
     }
 
     #[test]
