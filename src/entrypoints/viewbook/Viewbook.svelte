@@ -21,6 +21,7 @@
       symbols: [],
       says: ['Hund'],
       glosses: ['dog'],
+      marks: [['masculine']],
       example: null,
       readings: [],
       provenance: { kind: 'dictionary', pack: 'lex-es' },

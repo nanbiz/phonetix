@@ -39,6 +39,10 @@ pub struct Answer {
     /// What the word means, in English, which is the anchor the card shows when the join is
     /// ambiguous or absent.
     pub glosses: Vec<String>,
+    /// What the dump marks each of those senses as, in the same order: "colloquial",
+    /// "archaic", "Latin America". A sense a reader would not use is worth knowing about
+    /// before they use it, and the pack has carried these all along with nothing reading them.
+    pub marks: Vec<Vec<String>>,
     /// Each word this spelling is, where it is more than one. "book" is a noun and a verb, and
     /// which of them a reader met is theirs to say: the card offers the readings and the
     /// cascade does not choose.
@@ -75,6 +79,7 @@ impl Answer {
             symbols: Vec::new(),
             says: Vec::new(),
             glosses: Vec::new(),
+            marks: Vec::new(),
             readings: Vec::new(),
             example: None,
             provenance: None,
@@ -403,6 +408,7 @@ fn finish<D: AsRef<[u8]>>(
         ipa: entry.ipa.clone(),
         says,
         glosses,
+        marks: entry.senses.iter().map(|s| s.marks.clone()).collect(),
         readings: Vec::new(),
         example,
         provenance: Some(Provenance::Dictionary {

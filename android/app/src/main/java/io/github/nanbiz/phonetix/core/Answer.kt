@@ -29,6 +29,9 @@ data class Answer(
     val says: List<String>,
     /** What the word means in English, which anchors an answer a machine guessed. */
     val glosses: List<String>,
+    /** What the dump marks each of those senses as, in the same order: "colloquial",
+     *  "archaic", "Latin America". Worth knowing before a reader uses the word. */
+    val marks: List<List<String>>,
     /** The applying sense's example, where the dump had one. Never invented: a made-up
      *  sentence would be worth less than nothing. */
     val example: String?,
@@ -107,6 +110,7 @@ data class Answer(
             symbols = IpaSymbols.explain(ipa),
             says = emptyList(),
             glosses = emptyList(),
+            marks = emptyList(),
             example = null,
             readings = emptyList(),
             // Nothing says where it came from, because nothing here knows: this is what the
@@ -149,6 +153,14 @@ data class Answer(
                 },
                 says = list("says"),
                 glosses = list("glosses"),
+                marks = (o.optJSONArray("marks") ?: JSONArray()).let { outer ->
+                    (0 until outer.length()).map { at ->
+                        val inner = outer.optJSONArray(at) ?: JSONArray()
+                        (0 until inner.length()).mapNotNull {
+                            inner.optString(it).ifEmpty { null }
+                        }
+                    }
+                },
                 provenance = o.optJSONObject("provenance")?.let { row ->
                     when (row.optString("kind")) {
                         "dictionary" -> Provenance.Dictionary(row.optString("pack"))

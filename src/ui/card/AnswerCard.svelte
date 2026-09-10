@@ -38,7 +38,18 @@
   // The core split the transcription and said what each sound is; a card that split it
   // again would be a second opinion about where one sound ends.
   let symbols = $derived(answer.symbols);
-  let rest = $derived(chooses ? [] : answer.glosses.slice(1));
+  // Each sense with what it is marked as, so a reader is told a sense is archaic or regional
+  // rather than meeting it as though it were the ordinary one.
+  let rest = $derived(
+    chooses
+      ? []
+      : answer.glosses.slice(1).map((gloss, at) => ({
+          gloss,
+          marks: answer.marks[at + 1] ?? [],
+        }))
+  );
+  /** What the leading sense is marked as, which belongs beside the answer itself. */
+  let leadMarks = $derived(chooses ? [] : (answer.marks[0] ?? []));
   // A machine's answer is labelled one, and so is an English gloss standing in for an answer
   // the dictionary did not reach: unmarked, it reads as the translation rather than as the
   // anchor it is.
@@ -82,6 +93,7 @@
           <span class="tr quiet">{answer.spelling} is more than one word</span>
         {:else}
           <span class="tr">{lead ?? answer.spelling}</span>
+          {#each leadMarks as mark (mark)}<span class="chip">{mark}</span>{/each}
           {#if guessed}
             <span class="badge guess" title={engine ? `guessed by ${engine}` : 'a machine'}
               >guess</span>
@@ -161,7 +173,10 @@
                scroll. -->
           <div class="others">
             {#each rest.slice(0, 2) as sense, i (i)}
-              <p class="note">{sense}</p>
+              <!-- No space before the gloss: the marks are chips beside it, and a text node
+                   that begins with one reads as an indent in a list of senses. -->
+              <p class="note">{#each sense.marks as mark (mark)}<span class="chip"
+                  >{mark}</span>{" "}{/each}{sense.gloss}</p>
             {/each}
             {#if rest.length > 3}
               <button class="btn-text">{rest.length - 2} more senses</button>

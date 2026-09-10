@@ -63,6 +63,9 @@ export interface Answer {
   says: string[];
   /** What the word means in English, which anchors an answer a machine guessed. */
   glosses: string[];
+  /** What the dump marks each of those senses as, in the same order: "colloquial",
+   *  "archaic", "Latin America". Worth knowing before a reader uses the word. */
+  marks: string[][];
   /** The applying sense's example, where the dump had one. Never invented. */
   example: string | null;
   /** Each word this spelling is, where it is more than one. */
@@ -110,6 +113,7 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
     symbols: [],
     says: [],
     glosses: [],
+    marks: [],
     // Nothing said where it came from, because nothing here knows: this is what the overlay
     // already had, handed to a card as a last resort.
     provenance: null,

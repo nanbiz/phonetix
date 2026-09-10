@@ -254,7 +254,12 @@ private fun Example(answer: Answer, palette: Tokens.Palette, report: Reporter?) 
  */
 @Composable
 private fun OtherSenses(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
-    val rest = answer.glosses.drop(1)
+    // Each sense with what it is marked as, so a reader is told a sense is archaic or
+    // regional rather than meeting it as though it were the ordinary one.
+    val rest = answer.glosses.drop(1).mapIndexed { at, gloss ->
+        val marks = answer.marks.getOrNull(at + 1).orEmpty()
+        if (marks.isEmpty()) gloss else marks.joinToString(" ") + "  ·  " + gloss
+    }
     if (rest.isEmpty()) return
     for (sense in rest.take(2)) {
         androidx.compose.material3.Text(

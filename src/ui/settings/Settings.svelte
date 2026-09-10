@@ -87,8 +87,8 @@
 </script>
 
 <div class="flex flex-col divide-y divide-base-300">
-  <div class="flex items-center justify-between gap-3 px-4 py-3">
-    <span class="font-medium">Annotate what I read</span>
+  <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="on">
+    <span class="font-medium" data-name>Annotate what I read</span>
     <input
       type="checkbox"
       class="toggle toggle-primary"
@@ -101,8 +101,8 @@
   {#if site}
     <!-- One site, rather than everywhere: a reader who does not want this on their bank does
          not want to switch it off on the web. -->
-    <div class="flex items-center justify-between gap-3 px-4 py-3">
-      <span class="min-w-0 truncate font-medium">On {site}</span>
+    <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="site">
+      <span class="min-w-0 truncate font-medium" data-name>On {site}</span>
       <input
         type="checkbox"
         class="toggle toggle-primary"
@@ -113,13 +113,14 @@
     </div>
   {/if}
 
-  <div class="flex flex-col gap-2 px-4 py-3">
-    <span class="flex items-center gap-2 font-medium"><Eye class="size-4 opacity-60" />Show over a word</span>
+  <div class="flex flex-col gap-2 px-4 py-3" data-row="layer">
+    <span class="flex items-center gap-2 font-medium" data-name><Eye class="size-4 opacity-60" />Show over a word</span>
     <div class="join w-full">
       {#each layers as choice (choice.value)}
         <button
           type="button"
           class="btn join-item btn-xs flex-1 {settings.layer === choice.value ? 'btn-primary' : ''}"
+          data-choice={choice.value}
           aria-pressed={settings.layer === choice.value}
           onclick={() => change('layer', choice.value)}
         >{choice.label}</button>
@@ -127,10 +128,10 @@
     </div>
   </div>
 
-  <div class="flex flex-col gap-1 px-4 py-3">
+  <div class="flex flex-col gap-1 px-4 py-3" data-row="density">
     <div class="flex items-baseline justify-between">
-      <span class="font-medium">How often</span>
-      <span class="text-sm opacity-60">one word in {settings.density}</span>
+      <span class="font-medium" data-name>How often</span>
+      <span class="text-sm opacity-60" data-about>one word in {settings.density}</span>
     </div>
     <input
       class="range range-primary range-xs"
@@ -143,8 +144,8 @@
     />
   </div>
 
-  <div class="flex items-center justify-between gap-3 px-4 py-3">
-    <span class="font-medium">I read into</span>
+  <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="target">
+    <span class="font-medium" data-name>I read into</span>
     <select
       class="select select-sm max-w-48 cursor-pointer"
       aria-label="I read into"
@@ -158,8 +159,8 @@
     </select>
   </div>
 
-  <div class="flex items-center justify-between gap-3 px-4 py-3">
-    <span class="font-medium">This page is in</span>
+  <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="source">
+    <span class="font-medium" data-name>This page is in</span>
     <select
       class="select select-sm max-w-48 cursor-pointer"
       aria-label="this page is in"
@@ -177,8 +178,8 @@
     <!-- Only where there is something real to offer: a voice that exists, or a rule that holds
          for the whole vocabulary. A list of accents that all sound the same would be a list of
          promises. -->
-    <div class="flex items-center justify-between gap-3 px-4 py-3">
-      <span class="flex items-center gap-2 font-medium"><Volume class="size-4 opacity-60" />Accent</span>
+    <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="accent">
+      <span class="flex items-center gap-2 font-medium" data-name><Volume class="size-4 opacity-60" />Accent</span>
       <select
         class="select select-sm max-w-48 cursor-pointer"
         aria-label="accent"
@@ -193,9 +194,9 @@
     </div>
   {/if}
 
-  <div class="flex items-center justify-between gap-3 px-4 py-3">
+  <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="narrow">
     <span class="flex flex-col">
-      <span class="font-medium">Transcriptions</span>
+      <span class="font-medium" data-name>Transcriptions</span>
       <span class="text-sm opacity-60">
         {settings.narrow ? 'every detail of how it is said' : 'the sounds that tell words apart'}
       </span>
@@ -204,21 +205,23 @@
       <button
         type="button"
         class="btn join-item btn-xs {settings.narrow ? '' : 'btn-primary'}"
+        data-choice="broad"
         aria-pressed={!settings.narrow}
         onclick={() => change('narrow', false)}
       >broad</button>
       <button
         type="button"
         class="btn join-item btn-xs {settings.narrow ? 'btn-primary' : ''}"
+        data-choice="narrow"
         aria-pressed={settings.narrow}
         onclick={() => change('narrow', true)}
       >narrow</button>
     </div>
   </div>
 
-  <div class="flex items-center justify-between gap-3 px-4 py-3">
+  <div class="flex items-center justify-between gap-3 px-4 py-3" data-row="stress">
     <span class="flex flex-col">
-      <span class="font-medium">Stress marks</span>
+      <span class="font-medium" data-name>Stress marks</span>
       <span class="text-sm opacity-60">over a word; the card always shows them</span>
     </span>
     <input
@@ -230,9 +233,9 @@
     />
   </div>
 
-  <div class="flex flex-col gap-2 px-4 py-3">
+  <div class="flex flex-col gap-2 px-4 py-3" data-row="dictionaries">
     <div class="flex items-baseline justify-between">
-      <span class="font-medium">Dictionaries</span>
+      <span class="font-medium" data-name>Dictionaries</span>
       <span class="text-sm opacity-60">
         {#if packs.offered.length === 0}
           <!-- The list comes from wherever the reader said their dictionaries live, and that
@@ -247,21 +250,22 @@
 
     <!-- One row per dictionary: what it is, what it costs, and the one thing to do with it. -->
     {#each packs.offered as pack (pack.lang)}
-      <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center justify-between gap-3" data-row="pack" data-lang={pack.lang}>
         <span class="flex min-w-0 flex-col">
-          <span class="truncate">{LANGUAGES[pack.lang]?.english ?? pack.lang}</span>
-          <span class="text-xs opacity-60">
+          <span class="truncate" data-name>{LANGUAGES[pack.lang]?.english ?? pack.lang}</span>
+          <span class="text-xs opacity-60" data-about>
             {pack.entries.toLocaleString()} words · {size(pack.bytes)}
           </span>
         </span>
         {#if fetching === pack.lang}
           <span class="btn btn-ghost btn-xs" aria-label="fetching"><Loader class="size-4" /></span>
         {:else if packs.held.includes(pack.lang)}
-          <button class="btn btn-ghost btn-xs" onclick={() => forget?.(pack.lang)}>
+          <button class="btn btn-ghost btn-xs" data-does="remove"
+            onclick={() => forget?.(pack.lang)}>
             <Close class="size-4" />remove
           </button>
         {:else}
-          <button class="btn btn-xs" onclick={() => get?.(pack.lang)}>
+          <button class="btn btn-xs" data-does="get" onclick={() => get?.(pack.lang)}>
             <Download class="size-4" />get
           </button>
         {/if}

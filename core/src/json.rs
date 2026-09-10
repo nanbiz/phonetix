@@ -15,7 +15,7 @@ pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
-\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{}}}",
+\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
@@ -26,6 +26,9 @@ pub fn of(answer: &Answer) -> String {
         strings(&answer.says),
         strings(&answer.glosses),
         maybe(&answer.example),
+        // What each sense is marked as, in the order the glosses are: a reader is owed that a
+        // sense is archaic or regional before they use it.
+        marks(&answer.marks),
         readings(&answer.readings),
         // Where the answer came from, which a card has to be able to say. Left out of this
         // shape, the surface that most owes a reader the difference between a dictionary and
@@ -167,6 +170,12 @@ fn readings(items: &[crate::resolve::Reading]) -> String {
     format!("[{}]", inner.join(","))
 }
 
+/// The marks of every sense, as a list of lists in the order the glosses came.
+fn marks(items: &[Vec<String>]) -> String {
+    let inner: Vec<String> = items.iter().map(|sense| strings(sense)).collect();
+    format!("[{}]", inner.join(","))
+}
+
 fn strings(items: &[String]) -> String {
     let inner: Vec<String> = items.iter().map(|s| quoted(s)).collect();
     format!("[{}]", inner.join(","))
@@ -217,6 +226,7 @@ mod tests {
             symbols: crate::symbols::explain("ˈpe.ro"),
             says: vec!["Hund".into()],
             glosses: vec!["dog".into()],
+            marks: vec![vec!["masculine".into()]],
             readings: Vec::new(),
             example: Some("El perro ladra.".into()),
             provenance: None,

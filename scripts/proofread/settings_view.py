@@ -79,15 +79,18 @@ def main():
         # It draws itself from what the reader has chosen and what the host holds.
         drawn = wait_for(cdp, view, """
             (() => {
-              const panel = document.querySelector('.panel');
+              const panel = document.querySelector('main');
               if (!panel) return null;
               return JSON.stringify({
-                rows: [...panel.querySelectorAll('.row .r-name')].map(r => r.textContent.trim()),
-                choices: [...panel.querySelectorAll('.seg span')].map(s => s.textContent.trim()),
-                on: panel.querySelector('.toggle').classList.contains('on'),
-                often: (panel.querySelector('.r-sub') || {}).textContent || '',
+                rows: [...panel.querySelectorAll('[data-row] [data-name]')]
+                  .map(r => r.textContent.trim()),
+                choices: [...panel.querySelectorAll('[data-row="layer"] [data-choice]')]
+                  .map(s => s.textContent.trim()),
+                on: panel.querySelector('[data-row="on"] input').checked,
+                often: (panel.querySelector('[data-row="density"] [data-about]') || {})
+                  .textContent || '',
                 languages: panel.querySelectorAll('select')[0].options.length,
-                surface: getComputedStyle(panel).backgroundColor,
+                surface: getComputedStyle(document.body).backgroundColor,
                 width: Math.round(panel.getBoundingClientRect().width),
               });
             })()
@@ -112,12 +115,12 @@ def main():
         for _ in range(4):
             got = evaluate(cdp, view, """
                 (() => {
-                  const row = [...document.querySelectorAll('.row')].find(
-                    r => (r.querySelector('.r-act .btn-text') || {}).textContent
+                  const row = [...document.querySelectorAll('[data-row="pack"]')].find(
+                    r => (r.querySelector('[data-does]') || {}).textContent
                           ?.trim() === 'get');
                   if (!row) return 'none left';
-                  row.querySelector('.btn-text').click();
-                  return row.querySelector('.r-name').textContent.trim();
+                  row.querySelector('[data-does]').click();
+                  return row.querySelector('[data-name]').textContent.trim();
                 })()
             """)
             if got == "none left":
@@ -133,9 +136,11 @@ def main():
 
         # Every word first, so that what the other settings do is visible on a page whose
         # dictionary knows only a handful of its words.
-        control(cdp, view, "(() => { const s = document.querySelector('.slider');"
+        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        told = evaluate(cdp, view, "document.querySelector('.r-sub').textContent")
+        told = evaluate(
+            cdp, view,
+            "document.querySelector('[data-row=density] [data-about]').textContent")
         dense = words(cdp, page)
         if "1" not in (told or ""):
             failures.append(f"the dense end says {told!r}")
@@ -150,7 +155,7 @@ def main():
             failures.append(f"the answers are {german['glosses'][:6]}, not German")
 
         # What is shown over a word: the sound rather than the meaning.
-        control(cdp, view, "[...document.querySelectorAll('.seg span')]"
+        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
                            ".find(s => s.textContent.trim() === 'sound').click()")
         sound = words(cdp, page)
         print(f"  showing the sound: {sound['sounds'][:3]}")
@@ -160,7 +165,7 @@ def main():
             failures.append("nothing is said about how the words sound")
 
         # In place: the word repainted as what it means.
-        control(cdp, view, "[...document.querySelectorAll('.seg span')]"
+        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
                            ".find(s => s.textContent.trim() === 'in place').click()")
         swapped = words(cdp, page)
         print(f"  in place: {swapped['swapped'][:4]}")
@@ -168,9 +173,9 @@ def main():
             failures.append(f"nothing was repainted: {swapped['swapped'][:4]}")
 
         # How often: the sparse end of the bar draws fewer words than the dense end.
-        control(cdp, view, "[...document.querySelectorAll('.seg span')]"
+        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
                            ".find(s => s.textContent.trim() === 'meaning').click()")
-        control(cdp, view, "(() => { const s = document.querySelector('.slider');"
+        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = 0; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
         sparse = words(cdp, page)
         print(f"  dense {dense['count']} words ({told}), sparse {sparse['count']}")
@@ -183,13 +188,13 @@ def main():
         # The dictionaries a reader can have, and the two things to do with one.
         offered = wait_for(cdp, view, """
             (() => {
-              const rows = [...document.querySelectorAll('.row')]
-                .filter(r => r.querySelector('.r-act .btn-text'));
+              const rows = [...document.querySelectorAll('[data-row="pack"]')]
+                .filter(r => r.querySelector('[data-does]'));
               if (rows.length === 0) return null;
               return JSON.stringify(rows.map(r => ({
-                name: r.querySelector('.r-name').textContent.trim(),
-                about: r.querySelector('.r-sub').textContent.trim(),
-                action: r.querySelector('.r-act .btn-text').textContent.trim(),
+                name: r.querySelector('[data-name]').textContent.trim(),
+                about: r.querySelector('[data-about]').textContent.trim(),
+                action: r.querySelector('[data-does]').textContent.trim(),
               })));
             })()
         """, lambda v: v is not None)
@@ -206,11 +211,11 @@ def main():
         # Giving one up: the row offers it back, and the page loses the answers it gave.
         held_before = json.loads(offered)
         if any(row["action"] == "remove" for row in held_before):
-            control(cdp, view, "[...document.querySelectorAll('.row .r-act .btn-text')]"
+            control(cdp, view, "[...document.querySelectorAll('[data-row=pack] [data-does]')]"
                                ".find(b => b.textContent.trim() === 'remove').click()")
             time.sleep(2)
             after = json.loads(evaluate(cdp, view, """
-                (() => JSON.stringify([...document.querySelectorAll('.row .r-act .btn-text')]
+                (() => JSON.stringify([...document.querySelectorAll('[data-row=pack] [data-does]')]
                   .map(b => b.textContent.trim())))()
             """) or "[]")
             print(f"  after giving one up: {after}")
@@ -222,9 +227,9 @@ def main():
         # An accent whose difference is a rule changes the transcriptions on the page.
         # Every word again first: the bar was left at its sparse end by the check above, and
         # a page with nothing on it says nothing about accents.
-        control(cdp, view, "(() => { const s = document.querySelector('.slider');"
+        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        control(cdp, view, "[...document.querySelectorAll('.seg span')]"
+        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
                            ".find(s => s.textContent.trim() === 'sound').click()")
         def sound_of(word):
             said = evaluate(cdp, page, """
@@ -239,9 +244,7 @@ def main():
         before = sound_of("calle")
         picked = evaluate(cdp, view, """
             (() => {
-              const rows = [...document.querySelectorAll('.row')];
-              const row = rows.find(r => r.querySelector('.r-name')?.textContent.trim()
-                                          === 'Accent');
+              const row = document.querySelector('[data-row="accent"]');
               if (!row) return 'no accent row';
               const select = row.querySelector('select');
               const option = [...select.options].find(o => o.textContent.includes('Latin'));
@@ -265,22 +268,17 @@ def main():
         # extension is still on for everything else.
         control(cdp, view, """
             (() => {
-              const rows = [...document.querySelectorAll('.row')];
-              const row = rows.find(r => r.querySelector('.r-name')
-                                          ?.textContent.trim().startsWith('On '));
+              const row = document.querySelector('[data-row="site"]');
               if (!row) return 'no row';
-              row.querySelector('.toggle').click();
-              return row.querySelector('.r-name').textContent.trim();
+              row.querySelector('input').click();
+              return row.querySelector('[data-name]').textContent.trim();
             })()
         """)
         time.sleep(2)
         here = words(cdp, page)
         still_on = evaluate(cdp, view, """
             (() => {
-              const rows = [...document.querySelectorAll('.row')];
-              const master = rows.find(r => r.querySelector('.r-name')
-                                             ?.textContent.trim() === 'Annotate what I read');
-              return master.querySelector('.toggle').classList.contains('on');
+              return document.querySelector('[data-row="on"] input').checked;
             })()
         """)
         print(f"  switched off for this site: {here['count']} words, still on elsewhere: {still_on}")
@@ -290,7 +288,7 @@ def main():
             failures.append("switching one site off switched the extension off everywhere")
 
         # And the switch takes it all away.
-        control(cdp, view, "document.querySelector('.toggle').click()")
+        control(cdp, view, "document.querySelector('[data-row=on] input').click()")
         off = words(cdp, page)
         if off["count"] != 0:
             failures.append(f"{off['count']} annotations survived the switch")
