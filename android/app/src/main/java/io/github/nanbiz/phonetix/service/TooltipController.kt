@@ -120,6 +120,9 @@ class TooltipController(
             v.postDelayed(writeOut, 120)
         }
     }
+    /** Which side of the card the arrow is on, once the card has been placed. */
+    private var pointsDown: androidx.compose.runtime.MutableState<Boolean>? = null
+
     /** The scrolling list of symbols, refilled in place when a row opens or closes. */
     private var list: LinearLayout? = null
     private var scroller: ScrollView? = null
@@ -240,6 +243,13 @@ class TooltipController(
      * Guessing the height beforehand put a long card half off the bottom of the screen, with
      * the buttons that close it out of reach.
      */
+    /** The card's left edge on screen, so the arrow can be put where the word is. */
+    private fun cardLeft(): Float =
+        ((context.resources.displayMetrics.widthPixels -
+            context.resources.displayMetrics.widthPixels * 0.88f) / 2f)
+
+    private fun density(): Float = context.resources.displayMetrics.density
+
     private fun place(card: View, lp: WindowManager.LayoutParams, box: WordBox) {
         val metrics = context.resources.displayMetrics
         val margin = dp(8).roundToInt()
@@ -251,6 +261,8 @@ class TooltipController(
             above >= margin -> above
             else -> (metrics.heightPixels - height - margin).coerceAtLeast(margin)
         }
+        // Above the word means the arrow is on the card's underside, pointing down at it.
+        pointsDown?.value = y != below
         if (y == lp.y) return
         lp.y = y
         runCatching { wm.updateViewLayout(card, lp) }
@@ -349,6 +361,9 @@ class TooltipController(
         }
         val fresh = OverlayHost(context)
         host = fresh
+        // Which side of the word the card ends up on is settled once it has been measured, so
+        // the arrow follows that rather than the guess made before it was drawn.
+        pointsDown = androidx.compose.runtime.mutableStateOf(false)
         fresh.view.setContent {
             val opened = androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf<String?>(null)
@@ -360,6 +375,10 @@ class TooltipController(
             AnswerCard(
                 answer = answer,
                 palette = palette,
+                // Where the word sits along the card's own width: the card is centred and the
+                // word can be anywhere on the line, so the middle would point at nothing.
+                pointsAt = androidx.compose.ui.unit.Dp((box.rect.centerX() - cardLeft()) / density()),
+                pointsDown = pointsDown?.value ?: false,
                 report = if (BuildConfig.DEBUG) laidOut else null,
                 onOpen = { open(it) },
                 // A second tap on the same symbol puts the line back to where it started: it

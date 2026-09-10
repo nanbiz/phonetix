@@ -1,5 +1,6 @@
 package io.github.nanbiz.phonetix.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,6 +24,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Accents
@@ -69,6 +72,13 @@ fun AnswerCard(
     onPlay: () -> Unit = {},
     /** Play a recording of one sound, which is a file rather than a synthesised voice. */
     onPlaySymbol: () -> Unit = {},
+    /**
+     * Where the word this card is about sits along the card's own width, and which side of the
+     * card it is on. Nothing where the card is not anchored to a word, and then no arrow is
+     * drawn: a card that opened between two words was a card about either of them.
+     */
+    pointsAt: Dp? = null,
+    pointsDown: Boolean = false,
     /** Somewhere to send a reader who wants the whole entry. */
     onOpen: (String) -> Unit = {},
     /** Where each piece of the card ended up, once it has been laid out.
@@ -79,54 +89,104 @@ fun AnswerCard(
      *  point of asking. */
     report: Reporter? = null,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(Tokens.Scale.radiusCard.dp))
-            .background(Color(palette.surface))
-            .padding(Tokens.Scale.space4.dp),
-        verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
-    ) {
-        // The word the reader is on, whatever else the card could or could not find out.
-        TopRow(answer, accent, palette, report, onOpen)
-        if (!answer.found) {
-            Nothing(answer, palette, report)
-            return@Column
-        }
-        if (answer.readings.size < 2) {
-            Headline(answer, palette, report)
-        } else {
-            // Nothing leads: the reader is choosing between the readings below, and a headline
-            // would be the card choosing for them.
-            androidx.compose.material3.Text(
-                text = "${answer.spelling} is more than one word",
-                color = Color(palette.inkMuted),
-                fontSize = Tokens.Scale.fontSizeBody.sp,
-            )
-        }
-        if (answer.ipa.isNotEmpty()) {
-            Pronunciation(answer, palette, onSymbol, recorded, onPlay, opened, report)
-        }
-        // Only where there are sounds to ask about: a line inviting a tap on a transcription
-        // whose symbols the table could not name is a line that answers nothing.
-        if (answer.symbols.isNotEmpty()) {
-            SoundLine(
-                about = opened,
+    Box(modifier.fillMaxWidth()) {
+        // The arrow, outside the card's own rounded box so the card can keep clipping its
+        // corners. It is drawn first and the card over it, so the seam where they meet is the
+        // card's edge rather than a line across the arrow.
+        if (pointsAt != null) {
+            Arrow(
+                at = pointsAt,
+                down = pointsDown,
                 palette = palette,
-                onPlay = onPlaySymbol,
-                onOpen = onOpen,
-                diagram = diagram,
-                report = report,
+                modifier = Modifier.align(if (pointsDown) Alignment.BottomStart else Alignment.TopStart),
             )
         }
-        // Every reading, where the join reached more than one. The reader chooses by meaning,
-        // so each is its own row: showing the first and dropping the rest would be the card
-        // making exactly the choice it is here to avoid.
-        Readings(answer, palette, report)
-        Grammar(answer, palette, report)
-        Example(answer, palette, report)
-        OtherSenses(answer, palette, report)
-        Foot(answer, palette, report, onOpen)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = if (pointsAt != null && !pointsDown) ARROW else 0.dp,
+                    bottom = if (pointsAt != null && pointsDown) ARROW else 0.dp,
+                )
+                .clip(RoundedCornerShape(Tokens.Scale.radiusCard.dp))
+                .background(Color(palette.surface))
+                .padding(Tokens.Scale.space4.dp),
+            verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
+        ) {
+            // The word the reader is on, whatever else the card could or could not find out.
+            TopRow(answer, accent, palette, report, onOpen)
+            if (!answer.found) {
+                Nothing(answer, palette, report)
+                return@Column
+            }
+            if (answer.readings.size < 2) {
+                Headline(answer, palette, report)
+            } else {
+                // Nothing leads: the reader is choosing between the readings below, and a headline
+                // would be the card choosing for them.
+                androidx.compose.material3.Text(
+                    text = "${answer.spelling} is more than one word",
+                    color = Color(palette.inkMuted),
+                    fontSize = Tokens.Scale.fontSizeBody.sp,
+                )
+            }
+            if (answer.ipa.isNotEmpty()) {
+                Pronunciation(answer, palette, onSymbol, recorded, onPlay, opened, report)
+            }
+            // Only where there are sounds to ask about: a line inviting a tap on a transcription
+            // whose symbols the table could not name is a line that answers nothing.
+            if (answer.symbols.isNotEmpty()) {
+                SoundLine(
+                    about = opened,
+                    palette = palette,
+                    onPlay = onPlaySymbol,
+                    onOpen = onOpen,
+                    diagram = diagram,
+                    report = report,
+                )
+            }
+            // Every reading, where the join reached more than one. The reader chooses by meaning,
+            // so each is its own row: showing the first and dropping the rest would be the card
+            // making exactly the choice it is here to avoid.
+            Readings(answer, palette, report)
+            Grammar(answer, palette, report)
+            Example(answer, palette, report)
+            OtherSenses(answer, palette, report)
+            Foot(answer, palette, report, onOpen)
+        }
+    }
+}
+
+/** How far the arrow reaches out of the card, which is also the room made for it. */
+private val ARROW = 8.dp
+
+/**
+ * The arrow that says which word the card is about.
+ *
+ * A triangle in the card's own surface with the card's own border along its two outer edges,
+ * so what a reader sees is the card's edge carrying a point rather than a shape stuck to it.
+ */
+@Composable
+private fun Arrow(at: Dp, down: Boolean, palette: Tokens.Palette, modifier: Modifier = Modifier) {
+    Canvas(modifier.fillMaxWidth().height(ARROW)) {
+        val middle = at.toPx().coerceIn(ARROW.toPx() * 2, size.width - ARROW.toPx() * 2)
+        val half = ARROW.toPx()
+        val tip = if (down) size.height else 0f
+        val base = if (down) 0f else size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(middle - half, base)
+            lineTo(middle, tip)
+            lineTo(middle + half, base)
+            close()
+        }
+        drawPath(path, Color(palette.surface))
+        drawPath(
+            path,
+            Color(palette.border),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = Tokens.Scale.borderWidth.dp.toPx(),
+            ),
+        )
     }
 }
 
