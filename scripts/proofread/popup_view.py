@@ -139,6 +139,57 @@ def main():
             failures.append(
                 f"controls whose label drags into a selection: {controls['selectable'][:4]}")
 
+        # On a phone the popup is a sheet the width of the device, and the view has to be that
+        # width: at a fixed 24rem on a 360px screen the right edge of every row was past it.
+        # And every row starts where every other row starts - a banner inset by its own padding
+        # rather than the panel's was 4px left of everything under it.
+        PHONE = 360
+        for _ in range(6):
+            cdp.send("Emulation.setDeviceMetricsOverride", {
+                "width": PHONE, "height": 760, "deviceScaleFactor": 1, "mobile": True,
+            }, session=session)
+            time.sleep(1)
+            # The window really is that size before anything is measured in it: an override
+            # that did not take makes every question below a question about the wrong screen,
+            # and the answers all look fine.
+            if evaluate(cdp, session, "window.innerWidth") == PHONE:
+                break
+        else:
+            # A page that will not be shown narrower than its own content is the fault this
+            # asks about: on a phone the popup is a sheet the width of the device.
+            failures.append(
+                f"the view will not fit a {PHONE}px screen: the window stayed "
+                f"{evaluate(cdp, session, 'window.innerWidth')}px")
+        narrow = json.loads(evaluate(cdp, session, """
+            (() => {
+              const edges = [...document.querySelectorAll('[data-view=main] [data-name]')]
+                .filter(el => el.offsetParent !== null)
+                .map(el => ({
+                  says: el.textContent.trim().slice(0, 18),
+                  left: Math.round(el.getBoundingClientRect().left),
+                }));
+              return JSON.stringify({
+                wide: document.documentElement.scrollWidth,
+                seen: window.innerWidth,
+                edges,
+              });
+            })()
+        """))
+        lefts = sorted({row["left"] for row in narrow["edges"]})
+        print(f"  on a {narrow['seen']}px screen it draws {narrow['wide']}px wide, "
+              f"rows starting at {lefts}")
+        if narrow["seen"] == PHONE and narrow["wide"] > narrow["seen"]:
+            failures.append(
+                f"the view is {narrow['wide']}px wide on a {narrow['seen']}px screen")
+        # One edge for the rows, and the name beside the mark at the top is allowed its own:
+        # it sits after an icon rather than at the panel's margin.
+        if len(lefts) > 2:
+            failures.append(f"rows start at {lefts}: {narrow['edges'][:6]}")
+        cdp.send("Emulation.setDeviceMetricsOverride", {
+            "width": 384, "height": 700, "deviceScaleFactor": 1, "mobile": False,
+        }, session=session)
+        time.sleep(1)
+
         # The switch reads as on or off. Its knob is drawn against its own track, and painted
         # in the surface colour it vanished into it in both palettes.
         knob = json.loads(evaluate(cdp, session, """

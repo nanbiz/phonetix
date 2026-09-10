@@ -15,7 +15,7 @@
 </script>
 
 {#if trouble.length > 0}
-  <div class="alert" data-row="trouble" role="status">
+  <div class="alert across" data-row="trouble" role="status">
     <!-- What is wrong and what it costs, and nothing about what to do: what a reader can do
          about an engine depends on which one it was, and guessing at it in one sentence for
          all of them is advice that is wrong more often than it is right. -->

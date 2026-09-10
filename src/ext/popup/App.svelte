@@ -28,19 +28,22 @@
   let trouble = $state<string[]>([]);
 
   /** This extension's mark and the build a reader is looking at, from the manifest. */
-  const icon = chrome.runtime.getURL('icon/48.png');
-  const version = chrome.runtime.getManifest().version;
+  const icon = browser.runtime.getURL('/icon/48.png');
+  const version = browser.runtime.getManifest().version;
 
   async function load() {
     settings = await current();
     // The page the reader is on, which is not always the active tab: the settings view can
     // itself be open as a tab, and a view that then described itself would offer a site
     // switch for the extension and accents for nothing.
-    const active = await chrome.tabs.query({ active: true, currentWindow: true });
+    // Through `browser` rather than `chrome`: on Firefox the chrome namespace is
+    // callback-only, so awaiting it yields nothing at all - which is why the popup there
+    // showed no site row and no accents, having decided it was looking at no page.
+    const active = await browser.tabs.query({ active: true, currentWindow: true });
     const readable = (url?: string) => Boolean(url && /^https?:/.test(url));
     let tab = active.find((it) => readable(it.url));
     if (!tab) {
-      const all = await chrome.tabs.query({});
+      const all = await browser.tabs.query({});
       tab = all
         .filter((it) => readable(it.url))
         .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0];
@@ -49,7 +52,7 @@
     siteIcon = tab?.favIconUrl ?? '';
     // Asked of the page rather than guessed: it is the one that read itself.
     pageLang = tab?.id
-      ? await chrome.tabs
+      ? await browser.tabs
           .sendMessage(tab.id, { phonetix: 'pageLanguage', data: {} })
           .then((r: { ok?: string } | undefined) => r?.ok ?? '')
           .catch(() => '')

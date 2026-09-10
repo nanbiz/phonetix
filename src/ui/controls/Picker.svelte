@@ -14,13 +14,16 @@
   let { options, chosen, label, change }: Props = $props();
 </script>
 
-<select
-  class="select"
-  aria-label={label}
-  value={chosen}
-  onchange={(event) => change((event.currentTarget as HTMLSelectElement).value)}
->
-  {#each options as option (option.value)}
-    <option value={option.value}>{option.label}</option>
-  {/each}
-</select>
+<!-- The frame carries the caret, because a select cannot draw one of its own: what the reader
+     presses is still the menu, and the browser opens it the way it opens any other. -->
+<span class="select">
+  <select
+    aria-label={label}
+    value={chosen}
+    onchange={(event) => change((event.currentTarget as HTMLSelectElement).value)}
+  >
+    {#each options as option (option.value)}
+      <option value={option.value}>{option.label}</option>
+    {/each}
+  </select>
+</span>

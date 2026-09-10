@@ -3,7 +3,7 @@
 // The host owns the core and the packs; a content script owns a document. Everything that
 // crosses between them is here, so the boundary is one file rather than a habit.
 //
-// It is written on chrome.runtime directly. The boundary is four messages and a reply, and a
+// It is written on the browser's own runtime messaging directly. The boundary is four messages and a reply, and a
 // library in the middle of it was one more place for a message to disappear between a page and
 // a service worker with nothing to show for it.
 import type { Answer, IpaSymbol } from '@/core/answer';
@@ -92,7 +92,9 @@ export async function sendMessage<K extends Named>(
   data: HostProtocol[K]['data']
 ): Promise<HostProtocol[K]['reply']> {
   const asked: Asked<K> = { phonetix: name, data };
-  const answered = (await chrome.runtime.sendMessage(asked)) as Answered<K> | undefined;
+  // Through `browser` rather than `chrome`: on Firefox the chrome namespace is the
+  // callback-style one, and awaiting it there is awaiting undefined.
+  const answered = (await browser.runtime.sendMessage(asked)) as Answered<K> | undefined;
   if (!answered) throw new Error(`the host did not answer ${name}`);
   if ('failed' in answered) throw new Error(answered.failed);
   return answered.ok;
@@ -115,7 +117,7 @@ export function onMessage<K extends Named>(
   handlers.set(name, (data) => handle({ data: data as HostProtocol[K]['data'] }));
   if (listening) return;
   listening = true;
-  chrome.runtime.onMessage.addListener((message, _sender, respond) => {
+  browser.runtime.onMessage.addListener((message, _sender, respond) => {
     if (!isAsked(message)) return false;
     const handler = handlers.get(message.phonetix);
     if (!handler) return false;
