@@ -87,7 +87,17 @@ for zip in "$out/phonetix-$version-chrome.zip" "$out/phonetix-$version-firefox.z
     exit 1
   fi
 done
-[[ -n "$signed" ]] && artifacts+=("$signed")
+if [[ -n "$signed" ]]; then
+  artifacts+=("$signed")
+else
+  # The same bytes under the name Firefox expects. An xpi is a zip, and what a signature adds
+  # is Mozilla's approval, not a different container - so an unsigned build is installable
+  # wherever signatures are not enforced (a Developer Edition, a Nightly, an ESR with
+  # xpinstall.signatures.required off, or temporarily through about:debugging).
+  unsigned="$out/phonetix-$version-firefox-unsigned.xpi"
+  cp "$out/phonetix-$version-firefox.zip" "$unsigned"
+  artifacts+=("$unsigned")
+fi
 
 echo "== what would go up"
 printf '  %s\n' "${artifacts[@]}"
