@@ -331,7 +331,7 @@ class TooltipController(
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
         val answer = Reading.lookUp(
-            box.word, source, settings.target.ifEmpty { source }, settings.accent,
+            box.word, source, settings.target.ifEmpty { source }, settings.accent, box.before,
         )
             ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)

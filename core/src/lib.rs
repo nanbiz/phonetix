@@ -13,6 +13,7 @@ pub mod detect;
 pub mod gloss;
 pub mod json;
 pub mod languages;
+pub mod neighbours;
 pub mod resolve;
 pub mod segment;
 pub mod sprinkle;

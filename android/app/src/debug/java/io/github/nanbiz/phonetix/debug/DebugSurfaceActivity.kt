@@ -521,6 +521,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                             i.getStringExtra("lexSource").orEmpty(),
                             i.getStringExtra("lexTarget").orEmpty(),
                             i.getStringExtra("lexAccent").orEmpty(),
+                            i.getStringExtra("lexBefore").orEmpty(),
                         ),
                     )
                 }

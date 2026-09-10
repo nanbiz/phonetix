@@ -160,6 +160,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
     source: JString,
     target: JString,
     accent: JString,
+    // The word before it on the screen, which decides a spelling that is several words.
+    before: JString,
 ) -> jni::objects::JString<'a> {
     let empty = env.new_string("").unwrap_or_else(|_| {
         JString::from(unsafe { jni::objects::JObject::from_raw(std::ptr::null_mut()) })
@@ -180,6 +182,10 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         .get_string(&accent)
         .map(|it| it.into())
         .unwrap_or_default();
+    let before: String = env
+        .get_string(&before)
+        .map(|it| it.into())
+        .unwrap_or_default();
     // Safety: as above.
     let core = unsafe { &*(core as *const Core) };
     let open = lexcore::resolve::Open {
@@ -189,8 +195,13 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         accent: &accent,
         accent_pack: core.packs.get(&accent),
     };
-    let answer = lexcore::resolve::look_up(
+    let answer = lexcore::resolve::read_in_context(
         &spelling,
+        if before.is_empty() {
+            None
+        } else {
+            Some(&before)
+        },
         &lexcore::answer::Lang(source),
         &lexcore::answer::Lang(target),
         &open,

@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use lexcore::annotate::{annotate, complete};
 use lexcore::answer::{AnnotateOptions, EngineResult, InlineMode, Lang, TextRun, Token};
-use lexcore::resolve::{look_up, Open};
+use lexcore::resolve::Open;
 use lexpack::Pack;
 use wasm_bindgen::prelude::*;
 
@@ -172,7 +172,16 @@ impl Core {
 
     /// One word, as JSON, because an Answer is a tree and the boundary carries text.
     #[wasm_bindgen(js_name = lookUp)]
-    pub fn look_up(&self, spelling: &str, source: &str, target: &str, accent: &str) -> String {
+    pub fn look_up(
+        &self,
+        spelling: &str,
+        source: &str,
+        target: &str,
+        accent: &str,
+        // The word before it on the page, which decides a spelling that is several words.
+        // Empty where the host does not know it, and then the card asks instead.
+        before: &str,
+    ) -> String {
         let open = Open {
             source: self.packs.get(source),
             target: self.packs.get(target),
@@ -180,8 +189,13 @@ impl Core {
             accent,
             accent_pack: self.packs.get(accent),
         };
-        lexcore::json::of(&look_up(
+        lexcore::json::of(&lexcore::resolve::read_in_context(
             spelling,
+            if before.is_empty() {
+                None
+            } else {
+                Some(before)
+            },
             &Lang(source.into()),
             &Lang(target.into()),
             &open,

@@ -19,7 +19,14 @@ export interface HostProtocol {
   languages: { data: Record<string, never>; reply: string[] };
   /** What the core says about one word, read from source into target. */
   lookUp: {
-    data: { word: string; source: string; target: string; accent?: string };
+    data: {
+      word: string;
+      source: string;
+      target: string;
+      accent?: string;
+      /** The word before it on the page, which decides a spelling that is several words. */
+      before?: string;
+    };
     reply: Answer;
   };
   /** What a batch of runs gets drawn on it: one token per word, and the words the packs

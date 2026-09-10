@@ -74,6 +74,8 @@ object Lex {
         source: String,
         target: String,
         accent: String,
+        /** The word before it on the screen, which decides a spelling that is several words. */
+        before: String,
     ): String
 
     /** A transcription, symbol by symbol, as JSON: what each sound is called and where to

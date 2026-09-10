@@ -85,10 +85,12 @@ export async function lookUp(
   spelling: string,
   source: string,
   target: string,
-  accent = ''
+  accent = '',
+  /** The word before it on the page, which decides a spelling that is several words. */
+  before = ''
 ): Promise<Answer> {
   const it = await coreReady();
-  return JSON.parse(it.lookUp(spelling, source, target, accent)) as Answer;
+  return JSON.parse(it.lookUp(spelling, source, target, accent, before)) as Answer;
 }
 
 /**

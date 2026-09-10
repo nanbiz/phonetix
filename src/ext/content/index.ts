@@ -218,13 +218,16 @@ async function play(bytes: number[]): Promise<void> {
 }
 
 /** Open the card for a word the reader stopped at. */
-async function open(element: HTMLElement, token: Token): Promise<void> {
+async function open(element: HTMLElement, token: Token, before = ''): Promise<void> {
   const source = token.lang || pageLanguage();
   const answer = await sendMessage('lookUp', {
     word: token.spelling,
     source,
     target: settings.target || source,
     accent: settings.accent,
+    // What the inline layer already knew: a spelling that is several words is decided by the
+    // one before it, and the card must not ask a question the page has answered.
+    before,
   });
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
@@ -300,7 +303,7 @@ function gestures(): void {
     const found = wordAt(event.target);
     if (!found) return;
     if (opening) clearTimeout(opening);
-    opening = setTimeout(() => open(found.element, found.token), REST);
+    opening = setTimeout(() => open(found.element, found.token, found.before), REST);
   });
   document.addEventListener('mouseout', (event) => {
     if (!wordAt(event.target)) return;
@@ -314,7 +317,7 @@ function gestures(): void {
     const found = wordAt(event.target);
     if (found) {
       event.preventDefault();
-      open(found.element, found.token);
+      open(found.element, found.token, found.before);
       return;
     }
     if (showing()) hide();

@@ -2076,7 +2076,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             accent = settings.accent,
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
-        for (token in told) {
+        for ((at, token) in told.withIndex()) {
             // What is drawn is what the reader asked for: the meaning where there is one, the
             // transcription otherwise, and nothing at all where the core found neither.
             if (!token.inline) continue
@@ -2087,7 +2087,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             if (shown.isEmpty()) continue
             byRun.getOrPut(token.run) { ArrayList(4) }
-                .add(Pick(token.start, token.end - 1, token.spelling, shown))
+                .add(
+                    Pick(
+                        token.start,
+                        token.end - 1,
+                        token.spelling,
+                        shown,
+                        // What the core already used to decide this word, carried to the card
+                        // so a tap asks the same question the line answered.
+                        before = told.getOrNull(at - 1)
+                            ?.takeIf { it.run == token.run }?.spelling.orEmpty(),
+                    ),
+                )
         }
         val kept = ArrayList<Planned>(byRun.size)
         for ((at, line) in planned.withIndex()) {

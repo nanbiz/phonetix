@@ -550,7 +550,15 @@ def check_language(r, dev):
     reset(dev)
     # Every word, not one in two: what is being asked is which language a reading is in, and
     # a bar that draws half the page can leave out the word that answers that.
-    german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
+    #
+    # Asked again while nothing has been drawn: a German page is read by the synthesiser, which
+    # starts a moment after the first screen and fills on the pass after that.
+    german, german_log = {}, ""
+    for _ in range(4):
+        german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
+        if any("DRAWN " in line and len(line.split("DRAWN ", 1)[1]) > 3
+               for line in german_log.splitlines()):
+            break
     english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
     r.check(
         len(english) > 0,
@@ -775,11 +783,11 @@ def check_a_real_app(r, dev):
     # stayed that way, while the log said everything was fine. There are no marks to count in
     # someone else's app, so the same screen is photographed again with the service switched
     # off and the rows that differ are ours.
-    covered = [rows_of_ours(dev, "settled")]
+    covered = [settled_coverage(dev, "settled")]
     for _ in range(2):
         shell("input", "swipe", "540", "1400", "540", "500", "1300")
         time.sleep(3.0)
-        covered.append(rows_of_ours(dev, "scrolled"))
+        covered.append(settled_coverage(dev, "scrolled"))
     # As a share of the rows that carry text at all, not as a count. A count compares this
     # screen with the one before it, and scrolling a list reaches its end: the last screen of
     # the settings app is mostly empty, so a run that dragged that far reported the overlay as
@@ -804,6 +812,26 @@ def check_a_real_app(r, dev):
 # Not all of it: a screen scrolled to a different place has different words on it, and some of
 # them are ones this dictionary has nothing for.
 KEPT_AFTER_SCROLLING = 0.7
+
+
+def settled_coverage(dev, where, tries=3):
+    """How much of the screen the overlay carries, once it has stopped changing.
+
+    A reading taken while it is still drawing is a reading of a moment, not of the screen: the
+    overlay comes back a line at a time after a drag, and a photograph in the middle of that
+    says twelve per cent of a page that ends up carrying seventy. So this reads again while
+    the answer is still climbing and keeps the best, which is the settled screen.
+    """
+    best = (0, 0)
+    for _ in range(tries):
+        got = rows_of_ours(dev, where)
+        share = got[0] / got[1] if got[1] else 0
+        if share > (best[0] / best[1] if best[1] else 0):
+            best = got
+        if share >= 0.4:
+            break
+        time.sleep(2.5)
+    return best
 
 
 def drawn_again(dev, within=12.0):

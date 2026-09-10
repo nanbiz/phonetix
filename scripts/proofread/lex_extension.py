@@ -76,7 +76,7 @@ def reference():
             "core.openPack(fs.readFileSync(process.argv[2]));\n"
             "core.openPack(fs.readFileSync(process.argv[3]));\n"
             "for (const word of process.argv.slice(4)) {\n"
-            "  console.log(word + '\\t' + core.lookUp(word, 'es', 'de', ''));\n"
+            "  console.log(word + '\\t' + core.lookUp(word, 'es', 'de', '', ''));\n"
             "}\n"
         )
     got = run(["node", script, os.path.join(WORK, "es.pack"), os.path.join(WORK, "de.pack"),

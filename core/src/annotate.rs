@@ -15,7 +15,7 @@ use crate::answer::{
     AnnotateOptions, AnswerState, EngineResult, InlineMode, Lang, Miss, Need, Provenance, TextRun,
     Token,
 };
-use crate::resolve::{look_up, Open};
+use crate::resolve::Open;
 use crate::segment::words;
 use crate::sprinkle::picks;
 
@@ -41,6 +41,9 @@ pub fn annotate<D: AsRef<[u8]>>(
 
     for run in runs {
         let lang = run.lang_hint.clone().unwrap_or_else(|| source.clone());
+        // The word before this one, within the run. A run is a line the page drew, so the
+        // first word of one has no neighbour rather than borrowing the last word of another.
+        let mut before: Option<String> = None;
         for word in words(&run.text) {
             let spelling = word.text;
             let key = spelling.to_lowercase();
@@ -59,7 +62,12 @@ pub fn annotate<D: AsRef<[u8]>>(
                 _ => asked_about || picks(&key, occurrence, options.density),
             };
 
-            let answer = look_up(&spelling, &lang, target, open);
+            // With the word before it, which is what decides a spelling that is several
+            // words. The run is the sentence as the page has it, so the neighbour is the one
+            // the reader is actually looking at.
+            let answer =
+                crate::resolve::read_in_context(&spelling, before.as_deref(), &lang, target, open);
+            before = Some(spelling.clone());
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
             let gloss = answer

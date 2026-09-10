@@ -134,7 +134,7 @@ export function host(): void {
       // The accent's own words, where that accent is one that has them.
       data.accent ? open(data.accent).catch(() => null) : null,
     ]);
-    return lookUp(data.word, data.source, data.target, data.accent ?? '');
+    return lookUp(data.word, data.source, data.target, data.accent ?? '', data.before ?? '');
   });
 }
 

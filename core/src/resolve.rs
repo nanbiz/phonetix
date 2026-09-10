@@ -175,6 +175,23 @@ pub fn look_up<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) -> Answer {
+    read_in_context(spelling, None, source, target, open)
+}
+
+/// Look one word up, knowing the word before it.
+///
+/// A spelling that is several words is decided by what surrounds it. The neighbour is the
+/// signal that works in every language: a determiner is followed by a noun, an infinitive
+/// marker by a verb. Where it decides, the card leads with that reading and offers the others
+/// quietly; where it does not, the reader is asked, because a wrong word wearing a
+/// dictionary's authority is what the whole cascade is shaped to avoid.
+pub fn read_in_context<D: AsRef<[u8]>>(
+    spelling: &str,
+    before: Option<&str>,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Answer {
     let Some(pack) = open.source else {
         let state = if open.ipa_only {
             AnswerState::IpaOnly
@@ -236,14 +253,20 @@ pub fn look_up<D: AsRef<[u8]>>(
     }
     // The commonest word first, which the dump lists first, so a reader who does not choose
     // still gets the likely one.
-    let mut first = answers.remove(0);
+    let first = answers.remove(0);
     if answers.is_empty() {
         return first;
     }
-    // Several words under one spelling. The card shows them and the reader picks: nothing here
-    // knows which of "book" they met, and guessing would be the confident wrong answer again.
+    // Several words under one spelling. What the word before it makes likely decides, where
+    // it decides clearly; otherwise the card shows the readings and the reader picks, because
+    // guessing would be the confident wrong answer again.
+    let mut all: Vec<Answer> = std::iter::once(first).chain(answers).collect();
+    if let Some(at) = chosen_by_neighbour(&all, before, pack) {
+        all.swap(0, at);
+    }
+    let mut first = all.remove(0);
     first.readings = std::iter::once(&first)
-        .chain(answers.iter())
+        .chain(all.iter())
         .map(|answer| Reading {
             pos: answer.pos.clone(),
             ipa: answer.ipa.clone(),
@@ -251,8 +274,76 @@ pub fn look_up<D: AsRef<[u8]>>(
             glosses: answer.glosses.clone(),
         })
         .collect();
-    first.state = AnswerState::Homograph;
+    // Decided, so the card leads with it and keeps the others under the grammar line rather
+    // than asking. Undecided, so it asks.
+    if before.is_none() || chosen_by_neighbour(&first.readings, before, pack).is_none() {
+        first.state = AnswerState::Homograph;
+    }
     first
+}
+
+/// Which reading the word before this one makes likely, where one clearly wins.
+///
+/// Nothing where the neighbour is not in the pack, where it is itself several words, or where
+/// two readings are equally preferred: each of those is the signal saying it does not know,
+/// which is different from it choosing.
+fn chosen_by_neighbour<D: AsRef<[u8]>, R: HasPos>(
+    readings: &[R],
+    before: Option<&str>,
+    pack: &Pack<D>,
+) -> Option<usize> {
+    let before = before?;
+    let neighbours = lookup_either_case(pack, before);
+    // A neighbour that is itself ambiguous says nothing: reading one guess by another is how
+    // a mistake becomes two.
+    if neighbours.len() != 1 {
+        return None;
+    }
+    let its_pos = neighbours[0].pos.to_lowercase();
+    let wants: Vec<&str> = crate::neighbours::RULES
+        .iter()
+        .filter(|rule| rule.after == its_pos)
+        .map(|rule| rule.prefers)
+        .collect();
+    if wants.is_empty() {
+        return None;
+    }
+    let mut votes: Vec<(usize, u32)> = readings
+        .iter()
+        .enumerate()
+        .map(|(at, reading)| {
+            let pos = reading.pos_of().unwrap_or_default().to_lowercase();
+            let score = wants.iter().filter(|want| **want == pos).count() as u32;
+            (at, score)
+        })
+        .collect();
+    votes.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
+    let (best, most) = votes[0];
+    if most == 0 {
+        return None;
+    }
+    let runner_up = votes.get(1).map(|(_, score)| *score).unwrap_or(0);
+    if most < runner_up + crate::neighbours::MARGIN {
+        return None;
+    }
+    Some(best)
+}
+
+/// What both an Answer and a Reading can say about themselves, so one rule reads either.
+pub trait HasPos {
+    fn pos_of(&self) -> Option<&str>;
+}
+
+impl HasPos for Answer {
+    fn pos_of(&self) -> Option<&str> {
+        self.pos.as_deref()
+    }
+}
+
+impl HasPos for Reading {
+    fn pos_of(&self) -> Option<&str> {
+        self.pos.as_deref()
+    }
 }
 
 /// One of the words a spelling is, resolved on its own.

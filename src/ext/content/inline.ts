@@ -45,13 +45,25 @@ function room(layer: Layer): void {
 /** The words on screen, so a gesture can ask about the one under the cursor. */
 const words = new WeakMap<Element, Token>();
 
+/**
+ * The word before each annotated one, as the page has it.
+ *
+ * A spelling that is several words is decided by what surrounds it, and the card asks the core
+ * the same question the inline layer already answered. Kept per element rather than looked up
+ * again from the page, because the page's text is what was painted over and the run it came
+ * from is right here.
+ */
+const neighbours = new WeakMap<Element, string>();
+
 /** What a painted word is about, or nothing when the element is not one of ours. */
-export function wordAt(target: EventTarget | null): { element: HTMLElement; token: Token } | null {
+export function wordAt(
+  target: EventTarget | null
+): { element: HTMLElement; token: Token; before: string } | null {
   let node = target as Node | null;
   while (node && node !== document.body) {
     if (node instanceof HTMLElement) {
       const token = words.get(node);
-      if (token) return { element: node, token };
+      if (token) return { element: node, token, before: neighbours.get(node) ?? '' };
     }
     node = node.parentNode;
   }
@@ -141,6 +153,9 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
   const text = run.node.nodeValue ?? '';
   const pieces: Node[] = [];
   let at = 0;
+  // The word before the one being painted, within this run. A run is a line the page drew, so
+  // the first word of one has no neighbour rather than borrowing the last word of another.
+  let said = '';
   for (const token of drawn) {
     if (token.start < at || token.end > text.length) continue;   // the node moved under us
     if (token.start > at) pieces.push(document.createTextNode(text.slice(at, token.start)));
@@ -160,6 +175,8 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
       box.appendChild(document.createTextNode(spelling));
     }
     words.set(box, token);
+    neighbours.set(box, said);
+    said = spelling;
     pieces.push(box);
     at = token.end;
   }

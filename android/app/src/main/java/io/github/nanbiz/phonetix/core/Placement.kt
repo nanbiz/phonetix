@@ -14,6 +14,10 @@ data class WordBox(
     /** The whole transcription, marks and all, which is what the tooltip shows. */
     val full: String,
     val word: String,
+    /** The word before this one on its line, which decides a spelling that is several words.
+     *  Empty for the first word of a line: a line is what the app drew, and borrowing the last
+     *  word of the line above would be reading a sentence that is not there. */
+    val before: String = "",
     /** What the screen this word came from was found to be in. */
     val language: String = "",
     val background: Int = 0,
@@ -29,7 +33,14 @@ data class WordBox(
 data class Token(val text: String, val ipa: String?)
 
 /** A word chosen for transcription and where it sits in its node's text. */
-data class Pick(val start: Int, val end: Int, val word: String, val ipa: String)
+data class Pick(
+    val start: Int,
+    val end: Int,
+    val word: String,
+    val ipa: String,
+    /** The word before this one on its line, which decides a spelling that is several words. */
+    val before: String = "",
+)
 
 /**
  * Where a chosen word sits on the screen.
@@ -100,7 +111,17 @@ object Placement {
                 any = true
             }
             if (any && r > l && b > t) {
-                into.add(WordBox(RectF(l, t, r, b), DisplayIpa.display(p.ipa), p.ipa, p.word))
+                into.add(
+                    WordBox(
+                        RectF(l, t, r, b),
+                        DisplayIpa.display(p.ipa),
+                        p.ipa,
+                        p.word,
+                        // Carried from the pick, so a tap asks the same question the line
+                        // already answered about which word this spelling is.
+                        p.before,
+                    ),
+                )
             }
         }
     }

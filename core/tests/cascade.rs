@@ -4,7 +4,7 @@
 //! tested is the whole path a word travels rather than the last step of it.
 
 use lexcore::answer::{AnswerState, Lang, Provenance};
-use lexcore::resolve::{look_up, Open};
+use lexcore::resolve::{look_up, read_in_context, Open};
 use lexpack::{Builder, Entry, Kind, Pack, Sense};
 
 fn lang(code: &str) -> Lang {
@@ -634,4 +634,63 @@ fn a_form_says_what_form_it_is() {
     let lemma = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(lemma.lemma, None);
     assert_eq!(lemma.form, None);
+}
+
+/// A spelling that is several words is decided by the word before it, where that decides.
+///
+/// "book" is a noun and a verb. After "the" it is a noun; after "to" it is a verb. Neither
+/// needs a model or a language this repository has data for: the parts of speech are in the
+/// pack already, and a determiner is followed by a noun in every language that has both.
+///
+/// What it must not do is decide when it does not know. A reader handed the wrong word wearing
+/// a dictionary's authority is worse off than one who was asked.
+#[test]
+fn the_word_before_decides_which_word_this_is() {
+    let mut pack = Builder::new("en", Kind::Lex, 0);
+    pack.add::<&str>(word("book", "verb", "bʊk", &["to reserve"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("book", "noun", "bʊk", &["a bound volume"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("the", "det", "ðə", &["the"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("to", "particle", "tuː", &["to"]), &[])
+        .expect("the pack takes it");
+    // A word that is itself two things says nothing about its neighbour.
+    pack.add::<&str>(word("that", "det", "ðæt", &["that"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("that", "pron", "ðæt", &["that"]), &[])
+        .expect("the pack takes it");
+    let pack = Pack::open(pack.finish().expect("written")).expect("opens");
+    let open = Open {
+        source: Some(&pack),
+        target: Some(&pack),
+        ..Default::default()
+    };
+
+    let after_the = read_in_context("book", Some("the"), &lang("en"), &lang("en"), &open);
+    assert_eq!(after_the.pos.as_deref(), Some("noun"));
+    assert_ne!(
+        after_the.state,
+        AnswerState::Homograph,
+        "decided, so the card leads with it rather than asking",
+    );
+
+    let after_to = read_in_context("book", Some("to"), &lang("en"), &lang("en"), &open);
+    assert_eq!(after_to.pos.as_deref(), Some("verb"));
+
+    // Both readings are still there: a decision is not a claim that the other word does not
+    // exist, and the card shows it under the grammar line.
+    assert_eq!(after_the.readings.len(), 2);
+
+    // And where nothing decides, the reader is asked.
+    let alone = look_up("book", &lang("en"), &lang("en"), &open);
+    assert_eq!(alone.state, AnswerState::Homograph);
+    let after_ambiguous = read_in_context("book", Some("that"), &lang("en"), &lang("en"), &open);
+    assert_eq!(
+        after_ambiguous.state,
+        AnswerState::Homograph,
+        "a neighbour that is itself two words says nothing",
+    );
+    let after_unknown = read_in_context("book", Some("qwerty"), &lang("en"), &lang("en"), &open);
+    assert_eq!(after_unknown.state, AnswerState::Homograph);
 }

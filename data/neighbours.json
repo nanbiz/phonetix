@@ -1,0 +1,16 @@
+{
+  "note": "Which reading of a homograph the word before it makes likely. A spelling that is several words is decided by what surrounds it, and the cheapest signal that works in every language is the part of speech of the neighbour: a determiner is followed by a noun, an infinitive marker by a verb. The parts of speech are the dump's own, and a neighbour whose own reading is ambiguous says nothing rather than guessing. 'after' is the part of speech of the word before; 'prefers' is what the homograph is then read as; 'margin' is how much more the preferred reading has to be worth than the runner-up before the card stops offering the choice, counted in these votes.",
+  "margin": 1,
+  "rules": [
+    { "after": "det", "prefers": "noun", "why": "a determiner introduces a noun phrase" },
+    { "after": "article", "prefers": "noun", "why": "the same, where the dump calls it that" },
+    { "after": "adj", "prefers": "noun", "why": "an adjective modifies the noun after it" },
+    { "after": "num", "prefers": "noun", "why": "a number counts something" },
+    { "after": "pron", "prefers": "verb", "why": "a pronoun subject takes a verb" },
+    { "after": "particle", "prefers": "verb", "why": "an infinitive marker: to book, zu buchen" },
+    { "after": "aux", "prefers": "verb", "why": "an auxiliary takes a participle or infinitive" },
+    { "after": "adv", "prefers": "verb", "why": "an adverb before a word modifies a verb" },
+    { "after": "prep", "prefers": "noun", "why": "a preposition governs a noun phrase" },
+    { "after": "conj", "prefers": "verb", "why": "a clause after a conjunction begins again" }
+  ]
+}
