@@ -313,6 +313,35 @@ def main():
             if open_card["left"] < 0 or open_card["top"] < 0:
                 failures.append(f"the card is off screen at {open_card['left']},{open_card['top']}")
 
+        # And it says which word it is about: a card that opened between two words was a card
+        # about either of them. The arrow is put where the word is rather than at the card's
+        # middle, since a card pushed against the side of the window sits nowhere near it.
+        arrow = json.loads(evaluate(cdp, page, """
+            (() => {
+              const host = document.getElementById('phonetix-card-host');
+              const card = host.shadowRoot.querySelector('.card');
+              const frame = card.parentElement;
+              const word = [...document.querySelectorAll('.px-w')]
+                .find(w => w.textContent.includes('perro'));
+              const at = getComputedStyle(frame).getPropertyValue('--arrow-at');
+              const box = card.getBoundingClientRect();
+              const middle = word.getBoundingClientRect();
+              return JSON.stringify({
+                points: card.classList.contains('points'),
+                way: card.classList.contains('below') ? 'below' : 'above',
+                at: parseFloat(at),
+                wanted: Math.round(middle.left + middle.width / 2 - box.left),
+              });
+            })()
+        """) or "{}")
+        print(f"  it points {arrow.get('way')} at {arrow.get('at')}px "
+              f"(the word is at {arrow.get('wanted')}px)")
+        if not arrow.get("points"):
+            failures.append("the card does not say which word it is about")
+        elif abs(arrow["at"] - arrow["wanted"]) > 12:
+            failures.append(
+                f"the arrow points at {arrow['at']}px, the word is at {arrow['wanted']}px")
+
         # A tap on a symbol says what that sound is, on the card's own line for it. The line
         # is there before anything is tapped and is always the same height, so a reader who
         # explores a transcription never has the card move out from under the cursor.

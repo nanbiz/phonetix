@@ -32,6 +32,8 @@
     onPlaySymbol?: (url: string) => void;
     /** Whether the card eases in, which is the reader's choice and off by default. */
     eased?: boolean;
+    /** Which way the arrow points, where the card is anchored to a word at all. */
+    points?: 'above' | 'below' | null;
     /** A sound the reader asked about. */
     onSymbol?: (symbol: string) => void;
     onPlay?: () => void;
@@ -45,6 +47,7 @@
     opened = null,
     diagram = null,
     eased = false,
+    points = null,
     onPlaySymbol,
     onSymbol,
     onPlay,
@@ -127,7 +130,7 @@
   );
 </script>
 
-<article class="card{eased ? ' eased' : ''}">
+<article class="card{eased ? ' eased' : ''}{points ? ` points ${points}` : ''}">
   <div class="card-handle"></div>
   <header class="card-head">
     <!-- The word the reader is on, whatever else the card could or could not find out. -->

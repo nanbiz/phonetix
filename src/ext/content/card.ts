@@ -60,11 +60,25 @@ function place(at: DOMRect): void {
   const box = frame.getBoundingClientRect();
   const below = at.bottom + GAP;
   const above = at.top - GAP - box.height;
-  const top = below + box.height <= window.innerHeight ? below : Math.max(GAP, above);
+  const under = below + box.height <= window.innerHeight;
+  const top = under ? below : Math.max(GAP, above);
   const middle = at.left + at.width / 2 - box.width / 2;
   const left = Math.min(Math.max(GAP, middle), window.innerWidth - box.width - GAP);
   frame.style.top = `${Math.round(top)}px`;
   frame.style.left = `${Math.round(left)}px`;
+  // Where the word is along the card's own width, so the arrow points at it rather than at
+  // wherever the middle of the card happened to land: a card pushed against the side of the
+  // window is nowhere near the word it belongs to.
+  const pointsAt = Math.min(
+    Math.max(GAP * 2, at.left + at.width / 2 - left),
+    Math.max(GAP * 2, box.width - GAP * 2)
+  );
+  frame.style.setProperty('--arrow-at', `${Math.round(pointsAt)}px`);
+  const card = frame.querySelector('.card');
+  if (card) {
+    card.classList.toggle('below', under);
+    card.classList.toggle('above', !under);
+  }
 }
 
 /** What the card can be asked to do, which is the session's business rather than the card's. */
@@ -107,6 +121,8 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
       recorded: actions.recorded ?? false,
       accent: actions.accent ?? '',
       eased: actions.eased ?? false,
+      // Anchored to a word, so it says which one it is about.
+      points: 'below',
       diagram: actions.diagram,
       onPlay: actions.onPlay,
       onPlayUrl: actions.onPlayUrl,

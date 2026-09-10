@@ -18,6 +18,8 @@
     diagram?: (file: string) => Promise<string>;
     /** Whether the card eases in, which is the reader's choice. */
     eased?: boolean;
+    /** Which way the arrow points, where the card is anchored to a word. */
+    points?: 'above' | 'below' | null;
     onPlay?: () => void;
     onPlayUrl?: (url: string) => void;
     onOpen?: (url: string) => void;
@@ -31,6 +33,7 @@
     accent = '',
     diagram,
     eased = false,
+    points = null,
     onPlay,
     onPlayUrl,
     onOpen,
@@ -75,6 +78,7 @@
   {recorded}
   {accent}
   {eased}
+  {points}
   opened={sound}
   diagram={picture}
   onSymbol={ask}
