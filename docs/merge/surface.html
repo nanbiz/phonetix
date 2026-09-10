@@ -447,6 +447,9 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* Stress and syllable marks are not sounds, so they carry no rule: underlining them broke the
    transcription into dashes and said a mark was a thing to hear. */
 .sym.o { color: var(--color-ipa-other); text-decoration-color: transparent; }
+/* A diacritic is not a sound of its own either - it changes the one before it - so its rule is
+   dotted rather than solid, which is the difference drawn rather than written. */
+.sym.d { text-decoration-color: var(--color-ipa-other); text-decoration-style: dotted; }
 .sym:hover, .sym.active { background: var(--color-accent-bg); }
 /* The sound a reader asked about, on a line of its own height: what it is called, an example
    word, and the mouth that makes it. Fixed height and clipped text, because a panel that grew

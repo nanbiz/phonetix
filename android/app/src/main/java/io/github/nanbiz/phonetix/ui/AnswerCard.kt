@@ -284,6 +284,9 @@ private fun Pronunciation(
             val rule = when (symbol.kind) {
                 "vowel" -> palette.ipaVowel
                 "consonant" -> palette.ipaConsonant
+                // A diacritic is not a sound of its own - it changes the one before it - so it
+                // is ruled in the quiet colour rather than a sound's own.
+                "diacritic" -> palette.ipaOther
                 else -> null
             }
             androidx.compose.material3.Text(

@@ -123,6 +123,17 @@
     ...named.map((it) => ({ value: it.code, label: it.english })),
   ]);
 
+  /** How much dictionary there is behind this page, which is what the answers will be worth. */
+  let words = $derived(
+    (() => {
+      const pack = packs.offered.find((row) => row.lang === reading);
+      if (!pack || !packs.held.includes(reading)) return '';
+      return pack.entries >= 1000
+        ? `${Math.round(pack.entries / 1000)}k words`
+        : `${pack.entries} words`;
+    })()
+  );
+
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
 </script>
@@ -151,7 +162,9 @@
     row="page"
     about="{settings.source ? 'set by you' : 'what the page says'}{accentName
       ? ` · ${accentName}`
-      : ''}{settings.target ? ` · read into ${nameOf(settings.target)}` : ''}"
+      : ''}{words ? ` · ${words}` : ''}{settings.target
+      ? ` · read into ${nameOf(settings.target)}`
+      : ''}"
     open={() => (view = accents.length > 0 ? 'accent' : 'more')}
   />
 

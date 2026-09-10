@@ -51,9 +51,12 @@
     onOpen,
   }: Props = $props();
 
-  /** Which colour a symbol's rule takes: the page rules vowels, consonants and the rest apart. */
+  /** Which rule a symbol takes: the four kinds the table names are drawn apart. */
   function symbolClass(kind: string): string {
-    return kind === 'vowel' ? 'sym v' : kind === 'consonant' ? 'sym c' : 'sym o';
+    if (kind === 'vowel') return 'sym v';
+    if (kind === 'consonant') return 'sym c';
+    if (kind === 'diacritic') return 'sym d';
+    return 'sym o';
   }
 
   /** Where a word's own page is, which is the same URL the phone builds. */
