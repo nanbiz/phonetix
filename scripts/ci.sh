@@ -35,6 +35,7 @@ step() {
 
 if [[ "$what" == fast ]]; then
   step "the tables both platforms read are current" uv run python tools/gen_types.py --check
+  step "the homograph classifiers are built" uv run python tools/build_homographs.py
   step "the core's tests" cargo test --workspace --manifest-path core/Cargo.toml
   step "the core's formatting" cargo fmt --all --check --manifest-path core/Cargo.toml
   step "the core's lints" \
@@ -44,6 +45,7 @@ fi
 
 if [[ "$what" == all || "$what" == core ]]; then
   step "the tables both platforms read are current" uv run python tools/gen_types.py --check
+  step "the homograph classifiers are built" uv run python tools/build_homographs.py
   step "the core's tests" cargo test --workspace --manifest-path core/Cargo.toml
   step "the core's formatting" cargo fmt --all --check --manifest-path core/Cargo.toml
   step "the core's lints" \

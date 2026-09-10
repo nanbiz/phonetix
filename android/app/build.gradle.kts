@@ -108,6 +108,23 @@ val bundleSpeech by tasks.registering(Exec::class) {
     commandLine("scripts/build-espeak-android.sh")
 }
 
+/**
+ * The homograph classifiers, which decide which word a spelling is.
+ *
+ * A hundred kilobytes for every language together, so they are carried rather than fetched: a
+ * reader should not have to download something to be told which word they are looking at.
+ */
+val bundleHomographs by tasks.registering(Copy::class) {
+    val from = rootProject.file("../assets/homographs")
+    doFirst {
+        require(from.exists()) {
+            "Missing ${from.path}. Run `uv run python tools/build_homographs.py` first."
+        }
+    }
+    from(from) { include("*.hg") }
+    into(layout.projectDirectory.dir("src/main/assets/homographs"))
+}
+
 /** The language model, which is a build input like the dictionary beside it. */
 val bundleModel by tasks.registering(Copy::class) {
     val model = rootProject.file("../assets/eld.bin.gz")
@@ -116,7 +133,9 @@ val bundleModel by tasks.registering(Copy::class) {
     into(layout.projectDirectory.dir("src/main/assets"))
 }
 
-tasks.named("preBuild") { dependsOn(bundleDictionaries, bundleModel, bundleSpeech) }
+tasks.named("preBuild") {
+    dependsOn(bundleDictionaries, bundleModel, bundleSpeech, bundleHomographs)
+}
 
 // The native core, built from ../../core rather than committed.
 //

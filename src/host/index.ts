@@ -4,8 +4,8 @@
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
 import {
-  annotate, complete, curve, detect, lookUp, openLanguages, phrase, readRuns, readScreen,
-  readWiktionary, symbolsOf, type Said,
+  annotate, complete, curve, detect, lookUp, openHomographs, openLanguages, phrase, readRuns,
+  readScreen, readWiktionary, symbolsOf, type Said,
 } from '@/core';
 import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
@@ -35,6 +35,9 @@ export function host(): void {
       open(data.source).catch(() => null),
       data.target === data.source ? null : open(data.target).catch(() => null),
       data.options.accent ? open(data.options.accent).catch(() => null) : null,
+      // The classifier for what is being read, where the language has one. It decides which
+      // word a spelling is, above the rule about the word before it.
+      openHomographs(data.source).catch(() => 0),
     ]);
     const batch = await annotate(data.runs, data.source, data.target, data.options);
     // Two engines, in the order the reader is owed them: how a word is said, then what it
@@ -133,6 +136,7 @@ export function host(): void {
       data.target === data.source ? null : open(data.target),
       // The accent's own words, where that accent is one that has them.
       data.accent ? open(data.accent).catch(() => null) : null,
+      openHomographs(data.source).catch(() => 0),
     ]);
     return lookUp(data.word, data.source, data.target, data.accent ?? '', data.before ?? '');
   });

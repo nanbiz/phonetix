@@ -72,6 +72,8 @@ struct Core {
     packs: std::collections::HashMap<String, lexpack::Pack<Vec<u8>>>,
     /// The language model, where the overlay has given it one.
     model: Option<lexcore::detect::Model>,
+    /// The homograph classifiers, one per language, where the overlay has given them.
+    classifiers: std::collections::HashMap<String, lexcore::homographs::Classifier>,
     /// The batches the overlay is still drawing, kept so what an engine answers joins the
     /// same tokens rather than a second set this side stitched together itself. The same
     /// arrangement as the browser's, so a word filled by an engine is marked the same way on
@@ -95,6 +97,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_open(
     let core = Box::new(Core {
         packs: std::collections::HashMap::new(),
         model: None,
+        classifiers: std::collections::HashMap::new(),
         batches: std::collections::HashMap::new(),
         next_batch: 1,
     });
@@ -194,6 +197,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         ipa_only: false,
         accent: &accent,
         accent_pack: core.packs.get(&accent),
+        classifier: None,
     };
     let answer = lexcore::resolve::read_in_context(
         &spelling,
@@ -350,6 +354,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         ipa_only: false,
         accent: &accent_name,
         accent_pack: accent_pack.as_ref().and_then(|it| held.packs.get(it)),
+        classifier: held.classifiers.get(&source),
     };
     let options = lexcore::answer::AnnotateOptions {
         mode: match mode.as_str() {
@@ -669,4 +674,37 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_speechSay<'a>(
         return empty;
     }
     array.into_raw()
+}
+
+/// Read a language's homograph classifier off the disk. Returns how many spellings it knows.
+///
+/// A trained decision list for the words a language writes the same and says differently.
+/// Optional: without one a homograph is still decided by the word before it where that
+/// decides, and asked about where it does not.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openHomographs(
+    mut env: JNIEnv,
+    _class: JClass,
+    core: jlong,
+    lang: JString,
+    path: JString,
+) -> jint {
+    if core == 0 {
+        return 0;
+    }
+    let (Ok(lang), Ok(path)) = (env.get_string(&lang), env.get_string(&path)) else {
+        return 0;
+    };
+    let (lang, path): (String, String) = (lang.into(), path.into());
+    let Ok(bytes) = std::fs::read(&path) else {
+        return 0;
+    };
+    let Ok(it) = lexcore::homographs::Classifier::open(&bytes) else {
+        return 0;
+    };
+    let known = it.len() as jint;
+    // Safety: the pointer came from open above and Kotlin passes it back unchanged.
+    let core = unsafe { &mut *(core as *mut Core) };
+    core.classifiers.insert(lang, it);
+    known
 }

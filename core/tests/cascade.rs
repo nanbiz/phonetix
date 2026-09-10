@@ -85,6 +85,7 @@ fn a_lemma_that_joins_is_an_entry() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -116,6 +117,7 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Form);
@@ -138,6 +140,7 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
     assert_eq!(
@@ -168,6 +171,7 @@ fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
     // The pack holds the word and the reader's own pack is open; what is missing is a join.
@@ -191,6 +195,7 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(got.state, AnswerState::Mono);
@@ -213,6 +218,7 @@ fn a_reader_of_english_needs_no_join_at_all() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -230,6 +236,7 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::None);
@@ -245,6 +252,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
@@ -256,6 +264,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         ipa_only: true,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
@@ -284,6 +293,7 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
     // The entry is here and the reader's own pack is open; what is missing is a join between
@@ -323,6 +333,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.example.as_deref(), Some("El perro ladra."));
@@ -338,6 +349,7 @@ fn a_sense_with_no_example_invents_none() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("en"), &open).example,
@@ -368,6 +380,7 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Homograph);
@@ -388,6 +401,7 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert!(got.readings.is_empty(), "nothing to choose between");
@@ -449,6 +463,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "",
             accent_pack: None,
+            classifier: None,
         },
     );
     assert_eq!(standard.ipa, ["ˈʃɛdjuːl"]);
@@ -463,6 +478,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&american),
+            classifier: None,
         },
     );
     assert_eq!(said.ipa, ["ˈskɛdʒuːl"]);
@@ -480,6 +496,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&american),
+            classifier: None,
         },
     );
     assert_eq!(cut.ipa, ["kɐt"]);
@@ -524,6 +541,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&empty),
+            classifier: None,
         },
     );
     assert_eq!(said.ipa, ["ˈwɔːtɚ"]);
@@ -693,4 +711,126 @@ fn the_word_before_decides_which_word_this_is() {
     );
     let after_unknown = read_in_context("book", Some("qwerty"), &lang("en"), &lang("en"), &open);
     assert_eq!(after_unknown.state, AnswerState::Homograph);
+}
+
+/// The trained classifier decides, and outranks the rule about parts of speech.
+///
+/// Both signals answer the same question and they can disagree: the rule generalises about a
+/// determiner being followed by a noun, and the classifier was trained on how this word is
+/// really used. DR-1 says the first confident signal decides and names the classifier first.
+#[test]
+fn what_the_training_says_outranks_the_rule() {
+    let mut pack = Builder::new("en", Kind::Lex, 0);
+    pack.add::<&str>(word("record", "noun", "ˈɹɛkɚd", &["a bound account"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("record", "verb", "ɹəˈkɔːɹd", &["to write down"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("to", "particle", "tuː", &["to"]), &[])
+        .expect("the pack takes it");
+    let pack = Pack::open(pack.finish().expect("written")).expect("opens");
+
+    // A classifier that says the opposite of what the rule would: after "to" the rule prefers
+    // a verb, and this says the noun.
+    let trained = a_classifier_saying(&[("record", "to", "ˈɹɛkɚd", "noun")]);
+    let classifier = lexcore::homographs::Classifier::open(&trained).expect("opens");
+
+    let by_rule = read_in_context(
+        "record",
+        Some("to"),
+        &lang("en"),
+        &lang("en"),
+        &Open {
+            source: Some(&pack),
+            target: Some(&pack),
+            ..Default::default()
+        },
+    );
+    assert_eq!(by_rule.pos.as_deref(), Some("verb"), "the rule alone");
+
+    let by_training = read_in_context(
+        "record",
+        Some("to"),
+        &lang("en"),
+        &lang("en"),
+        &Open {
+            source: Some(&pack),
+            target: Some(&pack),
+            classifier: Some(&classifier),
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        by_training.pos.as_deref(),
+        Some("noun"),
+        "the training outranks the rule",
+    );
+    assert_ne!(by_training.state, AnswerState::Homograph);
+}
+
+/// One classifier, in the shape the tool writes: one word, two readings, one rule.
+fn a_classifier_saying(rules: &[(&str, &str, &str, &str)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.extend_from_slice(b"PXHG");
+    out.push(1);
+    lexpack::varint::put(&mut out, rules.len() as u64);
+    for (spelling, after, pronunciation, label) in rules {
+        lexpack::varint::put_str(&mut out, spelling);
+        lexpack::varint::put(&mut out, 2); // two readings, so it is a homograph
+        lexpack::varint::put(&mut out, 0);
+        lexpack::varint::put_str(&mut out, "chosen");
+        lexpack::varint::put_str(&mut out, label);
+        lexpack::varint::put_str(&mut out, pronunciation);
+        lexpack::varint::put(&mut out, 0);
+        lexpack::varint::put_str(&mut out, "other");
+        lexpack::varint::put_str(&mut out, "");
+        lexpack::varint::put_str(&mut out, "");
+        lexpack::varint::put(&mut out, 0);
+        lexpack::varint::put(&mut out, 1); // one rule
+        lexpack::varint::put(&mut out, 900);
+        lexpack::varint::put_str(&mut out, &format!("-1:{after}"));
+        lexpack::varint::put(&mut out, 0);
+    }
+    out
+}
+
+/// The real classifier, on the word that shows why a rule about parts of speech is not enough.
+///
+/// "read" is the same spelling, the same part of speech and two pronunciations: after "had"
+/// it is [ɹɛd] and after "should" it is [ɹiːd]. No rule about determiners and verbs can tell
+/// those apart, and a reader shown the wrong one is being told the word sounds like a word it
+/// does not.
+///
+/// The words are the list's own: it trained "-1:had" for the past and "-1:should" for the
+/// present, and a check that asked about a word the training never saw would be asking whether
+/// this repository can guess rather than whether the classifier works.
+#[test]
+fn the_trained_list_tells_read_from_read() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../assets/homographs/en.hg");
+    let bytes = std::fs::read(path)
+        .expect("the classifiers are built by tools/build_homographs.py; run it");
+    let classifier = lexcore::homographs::Classifier::open(&bytes).expect("opens");
+
+    let mut pack = Builder::new("en", Kind::Lex, 0);
+    pack.add::<&str>(word("read", "verb", "ˈɹɛd", &["past of read"]), &[])
+        .expect("the pack takes it");
+    pack.add::<&str>(word("read", "verb", "ˈɹiːd", &["to take in writing"]), &[])
+        .expect("the pack takes it");
+    let pack = Pack::open(pack.finish().expect("written")).expect("opens");
+    let open = Open {
+        source: Some(&pack),
+        target: Some(&pack),
+        classifier: Some(&classifier),
+        ..Default::default()
+    };
+
+    let past = read_in_context("read", Some("had"), &lang("en"), &lang("en"), &open);
+    assert_eq!(past.ipa, ["ˈɹɛd"], "after 'had' it is the past");
+    assert_ne!(past.state, AnswerState::Homograph, "decided, so not asked");
+
+    let present = read_in_context("read", Some("should"), &lang("en"), &lang("en"), &open);
+    assert_eq!(present.ipa, ["ˈɹiːd"], "after 'should' it is the present");
+
+    // And where the list has nothing to say, the reader is still asked rather than guessed at.
+    let alone = read_in_context("read", Some("qwerty"), &lang("en"), &lang("en"), &open);
+    assert_eq!(alone.state, AnswerState::Homograph);
 }

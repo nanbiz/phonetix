@@ -83,6 +83,8 @@ pub struct Core {
     packs: HashMap<String, Pack<Vec<u8>>>,
     /// The language model, where the host has given it one. Detection is off until it has.
     model: Option<lexcore::detect::Model>,
+    /// The homograph classifiers, one per language, where the host has given them.
+    classifiers: std::collections::HashMap<String, lexcore::homographs::Classifier>,
     /// The batches the host is still drawing, kept so that what its engines answer joins the
     /// same tokens rather than a second set the host stitched together itself.
     batches: HashMap<u64, (Vec<Token>, AnnotateOptions)>,
@@ -96,6 +98,7 @@ impl Core {
         Core {
             packs: HashMap::new(),
             model: None,
+            classifiers: HashMap::new(),
             batches: HashMap::new(),
             next_batch: 1,
         }
@@ -119,6 +122,20 @@ impl Core {
         let languages = model.languages().len();
         self.model = Some(model);
         Ok(languages)
+    }
+
+    /// Take a language's homograph classifier. Returns how many spellings it knows.
+    ///
+    /// A trained decision list for the words a language writes the same and says differently.
+    /// Optional: without one a homograph is still decided by the word before it where that
+    /// decides, and asked about where it does not.
+    #[wasm_bindgen(js_name = openHomographs)]
+    pub fn open_homographs(&mut self, lang: &str, bytes: &[u8]) -> Result<usize, JsError> {
+        let it = lexcore::homographs::Classifier::open(bytes)
+            .map_err(|e| JsError::new(&format!("{e:?}")))?;
+        let known = it.len();
+        self.classifiers.insert(lang.to_string(), it);
+        Ok(known)
     }
 
     /// What language a piece of text is in, as JSON, or nothing when no model is open.
@@ -188,6 +205,7 @@ impl Core {
             ipa_only: false,
             accent,
             accent_pack: self.packs.get(accent),
+            classifier: self.classifiers.get(source),
         };
         lexcore::json::of(&lexcore::resolve::read_in_context(
             spelling,
@@ -246,6 +264,7 @@ impl Core {
             ipa_only: false,
             accent: &accent,
             accent_pack: self.packs.get(&accent),
+            classifier: self.classifiers.get(source),
         };
         let options = AnnotateOptions {
             mode: match mode {

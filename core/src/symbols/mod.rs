@@ -223,6 +223,28 @@ fn stress(c: char) -> bool {
 /// The card always shows the full form; this is for the line over a word, where a syllable
 /// break says nothing a reader cannot see and a length mark in brackets says the vowel may be
 /// held or not, which is a fact about the word rather than about this reading of it.
+/// Whether two transcriptions are of the same sounds, allowing for how they were written.
+///
+/// Two tables built from the same dump still write a word differently: one marks stress and
+/// the other does not, one separates syllables with a dot, one writes length and one leaves it
+/// off. What is being asked here is whether they describe the same word, which is a question
+/// about the sounds and not about the notation.
+pub fn same_sound(one: &str, other: &str) -> bool {
+    fn bare(text: &str) -> String {
+        text.chars()
+            .filter(|c| {
+                !matches!(
+                    c,
+                    'ˈ' | 'ˌ' | '.' | 'ː' | 'ˑ' | ' ' | '\'' | '/' | '[' | ']'
+                )
+            })
+            .flat_map(|c| c.to_lowercase())
+            .collect()
+    }
+    let (one, other) = (bare(one), bare(other));
+    !one.is_empty() && one == other
+}
+
 pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
     let mut out = String::with_capacity(ipa.len());
     let chars: Vec<char> = ipa.chars().collect();

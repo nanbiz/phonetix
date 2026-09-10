@@ -727,7 +727,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // language, and the engine has to be opened for a direction before it can answer.
             if (screen.language != null && screen.language != lastScreenLanguage) {
                 lastScreenLanguage = screen.language
-                io.post { openTranslator() }
+                val reading = screen.language
+                io.post {
+                    // What decides which word a spelling is, for the language on screen. The
+                    // pack it belongs to may be the one bundled with the app rather than one
+                    // the reader fetched, so this does not hang off a pack opening.
+                    Packs.openClassifier(this, reading)
+                    openTranslator()
+                }
             }
             chooseWords(fresh, settings, screen.language, budget)
             planned = fresh

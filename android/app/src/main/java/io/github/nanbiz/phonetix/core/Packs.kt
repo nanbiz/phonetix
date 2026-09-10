@@ -46,8 +46,40 @@ object Packs {
             if (lang in open) continue
             val opened = runCatching { Lex.openPack(Reading.core, file(context, lang).path) }
                 .getOrNull()
-            if (!opened.isNullOrEmpty()) open.add(opened)
+            if (!opened.isNullOrEmpty()) {
+                open.add(opened)
+                openClassifier(context, opened)
+            }
         }
+    }
+
+    /** Which languages carry a trained homograph classifier, so none is looked for in vain. */
+    private val trained = setOf("de", "en", "es", "fr", "it", "ja", "nl", "pt", "ru", "zh")
+    private val classified = HashSet<String>()
+
+    /**
+     * Give the core a language's homograph classifier, once.
+     *
+     * Unpacked from the apk on first use, since the engine reads it as a file. A language with
+     * none loses nothing: the word before it still decides where it decides.
+     */
+    fun openClassifier(context: Context, lang: String) {
+        if (lang !in trained || lang in classified || Reading.core == 0L) return
+        classified.add(lang)
+        val into = File(context.applicationContext.filesDir, "homographs")
+        val path = File(into, "$lang.hg")
+        runCatching {
+            if (!path.exists()) {
+                into.mkdirs()
+                context.assets.open("homographs/$lang.hg").use { source ->
+                    path.outputStream().use { source.copyTo(it) }
+                }
+            }
+            val known = Lex.openHomographs(Reading.core, lang, path.absolutePath)
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "HOMOGRAPHS $lang knows $known")
+            }
+        }.onFailure { android.util.Log.w("Phonetix", "no classifier for $lang", it) }
     }
 
     /** What the reader's host has to offer, or nothing when they have not said where. */

@@ -104,6 +104,12 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// That accent's own pack, where it has one. A few thousand words a dictionary tagged for
     /// one country, which is the half of an accent that no rule can produce.
     pub accent_pack: Option<&'a Pack<D>>,
+    /// The trained classifier for this language, where the host has one open.
+    ///
+    /// It outranks the neighbour rule, because it was trained on how the word is really used
+    /// and the rule is a generalisation about parts of speech. Where it says nothing, the rule
+    /// still has its say.
+    pub classifier: Option<&'a crate::homographs::Classifier>,
 }
 
 impl<D: AsRef<[u8]>> Default for Open<'_, D> {
@@ -114,6 +120,7 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
             ipa_only: false,
             accent: "",
             accent_pack: None,
+            classifier: None,
         }
     }
 }
@@ -261,7 +268,11 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // it decides clearly; otherwise the card shows the readings and the reader picks, because
     // guessing would be the confident wrong answer again.
     let mut all: Vec<Answer> = std::iter::once(first).chain(answers).collect();
-    if let Some(at) = chosen_by_neighbour(&all, before, pack) {
+    // The first confident signal decides. A classifier trained on how this word is really used
+    // outranks a rule about parts of speech; where it says nothing, the rule still has its say.
+    let decided = chosen_by_training(&all, spelling, before, open)
+        .or_else(|| chosen_by_neighbour(&all, before, pack));
+    if let Some(at) = decided {
         all.swap(0, at);
     }
     let mut first = all.remove(0);
@@ -276,10 +287,59 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
     // than asking. Undecided, so it asks.
-    if before.is_none() || chosen_by_neighbour(&first.readings, before, pack).is_none() {
+    let told = chosen_by_training(&first.readings, spelling, before, open).is_some()
+        || chosen_by_neighbour(&first.readings, before, pack).is_some();
+    if !told {
         first.state = AnswerState::Homograph;
     }
     first
+}
+
+/// Which reading the training says this is, where a classifier is open and a rule matched.
+///
+/// The classifier answers with a pronunciation and, where the training recorded one, a part of
+/// speech. Which of the pack's readings that is comes from matching one or the other: the two
+/// tables were built from the same dump but they are two tables, and a reading it names that
+/// the pack does not have is a disagreement to leave alone rather than to resolve.
+fn chosen_by_training<D: AsRef<[u8]>, R: HasReading>(
+    readings: &[R],
+    spelling: &str,
+    before: Option<&str>,
+    open: &Open<D>,
+) -> Option<usize> {
+    let classifier = open.classifier?;
+    // The neighbour is all the context this side has. A decision list reads a window of five
+    // words either side and will use what it is given; a rule keyed on the word before is the
+    // one kind it can still match.
+    let around: Vec<&str> = match before {
+        Some(before) => vec![before, spelling],
+        None => vec![spelling],
+    };
+    let at = around.len() - 1;
+    let said = classifier.read(spelling, &around, at)?;
+    // By pronunciation first, which is the thing both tables agree about most closely.
+    if let Some(found) = readings.iter().position(|reading| {
+        reading
+            .ipa_of()
+            .is_some_and(|ipa| crate::symbols::same_sound(ipa, &said.pronunciation))
+    }) {
+        return Some(found);
+    }
+    if said.label.is_empty() {
+        return None;
+    }
+    let wanted = said.label.to_lowercase();
+    let mut matching = readings
+        .iter()
+        .enumerate()
+        .filter(|(_, reading)| reading.pos_of().unwrap_or_default().to_lowercase() == wanted);
+    let first = matching.next()?;
+    // Two readings with the same part of speech is the classifier naming a distinction this
+    // pack does not draw, which decides nothing.
+    if matching.next().is_some() {
+        return None;
+    }
+    Some(first.0)
 }
 
 /// Which reading the word before this one makes likely, where one clearly wins.
@@ -343,6 +403,23 @@ impl HasPos for Answer {
 impl HasPos for Reading {
     fn pos_of(&self) -> Option<&str> {
         self.pos.as_deref()
+    }
+}
+
+/// The same, for the signal that matches on how a word is said as well as what it is.
+pub trait HasReading: HasPos {
+    fn ipa_of(&self) -> Option<&str>;
+}
+
+impl HasReading for Answer {
+    fn ipa_of(&self) -> Option<&str> {
+        self.ipa.first().map(|it| it.as_str())
+    }
+}
+
+impl HasReading for Reading {
+    fn ipa_of(&self) -> Option<&str> {
+        self.ipa.first().map(|it| it.as_str())
     }
 }
 

@@ -173,6 +173,30 @@ export async function curve(): Promise<number[]> {
   return Array.from(it.curve());
 }
 
+/** Where the homograph classifiers sit in the extension's own package. */
+const CLASSIFIERS = 'homographs';
+
+/** Which languages have one, so nothing is fetched for a language that has none. */
+const TRAINED = ['de', 'en', 'es', 'fr', 'it', 'ja', 'nl', 'pt', 'ru', 'zh'];
+
+const opened = new Set<string>();
+
+/**
+ * Give the core a language's homograph classifier, once.
+ *
+ * A trained decision list for the words a language writes the same and says differently.
+ * Optional: without one a homograph is still decided by the word before it where that decides,
+ * and asked about where it does not - so a language with no classifier loses nothing it had.
+ */
+export async function openHomographs(lang: string): Promise<number> {
+  if (!TRAINED.includes(lang) || opened.has(lang)) return 0;
+  opened.add(lang);
+  const it = await coreReady();
+  const res = await fetch(chrome.runtime.getURL(`${CLASSIFIERS}/${lang}.hg` as never));
+  if (!res.ok) return 0;
+  return it.openHomographs(lang, new Uint8Array(await res.arrayBuffer()));
+}
+
 /** Where the language model sits in the extension's own package. */
 const MODEL = 'core/eld.bin';
 

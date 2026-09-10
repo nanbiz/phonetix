@@ -185,4 +185,13 @@ object Lex {
      * A batch because a screen is a batch, and the same reason the synthesiser takes one.
      */
     external fun translateSay(texts: Array<String>): Array<String>
+
+    /**
+     * Read a language's homograph classifier off the disk. Returns how many spellings it knows.
+     *
+     * A trained decision list for the words a language writes the same and says differently.
+     * Optional: without one a homograph is still decided by the word before it where that
+     * decides, and asked about where it does not.
+     */
+    external fun openHomographs(core: Long, lang: String, path: String): Int
 }
