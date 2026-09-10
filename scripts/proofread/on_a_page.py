@@ -235,6 +235,37 @@ def main():
         if painted["words"] != SENTENCE:
             failures.append(f"the words now read {painted['words']!r}")
 
+        # The page stops moving.
+        #
+        # Annotating a page changes the page, and the observer that watches for text arriving
+        # after load was told about our own changes: it asked for another paint, which caused
+        # more of them. A page redrew itself twice a second for as long as it was open, every
+        # line jumping as the annotations came off and went back on - and every check here
+        # passed throughout, because each of them asks the DOM a question once it has settled
+        # and none of them asks whether it ever does.
+        settled = evaluate(cdp, page, """
+            new Promise(done => {
+              let changes = 0;
+              const watch = new MutationObserver(records => { changes += records.length; });
+              watch.observe(document.body, {childList: true, subtree: true, characterData: true});
+              const word = document.querySelector('.px-w');
+              const was = word ? word.getBoundingClientRect().top : 0;
+              setTimeout(() => {
+                watch.disconnect();
+                const now = word ? word.getBoundingClientRect().top : 0;
+                done(JSON.stringify({changes, moved: Math.abs(now - was)}));
+              }, 4000);
+            })
+        """)
+        quiet = json.loads(settled)
+        print(f"  in four settled seconds: {quiet['changes']} changes, "
+              f"the first word moved {quiet['moved']:.0f}px")
+        if quiet["changes"] > 0:
+            failures.append(
+                f"the page is still being redrawn after it settled: {quiet['changes']} changes")
+        if quiet["moved"] > 1:
+            failures.append(f"an annotated word moved {quiet['moved']:.0f}px on a still page")
+
         # The card, opened at the word the cursor rests on.
         spot = json.loads(evaluate(cdp, page, """
             (() => {
