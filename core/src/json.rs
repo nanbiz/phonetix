@@ -15,7 +15,7 @@ pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\"readings\":{},\
-\"source\":{},\"target\":{}}}",
+\"provenance\":{},\"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
@@ -26,6 +26,10 @@ pub fn of(answer: &Answer) -> String {
         strings(&answer.glosses),
         maybe(&answer.example),
         readings(&answer.readings),
+        // Where the answer came from, which a card has to be able to say. Left out of this
+        // shape, the surface that most owes a reader the difference between a dictionary and
+        // a machine was the one surface that could not tell them.
+        provenance(&answer.provenance),
         quoted(&answer.source.0),
         quoted(&answer.target.0),
     )

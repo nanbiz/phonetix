@@ -42,9 +42,22 @@
   // A machine's answer is labelled one, and so is an English gloss standing in for an answer
   // the dictionary did not reach: unmarked, it reads as the translation rather than as the
   // anchor it is.
-  let guessed = $derived(answer.state === 'Guess');
+  //
+  // Taken from where the answer came from rather than guessed at from how far it got: the two
+  // are different questions, and the state only happened to answer this one for as long as
+  // there was no engine to be a second source.
+  let guessed = $derived(
+    answer.provenance?.kind === 'guess' || answer.state === 'Guess' || answer.state === 'Phrase'
+  );
+  /** Which engine, where a machine answered: a reader is owed which one. */
+  let engine = $derived(
+    answer.provenance?.kind === 'guess' ? answer.provenance.engine : ''
+  );
+  // Several words a reader selected. There is no transcription of a clause worth showing and
+  // no grammar to give, so the card is the selection and what it means.
+  let phrase = $derived(answer.state === 'Phrase');
   let anchored = $derived(answer.says.length === 0 && answer.glosses.length > 0);
-  let nothing = $derived(lead === null && answer.ipa.length === 0);
+  let nothing = $derived(lead === null && answer.ipa.length === 0 && !phrase);
   let missing = $derived(
     answer.state === 'NoPack'
       ? `No dictionary for ${named(answer.source)} yet`
@@ -70,7 +83,8 @@
         {:else}
           <span class="tr">{lead ?? answer.spelling}</span>
           {#if guessed}
-            <span class="badge guess">guess</span>
+            <span class="badge guess" title={engine ? `guessed by ${engine}` : 'a machine'}
+              >guess</span>
           {:else if anchored}
             <span class="badge">in English</span>
           {/if}
@@ -98,7 +112,13 @@
         </div>
       {/if}
 
-      {#if !chooses && (answer.lemma || answer.pos)}
+      {#if phrase}
+        <!-- What was selected, under what it means: a clause is long enough that a reader
+             needs to see which of it was answered. -->
+        <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
+      {/if}
+
+      {#if !chooses && !phrase && (answer.lemma || answer.pos)}
         <!-- For a form the lemma gets the prominence: "gehen" is what a learner commits to
              memory and "ging" is what they happened to meet. -->
         <div class="gram">
@@ -154,9 +174,12 @@
       <span>{answer.source && answer.target && answer.source !== answer.target
         ? `${named(answer.source)} → ${named(answer.target)}` : ''}</span>
       <span class="actions">
-        <!-- Always here, whether or not a dictionary answered: a reader who got nothing is
-             the one most likely to want it. -->
-        <button class="btn-text" onclick={() => onOpen?.(wiktionary(answer))}>Wiktionary</button>
+        <!-- Always here for a word, whether or not a dictionary answered: a reader who got
+             nothing is the one most likely to want it. Never for a phrase, which has no page
+             of its own and would link to a clause nobody wrote an entry for. -->
+        {#if !phrase}
+          <button class="btn-text" onclick={() => onOpen?.(wiktionary(answer))}>Wiktionary</button>
+        {/if}
       </span>
     </footer>
   {/if}

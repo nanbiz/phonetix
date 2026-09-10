@@ -57,6 +57,17 @@ pub fn read_wiktionary(wikitext: &str, lang: &str) -> String {
     }
 }
 
+/// Several words a reader selected, as JSON. What answers a phrase is always the engine.
+#[wasm_bindgen]
+pub fn phrase(text: &str, said: &str, source: &str, target: &str) -> String {
+    lexcore::json::of(&lexcore::resolve::phrase(
+        text,
+        said,
+        &Lang(source.into()),
+        &Lang(target.into()),
+    ))
+}
+
 /// A transcription in an accent, where that accent's difference is a rule.
 #[wasm_bindgen(js_name = inAccent)]
 pub fn in_accent(ipa: &str, accent: &str, word: &str) -> String {

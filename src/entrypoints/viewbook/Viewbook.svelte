@@ -22,6 +22,7 @@
       glosses: ['dog'],
       example: null,
       readings: [],
+      provenance: { kind: 'dictionary', pack: 'lex-es' },
       source: 'es',
       target: 'de',
       ...over,

@@ -107,6 +107,26 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
     }
 }
 
+/// Several words a reader selected, answered as one.
+///
+/// A phrase is not a word and no dictionary holds it, so what answers it is always the host's
+/// engine and the answer is always a guess. It is built here rather than by either host so
+/// that a phrase card and a word card are the same shape, made in the same place, and neither
+/// platform can invent an answer of its own.
+///
+/// There is no transcription: a machine reading a whole clause aloud says nothing a reader
+/// asked for, and the card has no row for it.
+pub fn phrase(text: &str, said: &str, source: &Lang, target: &Lang) -> Answer {
+    let mut answer = Answer::nothing(AnswerState::Phrase, text, source, target);
+    if !said.is_empty() {
+        answer.says = vec![said.to_string()];
+        answer.provenance = Some(Provenance::Guess {
+            engine: "bergamot".to_string(),
+        });
+    }
+    answer
+}
+
 /// A spelling as the page wrote it, or failing that as the language writes it.
 ///
 /// A page capitalises for its own reasons: the first word of a sentence, every word of a

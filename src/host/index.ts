@@ -4,7 +4,7 @@
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
 import {
-  annotate, complete, curve, detect, lookUp, openLanguages, readRuns, readScreen,
+  annotate, complete, curve, detect, lookUp, openLanguages, phrase, readRuns, readScreen,
   readWiktionary, symbolsOf, type Said,
 } from '@/core';
 import type { Batch } from '@/core/tokens';
@@ -116,6 +116,13 @@ export function host(): void {
       console.warn(`[Phonetix] Nothing said ${data.word}:`, e);
       return [];
     }
+  });
+
+  onMessage('phrase', async ({ data }) => {
+    // Nothing but an engine can answer several words at once, so this does not ask the packs.
+    // What comes back is a guess and the core is what says so.
+    const [said] = await guessed(data.source, data.target, [data.text]).catch(() => []);
+    return phrase(data.text, said ?? '', data.source, data.target);
   });
 
   onMessage('lookUp', async ({ data }) => {

@@ -58,6 +58,8 @@ export interface HostProtocol {
   /** Say one word: WAV bytes, because a page's own media policy can block an audio element
    *  loading a URL and cannot block Web Audio playing bytes. */
   speak: { data: { word: string; lang: string; accent?: string }; reply: number[] };
+  /** Several words a reader selected, which only an engine can answer. */
+  phrase: { data: { text: string; source: string; target: string }; reply: Answer };
 }
 
 type Named = keyof HostProtocol;

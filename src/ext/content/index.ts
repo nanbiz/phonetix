@@ -257,7 +257,43 @@ async function open(element: HTMLElement, token: Token): Promise<void> {
   });
 }
 
+/**
+ * Several words a reader selected, answered as one.
+ *
+ * A distinct gesture, and deliberately so: resting on a word asks about that word, and
+ * dragging across a clause asks about the clause. No dictionary holds a phrase, so what
+ * answers it is the engine and the card says so.
+ *
+ * Only a real selection of more than one word, inside text the page is showing rather than
+ * inside our own card: a stray click leaves an empty selection, and every click would
+ * otherwise close the card a reader had just opened.
+ */
+async function selected(): Promise<void> {
+  const selection = document.getSelection();
+  const text = selection?.toString().trim() ?? '';
+  if (!selection || selection.isCollapsed || text.split(/\s+/).length < 2) return;
+  if (text.length > PHRASE_LIMIT) return;
+  const at = selection.anchorNode;
+  if (at && inside(at instanceof Element ? at : (at.parentElement as Node))) return;
+  const source = pageLanguage();
+  const target = settings.target || source;
+  if (!target || target === source) return;
+  const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
+  if (!answer) return;
+  const range = selection.getRangeAt(0).getBoundingClientRect();
+  show(answer, range, { recorded: false });
+}
+
+/** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
+const PHRASE_LIMIT = 240;
+
 function gestures(): void {
+  // A drag across several words asks about all of them at once.
+  document.addEventListener('mouseup', () => {
+    // After the browser has settled the selection, which it has not when mouseup fires.
+    setTimeout(() => void selected(), 0);
+  });
+
   // A rest rather than a hover: the cursor crosses a dozen words on its way anywhere, and a
   // card for each of them is a page nobody can read.
   document.addEventListener('mouseover', (event) => {

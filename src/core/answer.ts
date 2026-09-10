@@ -4,6 +4,8 @@
 // Answer.kt. Nothing in this file interprets: a field that is empty is empty because the
 // cascade found nothing, and the card says so rather than filling it in.
 
+import type { Provenance } from './tokens';
+
 /** How far a word got through the cascade, which is what the card draws from. */
 export type AnswerState =
   | 'Entry'
@@ -62,6 +64,9 @@ export interface Answer {
   example: string | null;
   /** Each word this spelling is, where it is more than one. */
   readings: Reading[];
+  /** Where the answer came from: a dictionary, a machine, or a synthesised voice. The card
+   *  is the surface that most owes a reader that difference. */
+  provenance: Provenance | null;
   source: string;
   target: string;
 }
@@ -101,6 +106,9 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
     symbols: [],
     says: [],
     glosses: [],
+    // Nothing said where it came from, because nothing here knows: this is what the overlay
+    // already had, handed to a card as a last resort.
+    provenance: null,
     example: null,
     readings: [],
     source,

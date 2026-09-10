@@ -217,6 +217,26 @@ def main():
             if got.get("state") != "Guess":
                 failures.append(f"the token's state is {got.get('state')!r}, not Guess")
 
+        # Several words at once, which is a gesture of its own and only an engine can answer.
+        # Asked of the host the way the page asks it after a drag.
+        said = ask(cdp, session, {
+            "phonetix": "phrase",
+            "data": {"text": "El murciélago vuela sobre la montaña",
+                     "source": "es", "target": "en"},
+        }, tries=3, gap=6)
+        clause = said.get("ok") or {}
+        print(f"  the phrase: {clause.get('says')} ({clause.get('state')})")
+        if clause.get("state") != "Phrase":
+            failures.append(f"a selection came back as {clause.get('state')!r}, not a phrase")
+        if not (clause.get("says") or []):
+            failures.append("a selection came back with no translation at all")
+        elif "bat" not in clause["says"][0].lower():
+            failures.append(f"the phrase was translated {clause['says'][0]!r}")
+        if (clause.get("provenance") or {}).get("kind") != "guess":
+            failures.append("a phrase is not marked as a machine's answer")
+        if clause.get("ipa"):
+            failures.append("a phrase carries a transcription, which is nobody's question")
+
         # The models came from the reader's own host and nowhere else.
         asked = [p for p in SERVED if p.startswith("/models")]
         print(f"  asked of the host: {sorted(set(asked))}")

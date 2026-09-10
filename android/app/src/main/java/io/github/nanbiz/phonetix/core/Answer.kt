@@ -32,9 +32,19 @@ data class Answer(
     /** Each word this spelling is, where it is more than one. Empty when there is nothing to
      *  choose between. */
     val readings: List<Reading>,
+    /** Where the answer came from: a dictionary, a machine, or a synthesised voice. The card
+     *  is the surface that most owes a reader that difference. */
+    val provenance: Provenance?,
     val source: String,
     val target: String,
 ) {
+    /** What produced an answer. A reader deciding whether to trust a word is owed it. */
+    sealed interface Provenance {
+        data class Dictionary(val pack: String) : Provenance
+        data class Guess(val engine: String) : Provenance
+        data object Synthesised : Provenance
+    }
+
     /** One of the words a spelling is. */
     data class Reading(
         val pos: String?,
@@ -95,6 +105,9 @@ data class Answer(
             glosses = emptyList(),
             example = null,
             readings = emptyList(),
+            // Nothing says where it came from, because nothing here knows: this is what the
+            // overlay already had, handed to a card as a last resort.
+            provenance = null,
             source = source,
             target = source,
         )
@@ -131,6 +144,14 @@ data class Answer(
                 },
                 says = list("says"),
                 glosses = list("glosses"),
+                provenance = o.optJSONObject("provenance")?.let { row ->
+                    when (row.optString("kind")) {
+                        "dictionary" -> Provenance.Dictionary(row.optString("pack"))
+                        "guess" -> Provenance.Guess(row.optString("engine"))
+                        "synthesised" -> Provenance.Synthesised
+                        else -> null
+                    }
+                },
                 example = o.optString("example").ifEmpty { null }.takeIf { it != "null" },
                 readings = (o.optJSONArray("readings") ?: JSONArray()).let { array ->
                     (0 until array.length()).mapNotNull { i ->

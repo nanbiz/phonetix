@@ -9,6 +9,7 @@
 import init, {
   Core,
   display as shown,
+  phrase as asPhrase,
   readWiktionary as readPage,
   symbols as sounds,
 } from './wasm/lexcore.js';
@@ -118,6 +119,22 @@ export async function annotate(
       options.seen ?? []
     )
   ) as Batch;
+}
+
+/**
+ * Several words a reader selected, answered as one.
+ *
+ * Built by the core so a phrase card and a word card are the same shape. What answers it is
+ * always the engine, so what comes back is always a guess.
+ */
+export async function phrase(
+  text: string,
+  said: string,
+  source: string,
+  target: string
+): Promise<Answer> {
+  await coreReady();
+  return JSON.parse(asPhrase(text, said, source, target)) as Answer;
 }
 
 /**
