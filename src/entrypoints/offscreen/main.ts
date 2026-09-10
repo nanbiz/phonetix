@@ -7,10 +7,15 @@
 // Firefox needs none of this: its background page has a document, and the host runs the same
 // engine directly there.
 import { phonemizeBatch, synthesizeWav } from '@/engines/espeak';
+import { pairs, translate } from '@/engines/bergamot';
 
 interface Asked {
-  voice: 'ipa' | 'audio';
+  voice: 'ipa' | 'audio' | 'translate' | 'pairs';
   lang: string;
+  /** Where a translation is going, which the voice engines have no use for. */
+  into?: string;
+  /** Where the models are served from. Passed in: this page has no access to the setting. */
+  base?: string;
   words: string[];
 }
 
@@ -20,6 +25,18 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
   if (asked.voice === 'ipa') {
     phonemizeBatch(asked.words, asked.lang)
       .then((said) => respond({ ok: said }))
+      .catch((e) => respond({ failed: String(e) }));
+    return true;
+  }
+  if (asked.voice === 'translate') {
+    translate(asked.base ?? '', asked.lang, asked.into ?? '', asked.words)
+      .then((said) => respond({ ok: said }))
+      .catch((e) => respond({ failed: String(e) }));
+    return true;
+  }
+  if (asked.voice === 'pairs') {
+    pairs(asked.base ?? '')
+      .then((got) => respond({ ok: got }))
       .catch((e) => respond({ failed: String(e) }));
     return true;
   }

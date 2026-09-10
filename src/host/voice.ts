@@ -9,6 +9,8 @@
 // offscreen page and is asked through a message; a Firefox background page has a document, so
 // the same engine is simply called. Neither difference reaches anything above this file.
 
+import { host } from './packs';
+
 const CHROMIUM_OFFSCREEN = 'offscreen.html';
 
 const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
@@ -39,9 +41,15 @@ function offscreen(): Promise<void> {
   return ready;
 }
 
-async function ask<T>(voice: 'ipa' | 'audio', lang: string, words: string[]): Promise<T> {
+async function ask<T>(
+  voice: 'ipa' | 'audio' | 'translate' | 'pairs',
+  lang: string,
+  words: string[],
+  into?: string,
+  base?: string,
+): Promise<T> {
   await offscreen();
-  const answered = (await chrome.runtime.sendMessage({ voice, lang, words })) as
+  const answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base })) as
     | { ok: T }
     | { failed: string }
     | undefined;
@@ -63,6 +71,36 @@ export async function ipa(lang: string, words: string[]): Promise<Record<string,
     return phonemizeBatch(words, lang);
   }
   return ask<Record<string, string>>('ipa', lang, words);
+}
+
+/**
+ * What these words mean, as the engine guesses them.
+ *
+ * A machine's answer, which is why what it fills is marked as a guess rather than passed off
+ * as a dictionary's. The cascade has already answered everything a dictionary could.
+ */
+export async function guessed(from: string, to: string, words: string[]): Promise<string[]> {
+  if (words.length === 0 || !from || !to || from === to) return [];
+  // Read here, where the setting can be read at all, and carried to the engine.
+  const base = (await host()) ?? '';
+  if (!base) return [];
+  if (IS_FIREFOX) {
+    const { translate } = await import('@/engines/bergamot');
+    return translate(base, from, to, words);
+  }
+  return ask<string[]>('translate', from, words, to, base);
+}
+
+/** Which pairs the engine can translate at all, so nothing offers what it cannot do. */
+export async function translatable(): Promise<{ from: string; to: string }[]> {
+  const base = (await host()) ?? '';
+  if (!base) return [];
+  if (IS_FIREFOX) {
+    const { pairs } = await import('@/engines/bergamot');
+    return pairs(base);
+  }
+  return ask<{ from: string; to: string }[]>('pairs', '', [], undefined, base)
+    .catch(() => []);
 }
 
 /**

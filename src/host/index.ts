@@ -11,7 +11,7 @@ import type { Batch } from '@/core/tokens';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { forget, get, held, offered, open } from './packs';
-import { audio, ipa } from './voice';
+import { audio, guessed, ipa } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
@@ -37,7 +37,10 @@ export function host(): void {
       data.options.accent ? open(data.options.accent).catch(() => null) : null,
     ]);
     const batch = await annotate(data.runs, data.source, data.target, data.options);
-    return said(batch, data.source);
+    // Two engines, in the order the reader is owed them: how a word is said, then what it
+    // means. Each stamps its own name on what it filled, so a card can say which of them
+    // answered and neither is mistaken for the dictionary.
+    return meant(await said(batch, data.source), data.source, data.target);
   });
 
   onMessage('curve', async () => curve());
@@ -138,6 +141,7 @@ export function host(): void {
  */
 async function said(batch: Batch, lang: string): Promise<Batch> {
   const wanted = batch.misses.filter((miss) => miss.need !== 'Gloss');
+  // The voice fills a transcription; what a word means is the other engine's, below.
   if (wanted.length === 0) return batch;
   // By the language of the word rather than of the page. A page is not always in one: an
   // English line on a Spanish page read with the Spanish voice comes back saying "the" as
@@ -168,6 +172,55 @@ async function said(batch: Batch, lang: string): Promise<Batch> {
     .filter((result): result is { token: number; ipa: string } => Boolean(result.ipa));
   if (results.length === 0) return batch;
   return complete(batch.batch, results, 'espeak');
+}
+
+/**
+ * Fill in what the words no pack could translate mean.
+ *
+ * The dictionary answers first and this fills the rest: a word with no entry, a pair no pack
+ * covers. What comes back is a machine's guess and is marked as one all the way to the card,
+ * because a guess wearing a dictionary's authority is what the whole cascade is shaped to
+ * avoid - the reader is told which of the two answered, every time.
+ *
+ * A reader who has chosen no language to read into is not translating, and a word already
+ * answered by a pack never reaches this: the core says what it is missing and only that is
+ * asked for.
+ */
+async function meant(batch: Batch, source: string, target: string): Promise<Batch> {
+  if (!target || target === source) return batch;
+  const wanted = batch.misses.filter((miss) => miss.need !== 'Ipa');
+  if (wanted.length === 0) return batch;
+  // By the language of the word rather than of the page, for the same reason the voice is:
+  // an English line on a Spanish page is translated out of English or not at all.
+  const byLang = new Map<string, string[]>();
+  for (const miss of wanted) {
+    const token = batch.tokens[miss.token];
+    if (!token) continue;
+    const from = token.lang || source;
+    if (from === target) continue;
+    const words = byLang.get(from) ?? [];
+    if (!words.includes(token.spelling)) words.push(token.spelling);
+    byLang.set(from, words);
+  }
+  const guesses = new Map<string, Record<string, string>>();
+  for (const [from, words] of byLang) {
+    try {
+      const answers = await guessed(from, target, words);
+      guesses.set(from, Object.fromEntries(words.map((word, at) => [word, answers[at] ?? ''])));
+    } catch (e) {
+      console.warn(`[Phonetix] Nothing translated ${from} to ${target}:`, e);
+    }
+  }
+  const results = wanted
+    .map((miss) => {
+      const token = batch.tokens[miss.token];
+      const gloss = token ? guesses.get(token.lang || source)?.[token.spelling] : undefined;
+      return { token: miss.token, gloss };
+    })
+    .filter((result): result is { token: number; gloss: string } =>
+      Boolean(result.gloss) && result.gloss !== '');
+  if (results.length === 0) return batch;
+  return complete(batch.batch, results, 'bergamot');
 }
 
 /**

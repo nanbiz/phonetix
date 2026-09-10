@@ -16,7 +16,7 @@
     "install:browsers": "node scripts/install-browsers.mjs",
     "build:core": "node scripts/build-core-wasm.mjs",
     "fetch:dict": "node scripts/fetch-dictionaries.mjs",
-    "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && wxt prepare",
+    "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && node scripts/copy-bergamot.mjs && wxt prepare",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
     "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
     "test:features": "uv run scripts/proofread/android_features.py",
@@ -28,12 +28,14 @@
     "release": "scripts/release.sh",
     "ci:fast": "scripts/ci.sh fast",
     "hooks": "scripts/hooks/install.sh",
-    "test:translates": "uv run python scripts/proofread/android_translates.py",
+    "test:phone-translates": "uv run python scripts/proofread/android_translates.py",
     "test:lens": "uv run python scripts/proofread/android_lens.py",
     "test:accent": "uv run python scripts/proofread/android_accent.py",
-    "test:popup": "uv run scripts/proofread/popup_view.py"
+    "test:popup": "uv run scripts/proofread/popup_view.py",
+    "test:translates": "uv run scripts/proofread/translates.py"
   },
   "devDependencies": {
+    "@browsermt/bergamot-translator": "0.4.9",
     "@iconify-json/line-md": "^1.2.14",
     "@iconify-json/pixelarticons": "^1.2.4",
     "@puppeteer/browsers": "^2.13.0",

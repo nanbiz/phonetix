@@ -10,10 +10,22 @@ import { closePack, openLanguages, openPack } from '@/core';
 
 const store = createStore('phonetix-packs', 'lang-pack');
 
-/** Where the packs are served from, or nothing when the reader has not said. */
-async function host(): Promise<string | undefined> {
+/**
+ * Where the packs are served from, or nothing when the reader has not said.
+ *
+ * Read from the browser's own store rather than through the framework's helper. The helper is
+ * an auto-import, and an auto-import exists only in the bundles the framework builds that way:
+ * in the page the engines run in it is simply not defined, so asking for it threw, the catch
+ * below turned that into "the reader has set no host", and translation was quietly off with
+ * nothing anywhere saying why.
+ */
+export async function host(): Promise<string | undefined> {
   try {
-    return (await storage.getItem<string>('local:packBaseUrl'))?.replace(/\/+$/, '');
+    const got = await chrome.storage.local.get('packBaseUrl');
+    const said = got?.packBaseUrl;
+    return typeof said === 'string' && said !== ''
+      ? said.replace(/\/+$/, '')
+      : undefined;
   } catch {
     return undefined;   // storage unavailable is not a reason to fail a lookup
   }
