@@ -45,6 +45,16 @@ data class Settings(
      * only decorates.
      */
     val lens: Boolean = true,
+    /**
+     * Narrow transcriptions rather than broad ones.
+     *
+     * Broad is the sounds that tell words apart; narrow keeps the detail of how they are
+     * actually said - aspiration, devoicing. The same choice the extension offers, decided in
+     * the same place: the core strips the detail, not the surface drawing it.
+     */
+    val narrow: Boolean = false,
+    /** Leave the stress marks off the line over a word. The card always shows them. */
+    val hideStress: Boolean = true,
 )
 
 /**
@@ -64,6 +74,8 @@ object SettingsStore {
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
     private const val K_ACCENT = "accent"
+    private const val K_NARROW = "narrow"
+    private const val K_STRESS = "hide_stress"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -86,6 +98,8 @@ object SettingsStore {
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             accent = p.getString(K_ACCENT, "") ?: "",
+            narrow = p.getBoolean(K_NARROW, false),
+            hideStress = p.getBoolean(K_STRESS, true),
         )
     }
 
@@ -103,6 +117,8 @@ object SettingsStore {
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
             ?.putString(K_ACCENT, next.accent)
+            ?.putBoolean(K_NARROW, next.narrow)
+            ?.putBoolean(K_STRESS, next.hideStress)
             ?.apply()
     }
 
@@ -115,6 +131,8 @@ object SettingsStore {
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
     fun setAccent(v: String) = update { it.copy(accent = v) }
+    fun setNarrow(v: Boolean) = update { it.copy(narrow = v) }
+    fun setHideStress(v: Boolean) = update { it.copy(hideStress = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }

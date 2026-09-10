@@ -75,8 +75,11 @@ def in_the_browser(es, de):
             "core.openPack(fs.readFileSync(process.argv[2]));\n"
             "core.openPack(fs.readFileSync(process.argv[3]));\n"
             "for (const word of process.argv.slice(4)) {\n"
+            # The whole question the cascade is asked: which accent to read in and what the
+            # word before it was. Both empty here, so the two sides are asked the same thing
+            # and neither is answering a narrower question than the other.
             "  console.log(word + '\\t' + core.lookUp(word, 'es', "
-            f"{DRIFT!r}));\n"
+            f"{DRIFT!r}, '', ''));\n"
             "}\n"
         )
     got = run(["node", script, es, de, *WORDS])

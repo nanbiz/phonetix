@@ -10,6 +10,7 @@ import type { Answer } from '@/core/answer';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
 import { darkPage } from './inline';
+import { themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
 /** How far from the word the card sits, so the word it is about stays readable. */
@@ -42,7 +43,7 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   // no theme would have no colours at all. Which one comes from the page it is drawn over,
   // the same way the annotations decide, so a card and the words it is about never come out
   // of two different palettes.
-  frame.className = `theme-paper mode-${darkPage() ? 'dark' : 'light'}`;
+  frame.className = themeOf(darkPage());
   frame.style.cssText = 'position:fixed;width:var(--card-width);max-width:calc(100vw - 16px);';
   shadow.appendChild(frame);
   return { shadow, frame };

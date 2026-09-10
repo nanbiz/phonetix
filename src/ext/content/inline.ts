@@ -9,6 +9,7 @@
 // annotation over a word in a browser and the one over a word on a phone are the same design.
 import type { Token } from '@/core/tokens';
 import type { ScannedRun } from './scan';
+import { themeOf } from '@/ui/theme';
 
 /** What the reader asked to see over a word. */
 export type Layer = 'off' | 'gloss' | 'gloss+ipa' | 'ipa' | 'replace';
@@ -162,7 +163,7 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
     const spelling = text.slice(token.start, token.end);
     // The theme the tokens are keyed by, on the box itself: every colour is defined inside
     // one, so a box naming no theme would have none of them.
-    const box = span(`${WORD} theme-paper mode-${onDark ? 'dark' : 'light'}`);
+    const box = span(`${WORD} ${themeOf(onDark)}`);
     const mark = annotation(token, layer);
     if (layer === 'replace' && token.gloss) {
       // The word repainted as what it means, with the cue that it was swapped, and the word

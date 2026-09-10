@@ -173,17 +173,21 @@
         {/if}
       </div>
 
-      {#if symbols.length > 0}
+      {#if answer.ipa.length > 0}
         <div class="ipa-row">
           <span class="ipa">
             <span class="delim">/</span><!--
             Symbol by symbol, because each one is a button: a reader who does not know a
             sound is one tap from what it is.
          --><!-- No space between them: a transcription is one word and reads as one.
-         -->{#each symbols as symbol, i (i)}<button
+         -->{#if symbols.length > 0}{#each symbols as symbol, i (i)}<button
                 class="{symbolClass(symbol.kind)}{opened?.token === symbol.token ? ' active' : ''}"
                 title={symbol.name}
-                onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}<span
+                onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}{:else}<!--
+              Whole, where the table could not say what its sounds are: a transcription nobody
+              can tap is still the transcription, and empty delimiters are a card saying it
+              knows how a word sounds and then showing nothing.
+           -->{answer.ipa[0]}{/if}<span
               class="delim">/</span>
           </span>
           <PlayButton
@@ -193,12 +197,9 @@
           <SourceMark kind={recorded ? 'recording' : 'synthesised'} />
         </div>
 
-        <SoundLine
-          about={opened}
-          {diagram}
-          onPlay={onPlaySymbol}
-          {onOpen}
-        />
+        {#if symbols.length > 0}
+          <SoundLine about={opened} {diagram} onPlay={onPlaySymbol} {onOpen} />
+        {/if}
       {/if}
 
       {#if phrase}

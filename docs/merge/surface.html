@@ -55,7 +55,6 @@
   /* size */
   --card-width:        360px;
   --card-max-height:   60vh;
-  --popover-width:     300px;
   --breakpoint-phone:  600px;   /* mirrored literally in the @media rule below */
   --button-height:     36px;
   --touch-target:      44px;
@@ -99,7 +98,7 @@
 
   /* elevation */
   --shadow-card:    0 8px 28px var(--color-shadow);
-  --shadow-popover: 0 6px 20px var(--color-shadow);
+  --shadow-lifted:  0 6px 20px var(--color-shadow);  /* anything raised over the card: the enlarged diagram, the lens */
 }
 
 /* Palettes: one block per theme and mode. */
@@ -205,6 +204,61 @@
   --p-danger-bg: #3a1410;
   --p-shadow: rgba(0, 0, 0, 0.8);
   --p-scrim: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
+}
+/* The product's own colours, which are the icon's: crimson brackets, a gold glyph, printed
+   ink on paper. The app's chrome is drawn in these, so a screen of transcriptions and the
+   screen that switches them on are one palette rather than two. */
+.theme-phonetix.mode-light {
+  --p-page-bg: #f7efdd;
+  --p-surface: #fffbf2;
+  --p-surface-raised: #f4ead2;
+  --p-ink: #2b2117;
+  --p-ink-muted: #6b5b45;
+  --p-ink-faint: #8a7860;
+  --p-border: #e3d7be;
+  --p-accent: #b45309;
+  --p-accent-ink: #ffffff;
+  --p-accent-bg: #fdf0d2;
+  --p-guess: #8a4f0c;
+  --p-guess-bg: #fbefdc;
+  --p-chip-bg: #efe4cb;
+  --p-chip-ink: #4a3d2c;
+  --p-ipa-consonant: #7c4a12;
+  --p-ipa-vowel: #b03030;
+  --p-ipa-other: #8a7860;
+  --p-ruby-hue: 30;
+  --p-skeleton: #ece0c8;
+  --p-danger: #dc2626;
+  --p-danger-bg: #fbe4e2;
+  --p-shadow: rgba(59, 42, 20, 0.18);
+  --p-scrim: rgba(59, 42, 20, 0.06);
+  color-scheme: light;
+}
+.theme-phonetix.mode-dark {
+  --p-page-bg: #1b1410;
+  --p-surface: #241c17;
+  --p-surface-raised: #2e241d;
+  --p-ink: #f7efdd;
+  --p-ink-muted: #c9b79c;
+  --p-ink-faint: #a2917a;
+  --p-border: #3a2e25;
+  --p-accent: #fbbf24;
+  --p-accent-ink: #1b1410;
+  --p-accent-bg: #3a2e18;
+  --p-guess: #e0a85a;
+  --p-guess-bg: #3a2d1a;
+  --p-chip-bg: #33271f;
+  --p-chip-ink: #e3d7be;
+  --p-ipa-consonant: #e8c07a;
+  --p-ipa-vowel: #e5484d;
+  --p-ipa-other: #a2917a;
+  --p-ruby-hue: 30;
+  --p-skeleton: #33271f;
+  --p-danger: #e5484d;
+  --p-danger-bg: #3d2622;
+  --p-shadow: rgba(0, 0, 0, 0.6);
+  --p-scrim: rgba(255, 255, 255, 0.05);
   color-scheme: dark;
 }
 .theme-classroom.mode-light {
@@ -401,7 +455,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .detail .d-thumb { flex: 0 0 auto; width: var(--thumb-width); height: var(--thumb-height); border-radius: var(--radius-bar); background: var(--color-mark-plate); display: flex; align-items: center; justify-content: center; overflow: visible; }
 .detail .d-thumb img { max-width: 100%; max-height: 100%; display: block; transition: transform var(--motion-dwell) ease-out; }
 .detail .d-thumb:hover { position: relative; z-index: 2; }
-.detail .d-thumb:hover img { transform: scale(var(--thumb-zoom)); background: var(--color-mark-plate); border-radius: var(--radius-bar); box-shadow: var(--shadow-popover); }
+.detail .d-thumb:hover img { transform: scale(var(--thumb-zoom)); background: var(--color-mark-plate); border-radius: var(--radius-bar); box-shadow: var(--shadow-lifted); }
 .ipa-note { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); }
 /* What made the sound the button beside it plays: a spark for a voice a machine generated, a microphone for one a person recorded. Drawn rather than written, because it is a property of the sound and not a sentence the reader has to read on every card. */
 .ipa-mark { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; fill: var(--color-ink-faint); color: var(--color-ink-faint); align-self: center; }
@@ -482,15 +536,9 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 }
 
 /* ------------------------------------------------------------------
-   Symbol popover
+   The diagram slot, which is where a fetched sagittal section lands
    ------------------------------------------------------------------ */
-.popover { width: 100%; max-width: var(--popover-width); background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-popover); padding: var(--space-3) var(--space-4) var(--space-3); display: grid; grid-template-columns: var(--diagram-width) 1fr; gap: var(--space-2) var(--space-3); position: relative; margin-top: var(--space-3); }
-.popover::before { content: ""; position: absolute; top: calc(-1 * var(--space-2)); left: var(--space-5); width: var(--space-4); height: var(--space-4); background: var(--color-surface); border-left: var(--border-width) solid var(--color-border); border-top: var(--border-width) solid var(--color-border); transform: rotate(45deg); }
 .diagram { grid-row: 1 / span 2; width: var(--diagram-width); height: var(--diagram-height); border-radius: var(--radius-button); background: var(--color-surface-raised); border: var(--border-width) dashed var(--color-ink-faint); display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--font-ui); font-size: var(--font-size-label); line-height: 1.25; color: var(--color-ink-faint); padding: var(--space-1); }
-.pop-sym { font-family: var(--font-ipa); font-size: var(--font-size-symbol); line-height: 1; color: var(--color-ipa); display: flex; align-items: center; gap: var(--space-3); }
-.pop-name { font-size: var(--font-size-body); font-weight: var(--weight-medium); line-height: 1.3; }
-.pop-desc { grid-column: 1 / -1; margin: 0; font-size: var(--font-size-small); color: var(--color-ink-muted); }
-.pop-links { grid-column: 1 / -1; display: flex; gap: var(--space-1); flex-wrap: wrap; margin-left: calc(-1 * var(--space-2)); }
 
 /* ------------------------------------------------------------------
    Lens
@@ -498,7 +546,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .screen { background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); padding: var(--space-4); font-family: var(--font-page); font-size: var(--font-size-page); line-height: var(--line-page); position: relative; overflow: hidden; min-height: 180px; }
 .screen p { margin: 0 0 var(--space-3); }
 .screen p:last-child { margin-bottom: 0; }
-.lens { position: absolute; width: var(--lens-size); height: var(--lens-size); border-radius: 50%; border: var(--lens-ring) solid var(--color-accent); background: var(--color-scrim); box-shadow: var(--shadow-popover); display: flex; align-items: center; justify-content: center; }
+.lens { position: absolute; width: var(--lens-size); height: var(--lens-size); border-radius: 50%; border: var(--lens-ring) solid var(--color-accent); background: var(--color-scrim); box-shadow: var(--shadow-lifted); display: flex; align-items: center; justify-content: center; }
 .lens::after { content: ""; width: var(--space-2); height: var(--space-2); border-radius: 50%; background: var(--color-accent); }
 .lens.idle { right: calc(-1 * var(--lens-size) / 2); top: 50%; transform: translateY(-50%); opacity: 0.85; }
 /* The two placements below put the demo lens on the highlighted word; they are showcase
@@ -506,7 +554,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .lens.over { left: 22px; top: 214px; }
 .lens-target { background: var(--color-accent-bg); border-radius: var(--radius-symbol); }
 .screen.tall { min-height: 320px; padding-top: 204px; }
-.card.moving { position: absolute; left: var(--space-3); right: var(--space-3); top: var(--space-3); width: auto; max-width: none; box-shadow: var(--shadow-popover); }
+.card.moving { position: absolute; left: var(--space-3); right: var(--space-3); top: var(--space-3); width: auto; max-width: none; box-shadow: var(--shadow-lifted); }
 .card.moving .card-head { padding-bottom: var(--space-2); }
 .card.moving .fold { display: inline-flex; align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
 
@@ -593,7 +641,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
   .card { max-width: none; border-radius: var(--radius-card) var(--radius-card) 0 0; border-bottom: none; max-height: var(--card-max-height); }
   .card-handle { display: block; }
   .card-body { overflow: auto; }
-  .popover, .panel { max-width: none; }
+  .panel { max-width: none; }
 }
 </style>
 </head>
@@ -665,14 +713,16 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">reading room</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">a</button><button class="sym o">ː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
+          <div class="detail"><span class="d-sym">l</span><span class="d-text"><span class="d-name">voiced alveolar lateral approximant</span><span class="d-eg">"l" in lay</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">pl. Lesesäle</span></div>
         </header>
         <div class="card-body">
           <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"></span></footer>
       </article>
     </section>
 
@@ -681,15 +731,17 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">czytelnia</span><span class="badge guess">guess</span></div>
-          <div class="anchor-en"><a class="badge dict" href="#" aria-label="Source: Wiktionary, English gloss. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a><span class="anchor-label">in English</span><span class="anchor-gl">reading room</span></div>
+          <div class="anchor-en"><span class="anchor-label">in English</span><span class="anchor-gl">reading room</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
+          <div class="detail"><span class="d-sym">l</span><span class="d-text"><span class="d-name">voiced alveolar lateral approximant</span><span class="d-eg">"l" in lay</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span><span class="g-sub">German → Polish is a <b>partial</b> pair: this sense&#8217;s gloss does not join the Polish pack confidently, so the headline is a machine guess</span></div>
         </header>
         <div class="card-body">
           <p class="ex"><q>Der Lesesaal ist bis 22 Uhr geöffnet.</q><span class="ex-tr">The reading room is open until 10 pm.</span></p>
         </div>
-        <footer class="card-foot"><span>German → Polish · lex-de 2026.09 · Bergamot de-pl</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → Polish · lex-de 2026.09 · Bergamot de-pl</span><span class="actions"></span></footer>
       </article>
     </section>
 
@@ -698,15 +750,17 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">went</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
+          <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
         </header>
         <div class="card-body">
           <p class="ex"><q>Wir gingen nach Hause.</q><span class="ex-tr">We went home.</span></p>
           <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">All senses</button></span></footer>
       </article>
     </section>
 
@@ -715,6 +769,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">modern</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Two readings, choose one</span></div>
         </header>
         <div class="card-body">
@@ -723,7 +778,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
             <li><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip r-pos">verb</span></li>
           </ul>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"></span></footer>
       </article>
     </section>
 
@@ -732,15 +787,17 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr">modern, contemporary</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">modern</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr">modern, contemporary</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">m</button><button class="sym v">o</button><button class="sym c">d</button><button class="sym v">ɛ</button><button class="sym c">ʁ</button><button class="sym c">n</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
+          <div class="detail"><span class="d-sym">ʁ</span><span class="d-text"><span class="d-name">voiced uvular fricative</span><span class="d-eg">"r" in rot</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="lemma">modern</span><span class="chip">adjective</span><span class="g-sub">decided from the translation; another reading exists</span></div>
           <button class="alt-reading"><span class="alt-label">Other reading</span><span class="r-tr">to rot, to decay</span><span class="r-ipa">[moːdɐn]</span><span class="chip">verb</span><span class="chev">›</span></button>
         </header>
         <div class="card-body">
           <p class="ex"><q>Ein modernes Gebäude.</q><span class="ex-tr">A modern building.</span></p>
         </div>
-        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"></span></footer>
       </article>
     </section>
 
@@ -749,15 +806,17 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
-          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">serendipity</span><span class="pill">EN</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">s</button><button class="sym v">ɛ</button><button class="sym c">ɹ</button><button class="sym v">ə</button><button class="sym c">n</button><button class="sym c">d</button><button class="sym v">ɪ</button><button class="sym c">p</button><button class="sym v">ɪ</button><button class="sym c">t</button><button class="sym v">i</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg><span class="ipa-note">General American</span></div>
+          <div class="detail"><span class="d-sym">ɹ</span><span class="d-text"><span class="d-name">voiced alveolar approximant</span><span class="d-eg">"r" in red</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="lemma">serendipity</span><span class="chip">noun</span></div>
         </header>
         <div class="card-body">
           <p class="ex"><q>Finding the letter was pure serendipity.</q></p>
           <div class="others"><span class="others-label">Other senses</span><ul><li>The faculty of making such discoveries. <span class="chip mark">uncountable</span></li></ul></div>
         </div>
-        <footer class="card-foot"><span>English · lex-en 2026.09</span><span class="actions"><button class="btn-text">Wiktionary</button></span></footer>
+        <footer class="card-foot"><span>English · lex-en 2026.09</span><span class="actions"></span></footer>
       </article>
     </section>
 
@@ -766,8 +825,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">Bibliotheksausweisverlängerung</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">library card renewal</span><span class="badge guess">guess</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><button class="sym c">s</button><button class="sym v">a</button><button class="sym v">ʊ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">v</button><button class="sym v">a</button><button class="sym v">ɪ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">f</button><button class="sym v">ɛ</button><button class="sym v">ɐ</button><button class="sym c">l</button><button class="sym v">ɛ</button><button class="sym c">ŋ</button><button class="sym v">ə</button><button class="sym c">ʁ</button><button class="sym v">ʊ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
+          <div class="detail"><span class="d-sym">aʊ̯</span><span class="d-text"><span class="d-name">diphthong</span><span class="d-eg">"au" in Haus</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
           <div class="gram"><span class="g-sub">not in lex-de · machine translation of the whole word</span></div>
         </header>
         <div class="card-body">
@@ -783,6 +844,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">erst gegen Mittag</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">not until around noon</span><span class="badge guess">guess</span></div>
           <div class="gram"><span class="lemma">erst gegen Mittag</span><span class="g-sub">machine translation of the selection</span></div>
         </header>
@@ -799,8 +861,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">Bibliothek</span><span class="pill">DE</span><span class="pill from-machine">espeak</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">No German pack here yet</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg><span class="ipa-note">ipa-de</span></div>
+          <div class="detail"><span class="d-sym">b</span><span class="d-text"><span class="d-name">voiced bilabial plosive</span><span class="d-eg">"b" in bee</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
         </header>
         <div class="card-body">
           <div class="btn-row"><button class="btn">Fetch lex-de · 38 MB</button><button class="btn secondary">Not now</button></div>
@@ -814,6 +878,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">grmpf</span><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Nothing found for this word</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym c">ʁ</button><button class="sym c">m</button><button class="sym c">p</button><button class="sym c">f</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
         </header>
@@ -829,6 +894,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">biblioteca</span><span class="pill">PT</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">No Portuguese pack on this device</span></div>
           <div class="gram"><span class="g-sub">Portuguese → Polish will be a <b>machine</b> pair: few Spanish glosses join the Polish pack, so translation is a guess throughout; IPA and English glosses come from the pack</span></div>
         </header>
@@ -844,6 +910,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">biblioteca</span><span class="pill">?</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Which language is this block?</span></div>
           <div class="gram"><span class="g-sub">not recognised; the choice is remembered for this site</span></div>
         </header>
@@ -859,6 +926,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <article class="card">
         <div class="card-handle"></div>
         <header class="card-head">
+          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="skeleton" style="width: 55%; height: calc(var(--skeleton-height) * 1.6)"></div>
           <div class="skeleton" style="width: 40%"></div>
           <div class="skeleton" style="width: 30%"></div>
@@ -876,8 +944,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <div class="space" data-space="360 × 420" style="width: 360px; height: 420px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
+          <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
           <div class="card-body">
@@ -885,7 +955,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button></span></footer>
         </article>
       </div>
     </section>
@@ -895,8 +965,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <div class="space" data-space="360 × 260" style="width: 360px; height: 260px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
+          <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
           <div class="card-body">
@@ -904,7 +976,7 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button></span></footer>
         </article>
       </div>
     </section>
@@ -914,8 +986,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <div class="space" data-space="360 × 140" style="width: 360px; height: 140px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
           <header class="card-head">
-            <div class="headline"><span class="tr">went</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
+          <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
             <div class="gram"><span class="lemma prominent">gehen</span><span class="chip">verb</span><span class="g-sub">ging is the first and third person singular preterite</span></div>
           </header>
           <div class="card-body">
@@ -923,24 +997,25 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
             <div class="others"><span class="others-label">Other senses</span><ul><li>to walk <span class="chip mark">intransitive</span></li><li>to work, to function <span class="chip mark">colloquial</span></li></ul><button class="btn-text more">10 more senses</button></div>
             <button class="btn-text fold">12 senses, 1 example</button>
           </div>
-          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button><button class="btn-text">Wiktionary</button></span></footer>
+          <footer class="card-foot"><span>German → English · lex-de 2026.09</span><span class="actions"><button class="btn-text secondary-action">All senses</button></span></footer>
         </article>
       </div>
     </section>
 
-    <h2 class="group-title">VIEW-SYMBOL · Symbol popover</h2>
+    <h2 class="group-title">VIEW-SYMBOL · The sound line</h2>
 
     <section class="state" data-uid="STATE-SYMBOL-OPEN">
-      <div class="label"><b>STATE-SYMBOL-OPEN</b> Symbol open</div>
+      <div class="label"><b>STATE-SYMBOL-OPEN</b> A sound open</div>
       <div class="stage">
         <div class="ipa-row" style="padding: 0 var(--space-4)"><span class="ipa"><span class="delim">[</span><button class="sym v">ɪ</button><button class="sym c active">ç</button><span class="delim">]</span></span><span class="ipa-note">ich</span></div>
-        <aside class="popover">
-          <div class="diagram" aria-label="articulation diagram slot">image<br>Wikimedia Commons<br>sagittal section</div>
-          <div class="pop-sym">ç <span class="chip">consonant</span></div>
-          <div class="pop-name">voiceless palatal fricative</div>
-          <p class="pop-desc">The tongue body rises toward the hard palate and air hisses through the gap; close to the h in English <i>hue</i>.</p>
-          <div class="pop-links"><button class="btn-text">Play recording</button><button class="btn-text">Wikipedia</button><button class="btn-text">Seeing Speech</button></div>
-        </aside>
+        <div class="detail" style="margin: var(--space-2) var(--space-4) 0"><span class="d-sym">ç</span><span class="d-text"><span class="d-name">voiceless palatal fricative</span><span class="d-eg">&#8220;ch&#8221; in ich</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a><a class="icon-btn" href="#" aria-label="see a mouth saying it"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 4v16M17 4v16M2 12h20"/></svg></a><span class="d-thumb"><span class="diagram" style="width: var(--thumb-width); height: var(--thumb-height); font-size: 8px">sagittal section</span></span></div>
+      </div>
+    </section>
+
+    <section class="state" data-uid="STATE-SYMBOL-WAITING">
+      <div class="label"><b>STATE-SYMBOL-WAITING</b> No sound asked about yet</div>
+      <div class="stage">
+        <div class="detail" style="margin: 0 var(--space-4)"><span class="d-hint">Tap a sound to hear what it is</span></div>
       </div>
     </section>
 
@@ -960,8 +1035,10 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
       <div class="screen tall">
         <article class="card moving">
           <header class="card-head">
-            <div class="headline"><span class="tr">reading room</span><a class="badge dict" href="#" aria-label="Source: Wiktionary. Opens the entry on Wiktionary."><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
+            <div class="headline"><span class="tr">reading room</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span></div>
+          <div class="detail"><span class="d-sym">l</span><span class="d-text"><span class="d-name">voiced alveolar lateral approximant</span><span class="d-eg">"l" in lay</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
             <div class="gram"><span class="lemma">der Lesesaal</span><span class="chip">noun</span></div>
           </header>
           <div class="card-body"><button class="btn-text fold">1 sense, 1 example</button></div>

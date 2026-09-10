@@ -106,6 +106,7 @@ fun HomeScreen(
         )
 
         ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
+        TranscriptionsCard(settings = settings)
         DictionariesCard(settings = settings)
         LensCard(on = settings.lens, onLens = onLens)
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
@@ -311,28 +312,69 @@ private fun ReadingCard(
         }
         Spacer(Modifier.height(8.dp))
         Text("Over a word", style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            for ((value, label) in listOf(
+        Spacer(Modifier.height(4.dp))
+        // The same control the extension's settings view draws, from the same tokens: four
+        // short answers, all of them visible, one of them on.
+        Segmented(
+            choices = listOf(
                 "gloss" to "meaning",
                 "gloss+ipa" to "both",
                 "ipa" to "sound",
                 "replace" to "in place",
-            )) {
-                TextButton(onClick = { onLayer(value) }) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (settings.layer == value) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
-            }
-        }
+            ),
+            chosen = settings.layer,
+            palette = palette(),
+            change = onLayer,
+        )
     }
 }
+
+/**
+ * How much of how a word is said is drawn over it.
+ *
+ * Both are the extension's own settings and were never on the phone, which meant the two
+ * products showed the same reader different transcriptions of the same word.
+ */
+@Composable
+private fun TranscriptionsCard(settings: Settings) {
+    SectionCard(title = "Transcriptions") {
+        val colours = palette()
+        SettingRow(
+            name = "Detail",
+            palette = colours,
+            about = if (settings.narrow) {
+                "every detail of how it is said"
+            } else {
+                "the sounds that tell words apart"
+            },
+            control = {
+                Segmented(
+                    choices = listOf("broad" to "broad", "narrow" to "narrow"),
+                    chosen = if (settings.narrow) "narrow" else "broad",
+                    palette = colours,
+                    change = { SettingsStore.setNarrow(it == "narrow") },
+                )
+            },
+        )
+        SettingRow(
+            name = "Stress marks",
+            palette = colours,
+            about = "over a word; the card always shows them",
+            control = {
+                Switch(
+                    on = !settings.hideStress,
+                    label = "stress marks",
+                    palette = colours,
+                    change = { SettingsStore.setHideStress(!it) },
+                )
+            },
+        )
+    }
+}
+
+/** The colours this screen is drawn in, which are the ones Material got as well. */
+@Composable
+private fun palette(): Tokens.Palette = appPalette()
 
 /**
  * The dictionaries this phone has, and the ones it could have.

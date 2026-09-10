@@ -318,12 +318,15 @@ class TooltipController(
      *
      * The transcription alone is what a build with no dictionary pack has, and it is a real
      * answer to how a word is said even though it answers nothing about meaning. A tap on a
-     * symbol opens what that sound is, below the card rather than over it, so the word stays
-     * in sight while the sound is being read about.
+     * symbol says what that sound is on the card's own line for it, so the word stays in sight
+     * and the card does not change height under the finger.
      */
     private fun build(box: WordBox): View {
+        // Light or dark by the app it is drawn over rather than by the system setting: a card
+        // is read against the screen it lands on. Which palette is the product's own, so the
+        // card and the app that switches it on are one set of colours.
         val dark = box.background == 0 || isDark(box.background)
-        val palette = Tokens.palette(Tokens.Theme.PAPER, dark)
+        val palette = Tokens.palette(Tokens.Theme.PHONETIX, dark)
         // What the word means, asked of the cascade in the languages the reader is reading
         // between. Where no pack answers, what comes back is the transcription the overlay
         // already had, which is what the card then shows.

@@ -2080,6 +2080,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             target = settings.target.ifEmpty { source },
             mode = settings.layer,
             density = settings.density,
+            narrow = settings.narrow,
+            hideStress = settings.hideStress,
             accent = settings.accent,
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)

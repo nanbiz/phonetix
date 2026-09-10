@@ -60,7 +60,7 @@
 .detail .d-thumb { flex: 0 0 auto; width: var(--thumb-width); height: var(--thumb-height); border-radius: var(--radius-bar); background: var(--color-mark-plate); display: flex; align-items: center; justify-content: center; overflow: visible; }
 .detail .d-thumb img { max-width: 100%; max-height: 100%; display: block; transition: transform var(--motion-dwell) ease-out; }
 .detail .d-thumb:hover { position: relative; z-index: 2; }
-.detail .d-thumb:hover img { transform: scale(var(--thumb-zoom)); background: var(--color-mark-plate); border-radius: var(--radius-bar); box-shadow: var(--shadow-popover); }
+.detail .d-thumb:hover img { transform: scale(var(--thumb-zoom)); background: var(--color-mark-plate); border-radius: var(--radius-bar); box-shadow: var(--shadow-lifted); }
 .ipa-note { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); }
 /* What made the sound the button beside it plays: a spark for a voice a machine generated, a microphone for one a person recorded. Drawn rather than written, because it is a property of the sound and not a sentence the reader has to read on every card. */
 .ipa-mark { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; fill: var(--color-ink-faint); color: var(--color-ink-faint); align-self: center; }

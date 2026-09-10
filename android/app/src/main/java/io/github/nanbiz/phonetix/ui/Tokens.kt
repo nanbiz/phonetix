@@ -45,7 +45,6 @@ object Tokens {
         const val lineBody = 1.45f
         const val linePage = 1.5f
         const val markSize = 15.0f
-        const val popoverWidth = 300.0f
         const val progressHeight = 6.0f
         const val radiusBar = 3.0f
         const val radiusButton = 8.0f
@@ -86,7 +85,7 @@ object Tokens {
     }
 
     /** Which set of colours a reader has chosen. */
-    enum class Theme { CLASSROOM, DRACULA, INK, NORD, PAPER, SILK, WINTER }
+    enum class Theme { CLASSROOM, DRACULA, INK, NORD, PAPER, PHONETIX, SILK, WINTER }
 
     /** What each role is worth in one theme and mode. */
     data class Palette(
@@ -341,6 +340,62 @@ object Tokens {
             skeleton = 0xFF2E3138L,
             surface = 0xFF1F2126L,
             surfaceRaised = 0xFF272A30L,
+            rubyHue = 0x00000000L,
+        )
+        theme == Theme.PHONETIX && !dark -> Palette(
+            accent = 0xFFB45309L,
+            accentBg = 0xFFFDF0D2L,
+            accentInk = 0xFFFFFFFFL,
+            border = 0xFFE3D7BEL,
+            chipBg = 0xFFEFE4CBL,
+            chipInk = 0xFF4A3D2CL,
+            danger = 0xFFDC2626L,
+            dangerBg = 0xFFFBE4E2L,
+            guess = 0xFF8A4F0CL,
+            guessBg = 0xFFFBEFDCL,
+            ink = 0xFF2B2117L,
+            inkFaint = 0xFF8A7860L,
+            inkMuted = 0xFF6B5B45L,
+            ipa = 0xFF7C4A12L,
+            ipaConsonant = 0xFF7C4A12L,
+            ipaOther = 0xFF8A7860L,
+            ipaVowel = 0xFFB03030L,
+            pageBg = 0xFFF7EFDDL,
+            rubyInk = 0xFF7C4A12L,
+            rubyIpa = 0xFF6B5B45L,
+            scrim = 0x0F3B2A14L,
+            shadow = 0x2E3B2A14L,
+            skeleton = 0xFFECE0C8L,
+            surface = 0xFFFFFBF2L,
+            surfaceRaised = 0xFFF4EAD2L,
+            rubyHue = 0x00000000L,
+        )
+        theme == Theme.PHONETIX && dark -> Palette(
+            accent = 0xFFFBBF24L,
+            accentBg = 0xFF3A2E18L,
+            accentInk = 0xFF1B1410L,
+            border = 0xFF3A2E25L,
+            chipBg = 0xFF33271FL,
+            chipInk = 0xFFE3D7BEL,
+            danger = 0xFFE5484DL,
+            dangerBg = 0xFF3D2622L,
+            guess = 0xFFE0A85AL,
+            guessBg = 0xFF3A2D1AL,
+            ink = 0xFFF7EFDDL,
+            inkFaint = 0xFFA2917AL,
+            inkMuted = 0xFFC9B79CL,
+            ipa = 0xFFE8C07AL,
+            ipaConsonant = 0xFFE8C07AL,
+            ipaOther = 0xFFA2917AL,
+            ipaVowel = 0xFFE5484DL,
+            pageBg = 0xFF1B1410L,
+            rubyInk = 0xFFE8C07AL,
+            rubyIpa = 0xFFC9B79CL,
+            scrim = 0x0DFFFFFFL,
+            shadow = 0x99000000L,
+            skeleton = 0xFF33271FL,
+            surface = 0xFF241C17L,
+            surfaceRaised = 0xFF2E241DL,
             rubyHue = 0x00000000L,
         )
         theme == Theme.SILK && !dark -> Palette(

@@ -106,6 +106,10 @@ fun AnswerCard(
         }
         if (answer.ipa.isNotEmpty()) {
             Pronunciation(answer, palette, onSymbol, recorded, onPlay, opened, report)
+        }
+        // Only where there are sounds to ask about: a line inviting a tap on a transcription
+        // whose symbols the table could not name is a line that answers nothing.
+        if (answer.symbols.isNotEmpty()) {
             SoundLine(
                 about = opened,
                 palette = palette,
@@ -223,6 +227,12 @@ private fun Headline(answer: Answer, palette: Tokens.Palette, report: Reporter?)
         // And so is an English gloss sitting where the answer goes. Where the dictionary
         // reached nothing in the reader's language, what is left is the word's English
         // meaning, and unmarked it reads as the translation rather than as the anchor it is.
+        // Which kind of word it is, beside what it means rather than on a row of its own:
+        // alone on a line a single word reads as a leftover.
+        answer.pos?.let {
+            Box(Modifier.width(Tokens.Scale.space2.dp))
+            Badge(text = it, ink = Color(palette.chipInk), background = Color(palette.chipBg))
+        }
         val guessed = answer.state == Answer.State.Guess
         val anchor = answer.says.isEmpty() && answer.glosses.isNotEmpty()
         if (guessed || anchor) {
@@ -253,6 +263,17 @@ private fun Pronunciation(
             color = Color(palette.inkFaint),
             fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
         )
+        // Whole, where the table could not say what its sounds are: a transcription nobody
+        // can tap is still the transcription, and empty delimiters are a card saying it knows
+        // how a word sounds and then showing nothing.
+        if (answer.symbols.isEmpty()) {
+            androidx.compose.material3.Text(
+                text = answer.ipa.first(),
+                color = Color(palette.ink),
+                fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
+                modifier = Modifier.reported(answer.ipa.first(), report),
+            )
+        }
         // Symbol by symbol, because each one is a button: a reader who does not know a sound
         // is one tap from what it is, which is the whole of what the old tooltip was for.
         for (symbol in answer.symbols) {
@@ -315,9 +336,10 @@ private fun Grammar(answer: Answer, palette: Tokens.Palette, report: Reporter?) 
     // Each reading carries its own part of speech at the end of its row, so repeating the
     // first one under them says nothing and reads as if it belonged to the last.
     if (answer.readings.size >= 2) return
+    // The part of speech is beside the answer, not here: this line is about which word the
+    // spelling belongs to.
     val parts = buildList {
         answer.lemma?.let { add(it) }
-        answer.pos?.let { add(it) }
         // Which form, where the dump named it: "plural of perro" says the relation, and the
         // spelling on its own leaves a reader to work out what they are looking at.
         if (answer.lemma != null) {
@@ -414,10 +436,10 @@ private fun Readings(answer: Answer, palette: Tokens.Palette, report: Reporter?)
 }
 
 /**
- * Always the same place: which languages this is, and the way onward.
+ * Always the same place: which languages this is, and what answered.
  *
- * The link is always here whether or not a dictionary answered, because a reader who got
- * nothing is the one most likely to want it.
+ * The way onward is not here: it is the mark on the top row, which is where a reader who wants
+ * the whole entry looks and is there whether or not a dictionary answered.
  */
 @Composable
 private fun Foot(
@@ -427,16 +449,18 @@ private fun Foot(
     onOpen: (String) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.material3.Text(
-            text = "Wiktionary",
-            color = Color(palette.accent),
-            fontSize = Tokens.Scale.fontSizeLabel.sp,
-            modifier = Modifier
-                .clickable { onOpen(wiktionary(answer)) }
-                .reported("Wiktionary", report),
-        )
-        Box(Modifier.width(Tokens.Scale.space3.dp))
+        // The way onward is the mark on the top row, where a reader who wants the whole entry
+        // looks; a second Wiktionary link down here was the same link twice.
         Pair(answer, palette)
+        val pack = (answer.provenance as? Answer.Provenance.Dictionary)?.pack
+        if (pack != null) {
+            Box(Modifier.width(Tokens.Scale.space3.dp))
+            androidx.compose.material3.Text(
+                text = pack,
+                color = Color(palette.inkFaint),
+                fontSize = Tokens.Scale.fontSizeLabel.sp,
+            )
+        }
     }
 }
 
