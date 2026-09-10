@@ -64,7 +64,7 @@ SETTINGS_SECTIONS = ("Packs and home (settings surfaces)",)
 # Rules the settings surfaces use that are declared beside the card, because the same small
 # element appears on both. Named one by one rather than swept in, so that what a settings view
 # is styled by stays something a person can read off this list.
-SETTINGS_ALSO = (".chip",)
+SETTINGS_ALSO = (".chip", ".btn-text", ".btn", ".btn.secondary", ".btn.danger")
 
 # The inline layer is drawn into a page the extension does not own, where a class called "w"
 # would collide with the page's own. The rules are the page's; the names they are written

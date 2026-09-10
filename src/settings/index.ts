@@ -24,15 +24,26 @@ export interface Settings {
   narrow: boolean;
   /** Leave the stress marks off the line over a word. */
   hideStress: boolean;
-  /** The accent to read in, as a language tag: en-us, es-419, de-ch. Empty is the standard
-   *  one, which is what most readers want and what a dictionary lists first. */
-  accent: string;
+  /**
+   * Which accent to read each language in, as language tag to accent tag: en → en-us,
+   * es → es-419.
+   *
+   * Per language rather than one for everything, because an accent is only meaningful
+   * relative to a language: a page in German has nothing to do with the reader's choice
+   * between British and American English, and one field for both meant choosing an accent
+   * for a page threw away the choice made for every other. A language with no entry is read
+   * the way its dictionary lists it, which is what most readers want.
+   */
+  accents: Record<string, string>;
   /** How long the cursor rests on a word before its card opens, in milliseconds. A reader who
    *  reads with the pointer wants it slow; one who looks words up wants it instant. */
   delay: number;
   /** Whether the card eases in and the reveal fades. Off is instant, which is what a reader
    *  who finds movement distracting wants and what a slow machine wants. */
   animations: boolean;
+  /** Where the dictionaries come from. The reader's own, and nowhere in the source: an
+   *  extension that went looking on its own would be an extension deciding who to talk to. */
+  host: string;
   /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
    *  wants this on the web does not want to name every site it should work on. */
   off: string[];
@@ -46,9 +57,10 @@ export const DEFAULTS: Settings = {
   source: '',
   narrow: false,
   hideStress: true,
-  accent: '',
+  accents: {},
   delay: 200,
   animations: false,
+  host: '',
   off: [],
 };
 
@@ -59,11 +71,12 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   density: 'local:density',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
-  accent: 'local:accent',
+  accents: 'local:accents',
   narrow: 'local:narrow',
   hideStress: 'local:hideStress',
   delay: 'local:hoverDelay',
   animations: 'local:animations',
+  host: 'local:packBaseUrl',
   off: 'local:sitesOff',
 };
 
@@ -92,6 +105,19 @@ export function watch(told: (settings: Settings) => void): () => void {
     storage.watch(KEYS[name], async () => told(await current()))
   );
   return () => stop.forEach((off) => off());
+}
+
+/** Which accent this language is read in, or none, which is how its dictionary lists it. */
+export function accentFor(settings: Settings, lang: string): string {
+  return settings.accents[lang] ?? '';
+}
+
+/** Read one language in one accent, leaving the choice made for every other alone. */
+export function setAccent(settings: Settings, lang: string, accent: string): Record<string, string> {
+  const next = { ...settings.accents };
+  if (accent === '') delete next[lang];
+  else next[lang] = accent;
+  return next;
 }
 
 /** Whether this site is one the reader switched off. */

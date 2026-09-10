@@ -307,6 +307,36 @@ def main():
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
 
+        # Where the dictionaries come from is a setting, and the only way a reader has of
+        # pointing this at their own host. Emptied and typed back the way they would: nothing
+        # is on offer without it, and what they type is what is asked.
+        control(cdp, view, """
+            (() => {
+              const field = document.querySelector('[data-row=host] input');
+              field.value = '';
+              field.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """)
+        without = evaluate(cdp, view, """
+            (() => document.querySelectorAll('[data-row=pack]').length)()
+        """)
+        control(cdp, view, """
+            (() => {
+              const field = document.querySelector('[data-row=host] input');
+              field.value = %r;
+              field.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """ % base)
+        time.sleep(3)
+        back = wait_for(cdp, view, """
+            (() => document.querySelectorAll('[data-row=pack]').length)()
+        """, lambda v: v)
+        print(f"  with no host: {without} dictionaries; with one: {back}")
+        if without:
+            failures.append(f"{without} dictionaries were offered with no host set")
+        if not back:
+            failures.append("typing the host back offered nothing")
+
         # One site, rather than everywhere: switched off here, the page is bare, and the
         # extension is still on for everything else.
         control(cdp, view, """

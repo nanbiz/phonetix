@@ -3,6 +3,8 @@ package io.github.nanbiz.phonetix.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,31 +131,36 @@ fun Segmented(
     modifier: Modifier = Modifier,
     change: (String) -> Unit,
 ) {
-    Row(
+    Box(
         modifier
-            .clip(RoundedCornerShape(Tokens.Scale.radiusButton.dp))
             .border(
                 Tokens.Scale.borderWidth.dp,
                 Color(palette.border),
                 RoundedCornerShape(Tokens.Scale.radiusButton.dp),
-            ),
+            )
+            .clip(RoundedCornerShape(Tokens.Scale.radiusButton.dp)),
     ) {
-        for ((value, label) in choices) {
-            val on = value == chosen
-            Box(
-                Modifier
-                    .height((Tokens.Scale.buttonHeight - 8f).dp)
-                    .background(Color(if (on) palette.accent else palette.surface))
-                    .clickable { change(value) }
-                    .padding(horizontal = Tokens.Scale.space2.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label,
-                    color = Color(if (on) palette.accentInk else palette.inkMuted),
-                    fontSize = Tokens.Scale.fontSizeLabel.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+        // The choices scroll rather than clip: a language with six accents does not fit across
+        // a phone, and a control whose last choice is off the edge is a choice nobody can make.
+        // The frame stays put, because it is the shape of the control and not of its contents.
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            for ((value, label) in choices) {
+                val on = value == chosen
+                Box(
+                    Modifier
+                        .height((Tokens.Scale.buttonHeight - 8f).dp)
+                        .background(Color(if (on) palette.accent else palette.surface))
+                        .clickable { change(value) }
+                        .padding(horizontal = Tokens.Scale.space2.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = label,
+                        color = Color(if (on) palette.accentInk else palette.inkMuted),
+                        fontSize = Tokens.Scale.fontSizeLabel.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }

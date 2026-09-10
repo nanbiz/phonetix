@@ -117,6 +117,10 @@ def main():
                 pressable: pressable.length,
                 spans: text.length,
                 cursors: pressable
+                  // A field a reader types into carries the text cursor, which is what says
+                  // it can be typed into; everything else here is pressed rather than typed.
+                  .filter(el => !(el.tagName === 'INPUT'
+                    && ['text', 'url', 'search', 'email', 'number'].includes(el.type)))
                   .map(el => getComputedStyle(el).cursor)
                   .filter(c => c !== 'pointer' && c !== 'default'),
                 selectable: pressable

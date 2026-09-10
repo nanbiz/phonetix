@@ -30,6 +30,8 @@
     diagram?: string | null;
     /** A recording of a person saying one sound, where the table has one. */
     onPlaySymbol?: (url: string) => void;
+    /** Whether the card eases in, which is the reader's choice and off by default. */
+    eased?: boolean;
     /** A sound the reader asked about. */
     onSymbol?: (symbol: string) => void;
     onPlay?: () => void;
@@ -42,6 +44,7 @@
     accent = '',
     opened = null,
     diagram = null,
+    eased = false,
     onPlaySymbol,
     onSymbol,
     onPlay,
@@ -121,7 +124,7 @@
   );
 </script>
 
-<article class="card">
+<article class="card{eased ? ' eased' : ''}">
   <div class="card-handle"></div>
   <header class="card-head">
     <!-- The word the reader is on, whatever else the card could or could not find out. -->

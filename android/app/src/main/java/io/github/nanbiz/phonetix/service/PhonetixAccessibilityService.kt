@@ -2082,7 +2082,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             density = settings.density,
             narrow = settings.narrow,
             hideStress = settings.hideStress,
-            accent = settings.accent,
+            accent = settings.accentFor(source),
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
         for ((at, token) in told.withIndex()) {

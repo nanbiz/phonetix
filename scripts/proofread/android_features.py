@@ -957,7 +957,9 @@ def check_settings_screen(r, dev):
     # Short steps, and a dump after each. A long swipe scrolls a whole section past
     # between two dumps, and the section is then reported missing from a screen that
     # showed it perfectly well.
-    for _ in range(10):
+    # Enough steps to reach the end of it: the screen has grown - transcriptions, accents -
+    # and a sweep that stops halfway reports the sections below as missing.
+    for _ in range(18):
         shell("input", "swipe", "540", "1300", "540", "950", "400")
         time.sleep(1.2)
         more, more_dump = ui_text(dev)

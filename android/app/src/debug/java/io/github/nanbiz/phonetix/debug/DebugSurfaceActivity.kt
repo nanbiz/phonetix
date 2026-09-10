@@ -558,9 +558,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 )
             }
             if (i.hasExtra("accent")) {
-                // "none" rather than an empty string, as with the reading language above.
+                // "none" rather than an empty string, as with the reading language above. An
+                // accent belongs to a language, so the tag says which: "es-ar" is Spanish's.
                 val wanted = i.getStringExtra("accent").orEmpty()
+                val lang = i.getStringExtra("accentLang")
+                    ?: wanted.substringBefore('-').ifEmpty { "es" }
                 io.github.nanbiz.phonetix.core.SettingsStore.setAccent(
+                    lang,
                     if (wanted == "none") "" else wanted,
                 )
             }

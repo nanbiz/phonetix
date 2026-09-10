@@ -6,7 +6,7 @@
 // chose.
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
-import { allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
+import { accentFor, allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
 import { hide, inside, moveTo, show, showing } from './card';
 import { isPainted, paint, reveal, unpaint, unreveal, WORD, wordAt } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
@@ -149,7 +149,7 @@ async function draw(): Promise<void> {
         density: settings.density,
         narrow: settings.narrow,
         hideStress: settings.hideStress,
-        accent: settings.accent,
+        accent: accentFor(settings, source),
         seen: asked,
       },
     });
@@ -200,7 +200,7 @@ async function recorded(url: string): Promise<void> {
  * Web Audio playing bytes it was handed.
  */
 async function speak(word: string, lang: string): Promise<void> {
-  await play(await sendMessage('speak', { word, lang, accent: settings.accent }));
+  await play(await sendMessage('speak', { word, lang, accent: accentFor(settings, lang) }));
 }
 
 /** Play bytes through Web Audio, which is what a page's media policy cannot refuse. */
@@ -221,7 +221,7 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
     word: token.spelling,
     source,
     target: settings.target || source,
-    accent: settings.accent,
+    accent: accentFor(settings, source),
     // What the inline layer already knew: a spelling that is several words is decided by the
     // one before it, and the card must not ask a question the page has answered.
     before,
@@ -244,7 +244,8 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
     : answer;
   show(shown, element.getBoundingClientRect(), {
     recorded: Boolean(recording),
-    accent: settings.accent,
+    accent: accentFor(settings, source),
+    eased: settings.animations,
     onPlay: () => {
       if (recording) void recorded(commons(recording));
       // The accent's own voice where the reader chose one, since a synthesised word is
@@ -520,7 +521,7 @@ export async function session(): Promise<void> {
       was.target !== fresh.target ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||
-      was.accent !== fresh.accent ||
+      JSON.stringify(was.accents) !== JSON.stringify(fresh.accents) ||
       was.hideStress !== fresh.hideStress ||
       was.off.join() !== fresh.off.join()
     ) {

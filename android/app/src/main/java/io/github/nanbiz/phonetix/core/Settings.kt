@@ -33,8 +33,15 @@ data class Settings(
     val target: String = "",
     /** What is drawn over a word: "ipa", "gloss", "gloss+ipa" or "replace". */
     val layer: String = "gloss+ipa",
-    /** The accent to read in, where its difference from the standard is a rule. */
-    val accent: String = "",
+    /**
+     * Which accent to read each language in, as language tag to accent tag: en → en-us.
+     *
+     * Per language rather than one for everything, because an accent is only meaningful
+     * relative to a language: a screen in German has nothing to do with the reader's choice
+     * between British and American English, and one field for both meant choosing an accent
+     * for one language threw away the choice made for every other.
+     */
+    val accents: Map<String, String> = emptyMap(),
     /** Where the dictionaries come from. The reader's own, and nowhere in the source. */
     val packHost: String = "",
     /**
@@ -55,7 +62,10 @@ data class Settings(
     val narrow: Boolean = false,
     /** Leave the stress marks off the line over a word. The card always shows them. */
     val hideStress: Boolean = true,
-)
+) {
+    /** Which accent this language is read in, or none, which is how its dictionary lists it. */
+    fun accentFor(lang: String): String = accents[lang] ?: ""
+}
 
 /**
  * One store read by both the UI and the accessibility service. They run in the same
@@ -73,7 +83,7 @@ object SettingsStore {
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
-    private const val K_ACCENT = "accent"
+    private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
     private const val K_STRESS = "hide_stress"
 
@@ -97,7 +107,14 @@ object SettingsStore {
             layer = p.getString(K_LAYER, "gloss+ipa") ?: "gloss+ipa",
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
-            accent = p.getString(K_ACCENT, "") ?: "",
+            // Stored as one entry per language, because a set of strings is what preferences
+            // can hold and a map is what the rest of this asks for.
+            accents = (p.getStringSet(K_ACCENTS, emptySet()) ?: emptySet())
+                .mapNotNull { row ->
+                    val at = row.indexOf('=')
+                    if (at <= 0) null else row.take(at) to row.substring(at + 1)
+                }
+                .toMap(),
             narrow = p.getBoolean(K_NARROW, false),
             hideStress = p.getBoolean(K_STRESS, true),
         )
@@ -116,7 +133,7 @@ object SettingsStore {
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
-            ?.putString(K_ACCENT, next.accent)
+            ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
             ?.putBoolean(K_STRESS, next.hideStress)
             ?.apply()
@@ -130,7 +147,12 @@ object SettingsStore {
     fun setLayer(v: String) = update { it.copy(layer = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
-    fun setAccent(v: String) = update { it.copy(accent = v) }
+    /** Read one language in one accent, leaving the choice made for every other alone. */
+    fun setAccent(lang: String, accent: String) = update {
+        val next = it.accents.toMutableMap()
+        if (accent.isEmpty()) next.remove(lang) else next[lang] = accent
+        it.copy(accents = next)
+    }
     fun setNarrow(v: Boolean) = update { it.copy(narrow = v) }
     fun setHideStress(v: Boolean) = update { it.copy(hideStress = v) }
     fun toggleApp(pkg: String) = update {

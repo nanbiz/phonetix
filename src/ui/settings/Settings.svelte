@@ -9,10 +9,10 @@
   // Nothing here draws a control or lays out a row itself. The rows are Row, the screens are
   // Screen and the controls are the ones in src/ui/controls, drawn in the generated tokens the
   // card and the phone are drawn in, so this view and the rest of the product are one design.
-  import { accentsOf } from '@/data/accents';
+  import { ACCENTS, accentsOf } from '@/data/accents';
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
-  import type { Settings } from '@/settings';
+  import { accentFor, setAccent, type Settings } from '@/settings';
   import type { Offered } from '@/host/packs';
   import Heart from 'virtual:icons/pixelarticons/heart';
 
@@ -76,10 +76,26 @@
   let reading = $derived(settings.source || pageLang || '');
   // What the page is in decides which accents there are to choose between.
   let accents = $derived(accentsOf(reading));
-  let accentName = $derived(accents.find((row) => row.id === settings.accent)?.name ?? '');
+  /** Which accent this page's language is read in, which is the one worth showing. */
+  let chosen = $derived(accentFor(settings, reading));
+  let accentName = $derived(accents.find((row) => row.id === chosen)?.name ?? '');
   /** An accent with no per-word dictionary behind it is a rule applied to every word. Say so,
    *  rather than let it look like the same kind of thing as the others. */
-  let ruleBased = $derived(accents.find((row) => row.id === settings.accent)?.rule ?? false);
+  let ruleBased = $derived(accents.find((row) => row.id === chosen)?.rule ?? false);
+
+  // The accent for the language on screen is the one worth showing; the rest are a standing
+  // preference a reader sets once and rarely revisits, so they are a list under it rather than
+  // a screen of their own.
+  let elsewhere = $derived(
+    Object.entries(ACCENTS)
+      .filter(([lang, offered]) => lang !== reading && offered.length > 1)
+      .map(([lang, offered]) => ({
+        lang,
+        offered,
+        chosen: accentFor(settings, lang),
+      }))
+      .sort((a, b) => nameOf(a.lang).localeCompare(nameOf(b.lang)))
+  );
 
   const layers: { value: Layer; label: string }[] = [
     { value: 'off', label: 'nothing' },
@@ -203,21 +219,21 @@
     <!-- What the dictionary lists first, which is what most readers want and what a language
          with no accents to choose between gets anyway. -->
     <button
-      class="choice {settings.accent === '' ? 'on' : ''}"
+      class="choice {chosen === '' ? 'on' : ''}"
       data-accent=""
-      onclick={() => change('accent', '')}
+      onclick={() => change('accents', setAccent(settings, reading, ''))}
     >
       <span>As the dictionary gives it</span>
-      {#if settings.accent === ''}<span aria-hidden="true">✓</span>{/if}
+      {#if chosen === ''}<span aria-hidden="true">✓</span>{/if}
     </button>
     {#each accents as accent (accent.id)}
       <button
-        class="choice {settings.accent === accent.id ? 'on' : ''}"
+        class="choice {chosen === accent.id ? 'on' : ''}"
         data-accent={accent.id}
-        onclick={() => change('accent', accent.id)}
+        onclick={() => change('accents', setAccent(settings, reading, accent.id))}
       >
         <span>{accent.name}</span>
-        {#if settings.accent === accent.id}<span aria-hidden="true">✓</span>{/if}
+        {#if chosen === accent.id}<span aria-hidden="true">✓</span>{/if}
       </button>
     {/each}
     {#if ruleBased}
@@ -227,6 +243,30 @@
       </p>
     {/if}
   </div>
+
+  {#if elsewhere.length > 0}
+    <!-- Every other language that offers a choice, so setting one for a page does not throw
+         away the one already set for another. -->
+    <div class="rows">
+      {#each elsewhere as other (other.lang)}
+        <Row name={nameOf(other.lang)} row="accent-elsewhere" marks={{ 'data-lang': other.lang }}>
+          {#snippet control()}
+            <Picker
+              options={[
+                // Short, because the row already says which language it is about and the
+                // control is a menu rather than a sentence.
+                { value: '', label: 'dictionary' },
+                ...other.offered.map((it) => ({ value: it.id, label: it.name })),
+              ]}
+              chosen={other.chosen}
+              label="{nameOf(other.lang)} accent"
+              change={(value) => change('accents', setAccent(settings, other.lang, value))}
+            />
+          {/snippet}
+        </Row>
+      {/each}
+    </div>
+  {/if}
 </Screen>
 
 <Screen
@@ -236,7 +276,14 @@
   note="{held} of {offered} here"
   back={() => (view = 'main')}
 >
-  <Packs {packs} {fetching} {get} {forget} />
+  <Packs
+    {packs}
+    {fetching}
+    {get}
+    {forget}
+    host={settings.host}
+    onHost={(said) => change('host', said)}
+  />
 </Screen>
 
 <Screen name="more" on={view} title="How it reads" back={() => (view = 'main')}>
@@ -310,6 +357,30 @@
           label="animations"
           change={(on) => change('animations', on)}
         />
+      {/snippet}
+    </Row>
+  </div>
+
+  <!-- What actually answers a word, in the order it is asked. A reader deciding whether to
+       trust what a card says is deciding it on this, and the card's own pill names which of
+       these answered each time. -->
+  <div class="rows">
+    <Row name="What answers a word" row="how">
+      {#snippet wide()}
+        <ol class="steps">
+          <li>
+            <b>A dictionary</b>, where one is held for the language: entries a person wrote,
+            with the senses, the forms and how each is said.
+          </li>
+          <li>
+            <b>A translator</b>, for what no dictionary holds - a long compound, a phrase you
+            selected. It runs on this machine, and what it answers is marked as a guess.
+          </li>
+          <li>
+            <b>A synthesiser</b>, for how a word is said when no dictionary has it. Its
+            transcriptions carry its own mark, so they are never mistaken for a person's.
+          </li>
+        </ol>
       {/snippet}
     </Row>
   </div>

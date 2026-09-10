@@ -403,6 +403,11 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    Card (answer surface)
    ------------------------------------------------------------------ */
 .card { font-family: var(--font-ui); width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: var(--border-width) solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; }
+/* The card arriving, where the reader asked for movement. It is off by default and drawn in
+   place otherwise: a card that eases in is a card that is not yet readable, and a reader who
+   opens one on every other word is waiting for it each time. */
+@keyframes card-in { from { opacity: 0; transform: translateY(4px) scale(0.99); } to { opacity: 1; transform: none; } }
+.card.eased { animation: card-in var(--motion-dwell) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .card-handle { display: none; width: var(--handle-width); height: var(--handle-height); border-radius: var(--radius-bar); background: var(--color-border); margin: var(--space-2) auto 0; }
 .card-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
 /* The top row: the word as the page spells it, what it is being read as, where the answer came
@@ -494,6 +499,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .card-foot { border-top: var(--border-width) solid var(--color-border); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--font-size-label); color: var(--color-ink-faint); flex-wrap: wrap; }
 .card-foot .actions { display: flex; gap: var(--space-1); }
 .btn-text { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-accent); background: none; border: none; padding: var(--space-1) var(--space-2); border-radius: var(--radius-button); cursor: pointer; line-height: 1.4; }
+/* With a mark beside the word, which is how the dictionary rows say what pressing one does. */
+.btn-text { display: inline-flex; align-items: center; gap: var(--space-1); }
 .btn { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); height: var(--button-height); padding: 0 var(--space-4); border-radius: var(--radius-button); border: none; background: var(--color-accent); color: var(--color-accent-ink); cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); }
 .btn.secondary { background: var(--color-chip-bg); color: var(--color-ink); }
 .btn.danger { background: var(--color-danger-bg); color: var(--color-danger); }
@@ -616,6 +623,9 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
 .disclosure .chev { font-size: var(--font-size-ipa); color: var(--color-ink-faint); line-height: 1; }
 .disclosure.open { background: var(--color-surface-raised); }
 .field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--font-size-small); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-1) 0 var(--space-3); height: var(--button-height); overflow: hidden; }
+/* The same field where a reader actually types into it: the input carries the type, and the
+   frame around it is the row's. */
+.field input { flex: 1 1 auto; min-width: 0; font: inherit; color: inherit; background: none; border: none; outline: none; padding: 0; }
 .dim { opacity: 0.45; pointer-events: none; }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-accent-bg); color: var(--color-ink); font-size: var(--font-size-small); border-bottom: var(--border-width) solid var(--color-border); }
 /* The two switches at the top of the popup: whether this is on, and whether it is on here.
@@ -636,6 +646,11 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
 .frequency .f-name { font-weight: var(--weight-medium); }
 .frequency .f-says { background: var(--color-accent-bg); color: var(--color-accent); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* The heart and the version, which say who made this and which build a reader is looking at. */
+/* What answers a word, in the order it is asked: the one thing in the settings that is prose
+   rather than a control, and the ground a reader stands on when deciding what to trust. */
+.steps { margin: 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.steps li { padding-left: var(--space-1); }
+.steps b { color: var(--color-ink); font-weight: var(--weight-medium); }
 .made { display: flex; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .made .heart { color: var(--color-danger); display: inline-flex; }
 .made .version { color: var(--color-ink-faint); }

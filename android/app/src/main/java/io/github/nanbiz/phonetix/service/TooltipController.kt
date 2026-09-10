@@ -333,7 +333,8 @@ class TooltipController(
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
         val answer = Reading.lookUp(
-            box.word, source, settings.target.ifEmpty { source }, settings.accent, box.before,
+            box.word, source, settings.target.ifEmpty { source }, settings.accentFor(source),
+            box.before,
         )
             ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)
@@ -366,7 +367,7 @@ class TooltipController(
                 onSymbol = { symbol ->
                     opened.value = if (opened.value == symbol) null else symbol
                 },
-                accent = settings.accent,
+                accent = settings.accentFor(source),
                 opened = sound,
                 recorded = recorded.value != null,
                 onPlay = {
@@ -374,7 +375,7 @@ class TooltipController(
                     if (file != null) speaker.play(wikimediaFileUrl(file))
                     // In the voice the reader chose, which is the accent's where it has one of
                     // its own and the language's otherwise.
-                    else speaker.say(box.word, Accents.voiceOf(source, settings.accent))
+                    else speaker.say(box.word, Accents.voiceOf(source, settings.accentFor(source)))
                 },
                 onPlaySymbol = { sound?.audio?.let { speaker.play(wikimediaFileUrl(it)) } },
             )

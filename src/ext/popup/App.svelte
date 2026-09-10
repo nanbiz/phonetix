@@ -60,7 +60,11 @@
 
   function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
     if (settings) settings = { ...settings, [name]: value };
-    void set(name, value);
+    void set(name, value).then(() => {
+      // A reader who has just said where their dictionaries live means now: without this the
+      // list they were typing the address for stays empty until the popup is opened again.
+      if (name === 'host') return load();
+    });
   }
 
   async function get(lang: string) {

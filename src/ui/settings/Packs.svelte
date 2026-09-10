@@ -9,17 +9,21 @@
 
   import { LANGUAGES } from '@/data/languages';
   import type { Offered } from '@/host/packs';
+  import Field from '@/ui/controls/Field.svelte';
   import Row from './Row.svelte';
 
   interface Props {
     packs: { held: string[]; open: string[]; offered: Offered[] };
+    /** Where the dictionaries come from, which is the reader's to decide. */
+    host?: string;
+    onHost?: (host: string) => void;
     /** Which language is being fetched right now, so its row says so rather than looking dead. */
     fetching?: string | null;
     get?: (lang: string) => void;
     forget?: (lang: string) => void;
   }
 
-  let { packs, fetching = null, get, forget }: Props = $props();
+  let { packs, host = '', onHost, fetching = null, get, forget }: Props = $props();
 
   /** A size a reader can weigh, since the whole point of the row is deciding whether to
    *  spend it. */
@@ -31,17 +35,25 @@
 </script>
 
 <div class="rows">
-  {#if packs.offered.length === 0}
-    <!-- The list comes from wherever the reader said their dictionaries live, and that is
-         theirs to set: an extension that went looking on its own would be an extension
-         deciding who to talk to. -->
-    <div class="row">
-      <span class="r-sub r-wide">
-        Nowhere to fetch them from yet. Where a reader's dictionaries come from is a setting,
-        because it decides who this talks to.
-      </span>
-    </div>
-  {/if}
+  <!-- Where they come from, which is the reader's to decide and appears nowhere in the source:
+       an extension that went looking on its own would be an extension deciding who to talk to. -->
+  <Row
+    name="Where they come from"
+    row="host"
+    about={host
+      ? 'Fetched once and kept on this machine, so a dictionary works on a train.'
+      : 'Nothing is fetched until this is set.'}
+  >
+    {#snippet wide()}
+      <Field
+        value={host}
+        kind="url"
+        label="where the dictionaries come from"
+        placeholder="https://…"
+        change={(said) => onHost?.(said)}
+      />
+    {/snippet}
+  </Row>
   {#each packs.offered as pack (pack.lang)}
     <Row
       name={LANGUAGES[pack.lang]?.english ?? pack.lang}

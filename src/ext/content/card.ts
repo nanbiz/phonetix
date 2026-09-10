@@ -73,6 +73,8 @@ export interface CardActions {
   recorded?: boolean;
   /** The accent this language is being read in, which the card names beside the word. */
   accent?: string;
+  /** Whether the card eases in rather than appearing in place. */
+  eased?: boolean;
   /** Say the word the card is about. */
   onPlay?: () => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
@@ -91,7 +93,7 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   const { frame: box } = build();
   const key = `${answer.spelling}:${answer.state}:${actions.recorded ?? false}:${
     actions.accent ?? ''
-  }`;
+  }:${actions.eased ?? false}`;
   if (drawn && about === key) {
     place(at);
     return;
@@ -104,6 +106,7 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
       answer,
       recorded: actions.recorded ?? false,
       accent: actions.accent ?? '',
+      eased: actions.eased ?? false,
       diagram: actions.diagram,
       onPlay: actions.onPlay,
       onPlayUrl: actions.onPlayUrl,

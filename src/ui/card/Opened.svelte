@@ -16,6 +16,8 @@
     accent?: string;
     /** A picture of the mouth making a sound, fetched by the host that can reach it. */
     diagram?: (file: string) => Promise<string>;
+    /** Whether the card eases in, which is the reader's choice. */
+    eased?: boolean;
     onPlay?: () => void;
     onPlayUrl?: (url: string) => void;
     onOpen?: (url: string) => void;
@@ -23,8 +25,17 @@
     onSymbol?: (symbol: string | null) => void;
   }
 
-  let { answer, recorded = false, accent = '', diagram, onPlay, onPlayUrl, onOpen, onSymbol }:
-    Props = $props();
+  let {
+    answer,
+    recorded = false,
+    accent = '',
+    diagram,
+    eased = false,
+    onPlay,
+    onPlayUrl,
+    onOpen,
+    onSymbol,
+  }: Props = $props();
 
   let opened = $state<string | null>(null);
   // The first sound of the word until the reader picks another: the line is there either way,
@@ -63,6 +74,7 @@
   {answer}
   {recorded}
   {accent}
+  {eased}
   opened={sound}
   diagram={picture}
   onSymbol={ask}

@@ -6,6 +6,11 @@
 
 /* Card (answer surface) */
 .card { font-family: var(--font-ui); width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: var(--border-width) solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; }
+/* The card arriving, where the reader asked for movement. It is off by default and drawn in
+   place otherwise: a card that eases in is a card that is not yet readable, and a reader who
+   opens one on every other word is waiting for it each time. */
+@keyframes card-in { from { opacity: 0; transform: translateY(4px) scale(0.99); } to { opacity: 1; transform: none; } }
+.card.eased { animation: card-in var(--motion-dwell) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .card-handle { display: none; width: var(--handle-width); height: var(--handle-height); border-radius: var(--radius-bar); background: var(--color-border); margin: var(--space-2) auto 0; }
 .card-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
 /* The top row: the word as the page spells it, what it is being read as, where the answer came
@@ -97,6 +102,8 @@
 .card-foot { border-top: var(--border-width) solid var(--color-border); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--font-size-label); color: var(--color-ink-faint); flex-wrap: wrap; }
 .card-foot .actions { display: flex; gap: var(--space-1); }
 .btn-text { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-accent); background: none; border: none; padding: var(--space-1) var(--space-2); border-radius: var(--radius-button); cursor: pointer; line-height: 1.4; }
+/* With a mark beside the word, which is how the dictionary rows say what pressing one does. */
+.btn-text { display: inline-flex; align-items: center; gap: var(--space-1); }
 .btn { font-family: var(--font-ui); font-size: var(--font-size-small); font-weight: var(--weight-medium); height: var(--button-height); padding: 0 var(--space-4); border-radius: var(--radius-button); border: none; background: var(--color-accent); color: var(--color-accent-ink); cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); }
 .btn.secondary { background: var(--color-chip-bg); color: var(--color-ink); }
 .btn.danger { background: var(--color-danger-bg); color: var(--color-danger); }

@@ -107,6 +107,7 @@ fun HomeScreen(
 
         ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
         TranscriptionsCard(settings = settings)
+        AccentsCard(settings = settings)
         DictionariesCard(settings = settings)
         LensCard(on = settings.lens, onLens = onLens)
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
@@ -369,6 +370,51 @@ private fun TranscriptionsCard(settings: Settings) {
                 )
             },
         )
+    }
+}
+
+/**
+ * Which accent each language is read in.
+ *
+ * Only the languages that really offer a choice - a voice that exists, or a rule that holds
+ * for a whole vocabulary - because a list of accents that all sound the same is a list of
+ * promises. Per language, since an accent means nothing except relative to one, and until now
+ * the phone had no way to choose one at all while the extension did.
+ */
+@Composable
+private fun AccentsCard(settings: Settings) {
+    val offered = remember {
+        io.github.nanbiz.phonetix.core.Accents.all
+            .filter { (_, list) -> list.size > 1 }
+            .toList()
+            .sortedBy { io.github.nanbiz.phonetix.core.Languages.english(it.first) }
+    }
+    if (offered.isEmpty()) return
+    SectionCard(title = "Accents") {
+        val colours = palette()
+        for ((lang, accents) in offered) {
+            val chosen = settings.accentFor(lang)
+            SettingRow(
+                name = io.github.nanbiz.phonetix.core.Languages.english(lang),
+                palette = colours,
+                about = accents.firstOrNull { it.id == chosen }?.let {
+                    if (it.rule) {
+                        "${it.name} - derived from its pronunciation rules, applied to every word"
+                    } else {
+                        it.name
+                    }
+                } ?: "as the dictionary gives it",
+                wide = {
+                    Segmented(
+                        choices = listOf("" to "dictionary") +
+                            accents.map { it.id to it.name },
+                        chosen = chosen,
+                        palette = colours,
+                        change = { SettingsStore.setAccent(lang, it) },
+                    )
+                },
+            )
+        }
     }
 }
 
