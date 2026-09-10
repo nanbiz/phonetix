@@ -16,6 +16,9 @@ data class Answer(
     val spelling: String,
     /** The dictionary form, where that is a different word from the one tapped. */
     val lemma: String?,
+    /** What form the spelling is, where the dump named it: "plural", "past participle". The
+     *  lemma alone does not say it, and the relation is what a reader is trying to learn. */
+    val form: String?,
     val pos: String?,
     val ipa: List<String>,
     /** The first transcription, symbol by symbol: the card offers each sound on its own and
@@ -97,6 +100,7 @@ data class Answer(
             state = State.IpaOnly,
             spelling = spelling,
             lemma = null,
+            form = null,
             pos = null,
             ipa = if (ipa.isBlank()) emptyList() else listOf(ipa),
             // The sounds of it, from the core: this side has no table of its own.
@@ -123,6 +127,7 @@ data class Answer(
                 state = State.of(o.optString("state")),
                 spelling = o.optString("spelling"),
                 lemma = o.optString("lemma").ifEmpty { null }.takeIf { it != "null" },
+                form = o.optString("form").ifEmpty { null }.takeIf { it != "null" },
                 pos = o.optString("pos").ifEmpty { null }.takeIf { it != "null" },
                 ipa = list("ipa"),
                 symbols = (o.optJSONArray("symbols") ?: JSONArray()).let { array ->

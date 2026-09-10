@@ -212,7 +212,11 @@ private fun Grammar(answer: Answer, palette: Tokens.Palette, report: Reporter?) 
     val parts = buildList {
         answer.lemma?.let { add(it) }
         answer.pos?.let { add(it) }
-        if (answer.lemma != null) add("form: ${answer.spelling}")
+        // Which form, where the dump named it: "plural of perro" says the relation, and the
+        // spelling on its own leaves a reader to work out what they are looking at.
+        if (answer.lemma != null) {
+            add(answer.form?.let { "$it of ${answer.lemma}" } ?: "form: ${answer.spelling}")
+        }
     }
     if (parts.isEmpty()) return
     val line = parts.joinToString("  ·  ")

@@ -26,6 +26,20 @@ pub struct Entry {
     pub tags: Vec<String>,
     pub ipa: Vec<String>,
     pub senses: Vec<Sense>,
+    /// The inflected spellings that reach this entry, and what each of them is.
+    ///
+    /// The spellings are in the key index already; what is here is the label the dump gave
+    /// them - "plural", "past participle". A reader who tapped a form is owed which form it
+    /// is, and the lemma alone does not say: "ging" is not simply "gehen".
+    pub forms: Vec<Form>,
+}
+
+/// One inflected spelling of an entry, and what the dump calls it.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct Form {
+    pub spelling: String,
+    /// What kind of form it is, empty where the dump did not say.
+    pub label: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -303,12 +317,22 @@ fn read_entry(bytes: &[u8], at: &mut usize) -> Option<Entry> {
             example,
         });
     }
+    // The forms, each with what the dump calls it. Written after the senses so that a pack of
+    // the previous format reads as an entry with none rather than as an entry misread.
+    let count = varint::get(bytes, at)?;
+    let mut forms = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        let spelling = varint::get_str(bytes, at)?;
+        let label = varint::get_str(bytes, at)?;
+        forms.push(Form { spelling, label });
+    }
     Some(Entry {
         lemma,
         pos,
         tags,
         ipa,
         senses: out,
+        forms,
     })
 }
 

@@ -50,6 +50,9 @@ export interface Answer {
   spelling: string;
   /** The dictionary form, where that is a different word from the one on the page. */
   lemma: string | null;
+  /** What form the spelling is, where the dump named it: "plural", "past participle". The
+   *  lemma alone does not say, and the relation is what a reader is trying to learn. */
+  form: string | null;
   pos: string | null;
   ipa: string[];
   /** The first transcription, symbol by symbol: the card offers each sound on its own and
@@ -101,6 +104,7 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
     state: 'IpaOnly',
     spelling,
     lemma: null,
+    form: null,
     pos: null,
     ipa: ipa.trim() === '' ? [] : [ipa],
     symbols: [],

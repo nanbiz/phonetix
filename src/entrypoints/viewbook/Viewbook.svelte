@@ -15,6 +15,7 @@
       state: 'Entry',
       spelling: 'perro',
       lemma: null,
+      form: null,
       pos: 'noun',
       ipa: ['ˈpe.ro'],
       symbols: [],

@@ -22,6 +22,7 @@ fn a_pack() -> Vec<u8> {
                 ipa: vec![ipa.to_string()],
                 tags: Vec::new(),
                 senses: Vec::new(),
+                forms: Vec::new(),
             },
             &[],
         )

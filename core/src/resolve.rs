@@ -22,6 +22,11 @@ pub struct Answer {
     pub spelling: String,
     /// The dictionary form it belongs to, where that is a different word.
     pub lemma: Option<String>,
+    /// What form the spelling is, where the dump named it: "plural", "past participle".
+    ///
+    /// The lemma alone does not say. A reader who met "ging" is owed that it is the past of
+    /// "gehen" rather than being handed the two words and left to work out the relation.
+    pub form: Option<String>,
     pub pos: Option<String>,
     /// How it is said, as the pack records it.
     pub ipa: Vec<String>,
@@ -64,6 +69,7 @@ impl Answer {
             state,
             spelling: spelling.to_string(),
             lemma: None,
+            form: None,
             pos: None,
             ipa: Vec::new(),
             symbols: Vec::new(),
@@ -377,6 +383,13 @@ fn finish<D: AsRef<[u8]>>(
         } else {
             Some(entry.lemma.clone())
         },
+        // Only for the spelling that was actually met, and only where the dump named it.
+        form: entry
+            .forms
+            .iter()
+            .find(|form| same_word(&form.spelling, spelling))
+            .map(|form| form.label.clone())
+            .filter(|label| !label.is_empty()),
         pos: if entry.pos.is_empty() {
             None
         } else {

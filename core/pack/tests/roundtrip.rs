@@ -24,6 +24,7 @@ fn word(lemma: &str, pos: &str, ipa: &str, glosses: &[&str]) -> Entry {
         tags: Vec::new(),
         ipa: vec![ipa.to_string()],
         senses: glosses.iter().map(|g| sense(g)).collect(),
+        forms: Vec::new(),
     }
 }
 

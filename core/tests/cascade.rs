@@ -26,6 +26,7 @@ fn word(lemma: &str, pos: &str, ipa: &str, glosses: &[&str]) -> Entry {
         tags: Vec::new(),
         ipa: vec![ipa.to_string()],
         senses: glosses.iter().map(|g| sense(g)).collect(),
+        forms: Vec::new(),
     }
 }
 
@@ -306,6 +307,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
                 marks: Vec::new(),
                 example: Some("El perro ladra.".into()),
             }],
+            forms: Vec::new(),
         },
         &[] as &[&str],
     )
@@ -408,6 +410,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
                 ipa: vec![ipa.into()],
                 tags: Vec::new(),
                 senses: Vec::new(),
+                forms: Vec::new(),
             },
             &[],
         )
@@ -425,6 +428,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
                     ipa: vec![ipa.into()],
                     tags: Vec::new(),
                     senses: Vec::new(),
+                    forms: Vec::new(),
                 },
                 &[],
             )
@@ -494,6 +498,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             ipa: vec!["ˈwɔːtɐ".into()],
             tags: Vec::new(),
             senses: Vec::new(),
+            forms: Vec::new(),
         },
         &[],
     )
@@ -584,4 +589,46 @@ fn a_language_that_capitalises_its_nouns_keeps_the_distinction() {
     let got = look_up("Bank", &lang("de"), &lang("de"), &open);
     assert_eq!(got.ipa, vec!["baŋk"]);
     assert_eq!(got.lemma, None, "the noun as the language writes it");
+}
+
+/// A reader who tapped an inflected spelling is told which form it is.
+///
+/// The lemma alone does not say it. "perros" and "perro" are two words on a card that gives
+/// only the second, and a reader learning the language is left to work out the relation - which
+/// is the thing they are trying to learn. The dump names the form and the pack now carries the
+/// name, so the card can say it.
+#[test]
+fn a_form_says_what_form_it_is() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add::<&str>(
+        Entry {
+            lemma: "perro".into(),
+            pos: "noun".into(),
+            tags: Vec::new(),
+            ipa: vec!["ˈpe.ro".into()],
+            senses: vec![sense("dog")],
+            forms: vec![lexpack::Form {
+                spelling: "perros".into(),
+                label: "plural".into(),
+            }],
+        },
+        &[],
+    )
+    .expect("the pack takes it");
+    let pack = Pack::open(pack.finish().expect("written")).expect("opens");
+    let open = Open {
+        source: Some(&pack),
+        target: Some(&pack),
+        ..Default::default()
+    };
+
+    let form = look_up("perros", &lang("es"), &lang("es"), &open);
+    assert_eq!(form.state, AnswerState::Mono);
+    assert_eq!(form.lemma.as_deref(), Some("perro"));
+    assert_eq!(form.form.as_deref(), Some("plural"));
+
+    // And the lemma itself is not a form of anything.
+    let lemma = look_up("perro", &lang("es"), &lang("es"), &open);
+    assert_eq!(lemma.lemma, None);
+    assert_eq!(lemma.form, None);
 }

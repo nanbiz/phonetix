@@ -124,7 +124,13 @@
         <div class="gram">
           {#if answer.lemma}<span class="lemma">{answer.lemma}</span>{/if}
           {#if answer.pos}<span class="chip">{answer.pos}</span>{/if}
-          {#if answer.lemma}<span class="g-sub">form: {answer.spelling}</span>{/if}
+          <!-- Which form, where the dump named it: "plural of perro" says the relation, and
+               the spelling alone leaves a reader to work it out. -->
+          {#if answer.lemma}
+            <span class="g-sub">
+              {answer.form ? `${answer.form} of ${answer.lemma}` : `form: ${answer.spelling}`}
+            </span>
+          {/if}
         </div>
       {/if}
     </header>

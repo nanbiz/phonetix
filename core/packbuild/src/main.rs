@@ -134,6 +134,9 @@ fn pronunciations(lang: &str, from: &str, to: &str) {
             ipa: vec![ipa.clone()],
             tags: Vec::new(),
             senses: Vec::new(),
+            // A pronunciation pack is a word and how it is said; the dump's inflection tables
+            // are the lexicon's business and not this one's.
+            forms: Vec::new(),
         };
         if pack.add::<&str>(entry, &[]).is_ok() {
             taken += 1;

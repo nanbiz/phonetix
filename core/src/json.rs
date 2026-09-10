@@ -14,12 +14,13 @@ use crate::resolve::Answer;
 pub fn of(answer: &Answer) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
-\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\"readings\":{},\
-\"provenance\":{},\"source\":{},\"target\":{}}}",
+\"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
+\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{}}}",
         answer.state,
         quoted(&answer.spelling),
         maybe(&answer.lemma),
         maybe(&answer.pos),
+        maybe(&answer.form),
         strings(&answer.ipa),
         symbols_of(&answer.symbols),
         strings(&answer.says),
@@ -210,6 +211,7 @@ mod tests {
             state: AnswerState::Entry,
             spelling: "perro".into(),
             lemma: None,
+            form: None,
             pos: Some("noun".into()),
             ipa: vec!["ˈpe.ro".into()],
             symbols: crate::symbols::explain("ˈpe.ro"),

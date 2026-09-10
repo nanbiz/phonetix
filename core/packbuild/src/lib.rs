@@ -82,8 +82,9 @@ pub fn read_line(line: &str, lang: &str, skipped: &mut Skipped) -> Option<Read> 
             tags: strings(value.get("tags")),
             ipa,
             senses,
+            forms: forms(&value, word),
         },
-        forms: forms(&value, word),
+        forms: Vec::new(),
     })
 }
 
@@ -151,8 +152,8 @@ fn senses(value: &Value) -> Vec<Sense> {
 /// A form the dump gives without a spelling of its own, or one that merely repeats the lemma,
 /// reaches it already. Duplicates are dropped here rather than at the pack, which refuses them
 /// as an error.
-fn forms(value: &Value, word: &str) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
+fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
+    let mut out: Vec<lexpack::Form> = Vec::new();
     for form in value
         .get("forms")
         .and_then(|v| v.as_array())
@@ -174,8 +175,19 @@ fn forms(value: &Value, word: &str) -> Vec<String> {
         }) {
             continue;
         }
-        if !out.iter().any(|had| had == spelling) {
-            out.push(spelling.to_string());
+        if !out.iter().any(|had| had.spelling == spelling) {
+            // What the dump calls it, as a reader would say it: "plural", "past participle".
+            // Several tags joined, since a form is regularly more than one thing at once, and
+            // nothing where the dump gave none.
+            let label = strings(form.get("tags"))
+                .into_iter()
+                .filter(|tag| tag != "canonical" && tag != "inflection-template")
+                .collect::<Vec<_>>()
+                .join(" ");
+            out.push(lexpack::Form {
+                spelling: spelling.to_string(),
+                label,
+            });
         }
     }
     out
@@ -225,7 +237,14 @@ mod tests {
         );
         assert_eq!(read.entry.senses[1].gloss, "a despicable person");
         // The lemma reaches itself, a table header is not a word, and a form is not repeated.
-        assert_eq!(read.forms, vec!["perros"]);
+        // The form carries what the dump calls it, so a card can say "plural of perro".
+        assert_eq!(
+            read.entry.forms,
+            vec![lexpack::Form {
+                spelling: "perros".into(),
+                label: "plural".into(),
+            }]
+        );
         assert_eq!(skipped, Skipped::default());
     }
 

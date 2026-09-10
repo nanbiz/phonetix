@@ -15,7 +15,7 @@ use std::collections::HashMap;
 pub mod varint;
 
 mod reader;
-pub use reader::{Entry, Pack, PackError, Sense};
+pub use reader::{Entry, Form, Pack, PackError, Sense};
 
 #[cfg(feature = "write")]
 mod writer;
@@ -27,7 +27,7 @@ pub const MAGIC: &[u8; 8] = b"LEXPACK\x01";
 
 /// The format itself, not the data in it. A reader refuses a version it was not written
 /// against, and packs are rebuilt and re-released rather than migrated on a device.
-pub const FORMAT: u32 = 2;
+pub const FORMAT: u32 = 3;
 
 /// How many entries share one compressed block.
 ///

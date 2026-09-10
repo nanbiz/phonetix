@@ -43,10 +43,13 @@ impl Builder {
     ///
     /// The gloss index is filled here rather than in a pass of its own, because every term of
     /// every sense is wanted and the sense is in hand.
-    pub fn add<S: AsRef<str>>(&mut self, entry: Entry, forms: &[S]) -> Result<u32, WriteError> {
+    pub fn add<S: AsRef<str>>(&mut self, entry: Entry, extra: &[S]) -> Result<u32, WriteError> {
         let which = self.entries.len() as u32;
-        let spellings =
-            std::iter::once(entry.lemma.as_str()).chain(forms.iter().map(|f| f.as_ref()));
+        // The entry's own forms, and anything the caller adds beyond them. A form is a
+        // spelling that reaches this entry whether or not the dump named what it is.
+        let spellings = std::iter::once(entry.lemma.as_str())
+            .chain(entry.forms.iter().map(|f| f.spelling.as_str()))
+            .chain(extra.iter().map(|f| f.as_ref()));
         for spelling in spellings {
             let reached = self.keys.entry(spelling.to_string()).or_default();
             // A form listed twice for the same entry is the dump repeating itself, not a
@@ -212,6 +215,11 @@ fn write_entry(out: &mut Vec<u8>, entry: &Entry) {
             }
             None => varint::put(out, 0),
         }
+    }
+    varint::put(out, entry.forms.len() as u64);
+    for form in &entry.forms {
+        varint::put_str(out, &form.spelling);
+        varint::put_str(out, &form.label);
     }
 }
 
