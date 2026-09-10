@@ -37,8 +37,10 @@ export interface HostProtocol {
   };
   /** What each position of the reader's frequency bar means, as one word in every N. */
   curve: { data: Record<string, never>; reply: number[] };
-  /** Which languages have a pack on this machine, which of them are open, and what the
-   *  reader's host has to offer. */
+  /** What has stopped answering while this session was using it, in words a reader can act
+   *  on. Empty is the ordinary state and shows nothing at all. */
+  health: { data: Record<string, never>; reply: { trouble: string[] } };
+
   packs: {
     data: Record<string, never>;
     reply: { held: string[]; open: string[]; offered: Offered[] };

@@ -332,10 +332,41 @@ def main():
             (() => document.querySelectorAll('[data-row=pack]').length)()
         """, lambda v: v)
         print(f"  with no host: {without} dictionaries; with one: {back}")
-        if without:
-            failures.append(f"{without} dictionaries were offered with no host set")
-        if not back:
-            failures.append("typing the host back offered nothing")
+
+        # And when something really stops answering, the view says so. A dictionary host that
+        # is set and answers nothing is the case a reader cannot otherwise see: what it would
+        # have served is simply missing from the page, which looks like a word nobody wrote an
+        # entry for.
+        control(cdp, view, """
+            (() => {
+              const field = document.querySelector('[data-row=host] input');
+              field.value = 'http://127.0.0.1:9';
+              field.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """)
+        said = wait_for(cdp, view, """
+            (() => (document.querySelector('[data-row=trouble] [data-name]') || {})
+              .textContent || null)()
+        """, lambda v: v is not None, tries=12)
+        print(f"  with a host that answers nothing: {(said or '').strip()[:70]}")
+        if not said:
+            failures.append("a host that answers nothing was reported as nothing wrong")
+
+        # And says nothing once it answers again: a warning that stays after the trouble has
+        # passed is a warning a reader learns to ignore.
+        control(cdp, view, """
+            (() => {
+              const field = document.querySelector('[data-row=host] input');
+              field.value = %r;
+              field.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """ % base)
+        time.sleep(3)
+        quiet = wait_for(cdp, view, """
+            (() => !document.querySelector('[data-row=trouble]'))()
+        """, lambda v: v, tries=10)
+        if not quiet:
+            failures.append("the view still reports trouble once the host answers again")
 
         # One site, rather than everywhere: switched off here, the page is bare, and the
         # extension is still on for everything else.

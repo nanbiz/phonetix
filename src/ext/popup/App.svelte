@@ -24,6 +24,8 @@
   let pageLang = $state('');
   /** The site's own mark, which the browser has already fetched for the tab. */
   let siteIcon = $state('');
+  /** What the host says is not working, which is nothing at all when everything answers. */
+  let trouble = $state<string[]>([]);
 
   /** This extension's mark and the build a reader is looking at, from the manifest. */
   const icon = chrome.runtime.getURL('icon/48.png');
@@ -56,6 +58,11 @@
     // view that decided either of them itself would be a second opinion.
     curve = await sendMessage('curve', {}).catch(() => []);
     packs = await sendMessage('packs', {}).catch(() => ({ held: [], open: [], offered: [] }));
+    // Asked of the host, because the host is where the engines are: a view that decided this
+    // itself would be reporting on a copy of them that does not exist.
+    trouble = await sendMessage('health', {})
+      .then((said) => said.trouble)
+      .catch((e) => [`the host did not answer: ${e}`]);
   }
 
   function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
@@ -100,6 +107,7 @@
       {icon}
       {siteIcon}
       {version}
+      {trouble}
       onSite={(on) => {
         if (settings) void setSite(settings, site, on).then(load);
       }}

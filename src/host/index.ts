@@ -8,6 +8,7 @@ import {
   readScreen, readWiktionary, symbolsOf, type Said,
 } from '@/core';
 import type { Batch } from '@/core/tokens';
+import { answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { forget, get, held, offered, open } from './packs';
@@ -48,15 +49,27 @@ export function host(): void {
 
   onMessage('curve', async () => curve());
 
+  // What has stopped answering. Recorded as it happens rather than probed here: asking each
+  // engine whether it is alive means waking it and running a word through it, which is how a
+  // health check becomes the thing that breaks the health it reports on.
+  onMessage('health', async () => ({ trouble: recent() }));
+
   onMessage('packs', async () => ({
     held: await held(),
     open: await openLanguages(),
     // What is on offer is asked for rather than remembered: a reader who changed where their
     // dictionaries come from means it from that moment.
-    offered: await offered().catch((e) => {
-      console.warn('[Phonetix] No list of packs:', e);
-      return [];
-    }),
+    offered: await offered().then(
+      (list) => {
+        answered('the dictionary host');
+        return list;
+      },
+      (e) => {
+        console.warn('[Phonetix] No list of packs:', e);
+        noted('the dictionary host', 'cannot be reached');
+        return [];
+      }
+    ),
   }));
 
   onMessage('getPack', async ({ data }) => {
@@ -114,9 +127,12 @@ export function host(): void {
 
   onMessage('speak', async ({ data }) => {
     try {
-      return await audio(voiceOf(data.lang, data.accent ?? ''), data.word);
+      const bytes = await audio(voiceOf(data.lang, data.accent ?? ''), data.word);
+      answered('the synthesiser');
+      return bytes;
     } catch (e) {
       console.warn(`[Phonetix] Nothing said ${data.word}:`, e);
+      noted('the synthesiser', 'could not say a word');
       return [];
     }
   });
@@ -170,8 +186,10 @@ async function said(batch: Batch, lang: string): Promise<Batch> {
   for (const [voice, words] of byLang) {
     try {
       spoken.set(voice, await ipa(voice, words));
+      answered('the synthesiser');
     } catch (e) {
       console.warn(`[Phonetix] The ${voice} voice did not answer:`, e);
+      noted('the synthesiser', 'is not answering');
     }
   }
   const results = wanted
@@ -218,8 +236,10 @@ async function meant(batch: Batch, source: string, target: string): Promise<Batc
     try {
       const answers = await guessed(from, target, words);
       guesses.set(from, Object.fromEntries(words.map((word, at) => [word, answers[at] ?? ''])));
+      answered('the translator');
     } catch (e) {
       console.warn(`[Phonetix] Nothing translated ${from} to ${target}:`, e);
+      noted('the translator', 'is not answering');
     }
   }
   const results = wanted

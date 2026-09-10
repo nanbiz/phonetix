@@ -26,6 +26,7 @@
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
   import Switchboard from './Switchboard.svelte';
+  import Trouble from './Trouble.svelte';
 
   interface Props {
     settings: Settings;
@@ -50,6 +51,8 @@
     siteIcon?: string;
     /** Which build this is, so a reader can say what they are looking at. */
     version?: string;
+    /** What the host says is not working, which is nothing at all when everything answers. */
+    trouble?: string[];
   }
 
   let {
@@ -66,6 +69,7 @@
     icon = '',
     siteIcon = '',
     version = '',
+    trouble = [],
   }: Props = $props();
 
   /** Which screen the reader is on. */
@@ -137,6 +141,8 @@
     onSite={(on) => onSite?.(on)}
   />
 
+  <Trouble {trouble} />
+
   <!-- What this page is being read as, and into what. Everything below is a choice about
        that, and a reader whose page was read as the wrong language has no other way to find
        out why the answers are nonsense. -->
@@ -190,9 +196,11 @@
   <NavRow
     name="Dictionaries"
     row="dictionaries"
-    about={offered === 0
-      ? 'no source for them yet'
-      : `${held} of ${offered} here, ${packs.open.length} open`}
+    about={offered > 0
+      ? `${held} of ${offered} here, ${packs.open.length} open`
+      : settings.host
+        ? `nothing on offer at ${settings.host}`
+        : 'no source for them yet'}
     open={() => (view = 'packs')}
   />
 
