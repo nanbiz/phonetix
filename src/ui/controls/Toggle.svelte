@@ -9,15 +9,17 @@
     on: boolean;
     /** What it switches, for a reader who cannot see the row it sits in. */
     label: string;
+    /** Larger, for the one switch a reader opens the popup to find. */
+    big?: boolean;
     change: (on: boolean) => void;
   }
 
-  let { on, label, change }: Props = $props();
+  let { on, label, big = false, change }: Props = $props();
 </script>
 
 <input
   type="checkbox"
-  class="toggle"
+  class="toggle{big ? ' big' : ''}"
   aria-label={label}
   checked={on}
   onchange={(event) => change((event.currentTarget as HTMLInputElement).checked)}

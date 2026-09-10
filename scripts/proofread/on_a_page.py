@@ -54,7 +54,11 @@ PAGE = (
     "<p id='prose'>" + SENTENCE + "</p>"
     "<pre id='code'>const perro = 1;</pre>"
     "<nav><a href='#'>perro</a></nav>"
-    "</main></body></html>"
+    "</main>"
+    # Somewhere to scroll to, and nothing in it: a card is anchored to a word, and whether it
+    # goes with that word when the page moves cannot be asked of a page that cannot move.
+    "<div id='room' style='height: 1200px'></div>"
+    "</body></html>"
 ).encode()
 
 
@@ -358,6 +362,82 @@ def main():
             if sound["height"] != before:
                 failures.append(
                     f"the card changed height when a sound was read: {before} -> {sound['height']}")
+
+        # The card is a thing to walk into. Between the word and the card there is a gap the
+        # pointer has to cross, and a card that closed the moment the cursor left the word was
+        # a card nobody could reach: nothing on it could be pressed, read to the end, or
+        # copied out.
+        cdp.send("Input.dispatchMouseEvent", {
+            "type": "mouseMoved", "x": spot["x"], "y": spot["y"] - 40,
+        }, session=page)
+        time.sleep(0.15)
+        reachable = evaluate(cdp, page, """
+            (() => !!(document.getElementById('phonetix-card-host')
+              || {}).shadowRoot?.querySelector('.card'))()
+        """)
+        print(f"  the card is still there a moment after the cursor left: {reachable}")
+        if not reachable:
+            failures.append("the card closed the instant the cursor left the word")
+
+        # And it goes with its word when the page scrolls under it, rather than staying where
+        # it was drawn and pointing at whatever has scrolled into that spot. In a window short
+        # enough to have somewhere to scroll to, with the cursor put back on the word: the
+        # grace period above has by now taken the card down, which is what it is for.
+        # Tall enough that the card sits under its word rather than being pushed against the
+        # top of the window, where a clamped card would sit still however far the page moved.
+        cdp.send("Emulation.setDeviceMetricsOverride", {
+            "width": 900, "height": 800, "deviceScaleFactor": 1, "mobile": False,
+        }, session=page)
+        time.sleep(0.5)
+        spot = json.loads(evaluate(cdp, page, """
+            (() => {
+              const word = [...document.querySelectorAll('.px-w')]
+                .find(w => w.textContent.includes('perro'));
+              const r = word.getBoundingClientRect();
+              return JSON.stringify({x: r.left + r.width / 2, y: r.top + r.height / 2});
+            })()
+        """))
+        for step in (0, 1):
+            cdp.send("Input.dispatchMouseEvent", {
+                "type": "mouseMoved", "x": spot["x"] + step, "y": spot["y"] + step,
+            }, session=page)
+            time.sleep(0.3)
+        wait_for(cdp, page, """
+            (() => !!(document.getElementById('phonetix-card-host')
+              || {}).shadowRoot?.querySelector('.card'))()
+        """, lambda v: v)
+        moved = json.loads(evaluate(cdp, page, """
+            (async () => {
+              const host = document.getElementById('phonetix-card-host');
+              const card = () => host.shadowRoot.querySelector('.card');
+              const before = card() ? card().getBoundingClientRect().top : null;
+              const word = [...document.querySelectorAll('.px-w')]
+                .find(w => w.textContent.includes('perro'));
+              const wasAt = word.getBoundingClientRect().top;
+              window.scrollBy(0, 40);
+              // Long enough that a card which closes shortly after a scroll - the grace
+              // period taking it down because the words moved out from under the cursor -
+              // has done so by the time it is measured.
+              await new Promise(r => setTimeout(r, 900));
+              const now = card() ? card().getBoundingClientRect().top : null;
+              return JSON.stringify({
+                before, now, open: !!card(),
+                wordMoved: Math.round(wasAt - word.getBoundingClientRect().top),
+              });
+            })()
+        """) or "{}")
+        print(f"  a scroll of {moved.get('wordMoved')}px: the card went "
+              f"from {moved.get('before')} to {moved.get('now')}")
+        if not moved.get("wordMoved"):
+            failures.append("the page did not scroll, so nothing was learned about the card")
+        elif not moved.get("open"):
+            failures.append("the card closed when the page scrolled")
+        elif abs((moved["before"] - moved["now"]) - moved["wordMoved"]) > 8:
+            failures.append(
+                f"the card did not follow its word: the word moved {moved['wordMoved']}px, "
+                f"the card {round(moved['before'] - moved['now'])}px")
+        cdp.send("Emulation.clearDeviceMetricsOverride", {}, session=page)
+        time.sleep(0.4)
 
         # A word no pack holds still gets a transcription, from the voice rather than from a
         # dictionary, and the annotation says which by its own state.

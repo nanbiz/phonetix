@@ -14,14 +14,18 @@
   import type { Layer } from '@/ext/content/inline';
   import type { Settings } from '@/settings';
   import type { Offered } from '@/host/packs';
+  import Heart from 'virtual:icons/pixelarticons/heart';
+
   import Picker from '@/ui/controls/Picker.svelte';
-  import Segmented from '@/ui/controls/Segmented.svelte';
   import Slider from '@/ui/controls/Slider.svelte';
   import Toggle from '@/ui/controls/Toggle.svelte';
+  import Segmented from '@/ui/controls/Segmented.svelte';
+  import Frequency from './Frequency.svelte';
   import NavRow from './NavRow.svelte';
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
+  import Switchboard from './Switchboard.svelte';
 
   interface Props {
     settings: Settings;
@@ -41,10 +45,28 @@
     forget?: (lang: string) => void;
     /** Which language is being fetched right now, so the row can say so. */
     fetching?: string | null;
+    /** The extension's own mark and the site's, from wherever the browser keeps them. */
+    icon?: string;
+    siteIcon?: string;
+    /** Which build this is, so a reader can say what they are looking at. */
+    version?: string;
   }
 
-  let { settings, curve, packs, change, get, forget, fetching = null, site = '', pageLang = '', onSite }:
-    Props = $props();
+  let {
+    settings,
+    curve,
+    packs,
+    change,
+    get,
+    forget,
+    fetching = null,
+    site = '',
+    pageLang = '',
+    onSite,
+    icon = '',
+    siteIcon = '',
+    version = '',
+  }: Props = $props();
 
   /** Which screen the reader is on. */
   let view = $state('main');
@@ -81,25 +103,25 @@
     ...named.map((it) => ({ value: it.code, label: it.english })),
   ]);
 
-  /** Where on the bar the reader's density sits, which is what the slider is set to. */
-  let position = $derived(
-    curve.length === 0
-      ? 0
-      : curve.reduce(
-          (best, density, at) =>
-            Math.abs(density - settings.density) < Math.abs(curve[best] - settings.density)
-              ? at
-              : best,
-          0
-        )
-  );
-
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
 </script>
 
 <Screen name="main" on={view}>
-  <!-- What this page is being read as, first: everything else on the screen is a choice about
+  <!-- Whether this is on, and whether it is on here. The first thing in the popup because it
+       is the first thing a reader opens it for. -->
+  <Switchboard
+    {icon}
+    {siteIcon}
+    {site}
+    on={settings.on}
+    {here}
+    decided={settings.off.includes(site)}
+    change={(on) => change('on', on)}
+    onSite={(on) => onSite?.(on)}
+  />
+
+  <!-- What this page is being read as, and into what. Everything below is a choice about
        that, and a reader whose page was read as the wrong language has no other way to find
        out why the answers are nonsense. -->
   <NavRow
@@ -110,45 +132,17 @@
       : ''}{settings.target ? ` · read into ${nameOf(settings.target)}` : ''}"
     open={() => (view = accents.length > 0 ? 'accent' : 'more')}
   />
+
+  <!-- The bar a reader comes back to, on a row of its own. -->
+  <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
+
   <div class="rows">
-    <Row name="Annotate what I read" row="on">
-      {#snippet control()}
-        <Toggle
-          on={settings.on}
-          label="annotate what I read"
-          change={(on) => change('on', on)}
-        />
-      {/snippet}
-    </Row>
-
-    {#if site}
-      <!-- One site, rather than everywhere: a reader who does not want this on their bank does
-           not want to switch it off on the web. -->
-      <Row name="On {site}" row="site">
-        {#snippet control()}
-          <Toggle on={here} label="on {site}" change={(on) => onSite?.(on)} />
-        {/snippet}
-      </Row>
-    {/if}
-
     <Row name="Show over a word" row="layer">
       {#snippet wide()}
         <Segmented
           choices={layers}
           chosen={settings.layer}
           change={(value) => change('layer', value as Layer)}
-        />
-      {/snippet}
-    </Row>
-
-    <Row name="How often" row="density" says="one word in {settings.density}">
-      {#snippet wide()}
-        <Slider
-          value={position}
-          max={Math.max(0, curve.length - 1)}
-          label="how often"
-          ends={['a few', 'every word']}
-          change={(at) => change('density', curve[at] ?? settings.density)}
         />
       {/snippet}
     </Row>
@@ -192,6 +186,11 @@
     about="transcriptions, stress, how long a rest opens a card"
     open={() => (view = 'more')}
   />
+
+  <p class="made">
+    Made with <span class="heart"><Heart class="r-icon" /></span>
+    {#if version}<span class="version">· v{version}</span>{/if}
+  </p>
 </Screen>
 
 <Screen

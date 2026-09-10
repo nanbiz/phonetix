@@ -305,6 +305,22 @@ let grabbed = false;
  *  that as a rest opened a card on every tap, including taps meant to follow a link. */
 let touched = false;
 
+/**
+ * Where the pointer is, as the reader last moved it.
+ *
+ * A scroll moves the words while the cursor stands still, and the browser reports that as the
+ * cursor leaving the word - before it reports the scroll, so no amount of noticing a scroll
+ * afterwards is in time. What settles it is asking where the pointer is when the card is about
+ * to be taken down: still on the word is still on the word, however the word got there.
+ */
+let pointer = { x: -1, y: -1 };
+
+/** What is under the pointer now: a word of ours, the card, or the page. */
+function under(): Element | null {
+  if (pointer.x < 0) return null;
+  return document.elementFromPoint(pointer.x, pointer.y);
+}
+
 /** Stop the card from closing, because the cursor is somewhere that keeps it. */
 function keep(): void {
   if (closing) clearTimeout(closing);
@@ -317,10 +333,14 @@ function letGo(): void {
   if (grabbed) return;
   closing = setTimeout(() => {
     closing = null;
-    if (!grabbed) {
-      hide();
-      anchored = null;
-    }
+    if (grabbed) return;
+    // Where the pointer is now, rather than what it was doing when the timer started: a page
+    // that scrolled under a still cursor reports the word leaving, and the reader is looking
+    // at exactly what they were looking at.
+    const at = under();
+    if (at && (inside(at) || wordAt(at))) return;
+    hide();
+    anchored = null;
   }, GRACE);
 }
 
@@ -344,6 +364,15 @@ function gestures(): void {
 
   // A rest rather than a hover: the cursor crosses a dozen words on its way anywhere, and a
   // card for each of them is a page nobody can read. How long a rest is is the reader's.
+  // Where the reader has the pointer, which is what decides whether a card is still wanted.
+  document.addEventListener(
+    'mousemove',
+    (event) => {
+      pointer = { x: event.clientX, y: event.clientY };
+    },
+    { passive: true }
+  );
+
   document.addEventListener('mouseover', (event) => {
     if (inside(event.target)) {
       keep();

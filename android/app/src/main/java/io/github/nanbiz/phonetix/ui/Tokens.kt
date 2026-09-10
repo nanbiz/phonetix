@@ -70,7 +70,9 @@ object Tokens {
         const val tierFullMinHeight = 400.0f
         const val tierFullMinWidth = 320.0f
         const val toggleHeight = 22.0f
+        const val toggleHeightLg = 32.0f
         const val toggleWidth = 40.0f
+        const val toggleWidthLg = 56.0f
         const val touchTarget = 44.0f
         const val underlineOffset = 4.0f
         const val underlineThickness = 2.0f

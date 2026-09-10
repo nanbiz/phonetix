@@ -39,6 +39,11 @@
    near-black, and each of them is the surface colour it was being drawn in, so a switched-off
    toggle read as an empty outlined pill. */
 .toggle::before { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
+/* The one switch a reader opens the popup to find is drawn larger than the rest: what it
+   answers - whether this is on at all - is not one setting among many. */
+.toggle.big { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
+.toggle.big::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
+.toggle.big:checked::before, .toggle.big.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
 .toggle:checked, .toggle.on { background: var(--color-accent); }
 .toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
 .select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
@@ -55,6 +60,28 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
 .field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--font-size-small); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-1) 0 var(--space-3); height: var(--button-height); overflow: hidden; }
 .dim { opacity: 0.45; pointer-events: none; }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-accent-bg); color: var(--color-ink); font-size: var(--font-size-small); border-bottom: var(--border-width) solid var(--color-border); }
+/* The two switches at the top of the popup: whether this is on, and whether it is on here.
+   The first thing a reader came for, so they are above everything that tunes how it reads. */
+.switchboard { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); }
+.board-row { display: flex; align-items: center; gap: var(--space-3); }
+.board-mark { width: 36px; height: 36px; flex: 0 0 auto; border-radius: var(--radius-button); object-fit: contain; }
+.board-mark.small { width: 28px; height: 28px; }
+.board-what { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.board-name { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.1; }
+.board-site { font-size: var(--font-size-small); font-weight: var(--weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-sub { font-size: var(--font-size-label); color: var(--color-ink-faint); }
+/* The one control that is a whole row of its own: how much of the page is transcribed. The
+   bar is the thing being read, so what it is set to is a chip beside its name rather than a
+   number under it. */
+.frequency { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); }
+.frequency .f-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.frequency .f-name { font-weight: var(--weight-medium); }
+.frequency .f-says { background: var(--color-accent-bg); color: var(--color-accent); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* The heart and the version, which say who made this and which build a reader is looking at. */
+.made { display: flex; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.made .heart { color: var(--color-danger); display: inline-flex; }
+.made .version { color: var(--color-ink-faint); }
+
 /* A row that opens a screen of its own. The settings a reader changes once - which accent,
    which dictionaries - are a screen behind a row rather than a wall of controls in front of
    the two they change daily. */

@@ -142,7 +142,9 @@ def main():
             cdp, view,
             "document.querySelector('[data-row=density] [data-about]').textContent")
         dense = words(cdp, page)
-        if "1" not in (told or ""):
+        # At the dense end every word is annotated, and the view says so in those words
+        # rather than as "one word in 1", which is a ratio nobody reads.
+        if "every word" not in (told or "").lower():
             failures.append(f"the dense end says {told!r}")
 
         # Reading into German: the answers change language.
@@ -172,6 +174,41 @@ def main():
         if "Hund" not in swapped["swapped"]:
             failures.append(f"nothing was repainted: {swapped['swapped'][:4]}")
 
+        # And what the swap covered is shown in place while the cursor is on it: a reader who
+        # wants to know what the word actually was rests on it, rather than hunting for the
+        # browser's own tooltip.
+        under = json.loads(evaluate(cdp, page, """
+            (async () => {
+              const box = [...document.querySelectorAll('.px-w')]
+                .find(w => w.querySelector('.px-was'));
+              if (!box) return JSON.stringify({found: false});
+              const was = box.querySelector('.px-was');
+              const before = getComputedStyle(was).display;
+              const at = box.getBoundingClientRect();
+              box.dispatchEvent(new MouseEvent('mouseover', {
+                bubbles: true, clientX: at.left + 2, clientY: at.top + 2,
+              }));
+              await new Promise(r => setTimeout(r, 200));
+              return JSON.stringify({
+                found: true,
+                word: was.textContent,
+                before,
+                after: getComputedStyle(was).display,
+                ground: getComputedStyle(was).backgroundColor,
+              });
+            })()
+        """) or "{}")
+        if not under.get("found"):
+            failures.append("no swapped word kept what it had covered")
+        else:
+            print(f"  resting on the swap shows {under['word']!r} "
+                  f"({under['before']} -> {under['after']} on {under['ground']})")
+            if under["before"] != "none" or under["after"] == "none":
+                failures.append(
+                    f"the original went from {under['before']} to {under['after']}")
+            if "rgba(0, 0, 0, 0)" in under["ground"]:
+                failures.append("the revealed word has no ground, so both forms show at once")
+
         # How often: the sparse end of the bar draws fewer words than the dense end.
         control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
                            ".find(s => s.textContent.trim() === 'meaning').click()")
@@ -182,7 +219,9 @@ def main():
         if dense["count"] <= sparse["count"]:
             failures.append(
                 f"the bar changed nothing: {dense['count']} dense, {sparse['count']} sparse")
-        if "1" not in (told or ""):
+        # At the dense end every word is annotated, and the view says so in those words
+        # rather than as "one word in 1", which is a ratio nobody reads.
+        if "every word" not in (told or "").lower():
             failures.append(f"the dense end says {told!r}")
 
         # The dictionaries a reader can have, and the two things to do with one.

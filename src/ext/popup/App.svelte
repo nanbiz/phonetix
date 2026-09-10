@@ -22,6 +22,12 @@
   let site = $state('');
   /** What the page being read is in, which decides which accents there are to choose. */
   let pageLang = $state('');
+  /** The site's own mark, which the browser has already fetched for the tab. */
+  let siteIcon = $state('');
+
+  /** This extension's mark and the build a reader is looking at, from the manifest. */
+  const icon = chrome.runtime.getURL('icon/48.png');
+  const version = chrome.runtime.getManifest().version;
 
   async function load() {
     settings = await current();
@@ -38,6 +44,7 @@
         .sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0];
     }
     site = tab?.url ? new URL(tab.url).hostname : '';
+    siteIcon = tab?.favIconUrl ?? '';
     // Asked of the page rather than guessed: it is the one that read itself.
     pageLang = tab?.id
       ? await chrome.tabs
@@ -72,11 +79,9 @@
 
 </script>
 
+<!-- No heading of its own: the switchboard at the top of the view names the product beside
+     the switch that answers what a reader came to ask. -->
 <main class="panel">
-  <h1 class="head">
-    Phonetix
-    <span class="h-note">{settings?.on ? 'reading' : 'off'}</span>
-  </h1>
   {#if settings}
     <Settings
       {settings}
@@ -88,6 +93,9 @@
       {fetching}
       {site}
       {pageLang}
+      {icon}
+      {siteIcon}
+      {version}
       onSite={(on) => {
         if (settings) void setSite(settings, site, on).then(load);
       }}
