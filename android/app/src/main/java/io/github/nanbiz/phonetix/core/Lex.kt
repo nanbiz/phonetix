@@ -18,6 +18,9 @@ object Lex {
         // The core is not optional: what a word means, how it is said and which words are
         // annotated are all decided in it. A build that cannot load it is a broken build,
         // and saying so here is better than a service that quietly shows nothing.
+        // The synthesiser first: the core links against it, so it has to be in the process
+        // before the core is loaded rather than when the first word needs saying.
+        runCatching { System.loadLibrary("espeak-ng") }
         System.loadLibrary("lexcore_android")
     }
 
@@ -119,4 +122,43 @@ object Lex {
 
     /** What a Wiktionary page says about a word in one language, as JSON. */
     external fun readWiktionary(wikitext: String, lang: String): String
+
+    /**
+     * Start the synthesiser against the data unpacked from the apk.
+     *
+     * Returns whether it is usable. Where it is not, the words no pack holds stay bare, which
+     * is exactly how the app read before there was one.
+     */
+    external fun speechStart(data: String): Int
+
+    /**
+     * How a batch of words is said, in one voice.
+     *
+     * A batch because a screen is a batch: a call per word would cross into the core a hundred
+     * times for one page.
+     */
+    external fun speechPhonemes(voice: String, words: Array<String>): Array<String>
+
+    /**
+     * Fill in what an engine answered about the words the packs missed.
+     *
+     * The answers go back through the core so one answer still drives the page, the card and
+     * the audio, and a machine's answer is marked as one in the place that decides that.
+     */
+    external fun complete(
+        core: Long,
+        batch: Long,
+        tokens: IntArray,
+        glosses: Array<String>,
+        ipas: Array<String>,
+        engine: String,
+    ): String
+
+    /**
+     * One word spoken, as the bytes of a WAV file.
+     *
+     * The same engine and the same voice the browser uses, so a word does not sound like two
+     * different products depending on where a reader met it.
+     */
+    external fun speechSay(voice: String, word: String): ByteArray
 }

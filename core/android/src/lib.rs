@@ -11,6 +11,8 @@ use jni::objects::{JClass, JObjectArray, JString};
 use jni::sys::{jint, jlong};
 use jni::JNIEnv;
 
+mod speech;
+
 /// How many terms two glosses share.
 #[no_mangle]
 pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_overlap(
@@ -70,6 +72,18 @@ struct Core {
     packs: std::collections::HashMap<String, lexpack::Pack<Vec<u8>>>,
     /// The language model, where the overlay has given it one.
     model: Option<lexcore::detect::Model>,
+    /// The batches the overlay is still drawing, kept so what an engine answers joins the
+    /// same tokens rather than a second set this side stitched together itself. The same
+    /// arrangement as the browser's, so a word filled by an engine is marked the same way on
+    /// both platforms.
+    batches: std::collections::HashMap<
+        u64,
+        (
+            Vec<lexcore::answer::Token>,
+            lexcore::answer::AnnotateOptions,
+        ),
+    >,
+    next_batch: u64,
 }
 
 /// Make one. The pointer it returns is what every call below is given back.
@@ -81,6 +95,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_open(
     let core = Box::new(Core {
         packs: std::collections::HashMap::new(),
         model: None,
+        batches: std::collections::HashMap::new(),
+        next_batch: 1,
     });
     Box::into_raw(core) as jlong
 }
@@ -345,7 +361,96 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         &open,
         &options,
     );
-    let written = lexcore::json::batch(0, &tokens, &misses);
+    // Safety: as above. Kept so the overlay can hand back what its engines answered.
+    let held = unsafe { &mut *(core as *mut Core) };
+    let id = held.next_batch;
+    held.next_batch += 1;
+    // One batch at a time is what a screen is; anything older is a screen that has gone.
+    held.batches.clear();
+    held.batches.insert(id, (tokens.clone(), options));
+    let written = lexcore::json::batch(id, &tokens, &misses);
+    env.new_string(written).unwrap_or(empty)
+}
+
+/// Fill in what the overlay's engines answered about the words the packs missed.
+///
+/// The answers go back through the core rather than being drawn beside its tokens, so one
+/// answer still drives the page, the card and the audio, and what a machine produced is
+/// marked as a machine's in the one place that decides what a reader is told.
+/// # Safety
+///
+/// `tokens` is a jintArray the vm owns for the length of the call, which is what the vm
+/// guarantees for every argument it passes across this boundary.
+#[allow(clippy::too_many_arguments)]
+#[no_mangle]
+pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    core: jlong,
+    batch: jlong,
+    tokens: jni::sys::jintArray,
+    glosses: JObjectArray<'a>,
+    ipas: JObjectArray<'a>,
+    engine: JString<'a>,
+) -> jni::objects::JString<'a> {
+    let empty = env
+        .new_string("{\"batch\":0,\"tokens\":[],\"misses\":[]}")
+        .expect("a string the vm can hold");
+    if core == 0 {
+        return empty;
+    }
+    let engine: String = env
+        .get_string(&engine)
+        .map(|it| it.into())
+        .unwrap_or_default();
+    // Safety: the array comes from the vm, which owns it for the length of this call. It is
+    // borrowed rather than taken, so nothing here frees what the vm will free itself.
+    let array = unsafe { jni::objects::JIntArray::from_raw(tokens) };
+    let indexes = {
+        let Ok(len) = env.get_array_length(&array) else {
+            return empty;
+        };
+        let mut out = vec![0i32; len as usize];
+        if env.get_int_array_region(&array, 0, &mut out).is_err() {
+            return empty;
+        }
+        out
+    };
+    let strings = |array: &JObjectArray<'a>, env: &mut JNIEnv<'a>| -> Vec<String> {
+        let Ok(len) = env.get_array_length(array) else {
+            return Vec::new();
+        };
+        (0..len)
+            .map(|at| {
+                let Ok(item) = env.get_object_array_element(array, at) else {
+                    return String::new();
+                };
+                let text = JString::from(item);
+                env.get_string(&text)
+                    .map(|it| -> String { it.into() })
+                    .unwrap_or_default()
+            })
+            .collect()
+    };
+    let said = strings(&glosses, &mut env);
+    let sounds = strings(&ipas, &mut env);
+    // Safety: as above.
+    let held = unsafe { &mut *(core as *mut Core) };
+    let Some((drawn, options)) = held.batches.get_mut(&(batch as u64)) else {
+        return empty;
+    };
+    let results: Vec<lexcore::answer::EngineResult> = indexes
+        .iter()
+        .enumerate()
+        .map(|(at, token)| lexcore::answer::EngineResult {
+            token_index: (*token).max(0) as u32,
+            gloss: said.get(at).filter(|it| !it.is_empty()).cloned(),
+            ipa: sounds.get(at).filter(|it| !it.is_empty()).cloned(),
+            engine: engine.clone(),
+        })
+        .collect();
+    lexcore::annotate::complete(drawn, &results, options);
+    let written = lexcore::json::batch(batch as u64, drawn, &[]);
     env.new_string(written).unwrap_or(empty)
 }
 
@@ -457,4 +562,100 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_readWiktionary<'a
         Some(said) => env.new_string(lexcore::json::said(&said)).unwrap_or(empty),
         None => empty,
     }
+}
+
+/// Start the synthesiser against the data unpacked from the apk.
+///
+/// Said once. What it answers is whether the words no pack holds can be transcribed at all;
+/// a phone where it does not start reads exactly as it did before there was one.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_speechStart(
+    mut env: JNIEnv,
+    _class: JClass,
+    data: JString,
+) -> jint {
+    let Ok(path) = env.get_string(&data) else {
+        return 0;
+    };
+    let path: String = path.into();
+    i32::from(speech::start(&path))
+}
+
+/// How a batch of words is said, in one voice.
+///
+/// A batch, because the overlay asks about a screen at a time and a call per word would cross
+/// the boundary a hundred times for one page.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_speechPhonemes<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    voice: JString<'a>,
+    words: JObjectArray<'a>,
+) -> JObjectArray<'a> {
+    let empty = env
+        .new_object_array(0, "java/lang/String", jni::objects::JObject::null())
+        .expect("an array the vm can hold");
+    let Ok(voice) = env.get_string(&voice) else {
+        return empty;
+    };
+    let voice: String = voice.into();
+    let Ok(count) = env.get_array_length(&words) else {
+        return empty;
+    };
+    let mut asked: Vec<String> = Vec::with_capacity(count as usize);
+    for at in 0..count {
+        let Ok(item) = env.get_object_array_element(&words, at) else {
+            asked.push(String::new());
+            continue;
+        };
+        let text: String = env
+            .get_string(&JString::from(item))
+            .map(|it| it.into())
+            .unwrap_or_default();
+        asked.push(text);
+    }
+    let said = speech::phonemes(&voice, &asked);
+    let Ok(out) = env.new_object_array(
+        said.len() as jint,
+        "java/lang/String",
+        jni::objects::JObject::null(),
+    ) else {
+        return empty;
+    };
+    for (at, text) in said.iter().enumerate() {
+        if let Ok(value) = env.new_string(text) {
+            let _ = env.set_object_array_element(&out, at as jint, value);
+        }
+    }
+    out
+}
+
+/// One word spoken, as the bytes of a WAV file.
+///
+/// Bytes rather than a sound: what plays a sound is the phone's own audio, and the browser
+/// takes the same bytes from the same engine, so the word is said by one voice everywhere.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_speechSay<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass<'a>,
+    voice: JString<'a>,
+    word: JString<'a>,
+) -> jni::sys::jbyteArray {
+    let empty = env
+        .new_byte_array(0)
+        .map(|it| it.into_raw())
+        .unwrap_or(std::ptr::null_mut());
+    let (Ok(voice), Ok(word)) = (env.get_string(&voice), env.get_string(&word)) else {
+        return empty;
+    };
+    let (voice, word): (String, String) = (voice.into(), word.into());
+    let wav = speech::say(&voice, &word);
+    let bytes: Vec<i8> = wav.into_iter().map(|b| b as i8).collect();
+    let Ok(array) = env.new_byte_array(bytes.len() as jint) else {
+        return empty;
+    };
+    if env.set_byte_array_region(&array, 0, &bytes).is_err() {
+        return empty;
+    }
+    array.into_raw()
 }

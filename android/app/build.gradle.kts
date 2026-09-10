@@ -69,6 +69,20 @@ val bundleDictionaries by tasks.registering(Exec::class) {
         "ipa", "en", dict.absolutePath, out.absolutePath)
 }
 
+/**
+ * The synthesiser, for the words no pack holds.
+ *
+ * Built from source per ABI, like the core beside it, rather than committed. The script is
+ * what knows how: this only makes sure the build has run before the apk is packaged, and does
+ * nothing when it already has.
+ */
+val bundleSpeech by tasks.registering(Exec::class) {
+    val marker = layout.projectDirectory.file("src/main/assets/espeak/phontab").asFile
+    onlyIf { !marker.exists() }
+    workingDir = rootProject.file("..")
+    commandLine("scripts/build-espeak-android.sh")
+}
+
 /** The language model, which is a build input like the dictionary beside it. */
 val bundleModel by tasks.registering(Copy::class) {
     val model = rootProject.file("../assets/eld.bin.gz")
@@ -77,7 +91,7 @@ val bundleModel by tasks.registering(Copy::class) {
     into(layout.projectDirectory.dir("src/main/assets"))
 }
 
-tasks.named("preBuild") { dependsOn(bundleDictionaries, bundleModel) }
+tasks.named("preBuild") { dependsOn(bundleDictionaries, bundleModel, bundleSpeech) }
 
 // The native core, built from ../../core rather than committed.
 //

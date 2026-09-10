@@ -20,6 +20,7 @@ import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
+import io.github.nanbiz.phonetix.core.Speech
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -150,6 +151,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
         io.post { Eld.ensureLoaded(this) { schedule(0L) } }
+        // The synthesiser, for the words no pack holds. On the io thread: the first call
+        // unpacks a few megabytes out of the apk, and the service must not wait for it. The
+        // screen is read again once it is up, so the words that were bare get their
+        // transcription without the reader doing anything.
+        io.post { if (Speech.start(this)) schedule(0L) }
         // Positions are the whole product here, and a cached position is a wrong one. The
         // platform keeps a copy of the node tree for a service to read cheaply, and while a
         // page is moving that copy is a picture of where the words used to be: lines came

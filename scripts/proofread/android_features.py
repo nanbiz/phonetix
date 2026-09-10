@@ -538,23 +538,57 @@ def check_language(r, dev):
     loanwords a German page really has and on the words the two languages happen to share.
 
     What decides it is which language's commonest words a line is made of, and a line too
-    short to hold one is decided for by the screen it is on. So this asks two pages the same
-    question: a German one, which should come back untouched, and an English one, which
-    should come back transcribed as it always was.
+    short to hold one is decided for by the screen it is on.
+
+    A German page used to have to come back untouched, because the only thing that could have
+    transcribed it would have said it in English. Now that the phone carries the synthesiser
+    the browser has always had, a German page is transcribed in the German voice - so what is
+    asked here is no longer whether anything was drawn but whether it was drawn in the right
+    language. "Nacht" is the word that separates them: German says it with the ach-Laut, and
+    no English reading of those letters has one.
     """
     reset(dev)
-    german, _ = show(dev, mode="german", density=2, scrollTo=0, settle=4)
+    # Every word, not one in two: what is being asked is which language a reading is in, and
+    # a bar that draws half the page can leave out the word that answers that.
+    german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
     english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
     r.check(
         len(english) > 0,
         "language: an English page is still transcribed",
         f"{len(english)} transcriptions on it",
     )
+    # What was written over each word, which the geometry line does not carry.
+    # The last report that drew anything, rather than the last report: a pass that read the
+    # screen and drew nothing is an ordinary moment between two that did, and taking it leaves
+    # this asking its question of an empty set.
+    said = {}
+    for line in reversed(german_log.splitlines()):
+        if "DRAWN " not in line:
+            continue
+        pairs = dict(
+            pair.split("=", 1)
+            for pair in line.split("DRAWN ", 1)[1].split()
+            if "=" in pair
+        )
+        if pairs:
+            said = pairs
+            break
     r.check(
-        len(german) == 0,
-        "language: a German page is left alone",
-        f"{len(german)} transcriptions on it: "
-        + str(sorted({b["word"] for b in german.values()})[:8]),
+        len(german) > 0,
+        "language: a German page is transcribed too",
+        "nothing on it, though the synthesiser can read any language it has a voice for",
+    )
+    # Sounds an English reading of these letters would not produce: the ach-Laut, the
+    # ich-Laut, and the front rounded vowels. One of them is enough to say which voice read
+    # the page, and looking for a set rather than for one word does not depend on which words
+    # the bar happened to draw.
+    GERMAN_ONLY = ("x", "ç", "yː", "ʏ", "øː", "œ")
+    marked = {word: ipa for word, ipa in said.items()
+              if any(sound in ipa for sound in GERMAN_ONLY)}
+    r.check(
+        bool(marked),
+        "language: a German page is read in German, not in English",
+        f"nothing among {list(said.items())[:6]} carries a sound only German has",
     )
 
 

@@ -52,7 +52,12 @@ object Reading {
             core, texts.toTypedArray(), source, target, mode, density, narrow, hideStress,
             accent,
         )
-        val batch = JSONObject(written)
+        var batch = JSONObject(written)
+        // What the packs could not say, said by the synthesiser. The core reports what it is
+        // missing and only that is asked for, so a word a dictionary answered keeps the
+        // pronunciation the dictionary recorded and what a machine produced is marked as a
+        // machine's - in the core, which is the one place that decides what a reader is told.
+        batch = filled(batch, source, accent)
         val tokens = batch.optJSONArray("tokens") ?: JSONArray()
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
@@ -74,6 +79,50 @@ object Reading {
                 )
             }
         }
+    }
+
+    /**
+     * Fill in how the words no pack could say are said.
+     *
+     * Nothing happens where the engine did not start: those words stay bare, exactly as they
+     * read before the phone had one.
+     */
+    private fun filled(batch: JSONObject, source: String, accent: String): JSONObject {
+        if (!Speech.usable) return batch
+        val misses = batch.optJSONArray("misses") ?: return batch
+        val tokens = batch.optJSONArray("tokens") ?: return batch
+        val wanted = ArrayList<Int>(misses.length())
+        val words = ArrayList<String>(misses.length())
+        for (at in 0 until misses.length()) {
+            val row = misses.optJSONObject(at) ?: continue
+            if (row.optString("need") == "Gloss") continue
+            val which = row.optInt("token")
+            val token = tokens.optJSONObject(which) ?: continue
+            wanted.add(which)
+            words.add(token.optString("spelling"))
+        }
+        if (wanted.isEmpty()) return batch
+        val said = Speech.phonemes(Accents.voiceOf(source, accent), words)
+        if (said.isEmpty()) return batch
+        val kept = ArrayList<Int>(wanted.size)
+        val sounds = ArrayList<String>(wanted.size)
+        for (at in wanted.indices) {
+            val ipa = said[words[at]] ?: continue
+            kept.add(wanted[at])
+            sounds.add(ipa)
+        }
+        if (kept.isEmpty()) return batch
+        val written = runCatching {
+            Lex.complete(
+                core,
+                batch.optLong("batch"),
+                kept.toIntArray(),
+                Array(kept.size) { "" },
+                sounds.toTypedArray(),
+                "espeak",
+            )
+        }.getOrNull() ?: return batch
+        return runCatching { JSONObject(written) }.getOrDefault(batch)
     }
 
     /**

@@ -24,6 +24,7 @@ import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.ui.AnswerCard
@@ -367,7 +368,9 @@ class TooltipController(
                     onPlay = {
                         val file = recorded.value
                         if (file != null) speaker.play(wikimediaFileUrl(file))
-                        else speaker.say(box.word)
+                        // In the voice the reader chose, which is the accent's where it has
+                        // one of its own and the language's otherwise.
+                        else speaker.say(box.word, Accents.voiceOf(source, settings.accent))
                     },
                 )
                 opened.value?.let { symbol ->
