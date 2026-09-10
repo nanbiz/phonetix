@@ -8,13 +8,10 @@
   // Only what the table actually has. A sound with no recording shows no play button, because
   // a control that leads nowhere is worse than no control.
   import type { IpaSymbol } from '@/core/answer';
+  import { commons, seeingSpeech, wikipedia } from '@/data/links';
   import IconButton from '@/ui/controls/IconButton.svelte';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import { ARTICLE, FILM, SPEAKER } from './icons';
-
-  /** Where Commons keeps a file, which is the same URL the phone builds. */
-  const commons = (file: string) =>
-    `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`;
 
   interface Props {
     /** The sound the line is showing, or nothing while none has been asked about. */
@@ -47,7 +44,7 @@
       <IconLink
         icon={ARTICLE}
         label="read about {about.token}"
-        url="https://en.wikipedia.org/wiki/{about.wiki}"
+        url={wikipedia(about.wiki)}
         name="Wikipedia"
         open={onOpen}
       />
@@ -57,7 +54,7 @@
       <IconLink
         icon={FILM}
         label="see a mouth saying {about.token}"
-        url="https://seeingspeech.ac.uk/{about.seeing}"
+        url={seeingSpeech(about.seeing)}
         name="Seeing Speech"
         open={onOpen}
       />

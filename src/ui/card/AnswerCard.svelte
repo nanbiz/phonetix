@@ -11,6 +11,7 @@
   // card and the Compose card are the same card.
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
+  import { wiktionary } from '@/data/links';
   import { accentsOf } from '@/data/accents';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import { WIKTIONARY } from './icons';
@@ -62,9 +63,9 @@
     return 'sym o';
   }
 
-  /** Where a word's own page is, which is the same URL the phone builds. */
-  const wiktionary = (it: Answer) =>
-    `https://en.wiktionary.org/wiki/${encodeURIComponent(it.lemma ?? it.spelling)}`;
+  /** Where a word's own page is: its dictionary form where there is one, since that is the
+   *  entry, and the spelling on the page otherwise. */
+  const entry = (it: Answer) => wiktionary(it.lemma ?? it.spelling);
 
   let lead = $derived(headlineOf(answer));
   let chooses = $derived(answer.readings.length >= 2);
@@ -151,7 +152,7 @@
         <IconLink
           icon={WIKTIONARY}
           label="Wiktionary"
-          url={wiktionary(answer)}
+          url={entry(answer)}
           name="Wiktionary"
           open={onOpen}
         />

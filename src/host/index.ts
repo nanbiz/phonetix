@@ -11,6 +11,7 @@ import type { Batch } from '@/core/tokens';
 import { answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
+import { commonsAt, wiktionarySource } from '@/data/links';
 import { forget, get, held, offered, open } from './packs';
 import { audio, guessed, ipa } from './voice';
 
@@ -262,10 +263,7 @@ async function meant(batch: Batch, source: string, target: string): Promise<Batc
  * size anyway. Fetched here because the page's own policy would refuse the load.
  */
 async function drawing(file: string, width: number): Promise<string> {
-  const url =
-    `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}` +
-    `?width=${width}`;
-  const res = await fetch(url);
+  const res = await fetch(commonsAt(file, width));
   if (!res.ok) throw new Error(String(res.status));
   const bytes = new Uint8Array(await res.arrayBuffer());
   let binary = '';
@@ -290,9 +288,7 @@ const asked = new Map<string, Said | null>();
 async function fromWiktionary(word: string, lang: string): Promise<Said | null> {
   const key = `${lang}:${word.toLowerCase()}`;
   if (asked.has(key)) return asked.get(key) ?? null;
-  const url =
-    'https://en.wiktionary.org/w/index.php?action=raw&title=' + encodeURIComponent(word);
-  const res = await fetch(url);
+  const res = await fetch(wiktionarySource(word));
   // A word with no page is an ordinary answer, not a failure: most words have no recording.
   const said = res.ok ? await readWiktionary(await res.text(), lang) : null;
   asked.set(key, said);

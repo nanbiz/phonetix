@@ -12,6 +12,7 @@ import { isPainted, paint, reveal, unpaint, unreveal, WORD, wordAt } from './inl
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { OURS, scan, type ScannedRun } from './scan';
+import { commons } from '@/data/links';
 
 // Until the stored ones are read, which is one await away.
 let settings: Settings = DEFAULTS;
@@ -177,10 +178,6 @@ async function draw(): Promise<void> {
     painting = false;
   }
 }
-
-/** Where Commons keeps a file, which is the same URL the phone builds. */
-const commons = (file: string) =>
-  `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}`;
 
 /** How wide a picture of a mouth is asked for, which is what the sheet gives it. */
 const DIAGRAM_WIDTH = 192;
