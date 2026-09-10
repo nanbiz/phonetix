@@ -27,6 +27,12 @@ export interface Settings {
   /** The accent to read in, as a language tag: en-us, es-419, de-ch. Empty is the standard
    *  one, which is what most readers want and what a dictionary lists first. */
   accent: string;
+  /** How long the cursor rests on a word before its card opens, in milliseconds. A reader who
+   *  reads with the pointer wants it slow; one who looks words up wants it instant. */
+  delay: number;
+  /** Whether the card eases in and the reveal fades. Off is instant, which is what a reader
+   *  who finds movement distracting wants and what a slow machine wants. */
+  animations: boolean;
   /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
    *  wants this on the web does not want to name every site it should work on. */
   off: string[];
@@ -41,6 +47,8 @@ export const DEFAULTS: Settings = {
   narrow: false,
   hideStress: true,
   accent: '',
+  delay: 200,
+  animations: false,
   off: [],
 };
 
@@ -54,6 +62,8 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   accent: 'local:accent',
   narrow: 'local:narrow',
   hideStress: 'local:hideStress',
+  delay: 'local:hoverDelay',
+  animations: 'local:animations',
   off: 'local:sitesOff',
 };
 

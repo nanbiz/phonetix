@@ -28,7 +28,6 @@ import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.ui.AnswerCard
-import io.github.nanbiz.phonetix.ui.SymbolSheet
 import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.core.SymbolInfo
 import io.github.nanbiz.phonetix.core.WordBox
@@ -350,41 +349,32 @@ class TooltipController(
             val opened = androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf<String?>(null)
             }
-            androidx.compose.foundation.layout.Column(
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement
-                    .spacedBy(androidx.compose.ui.unit.Dp(Tokens.Scale.space2)),
-            ) {
-                AnswerCard(
-                    answer = answer,
-                    palette = palette,
-                    report = if (BuildConfig.DEBUG) laidOut else null,
-                    onOpen = { open(it) },
-                    // A second tap on the same symbol closes it: the sheet is a detail about
-                    // the word on screen, not a place to end up in.
-                    onSymbol = { symbol ->
-                        opened.value = if (opened.value == symbol) null else symbol
-                    },
-                    recorded = recorded.value != null,
-                    onPlay = {
-                        val file = recorded.value
-                        if (file != null) speaker.play(wikimediaFileUrl(file))
-                        // In the voice the reader chose, which is the accent's where it has
-                        // one of its own and the language's otherwise.
-                        else speaker.say(box.word, Accents.voiceOf(source, settings.accent))
-                    },
-                )
-                opened.value?.let { symbol ->
-                    IpaSymbols.describe(symbol)?.let { about ->
-                        SymbolSheet(
-                            symbol = about,
-                            palette = palette,
-                            report = if (BuildConfig.DEBUG) laidOut else null,
-                            onPlay = { about.audio?.let { speaker.play(wikimediaFileUrl(it)) } },
-                            onOpen = { open(it) },
-                        )
-                    }
-                }
-            }
+            // The sound being read about: the first of the word until the reader picks another,
+            // so the line under the transcription teaches what it is for rather than saying it.
+            val sound = opened.value?.let { IpaSymbols.describe(it) }
+                ?: answer.symbols.firstOrNull { it.name.isNotBlank() }
+            AnswerCard(
+                answer = answer,
+                palette = palette,
+                report = if (BuildConfig.DEBUG) laidOut else null,
+                onOpen = { open(it) },
+                // A second tap on the same symbol puts the line back to where it started: it
+                // is a detail about the word on screen, not a place to end up in.
+                onSymbol = { symbol ->
+                    opened.value = if (opened.value == symbol) null else symbol
+                },
+                accent = settings.accent,
+                opened = sound,
+                recorded = recorded.value != null,
+                onPlay = {
+                    val file = recorded.value
+                    if (file != null) speaker.play(wikimediaFileUrl(file))
+                    // In the voice the reader chose, which is the accent's where it has one of
+                    // its own and the language's otherwise.
+                    else speaker.say(box.word, Accents.voiceOf(source, settings.accent))
+                },
+                onPlaySymbol = { sound?.audio?.let { speaker.play(wikimediaFileUrl(it)) } },
+            )
         }
         return fresh.view
     }

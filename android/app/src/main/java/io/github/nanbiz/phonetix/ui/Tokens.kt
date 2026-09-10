@@ -21,11 +21,13 @@ object Tokens {
         const val breakpointPhone = 600.0f
         const val buttonHeight = 36.0f
         const val cardWidth = 360.0f
+        const val detailHeight = 46.0f
         const val diagramHeight = 72.0f
         const val diagramWidth = 96.0f
         const val fontSizeBody = 15.0f
         const val fontSizeHeadline = 22.0f
         const val fontSizeIpa = 16.0f
+        const val fontSizeIpaLarge = 24.0f
         const val fontSizeIpaLens = 13.0f
         const val fontSizeLabel = 11.0f
         const val fontSizeLemma = 17.0f
@@ -36,6 +38,7 @@ object Tokens {
         const val fontSizeSymbol = 32.0f
         const val handleHeight = 4.0f
         const val handleWidth = 36.0f
+        const val iconButton = 26.0f
         const val iconSize = 20.0f
         const val lensRing = 3.0f
         const val lensSize = 56.0f
@@ -60,6 +63,9 @@ object Tokens {
         const val space4 = 16.0f
         const val space5 = 24.0f
         const val space6 = 32.0f
+        const val thumbHeight = 34.0f
+        const val thumbWidth = 46.0f
+        const val thumbZoom = 4.5f
         const val tierCompactMinHeight = 240.0f
         const val tierCompactMinWidth = 240.0f
         const val tierFullMinHeight = 400.0f
@@ -67,9 +73,16 @@ object Tokens {
         const val toggleHeight = 22.0f
         const val toggleWidth = 40.0f
         const val touchTarget = 44.0f
+        const val underlineOffset = 4.0f
+        const val underlineThickness = 2.0f
         const val weightBold = 650.0f
         const val weightMedium = 500.0f
         const val weightRegular = 400.0f
+    }
+
+    /** Colours a theme deliberately does not change, as the page declares them. */
+    object Fixed {
+        const val markPlate = 0xFFFFFFFF
     }
 
     /** Which set of colours a reader has chosen. */

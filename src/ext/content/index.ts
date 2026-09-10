@@ -7,14 +7,11 @@
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import { allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
-import { hide, inside, show, showing } from './card';
-import { isPainted, paint, unpaint, WORD, wordAt } from './inline';
+import { hide, inside, moveTo, show, showing } from './card';
+import { isPainted, paint, reveal, unpaint, unreveal, WORD, wordAt } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { OURS, scan, type ScannedRun } from './scan';
-
-/** How long the cursor rests on a word before its card opens, in milliseconds. */
-const REST = 200;
 
 // Until the stored ones are read, which is one await away.
 let settings: Settings = DEFAULTS;
@@ -247,6 +244,7 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
     : answer;
   show(shown, element.getBoundingClientRect(), {
     recorded: Boolean(recording),
+    accent: settings.accent,
     onPlay: () => {
       if (recording) void recorded(commons(recording));
       // The accent's own voice where the reader chose one, since a synthesised word is
@@ -290,7 +288,54 @@ async function selected(): Promise<void> {
 /** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
 const PHRASE_LIMIT = 240;
 
+/** How long a card stays after the cursor leaves the word, so it can be walked into. */
+const GRACE = 220;
+
+/** The word the card on screen is about, so it can be put back where that word is now. */
+let anchored: HTMLElement | null = null;
+let closing: ReturnType<typeof setTimeout> | null = null;
+/**
+ * Whether the reader has taken hold of the card.
+ *
+ * A card is a thing to read and select out of, and the moment a reader presses inside one it
+ * stops being something the pointer leaving a word may take away.
+ */
+let grabbed = false;
+/** Whether the last press was a finger. On a touch screen a tap fires a hover, and treating
+ *  that as a rest opened a card on every tap, including taps meant to follow a link. */
+let touched = false;
+
+/** Stop the card from closing, because the cursor is somewhere that keeps it. */
+function keep(): void {
+  if (closing) clearTimeout(closing);
+  closing = null;
+}
+
+/** Close it after the grace period, unless something keeps it first. */
+function letGo(): void {
+  keep();
+  if (grabbed) return;
+  closing = setTimeout(() => {
+    closing = null;
+    if (!grabbed) {
+      hide();
+      anchored = null;
+    }
+  }, GRACE);
+}
+
 function gestures(): void {
+  document.addEventListener(
+    'pointerdown',
+    (event) => {
+      touched = event.pointerType === 'touch';
+      // Pressing inside the card is taking hold of it: selecting a translation out of a card
+      // that closes when the pointer wanders is a card that cannot be copied from.
+      grabbed = inside(event.target);
+    },
+    { capture: true }
+  );
+
   // A drag across several words asks about all of them at once.
   document.addEventListener('mouseup', () => {
     // After the browser has settled the selection, which it has not when mouseup fires.
@@ -298,16 +343,33 @@ function gestures(): void {
   });
 
   // A rest rather than a hover: the cursor crosses a dozen words on its way anywhere, and a
-  // card for each of them is a page nobody can read.
+  // card for each of them is a page nobody can read. How long a rest is is the reader's.
   document.addEventListener('mouseover', (event) => {
+    if (inside(event.target)) {
+      keep();
+      return;
+    }
     const found = wordAt(event.target);
     if (!found) return;
+    if (touched) return;
+    // What the swap covered, back for as long as the cursor is on it. Immediately, because
+    // it is the word itself rather than a card about it.
+    reveal(found.element);
+    keep();
     if (opening) clearTimeout(opening);
-    opening = setTimeout(() => open(found.element, found.token, found.before), REST);
+    opening = setTimeout(() => {
+      anchored = found.element;
+      void open(found.element, found.token, found.before);
+    }, Math.max(0, settings.delay));
   });
   document.addEventListener('mouseout', (event) => {
+    if (inside(event.target)) return;
     if (!wordAt(event.target)) return;
     if (opening) clearTimeout(opening);
+    unreveal();
+    // Not straight away: the card sits under the word, and the pointer has to cross the gap
+    // between them to reach it.
+    if (showing()) letGo();
   });
 
   // A touch opens it outright: there is no resting on a phone, and the annotation is small
@@ -317,16 +379,50 @@ function gestures(): void {
     const found = wordAt(event.target);
     if (found) {
       event.preventDefault();
-      open(found.element, found.token, found.before);
+      grabbed = false;
+      if (touched) reveal(found.element);
+      anchored = found.element;
+      void open(found.element, found.token, found.before);
       return;
     }
-    if (showing()) hide();
+    grabbed = false;
+    unreveal();
+    if (showing()) {
+      hide();
+      anchored = null;
+    }
   });
 
-  // A card anchored to a word that has moved is a card pointing at nothing.
-  window.addEventListener('scroll', () => showing() && hide(), { passive: true });
+  // A card anchored to a word that has moved is a card pointing at nothing, so it goes with
+  // the word rather than closing: a reader who scrolls a line to read it has not asked for
+  // the answer to disappear. It closes only once the word it is about is off the screen.
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!showing()) return;
+      const word = anchored;
+      if (!word?.isConnected) {
+        hide();
+        anchored = null;
+        return;
+      }
+      const box = word.getBoundingClientRect();
+      if (box.bottom < 0 || box.top > window.innerHeight) {
+        hide();
+        anchored = null;
+        return;
+      }
+      moveTo(box);
+    },
+    { passive: true }
+  );
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && showing()) hide();
+    if (event.key === 'Escape' && showing()) {
+      grabbed = false;
+      hide();
+      anchored = null;
+      unreveal();
+    }
   });
 }
 

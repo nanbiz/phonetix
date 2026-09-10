@@ -165,11 +165,13 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
     const box = span(`${WORD} theme-paper mode-${onDark ? 'dark' : 'light'}`);
     const mark = annotation(token, layer);
     if (layer === 'replace' && token.gloss) {
-      // The word repainted as what it means, with the cue that it was swapped. The original
-      // stays in the box's title so a reader can always see what was there.
+      // The word repainted as what it means, with the cue that it was swapped, and the word
+      // itself kept beside it: a reader who wants to know what was there rests on it, rather
+      // than hunting for a tooltip the browser draws whenever it feels like it.
       const swapped = span('px-rep', token.gloss);
       swapped.title = spelling;
       box.appendChild(swapped);
+      box.appendChild(span('px-was', spelling));
     } else {
       if (mark) box.appendChild(mark);
       box.appendChild(document.createTextNode(spelling));
@@ -189,6 +191,42 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
   painted.push({ drawn: pieces, was: text, parent });
 }
 
+/** The word whose original is being shown, so the last one comes down when the next goes up. */
+let revealed: HTMLElement | null = null;
+
+/**
+ * Show what a swapped word said, in place, over the swap.
+ *
+ * The layer needs a ground of its own or both forms show through each other, and the only
+ * ground that is right is the one the word sits on: the nearest background up the page, since
+ * an element with none of its own shows its parent's.
+ */
+export function reveal(box: HTMLElement): void {
+  if (!box.querySelector('.px-was')) return;
+  if (revealed && revealed !== box) revealed.classList.remove('px-showing');
+  box.style.setProperty('--px-page-bg', behind(box));
+  box.classList.add('px-showing');
+  revealed = box;
+}
+
+/** Put the swap back. */
+export function unreveal(): void {
+  revealed?.classList.remove('px-showing');
+  revealed = null;
+}
+
+/** The nearest solid background behind an element, walking up to the page. */
+function behind(element: HTMLElement | null): string {
+  for (let at: HTMLElement | null = element; at; at = at.parentElement) {
+    const colour = getComputedStyle(at).backgroundColor;
+    if (colour && colour !== 'transparent' && !colour.startsWith('rgba(0, 0, 0, 0)')) {
+      return colour;
+    }
+  }
+  const body = getComputedStyle(document.body).backgroundColor;
+  return body && !body.startsWith('rgba(0, 0, 0, 0)') ? body : '#fff';
+}
+
 /**
  * Put every painted node back exactly as it was.
  *
@@ -197,6 +235,7 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
  */
 export function unpaint(): void {
   document.documentElement.classList.remove('px', 'px-ruby', 'px-ruby-2');
+  revealed = null;
   for (let i = painted.length - 1; i >= 0; i--) {
     const { drawn, was, parent } = painted[i];
     const first = drawn[0];

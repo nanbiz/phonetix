@@ -15,14 +15,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
+import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Languages
+import io.github.nanbiz.phonetix.core.SymbolInfo
 
 /** Told what a piece of a card says and where it landed. */
 typealias Reporter = (String, androidx.compose.ui.geometry.Rect) -> Unit
@@ -38,14 +43,14 @@ internal fun Modifier.reported(text: String, report: Reporter?): Modifier =
 /**
  * The answer surface: what a reader gets when they stop at a word.
  *
- * The order is what a reader wants, not what the data happens to hold: what it means, how it
- * is said, which word it is, then the senses that did not apply. The tapped spelling is
- * deliberately not the headline - the page is already showing it under the finger, and the
- * card repeating it pushed the answer down. The lemma still appears, small, in the grammar
- * line, so the word is never absent.
+ * The top row names the word under the finger and says what it is being read as and where the
+ * answer came from, because everything under it is only as good as that. Then what it means,
+ * then how it is said - and the pronunciation is the interactive part: every symbol is a
+ * button, and the sound a reader asks about is described on [SoundLine], which is always there
+ * and always the same height, so exploring a transcription never resizes the card.
  *
- * Every colour and size comes from [Tokens], which is generated from the same page the
- * browser's card is styled by, so the two cannot drift apart.
+ * Every colour and size comes from [Tokens], and the rows are the ones the extension draws in
+ * the same order, both generated from the one surface page, so the two cannot drift apart.
  */
 @Composable
 fun AnswerCard(
@@ -55,7 +60,15 @@ fun AnswerCard(
     onSymbol: (String) -> Unit = {},
     /** Whether what the play button plays is a person rather than a machine. */
     recorded: Boolean = false,
+    /** The accent this language is being read in, which the card names beside the word. */
+    accent: String = "",
+    /** The sound the detail line is describing, where the reader has tapped one. */
+    opened: SymbolInfo? = null,
+    /** A picture of the mouth making that sound, drawn by the caller that could fetch it. */
+    diagram: (@Composable () -> Unit)? = null,
     onPlay: () -> Unit = {},
+    /** Play a recording of one sound, which is a file rather than a synthesised voice. */
+    onPlaySymbol: () -> Unit = {},
     /** Somewhere to send a reader who wants the whole entry. */
     onOpen: (String) -> Unit = {},
     /** Where each piece of the card ended up, once it has been laid out.
@@ -74,6 +87,8 @@ fun AnswerCard(
             .padding(Tokens.Scale.space4.dp),
         verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
     ) {
+        // The word the reader is on, whatever else the card could or could not find out.
+        TopRow(answer, accent, palette, report, onOpen)
         if (!answer.found) {
             Nothing(answer, palette, report)
             return@Column
@@ -90,7 +105,15 @@ fun AnswerCard(
             )
         }
         if (answer.ipa.isNotEmpty()) {
-            Pronunciation(answer, palette, onSymbol, recorded, onPlay, report)
+            Pronunciation(answer, palette, onSymbol, recorded, onPlay, opened, report)
+            SoundLine(
+                about = opened,
+                palette = palette,
+                onPlay = onPlaySymbol,
+                onOpen = onOpen,
+                diagram = diagram,
+                report = report,
+            )
         }
         // Every reading, where the join reached more than one. The reader chooses by meaning,
         // so each is its own row: showing the first and dropping the rest would be the card
@@ -100,6 +123,79 @@ fun AnswerCard(
         Example(answer, palette, report)
         OtherSenses(answer, palette, report)
         Foot(answer, palette, report, onOpen)
+    }
+}
+
+/**
+ * The word as the page spells it, what it is being read as, and where the answer came from.
+ *
+ * One line and it stays one line: what is under the finger is named before anything else is
+ * said about it, and a reader decides how far to trust the card by where the answer came from.
+ */
+@Composable
+private fun TopRow(
+    answer: Answer,
+    accent: String,
+    palette: Tokens.Palette,
+    report: Reporter?,
+    onOpen: (String) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.Text(
+            text = answer.spelling,
+            color = Color(palette.ink),
+            fontSize = Tokens.Scale.fontSizeLemma.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .reported(answer.spelling, report),
+        )
+        Box(Modifier.width(Tokens.Scale.space2.dp))
+        // What it is being read as, and in which accent where the reader chose one: the two
+        // are one fact, so they share one neutral pill.
+        val named = Accents.of(answer.source).firstOrNull { it.id == accent }?.name
+        Badge(
+            text = if (named != null) "${answer.source.uppercase()} · $named"
+            else answer.source.uppercase(),
+            ink = Color(palette.chipInk),
+            background = Color(palette.chipBg),
+        )
+        val from = answer.provenance
+        if (from != null) {
+            Box(Modifier.width(Tokens.Scale.space2.dp))
+            val machine = from !is Answer.Provenance.Dictionary
+            Badge(
+                text = when (from) {
+                    is Answer.Provenance.Dictionary -> "dictionary"
+                    is Answer.Provenance.Guess -> from.engine.ifEmpty { "machine" }
+                    Answer.Provenance.Synthesised -> "espeak"
+                },
+                ink = Color(if (machine) palette.guess else palette.accent),
+                background = Color(if (machine) palette.guessBg else palette.accentBg),
+            )
+        }
+        Box(Modifier.weight(1f))
+        // The word's own entry, and it is here whether or not a dictionary answered: the
+        // reader who got nothing is the one most likely to want it.
+        Box(
+            Modifier
+                .size(Tokens.Scale.iconButton.dp)
+                .clip(RoundedCornerShape(Tokens.Scale.radiusSymbol.dp))
+                .clickable { onOpen(wiktionary(answer)) }
+                .semantics { contentDescription = "open this word on Wiktionary" }
+                .reported("Wiktionary", report),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.material3.Text(
+                text = "W",
+                color = Color(palette.inkFaint),
+                fontSize = Tokens.Scale.markSize.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Serif,
+            )
+        }
     }
 }
 
@@ -148,39 +244,49 @@ private fun Pronunciation(
     onSymbol: (String) -> Unit,
     recorded: Boolean,
     onPlay: () -> Unit,
+    opened: SymbolInfo?,
     report: Reporter?,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.Text(
             text = "/",
-            color = Color(palette.ipa),
-            fontSize = Tokens.Scale.fontSizeIpa.sp,
+            color = Color(palette.inkFaint),
+            fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
         )
         // Symbol by symbol, because each one is a button: a reader who does not know a sound
         // is one tap from what it is, which is the whole of what the old tooltip was for.
         for (symbol in answer.symbols) {
+            // The rule under a symbol says what kind of sound it is and follows the letterform
+            // rather than boxing it, so the transcription still reads as one word. Stress and
+            // syllable marks carry none: they are not sounds, and underlining them broke the
+            // line into dashes.
+            val rule = when (symbol.kind) {
+                "vowel" -> palette.ipaVowel
+                "consonant" -> palette.ipaConsonant
+                else -> null
+            }
             androidx.compose.material3.Text(
                 text = symbol.token,
-                color = Color(
-                    when (symbol.kind) {
-                        "vowel" -> palette.ipaVowel
-                        "consonant" -> palette.ipaConsonant
-                        else -> palette.ipaOther
-                    },
-                ),
-                fontSize = Tokens.Scale.fontSizeIpa.sp,
+                color = Color(if (rule == null) palette.ipaOther else palette.ink),
+                fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
                 // No space between symbols: a transcription is one word and reads as one.
                 // Each is still its own target, which is what a tap needs, and the gaps that
                 // separated them made "/ˈpe.ro/" read as a row of letters.
                 modifier = Modifier
+                    .clip(RoundedCornerShape(Tokens.Scale.radiusSymbol.dp))
+                    .background(
+                        if (opened?.token == symbol.token) Color(palette.accentBg)
+                        else Color.Transparent,
+                    )
                     .clickable { onSymbol(symbol.token) }
+                    .underlined(rule?.let { Color(it) })
                     .reported(symbol.token, report),
             )
         }
         androidx.compose.material3.Text(
             text = "/",
-            color = Color(palette.ipa),
-            fontSize = Tokens.Scale.fontSizeIpa.sp,
+            color = Color(palette.inkFaint),
+            fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
         )
         Box(Modifier.width(Tokens.Scale.space3.dp))
         PlayButton(
@@ -333,6 +439,27 @@ private fun Foot(
         Pair(answer, palette)
     }
 }
+
+/**
+ * A rule under a symbol, in the colour of what kind of sound it is.
+ *
+ * Drawn rather than asked for as a text decoration, because a decoration takes the colour of
+ * the text it underlines and the whole point here is that the two differ.
+ */
+private fun Modifier.underlined(colour: Color?): Modifier =
+    if (colour == null) {
+        this
+    } else {
+        drawBehind {
+            val thickness = Tokens.Scale.underlineThickness.dp.toPx()
+            val below = size.height - Tokens.Scale.underlineOffset.dp.toPx() / 2
+            drawRect(
+                color = colour,
+                topLeft = androidx.compose.ui.geometry.Offset(0f, below - thickness),
+                size = androidx.compose.ui.geometry.Size(size.width, thickness),
+            )
+        }
+    }
 
 /** Where a word's own page is, which is the same URL the extension builds. */
 internal fun wiktionary(answer: Answer): String {

@@ -22,22 +22,25 @@
 /* A control is not prose. Without this every label in the interface takes the text cursor and
    drags into a selection when a reader means to press it - and a segmented control, which is
    spans rather than buttons, looked and behaved like a paragraph. */
-.seg, .seg span, .toggle, .select, .pick, .btn, .btn-text, .switch, .chip, .scope-head, .ticks,
-.audio, .sym, .readings li, .alt-reading, .disclosure, .r-name, .r-sub { user-select: none; -webkit-user-select: none; }
+.seg, .seg button, .toggle, .select, .pick, .btn, .btn-text, .switch, .chip, .scope-head, .ticks,
+.audio, .sym, .readings li, .alt-reading, .disclosure, .nav, .back, .choice, .r-name, .r-sub { user-select: none; -webkit-user-select: none; }
 .seg { display: inline-flex; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); overflow: hidden; }
-.seg span { padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
-.seg span:last-child { border-right: none; }
-.seg span.on { background: var(--color-accent); color: var(--color-accent-ink); }
+/* Buttons, because that is what they are: spans cut into the shape of a control took the text
+   cursor, dragged into a selection and reached neither the keyboard nor a screen reader. */
+.seg button { font-family: var(--font-ui); padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: var(--color-surface); border: none; border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--color-accent); color: var(--color-accent-ink); }
 .slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }
-.toggle { cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; }
+/* The switch is a checkbox wearing a switch, rather than a div that has to be taught what a
+   checkbox already knows: the keyboard, the screen reader and the form all still work. */
+.toggle { appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; flex: 0 0 auto; }
 /* The knob is drawn against its own track, not against the page. Painted in the surface
    colour it disappeared in both palettes: the light track is near-white and the dark track is
    near-black, and each of them is the surface colour it was being drawn in, so a switched-off
    toggle read as an empty outlined pill. */
-.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
-.toggle.on { background: var(--color-accent); }
-.toggle.on::after { background: var(--color-accent-ink); }
-.toggle.on::after { left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
+.toggle::before { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
+.toggle:checked, .toggle.on { background: var(--color-accent); }
+.toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
 .select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
 .select::after { content: "⌄"; color: var(--color-ink-faint); }
 /* The same control where it is a real one: a browser paints its own select in its own colours, which on a dark surface is a white slab with invisible text. */
@@ -52,6 +55,24 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
 .field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--font-size-small); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-1) 0 var(--space-3); height: var(--button-height); overflow: hidden; }
 .dim { opacity: 0.45; pointer-events: none; }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-accent-bg); color: var(--color-ink); font-size: var(--font-size-small); border-bottom: var(--border-width) solid var(--color-border); }
+/* A row that opens a screen of its own. The settings a reader changes once - which accent,
+   which dictionaries - are a screen behind a row rather than a wall of controls in front of
+   the two they change daily. */
+.nav { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; text-align: left; font: inherit; color: var(--color-ink); background: none; border: none; border-bottom: var(--border-width) solid var(--color-border); padding: var(--space-3) var(--space-4); min-height: var(--touch-target); cursor: pointer; }
+.nav:hover { background: var(--color-surface-raised); }
+.nav .n-name { font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); }
+.nav .n-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.nav .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-ink-faint); font-size: var(--font-size-ipa); }
+/* The way back out of one, which is the first thing on the screen it leads to. */
+.back { display: inline-flex; align-items: center; gap: var(--space-1); font: inherit; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: none; border: none; padding: var(--space-2) var(--space-4); cursor: pointer; }
+.back:hover { color: var(--color-ink); }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-body); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
+.head .h-note { font-size: var(--font-size-label); font-weight: var(--weight-regular); color: var(--color-ink-faint); }
+.r-icon { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; color: var(--color-ink-faint); }
+/* One choice out of a list too long for a segmented control: which accent, which language. */
+.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
+.choice.on { border-color: var(--color-accent); background: var(--color-accent-bg); color: var(--color-accent); font-weight: var(--weight-medium); }
+.choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 
 /* Shared with the card, where they are declared. */
 .chip { display: inline-flex; align-items: center; background: var(--color-chip-bg); color: var(--color-chip-ink); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); line-height: 1.6; white-space: nowrap; }

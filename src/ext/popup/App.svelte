@@ -72,10 +72,10 @@
 
 </script>
 
-<main>
-  <h1 class="flex items-baseline justify-between px-4 py-3 text-base font-bold">
+<main class="panel">
+  <h1 class="head">
     Phonetix
-    <span class="text-sm font-normal opacity-60">{settings?.on ? 'reading' : 'off'}</span>
+    <span class="h-note">{settings?.on ? 'reading' : 'off'}</span>
   </h1>
   {#if settings}
     <Settings

@@ -16,6 +16,13 @@
 /* the swap cue lives inside the painted box: a dotted rule on its bottom edge */
 .px-keep { }
 /* an unswapped unit: untouched pixels, tappable */
+/* What the swap covered up, shown in place while the cursor is on it. No measuring: it is laid
+   at the painted box's own origin, so it lands on the same pixels in every browser, and it
+   paints an opaque ground taken from the page beneath it rather than letting both forms show
+   through each other. */
+.px-was { position: absolute; left: 0; bottom: 0; display: none; white-space: nowrap; background: var(--px-page-bg, var(--color-surface)); color: var(--color-ink); border-radius: var(--radius-bar); padding: 0 2px; z-index: 1; }
+.px-w.px-showing > .px-was { display: inline-block; }
+.px-w.px-showing > .px-rep { visibility: hidden; }
 .px.px-inbox .px-w { padding-top: 0; }
 .px.px-inbox .px-w > .px-rb { bottom: calc(var(--ruby-glyph-line) - var(--ruby-inbox-overlap)); background: var(--color-annotation-backing); border-radius: var(--radius-bar); padding: 0 var(--space-1); }
 .px.px-inbox .px-rb .px-gl { font-size: calc(1em * var(--ruby-inbox-scale)); }

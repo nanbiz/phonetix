@@ -1,5 +1,4 @@
 import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
 import Icons from 'unplugin-icons/vite';
 import fs from 'fs';
 import path from 'path';
@@ -25,13 +24,10 @@ export default defineConfig({
     // from stalling in review for weeks. The bundle is tiny next to the espeak data, so
     // there is no meaningful size cost.
     build: { minify: false },
-    // The interface is built out of libraries rather than hand-cut CSS: Tailwind and daisyUI
-    // for the controls, and icon sets compiled to Svelte components so an icon is a component
-    // rather than a path this repository draws and has to keep legible itself.
-    plugins: [
-      tailwindcss(),
-      Icons({ autoInstall: true, compiler: 'svelte' }),
-    ],
+    // Icon sets compiled to Svelte components, so a mark is a component from the set that
+    // drew it rather than a path this repository cuts and has to keep legible itself. The
+    // surfaces themselves are drawn in the generated tokens, which the phone is drawn in too.
+    plugins: [Icons({ autoInstall: true, compiler: 'svelte' })],
   }),
   srcDir: 'src',
   // AMO wants the source of a build it signs, and the default sweep takes the repository with

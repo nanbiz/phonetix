@@ -70,6 +70,8 @@ function place(at: DOMRect): void {
 export interface CardActions {
   /** Whether what the play button plays is a person rather than a machine. */
   recorded?: boolean;
+  /** The accent this language is being read in, which the card names beside the word. */
+  accent?: string;
   /** Say the word the card is about. */
   onPlay?: () => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
@@ -86,7 +88,9 @@ let anchor: DOMRect = new DOMRect();
 export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): void {
   anchor = at;
   const { frame: box } = build();
-  const key = `${answer.spelling}:${answer.state}:${actions.recorded ?? false}`;
+  const key = `${answer.spelling}:${answer.state}:${actions.recorded ?? false}:${
+    actions.accent ?? ''
+  }`;
   if (drawn && about === key) {
     place(at);
     return;
@@ -98,6 +102,7 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
     props: {
       answer,
       recorded: actions.recorded ?? false,
+      accent: actions.accent ?? '',
       diagram: actions.diagram,
       onPlay: actions.onPlay,
       onPlayUrl: actions.onPlayUrl,
@@ -111,6 +116,18 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   void box;
   // Placed after it has drawn, since where it fits depends on how tall it turned out to be.
   requestAnimationFrame(() => place(at));
+}
+
+/**
+ * Put the card back over the word it is about, wherever that word is now.
+ *
+ * A page scrolls under a card that is positioned against the window, so without this the card
+ * stays where it was drawn and points at whatever has scrolled into that spot.
+ */
+export function moveTo(at: DOMRect): void {
+  if (!drawn) return;
+  anchor = at;
+  place(at);
 }
 
 /** Take the card down. */

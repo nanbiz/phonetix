@@ -22,6 +22,7 @@
   --font-size-lemma:  17px;
   --font-size-ipa:    16px;
   --font-size-ipa-lens: 13px;
+  --font-size-ipa-large: 24px;  /* the pronunciation on the card, which is what the card is for */
   --font-size-body:   15px;
   --font-size-sense:  14px;
   --font-size-small:  12px;
@@ -61,6 +62,13 @@
   --icon-size:         20px;
   --audio-size:        28px;
   --source-mark-size:  14px;   /* what made a sound, drawn beside the button that plays it */
+  --icon-button:       26px;   /* the small square buttons on the card's top row */
+  --detail-height:     46px;   /* the sound line, fixed so reading a symbol never resizes the card */
+  --thumb-width:       46px;   /* the mouth diagram in that line, enlarged on hover */
+  --thumb-height:      34px;
+  --thumb-zoom:        4.5;    /* how far it grows when a reader looks at it */
+  --underline-thickness: 2px;  /* the rule under a symbol, coloured by what kind of sound it is */
+  --underline-offset:  4px;
   --lens-size:         56px;
   --lens-ring:         3px;
   --handle-width:      36px;
@@ -320,6 +328,13 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .w.seen { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--border-width); text-underline-offset: 3px; }
 .rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }   /* the swap cue lives inside the painted box: a dotted rule on its bottom edge */
 .keep { }                                                                    /* an unswapped unit: untouched pixels, tappable */
+/* What the swap covered up, shown in place while the cursor is on it. No measuring: it is laid
+   at the painted box's own origin, so it lands on the same pixels in every browser, and it
+   paints an opaque ground taken from the page beneath it rather than letting both forms show
+   through each other. */
+.was { position: absolute; left: 0; bottom: 0; display: none; white-space: nowrap; background: var(--px-page-bg, var(--color-surface)); color: var(--color-ink); border-radius: var(--radius-bar); padding: 0 2px; z-index: 1; }
+.w.showing > .was { display: inline-block; }
+.w.showing > .rep { visibility: hidden; }
 .page.inbox .w { padding-top: 0; }
 .page.inbox .w > .rb { bottom: calc(var(--ruby-glyph-line) - var(--ruby-inbox-overlap)); background: var(--color-annotation-backing); border-radius: var(--radius-bar); padding: 0 var(--space-1); }
 .page.inbox .rb .gl { font-size: calc(1em * var(--ruby-inbox-scale)); }
@@ -334,21 +349,59 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .card { font-family: var(--font-ui); width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: var(--border-width) solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; }
 .card-handle { display: none; width: var(--handle-width); height: var(--handle-height); border-radius: var(--radius-bar); background: var(--color-border); margin: var(--space-2) auto 0; }
 .card-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
+/* The top row: the word as the page spells it, what it is being read as, where the answer came
+   from, and the two things a reader reaches for outside the card. It is one line and stays one
+   line, so what is under the cursor is named before anything else is said about it. */
+.card-top { display: flex; align-items: center; gap: var(--space-2); }
+.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.card-top .spacer { flex: 1 1 auto; }
+.pill { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; line-height: 1.6; padding: 1px var(--space-2); border-radius: var(--radius-chip); white-space: nowrap; background: var(--color-chip-bg); color: var(--color-chip-ink); flex: 0 0 auto; }
+/* Where the answer came from, in its own colour: a dictionary a person wrote and a machine
+   that guessed are not the same claim, and a reader decides how far to trust the card by it. */
+.pill.from-dictionary { background: var(--color-accent-bg); color: var(--color-accent); }
+.pill.from-machine { background: var(--color-guess-bg); color: var(--color-guess); }
+.icon-btn { width: var(--icon-button); height: var(--icon-button); flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; border-radius: var(--radius-symbol); color: var(--color-ink-faint); cursor: pointer; text-decoration: none; }
+.icon-btn:hover { color: var(--color-ink); background: var(--color-surface-raised); }
+.icon-btn svg { width: var(--source-mark-size); height: var(--source-mark-size); display: block; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.icon-btn svg.solid { fill: currentColor; stroke: none; }
+.icon-btn[disabled] { opacity: 0.3; pointer-events: none; }
 .headline { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
-.headline .tr { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.2; flex: 1 1 auto; min-width: 0; }
+/* The answer takes only the room it needs: growing it pushed the chips beside it - what kind of word it is, what the sense is marked as - out to the far edge of the card, where they read as belonging to nothing. */
+.headline .tr { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.2; flex: 0 1 auto; min-width: 0; }
 .headline .tr.def { font-size: var(--font-size-ipa); font-weight: var(--weight-medium); }
 .headline .tr.quiet { font-size: var(--font-size-body); font-weight: var(--weight-medium); color: var(--color-ink); }
 .audio { flex: 0 0 auto; width: var(--audio-size); height: var(--audio-size); border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-accent-ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; align-self: center; }
 .audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); fill: currentColor; margin-left: 2px; }
 .audio[disabled] { background: var(--color-chip-bg); color: var(--color-ink-faint); }
-.ipa-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); }
+/* The pronunciation, drawn large because it is what the card is for, and each symbol is a
+   button: a reader who does not know a sound is one tap from what it is. */
+.ipa-row { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; font-family: var(--font-ipa); font-size: var(--font-size-ipa-large); color: var(--color-ipa); }
 .ipa { display: inline-flex; align-items: baseline; flex-wrap: wrap; }
 .ipa .delim { color: var(--color-ink-faint); }
-.sym { font: inherit; color: var(--color-ipa-other); background: none; border: none; padding: 0 1px; margin: 0; border-radius: var(--radius-symbol); cursor: pointer; line-height: 1.2; }
-.sym.c { color: var(--color-ipa-consonant); }
-.sym.v { color: var(--color-ipa-vowel); }
-.sym.o { color: var(--color-ipa-other); }
+/* The rule under a symbol says what kind of sound it is, and follows the letterform rather
+   than boxing it: the transcription still reads as one word. */
+.sym { font: inherit; color: var(--color-ink); background: none; border: none; padding: 0 1px 2px; margin: 0; border-radius: var(--radius-symbol); cursor: pointer; line-height: 1.25; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: var(--underline-thickness); text-underline-offset: var(--underline-offset); }
+.sym.c { text-decoration-color: var(--color-ipa-consonant); }
+.sym.v { text-decoration-color: var(--color-ipa-vowel); }
+/* Stress and syllable marks are not sounds, so they carry no rule: underlining them broke the
+   transcription into dashes and said a mark was a thing to hear. */
+.sym.o { color: var(--color-ipa-other); text-decoration-color: transparent; }
 .sym:hover, .sym.active { background: var(--color-accent-bg); }
+/* The sound a reader asked about, on a line of its own height: what it is called, an example
+   word, and the mouth that makes it. Fixed height and clipped text, because a panel that grew
+   with the description would move the card under the cursor every time one is read. */
+.detail { display: flex; align-items: center; gap: var(--space-2); height: var(--detail-height); padding: var(--space-1) var(--space-2); border-radius: var(--radius-button); background: var(--color-surface-raised); }
+.detail .d-sym { font-family: var(--font-ipa); font-size: var(--font-size-ipa); line-height: 1; color: var(--color-ipa); flex: 0 0 auto; }
+.detail .d-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.detail .d-name { font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.detail .d-eg { font-size: var(--font-size-label); color: var(--color-ink-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail .d-hint { font-size: var(--font-size-label); color: var(--color-ink-faint); }
+/* A sagittal section is dark ink drawn to be read on white, so it keeps its own white plate
+   whatever the card's ground is, and grows about its own centre where the eye already is. */
+.detail .d-thumb { flex: 0 0 auto; width: var(--thumb-width); height: var(--thumb-height); border-radius: var(--radius-bar); background: var(--color-mark-plate); display: flex; align-items: center; justify-content: center; overflow: visible; }
+.detail .d-thumb img { max-width: 100%; max-height: 100%; display: block; transition: transform var(--motion-dwell) ease-out; }
+.detail .d-thumb:hover { position: relative; z-index: 2; }
+.detail .d-thumb:hover img { transform: scale(var(--thumb-zoom)); background: var(--color-mark-plate); border-radius: var(--radius-bar); box-shadow: var(--shadow-popover); }
 .ipa-note { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); }
 /* What made the sound the button beside it plays: a spark for a voice a machine generated, a microphone for one a person recorded. Drawn rather than written, because it is a property of the sound and not a sentence the reader has to read on every card. */
 .ipa-mark { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; fill: var(--color-ink-faint); color: var(--color-ink-faint); align-self: center; }
@@ -424,7 +477,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
   .card .fold { display: inline-flex; align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
 }
 @container card-space ((max-height: 239px) or (max-width: 239px)) {
-  .card .gram, .card .card-foot, .card .ipa-note, .card .card-body { display: none; }
+  .card .gram, .card .card-foot, .card .ipa-note, .card .card-body, .card .detail { display: none; }
   .card .card-head { padding-bottom: var(--space-3); }
 }
 
@@ -477,22 +530,25 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* A control is not prose. Without this every label in the interface takes the text cursor and
    drags into a selection when a reader means to press it - and a segmented control, which is
    spans rather than buttons, looked and behaved like a paragraph. */
-.seg, .seg span, .toggle, .select, .pick, .btn, .btn-text, .switch, .chip, .scope-head, .ticks,
-.audio, .sym, .readings li, .alt-reading, .disclosure, .r-name, .r-sub { user-select: none; -webkit-user-select: none; }
+.seg, .seg button, .toggle, .select, .pick, .btn, .btn-text, .switch, .chip, .scope-head, .ticks,
+.audio, .sym, .readings li, .alt-reading, .disclosure, .nav, .back, .choice, .r-name, .r-sub { user-select: none; -webkit-user-select: none; }
 .seg { display: inline-flex; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); overflow: hidden; }
-.seg span { padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
-.seg span:last-child { border-right: none; }
-.seg span.on { background: var(--color-accent); color: var(--color-accent-ink); }
+/* Buttons, because that is what they are: spans cut into the shape of a control took the text
+   cursor, dragged into a selection and reached neither the keyboard nor a screen reader. */
+.seg button { font-family: var(--font-ui); padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: var(--color-surface); border: none; border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
+.seg button:last-child { border-right: none; }
+.seg button.on { background: var(--color-accent); color: var(--color-accent-ink); }
 .slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }
-.toggle { cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; }
+/* The switch is a checkbox wearing a switch, rather than a div that has to be taught what a
+   checkbox already knows: the keyboard, the screen reader and the form all still work. */
+.toggle { appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; flex: 0 0 auto; }
 /* The knob is drawn against its own track, not against the page. Painted in the surface
    colour it disappeared in both palettes: the light track is near-white and the dark track is
    near-black, and each of them is the surface colour it was being drawn in, so a switched-off
    toggle read as an empty outlined pill. */
-.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
-.toggle.on { background: var(--color-accent); }
-.toggle.on::after { background: var(--color-accent-ink); }
-.toggle.on::after { left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
+.toggle::before { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
+.toggle:checked, .toggle.on { background: var(--color-accent); }
+.toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
 .select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
 .select::after { content: "⌄"; color: var(--color-ink-faint); }
 /* The same control where it is a real one: a browser paints its own select in its own colours, which on a dark surface is a white slab with invisible text. */
@@ -507,6 +563,24 @@ select.select option { background: var(--color-surface); color: var(--color-ink)
 .field { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: var(--font-size-small); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-1) 0 var(--space-3); height: var(--button-height); overflow: hidden; }
 .dim { opacity: 0.45; pointer-events: none; }
 .banner { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--color-accent-bg); color: var(--color-ink); font-size: var(--font-size-small); border-bottom: var(--border-width) solid var(--color-border); }
+/* A row that opens a screen of its own. The settings a reader changes once - which accent,
+   which dictionaries - are a screen behind a row rather than a wall of controls in front of
+   the two they change daily. */
+.nav { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; text-align: left; font: inherit; color: var(--color-ink); background: none; border: none; border-bottom: var(--border-width) solid var(--color-border); padding: var(--space-3) var(--space-4); min-height: var(--touch-target); cursor: pointer; }
+.nav:hover { background: var(--color-surface-raised); }
+.nav .n-name { font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); }
+.nav .n-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.nav .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-ink-faint); font-size: var(--font-size-ipa); }
+/* The way back out of one, which is the first thing on the screen it leads to. */
+.back { display: inline-flex; align-items: center; gap: var(--space-1); font: inherit; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: none; border: none; padding: var(--space-2) var(--space-4); cursor: pointer; }
+.back:hover { color: var(--color-ink); }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-body); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
+.head .h-note { font-size: var(--font-size-label); font-weight: var(--weight-regular); color: var(--color-ink-faint); }
+.r-icon { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; color: var(--color-ink-faint); }
+/* One choice out of a list too long for a segmented control: which accent, which language. */
+.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
+.choice.on { border-color: var(--color-accent); background: var(--color-accent-bg); color: var(--color-accent); font-weight: var(--weight-medium); }
+.choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 
 /* ------------------------------------------------------------------
    Docked form. When the space beside the anchor cannot hold a Compact

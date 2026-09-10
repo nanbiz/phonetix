@@ -56,7 +56,7 @@ LANGUAGES_TS = os.path.join(ROOT, "src", "data", "languages.ts")
 # The sections of the surface page's stylesheet the extension's card is drawn by. Named
 # rather than pattern-matched: the page also styles its own showcase, and a card that picked
 # up the showcase's rules would be styled by the exhibition it is displayed in.
-CARD_SECTIONS = ("Card (answer surface)", "Density tiers", "Symbol popover")
+CARD_SECTIONS = ("Card (answer surface)", "Density tiers")
 
 # The settings surfaces: the panel, its rows and the controls in them. Same page, same
 # reasoning as the card, so the view a reader changes things in is not a second design.
@@ -83,6 +83,8 @@ INLINE_CLASSES = {
     "ruby": "px-ruby",
     "ruby-2": "px-ruby-2",
     "inbox": "px-inbox",
+    "was": "px-was",
+    "showing": "px-showing",
     "guess": "px-guess",
 }
 # The showcase's own furniture, which is not part of what a reader gets.
@@ -212,7 +214,8 @@ def inline_stylesheet(style):
 
 # Which of daisyUI's themes this product offers, and what each palette entry of ours is worth
 # in it. The library ships thirty-five of them as plain custom properties, so they are data
-# this generator can read rather than a second stylesheet to keep in step by hand.
+# this generator can read rather than a second stylesheet to keep in step by hand. It is a
+# build input and nothing else: no surface is drawn by that library, and none of its CSS ships.
 #
 # The mapping is the whole point: a theme is a set of values, and the vocabulary stays ours.
 # Everything drawn on either platform names a role - surface, ink, accent - so a theme from a
@@ -400,6 +403,16 @@ def kotlin(scalars, palettes, roles):
         number = re.fullmatch(r"(-?[\d.]+)(px|em|rem)?", value.strip())
         if number and number.group(2) in (None, "px"):
             lines.append(f"        const val {camel(name)} = {float(number.group(1))}f")
+    lines += [
+        "    }",
+        "",
+        "    /** Colours a theme deliberately does not change, as the page declares them. */",
+        "    object Fixed {",
+    ]
+    for name, value in sorted(scalars.items()):
+        hex_colour = re.fullmatch(r"#([0-9a-fA-F]{6})", value.strip())
+        if hex_colour:
+            lines.append(f"        const val {camel(name)} = 0xFF{hex_colour.group(1).upper()}")
     lines += [
         "    }",
         "",

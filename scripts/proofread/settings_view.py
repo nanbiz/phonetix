@@ -242,20 +242,24 @@ def main():
             return said or ""
 
         before = sound_of("calle")
+        # The accents are a screen of their own, opened from the row that says which one is
+        # set: driven the way a reader drives it, through the row and then the choice.
         picked = evaluate(cdp, view, """
             (() => {
               const row = document.querySelector('[data-row="accent"]');
               if (!row) return 'no accent row';
-              const select = row.querySelector('select');
-              const option = [...select.options].find(o => o.textContent.includes('Latin'));
-              if (!option) return 'no Latin American option';
-              select.value = option.value;
-              select.dispatchEvent(new Event('change', {bubbles: true}));
-              return option.value;
+              row.click();
+              const choice = [...document.querySelectorAll('[data-accent]')]
+                .find(c => c.textContent.includes('Latin'));
+              if (!choice) return 'no Latin American accent';
+              choice.click();
+              return choice.getAttribute('data-accent');
             })()
         """)
         time.sleep(3)
         after = sound_of("calle")
+        # And back out of it, the way a reader leaves a screen they are done with.
+        evaluate(cdp, view, "(document.querySelector('[data-view=accent] .back') || {}).click?.()")
         print(f"  accent {picked}: calle said {before!r} -> {after!r}")
         if picked and picked.startswith("no "):
             failures.append(f"the view offers no accent to pick ({picked})")
