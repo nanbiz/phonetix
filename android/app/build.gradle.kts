@@ -167,6 +167,10 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    // The icons, from the set rather than drawn here. A play triangle and a microphone cut by
+    // hand in a canvas are shapes this repository then has to keep legible at every size, and
+    // it did not: the microphone read as a lollipop until somebody looked at it closely.
+    implementation(libs.compose.material.icons)
     implementation(libs.kotlinx.coroutines.android)
     // The list most apps are built from, for the test pages only: what a scroll event says
     // about how far it moved differs by container, and the answer for this one decides
