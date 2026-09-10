@@ -62,6 +62,7 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "every card state draws what it means" uv run python scripts/proofread/card_states.py
   step "a page is annotated and comes back" uv run python scripts/proofread/on_a_page.py
   step "every setting changes what is seen" uv run python scripts/proofread/settings_view.py
+  step "the settings view looks like one surface" uv run scripts/proofread/popup_view.py
 fi
 
 if [[ "$what" == all || "$what" == android ]]; then

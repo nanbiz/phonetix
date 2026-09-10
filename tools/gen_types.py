@@ -14,7 +14,9 @@ rather than a card that looks wrong on one platform only.
   uv run python tools/gen_types.py --check  # say whether what is written is still current
 """
 import json
+import math
 import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -202,6 +204,107 @@ def inline_stylesheet(style):
     return "\n".join(lines) + "\n"
 
 
+# Which of daisyUI's themes this product offers, and what each palette entry of ours is worth
+# in it. The library ships thirty-five of them as plain custom properties, so they are data
+# this generator can read rather than a second stylesheet to keep in step by hand.
+#
+# The mapping is the whole point: a theme is a set of values, and the vocabulary stays ours.
+# Everything drawn on either platform names a role - surface, ink, accent - so a theme from a
+# library reaches the phone's card without a single Kotlin file knowing the library exists.
+DAISY = pathlib.Path(ROOT) / "node_modules" / "daisyui" / "theme"
+
+DAISY_THEMES = ["nord", "dracula", "winter", "silk"]
+
+DAISY_ROLES = {
+    "--p-surface": "--color-base-100",
+    "--p-surface-raised": "--color-base-200",
+    "--p-border": "--color-base-300",
+    "--p-ink": "--color-base-content",
+    "--p-ink-muted": "--color-base-content",
+    "--p-ink-faint": "--color-base-content",
+    "--p-accent": "--color-primary",
+    "--p-accent-ink": "--color-primary-content",
+    "--p-accent-bg": "--color-primary",
+    "--p-chip-bg": "--color-base-200",
+    "--p-chip-ink": "--color-base-content",
+    "--p-danger": "--color-error",
+    "--p-danger-bg": "--color-error-content",
+}
+
+
+def from_oklch(value):
+    """An oklch() colour as #rrggbb. daisyUI writes every colour that way."""
+    got = re.fullmatch(
+        r"oklch\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*\)", value.strip())
+    if not got:
+        return None
+    lightness, chroma, hue = (float(g) for g in got.groups())
+    if lightness > 1.5:
+        lightness /= 100.0
+    radians = math.radians(hue)
+    a, b = chroma * math.cos(radians), chroma * math.sin(radians)
+    # Oklab to linear sRGB, as the colour space defines it.
+    l_ = (lightness + 0.3963377774 * a + 0.2158037573 * b) ** 3
+    m_ = (lightness - 0.1055613458 * a - 0.0638541728 * b) ** 3
+    s_ = (lightness - 0.0894841775 * a - 1.2914855480 * b) ** 3
+    linear = (
+        4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+        -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+        -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076147010 * s_,
+    )
+    out = []
+    for channel in linear:
+        channel = max(0.0, min(1.0, channel))
+        srgb = 12.92 * channel if channel <= 0.0031308 else 1.055 * channel ** (1 / 2.4) - 0.055
+        out.append(round(max(0.0, min(1.0, srgb)) * 255))
+    return "#%02x%02x%02x" % tuple(out)
+
+
+def lightness_of(value):
+    """How light an oklch() colour is, from 0 to 1. Anything unparsed reads as light."""
+    got = re.fullmatch(r"oklch\(\s*([\d.]+)%?\s+.*", value.strip())
+    if not got:
+        return 1.0
+    light = float(got.group(1))
+    return light / 100.0 if light > 1.5 else light
+
+
+def read_daisy():
+    """The offered daisyUI themes, as palettes in this product's own vocabulary."""
+    palettes = {}
+    for name in DAISY_THEMES:
+        path = DAISY / f"{name}.css"
+        if not path.exists():
+            continue
+        declared = dict(re.findall(r"(--[a-z0-9-]+)\s*:\s*([^;]+);", path.read_text()))
+        # Which mode a theme is, taken from the colour it paints its surface rather than from
+        # what it says: daisyUI's nord declares "color-scheme: dark" and has a surface at 95%
+        # lightness, and believing the declaration filed a light theme as a dark one.
+        mode = "dark" if lightness_of(declared.get("--color-base-100", "")) < 0.5 else "light"
+        palette = {}
+        for ours, theirs in DAISY_ROLES.items():
+            colour = from_oklch(declared.get(theirs, ""))
+            if colour:
+                palette[ours] = colour
+        # The two quieter inks are the body colour stepped towards the surface, since a theme
+        # states one text colour and this product draws three weights of it.
+        for role, mix in (("--p-ink-muted", 0.35), ("--p-ink-faint", 0.55)):
+            ink, surface = palette.get("--p-ink"), palette.get("--p-surface")
+            if ink and surface:
+                palette[role] = blend(ink, surface, mix)
+        if palette:
+            palettes[f"{name}-{mode}"] = palette
+    return palettes
+
+
+def blend(one, other, amount):
+    """One colour moved towards another, as #rrggbb."""
+    a = [int(one[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(other[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#%02x%02x%02x" % tuple(
+        round(x + (y - x) * amount) for x, y in zip(a, b))
+
+
 def read_surface():
     """The scalars, the palettes and the roles, as the page declares them."""
     with open(SURFACE) as f:
@@ -224,6 +327,9 @@ def read_surface():
                 seen = re.match(r"var\((--p-[a-z0-9-]+)\)", value)
                 if seen:
                     roles[role] = seen.group(1)
+    # The themes a library gives us, in the same vocabulary, so every surface on both
+    # platforms can offer them without knowing where they came from.
+    palettes.update(read_daisy())
     return scalars, palettes, roles
 
 
@@ -314,8 +420,17 @@ def kotlin(scalars, palettes, roles):
                              if argb is not None else
                              f"            {camel(role)} = 0x00000000L,")
             lines.append("        )")
+    # A theme offered in one mode only keeps its own colours in the other. Many of the themes
+    # a library ships are designed as one or the other, and falling through to a different
+    # theme would answer a reader who chose Dracula with somebody else's palette.
+    lines.append("        // A theme designed for one mode keeps its own colours in the other.")
+    for theme in themes:
+        has = [mode for mode in ("dark", "light") if f"{theme}-{mode}" in palettes]
+        if len(has) == 1:
+            lines.append(
+                f"        theme == Theme.{theme.upper()} -> "
+                f"palette(Theme.{theme.upper()}, {'true' if has[0] == 'dark' else 'false'})")
     lines += [
-        "        // A theme with no palette is a build that generated one and not the other.",
         f"        else -> palette(Theme.{themes[0].upper()}, dark)",
         "    }",
         "}",

@@ -30,13 +30,15 @@
     "hooks": "scripts/hooks/install.sh",
     "test:translates": "uv run python scripts/proofread/android_translates.py",
     "test:lens": "uv run python scripts/proofread/android_lens.py",
-    "test:accent": "uv run python scripts/proofread/android_accent.py"
+    "test:accent": "uv run python scripts/proofread/android_accent.py",
+    "test:popup": "uv run scripts/proofread/popup_view.py"
   },
   "devDependencies": {
     "@iconify-json/line-md": "^1.2.14",
     "@iconify-json/pixelarticons": "^1.2.4",
     "@puppeteer/browsers": "^2.13.0",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@tailwindcss/vite": "^4.3.3",
     "@tsconfig/svelte": "^5.0.8",
     "@types/chrome": "^0.1.37",
     "@wxt-dev/module-svelte": "^2.0.4",
@@ -46,8 +48,11 @@
     "eslint-plugin-svelte": "^3.15.0",
     "svelte": "^5.53.6",
     "svelte-check": "^4.4.4",
+    "svelte-multiselect": "^11.8.0",
+    "tailwindcss": "^4.3.3",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
+    "unplugin-icons": "^23.0.1",
     "wxt": "^0.20.18"
   },
   "dependencies": {

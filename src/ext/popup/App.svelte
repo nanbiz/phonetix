@@ -8,8 +8,6 @@
   import { current, set, setSite, type Settings as Chosen } from '@/settings';
   import { sendMessage } from '@/host/messages';
   import type { Offered } from '@/host/packs';
-  import '@/ui/tokens.css';
-  import '@/ui/settings/settings.css';
 
   let settings = $state<Chosen | null>(null);
   let curve = $state<number[]>([]);
@@ -72,12 +70,13 @@
 
   void load();
 
-  // The theme the tokens are keyed by. A settings view is the extension's own surface, so it
-  // follows the reader's browser rather than a page.
-  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 </script>
 
-<main class="theme-paper mode-{dark ? 'dark' : 'light'}">
+<main>
+  <h1 class="flex items-baseline justify-between px-4 py-3 text-base font-bold">
+    Phonetix
+    <span class="text-sm font-normal opacity-60">{settings?.on ? 'reading' : 'off'}</span>
+  </h1>
   {#if settings}
     <Settings
       {settings}
@@ -96,13 +95,4 @@
   {/if}
 </main>
 
-<style>
-  main {
-    background: var(--color-page-bg);
-    padding: var(--space-3);
-    min-width: 340px;
-    font-family: var(--font-ui);
-    font-size: var(--font-size-body);
-    color: var(--color-ink);
-  }
-</style>
+

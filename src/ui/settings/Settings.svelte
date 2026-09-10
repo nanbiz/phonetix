@@ -1,9 +1,18 @@
 <script lang="ts">
   // What a reader changes, and nothing else.
   //
-  // Every control here is one setting: the panel, its rows and the controls in them are the
-  // design page's own, so the settings a reader meets in a browser and the ones on a phone are
-  // the same surface.
+  // The controls are daisyUI's and the icons are icon sets compiled to components. Nothing
+  // here is drawn by hand: a segmented control cut out of spans is not a control, it is a
+  // paragraph that happens to react - it takes the text cursor, it drags into a selection,
+  // and its states have to be kept legible by this repository rather than by a library that
+  // does nothing else. What is ours is the reading surface, where a colour has to match the
+  // page it is drawn over; a settings screen has no such constraint and is better off native.
+  import Eye from 'virtual:icons/pixelarticons/eye';
+  import Volume from 'virtual:icons/pixelarticons/volume-2';
+  import Download from 'virtual:icons/pixelarticons/download';
+  import Close from 'virtual:icons/pixelarticons/close';
+  import Loader from 'virtual:icons/line-md/loading-twotone-loop';
+
   import { accentsOf } from '@/data/accents';
   import { LANGUAGES } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
@@ -77,167 +86,154 @@
   }
 </script>
 
-<div class="panel">
-  <h4>Phonetix<span class="h4-note">{settings.on ? 'reading' : 'off'}</span></h4>
-  <div class="rows">
-    <div class="row">
-      <span class="r-name">Annotate what I read</span>
-      <span class="r-act">
+<div class="flex flex-col divide-y divide-base-300">
+  <div class="flex items-center justify-between gap-3 px-4 py-3">
+    <span class="font-medium">Annotate what I read</span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary"
+      aria-label="annotate what I read"
+      checked={settings.on}
+      onchange={() => change('on', !settings.on)}
+    />
+  </div>
+
+  {#if site}
+    <!-- One site, rather than everywhere: a reader who does not want this on their bank does
+         not want to switch it off on the web. -->
+    <div class="flex items-center justify-between gap-3 px-4 py-3">
+      <span class="min-w-0 truncate font-medium">On {site}</span>
+      <input
+        type="checkbox"
+        class="toggle toggle-primary"
+        aria-label="on {site}"
+        checked={here}
+        onchange={() => onSite?.(!here)}
+      />
+    </div>
+  {/if}
+
+  <div class="flex flex-col gap-2 px-4 py-3">
+    <span class="flex items-center gap-2 font-medium"><Eye class="size-4 opacity-60" />Show over a word</span>
+    <div class="join w-full">
+      {#each layers as choice (choice.value)}
         <button
-          class="toggle {settings.on ? 'on' : ''}"
-          aria-label="annotate what I read"
-          aria-pressed={settings.on}
-          onclick={() => change('on', !settings.on)}
-        ></button>
-      </span>
+          type="button"
+          class="btn join-item btn-xs flex-1 {settings.layer === choice.value ? 'btn-primary' : ''}"
+          aria-pressed={settings.layer === choice.value}
+          onclick={() => change('layer', choice.value)}
+        >{choice.label}</button>
+      {/each}
     </div>
+  </div>
 
-    {#if site}
-      <div class="row">
-        <!-- One site, rather than everywhere: a reader who does not want this on their bank
-             does not want to switch it off on the web. -->
-        <span class="r-name">On {site}</span>
-        <span class="r-act">
-          <button
-            class="toggle {here ? 'on' : ''}"
-            aria-label="on {site}"
-            aria-pressed={here}
-            onclick={() => onSite?.(!here)}
-          ></button>
-        </span>
-      </div>
-    {/if}
-
-    <div class="row">
-      <span class="r-name">Show over a word</span>
-      <span class="r-wide">
-        <span class="seg">
-          {#each layers as choice (choice.value)}
-            <span
-              class={settings.layer === choice.value ? 'on' : ''}
-              role="button"
-              tabindex="0"
-              onclick={() => change('layer', choice.value)}
-              onkeydown={(e) => e.key === 'Enter' && change('layer', choice.value)}
-            >{choice.label}</span>
-          {/each}
-        </span>
-      </span>
+  <div class="flex flex-col gap-1 px-4 py-3">
+    <div class="flex items-baseline justify-between">
+      <span class="font-medium">How often</span>
+      <span class="text-sm opacity-60">one word in {settings.density}</span>
     </div>
+    <input
+      class="range range-primary range-xs"
+      type="range"
+      min="0"
+      max={Math.max(0, curve.length - 1)}
+      value={position}
+      aria-label="how often"
+      oninput={slid}
+    />
+  </div>
 
-    <div class="row">
-      <span class="r-name">How often</span>
-      <span class="r-sub">one word in {settings.density}</span>
-      <span class="r-wide">
-        <input
-          class="slider"
-          type="range"
-          min="0"
-          max={Math.max(0, curve.length - 1)}
-          value={position}
-          aria-label="how often"
-          oninput={slid}
-        />
-      </span>
+  <div class="flex items-center justify-between gap-3 px-4 py-3">
+    <span class="font-medium">I read into</span>
+    <select
+      class="select select-sm max-w-48 cursor-pointer"
+      aria-label="I read into"
+      value={settings.target}
+      onchange={(e) => change('target', (e.currentTarget as HTMLSelectElement).value)}
+    >
+      <option value="">nothing yet</option>
+      {#each named as language (language.code)}
+        <option value={language.code}>{language.english} · {language.native}</option>
+      {/each}
+    </select>
+  </div>
+
+  <div class="flex items-center justify-between gap-3 px-4 py-3">
+    <span class="font-medium">This page is in</span>
+    <select
+      class="select select-sm max-w-48 cursor-pointer"
+      aria-label="this page is in"
+      value={settings.source}
+      onchange={(e) => change('source', (e.currentTarget as HTMLSelectElement).value)}
+    >
+      <option value="">what the page says</option>
+      {#each named as language (language.code)}
+        <option value={language.code}>{language.english}</option>
+      {/each}
+    </select>
+  </div>
+
+  {#if accents.length > 0}
+    <!-- Only where there is something real to offer: a voice that exists, or a rule that holds
+         for the whole vocabulary. A list of accents that all sound the same would be a list of
+         promises. -->
+    <div class="flex items-center justify-between gap-3 px-4 py-3">
+      <span class="flex items-center gap-2 font-medium"><Volume class="size-4 opacity-60" />Accent</span>
+      <select
+        class="select select-sm max-w-48 cursor-pointer"
+        aria-label="accent"
+        value={settings.accent}
+        onchange={(e) => change('accent', (e.currentTarget as HTMLSelectElement).value)}
+      >
+        <option value="">as the dictionary gives it</option>
+        {#each accents as accent (accent.id)}
+          <option value={accent.id}>{accent.name}</option>
+        {/each}
+      </select>
     </div>
+  {/if}
 
-    <div class="row">
-      <span class="r-name">I read into</span>
-      <span class="r-act">
-        <select
-          class="select"
-          aria-label="I read into"
-          value={settings.target}
-          onchange={(e) => change('target', (e.currentTarget as HTMLSelectElement).value)}
-        >
-          <option value="">nothing yet</option>
-          {#each named as language (language.code)}
-            <option value={language.code}>{language.english} · {language.native}</option>
-          {/each}
-        </select>
-      </span>
-    </div>
-
-    <div class="row">
-      <span class="r-name">This page is in</span>
-      <span class="r-act">
-        <select
-          class="select"
-          aria-label="this page is in"
-          value={settings.source}
-          onchange={(e) => change('source', (e.currentTarget as HTMLSelectElement).value)}
-        >
-          <option value="">what the page says</option>
-          {#each named as language (language.code)}
-            <option value={language.code}>{language.english}</option>
-          {/each}
-        </select>
-      </span>
-    </div>
-
-    {#if accents.length > 0}
-      <div class="row">
-        <!-- Only where there is something real to offer: a voice that exists, or a rule that
-             holds for the whole vocabulary. A list of accents that all sound the same would
-             be a list of promises. -->
-        <span class="r-name">Accent</span>
-        <span class="r-act">
-          <select
-            class="select"
-            aria-label="accent"
-            value={settings.accent}
-            onchange={(e) => change('accent', (e.currentTarget as HTMLSelectElement).value)}
-          >
-            <option value="">as the dictionary gives it</option>
-            {#each accents as accent (accent.id)}
-              <option value={accent.id}>{accent.name}</option>
-            {/each}
-          </select>
-        </span>
-      </div>
-    {/if}
-
-    <div class="row">
-      <span class="r-name">Transcriptions</span>
-      <span class="r-sub">
+  <div class="flex items-center justify-between gap-3 px-4 py-3">
+    <span class="flex flex-col">
+      <span class="font-medium">Transcriptions</span>
+      <span class="text-sm opacity-60">
         {settings.narrow ? 'every detail of how it is said' : 'the sounds that tell words apart'}
       </span>
-      <span class="r-act">
-        <span class="seg">
-          <span
-            class={settings.narrow ? '' : 'on'}
-            role="button"
-            tabindex="0"
-            onclick={() => change('narrow', false)}
-            onkeydown={(e) => e.key === 'Enter' && change('narrow', false)}
-          >broad</span>
-          <span
-            class={settings.narrow ? 'on' : ''}
-            role="button"
-            tabindex="0"
-            onclick={() => change('narrow', true)}
-            onkeydown={(e) => e.key === 'Enter' && change('narrow', true)}
-          >narrow</span>
-        </span>
-      </span>
+    </span>
+    <div class="join">
+      <button
+        type="button"
+        class="btn join-item btn-xs {settings.narrow ? '' : 'btn-primary'}"
+        aria-pressed={!settings.narrow}
+        onclick={() => change('narrow', false)}
+      >broad</button>
+      <button
+        type="button"
+        class="btn join-item btn-xs {settings.narrow ? 'btn-primary' : ''}"
+        aria-pressed={settings.narrow}
+        onclick={() => change('narrow', true)}
+      >narrow</button>
     </div>
+  </div>
 
-    <div class="row">
-      <span class="r-name">Stress marks</span>
-      <span class="r-sub">over a word; the card always shows them</span>
-      <span class="r-act">
-        <button
-          class="toggle {settings.hideStress ? '' : 'on'}"
-          aria-label="stress marks"
-          aria-pressed={!settings.hideStress}
-          onclick={() => change('hideStress', !settings.hideStress)}
-        ></button>
-      </span>
-    </div>
+  <div class="flex items-center justify-between gap-3 px-4 py-3">
+    <span class="flex flex-col">
+      <span class="font-medium">Stress marks</span>
+      <span class="text-sm opacity-60">over a word; the card always shows them</span>
+    </span>
+    <input
+      type="checkbox"
+      class="toggle toggle-primary"
+      aria-label="stress marks"
+      checked={!settings.hideStress}
+      onchange={() => change('hideStress', !settings.hideStress)}
+    />
+  </div>
 
-    <div class="row">
-      <span class="r-name">Dictionaries</span>
-      <span class="r-sub">
+  <div class="flex flex-col gap-2 px-4 py-3">
+    <div class="flex items-baseline justify-between">
+      <span class="font-medium">Dictionaries</span>
+      <span class="text-sm opacity-60">
         {#if packs.offered.length === 0}
           <!-- The list comes from wherever the reader said their dictionaries live, and that
                is theirs to set: an extension that went looking on its own would be an
@@ -251,20 +247,24 @@
 
     <!-- One row per dictionary: what it is, what it costs, and the one thing to do with it. -->
     {#each packs.offered as pack (pack.lang)}
-      <div class="row">
-        <span class="r-name">{LANGUAGES[pack.lang]?.english ?? pack.lang}</span>
-        <span class="r-sub">
-          {pack.entries.toLocaleString()} words · {size(pack.bytes)}
+      <div class="flex items-center justify-between gap-3">
+        <span class="flex min-w-0 flex-col">
+          <span class="truncate">{LANGUAGES[pack.lang]?.english ?? pack.lang}</span>
+          <span class="text-xs opacity-60">
+            {pack.entries.toLocaleString()} words · {size(pack.bytes)}
+          </span>
         </span>
-        <span class="r-act">
-          {#if fetching === pack.lang}
-            <span class="chip">fetching</span>
-          {:else if packs.held.includes(pack.lang)}
-            <button class="btn-text" onclick={() => forget?.(pack.lang)}>remove</button>
-          {:else}
-            <button class="btn-text" onclick={() => get?.(pack.lang)}>get</button>
-          {/if}
-        </span>
+        {#if fetching === pack.lang}
+          <span class="btn btn-ghost btn-xs" aria-label="fetching"><Loader class="size-4" /></span>
+        {:else if packs.held.includes(pack.lang)}
+          <button class="btn btn-ghost btn-xs" onclick={() => forget?.(pack.lang)}>
+            <Close class="size-4" />remove
+          </button>
+        {:else}
+          <button class="btn btn-xs" onclick={() => get?.(pack.lang)}>
+            <Download class="size-4" />get
+          </button>
+        {/if}
       </div>
     {/each}
   </div>

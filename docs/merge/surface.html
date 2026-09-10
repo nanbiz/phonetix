@@ -474,16 +474,26 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .progress { height: var(--progress-height); border-radius: var(--radius-bar); background: var(--color-skeleton); overflow: hidden; }
 .progress i { display: block; height: 100%; width: 30%; background: var(--color-accent); border-radius: var(--radius-bar); }
 .alert { display: flex; gap: var(--space-2); align-items: flex-start; background: var(--color-danger-bg); color: var(--color-danger); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); font-size: var(--font-size-small); }
+/* A control is not prose. Without this every label in the interface takes the text cursor and
+   drags into a selection when a reader means to press it - and a segmented control, which is
+   spans rather than buttons, looked and behaved like a paragraph. */
+.seg, .seg span, .toggle, .select, .pick, .btn, .btn-text, .switch, .chip, .scope-head, .ticks,
+.audio, .sym, .readings li, .alt-reading, .disclosure, .r-name, .r-sub { user-select: none; -webkit-user-select: none; }
 .seg { display: inline-flex; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); overflow: hidden; }
-.seg span { padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); border-right: var(--border-width) solid var(--color-border); white-space: nowrap; }
+.seg span { padding: 0 var(--space-2); height: calc(var(--button-height) - 8px); display: inline-flex; align-items: center; font-size: var(--font-size-label); font-weight: var(--weight-medium); color: var(--color-ink-muted); border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
 .seg span:last-child { border-right: none; }
 .seg span.on { background: var(--color-accent); color: var(--color-accent-ink); }
-.slider { width: 100%; accent-color: var(--color-accent); margin: 0; }
-.toggle { width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; }
-.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-surface); box-shadow: 0 1px 2px var(--color-shadow); }
+.slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }
+.toggle { cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; }
+/* The knob is drawn against its own track, not against the page. Painted in the surface
+   colour it disappeared in both palettes: the light track is near-white and the dark track is
+   near-black, and each of them is the surface colour it was being drawn in, so a switched-off
+   toggle read as an empty outlined pill. */
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
 .toggle.on { background: var(--color-accent); }
+.toggle.on::after { background: var(--color-accent-ink); }
 .toggle.on::after { left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
-.select { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
+.select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 8px); }
 .select::after { content: "⌄"; color: var(--color-ink-faint); }
 /* The same control where it is a real one: a browser paints its own select in its own colours, which on a dark surface is a white slab with invisible text. */
 select.select { appearance: none; background: transparent; font-family: inherit; max-width: 12em; text-overflow: ellipsis; }

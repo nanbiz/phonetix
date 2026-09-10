@@ -13,6 +13,9 @@ import type { ScannedRun } from './scan';
 /** What the reader asked to see over a word. */
 export type Layer = 'off' | 'gloss' | 'gloss+ipa' | 'ipa' | 'replace';
 
+/** What one annotated word is wrapped in. Named once: the session recognises its own work by it. */
+export const WORD = 'px-w';
+
 /** One text node that was painted, and what it held before. */
 interface Painted {
   /** The elements that took the text node's place, in order. */
@@ -144,7 +147,7 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
     const spelling = text.slice(token.start, token.end);
     // The theme the tokens are keyed by, on the box itself: every colour is defined inside
     // one, so a box naming no theme would have none of them.
-    const box = span(`px-w theme-paper mode-${onDark ? 'dark' : 'light'}`);
+    const box = span(`${WORD} theme-paper mode-${onDark ? 'dark' : 'light'}`);
     const mark = annotation(token, layer);
     if (layer === 'replace' && token.gloss) {
       // The word repainted as what it means, with the cue that it was swapped. The original

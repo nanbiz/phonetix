@@ -73,7 +73,7 @@ object Tokens {
     }
 
     /** Which set of colours a reader has chosen. */
-    enum class Theme { CLASSROOM, INK, PAPER }
+    enum class Theme { CLASSROOM, DRACULA, INK, NORD, PAPER, SILK, WINTER }
 
     /** What each role is worth in one theme and mode. */
     data class Palette(
@@ -162,6 +162,34 @@ object Tokens {
             surfaceRaised = 0xFF232A31L,
             rubyHue = 0x00000000L,
         )
+        theme == Theme.DRACULA && dark -> Palette(
+            accent = 0xFFFF79C6L,
+            accentBg = 0xFFFF79C6L,
+            accentInk = 0xFF16050EL,
+            border = 0xFF1F202AL,
+            chipBg = 0xFF232530L,
+            chipInk = 0xFFF8F8F3L,
+            danger = 0xFFFF5555L,
+            dangerBg = 0xFF160202L,
+            guess = 0x00000000L,
+            guessBg = 0x00000000L,
+            ink = 0xFFF8F8F3L,
+            inkFaint = 0xFF86878BL,
+            inkMuted = 0xFFAFB0B1L,
+            ipa = 0x00000000L,
+            ipaConsonant = 0x00000000L,
+            ipaOther = 0x00000000L,
+            ipaVowel = 0x00000000L,
+            pageBg = 0x00000000L,
+            rubyInk = 0x00000000L,
+            rubyIpa = 0xFFAFB0B1L,
+            scrim = 0x00000000L,
+            shadow = 0x00000000L,
+            skeleton = 0x00000000L,
+            surface = 0xFF282A36L,
+            surfaceRaised = 0xFF232530L,
+            rubyHue = 0x00000000L,
+        )
         theme == Theme.INK && !dark -> Palette(
             accent = 0xFF0028A8L,
             accentBg = 0xFFE3E8FFL,
@@ -216,6 +244,34 @@ object Tokens {
             skeleton = 0xFF2A2A2AL,
             surface = 0xFF000000L,
             surfaceRaised = 0xFF161616L,
+            rubyHue = 0x00000000L,
+        )
+        theme == Theme.NORD && !dark -> Palette(
+            accent = 0xFF5E81ACL,
+            accentBg = 0xFF5E81ACL,
+            accentInk = 0xFF03060BL,
+            border = 0xFFD8DEE9L,
+            chipBg = 0xFFE5E9F0L,
+            chipInk = 0xFF2E3440L,
+            danger = 0xFFBF616AL,
+            dangerBg = 0xFF0D0304L,
+            guess = 0x00000000L,
+            guessBg = 0x00000000L,
+            ink = 0xFF2E3440L,
+            inkFaint = 0xFF969BA3L,
+            inkMuted = 0xFF70757FL,
+            ipa = 0x00000000L,
+            ipaConsonant = 0x00000000L,
+            ipaOther = 0x00000000L,
+            ipaVowel = 0x00000000L,
+            pageBg = 0x00000000L,
+            rubyInk = 0x00000000L,
+            rubyIpa = 0xFF70757FL,
+            scrim = 0x00000000L,
+            shadow = 0x00000000L,
+            skeleton = 0x00000000L,
+            surface = 0xFFECEFF4L,
+            surfaceRaised = 0xFFE5E9F0L,
             rubyHue = 0x00000000L,
         )
         theme == Theme.PAPER && !dark -> Palette(
@@ -274,7 +330,67 @@ object Tokens {
             surfaceRaised = 0xFF272A30L,
             rubyHue = 0x00000000L,
         )
-        // A theme with no palette is a build that generated one and not the other.
+        theme == Theme.SILK && !dark -> Palette(
+            accent = 0xFF1C1C29L,
+            accentBg = 0xFF1C1C29L,
+            accentInk = 0xFFE1FF00L,
+            border = 0xFFE2DDD9L,
+            chipBg = 0xFFF3EDE9L,
+            chipInk = 0xFF4B4743L,
+            danger = 0xFFFF7878L,
+            dangerBg = 0xFF800001L,
+            guess = 0x00000000L,
+            guessBg = 0x00000000L,
+            ink = 0xFF4B4743L,
+            inkFaint = 0xFFAAA7A4L,
+            inkMuted = 0xFF878481L,
+            ipa = 0x00000000L,
+            ipaConsonant = 0x00000000L,
+            ipaOther = 0x00000000L,
+            ipaVowel = 0x00000000L,
+            pageBg = 0x00000000L,
+            rubyInk = 0x00000000L,
+            rubyIpa = 0xFF878481L,
+            scrim = 0x00000000L,
+            shadow = 0x00000000L,
+            skeleton = 0x00000000L,
+            surface = 0xFFF7F5F3L,
+            surfaceRaised = 0xFFF3EDE9L,
+            rubyHue = 0x00000000L,
+        )
+        theme == Theme.WINTER && !dark -> Palette(
+            accent = 0xFF0069FFL,
+            accentBg = 0xFF0069FFL,
+            accentInk = 0xFFCEE4FFL,
+            border = 0xFFE3E9F4L,
+            chipBg = 0xFFF2F7FEL,
+            chipInk = 0xFF394E6AL,
+            danger = 0xFFE58B8BL,
+            dangerBg = 0xFF120707L,
+            guess = 0x00000000L,
+            guessBg = 0x00000000L,
+            ink = 0xFF394E6AL,
+            inkFaint = 0xFFA6AFBCL,
+            inkMuted = 0xFF7E8C9EL,
+            ipa = 0x00000000L,
+            ipaConsonant = 0x00000000L,
+            ipaOther = 0x00000000L,
+            ipaVowel = 0x00000000L,
+            pageBg = 0x00000000L,
+            rubyInk = 0x00000000L,
+            rubyIpa = 0xFF7E8C9EL,
+            scrim = 0x00000000L,
+            shadow = 0x00000000L,
+            skeleton = 0x00000000L,
+            surface = 0xFFFFFFFFL,
+            surfaceRaised = 0xFFF2F7FEL,
+            rubyHue = 0x00000000L,
+        )
+        // A theme designed for one mode keeps its own colours in the other.
+        theme == Theme.DRACULA -> palette(Theme.DRACULA, true)
+        theme == Theme.NORD -> palette(Theme.NORD, false)
+        theme == Theme.SILK -> palette(Theme.SILK, false)
+        theme == Theme.WINTER -> palette(Theme.WINTER, false)
         else -> palette(Theme.CLASSROOM, dark)
     }
 }

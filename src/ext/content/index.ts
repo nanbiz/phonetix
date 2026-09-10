@@ -8,10 +8,10 @@ import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import { allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
 import { hide, inside, show, showing } from './card';
-import { isPainted, paint, unpaint, wordAt } from './inline';
+import { isPainted, paint, unpaint, WORD, wordAt } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
-import { scan, type ScannedRun } from './scan';
+import { OURS, scan, type ScannedRun } from './scan';
 
 /** How long the cursor rests on a word before its card opens, in milliseconds. */
 const REST = 200;
@@ -22,6 +22,17 @@ let settings: Settings = DEFAULTS;
 const asked: string[] = [];
 let opening: ReturnType<typeof setTimeout> | null = null;
 let painting = false;
+
+/**
+ * What watches the page for text arriving after it loaded.
+ *
+ * Held here so that painting can throw away the mutations it caused itself. Annotating a page
+ * changes the page, those changes arrive at the observer after the paint has finished, and
+ * without dropping them the observer asks for another paint, which causes more of them: a
+ * page that redrew itself twice a second for as long as it was open, with every line moving
+ * as the annotations came off and went back on.
+ */
+let watcher: MutationObserver | null = null;
 
 /**
  * What the session is doing, written where anything can read it.
@@ -163,6 +174,9 @@ async function draw(): Promise<void> {
     state(`failed: ${e}`);
     throw e;
   } finally {
+    // Our own mutations, dropped before anything can act on them. Ordered before the guard
+    // comes down, since a record delivered after it is a record that starts this again.
+    watcher?.takeRecords();
     painting = false;
   }
 }
@@ -277,6 +291,12 @@ function gestures(): void {
   });
 }
 
+/** Whether a node is something this extension drew rather than something the page brought. */
+function ours(node: Node): boolean {
+  const element = node instanceof Element ? node : node.parentElement;
+  return element !== null && element.closest(`.${WORD}, #${OURS}`) !== null;
+}
+
 /**
  * Watch the page for text that arrives after it loaded.
  *
@@ -285,18 +305,22 @@ function gestures(): void {
  */
 function follow(): void {
   let soon: ReturnType<typeof setTimeout> | null = null;
-  const observer = new MutationObserver((changes) => {
+  watcher = new MutationObserver((changes) => {
     if (painting) return;
+    // Text the page brought, not text we drew. An annotation is an element of ours holding
+    // the word it annotates, so a change inside one is our own work coming back to us.
     const real = changes.some((change) =>
+      !ours(change.target) &&
       [...change.addedNodes].some(
-        (node) => node.nodeType === Node.TEXT_NODE || node instanceof HTMLElement
+        (node) =>
+          !ours(node) && (node.nodeType === Node.TEXT_NODE || node instanceof HTMLElement)
       )
     );
     if (!real) return;
     if (soon) clearTimeout(soon);
     soon = setTimeout(() => void draw(), 500);
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  watcher.observe(document.body, { childList: true, subtree: true });
 }
 
 /**

@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+/* The design tokens, which are generated from docs/merge/surface.html and are also what the
+   card, the inline annotations and the phone are drawn in. */
+@import "../../ui/tokens.css";
+
+/* daisyUI draws the controls; this is what it draws them in.
+ *
+ * The library's own palette is not a second source of truth to keep in step with ours - a
+ * settings screen half in one palette and half in another is exactly how a surface ends up
+ * looking like two products. So daisyUI's theme variables are bound to the tokens, and a
+ * colour changed on the design page moves the toggle, the slider and the buttons with it.
+ */
+[data-theme],
+:root {
+  --color-base-100: var(--color-surface);
+  --color-base-200: var(--color-surface-raised);
+  --color-base-300: var(--color-border);
+  --color-base-content: var(--color-ink);
+  --color-primary: var(--color-accent);
+  --color-primary-content: var(--color-accent-ink);
+  --color-neutral: var(--color-chip-bg);
+  --color-neutral-content: var(--color-chip-ink);
+  --color-error: var(--color-danger);
+  --color-error-content: var(--color-danger-bg);
+  --radius-box: var(--radius-card);
+  --radius-field: var(--radius-button);
+  --radius-selector: var(--radius-chip);
+  --border: var(--border-width);
+}
+
+/* The popup is a fixed width and sizes its height to what is showing, so a short screen stays
+   short and a taller one grows until the browser's own cap scrolls it. */
+html,
+body {
+  width: 24rem;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* The document is the surface. Left to the browser's default it painted white behind the
+   panel, and what showed at the popup's edges was a white L down the top and left of every
+   screen. */
+html,
+body,
+#app {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  width: 100%;
+}
