@@ -21,6 +21,7 @@ import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.Speech
+import io.github.nanbiz.phonetix.core.Translator
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -42,6 +43,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
     private lateinit var lens: LensController
+
+    /** What the screen last turned out to be in, which is one half of the translation
+     *  direction. Held because the engine is opened for a direction, not per screen. */
+    @Volatile
+    private var lastScreenLanguage: String? = null
     private lateinit var tooltip: TooltipController
     private lateinit var speaker: Speaker
     private lateinit var io: Handler
@@ -155,7 +161,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // unpacks a few megabytes out of the apk, and the service must not wait for it. The
         // screen is read again once it is up, so the words that were bare get their
         // transcription without the reader doing anything.
-        io.post { if (Speech.start(this)) schedule(0L) }
+        io.post { if (Speech.start(this)) readAgain() }
+        // The translation engine, for the words no pack holds. Opened for the direction the
+        // reader is reading in, and only once a model for it has been fetched: a reader who
+        // has chosen no language to read into is not translating, and one whose host has no
+        // model for their pair is not either.
+        io.post { openTranslator() }
         // Positions are the whole product here, and a cached position is a wrong one. The
         // platform keeps a copy of the node tree for a service to read cheaply, and while a
         // page is moving that copy is a picture of where the words used to be: lines came
@@ -712,6 +723,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // wrong language any more - a screen the packs cannot answer comes back with
             // nothing to draw, which is the same outcome decided in one place.
             val screen = stats.tongue.read()
+            // Kept, because the direction the reader is translating in is this and their own
+            // language, and the engine has to be opened for a direction before it can answer.
+            if (screen.language != null && screen.language != lastScreenLanguage) {
+                lastScreenLanguage = screen.language
+                io.post { openTranslator() }
+            }
             chooseWords(fresh, settings, screen.language, budget)
             planned = fresh
             cachedPlan = fresh
@@ -2088,6 +2105,42 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         planned.clear()
         planned.addAll(kept)
+    }
+
+    /**
+     * Open the translation engine for the direction the reader is reading in.
+     *
+     * Called when the service starts and whenever a setting that decides the direction moves.
+     * Nothing is fetched here: the model is what the reader asked for in the settings view.
+     */
+    private fun openTranslator() {
+        val settings = SettingsStore.current
+        val target = settings.target
+        if (target.isEmpty()) return
+        val source = lastScreenLanguage ?: Language.OURS
+        if (source == target) return
+        val started = Translator.start(Packs.models(this), source, target)
+        if (started) readAgain()
+    }
+
+    /**
+     * Read the screen again from scratch.
+     *
+     * An engine that has just started can answer words the last pass could not, and those
+     * words are already chosen: a scheduled pass takes the fast path, reuses what it decided
+     * and draws the same blanks again. Both engines load in seconds, after the first screen
+     * has been read, so without this the words they can answer stay bare until the reader
+     * scrolls.
+     */
+    private fun readAgain() {
+        // On the main thread, because that is the one the loop runs on: both engines start on
+        // a background thread and a scheduling call made from there returned without doing
+        // anything, so the words the engine could now answer stayed bare until the reader
+        // scrolled and something else asked for a read.
+        main.post {
+            scrollOnly = false
+            schedule(0L)
+        }
     }
 
     private fun plan(

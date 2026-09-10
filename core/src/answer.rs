@@ -25,6 +25,13 @@ pub enum AnswerState {
     /// Several words the reader selected, translated together.
     Phrase,
     /// An IPA pack but no lex pack, so a pronunciation and an offer to fetch the rest.
+    /// The pack holds the word and the reader's own pack is open, but nothing in it answers:
+    /// the entry's English gloss is the anchor and an engine is asked for the rest.
+    ///
+    /// Different from IpaOnly, which is what a reader gets when there is no pack for the pair
+    /// at all. A card that says "no dictionary yet" about a word the dictionary knows is
+    /// telling them to fetch something they already have.
+    ViaEn,
     IpaOnly,
     /// Nothing found and no engine to ask.
     None,

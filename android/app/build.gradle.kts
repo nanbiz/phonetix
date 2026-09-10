@@ -6,12 +6,19 @@ plugins {
 android {
     namespace = "io.github.nanbiz.phonetix"
     compileSdk = 36
+    // The NDK this repository declares in Nix, named rather than left to the plugin's default:
+    // the store path is read-only, so a plugin that wants a different version cannot install
+    // one and stops the build instead.
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "io.github.nanbiz.phonetix"
         // 26 is the floor for both halves of the feature: TYPE_APPLICATION_OVERLAY
         // windows and per-character text bounds from an accessibility node.
-        minSdk = 26
+        // Twenty-eight because the translation engine links against iconv and glob, which
+        // Bionic gained there. Below it the engine does not link at all, and an app that
+        // cannot translate is not the product this is.
+        minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
@@ -40,6 +47,24 @@ android {
         // The dictionary is already gzipped; compressing it again in the APK only
         // costs build time and gains nothing.
         noCompress += "gz"
+    }
+
+    // The translation engine's own way in. The engine itself is prebuilt per ABI by
+    // scripts/build-bergamot-android.sh; what is compiled here is the few lines that hand a
+    // batch of words to it, which is the only part that changes.
+    // The two the engine is built for, which are the two this repository's own native library
+    // is built for: a phone and the emulator. Nothing is gained by shipping a 32-bit build of
+    // a translation engine to a phone that cannot hold the model anyway.
+    defaultConfig {
+        ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            // No version pinned: naming one sends the plugin to the SDK to install it, and
+            // the SDK here is a read-only store path. local.properties says where cmake is.
+        }
     }
 }
 

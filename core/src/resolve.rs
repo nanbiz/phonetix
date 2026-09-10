@@ -359,7 +359,9 @@ fn resolve_one<D: AsRef<[u8]>>(
         says.clear();
     }
     let state = match (says.len(), inflected) {
-        (0, _) => AnswerState::IpaOnly,
+        // The entry is here and the reader's pack is open; what is missing is a join between
+        // them. The English gloss anchors it and the engine is asked for the rest.
+        (0, _) => AnswerState::ViaEn,
         (_, true) => AnswerState::Form,
         (_, false) => AnswerState::Entry,
     };

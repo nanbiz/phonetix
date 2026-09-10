@@ -32,6 +32,7 @@
     "test:lens": "uv run python scripts/proofread/android_lens.py",
     "test:accent": "uv run python scripts/proofread/android_accent.py",
     "test:popup": "uv run scripts/proofread/popup_view.py",
+    "test:phone-guesses": "uv run scripts/proofread/android_guesses.py",
     "test:translates": "uv run scripts/proofread/translates.py"
   },
   "devDependencies": {

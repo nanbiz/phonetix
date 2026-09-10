@@ -23,6 +23,9 @@ public/core/
 # Built from assets/dictionaries by the app's own build, like the native library beside it
 android/app/src/main/assets/ipa-en.pack
 
+# What the C++ build leaves behind, which is the build's own bookkeeping.
+android/app/.cxx/
+
 # The synthesiser and its data, built by scripts/build-espeak-android.sh. A checked-in binary
 # is a build artefact pretending to be source, and it drifts the moment the build changes.
 android/app/src/main/assets/espeak/

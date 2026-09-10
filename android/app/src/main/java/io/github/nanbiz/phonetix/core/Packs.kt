@@ -94,6 +94,58 @@ object Packs {
         }.getOrDefault(false)
     }
 
+    /** Where the translation models are kept, one directory per direction. */
+    fun models(context: Context): File =
+        File(context.applicationContext.filesDir, "models")
+
+    /**
+     * Fetch the model for one direction, from the same host the packs come from.
+     *
+     * Three files and tens of megabytes, so it happens once and only when a reader has chosen
+     * a language to read into. The names are the registry's, which is the same list the
+     * browser reads.
+     */
+    fun getModel(context: Context, base: String, from: String, to: String): Boolean {
+        if (base.isBlank()) return false
+        val host = base.trimEnd('/')
+        val listed = runCatching { JSONArray(URL("$host/models.json").readText()) }
+            .getOrNull() ?: return false
+        val row = (0 until listed.length())
+            .mapNotNull { listed.optJSONObject(it) }
+            .firstOrNull { it.optString("from") == from && it.optString("to") == to }
+            ?: return false
+        val files = row.optJSONObject("files") ?: return false
+        val into = File(models(context), "$from-$to")
+        into.mkdirs()
+        // Under the names they are published with. The engine reads the kind of model it is
+        // from the file name - a model built for intgemm says so there - so a file renamed to
+        // something tidier is a model it cannot use.
+        for (key in listOf("model", "vocab", "lex")) {
+            val named = files.optJSONObject(key)?.optString("name").orEmpty()
+            if (named.isEmpty()) {
+                // Only the shortlist is optional; without a model or a vocabulary there is
+                // nothing to open.
+                if (key == "lex") continue
+                return false
+            }
+            val name = named
+            val to_ = File(into, name)
+            if (to_.exists() && to_.length() > 0) continue
+            val part = File(into, "$name.part")
+            val ok = runCatching {
+                URL("$host/models/$named").openStream().use { source ->
+                    part.outputStream().use { sink -> source.copyTo(sink) }
+                }
+                part.renameTo(to_)
+            }.onFailure {
+                part.delete()
+                android.util.Log.w("Phonetix", "the $from-$to model did not arrive", it)
+            }.getOrDefault(false)
+            if (!ok) return false
+        }
+        return true
+    }
+
     /** Give a dictionary up. */
     fun forget(context: Context, lang: String) {
         file(context, lang).delete()

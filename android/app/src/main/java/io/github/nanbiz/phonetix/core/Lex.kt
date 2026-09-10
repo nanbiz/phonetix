@@ -22,6 +22,10 @@ object Lex {
         // before the core is loaded rather than when the first word needs saying.
         runCatching { System.loadLibrary("espeak-ng") }
         System.loadLibrary("lexcore_android")
+        // The translation engine is its own library: the calls below reach it directly rather
+        // than through the core, because what it needs is a C++ interface and the core is
+        // Rust. A phone without it reads exactly as it did before there was one.
+        runCatching { System.loadLibrary("phonetix_translate") }
     }
 
     /** How many terms two English glosses share, which is how a word in one language is
@@ -161,4 +165,22 @@ object Lex {
      * different products depending on where a reader met it.
      */
     external fun speechSay(voice: String, word: String): ByteArray
+
+    /**
+     * Open a translation direction, from a configuration naming files already on disk.
+     *
+     * Returns whether it can answer. A direction with no model is one this reader cannot
+     * translate, which is an ordinary answer: the words stay as the dictionary left them.
+     */
+    external fun translateOpen(config: String): Int
+
+    /** Whether a direction is open, so nothing offers what it cannot do. */
+    external fun translateReady(): Int
+
+    /**
+     * Translate a batch, in the order it was given.
+     *
+     * A batch because a screen is a batch, and the same reason the synthesiser takes one.
+     */
+    external fun translateSay(texts: Array<String>): Array<String>
 }

@@ -58,6 +58,9 @@ object Reading {
         // pronunciation the dictionary recorded and what a machine produced is marked as a
         // machine's - in the core, which is the one place that decides what a reader is told.
         batch = filled(batch, source, accent)
+        // And what no dictionary could translate, translated. The engine answers only where a
+        // reader has chosen a language to read into and the model for that direction is here.
+        batch = meant(batch, source, target)
         val tokens = batch.optJSONArray("tokens") ?: JSONArray()
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
@@ -120,6 +123,51 @@ object Reading {
                 Array(kept.size) { "" },
                 sounds.toTypedArray(),
                 "espeak",
+            )
+        }.getOrNull() ?: return batch
+        return runCatching { JSONObject(written) }.getOrDefault(batch)
+    }
+
+    /**
+     * Fill in what the packs could not translate.
+     *
+     * The dictionary answers first and this fills the rest: a word with no entry, a pair no
+     * pack covers. What comes back is a machine's guess and is marked as one by the core, so
+     * a reader is told which of the two answered.
+     */
+    private fun meant(batch: JSONObject, source: String, target: String): JSONObject {
+        if (!Translator.usable || target.isEmpty() || target == source) return batch
+        val misses = batch.optJSONArray("misses") ?: return batch
+        val tokens = batch.optJSONArray("tokens") ?: return batch
+        val wanted = ArrayList<Int>(misses.length())
+        val words = ArrayList<String>(misses.length())
+        for (at in 0 until misses.length()) {
+            val row = misses.optJSONObject(at) ?: continue
+            if (row.optString("need") == "Ipa") continue
+            val which = row.optInt("token")
+            val token = tokens.optJSONObject(which) ?: continue
+            wanted.add(which)
+            words.add(token.optString("spelling"))
+        }
+        if (wanted.isEmpty()) return batch
+        val said = Translator.meanings(words)
+        if (said.isEmpty()) return batch
+        val kept = ArrayList<Int>(wanted.size)
+        val meanings = ArrayList<String>(wanted.size)
+        for (at in wanted.indices) {
+            val gloss = said[words[at]] ?: continue
+            kept.add(wanted[at])
+            meanings.add(gloss)
+        }
+        if (kept.isEmpty()) return batch
+        val written = runCatching {
+            Lex.complete(
+                core,
+                batch.optLong("batch"),
+                kept.toIntArray(),
+                meanings.toTypedArray(),
+                Array(kept.size) { "" },
+                "bergamot",
             )
         }.getOrNull() ?: return batch
         return runCatching { JSONObject(written) }.getOrDefault(batch)

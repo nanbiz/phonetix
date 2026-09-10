@@ -170,7 +170,8 @@ fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
         accent_pack: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
-    assert_eq!(got.state, AnswerState::IpaOnly);
+    // The pack holds the word and the reader's own pack is open; what is missing is a join.
+    assert_eq!(got.state, AnswerState::ViaEn);
     assert!(got.says.is_empty(), "reached {:?}", got.says);
     assert_eq!(
         got.glosses,
@@ -285,7 +286,9 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         accent_pack: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
-    assert_eq!(got.state, AnswerState::IpaOnly);
+    // The entry is here and the reader's own pack is open; what is missing is a join between
+    // them, which is a different answer from having no pack for the pair at all.
+    assert_eq!(got.state, AnswerState::ViaEn);
     assert!(got.says.is_empty());
     assert_eq!(got.glosses, vec!["platypus"]);
     assert_eq!(got.ipa, vec!["oɾ.ni.toˈrin.ko"]);
