@@ -11,6 +11,7 @@ pub mod annotate;
 pub mod answer;
 pub mod detect;
 pub mod gloss;
+pub mod homographs;
 pub mod json;
 pub mod languages;
 pub mod neighbours;

@@ -23,6 +23,9 @@ public/core/
 # Built from assets/dictionaries by the app's own build, like the native library beside it
 android/app/src/main/assets/ipa-en.pack
 
+# Built from the classifiers beside them by tools/build_homographs.py.
+assets/homographs/*.hg
+
 # What the C++ build leaves behind, which is the build's own bookkeeping.
 android/app/.cxx/
 

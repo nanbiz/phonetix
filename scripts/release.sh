@@ -87,6 +87,43 @@ for zip in "$out/phonetix-$version-chrome.zip" "$out/phonetix-$version-firefox.z
     exit 1
   fi
 done
+# A crx as well as the zip.
+#
+# A crx is not a renamed zip the way an xpi is: it carries a header and a signature, so one
+# has to be packed and signed. The key is this project's own and lives outside the repository,
+# because it is a signing key and because it is what fixes the extension's id - a new key every
+# release would be a new extension every release. Generated on first use and kept.
+#
+# What it is good for: an install by policy, a Chromium fork that still allows one, or a
+# reader who wants the file. Chrome itself refuses a crx that did not come from its store, so
+# the zip and "load unpacked" remain the way in on stock Chrome.
+crx=""
+chromium="${PHONETIX_CHROMIUM:-chromium}"
+key="${PHONETIX_CRX_KEY:-$HOME/.config/phonetix/crx.pem}"
+if command -v "$chromium" >/dev/null 2>&1; then
+  echo "== packing a crx"
+  mkdir -p "$(dirname "$key")"
+  packing="$out/crx-$version"
+  rm -rf "$packing" "$packing.crx" "$packing.pem"
+  cp -r "$out/chrome-mv3" "$packing"
+  if [[ -f "$key" ]]; then
+    "$chromium" --pack-extension="$(realpath "$packing")" \
+      --pack-extension-key="$(realpath "$key")" --no-sandbox >/dev/null 2>&1 || true
+  else
+    "$chromium" --pack-extension="$(realpath "$packing")" --no-sandbox >/dev/null 2>&1 || true
+    [[ -f "$packing.pem" ]] && mv "$packing.pem" "$key" && chmod 600 "$key"
+    echo "   a new signing key, kept at $key: keep it, or the extension changes id"
+  fi
+  if [[ -f "$packing.crx" ]]; then
+    crx="$out/phonetix-$version-chrome.crx"
+    mv "$packing.crx" "$crx"
+  else
+    echo "   the crx did not pack; the zip goes up on its own" >&2
+  fi
+  rm -rf "$packing" "$packing.pem"
+fi
+[[ -n "$crx" ]] && artifacts+=("$crx")
+
 if [[ -n "$signed" ]]; then
   artifacts+=("$signed")
 else
