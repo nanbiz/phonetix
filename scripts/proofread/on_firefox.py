@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""The extension, in the other engine.
+
+Everything else here drives Chrome, and the two engines differ in the one place that decides
+whether anything works at all: on Gecko the `chrome` namespace is the callback-style one, so a
+call awaited through it returns nothing and the surface that made it quietly concludes there is
+nothing there. That is not a thing a Chrome check can fail on, and CI is where it used to be
+caught until CI stopped running.
+
+So this launches a real Firefox, headless, on a profile of its own, installs the built add-on
+as a temporary one and asks the same questions the Chrome checks ask: is a page annotated, does
+the card open on a word, and does the settings view know which site it is looking at.
+
+  uv run python scripts/proofread/on_firefox.py
+
+Nothing of the reader's own Firefox is touched: the profile is made in a temporary directory
+and thrown away, and the add-on is temporary, which is why signing does not come into it.
+"""
+import json
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tempfile
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from on_a_page import PORT, build_packs, serve
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ADDON = os.path.join(ROOT, ".output")
+# Pinned, because an extension page's address is moz-extension://<uuid>/ and the uuid is made
+# per profile: told what it is beforehand, the check can open the settings view by name.
+UUID = "9f4a6b1e-5c3d-4a7b-8e2f-1d0c9b8a7654"
+ADDON_ID = "phonetix@nanbiz.github.io"
+
+
+def newest_zip():
+    """The add-on this build made, which is what is being checked."""
+    zips = [
+        os.path.join(ADDON, name)
+        for name in os.listdir(ADDON)
+        if name.endswith("-firefox.zip")
+    ]
+    if not zips:
+        raise SystemExit("no firefox build to check: run pnpm zip:firefox")
+    return max(zips, key=os.path.getmtime)
+
+
+class Marionette:
+    """Firefox's own remote protocol, which is a length-prefixed JSON packet on a socket."""
+
+    def __init__(self, port):
+        self.socket = socket.create_connection(("127.0.0.1", port), timeout=90)
+        self.socket.settimeout(90)
+        self.rest = b""
+        self.at = 0
+        self.read()   # the handshake the browser sends first
+
+    def read(self):
+        while True:
+            head, sep, tail = self.rest.partition(b":")
+            if sep and head.isdigit():
+                want = int(head)
+                if len(tail) >= want:
+                    self.rest = tail[want:]
+                    return json.loads(tail[:want])
+            more = self.socket.recv(65536)
+            if not more:
+                raise SystemExit("firefox closed the connection")
+            self.rest += more
+
+    def send(self, name, params=None):
+        self.at += 1
+        body = json.dumps([0, self.at, name, params or {}]).encode()
+        self.socket.sendall(str(len(body)).encode() + b":" + body)
+        while True:
+            got = self.read()
+            if got[0] == 1 and got[1] == self.at:
+                if got[2]:
+                    raise SystemExit(f"{name} failed: {got[2]}")
+                return got[3]
+
+    def script(self, source, timeout=30000):
+        return self.send(
+            "WebDriver:ExecuteAsyncScript",
+            {"script": source, "args": [], "scriptTimeout": timeout},
+        )["value"]
+
+
+def profile(into):
+    """A profile that talks Marionette, takes an unsigned add-on, and knows its uuid."""
+    with open(os.path.join(into, "user.js"), "w") as f:
+        f.write(
+            'user_pref("xpinstall.signatures.required", false);\n'
+            'user_pref("extensions.autoDisableScopes", 0);\n'
+            'user_pref("extensions.experiments.enabled", true);\n'
+            'user_pref("browser.shell.checkDefaultBrowser", false);\n'
+            'user_pref("datareporting.policy.dataSubmissionEnabled", false);\n'
+            'user_pref("browser.aboutwelcome.enabled", false);\n'
+            f'user_pref("extensions.webextensions.uuids", '
+            f'"{{\\"{ADDON_ID}\\":\\"{UUID}\\"}}");\n'
+        )
+
+
+def main():
+    build_packs()
+    serve()
+    base = f"http://127.0.0.1:{PORT}"
+    failures = []
+
+    where = tempfile.mkdtemp(prefix="phonetix-firefox-")
+    profile(where)
+    firefox = subprocess.Popen(
+        [
+            "firefox", "--headless", "--no-remote", "--marionette",
+            "--profile", where, "about:blank",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        env={**os.environ, "MOZ_MARIONETTE_PORT": "2828"},
+    )
+    driver = None
+    try:
+        for _ in range(60):
+            try:
+                driver = Marionette(2828)
+                break
+            except OSError:
+                time.sleep(1)
+        if driver is None:
+            print("FAIL - firefox never opened its remote port")
+            sys.exit(1)
+        driver.send("WebDriver:NewSession", {"capabilities": {}})
+        driver.send("Addon:Install", {"path": newest_zip(), "temporary": True})
+        print(f"  installed {os.path.basename(newest_zip())}")
+
+        view = f"moz-extension://{UUID}"
+        # The reader's choices, written the way the settings view writes them, and the packs
+        # asked for by name. Both go through the messaging this check exists to exercise.
+        driver.send("WebDriver:Navigate", {"url": f"{view}/viewbook.html"})
+        time.sleep(3)
+        told = driver.script(
+            "const done = arguments[0];"
+            f"browser.storage.local.set({{packBaseUrl: '{base}', targetLanguage: 'de',"
+            " density: 1, layer: 'gloss'})"
+            "  .then(() => Promise.all(['es', 'de'].map(lang =>"
+            "     browser.runtime.sendMessage({phonetix: 'openPack', data: {lang}}))))"
+            "  .then(r => done(JSON.stringify(r)), e => done('failed: ' + e));",
+            timeout=120000,
+        )
+        print(f"  the packs opened: {told}")
+        if not told or "failed" in told or "null" in told:
+            failures.append(f"the host did not open the packs: {told}")
+
+        # A page, annotated. Everything the content script needs travels over the same
+        # messaging, so a page with words on it is the whole boundary working.
+        driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
+        words = None
+        for _ in range(20):
+            time.sleep(2)
+            words = driver.script(
+                "const done = arguments[0];"
+                "done(JSON.stringify({"
+                "  count: document.querySelectorAll('.px-w').length,"
+                "  said: [...document.querySelectorAll('.px-gl')].map(g => g.textContent)"
+                "    .slice(0, 4),"
+                "  state: document.documentElement.dataset.phonetix || ''}));"
+            )
+            if json.loads(words or "{}").get("count"):
+                break
+        drawn = json.loads(words or "{}")
+        print(f"  {drawn.get('count')} words annotated, saying {drawn.get('said')} "
+              f"[{drawn.get('state')}]")
+        if not drawn.get("count"):
+            failures.append(f"nothing was annotated on Gecko: {drawn}")
+        elif "Hund" not in (drawn.get("said") or []):
+            failures.append(f"the answers are {drawn.get('said')}, not the German ones")
+
+        # And the settings view knows which site it is looking at. In a tab of its own, with
+        # the page left open in the one behind it: that is the shape a reader opens it in, and
+        # a view navigated on top of the page would have no page left to be about. Asked
+        # through the tabs API, which is the one that returns nothing when it is awaited on the
+        # chrome namespace.
+        fresh = driver.send("WebDriver:NewWindow", {"type": "tab", "focus": True})
+        driver.send("WebDriver:SwitchToWindow", {"handle": fresh["handle"]})
+        driver.send("WebDriver:Navigate", {"url": f"{view}/popup.html"})
+        time.sleep(6)
+        seen = driver.script(
+            "const done = arguments[0];"
+            "done(JSON.stringify({"
+            "  rows: [...document.querySelectorAll('[data-row]')].map(r => r.dataset.row),"
+            "  site: (document.querySelector('[data-row=site] [data-name]') || {})"
+            "    .textContent || ''}));"
+        )
+        view_rows = json.loads(seen or "{}")
+        print(f"  the settings view says it is on {view_rows.get('site')!r}")
+        if "site" not in (view_rows.get("rows") or []):
+            failures.append(
+                f"the view has no site row, so it saw no page: {view_rows.get('rows')}")
+    finally:
+        if driver is not None:
+            try:
+                driver.send("Marionette:Quit")
+            except SystemExit:
+                pass
+        firefox.terminate()
+        try:
+            firefox.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            firefox.kill()
+        shutil.rmtree(where, ignore_errors=True)
+
+    if failures:
+        print("\nFAIL")
+        for line in failures:
+            print(f"  {line}")
+        sys.exit(1)
+    print("\nPASS - the other engine annotates a page and knows which site it is on")
+
+
+if __name__ == "__main__":
+    main()

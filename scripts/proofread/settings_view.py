@@ -84,8 +84,8 @@ def main():
               return JSON.stringify({
                 rows: [...panel.querySelectorAll('[data-row] [data-name]')]
                   .map(r => r.textContent.trim()),
-                choices: [...panel.querySelectorAll('[data-row="layer"] [data-choice]')]
-                  .map(s => s.textContent.trim()),
+                choices: [...panel.querySelectorAll('[data-view="layer"] [data-choice]')]
+                  .map(c => (c.querySelector('.c-name') || c).textContent.trim()),
                 on: panel.querySelector('[data-row="on"] input').checked,
                 often: (panel.querySelector('[data-row="density"] [data-about]') || {})
                   .textContent || '',
@@ -157,8 +157,12 @@ def main():
             failures.append(f"the answers are {german['glosses'][:6]}, not German")
 
         # What is shown over a word: the sound rather than the meaning.
-        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
-                           ".find(s => s.textContent.trim() === 'sound').click()")
+        control(cdp, view, """
+            (() => {
+              document.querySelector('[data-row=layer]').click();
+              document.querySelector('[data-choice="ipa"]').click();
+            })()
+        """)
         sound = words(cdp, page)
         print(f"  showing the sound: {sound['sounds'][:3]}")
         if sound["glosses"]:
@@ -167,8 +171,7 @@ def main():
             failures.append("nothing is said about how the words sound")
 
         # In place: the word repainted as what it means.
-        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
-                           ".find(s => s.textContent.trim() === 'in place').click()")
+        control(cdp, view, "document.querySelector('[data-choice=replace]').click()")
         swapped = words(cdp, page)
         print(f"  in place: {swapped['swapped'][:4]}")
         if "Hund" not in swapped["swapped"]:
@@ -210,8 +213,12 @@ def main():
                 failures.append("the revealed word has no ground, so both forms show at once")
 
         # How often: the sparse end of the bar draws fewer words than the dense end.
-        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
-                           ".find(s => s.textContent.trim() === 'meaning').click()")
+        control(cdp, view, """
+            (() => {
+              document.querySelector('[data-choice="gloss"]').click();
+              document.querySelector('[data-view=layer] .back').click();
+            })()
+        """)
         control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = 0; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
         sparse = words(cdp, page)
@@ -268,8 +275,12 @@ def main():
         # a page with nothing on it says nothing about accents.
         control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        control(cdp, view, "[...document.querySelectorAll('[data-choice]')]"
-                           ".find(s => s.textContent.trim() === 'sound').click()")
+        control(cdp, view, """
+            (() => {
+              document.querySelector('[data-row=layer]').click();
+              document.querySelector('[data-choice="ipa"]').click();
+            })()
+        """)
         def sound_of(word):
             said = evaluate(cdp, page, """
                 (() => {

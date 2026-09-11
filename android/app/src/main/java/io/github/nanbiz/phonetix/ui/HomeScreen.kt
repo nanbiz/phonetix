@@ -51,6 +51,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.launch
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Wording
 import androidx.compose.material3.OutlinedTextField
 
 private const val PREVIEW_TEXT =
@@ -275,7 +276,7 @@ private fun ReadingCard(
     onTarget: (String) -> Unit,
     onLayer: (String) -> Unit,
 ) {
-    SectionCard(title = "Reading into") {
+    SectionCard(title = Wording.row("target").name) {
         val named = remember {
             io.github.nanbiz.phonetix.core.Languages.all()
                 .map { it to io.github.nanbiz.phonetix.core.Languages.english(it) }
@@ -312,17 +313,13 @@ private fun ReadingCard(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Text("Over a word", style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(4.dp))
-        // The same control the extension's settings view draws, from the same tokens: four
-        // short answers, all of them visible, one of them on.
-        Segmented(
-            choices = listOf(
-                "gloss" to "meaning",
-                "gloss+ipa" to "both",
-                "ipa" to "sound",
-                "replace" to "in place",
-            ),
+        Text(Wording.row("layer").name, style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        // What each choice does to the screen, in its own words, from data/choices.json: the
+        // name of one is not a choice a reader can make, and the extension says the same
+        // words because both are written out of the same table.
+        Choices(
+            options = Wording.layer,
             chosen = settings.layer,
             palette = palette(),
             change = onLayer,
@@ -338,29 +335,27 @@ private fun ReadingCard(
  */
 @Composable
 private fun TranscriptionsCard(settings: Settings) {
-    SectionCard(title = "Transcriptions") {
+    SectionCard(title = Wording.row("more").name) {
         val colours = palette()
+        val detail = Wording.detail
+        val chosen = if (settings.narrow) "narrow" else "broad"
         SettingRow(
-            name = "Detail",
+            name = Wording.row("narrow").name,
             palette = colours,
-            about = if (settings.narrow) {
-                "every detail of how it is said"
-            } else {
-                "the sounds that tell words apart"
-            },
+            about = Wording.aboutOf(detail, chosen),
             control = {
                 Segmented(
-                    choices = listOf("broad" to "broad", "narrow" to "narrow"),
-                    chosen = if (settings.narrow) "narrow" else "broad",
+                    choices = detail.map { it.value to it.label },
+                    chosen = chosen,
                     palette = colours,
                     change = { SettingsStore.setNarrow(it == "narrow") },
                 )
             },
         )
         SettingRow(
-            name = "Stress marks",
+            name = Wording.row("stress").name,
             palette = colours,
-            about = "over a word; the card always shows them",
+            about = Wording.row("stress").about,
             control = {
                 Switch(
                     on = !settings.hideStress,
@@ -390,7 +385,7 @@ private fun AccentsCard(settings: Settings) {
             .sortedBy { io.github.nanbiz.phonetix.core.Languages.english(it.first) }
     }
     if (offered.isEmpty()) return
-    SectionCard(title = "Accents") {
+    SectionCard(title = Wording.row("accent").name + "s") {
         val colours = palette()
         for ((lang, accents) in offered) {
             val chosen = settings.accentFor(lang)
@@ -445,7 +440,7 @@ private fun DictionariesCard(settings: Settings) {
         }
     }
 
-    SectionCard(title = "Dictionaries") {
+    SectionCard(title = Wording.row("dictionaries").name) {
         OutlinedTextField(
             value = host,
             onValueChange = { host = it },
@@ -562,11 +557,14 @@ private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
 
 @Composable
 private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (Int) -> Unit) {
-    SectionCard(title = "How often") {
+    SectionCard(title = Wording.row("density").name) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // What the bar is for, in the words the extension uses for it: the card's own
+            // title said the same thing twice before, once as a heading and once as a name.
             Text(
-                "Frequency",
-                style = MaterialTheme.typography.titleMedium,
+                Wording.row("density").about,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             Pill(Frequency.label(density))
@@ -581,8 +579,8 @@ private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (In
             ),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Label("A few words")
-            Label("Every word")
+            Label(Wording.ends["density"]!!.first)
+            Label(Wording.ends["density"]!!.second)
         }
         Spacer(Modifier.height(14.dp))
         Text(

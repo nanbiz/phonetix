@@ -959,7 +959,7 @@ def check_settings_screen(r, dev):
     # showed it perfectly well.
     # Enough steps to reach the end of it: the screen has grown - transcriptions, accents -
     # and a sweep that stops halfway reports the sections below as missing.
-    for _ in range(18):
+    for _ in range(26):
         shell("input", "swipe", "540", "1300", "540", "950", "400")
         time.sleep(1.2)
         more, more_dump = ui_text(dev)
@@ -969,7 +969,7 @@ def check_settings_screen(r, dev):
     # The screen sets its section titles in capitals, so the comparison is on the words
     # rather than on their case.
     seen = {t.lower() for t in texts}
-    for wanted in ("Phonetix", "Frequency", "Preview", "Apps"):
+    for wanted in ("Phonetix", "How often", "Preview", "Apps"):
         r.check(wanted.lower() in seen, f"settings: the screen shows {wanted}", str(texts[:12]))
 
     # The frequency reads as one word in so many, and the preview shows what that does.
@@ -978,8 +978,9 @@ def check_settings_screen(r, dev):
         "settings: the frequency is stated as one word in so many",
         str([t for t in texts if "in" in t][:5]),
     )
+    # In the words both platforms are written out of, whatever case the screen sets them in.
     r.check(
-        "Every word" in texts,
+        any(t.lower() == "every word" for t in texts),
         "settings: the dense end of the bar says it means every word",
         str(texts[:12]),
     )

@@ -13,6 +13,15 @@
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
   import { accentFor, setAccent, type Settings } from '@/settings';
+  import {
+    aboutOf,
+    DETAIL_CHOICES,
+    ENDS,
+    labelOf,
+    LAYER_CHOICES,
+    ROWS,
+    SAYS,
+  } from '@/data/wording';
   import type { Offered } from '@/host/packs';
   import Heart from 'virtual:icons/pixelarticons/heart';
 
@@ -20,6 +29,7 @@
   import Slider from '@/ui/controls/Slider.svelte';
   import Toggle from '@/ui/controls/Toggle.svelte';
   import Segmented from '@/ui/controls/Segmented.svelte';
+  import Choice from './Choice.svelte';
   import Frequency from './Frequency.svelte';
   import NavRow from './NavRow.svelte';
   import Packs from './Packs.svelte';
@@ -101,13 +111,10 @@
       .sort((a, b) => nameOf(a.lang).localeCompare(nameOf(b.lang)))
   );
 
-  const layers: { value: Layer; label: string }[] = [
-    { value: 'off', label: 'nothing' },
-    { value: 'gloss', label: 'meaning' },
-    { value: 'gloss+ipa', label: 'both' },
-    { value: 'ipa', label: 'sound' },
-    { value: 'replace', label: 'in place' },
-  ];
+  // What is drawn over a word, and what each choice does, from data/choices.json: the words
+  // are the choice, and they are the same words on the phone.
+  const layers = LAYER_CHOICES;
+  let layerName = $derived(labelOf(LAYER_CHOICES, settings.layer));
 
   // The languages a reader can pick between, by the name they know them under.
   const named = Object.entries(LANGUAGES)
@@ -115,7 +122,7 @@
     .sort((a, b) => a.english.localeCompare(b.english));
 
   let readInto = $derived([
-    { value: '', label: 'nothing yet' },
+    { value: '', label: SAYS['nothing-yet'] },
     ...named.map((it) => ({ value: it.code, label: `${it.english} · ${it.native}` })),
   ]);
   let pageIs = $derived([
@@ -171,18 +178,15 @@
   <!-- The bar a reader comes back to, on a row of its own. -->
   <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
 
-  <div class="rows">
-    <Row name="Show over a word" row="layer">
-      {#snippet wide()}
-        <Segmented
-          choices={layers}
-          chosen={settings.layer}
-          change={(value) => change('layer', value as Layer)}
-        />
-      {/snippet}
-    </Row>
+  <NavRow
+    name={ROWS.layer.name}
+    row="layer"
+    about={layerName}
+    open={() => (view = 'layer')}
+  />
 
-    <Row name="I read into" row="target">
+  <div class="rows">
+    <Row name={ROWS.target.name} row="target">
       {#snippet control()}
         <Picker
           options={readInto}
@@ -199,28 +203,28 @@
          for the whole vocabulary. A list of accents that all sound the same is a list of
          promises. -->
     <NavRow
-      name="Accent"
+      name={ROWS.accent.name}
       row="accent"
-      about="{nameOf(reading)} · {accentName || 'as the dictionary gives it'}"
+      about="{nameOf(reading)} · {accentName || SAYS['dictionary-accent']}"
       open={() => (view = 'accent')}
     />
   {/if}
 
   <NavRow
-    name="Dictionaries"
+    name={ROWS.dictionaries.name}
     row="dictionaries"
     about={offered > 0
       ? `${held} of ${offered} here, ${packs.open.length} open`
       : settings.host
         ? `nothing on offer at ${settings.host}`
-        : 'no source for them yet'}
+        : SAYS['no-source']}
     open={() => (view = 'packs')}
   />
 
   <NavRow
-    name="How it reads"
+    name={ROWS.more.name}
     row="more"
-    about="transcriptions, stress, how long a rest opens a card"
+    about={ROWS.more.about}
     open={() => (view = 'more')}
   />
 
@@ -231,9 +235,22 @@
 </Screen>
 
 <Screen
+  name="layer"
+  on={view}
+  title={ROWS.layer.name}
+  back={() => (view = 'main')}
+>
+  <Choice
+    options={layers}
+    chosen={settings.layer}
+    change={(value) => change('layer', value as Layer)}
+  />
+</Screen>
+
+<Screen
   name="accent"
   on={view}
-  title="{nameOf(reading)} accent"
+  title="{nameOf(reading)} {ROWS.accent.name.toLowerCase()}"
   back={() => (view = 'main')}
 >
   <div class="choices">
@@ -244,7 +261,7 @@
       data-accent=""
       onclick={() => change('accents', setAccent(settings, reading, ''))}
     >
-      <span>As the dictionary gives it</span>
+      <span>{SAYS['dictionary-accent']}</span>
       {#if chosen === ''}<span aria-hidden="true">✓</span>{/if}
     </button>
     {#each accents as accent (accent.id)}
@@ -293,7 +310,7 @@
 <Screen
   name="packs"
   on={view}
-  title="Dictionaries"
+  title={ROWS.dictionaries.name}
   note="{held} of {offered} here"
   back={() => (view = 'main')}
 >
@@ -307,13 +324,12 @@
   />
 </Screen>
 
-<Screen name="more" on={view} title="How it reads" back={() => (view = 'main')}>
+<Screen name="more" on={view} title={ROWS.more.name} back={() => (view = 'main')}>
   <div class="rows">
     <Row
-      name="This page is in"
+      name={ROWS.source.name}
       row="source"
-      about="Each block is read on its own, so a page in two languages already reads correctly.
-             Set this only where that goes wrong."
+      about={ROWS.source.about}
     >
       {#snippet control()}
         <Picker
@@ -326,18 +342,13 @@
     </Row>
 
     <Row
-      name="Transcriptions"
+      name={ROWS.narrow.name}
       row="narrow"
-      about={settings.narrow
-        ? 'every detail of how it is said'
-        : 'the sounds that tell words apart'}
+      about={aboutOf(DETAIL_CHOICES, settings.narrow ? 'narrow' : 'broad')}
     >
       {#snippet control()}
         <Segmented
-          choices={[
-            { value: 'broad', label: 'broad' },
-            { value: 'narrow', label: 'narrow' },
-          ]}
+          choices={DETAIL_CHOICES}
           chosen={settings.narrow ? 'narrow' : 'broad'}
           change={(value) => change('narrow', value === 'narrow')}
         />
@@ -345,9 +356,9 @@
     </Row>
 
     <Row
-      name="Stress marks"
+      name={ROWS.stress.name}
       row="stress"
-      about="over a word; the card always shows them"
+      about={ROWS.stress.about}
     >
       {#snippet control()}
         <Toggle
@@ -358,20 +369,20 @@
       {/snippet}
     </Row>
 
-    <Row name="Rest before a card opens" row="delay" says="{settings.delay} ms">
+    <Row name={ROWS.delay.name} row="delay" says="{settings.delay} ms">
       {#snippet wide()}
         <Slider
           value={settings.delay}
           max={1000}
           step={50}
           label="rest before a card opens"
-          ends={['instant', '1000 ms']}
+          ends={ENDS.delay}
           change={(ms) => change('delay', ms)}
         />
       {/snippet}
     </Row>
 
-    <Row name="Animations" row="animations" about="the card eases in; off is instant">
+    <Row name={ROWS.animations.name} row="animations" about={ROWS.animations.about}>
       {#snippet control()}
         <Toggle
           on={settings.animations}

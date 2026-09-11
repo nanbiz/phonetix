@@ -4,6 +4,7 @@
   // The first thing in the popup and the first thing a reader came for. Two switches, because
   // they answer two different questions: the big one is what happens on a site the reader has
   // not decided about, and the small one is the decision about this site, which wins.
+  import { ROWS } from '@/data/wording';
   import Toggle from '@/ui/controls/Toggle.svelte';
 
   interface Props {
@@ -30,7 +31,7 @@
     {#if icon}<img class="board-mark" src={icon} alt="" />{/if}
     <span class="board-what">
       <span class="board-name" data-name>Phonetix</span>
-      <span class="board-sub">Default for sites you have not set</span>
+      <span class="board-sub">{ROWS.site.about}</span>
     </span>
     <Toggle {on} big label="annotate what I read" {change} />
   </div>

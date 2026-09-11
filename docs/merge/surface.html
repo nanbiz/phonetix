@@ -692,8 +692,16 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .head .h-note { font-size: var(--font-size-label); font-weight: var(--weight-regular); color: var(--color-ink-faint); }
 .r-icon { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; color: var(--color-ink-faint); }
 /* One choice out of a list too long for a segmented control: which accent, which language. */
-.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
+.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
 .choice.on { border-color: var(--color-accent); background: var(--color-accent-bg); color: var(--color-accent); font-weight: var(--weight-medium); }
+/* What the choice is and what it does, because a word on its own is not a choice a reader can
+   make: "both" says nothing at all to somebody who has not already worked out what the other
+   four are. */
+.choice .c-what { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.choice .c-name { font-weight: var(--weight-medium); }
+.choice .c-about { font-size: var(--font-size-label); color: var(--color-ink-muted); font-weight: var(--weight-regular); }
+.choice.on .c-about { color: var(--color-accent); opacity: 0.85; }
+.choice .c-mark { flex: 0 0 auto; color: var(--color-accent); }
 .choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
 
 /* ------------------------------------------------------------------

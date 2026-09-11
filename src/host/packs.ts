@@ -18,10 +18,14 @@ const store = createStore('phonetix-packs', 'lang-pack');
  * in the page the engines run in it is simply not defined, so asking for it threw, the catch
  * below turned that into "the reader has set no host", and translation was quietly off with
  * nothing anywhere saying why.
+ *
+ * Through `browser` rather than `chrome`, for the reason the messaging is: on Gecko the chrome
+ * namespace is callback-style, so awaiting it there returned undefined and every reader on
+ * Firefox was told they had set no host - no dictionaries, no translation, no explanation.
  */
 export async function host(): Promise<string | undefined> {
   try {
-    const got = await chrome.storage.local.get('packBaseUrl');
+    const got = await browser.storage.local.get('packBaseUrl');
     const said = got?.packBaseUrl;
     return typeof said === 'string' && said !== ''
       ? said.replace(/\/+$/, '')

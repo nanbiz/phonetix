@@ -9,6 +9,7 @@
 
   import { LANGUAGES } from '@/data/languages';
   import type { Offered } from '@/host/packs';
+  import { ROWS, SAYS } from '@/data/wording';
   import Field from '@/ui/controls/Field.svelte';
   import Row from './Row.svelte';
 
@@ -38,11 +39,9 @@
   <!-- Where they come from, which is the reader's to decide and appears nowhere in the source:
        an extension that went looking on its own would be an extension deciding who to talk to. -->
   <Row
-    name="Where they come from"
+    name={ROWS.host.name}
     row="host"
-    about={host
-      ? 'Fetched once and kept on this machine, so a dictionary works on a train.'
-      : 'Nothing is fetched until this is set.'}
+    about={host ? ROWS.host.about : SAYS['no-host']}
   >
     {#snippet wide()}
       <Field

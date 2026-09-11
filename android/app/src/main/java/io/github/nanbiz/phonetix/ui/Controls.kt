@@ -165,3 +165,67 @@ fun Segmented(
         }
     }
 }
+
+/**
+ * One choice out of a handful, each saying what it does.
+ *
+ * A row of one-word buttons is only a choice for a reader who already knows what the words
+ * mean: "both" says nothing to somebody who has not worked out what the other four are. So
+ * each choice carries its own sentence, and the one in force is marked.
+ */
+@Composable
+fun Choices(
+    options: List<io.github.nanbiz.phonetix.core.Choice>,
+    chosen: String,
+    palette: Tokens.Palette,
+    modifier: Modifier = Modifier,
+    change: (String) -> Unit,
+) {
+    Column(
+        modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space2.dp),
+    ) {
+        for (option in options) {
+            val (value, label, about) = option
+            val on = value == chosen
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Tokens.Scale.radiusButton.dp))
+                    .background(if (on) Color(palette.accentBg) else Color.Transparent)
+                    .border(
+                        Tokens.Scale.borderWidth.dp,
+                        Color(if (on) palette.accent else palette.border),
+                        RoundedCornerShape(Tokens.Scale.radiusButton.dp),
+                    )
+                    .clickable { change(value) }
+                    .padding(
+                        horizontal = Tokens.Scale.space3.dp,
+                        vertical = Tokens.Scale.space2.dp,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = label,
+                        color = Color(if (on) palette.accent else palette.ink),
+                        fontSize = Tokens.Scale.fontSizeSmall.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = about,
+                        color = Color(if (on) palette.accent else palette.inkMuted),
+                        fontSize = Tokens.Scale.fontSizeLabel.sp,
+                    )
+                }
+                if (on) {
+                    Text(
+                        text = "✓",
+                        color = Color(palette.accent),
+                        fontSize = Tokens.Scale.fontSizeSmall.sp,
+                    )
+                }
+            }
+        }
+    }
+}

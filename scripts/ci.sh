@@ -66,6 +66,10 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "every setting changes what is seen" uv run python scripts/proofread/settings_view.py
   step "the settings view looks like one surface" uv run scripts/proofread/popup_view.py
   step "a word no dictionary holds is translated" uv run scripts/proofread/translates.py
+  # The other engine, which differs in the one place that decides whether anything works:
+  # awaiting the chrome namespace on Gecko returns nothing at all.
+  step "the extension builds for the other engine" pnpm zip:firefox
+  step "the other engine annotates a page" uv run python scripts/proofread/on_firefox.py
 fi
 
 if [[ "$what" == all || "$what" == android ]]; then
