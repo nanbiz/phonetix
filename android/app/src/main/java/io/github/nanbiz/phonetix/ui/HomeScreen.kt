@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -79,8 +80,8 @@ fun HomeScreen(
         Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = Tokens.Scale.space4.dp),
+        verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
     ) {
         Spacer(Modifier.height(28.dp))
         Header()
@@ -147,18 +148,24 @@ fun Wordmark(size: Int) {
 
 @Composable
 private fun MasterCard(enabled: Boolean, ready: Boolean, onEnabled: (Boolean) -> Unit) {
+    // Off, it is a card like the others: painted in the raised surface it was a beige slab on
+    // a beige page with nothing to say where it ended.
     val bg by animateColorAsState(
         if (enabled) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceVariant,
+        else MaterialTheme.colorScheme.surface,
         label = "master",
     )
     Card(
         colors = CardDefaults.cardColors(containerColor = bg),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(Tokens.Scale.radiusCard.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            Tokens.Scale.borderWidth.dp,
+            if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+        ),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            Modifier.padding(20.dp),
+            Modifier.padding(Tokens.Scale.space4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
@@ -569,6 +576,9 @@ private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (In
             )
             Pill(Frequency.label(density))
         }
+        // The bar the extension draws: a filled track and a round thumb. Material's own thumb
+        // is a tall bar with a gap either side of it, which beside everything else here read
+        // as a control that had come apart.
         Slider(
             value = Frequency.posForDensity(density),
             onValueChange = { onDensity(Frequency.densityForPos(it)) },
@@ -577,6 +587,27 @@ private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (In
                 activeTrackColor = MaterialTheme.colorScheme.primary,
                 inactiveTrackColor = MaterialTheme.colorScheme.outline,
             ),
+            thumb = {
+                Box(
+                    Modifier
+                        .size(Tokens.Scale.audioSize.dp * 0.72f)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            },
+            track = { state ->
+                SliderDefaults.Track(
+                    sliderState = state,
+                    colors = SliderDefaults.colors(
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.outline,
+                    ),
+                    thumbTrackGapSize = 0.dp,
+                    trackInsideCornerSize = 0.dp,
+                    drawStopIndicator = null,
+                    modifier = Modifier.height(Tokens.Scale.progressHeight.dp),
+                )
+            },
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Label(Wording.ends["density"]!!.first)
@@ -667,21 +698,33 @@ private fun AppsCard(settings: Settings, onOpenApps: () -> Unit) {
     }
 }
 
+/**
+ * One section of the screen: a surface with a border, on the page's own ground.
+ *
+ * The card used to be drawn in the raised surface colour on the page colour, and in this
+ * palette those are within a few percent of each other: eight cards of beige on beige, with
+ * nothing to say where one ended and the next began. A surface and a line is what the
+ * extension's panel is, and it is what separates a card from the page here too.
+ */
 @Composable
 fun SectionCard(title: String, content: @Composable () -> Unit) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(Tokens.Scale.radiusCard.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            Tokens.Scale.borderWidth.dp,
+            MaterialTheme.colorScheme.outline,
+        ),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(Tokens.Scale.space4.dp)) {
             Text(
                 title.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 letterSpacing = 1.2.sp,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Tokens.Scale.space2.dp))
             content()
         }
     }
