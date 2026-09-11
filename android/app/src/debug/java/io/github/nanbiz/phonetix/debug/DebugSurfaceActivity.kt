@@ -107,6 +107,17 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
      *  is made of pixels alone. */
     private var marking = false
 
+    override fun onResume() {
+        super.onResume()
+        // This window is ours and is meant to be annotated, unlike the rest of the app.
+        io.github.nanbiz.phonetix.service.OwnScreen.readable = true
+    }
+
+    override fun onPause() {
+        super.onPause()
+        io.github.nanbiz.phonetix.service.OwnScreen.readable = false
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mode = intent?.getStringExtra(EXTRA_MODE) ?: "plain"

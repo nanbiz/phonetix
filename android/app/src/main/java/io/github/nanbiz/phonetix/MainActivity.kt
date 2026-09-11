@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
      *  the only honest moment to re-read them is when the user comes back. */
     private var resumeTick by mutableStateOf(0)
     private var dictReady by mutableStateOf(false)
+    /** Whether the synthesiser is up, so the preview can draw the words no dictionary holds. */
+    private var voiceReady by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +47,15 @@ class MainActivity : ComponentActivity() {
         SettingsStore.init(this)
         Dictionary.ensureLoaded(this) { runOnUiThread { dictReady = true } }
         dictReady = Dictionary.ready
+        // The synthesiser, for this screen's own sake. It was started only by the
+        // accessibility service, so with the overlay switched off the preview of what a
+        // setting does had nothing to fill a word with and showed plain English - the one
+        // place in the app that exists to show a transcription, showing none.
+        Thread {
+            if (io.github.nanbiz.phonetix.core.Speech.start(this)) {
+                runOnUiThread { voiceReady = true }
+            }
+        }.start()
 
         setContent {
             PhonetixTheme {
@@ -56,7 +67,7 @@ class MainActivity : ComponentActivity() {
                         Root(
                             modifier = Modifier.padding(inner),
                             resumeTick = resumeTick,
-                            dictReady = dictReady,
+                            dictReady = dictReady || voiceReady,
                         )
                     }
                 }

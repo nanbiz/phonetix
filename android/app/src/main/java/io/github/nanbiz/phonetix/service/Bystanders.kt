@@ -9,10 +9,10 @@ import android.view.inputmethod.InputMethodManager
  * The apps a transcription has no business being on.
  *
  * The home screen is a grid of names, the status bar and the notification shade are
- * controls, and a keyboard is the thing being typed on: none of them is text anyone reads for
- * its pronunciation, and covering their words costs a read of the tree every time they move.
- * The reader turning the overlay on for "every app" means every app they read in, and these
- * are not that.
+ * controls, a keyboard is the thing being typed on, and this app's own screen is the switches
+ * that work it: none of them is text anyone reads for its pronunciation, and covering their
+ * words costs a read of the tree every time they move. The reader turning the overlay on for
+ * "every app" means every app they read in, and these are not that.
  *
  * Which packages those are differs by device, so they are looked up rather than listed: the
  * launcher is whatever answers the home intent, the keyboards are whatever input methods are
@@ -25,6 +25,8 @@ class Bystanders(private val context: Context) {
 
     fun contains(pkg: String?): Boolean {
         if (pkg == null) return false
+        // Except the surface the checks drive, which is ours and is there to be annotated.
+        if (pkg == context.packageName && OwnScreen.readable) return false
         val now = SystemClock.uptimeMillis()
         if (now - lookedUpAt > REFRESH_MS) refresh()
         return pkg in packages
@@ -34,6 +36,10 @@ class Bystanders(private val context: Context) {
         lookedUpAt = SystemClock.uptimeMillis()
         val found = HashSet<String>(8)
         found.add("com.android.systemui")
+        // This app itself. Its screen is controls, and transcribing them covers the words a
+        // reader works it by: "I read into" came back as "I read ɪntʊ" with the choices under
+        // it half in IPA. The one window of ours that is meant to be read says so itself.
+        found.add(context.packageName)
         // Whatever answers the home intent, unless what answers it is not a launcher.
         //
         // A device with no launcher installed - an emulator, a freshly flashed phone - answers
