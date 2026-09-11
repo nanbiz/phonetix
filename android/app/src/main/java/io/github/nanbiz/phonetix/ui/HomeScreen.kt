@@ -183,7 +183,16 @@ private fun MasterCard(enabled: Boolean, ready: Boolean, onEnabled: (Boolean) ->
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = enabled, enabled = ready, onCheckedChange = onEnabled)
+            // The one switch a reader opens the app to find, drawn larger than the rest and
+            // the same switch the extension's popup puts at the top of its own view.
+            Switch(
+                on = enabled,
+                label = Wording.row("on").name,
+                palette = palette(),
+                big = true,
+                enabled = ready,
+                change = onEnabled,
+            )
         }
     }
 }
@@ -448,23 +457,32 @@ private fun DictionariesCard(settings: Settings) {
     }
 
     SectionCard(title = Wording.row("dictionaries").name) {
-        OutlinedTextField(
-            value = host,
-            onValueChange = { host = it },
-            label = { Text("Where they come from") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        val colours = palette()
+        SettingRow(
+            name = Wording.row("host").name,
+            palette = colours,
+            about = if (settings.packHost.isBlank()) {
+                Wording.says["no-host"].orEmpty()
+            } else {
+                Wording.row("host").about
+            },
+            wide = {
+                OutlinedTextField(
+                    value = host,
+                    onValueChange = { host = it },
+                    singleLine = true,
+                    shape = RoundedCornerShape(Tokens.Scale.radiusButton.dp),
+                    placeholder = { Text("https://…") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
         )
         if (host != settings.packHost) {
             TextButton(onClick = { SettingsStore.setPackHost(host) }) { Text("Use this") }
         }
-        if (offered.isEmpty()) {
+        if (offered.isEmpty() && settings.packHost.isNotBlank()) {
             Text(
-                if (settings.packHost.isBlank()) {
-                    "No source for them yet"
-                } else {
-                    "Nothing offered there"
-                },
+                "nothing on offer at ${settings.packHost}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -519,46 +537,47 @@ private fun DictionariesCard(settings: Settings) {
  */
 @Composable
 private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
+    val colours = palette()
     SectionCard(title = "The lens") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Drag it over a word", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    "It asks what it passes over and takes none of the screen's touches",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        SettingRow(
+            name = "Drag it over a word",
+            palette = colours,
+            about = "It asks what it passes over and takes none of the screen's touches",
+            control = {
+                Switch(
+                    on = on,
+                    label = "the lens",
+                    palette = colours,
+                    change = onLens,
                 )
-            }
-            Switch(checked = on, onCheckedChange = onLens)
-        }
+            },
+        )
     }
 }
 
 @Composable
 private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
+    val colours = palette()
     SectionCard(title = "Touching a word") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (on) "Press a word for its sounds" else "Words are not touchable",
-                    style = MaterialTheme.typography.titleMedium,
+        SettingRow(
+            name = if (on) "Press a word for its sounds" else "Words are not touchable",
+            palette = colours,
+            about = if (on) {
+                "Hold a transcription to open its card. While this is on, a swipe that starts " +
+                    "on a transcription will not scroll the page."
+            } else {
+                "Every touch goes to the app underneath, so scrolling is untouched. Turn this " +
+                    "on to open a word's card by holding it."
+            },
+            control = {
+                Switch(
+                    on = on,
+                    label = "touching a word",
+                    palette = colours,
+                    change = onTouchWords,
                 )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (on) {
-                        "Hold a transcription to open its card. While this is on, a swipe " +
-                            "that starts on a transcription will not scroll the page."
-                    } else {
-                        "Every touch goes to the app underneath, so scrolling is untouched. " +
-                            "Turn this on to open a word's card by holding it."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(checked = on, onCheckedChange = onTouchWords)
-        }
+            },
+        )
     }
 }
 

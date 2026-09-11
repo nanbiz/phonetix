@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
@@ -90,24 +91,31 @@ fun Switch(
     label: String,
     palette: Tokens.Palette,
     modifier: Modifier = Modifier,
+    /** Larger, for the one switch a reader opens the app to find. */
+    big: Boolean = false,
+    /** Off, when the thing it switches is not ready to be switched on yet. */
+    enabled: Boolean = true,
     change: (Boolean) -> Unit,
 ) {
-    val height = Tokens.Scale.toggleHeight
-    val knob = height - 6f
+    val height = if (big) Tokens.Scale.toggleHeightLg else Tokens.Scale.toggleHeight
+    val width = if (big) Tokens.Scale.toggleWidthLg else Tokens.Scale.toggleWidth
+    val knob = height - (if (big) 8f else 6f)
+    val edge = if (big) 4f else 3f
     Box(
         modifier
-            .width(Tokens.Scale.toggleWidth.dp)
+            .width(width.dp)
             .height(height.dp)
             .clip(RoundedCornerShape(Tokens.Scale.radiusChip.dp))
             .background(Color(if (on) palette.accent else palette.chipBg))
-            .clickable { change(!on) }
+            .alpha(if (enabled) 1f else 0.5f)
+            .clickable(enabled = enabled) { change(!on) }
             .semantics { contentDescription = label },
     ) {
         Box(
             Modifier
                 .padding(
-                    start = if (on) (Tokens.Scale.toggleWidth - height + 3f).dp else 3.dp,
-                    top = 3.dp,
+                    start = if (on) (width - height + edge).dp else edge.dp,
+                    top = edge.dp,
                 )
                 .width(knob.dp)
                 .height(knob.dp)
