@@ -8,7 +8,7 @@ import {
   readScreen, readWiktionary, symbolsOf, type Said,
 } from '@/core';
 import type { Batch, TextRun } from '@/core/tokens';
-import { answered, noted, recent } from './health';
+import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
@@ -17,6 +17,14 @@ import { audio, guessed, ipa, translatable } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
+  // A new place to fetch dictionaries from is a new situation: what failed against the old
+  // host was about the old host, and a reader who has just corrected the address should not
+  // be met by the complaint they were correcting. Whatever is still wrong records itself
+  // again the next time it is asked for something.
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && 'packBaseUrl' in changes) afresh();
+  });
+
   onMessage('openPack', async ({ data }) => {
     try {
       return await get(data.lang);

@@ -53,12 +53,33 @@ first, and offers controls for things the reader cannot use yet.
 10. **The preview previews nothing.** Under "How often" sits a sample paragraph with no
     annotations on it, because nothing can be annotated until the two settings above are made.
 
-## What the fix is
+## What was done about it
 
-Not more features. In order:
+Not more features:
 
-- One block at the top of each surface that says what is missing and does the next step, and
-  nothing below it that pretends to work before it does.
-- The settings ordered the way a reader decides: into what, from where, what appears, how much.
-- Every row leads to the thing it names.
-- A setting appears when there is something for it to change.
+- **Each surface says what is missing, and does it there.** The extension shows the steps and
+  nothing else until they are done, with the control for each step in the row that names it.
+  The phone's are the two permissions (nothing can be read without them) and then, in a card of
+  its own beside the setting it serves, the language and the dictionary that meanings need -
+  because the phone ships a dictionary and answers how a word is said from the first screen.
+- **The settings are in the order a reader decides in**: what they read into, where the
+  dictionaries come from, what appears over a word, how much of the page, then the page's own
+  language and accent.
+- **Every row leads to what it names.** "This page is in" opens the page's own screen, which
+  holds what it is being read as and how that language is read.
+- **A setting appears when there is something for it to change.** The phone offers accents only
+  for languages it holds a dictionary for; the switchboard's first line says what the product
+  does rather than what happens on undecided sites; the mark's card says what holding and
+  pressing do in prose rather than as rows that look like controls and are not; and the
+  preview shows which words the bar would answer rather than the page redrawn as phonetics
+  nobody asked for.
+- **A complaint about a host clears when the host changes.** What failed against the old
+  address was about the old address.
+
+## Still open
+
+- **A dictionary given up and taken back leaves the page half answered.** After a pack is
+  removed and fetched again with a page open, the words that pack holds are answered and the
+  words the synthesiser would answer stay bare until the page is loaded again. Found while
+  driving the settings view; the host answers those words correctly when asked directly, so it
+  is the page's own reuse of what it already had.

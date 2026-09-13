@@ -35,6 +35,7 @@
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
+  import Start from './Start.svelte';
   import Switchboard from './Switchboard.svelte';
   import Trouble from './Trouble.svelte';
   import Field from '@/ui/controls/Field.svelte';
@@ -186,6 +187,18 @@
 
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
+
+  /** What is still to be done before anything can be answered, in the order it has to be
+   *  done in: a language to read into, a host to fetch from, and a dictionary from it.
+   *
+   *  Any dictionary, not this page's: a reader holding Spanish who opens a German page is not
+   *  in setup, they are missing German, and the dictionaries row is where that is said. The
+   *  view is also often open with no page in front of it at all, and a step that can never be
+   *  finished is worse than no step. */
+  let missing = $derived(
+    [!settings.target, !settings.host, settings.host !== '' && packs.held.length === 0]
+      .filter(Boolean).length
+  );
 </script>
 
 <Screen name="main" on={view}>
@@ -204,54 +217,67 @@
 
   <Trouble {trouble} />
 
-  <!-- What this page is being read as, and into what. Everything below is a choice about
-       that, and a reader whose page was read as the wrong language has no other way to find
-       out why the answers are nonsense. -->
-  <NavRow
-    name={reading ? nameOf(reading) : 'Not sure what this page is'}
-    row="page"
-    about="{settings.source ? 'set by you' : 'what the page says'}{accentName
-      ? ` · ${accentName}`
-      : ''}{words ? ` · ${words}` : ''}{settings.target
-      ? ` · read into ${nameOf(settings.target)}`
-      : ''}"
-    open={() => (view = accents.length > 0 ? 'accent' : 'more')}
-  />
+  <!-- What is missing before any of this can answer a word, with the control that does each
+       step in the row that names it. Gone once they are done. -->
+  <Start left={missing}>
+    {#if !settings.target}
+      <Row name={SAYS['start-target']} row="start-target">
+        {#snippet control()}
+          <Picker
+            options={readInto}
+            chosen={settings.target}
+            label={ROWS.target.name}
+            change={(value) => change('target', value)}
+          />
+        {/snippet}
+      </Row>
+    {/if}
+    {#if !settings.host}
+      <Row name={SAYS['start-host']} row="start-host" about={ROWS.host.about}>
+        {#snippet wide()}
+          <Field
+            value={settings.host}
+            label={ROWS.host.name}
+            placeholder="https://…"
+            kind="url"
+            change={(said) => change('host', said)}
+          />
+        {/snippet}
+      </Row>
+    {/if}
+    {#if settings.host && packs.held.length === 0}
+      <Row
+        name={SAYS['start-pack']}
+        row="start-pack"
+        about={offered > 0 ? `${offered} on offer` : `nothing on offer at ${settings.host}`}
+      >
+        {#snippet control()}
+          <button class="btn" onclick={() => (view = 'packs')}>{SAYS['start-go']}</button>
+        {/snippet}
+      </Row>
+    {/if}
+  </Start>
 
-  <!-- The bar a reader comes back to, on a row of its own. -->
-  <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
+  <!-- While something is still missing, none of this is shown: every one of these rows is a
+       choice about answers that cannot be given yet, and two of them are the very steps above
+       under another name. A first run is the three steps and nothing else.
 
-  <NavRow
-    name={ROWS.layer.name}
-    row="layer"
-    about={layerName}
-    open={() => (view = 'layer')}
-  />
-
+       In the order a reader decides: what they read into, where the dictionaries come from,
+       what appears over a word, and only then how much of the page. The bar used to be first
+       and changed nothing at all until the two below it were set. -->
+  {#if missing === 0}
   <div class="rows">
-    <Row name={ROWS.target.name} row="target">
+    <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
       {#snippet control()}
         <Picker
           options={readInto}
           chosen={settings.target}
-          label="I read into"
+          label={ROWS.target.name}
           change={(value) => change('target', value)}
         />
       {/snippet}
     </Row>
   </div>
-
-  {#if accents.length > 0}
-    <!-- Only where there is something real to offer: a voice that exists, or a rule that holds
-         for the whole vocabulary. A list of accents that all sound the same is a list of
-         promises. -->
-    <NavRow
-      name={ROWS.accent.name}
-      row="accent"
-      about="{nameOf(reading)} · {accentName || SAYS['dictionary-accent']}"
-      open={() => (view = 'accent')}
-    />
-  {/if}
 
   <NavRow
     name={ROWS.dictionaries.name}
@@ -264,16 +290,36 @@
     open={() => (view = 'packs')}
   />
 
+  <NavRow
+    name={ROWS.layer.name}
+    row="layer"
+    about={layerName}
+    open={() => (view = 'layer')}
+  />
+
+  <!-- The bar a reader comes back to, on a row of its own. -->
+  <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
+
+  <!-- This page: what it is being read as, and how that language is read. The row used to
+       name the page and open a screen about stress marks and card timing. -->
+  <NavRow
+    name={reading ? nameOf(reading) : ROWS.source.name}
+    row="page"
+    about="{settings.source ? 'set by you' : 'what the page says'}{accentName
+      ? ` · ${accentName}`
+      : ''}{words ? ` · ${words}` : ''}"
+    open={() => (view = 'page')}
+  />
+
   <!-- The other direction. Everything above answers a word somebody else wrote; this one
        answers a word the reader is looking for. -->
   <NavRow
     name={ROWS.say.name}
     row="say"
-    about={learning && settings.target && learning !== settings.target
-      ? `into ${nameOf(learning)}`
-      : SAYS['say-no-language']}
+    about="into {nameOf(learning)}"
     open={() => (view = 'say')}
   />
+  {/if}
 
   <NavRow
     name={ROWS.more.name}
@@ -301,12 +347,31 @@
   />
 </Screen>
 
+<!-- This page: what it is being read as, and how that language is read. One screen, because
+     those are one question - a reader who opens it has noticed something is wrong with how
+     this page is being answered. -->
 <Screen
-  name="accent"
+  name="page"
   on={view}
-  title="{nameOf(reading)} {ROWS.accent.name.toLowerCase()}"
+  title={reading ? nameOf(reading) : ROWS.source.name}
+  note={words}
   back={() => (view = 'main')}
 >
+  <div class="rows">
+    <Row name={ROWS.source.name} row="source" about={ROWS.source.about}>
+      {#snippet control()}
+        <Picker
+          options={pageIs}
+          chosen={settings.source}
+          label={ROWS.source.name}
+          change={(value) => change('source', value)}
+        />
+      {/snippet}
+    </Row>
+  </div>
+
+  {#if accents.length > 0}
+  <h4 class="head">{ROWS.accent.name}<span class="h-note">{nameOf(reading)}</span></h4>
   <div class="choices">
     <!-- What the dictionary lists first, which is what most readers want and what a language
          with no accents to choose between gets anyway. -->
@@ -335,6 +400,7 @@
       </p>
     {/if}
   </div>
+  {/if}
 
   {#if elsewhere.length > 0}
     <!-- Every other language that offers a choice, so setting one for a page does not throw
@@ -415,21 +481,6 @@
 
 <Screen name="more" on={view} title={ROWS.more.name} back={() => (view = 'main')}>
   <div class="rows">
-    <Row
-      name={ROWS.source.name}
-      row="source"
-      about={ROWS.source.about}
-    >
-      {#snippet control()}
-        <Picker
-          options={pageIs}
-          chosen={settings.source}
-          label="this page is in"
-          change={(value) => change('source', value)}
-        />
-      {/snippet}
-    </Row>
-
     <Row
       name={ROWS.narrow.name}
       row="narrow"

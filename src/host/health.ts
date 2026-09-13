@@ -38,6 +38,18 @@ export function answered(what: string): void {
   seen.delete(what);
 }
 
+/**
+ * A clean slate, for when what failed is no longer the situation.
+ *
+ * Changing where the dictionaries come from is the case this exists for: everything recorded
+ * against the old host was about the old host, and leaving it up afterwards leaves a reader
+ * who has just fixed their setting looking at a complaint about it. The engines will record
+ * again soon enough if they are still not answering.
+ */
+export function afresh(): void {
+  seen.clear();
+}
+
 /** What has failed recently, in the words a reader can act on. */
 export function recent(): string[] {
   const now = Date.now();

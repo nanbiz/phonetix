@@ -110,6 +110,18 @@ def main():
         if panel["width"] < 300:
             failures.append(f"the view measured {panel['width']}px wide")
 
+        # The first step the view asks for, and the reason it asks: until a language to read
+        # into is chosen there is nothing to answer a word with, and the view shows the steps
+        # rather than settings that cannot do anything.
+        control(cdp, view, """
+            (() => {
+              const picked = document.querySelector('[data-row=start-target] select');
+              picked.value = 'en';
+              picked.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """)
+        time.sleep(1)
+
         # The dictionaries, fetched the way a reader fetches them: from the list, by name,
         # one button each. Nothing arrives because a page happened to be in that language.
         for _ in range(4):
@@ -148,9 +160,13 @@ def main():
             failures.append(f"the dense end says {told!r}")
 
         # Reading into German: the answers change language.
-        control(cdp, view, "document.querySelectorAll('select')[0].value='de';"
-                           "document.querySelectorAll('select')[0]"
-                           ".dispatchEvent(new Event('change',{bubbles:true}))")
+        control(cdp, view, """
+            (() => {
+              const picked = document.querySelector('[data-row=target] select');
+              picked.value = 'de';
+              picked.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """)
         german = words(cdp, page)
         print(f"  reading into German: {german['glosses'][:4]}")
         if "Hund" not in german["glosses"]:
@@ -254,22 +270,6 @@ def main():
         ):
             failures.append(f"a dictionary row says nothing about its cost: {listed}")
 
-        # Giving one up: the row offers it back, and the page loses the answers it gave.
-        held_before = json.loads(offered)
-        if any(row["action"] == "remove" for row in held_before):
-            control(cdp, view, "[...document.querySelectorAll('[data-row=pack] [data-does]')]"
-                               ".find(b => b.textContent.trim() === 'remove').click()")
-            time.sleep(2)
-            after = json.loads(evaluate(cdp, view, """
-                (() => JSON.stringify([...document.querySelectorAll('[data-row=pack] [data-does]')]
-                  .map(b => b.textContent.trim())))()
-            """) or "[]")
-            print(f"  after giving one up: {after}")
-            if after.count("get") < 1:
-                failures.append(f"a dictionary given up is not offered back: {after}")
-        else:
-            failures.append(f"no dictionary was held to give up: {held_before}")
-
         # An accent whose difference is a rule changes the transcriptions on the page.
         # Every word again first: the bar was left at its sparse end by the check above, and
         # a page with nothing on it says nothing about accents.
@@ -291,13 +291,28 @@ def main():
             """ % word)
             return said or ""
 
+        # Waited for, and the page nudged into reading itself again if it is still bare: the
+        # word this step is about has no dictionary entry, so its transcription comes from the
+        # synthesiser, and a page annotated while that was still starting holds a token without
+        # one until something asks for the page again.
+        for _ in range(8):
+            if sound_of("calle"):
+                break
+            control(cdp, view, """
+                (() => {
+                  const s = document.querySelector('[data-row=density] input');
+                  s.value = s.max;
+                  s.dispatchEvent(new Event('input', {bubbles: true}));
+                })()
+            """)
+            time.sleep(3)
         before = sound_of("calle")
         # The accents are a screen of their own, opened from the row that says which one is
         # set: driven the way a reader drives it, through the row and then the choice.
         picked = evaluate(cdp, view, """
             (() => {
-              const row = document.querySelector('[data-row="accent"]');
-              if (!row) return 'no accent row';
+              const row = document.querySelector('[data-row="page"]');
+              if (!row) return 'no page row';
               row.click();
               const choice = [...document.querySelectorAll('[data-accent]')]
                 .find(c => c.textContent.includes('Latin'));
@@ -309,7 +324,7 @@ def main():
         time.sleep(3)
         after = sound_of("calle")
         # And back out of it, the way a reader leaves a screen they are done with.
-        evaluate(cdp, view, "(document.querySelector('[data-view=accent] .back') || {}).click?.()")
+        evaluate(cdp, view, "(document.querySelector('[data-view=page] .back') || {}).click?.()")
         print(f"  accent {picked}: calle said {before!r} -> {after!r}")
         if picked and picked.startswith("no "):
             failures.append(f"the view offers no accent to pick ({picked})")
@@ -317,6 +332,23 @@ def main():
             failures.append("the word the accent changes was not on the page")
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
+
+
+        # Giving one up: the row offers it back, and the page loses the answers it gave.
+        held_before = json.loads(offered)
+        if any(row["action"] == "remove" for row in held_before):
+            control(cdp, view, "[...document.querySelectorAll('[data-row=pack] [data-does]')]"
+                               ".find(b => b.textContent.trim() === 'remove').click()")
+            time.sleep(2)
+            after = json.loads(evaluate(cdp, view, """
+                (() => JSON.stringify([...document.querySelectorAll('[data-row=pack] [data-does]')]
+                  .map(b => b.textContent.trim())))()
+            """) or "[]")
+            print(f"  after giving one up: {after}")
+            if after.count("get") < 1:
+                failures.append(f"a dictionary given up is not offered back: {after}")
+        else:
+            failures.append(f"no dictionary was held to give up: {held_before}")
 
         # Where the dictionaries come from is a setting, and the only way a reader has of
         # pointing this at their own host. Emptied and typed back the way they would: nothing

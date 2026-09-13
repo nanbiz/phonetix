@@ -4,7 +4,7 @@
   // The first thing in the popup and the first thing a reader came for. Two switches, because
   // they answer two different questions: the big one is what happens on a site the reader has
   // not decided about, and the small one is the decision about this site, which wins.
-  import { ROWS } from '@/data/wording';
+  import { SAYS } from '@/data/wording';
   import Toggle from '@/ui/controls/Toggle.svelte';
 
   interface Props {
@@ -31,7 +31,10 @@
     {#if icon}<img class="board-mark" src={icon} alt="" />{/if}
     <span class="board-what">
       <span class="board-name" data-name>Phonetix</span>
-      <span class="board-sub">{ROWS.site.about}</span>
+      <!-- What the product does, which is what belongs under its own name. This line used to
+           explain what happens on sites the reader has not decided about - an edge case, as
+           the first sentence anybody reads. -->
+      <span class="board-sub">{SAYS['tagline']}</span>
     </span>
     <Toggle {on} big label="annotate what I read" {change} />
   </div>
@@ -51,7 +54,11 @@
       <span class="board-what">
         <span class="board-site" data-name>{site}</span>
         <span class="board-sub" data-about>
-          {decided ? (here ? 'always on here' : 'always off here') : 'following the default'}
+          {decided
+            ? here
+              ? 'always on here'
+              : 'always off here'
+            : `following the switch above, which is ${on ? 'on' : 'off'}`}
         </span>
       </span>
       <Toggle on={here} label="on {site}" change={(value) => onSite?.(value)} />

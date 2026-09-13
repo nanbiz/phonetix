@@ -13,6 +13,7 @@ and checks the overlay actually obeys them on a device rather than in a unit tes
 # dependencies = ["pillow"]
 # ///
 
+import json
 import os
 import re
 import sys
@@ -969,8 +970,15 @@ def check_settings_screen(r, dev):
     # The screen sets its section titles in capitals, so the comparison is on the words
     # rather than on their case.
     seen = {t.lower() for t in texts}
-    for wanted in ("Phonetix", "How often", "Preview", "Apps"):
+    for wanted in ("Phonetix", "How often", "Apps"):
         r.check(wanted.lower() in seen, f"settings: the screen shows {wanted}", str(texts[:12]))
+    # The preview says what it is a preview of, so it is found by what it starts with rather
+    # than by the bare word.
+    r.check(
+        any(t.lower().startswith("preview") for t in texts),
+        "settings: the screen shows a preview of what the bar does",
+        str([t for t in texts if "preview" in t.lower()][:3]),
+    )
 
     # The frequency reads as one word in so many, and the preview shows what that does.
     r.check(
@@ -986,14 +994,28 @@ def check_settings_screen(r, dev):
     )
     r.check("SeekBar" in dump, "settings: the frequency bar is a real control", "no slider in the screen")
 
-    # The preview applies the setting to real words, so it must contain a transcription
-    # rather than only plain English.
-    ipa_chars = set("ˈˌːɪɛəɹʃʒŋʌɑɔʊθðæɐɡ")
+    # The preview shows which words the bar would answer, in a sentence, so what has to be
+    # there is the sentence: it used to be redrawn as transcriptions, which is not what the
+    # overlay does to a page and not what the reader's own setting asks for.
     r.check(
-        any(any(c in ipa_chars for c in t) for t in texts),
-        "settings: the preview shows a transcription",
+        any("teaches pronunciation" in t for t in texts),
+        "settings: the preview shows the sentence the bar is applied to",
         "no transcription among the previewed text",
     )
+
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+
+
+def wording():
+    """The words both platforms are written out of, read where they are authored.
+
+    A check that spells a label itself is a third copy of it, and the one that goes stale
+    without anything failing.
+    """
+    with open(os.path.join(ROOT, "data", "wording.json")) as f:
+        return json.load(f)
 
 
 def check_switch_in_ui(r, dev):
@@ -1003,8 +1025,12 @@ def check_switch_in_ui(r, dev):
     time.sleep(3)
     to_top()
     texts, _ = ui_text(dev)
+    # In the words both platforms are written out of: the state of the one switch a reader
+    # opens the app for.
+    on_word = wording()["says"]["master-on"]
+    off_word = wording()["says"]["master-off"]
     r.check(
-        "Transcribing" in texts or "Paused" in texts,
+        on_word in texts or off_word in texts,
         "settings: the screen says whether it is on",
         str(texts[:10]),
     )

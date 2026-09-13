@@ -13,7 +13,7 @@
           ],
           "about": {
             "browser": "the page as it is; a card when you stop on a word",
-            "phone": "the screen as it is; the circle when you want a word"
+            "phone": "the screen as it is; the mark when you want a word"
           }
         },
         {
@@ -193,6 +193,18 @@
     "apps": {
       "name": "Apps",
       "about": ""
+    },
+    "start": {
+      "name": "Before it can answer a word",
+      "about": "Asked once. Nothing else appears until they are done."
+    },
+    "touch-words": {
+      "name": "Hold a word for its card",
+      "about": ""
+    },
+    "meanings": {
+      "name": "To see what a word means",
+      "about": "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."
     }
   },
   "ends": {
@@ -215,8 +227,6 @@
     "say-no-language": "Choose a language to read into first.",
     "touch-on": "Hold a transcription to open its card. While this is on, a swipe that starts on a transcription will not scroll the page.",
     "touch-off": "Every touch goes to the app underneath, so scrolling is untouched. Turn this on to open a word's card by holding it.",
-    "touch-name-on": "Press a word for its sounds",
-    "touch-name-off": "Words are not touchable",
     "open-accessibility": "Open accessibility",
     "allow-overlay": "Allow overlay",
     "loading-dictionary": "Loading the dictionary…",
@@ -225,6 +235,20 @@
     "use-this": "Use this",
     "get": "Get",
     "remove": "Remove",
-    "say-no-model": "No translation model for that direction at your dictionary host."
+    "say-no-model": "No translation model for that direction at your dictionary host.",
+    "start-target": "Choose the language you read into",
+    "start-host": "Say where your dictionaries come from",
+    "start-pack": "Get a dictionary for the language you are reading",
+    "start-permission": "Let it read the screen, and draw over it",
+    "start-go": "Set this",
+    "start-done": "done",
+    "tagline": "What the words you read mean, and how they are said",
+    "master-on": "Reading",
+    "master-off": "Paused",
+    "master-working": "The words in your apps are being answered",
+    "master-idle": "Nothing is drawn over your apps",
+    "master-unready": "Finish the steps below to switch on",
+    "preview": "Preview",
+    "preview-about": "the words on a page this would answer"
   }
 }

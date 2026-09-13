@@ -52,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.launch
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Wording
 import androidx.compose.material3.OutlinedTextField
@@ -77,6 +78,12 @@ fun HomeScreen(
     onOpenApps: () -> Unit,
 ) {
     val ready = accessibilityOn && overlayOn
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // Read once per composition of the screen rather than held: a dictionary arrives while
+    // this screen is open, and the card that fetched it says so itself.
+    val held = remember(dictionaryReady, settings.packHost) {
+        io.github.nanbiz.phonetix.core.Packs.held(context)
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -87,13 +94,22 @@ fun HomeScreen(
         Spacer(Modifier.height(28.dp))
         Header()
 
+        // Whether a word can be answered at all, which on the phone is the two permissions:
+        // it ships a dictionary, so pronunciation works from the first screen. Meanings need
+        // more, and say so where they are chosen rather than across the whole screen.
+        val started = ready
+        val meaningsReady = settings.target.isNotBlank() && held.isNotEmpty()
+
         MasterCard(
-            enabled = settings.enabled && ready,
-            ready = ready,
+            enabled = settings.enabled && started,
+            ready = started,
             onEnabled = onEnabled,
         )
 
-        AnimatedVisibility(visible = !ready) {
+        // What is still to be done, and nothing below it until it is done: every card under
+        // here is a choice about answers that cannot be given yet, and a bar that changes
+        // nothing is worse than no bar.
+        AnimatedVisibility(visible = !started) {
             SetupCard(
                 accessibilityOn = accessibilityOn,
                 overlayOn = overlayOn,
@@ -102,20 +118,26 @@ fun HomeScreen(
             )
         }
 
-        FrequencyCard(
-            density = settings.density,
-            dictionaryReady = dictionaryReady,
-            onDensity = onDensity,
-        )
-
-        ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
-        TranscriptionsCard(settings = settings)
-        AccentsCard(settings = settings)
-        DictionariesCard(settings = settings)
-        SayCard(settings = settings)
-        LensCard(on = settings.lens, onLens = onLens)
-        TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
-        AppsCard(settings = settings, onOpenApps = onOpenApps)
+        if (started) {
+            // In the order a reader decides: what they read into, where the dictionaries come
+            // from, what appears over a word, and only then how much of the page.
+            ReadingCard(settings = settings, onTarget = onTarget, onLayer = onLayer)
+            // One of the two, never both: the card that says what is missing carries the very
+            // field the dictionaries card carries, and a reader met the same box twice under
+            // two headings.
+            if (meaningsReady) {
+                DictionariesCard(settings = settings)
+            } else {
+                MeaningsCard(settings = settings, onTarget = onTarget)
+            }
+            FrequencyCard(density = settings.density, onDensity = onDensity)
+            TranscriptionsCard(settings = settings)
+            AccentsCard(settings = settings, held = held)
+            SayCard(settings = settings)
+            LensCard(on = settings.lens, onLens = onLens)
+            TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
+            AppsCard(settings = settings, onOpenApps = onOpenApps)
+        }
 
         Spacer(Modifier.height(32.dp))
     }
@@ -129,7 +151,7 @@ private fun Header() {
         Column {
             Text("Phonetix", style = MaterialTheme.typography.displaySmall)
             Text(
-                "Pronunciation, over the words you read",
+                Wording.says["tagline"].orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -172,14 +194,14 @@ private fun MasterCard(enabled: Boolean, ready: Boolean, onEnabled: (Boolean) ->
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (enabled) "Transcribing" else "Paused",
+                    Wording.says[if (enabled) "master-on" else "master-off"].orEmpty(),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Text(
                     when {
-                        !ready -> "Finish setup below to switch on"
-                        enabled -> "Words are being transcribed in your apps"
-                        else -> "Nothing is drawn over your apps"
+                        !ready -> Wording.says["master-unready"].orEmpty()
+                        enabled -> Wording.says["master-working"].orEmpty()
+                        else -> Wording.says["master-idle"].orEmpty()
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -206,7 +228,13 @@ private fun SetupCard(
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
 ) {
-    SectionCard(title = Wording.row("setup").name) {
+    SectionCard(title = Wording.row("start").name) {
+        Text(
+            Wording.row("start").about,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
         PermissionRow(
             title = Wording.row("setup-reading").name,
             body = Wording.row("setup-reading").about,
@@ -222,6 +250,39 @@ private fun SetupCard(
             action = Wording.says["allow-overlay"].orEmpty(),
             onAction = onOpenOverlay,
         )
+    }
+}
+
+/**
+ * What is still missing before a word's meaning can be shown, where the reader chooses to
+ * show it.
+ *
+ * Not a gate across the screen: this phone ships a dictionary and answers how a word is said
+ * out of it from the first screen. Meanings are the part that needs a language to read into
+ * and a dictionary for the language being read, and a reader who wants only pronunciation
+ * never has to do either.
+ */
+@Composable
+private fun MeaningsCard(settings: Settings, onTarget: (String) -> Unit) {
+    val colours = palette()
+    SectionCard(title = Wording.row("meanings").name) {
+        Text(
+            Wording.row("meanings").about,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (settings.target.isBlank()) {
+            Spacer(Modifier.height(12.dp))
+            SettingRow(
+                name = Wording.says["start-target"].orEmpty(),
+                palette = colours,
+                about = Wording.row("target").about,
+                wide = { LanguagePicker(chosen = settings.target, change = onTarget) },
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(Wording.says["start-pack"].orEmpty(), style = MaterialTheme.typography.titleMedium)
+        DictionariesBody(settings)
     }
 }
 
@@ -288,6 +349,46 @@ private fun StatusDot(on: Boolean) {
  * needs to know which language the answer should come back in. That is the whole product, so
  * it is asked for here rather than buried.
  */
+/** The language a reader reads into, offered the same way wherever it is asked for. */
+@Composable
+private fun LanguagePicker(chosen: String, change: (String) -> Unit) {
+    val named = remember {
+        io.github.nanbiz.phonetix.core.Languages.all()
+            .map { it to io.github.nanbiz.phonetix.core.Languages.english(it) }
+            .sortedBy { it.second }
+    }
+    var open by remember { mutableStateOf(false) }
+    val set = chosen.ifEmpty { null }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (set == null) {
+                Wording.says["nothing-yet"].orEmpty()
+            } else {
+                io.github.nanbiz.phonetix.core.Languages.english(set)
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = { open = true }) { Text(if (set == null) "Choose" else "Change") }
+    }
+    if (open) {
+        // A plain list rather than a menu: sixty languages in a dropdown is a list that
+        // scrolls off the screen either way, and this one can be read.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = 260.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            for ((code, english) in named) {
+                TextButton(onClick = { change(code); open = false }) {
+                    Text(english, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ReadingCard(
     settings: Settings,
@@ -295,41 +396,7 @@ private fun ReadingCard(
     onLayer: (String) -> Unit,
 ) {
     SectionCard(title = Wording.row("target").name) {
-        val named = remember {
-            io.github.nanbiz.phonetix.core.Languages.all()
-                .map { it to io.github.nanbiz.phonetix.core.Languages.english(it) }
-                .sortedBy { it.second }
-        }
-        var open by remember { mutableStateOf(false) }
-        val chosen = settings.target.ifEmpty { null }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (chosen == null) {
-                    "Nothing yet - words answer with how they are said"
-                } else {
-                    io.github.nanbiz.phonetix.core.Languages.english(chosen)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { open = true }) { Text(if (chosen == null) "Choose" else "Change") }
-        }
-        if (open) {
-            // A plain list rather than a menu: sixty languages in a dropdown is a list that
-            // scrolls off the screen either way, and this one can be read.
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 260.dp)
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                for ((code, english) in named) {
-                    TextButton(onClick = { onTarget(code); open = false }) {
-                        Text(english, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-        }
+        LanguagePicker(chosen = settings.target, change = onTarget)
         Spacer(Modifier.height(8.dp))
         Text(Wording.row("layer").name, style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
@@ -395,10 +462,13 @@ private fun TranscriptionsCard(settings: Settings) {
  * the phone had no way to choose one at all while the extension did.
  */
 @Composable
-private fun AccentsCard(settings: Settings) {
-    val offered = remember {
+private fun AccentsCard(settings: Settings, held: List<String>) {
+    // Only for languages this phone holds a dictionary for. The table knows an accent list for
+    // a dozen languages; offering all of them to a reader who holds one dictionary is a screen
+    // of choices about words the phone cannot answer.
+    val offered = remember(held) {
         io.github.nanbiz.phonetix.core.Accents.all
-            .filter { (_, list) -> list.size > 1 }
+            .filter { (lang, list) -> list.size > 1 && lang in held }
             .toList()
             .sortedBy { io.github.nanbiz.phonetix.core.Languages.english(it.first) }
     }
@@ -443,6 +513,11 @@ private fun palette(): Tokens.Palette = appPalette()
  */
 @Composable
 private fun DictionariesCard(settings: Settings) {
+    SectionCard(title = Wording.row("dictionaries").name) { DictionariesBody(settings) }
+}
+
+@Composable
+private fun DictionariesBody(settings: Settings) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var held by remember { mutableStateOf(io.github.nanbiz.phonetix.core.Packs.held(context)) }
@@ -458,7 +533,7 @@ private fun DictionariesCard(settings: Settings) {
         }
     }
 
-    SectionCard(title = Wording.row("dictionaries").name) {
+    run {
         val colours = palette()
         SettingRow(
             name = Wording.row("host").name,
@@ -686,16 +761,14 @@ private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
         // What else the one mark answers. A gesture nothing on screen describes is a gesture
         // nobody finds: the drag was the only one a reader could discover by trying.
         if (on) {
-            SettingRow(
-                name = Wording.row("lens-hold").name,
-                palette = colours,
-                about = Wording.row("lens-hold").about,
-            )
-            SettingRow(
-                name = Wording.row("lens-tap").name,
-                palette = colours,
-                about = Wording.row("lens-tap").about,
-            )
+            for (row in listOf("lens-hold", "lens-tap")) {
+                Spacer(Modifier.height(Tokens.Scale.space2.dp))
+                Text(
+                    "${Wording.row(row).name}. ${Wording.row(row).about}.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -705,7 +778,7 @@ private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
     val colours = palette()
     SectionCard(title = Wording.row("touch").name) {
         SettingRow(
-            name = Wording.says[if (on) "touch-name-on" else "touch-name-off"].orEmpty(),
+            name = Wording.row("touch-words").name,
             palette = colours,
             about = Wording.says[if (on) "touch-on" else "touch-off"].orEmpty(),
             control = {
@@ -721,7 +794,7 @@ private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
 }
 
 @Composable
-private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (Int) -> Unit) {
+private fun FrequencyCard(density: Int, onDensity: (Int) -> Unit) {
     SectionCard(title = Wording.row("density").name) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // What the bar is for, in the words the extension uses for it: the card's own
@@ -773,43 +846,48 @@ private fun FrequencyCard(density: Int, dictionaryReady: Boolean, onDensity: (In
         }
         Spacer(Modifier.height(14.dp))
         Text(
-            "Preview",
+            "${Wording.says["preview"]}: ${Wording.says["preview-about"]}",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(6.dp))
-        Preview(density = density, ready = dictionaryReady)
+        Preview(density = density)
     }
 }
 
 /**
- * The setting applied to a real sentence, using the same dictionary and the same word
- * choice the overlay uses — so the slider shows what it will actually do rather than
- * asking the reader to imagine it.
+ * Which words the bar would answer, marked in a sentence.
+ *
+ * The same choice the overlay makes - the core's own, word by word - and nothing more than
+ * that. It used to draw the sentence with every chosen word replaced by its transcription,
+ * which was wrong twice over: the sentence is in the reader's own language, so a real page
+ * never looks like that, and it showed transcriptions to a reader whose setting says to show
+ * meanings. What the bar decides is how many words are answered, so that is what it shows.
  */
 @Composable
-private fun Preview(density: Int, ready: Boolean) {
+private fun Preview(density: Int) {
     val gold = Brand.gold
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val text = remember(density, ready) {
-        if (!ready) null else buildAnnotatedString {
-            val tokens = io.github.nanbiz.phonetix.core.Reading.annotate(
-                listOf(PREVIEW_TEXT),
-                source = "en",
-                target = "en",
-                mode = "ipa",
-                density = density,
-            ).filter { it.inline && it.ipa.isNotEmpty() }
+    val text = remember(density) {
+        buildAnnotatedString {
+            val seen = HashMap<String, Int>()
             var i = 0
-            for (t in tokens) {
-                val at = t.start
-                if (at > i) append(PREVIEW_TEXT.substring(i, at))
-                if (t.ipa.isNotEmpty()) {
-                    withStyle(SpanStyle(color = gold, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold)) {
-                        append(t.ipa)
+            Placement.scanWords(PREVIEW_TEXT) { start, end ->
+                if (start > i) append(PREVIEW_TEXT.substring(i, start))
+                val word = PREVIEW_TEXT.substring(start, end)
+                val nth = seen.getOrDefault(word.lowercase(), 0)
+                seen[word.lowercase()] = nth + 1
+                val picked = runCatching {
+                    io.github.nanbiz.phonetix.core.Lex.picks(word, nth, density)
+                }.getOrDefault(false)
+                if (picked) {
+                    withStyle(SpanStyle(color = gold, fontWeight = FontWeight.Bold)) {
+                        append(word)
                     }
+                } else {
+                    append(word)
                 }
-                i = t.end
+                i = end
             }
             if (i < PREVIEW_TEXT.length) append(PREVIEW_TEXT.substring(i))
         }
@@ -822,15 +900,7 @@ private fun Preview(density: Int, ready: Boolean) {
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
             .padding(14.dp),
     ) {
-        if (text == null) {
-            Text(
-                Wording.says["loading-dictionary"].orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
-                color = muted,
-            )
-        } else {
-            Text(text, style = MaterialTheme.typography.bodyMedium, lineHeight = 24.sp)
-        }
+        Text(text, style = MaterialTheme.typography.bodyMedium, lineHeight = 24.sp, color = muted)
     }
 }
 
