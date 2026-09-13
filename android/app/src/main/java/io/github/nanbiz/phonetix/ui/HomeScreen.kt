@@ -206,20 +206,20 @@ private fun SetupCard(
     onOpenAccessibility: () -> Unit,
     onOpenOverlay: () -> Unit,
 ) {
-    SectionCard(title = "Setup") {
+    SectionCard(title = Wording.row("setup").name) {
         PermissionRow(
-            title = "Reading the screen",
-            body = "Lets Phonetix see the words in other apps. Nothing leaves your device.",
+            title = Wording.row("setup-reading").name,
+            body = Wording.row("setup-reading").about,
             granted = accessibilityOn,
-            action = "Open accessibility",
+            action = Wording.says["open-accessibility"].orEmpty(),
             onAction = onOpenAccessibility,
         )
         Spacer(Modifier.height(12.dp))
         PermissionRow(
-            title = "Drawing over apps",
-            body = "Lets it paint the transcription on top of the word.",
+            title = Wording.row("setup-overlay").name,
+            body = Wording.row("setup-overlay").about,
             granted = overlayOn,
-            action = "Allow overlay",
+            action = Wording.says["allow-overlay"].orEmpty(),
             onAction = onOpenOverlay,
         )
     }
@@ -480,7 +480,9 @@ private fun DictionariesCard(settings: Settings) {
             },
         )
         if (host != settings.packHost) {
-            TextButton(onClick = { SettingsStore.setPackHost(host) }) { Text("Use this") }
+            TextButton(onClick = { SettingsStore.setPackHost(host) }) {
+                Text(Wording.says["use-this"].orEmpty())
+            }
         }
         if (offered.isEmpty() && settings.packHost.isNotBlank()) {
             Text(
@@ -511,7 +513,7 @@ private fun DictionariesCard(settings: Settings) {
                     pack.lang in held -> TextButton(onClick = {
                         io.github.nanbiz.phonetix.core.Packs.forget(context, pack.lang)
                         held = io.github.nanbiz.phonetix.core.Packs.held(context)
-                    }) { Text("Remove") }
+                    }) { Text(Wording.says["remove"].orEmpty()) }
                     else -> TextButton(onClick = {
                         busy = pack.lang
                         scope.launch {
@@ -523,7 +525,7 @@ private fun DictionariesCard(settings: Settings) {
                             held = io.github.nanbiz.phonetix.core.Packs.held(context)
                             busy = ""
                         }
-                    }) { Text("Get") }
+                    }) { Text(Wording.says["get"].orEmpty()) }
                 }
             }
         }
@@ -651,11 +653,11 @@ private fun SayCard(settings: Settings) {
 @Composable
 private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
     val colours = palette()
-    SectionCard(title = "The lens") {
+    SectionCard(title = Wording.row("lens").name) {
         SettingRow(
-            name = "Drag it over a word",
+            name = Wording.row("lens-drag").name,
             palette = colours,
-            about = "It asks what it passes over and takes none of the screen's touches",
+            about = Wording.row("lens-drag").about,
             control = {
                 Switch(
                     on = on,
@@ -665,23 +667,31 @@ private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
                 )
             },
         )
+        // What else the one mark answers. A gesture nothing on screen describes is a gesture
+        // nobody finds: the drag was the only one a reader could discover by trying.
+        if (on) {
+            SettingRow(
+                name = Wording.row("lens-hold").name,
+                palette = colours,
+                about = Wording.row("lens-hold").about,
+            )
+            SettingRow(
+                name = Wording.row("lens-tap").name,
+                palette = colours,
+                about = Wording.row("lens-tap").about,
+            )
+        }
     }
 }
 
 @Composable
 private fun TouchCard(on: Boolean, onTouchWords: (Boolean) -> Unit) {
     val colours = palette()
-    SectionCard(title = "Touching a word") {
+    SectionCard(title = Wording.row("touch").name) {
         SettingRow(
-            name = if (on) "Press a word for its sounds" else "Words are not touchable",
+            name = Wording.says[if (on) "touch-name-on" else "touch-name-off"].orEmpty(),
             palette = colours,
-            about = if (on) {
-                "Hold a transcription to open its card. While this is on, a swipe that starts " +
-                    "on a transcription will not scroll the page."
-            } else {
-                "Every touch goes to the app underneath, so scrolling is untouched. Turn this " +
-                    "on to open a word's card by holding it."
-            },
+            about = Wording.says[if (on) "touch-on" else "touch-off"].orEmpty(),
             control = {
                 Switch(
                     on = on,
@@ -797,7 +807,11 @@ private fun Preview(density: Int, ready: Boolean) {
             .padding(14.dp),
     ) {
         if (text == null) {
-            Text("Loading the dictionary…", style = MaterialTheme.typography.bodyMedium, color = muted)
+            Text(
+                Wording.says["loading-dictionary"].orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = muted,
+            )
         } else {
             Text(text, style = MaterialTheme.typography.bodyMedium, lineHeight = 24.sp)
         }
@@ -806,7 +820,7 @@ private fun Preview(density: Int, ready: Boolean) {
 
 @Composable
 private fun AppsCard(settings: Settings, onOpenApps: () -> Unit) {
-    SectionCard(title = "Where") {
+    SectionCard(title = Wording.row("where").name) {
         Row(
             Modifier
                 .fillMaxWidth()
@@ -816,15 +830,18 @@ private fun AppsCard(settings: Settings, onOpenApps: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Apps", style = MaterialTheme.typography.titleMedium)
+                Text(Wording.row("apps").name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    if (settings.allApps) "Every app"
-                    else "${settings.apps.size} app${if (settings.apps.size == 1) "" else "s"} chosen",
+                    if (settings.allApps) {
+                        Wording.says["every-app"].orEmpty()
+                    } else {
+                        "${settings.apps.size} app${if (settings.apps.size == 1) "" else "s"} chosen"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text("Change", style = MaterialTheme.typography.labelLarge,
+            Text(Wording.says["change"].orEmpty(), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
         }
     }

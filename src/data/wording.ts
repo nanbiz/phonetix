@@ -43,19 +43,29 @@ export const LAYER_CHOICES: Choice[] = [
 export const ROWS: Record<string, Words> = {
   "accent": { name: "Accent", about: "which accent each language is read in" },
   "animations": { name: "Animations", about: "the card eases in; off is instant" },
+  "apps": { name: "Apps", about: "" },
   "delay": { name: "Rest before a card opens", about: "how long the cursor stays on a word before it answers" },
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
   "host": { name: "Where they come from", about: "Fetched once and kept on this machine, so a dictionary works on a train." },
   "layer": { name: "Show over a word", about: "" },
+  "lens": { name: "The mark", about: "One mark at the edge of the screen, and the three things it answers" },
+  "lens-drag": { name: "Drag it over a word", about: "It says what it passes over and takes none of the screen's touches" },
+  "lens-hold": { name: "Hold it, then sweep", about: "Every word it passes over joins the run, and the card answers the whole clause" },
+  "lens-tap": { name: "Press it", about: "The whole screen in your own language; press it again to put the screen back" },
   "more": { name: "How it reads", about: "transcriptions, stress, how long a rest opens a card" },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
   "say": { name: "The word for something", about: "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you." },
+  "setup": { name: "Setup", about: "" },
+  "setup-overlay": { name: "Drawing over apps", about: "Lets it paint the transcription on top of the word." },
+  "setup-reading": { name: "Reading the screen", about: "Lets Phonetix see the words in other apps. Nothing leaves your device." },
   "site": { name: "On this site", about: "the default is what happens on sites you have not decided about" },
   "source": { name: "This page is in", about: "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong." },
   "stress": { name: "Stress marks", about: "over a word; the card always shows them" },
   "target": { name: "I read into", about: "the language the answers come in" },
+  "touch": { name: "Touching a word", about: "" },
+  "where": { name: "Where", about: "" },
 };
 
 /** What the two ends of a bar mean. */
@@ -66,13 +76,25 @@ export const ENDS: Record<string, [string, string]> = {
 
 /** Phrases both surfaces use, so neither invents its own wording. */
 export const SAYS: Record<string, string> = {
+  "allow-overlay": "Allow overlay",
+  "change": "Change",
   "dictionary-accent": "as the dictionary gives it",
+  "every-app": "Every app",
+  "get": "Get",
+  "loading-dictionary": "Loading the dictionary…",
   "no-host": "Nothing is fetched until this is set.",
   "no-source": "no source for them yet",
   "nothing-yet": "nothing yet",
+  "open-accessibility": "Open accessibility",
+  "remove": "Remove",
   "say-no-language": "Choose a language to read into first.",
   "say-nothing": "no word for that",
   "say-placeholder": "what you want to say",
+  "touch-name-off": "Words are not touchable",
+  "touch-name-on": "Press a word for its sounds",
+  "touch-off": "Every touch goes to the app underneath, so scrolling is untouched. Turn this on to open a word's card by holding it.",
+  "touch-on": "Hold a transcription to open its card. While this is on, a swipe that starts on a transcription will not scroll the page.",
+  "use-this": "Use this",
 };
 
 /** What one of them is called, for a row that says what it is set to. */

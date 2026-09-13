@@ -35,19 +35,29 @@ object Wording {
     val rows = mapOf(
         "accent" to Words("Accent", "which accent each language is read in"),
         "animations" to Words("Animations", "the card eases in; off is instant"),
+        "apps" to Words("Apps", ""),
         "delay" to Words("Rest before a card opens", "how long the cursor stays on a word before it answers"),
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
         "host" to Words("Where they come from", "Fetched once and kept on this machine, so a dictionary works on a train."),
         "layer" to Words("Show over a word", ""),
+        "lens" to Words("The mark", "One mark at the edge of the screen, and the three things it answers"),
+        "lens-drag" to Words("Drag it over a word", "It says what it passes over and takes none of the screen's touches"),
+        "lens-hold" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),
+        "lens-tap" to Words("Press it", "The whole screen in your own language; press it again to put the screen back"),
         "more" to Words("How it reads", "transcriptions, stress, how long a rest opens a card"),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
         "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
+        "setup" to Words("Setup", ""),
+        "setup-overlay" to Words("Drawing over apps", "Lets it paint the transcription on top of the word."),
+        "setup-reading" to Words("Reading the screen", "Lets Phonetix see the words in other apps. Nothing leaves your device."),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "stress" to Words("Stress marks", "over a word; the card always shows them"),
         "target" to Words("I read into", "the language the answers come in"),
+        "touch" to Words("Touching a word", ""),
+        "where" to Words("Where", ""),
     )
 
     /** What the two ends of a bar mean. */
@@ -58,13 +68,25 @@ object Wording {
 
     /** Phrases both surfaces use, so neither invents its own wording. */
     val says = mapOf(
+        "allow-overlay" to "Allow overlay",
+        "change" to "Change",
         "dictionary-accent" to "as the dictionary gives it",
+        "every-app" to "Every app",
+        "get" to "Get",
+        "loading-dictionary" to "Loading the dictionary…",
         "no-host" to "Nothing is fetched until this is set.",
         "no-source" to "no source for them yet",
         "nothing-yet" to "nothing yet",
+        "open-accessibility" to "Open accessibility",
+        "remove" to "Remove",
         "say-no-language" to "Choose a language to read into first.",
         "say-nothing" to "no word for that",
         "say-placeholder" to "what you want to say",
+        "touch-name-off" to "Words are not touchable",
+        "touch-name-on" to "Press a word for its sounds",
+        "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched. Turn this on to open a word's card by holding it.",
+        "touch-on" to "Hold a transcription to open its card. While this is on, a swipe that starts on a transcription will not scroll the page.",
+        "use-this" to "Use this",
     )
 
     /** What one row is called, or the name it is asked for when the table is short. */
