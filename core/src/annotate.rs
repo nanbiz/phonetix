@@ -162,13 +162,8 @@ pub fn complete<D: AsRef<[u8]>>(
                 };
                 let spelling = token.spelling.clone();
                 let lang = token.lang.clone();
-                let answer = crate::resolve::read_in_context(
-                    &spelling,
-                    None,
-                    &lang,
-                    target,
-                    &with_sentence,
-                );
+                let answer =
+                    crate::resolve::read_in_context(&spelling, None, &lang, target, &with_sentence);
                 if answer.state != AnswerState::Homograph {
                     token.state = answer.state;
                     token.provenance = answer.provenance.clone();

@@ -319,9 +319,9 @@ pub fn read_in_context<D: AsRef<[u8]>>(
 ///
 /// This is the evidence the translation gives rather than the alignment it was meant to give:
 /// the published WebAssembly build of the engine exposes the translated text and nothing else
-/// - no alignment accessor in its bindings - so which target span this source word became
-/// cannot be asked for. Matching the sentence is weaker where a reading's word appears for
-/// some other reason, which is why it has to be the only one present to decide anything.
+/// (there is no alignment accessor in its bindings), so which target span this source word
+/// became cannot be asked for. Matching the sentence is weaker where a reading's word appears
+/// for some other reason, which is why it has to be the only one present to decide anything.
 fn chosen_by_translation<R: HasAnswers>(readings: &[R], said: Option<&str>) -> Option<usize> {
     let said = said?;
     if said.trim().is_empty() {
