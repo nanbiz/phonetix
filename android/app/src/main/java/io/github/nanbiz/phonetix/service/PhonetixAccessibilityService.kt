@@ -45,6 +45,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private lateinit var hover: HoverController
     private lateinit var page: PageController
 
+    /** Whether the screen has been replaced by its own translation. Asked from paths that run
+     *  before the service has finished building itself - a scroll event arrives as soon as the
+     *  service is bound - so it answers for a page that does not exist yet. */
+    private val pageUp: Boolean get() = ::page.isInitialized && page.showing
+
     /** What the screen last turned out to be in, which is one half of the translation
      *  direction. Held because the engine is opened for a direction, not per screen. */
     @Volatile
@@ -163,7 +168,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         )
         hover = HoverController(
             this,
-            wordAt = { x, y -> overlay.wordAt(x, y) },
+            // Nothing to ask about while the page has been replaced: the words the boxes
+            // belong to are covered by the translation, and a card about one of them would be
+            // about a word the reader cannot see.
+            wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y -> tooltip.clearOf(y) },
             onPhrase = { run ->
@@ -444,7 +452,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "LATE ${android.os.SystemClock.uptimeMillis() - told}ms",
                 )
             }
-            if (::overlay.isInitialized) {
+            // Nothing of ours rides a moving page while the page has been replaced: what is
+            // on screen then is the translation, and the transcriptions belong to words that
+            // are not showing.
+            if (::overlay.isInitialized && !pageUp) {
                 main.post {
                     overlay.beginMotion()
                     if (USE_SAID_SCROLL && kotlin.math.abs(carried) >= SAID_TOO_SMALL &&
@@ -1323,7 +1334,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // riding on the layer rather than being re-read once a second.
                 if (shifted) {
                     lastMotionAt = android.os.SystemClock.uptimeMillis()
-                    if (!overlay.inMotion) main.post { overlay.beginMotion() }
+                    if (!overlay.inMotion && !pageUp) main.post { overlay.beginMotion() }
                     startFollowing()
                 } else if (onTheMove()) {
                     // A pass that measured nothing is not a page that has stopped, and the
@@ -1372,7 +1383,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d("Phonetix", sb.toString())
                 }
                 main.post {
-                    if (moving && overlay.inMotion) {
+                    // The replaced page owns the screen, so the follow paints nothing: this is
+                    // the other way a transcription reaches the screen, and guarding only the
+                    // full read left ten of them over a translated page.
+                    if (pageUp) overlay.hideNow()
+                    else if (moving && overlay.inMotion) {
                         overlay.motionMeasured(moved, readAt, speedY, shifted)
                     }
                     else overlay.endMotion(moved)
@@ -1744,10 +1759,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // would have placed the chips places the lines again instead, which is how the
         // translation follows the page as it scrolls. Asked for here, on the thread that read
         // the screen, because whatever has scrolled into view has still to be translated.
-        val replaced = if (page.showing) pageLines().also { page.prepare(it) } else emptyList()
+        val replaced = if (pageUp) pageLines().also { page.prepare(it) } else emptyList()
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            if (page.showing) page.draw(replaced) else overlay.render(painted)
+            if (pageUp) page.draw(replaced) else overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +

@@ -102,7 +102,14 @@ class HoverController(
 
     /** Put the circle up, parked at the edge. */
     fun show() {
-        if (mark != null) return
+        if (mark != null) {
+            // Already up. Where it is is said again anyway: a reader cannot see the window
+            // list, and neither can a check - all either has is what the service reports, and
+            // reporting it only the once means the mark is invisible to anything that started
+            // watching afterwards.
+            parked()
+            return
+        }
         val size = markPx()
         markX = restingX(size)
         if (markY <= 0) markY = screen().height() / 2
@@ -111,11 +118,16 @@ class HoverController(
         runCatching { wm.addView(view, markParams(size)) }
             .onSuccess {
                 mark = view
-                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-                    android.util.Log.d("Phonetix", "LENSPARKED $markX,$markY,$size,$size")
-                }
+                parked()
             }
             .onFailure { android.util.Log.w("Phonetix", "the circle did not go up", it) }
+    }
+
+    /** Where the mark is sitting, for anything that can only read what the service says. */
+    private fun parked() {
+        if (!io.github.nanbiz.phonetix.BuildConfig.DEBUG) return
+        val size = mark?.width?.takeIf { it > 0 } ?: markPx()
+        android.util.Log.d("Phonetix", "LENSPARKED $markX,$markY,$size,$size")
     }
 
     /** Take it down, and everything it had drawn with it. */
