@@ -78,6 +78,11 @@ object Lex {
         before: String,
     ): String
 
+    /** Several words asked as one, as JSON. No dictionary holds a phrase, so what answers it
+     *  is the engine; [said] is what the engine made of [text], and the core is what marks the
+     *  answer as a machine's. */
+    external fun phrase(text: String, said: String, source: String, target: String): String
+
     /** A transcription, symbol by symbol, as JSON: what each sound is called and where to
      *  read about it. The table is the core's, so both platforms name a sound the same. */
     external fun symbols(ipa: String): String

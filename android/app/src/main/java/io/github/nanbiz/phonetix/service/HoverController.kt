@@ -51,6 +51,14 @@ class HoverController(
      * again to put it back. A drag asks about a word; a tap asks about the page.
      */
     private val onTap: () -> Unit = {},
+    /**
+     * Several words asked as one, which is the phone's answer to selecting a clause.
+     *
+     * A reader cannot select an app's own text: the words belong to the app and our overlay
+     * takes no touches. So the run is swept with the mark instead - held down first, then
+     * dragged - and every word the circle passes over joins it.
+     */
+    private val onPhrase: (List<WordBox>) -> Unit = {},
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -67,6 +75,12 @@ class HoverController(
     private var markY = -1
 
     private var hovered: WordBox? = null
+
+    /** The words a sweep has taken in, in the order the circle met them. Empty unless the
+     *  reader held the mark down before dragging, which is what asks about a run rather than
+     *  about each word in turn. */
+    private var sweeping = false
+    private val swept = ArrayList<WordBox>()
 
     /** Whether the circle is on screen at all. */
     val showing: Boolean get() = mark != null
@@ -199,11 +213,20 @@ class HoverController(
             // A tick under the thumb each time the circle takes a new word, since the eye is
             // on the word rather than on the circle.
             mark?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            if (sweeping && swept.none { it.word == found.word && it.rect == found.rect }) {
+                swept.add(found)
+                highlight?.gather(swept.map {
+                    Rect(it.rect.left.toInt(), it.rect.top.toInt(),
+                        it.rect.right.toInt(), it.rect.bottom.toInt())
+                })
+            }
         }
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d("Phonetix", "LENSAT $x,$y -> ${found?.word ?: "nothing"}")
         }
-        onWord(found)
+        // A sweep is one question, asked when it ends. Opening a card for each word along the
+        // way would answer the wrong thing and put a card over the words still to be swept.
+        if (!sweeping) onWord(found)
     }
 
     /**
@@ -221,6 +244,27 @@ class HoverController(
         private var formed = false
         private var active = false
         private val slop = ViewConfiguration.get(context).scaledTouchSlop
+
+        /**
+         * The hold that turns the next drag into a sweep.
+         *
+         * Held first, then dragged: a drag that starts straight away is the reader asking
+         * about the words it passes, one at a time, which is what the mark is mostly for. The
+         * hold is what says this one is about a run.
+         */
+        private var held = false
+
+        private val hold = Runnable {
+            if (dragging || !active) return@Runnable
+            held = true
+            sweeping = true
+            swept.clear()
+            highlight?.gather(emptyList())
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "LENSSWEEP on")
+            }
+        }
 
         // The ball is not nailed to a point above the finger; it is on the end of the thread.
         // It is pulled towards where the finger holds it, it has weight, and it swings past
@@ -284,14 +328,21 @@ class HoverController(
                     dragging = false
                     formed = false
                     active = true
+                    held = false
+                    sweeping = false
+                    swept.clear()
                     view.active = true
                     showLayer()
+                    main.postDelayed(hold, HOLD_MS)
                     return true
                 }
 
                 MotionEvent.ACTION_MOVE -> {
                     if (!dragging && hypot(event.rawX - downX, event.rawY - downY) > slop) {
                         dragging = true
+                        // Moved before the hold was up: this is the other gesture, and the
+                        // hold must not turn it into a sweep halfway through.
+                        if (!sweeping) main.removeCallbacks(hold)
                     }
                     if (dragging) follow(event)
                     return true
@@ -300,10 +351,25 @@ class HoverController(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     active = false
                     view.active = false
+                    main.removeCallbacks(hold)
                     Choreographer.getInstance().removeFrameCallback(swing)
                     highlight?.mark(null)
+                    highlight?.gather(emptyList())
                     hovered = null
-                    onWord(null)
+                    // The run, asked as one thing, now that it is finished. One word is not a
+                    // phrase: a sweep that took in a single word is the question the drag
+                    // already answers, and it is answered that way rather than as a clause.
+                    val run = if (sweeping) ArrayList(swept) else emptyList()
+                    sweeping = false
+                    swept.clear()
+                    if (run.size > 1) {
+                        onWord(null)
+                        onPhrase(run)
+                    } else if (run.size == 1) {
+                        onWord(run[0])
+                    } else {
+                        onWord(null)
+                    }
                     // No hand on the screen any more: a card opened by a press after this
                     // would otherwise still be dodging a finger that had gone.
                     onHand(0)
@@ -324,8 +390,11 @@ class HoverController(
                     } else {
                         hideLayer()
                         // Nothing was dragged, so nothing was being asked about a word: this
-                        // is the press that asks about the whole screen.
-                        onTap()
+                        // is the press that asks about the whole screen. A press held long
+                        // enough to arm a sweep and then let go asked for nothing, and
+                        // replacing the page under it would be the opposite of what the
+                        // reader had just decided not to do.
+                        if (!held) onTap()
                     }
                     return true
                 }
@@ -426,5 +495,13 @@ class HoverController(
 
         /** How long the mark takes to travel back to the edge. */
         const val PARK_MS = 260L
+
+        /**
+         * How long the mark is held before a drag becomes a sweep.
+         *
+         * The platform's own long press, rather than a number of ours: a reader who has
+         * learnt what a long press feels like on their phone has learnt this gesture too.
+         */
+        val HOLD_MS = android.view.ViewConfiguration.getLongPressTimeout().toLong()
     }
 }

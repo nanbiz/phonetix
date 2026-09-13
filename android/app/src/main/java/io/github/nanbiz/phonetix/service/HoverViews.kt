@@ -140,6 +140,10 @@ class HoverHighlightView(context: Context) : View(context) {
 
     /** Where the mark is drawn right now, which trails where it has been asked to be. */
     private val shown = RectF()
+
+    /** Everything a sweep has taken in so far, drawn flat: the reader is watching the run
+     *  grow, and a run whose every word slides and fades is a run nobody can read. */
+    private var gathered: List<Rect> = emptyList()
     private var marked: Rect? = null
     private var settled = false
     private var presence = 0f
@@ -206,6 +210,13 @@ class HoverHighlightView(context: Context) : View(context) {
         }
     }
 
+    /** The words a sweep has taken in, or none: the phrase as it stands. */
+    fun gather(bounds: List<Rect>) {
+        if (gathered == bounds) return
+        gathered = bounds
+        invalidate()
+    }
+
     /** Where the circle is, or nothing at all once the finger is gone. */
     fun aim(x: Float, y: Float, radius: Float) {
         aimX = x
@@ -220,6 +231,11 @@ class HoverHighlightView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
+        // Under the word being taken in now, so the one the circle is over still reads as the
+        // one it is over.
+        for (box in gathered) {
+            canvas.drawRoundRect(RectF(box), 6f, 6f, glass)
+        }
         if (settled && presence > 0f) {
             paint.alpha = (90 * presence).toInt().coerceIn(0, 255)
             canvas.drawRoundRect(shown, 6f, 6f, paint)

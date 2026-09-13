@@ -27,6 +27,13 @@ data class WordBox(
      *  pixels alone ask whether the line the overlay believes a word is on is the line the
      *  word is actually over, without believing anything the overlay says. */
     val line: Int = -1,
+    /** Where this word starts in the text of the line it came from, and where it ends.
+     *  A word swept into a phrase has to be found again in that line: the run a reader asks
+     *  about is the line's own words between the first and the last, which includes the ones
+     *  that carry no transcription of their own. Both are -1 for a word that came from
+     *  somewhere without a line behind it. */
+    val at: Int = -1,
+    val to: Int = -1,
 )
 
 /** One token of a line of text: the word, and its transcription when it was picked. */
@@ -120,6 +127,8 @@ object Placement {
                         // Carried from the pick, so a tap asks the same question the line
                         // already answered about which word this spelling is.
                         p.before,
+                        at = p.start,
+                        to = p.end,
                     ),
                 )
             }

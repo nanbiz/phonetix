@@ -169,8 +169,29 @@ class TooltipController(
         }
         expanded = null
         shown = box
+        given = null
         render(box)
     }
+
+    /**
+     * Several words, answered as one.
+     *
+     * The answer is handed in rather than looked up here: a phrase is the engine's to answer
+     * and the engine is not something to wait for on the thread that draws. [box] is where the
+     * run sat and what it says, which is what the card points at and takes its colours from.
+     */
+    fun showPhrase(box: WordBox, answer: Answer) {
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "TOOLTIP phrase=${box.word} says=${answer.says}")
+        }
+        expanded = null
+        shown = box
+        given = answer
+        render(box)
+    }
+
+    /** An answer somebody else worked out, for the card that cannot work it out itself. */
+    private var given: Answer? = null
 
     fun hide() {
         if (BuildConfig.DEBUG && view != null) {
@@ -187,6 +208,7 @@ class TooltipController(
         scroller = null
         shown = null
         expanded = null
+        given = null
     }
 
     private fun render(box: WordBox) {
@@ -361,17 +383,20 @@ class TooltipController(
         // already had, which is what the card then shows.
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
-        val answer = Reading.lookUp(
-            box.word, source, settings.target.ifEmpty { source }, settings.accentFor(source),
-            box.before,
-        )
-            ?.takeIf { it.found }
+        val answer = given
+            ?: Reading.lookUp(
+                box.word, source, settings.target.ifEmpty { source },
+                settings.accentFor(source), box.before,
+            )
+                ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)
         // What a person recorded, where Wiktionary has one: a recording is what a reader
         // trusts, and a machine reading a transcription is not the same thing. Asked for off
         // the main thread, and the card is told once it has an answer.
         val recorded = androidx.compose.runtime.mutableStateOf<String?>(null)
-        io.execute {
+        // Nothing has recorded a clause somebody swept off a screen, so a phrase card does not
+        // go looking for one.
+        if (given == null) io.execute {
             val said = Wiktionary.about(box.word, source)
             val file = said?.audio?.firstOrNull()
             if (file != null) main.post { recorded.value = file }

@@ -39,7 +39,7 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 | # | What the reader wants | Browser | Phone |
 |---|---|---|---|
-| P1 | Ask about a phrase | Select it; the card answers the selection as one thing, marked as a guess | **Missing**. DR-1 says long-press then drag; nothing implements it |
+| P1 | Ask about a phrase | Select it; the card answers the selection as one thing, marked as a guess | Hold the mark down, then sweep: every word the circle passes over joins the run, and the card answers the clause the page wrote between the first and the last, marked as a guess. A reader cannot select an app's own text, so the mark is what selects |
 
 ## The whole thing in my language
 
@@ -67,7 +67,5 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 ## What is still missing, in the order it matters
 
-1. **The phrase gesture on the phone** (P1): the one way of asking that the phone cannot do at
-   all, and the browser can.
-2. **Say it** (S1): Taplex's other direction, dropped.
-3. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.
+1. **Say it** (S1): Taplex's other direction, dropped.
+2. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.

@@ -214,6 +214,46 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
     env.new_string(lexcore::json::of(&answer)).unwrap_or(empty)
 }
 
+/// Several words asked as one, as JSON.
+///
+/// No dictionary holds a phrase, so what answers it is the engine and the core is what marks
+/// the answer as a machine's. The translation is passed in rather than fetched here: the
+/// engine lives on the other side of this boundary already, and asking it twice for the same
+/// sentence is a second pass over a model for nothing.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_phrase<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass,
+    text: JString,
+    said: JString,
+    source: JString,
+    target: JString,
+) -> jni::objects::JString<'a> {
+    let empty = env.new_string("").unwrap_or_else(|_| {
+        JString::from(unsafe { jni::objects::JObject::from_raw(std::ptr::null_mut()) })
+    });
+    let (Ok(text), Ok(source), Ok(target)) = (
+        env.get_string(&text),
+        env.get_string(&source),
+        env.get_string(&target),
+    ) else {
+        return empty;
+    };
+    let (text, source, target): (String, String, String) =
+        (text.into(), source.into(), target.into());
+    let said: String = env
+        .get_string(&said)
+        .map(|it| it.into())
+        .unwrap_or_default();
+    let answer = lexcore::resolve::phrase(
+        &text,
+        &said,
+        &lexcore::answer::Lang(source),
+        &lexcore::answer::Lang(target),
+    );
+    env.new_string(lexcore::json::of(&answer)).unwrap_or(empty)
+}
+
 /// A transcription, symbol by symbol, as JSON.
 ///
 /// The overlay's card offers every sound on its own, and what a sound is called is the core's

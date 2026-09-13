@@ -207,4 +207,28 @@ object Reading {
             ?: return null
         return Answer.parse(written)
     }
+
+    /**
+     * What several words mean, asked as one thing.
+     *
+     * A distinct question from a word: no dictionary holds a clause, so the engine is what
+     * answers and the card says a machine did. Nothing comes back where the engine has no
+     * model for the pair, because a phrase card with the phrase itself on it tells the reader
+     * nothing they were not already looking at.
+     */
+    fun phrase(text: String, source: String, target: String): Answer? {
+        val asked = text.trim()
+        if (asked.isEmpty() || source == target) return null
+        val said = Translator.lines(listOf(asked)).firstOrNull().orEmpty()
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "PHRASE $source->$target usable=${Translator.usable} $asked = $said",
+            )
+        }
+        if (said.isEmpty() || said.equals(asked, ignoreCase = true)) return null
+        val written = runCatching { Lex.phrase(asked, said, source, target) }.getOrNull()
+            ?: return null
+        return Answer.parse(written)
+    }
 }

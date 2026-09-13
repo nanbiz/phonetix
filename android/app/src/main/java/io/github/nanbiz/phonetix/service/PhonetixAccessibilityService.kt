@@ -166,6 +166,39 @@ class PhonetixAccessibilityService : AccessibilityService() {
             wordAt = { x, y -> overlay.wordAt(x, y) },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y -> tooltip.clearOf(y) },
+            onPhrase = { run ->
+                // The clause as the app wrote it, not the words the circle happened to land
+                // on: only some words of a line carry a transcription, so a run made of those
+                // would ask about "dog road bench" where the reader swept a sentence.
+                val text = phraseOf(run)
+                val across = android.graphics.RectF(run.first().rect)
+                for (box in run) across.union(box.rect)
+                val first = run.first()
+                // What the screen was found to be in, which is the same thing the transcriptions
+                // were made from. A word box carries no language of its own, and taking the
+                // reader's own as the fallback asks the engine to translate English into
+                // English and answers nothing.
+                val source = first.language.ifEmpty { lastScreenLanguage ?: Language.OURS }
+                val target = SettingsStore.current.target.ifEmpty { source }
+                // Off the main thread: a clause is a pass through the translation model, and
+                // the finger that finished the sweep is still on the screen.
+                io.post {
+                    val answer = Reading.phrase(text, source, target)
+                    main.post {
+                        if (answer == null) {
+                            // Nothing an engine could answer. The card that would open would
+                            // carry the reader's own words back at them, so none opens.
+                            android.util.Log.d(
+                                "Phonetix", "PHRASE unanswered $source->$target: $text")
+                            return@post
+                        }
+                        tooltip.showPhrase(
+                            first.copy(rect = across, word = text, ipa = "", full = ""),
+                            answer,
+                        )
+                    }
+                }
+            },
             onTap = {
                 tooltip.hide()
                 val lines = if (page.showing) emptyList() else pageLines()
@@ -1868,6 +1901,47 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * Every line on screen as the page overlay takes them: where it sits now, what it says,
      * and the colours read off the app so it can be put back looking like itself.
      */
+    /**
+     * What a sweep actually asked about: the text of the page from the first word it took in
+     * to the last.
+     *
+     * The words between them are part of the clause whether or not they were given a
+     * transcription of their own, and a phrase card is about a clause. Where the run crosses
+     * lines, each line is taken from where the run enters it to where it leaves, which is
+     * what a reader dragging across a paragraph has selected.
+     */
+    private fun phraseOf(run: List<WordBox>): String {
+        val fallback = run.joinToString(" ") { it.word }
+        if (run.isEmpty()) return fallback
+        // Which line each swept word came from, so a run can be put back in reading order:
+        // the circle may have crossed the page in either direction.
+        val lines = ArrayList<Pair<Planned, MutableList<WordBox>>>()
+        for (box in run) {
+            val owner = cachedPlan.firstOrNull { p ->
+                p.boxes.any { it.at == box.at && it.to == box.to && it.rect == box.rect }
+            } ?: continue
+            val known = lines.firstOrNull { it.first === owner }
+            if (known != null) known.second.add(box) else lines.add(owner to mutableListOf(box))
+        }
+        if (lines.isEmpty()) return fallback
+        lines.sortWith(
+            compareBy({ it.first.measuredAt?.top ?: 0 }, { it.first.measuredAt?.left ?: 0 }),
+        )
+        val said = StringBuilder()
+        for ((line, words) in lines) {
+            val from = words.minOf { it.at }.coerceAtLeast(0)
+            val to = (words.maxOf { it.to } + 1).coerceAtMost(line.text.length)
+            if (from >= to) continue
+            if (said.isNotEmpty()) said.append(' ')
+            said.append(line.text, from, to)
+        }
+        val text = said.toString().trim()
+        if (text.isEmpty()) return fallback
+        // Past this a reader is sweeping a page rather than a clause, and an engine handed a
+        // page answers it as one sentence.
+        return if (text.length > PHRASE_LIMIT) text.substring(0, PHRASE_LIMIT) else text
+    }
+
     private fun pageLines(): List<PageOverlayView.Line> = cachedPlan.mapNotNull { p ->
         val where = p.measuredAt ?: return@mapNotNull null
         val text = p.text.trim()
@@ -2579,6 +2653,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How many painted rectangles are kept for working out what covers what. A screen
          *  holds a hundred or so; beyond that they are old ones from before a scroll. */
         const val MAX_PAINTED = 256
+
+        /** How much text a phrase card will answer, the same as the browser's. */
+        const val PHRASE_LIMIT = 240
 
         /** The service, while it is running, so a test can ask it to measure itself. */
         @Volatile
