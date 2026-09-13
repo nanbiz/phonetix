@@ -149,6 +149,10 @@
     "more": {
       "name": "How it reads",
       "about": "transcriptions, stress, how long a rest opens a card"
+    },
+    "say": {
+      "name": "The word for something",
+      "about": "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."
     }
   },
   "ends": {
@@ -165,6 +169,9 @@
     "dictionary-accent": "as the dictionary gives it",
     "no-host": "Nothing is fetched until this is set.",
     "no-source": "no source for them yet",
-    "nothing-yet": "nothing yet"
+    "nothing-yet": "nothing yet",
+    "say-placeholder": "what you want to say",
+    "say-nothing": "no word for that",
+    "say-no-language": "Choose a language to read into first."
   }
 }

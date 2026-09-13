@@ -51,6 +51,7 @@ export const ROWS: Record<string, Words> = {
   "more": { name: "How it reads", about: "transcriptions, stress, how long a rest opens a card" },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
+  "say": { name: "The word for something", about: "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you." },
   "site": { name: "On this site", about: "the default is what happens on sites you have not decided about" },
   "source": { name: "This page is in", about: "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong." },
   "stress": { name: "Stress marks", about: "over a word; the card always shows them" },
@@ -69,6 +70,9 @@ export const SAYS: Record<string, string> = {
   "no-host": "Nothing is fetched until this is set.",
   "no-source": "no source for them yet",
   "nothing-yet": "nothing yet",
+  "say-no-language": "Choose a language to read into first.",
+  "say-nothing": "no word for that",
+  "say-placeholder": "what you want to say",
 };
 
 /** What one of them is called, for a row that says what it is set to. */

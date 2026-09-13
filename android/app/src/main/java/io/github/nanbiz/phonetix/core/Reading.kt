@@ -209,6 +209,48 @@ object Reading {
     }
 
     /**
+     * The word for something the reader wants to say.
+     *
+     * The other direction, and Taplex's: what is typed is in the language the reader already
+     * has, and what comes back is the word in the one they are learning, with that word's own
+     * entry under it so a machine's answer can be judged rather than taken.
+     *
+     * The engine holds one direction open at a time, so this opens the reverse pair, asks, and
+     * puts the reading direction back. It costs seconds and is paid while the reader is in
+     * this app rather than reading a screen, which is the only place the question is asked
+     * from. Nothing comes back where the reverse model was never fetched: the reader is told
+     * that, rather than handed their own words back.
+     */
+    fun say(context: android.content.Context, text: String, source: String, target: String): Answer? {
+        val asked = text.trim()
+        if (asked.isEmpty() || source.isEmpty() || target.isEmpty() || source == target) {
+            return null
+        }
+        // The dictionaries this phone holds, since the entry under the machine's answer comes
+        // out of one: asked from the app's own screen, nothing else has opened them.
+        Dictionary.ensureLoaded(context)
+        Packs.openHeld(context)
+        val models = Packs.models(context)
+        if (!Translator.start(models, target, source)) return null
+        val word = try {
+            Translator.lines(listOf(asked)).firstOrNull().orEmpty().trim()
+        } finally {
+            // Back to the direction the screen is read in, whatever happened above: an engine
+            // left pointing the other way answers every word on the next screen backwards.
+            Translator.start(models, source, target)
+        }
+        if (word.isEmpty() || word.equals(asked, ignoreCase = true)) return null
+        // A machine that answered with several words is answered as a phrase: no dictionary
+        // holds one, and a card claiming an entry for it would be claiming one that is not
+        // there.
+        return if (word.split(Regex("\\s+")).size > 1) {
+            phrase(word, source, target)
+        } else {
+            lookUp(word, source, target)?.takeIf { it.found } ?: phrase(word, source, target)
+        }
+    }
+
+    /**
      * What several words mean, asked as one thing.
      *
      * A distinct question from a word: no dictionary holds a clause, so the engine is what

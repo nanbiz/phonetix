@@ -37,6 +37,9 @@
   import Screen from './Screen.svelte';
   import Switchboard from './Switchboard.svelte';
   import Trouble from './Trouble.svelte';
+  import Field from '@/ui/controls/Field.svelte';
+  import AnswerCard from '@/ui/card/AnswerCard.svelte';
+  import type { Answer } from '@/core/answer';
 
   interface Props {
     settings: Settings;
@@ -63,6 +66,11 @@
     version?: string;
     /** What the host says is not working, which is nothing at all when everything answers. */
     trouble?: string[];
+    /** The word for something the reader wants to say, asked of the host: the engine and the
+     *  dictionaries live there, and this view holds neither. The language to answer in is
+     *  passed with it, since what a reader is learning is not always what the page in front
+     *  of them is written in - the settings view is often open with no page at all. */
+    say?: (text: string, source: string) => Promise<Answer | null>;
   }
 
   let {
@@ -80,7 +88,26 @@
     siteIcon = '',
     version = '',
     trouble = [],
+    say,
   }: Props = $props();
+
+  /** What the reader asked for in their own language, what came back, and whether the
+   *  machine is still thinking about it. */
+  let wanted = $state('');
+  let said = $state<Answer | null>(null);
+  let asking = $state(false);
+  let nothing = $state(false);
+
+  async function ask(text: string) {
+    wanted = text;
+    said = null;
+    nothing = false;
+    if (!text || !say || !learning) return;
+    asking = true;
+    said = await say(text, learning).catch(() => null);
+    asking = false;
+    nothing = said === null;
+  }
 
   /** Which screen the reader is on. */
   let view = $state('main');
@@ -139,6 +166,13 @@
         ? `${Math.round(pack.entries / 1000)}k words`
         : `${pack.entries} words`;
     })()
+  );
+
+  /** Which language the reader is learning, for a question asked away from a page: what the
+   *  page in front of them is in where there is one, and otherwise whatever they keep a
+   *  dictionary for. A reader with a Spanish pack is learning Spanish. */
+  let learning = $derived(
+    reading || packs.held.find((lang) => lang !== settings.target) || ''
   );
 
   let held = $derived(packs.held.length);
@@ -219,6 +253,17 @@
         ? `nothing on offer at ${settings.host}`
         : SAYS['no-source']}
     open={() => (view = 'packs')}
+  />
+
+  <!-- The other direction. Everything above answers a word somebody else wrote; this one
+       answers a word the reader is looking for. -->
+  <NavRow
+    name={ROWS.say.name}
+    row="say"
+    about={learning && settings.target && learning !== settings.target
+      ? `into ${nameOf(learning)}`
+      : SAYS['say-no-language']}
+    open={() => (view = 'say')}
   />
 
   <NavRow
@@ -322,6 +367,39 @@
     host={settings.host}
     onHost={(said) => change('host', said)}
   />
+</Screen>
+
+<Screen name="say" on={view} title={ROWS.say.name} back={() => (view = 'main')}>
+  <p class="about">{ROWS.say.about}</p>
+  <div class="rows">
+    <!-- The field carries the whole row: the screen it is on is named after it already, and
+         a row that repeats its own screen's title is the title twice. -->
+    <Row name="" row="say-field">
+      {#snippet wide()}
+        <Field
+          value={wanted}
+          label={ROWS.say.name}
+          placeholder={SAYS['say-placeholder']}
+          change={(text) => void ask(text)}
+        />
+      {/snippet}
+    </Row>
+  </div>
+  {#if !learning || !settings.target || learning === settings.target}
+    <p class="about">{SAYS['say-no-language']}</p>
+  {/if}
+  <!-- The answer is the card the rest of the product answers with, so what a machine gave
+       back can be judged the same way: how it is said, what it means back, and the mark that
+       says a machine said it. -->
+  {#if said}
+    <div class="answer">
+      <AnswerCard answer={said} />
+    </div>
+  {:else if asking}
+    <p class="about">…</p>
+  {:else if nothing && wanted}
+    <p class="about">{SAYS['say-nothing']}</p>
+  {/if}
 </Screen>
 
 <Screen name="more" on={view} title={ROWS.more.name} back={() => (view = 'main')}>

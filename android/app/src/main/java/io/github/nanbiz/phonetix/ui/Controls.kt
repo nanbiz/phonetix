@@ -56,12 +56,16 @@ fun SettingRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(
-                    text = name,
-                    color = Color(palette.ink),
-                    fontSize = Tokens.Scale.fontSizeBody.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+                // A row on a card named after it says its name once: the card's own heading
+                // is the name, and repeating it under itself is the title twice.
+                if (name.isNotBlank()) {
+                    Text(
+                        text = name,
+                        color = Color(palette.ink),
+                        fontSize = Tokens.Scale.fontSizeBody.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
                 if (about.isNotBlank()) {
                     Text(
                         text = about,

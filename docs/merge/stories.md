@@ -52,7 +52,7 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 | # | What the reader wants | Browser | Phone |
 |---|---|---|---|
-| S1 | Know the word for something I want to say | **Missing** | **Missing**. Taplex answered it with the word and that word's entry, so the guess could be judged |
+| S1 | Know the word for something I want to say | A screen in the settings view: type it in the language you have, and the word comes back as the card every other answer uses, with its entry under it | The same, on the app's own screen. The engine holds one direction at a time, so the reverse pair is opened, asked, and the reading direction put back |
 
 ## Dictionaries, scope, voice
 
@@ -67,5 +67,4 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 ## What is still missing, in the order it matters
 
-1. **Say it** (S1): Taplex's other direction, dropped.
-2. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.
+1. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.

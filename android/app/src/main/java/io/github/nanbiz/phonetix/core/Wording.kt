@@ -43,6 +43,7 @@ object Wording {
         "more" to Words("How it reads", "transcriptions, stress, how long a rest opens a card"),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
+        "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "stress" to Words("Stress marks", "over a word; the card always shows them"),
@@ -61,6 +62,9 @@ object Wording {
         "no-host" to "Nothing is fetched until this is set.",
         "no-source" to "no source for them yet",
         "nothing-yet" to "nothing yet",
+        "say-no-language" to "Choose a language to read into first.",
+        "say-nothing" to "no word for that",
+        "say-placeholder" to "what you want to say",
     )
 
     /** What one row is called, or the name it is asked for when the table is short. */

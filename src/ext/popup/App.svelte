@@ -111,6 +111,11 @@
       {siteIcon}
       {version}
       {trouble}
+      say={(text, source) =>
+        // Into the language the reader is learning, out of the one they already have. Which
+        // language that is the view decides, since it is the one that knows whether there is
+        // a page in front of it.
+        sendMessage('say', { text, source, target: settings?.target || '' }).catch(() => null)}
       onSite={(on) => {
         if (settings) void setSite(settings, site, on).then(load);
       }}

@@ -69,6 +69,9 @@ export interface HostProtocol {
   speak: { data: { word: string; lang: string; accent?: string }; reply: number[] };
   /** Several words a reader selected, which only an engine can answer. */
   phrase: { data: { text: string; source: string; target: string }; reply: Answer };
+  /** The other direction: something the reader wants to say, in the language they are
+   *  learning, with that word's own entry so the machine's answer can be judged. */
+  say: { data: { text: string; source: string; target: string }; reply: Answer | null };
 }
 
 type Named = keyof HostProtocol;

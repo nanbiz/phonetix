@@ -152,6 +152,26 @@ export function host(): void {
     return phrase(data.text, said ?? '', data.source, data.target);
   });
 
+  onMessage('say', async ({ data }) => {
+    // The reading direction, reversed: what is typed is in the language the reader already
+    // has, and the word wanted is in the one they are learning.
+    const [word] = await guessed(data.target, data.source, [data.text]).catch(() => []);
+    const wanted = (word ?? '').trim();
+    if (!wanted || wanted.toLowerCase() === data.text.trim().toLowerCase()) return null;
+    // And then the word's own entry, so what a machine handed over can be judged: how it is
+    // said, what it means back in the reader's language, which sounds are in it.
+    await Promise.all([
+      open(data.source),
+      data.target === data.source ? null : open(data.target),
+      openHomographs(data.source).catch(() => 0),
+    ]);
+    // One word is looked up as one word; a machine that answered with a phrase is answered
+    // as a phrase, because no dictionary holds one.
+    return wanted.split(/\s+/).length > 1
+      ? phrase(wanted, data.text, data.source, data.target)
+      : lookUp(wanted, data.source, data.target, '', '');
+  });
+
   onMessage('lookUp', async ({ data }) => {
     // A missing pack is an answer the cascade gives; anything else is a fault, and it
     // travels back as one rather than as a card claiming the word does not exist.

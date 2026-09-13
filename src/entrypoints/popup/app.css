@@ -7,6 +7,9 @@
  */
 @import "../../ui/tokens.css";
 @import "../../ui/settings/settings.css";
+/* The card, because the say screen answers with it: what a machine handed over is judged the
+   way every other answer in this product is. */
+@import "../../ui/card/card.css";
 
 /* The popup is a fixed width and sizes its height to what is showing, so a short screen stays
    short and a taller one grows until the browser's own cap scrolls it - but never wider than

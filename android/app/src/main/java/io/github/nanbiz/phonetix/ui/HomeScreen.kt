@@ -52,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.heightIn
 import kotlinx.coroutines.launch
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Wording
 import androidx.compose.material3.OutlinedTextField
 
@@ -111,6 +112,7 @@ fun HomeScreen(
         TranscriptionsCard(settings = settings)
         AccentsCard(settings = settings)
         DictionariesCard(settings = settings)
+        SayCard(settings = settings)
         LensCard(on = settings.lens, onLens = onLens)
         TouchCard(on = settings.touchWords, onTouchWords = onTouchWords)
         AppsCard(settings = settings, onOpenApps = onOpenApps)
@@ -535,6 +537,117 @@ private fun DictionariesCard(settings: Settings) {
  * word and costs every swipe that starts on one; the lens costs nothing and is dragged to
  * whatever the reader wants to know about.
  */
+/**
+ * The other direction: the word for something the reader wants to say.
+ *
+ * Everything else in this app answers a word somebody else wrote. This one answers a word the
+ * reader is looking for, and answers it with the same card, so what a machine handed over is
+ * judged the way every other answer is: how it is said, what it means back, which sounds are
+ * in it.
+ */
+@Composable
+private fun SayCard(settings: Settings) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val colours = palette()
+    var wanted by remember { mutableStateOf("") }
+    var asking by remember { mutableStateOf(false) }
+    var said by remember { mutableStateOf<io.github.nanbiz.phonetix.core.Answer?>(null) }
+    var nothing by remember { mutableStateOf(false) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    // What the reader already has is what they read into. What they are learning is whatever
+    // they keep a dictionary for: the phone has no page in front of it to read a language off
+    // while this screen is open, and a reader with one pack is learning that language.
+    val have = settings.target
+    val held = remember { io.github.nanbiz.phonetix.core.Packs.held(context).filter { it != have } }
+    var learning by remember(held) { mutableStateOf(held.firstOrNull().orEmpty()) }
+
+    SectionCard(title = Wording.row("say").name) {
+        if (held.size > 1) {
+            SettingRow(
+                name = Wording.row("source").name,
+                palette = colours,
+                about = Wording.row("source").about,
+                wide = {
+                    Segmented(
+                        choices = held.map {
+                            it to io.github.nanbiz.phonetix.core.Languages.english(it)
+                        },
+                        chosen = learning,
+                        palette = colours,
+                        change = { learning = it },
+                    )
+                },
+            )
+        }
+        SettingRow(
+            name = "",
+            palette = colours,
+            about = if (learning.isBlank() || have.isBlank() || learning == have) {
+                Wording.says["say-no-language"].orEmpty()
+            } else {
+                Wording.row("say").about
+            },
+            wide = {
+                OutlinedTextField(
+                    value = wanted,
+                    onValueChange = { wanted = it },
+                    singleLine = true,
+                    enabled = learning.isNotBlank() && have.isNotBlank() && learning != have,
+                    shape = RoundedCornerShape(Tokens.Scale.radiusButton.dp),
+                    placeholder = { Text(Wording.says["say-placeholder"].orEmpty()) },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search,
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = {
+                            val asked = wanted.trim()
+                            if (asked.isEmpty()) return@KeyboardActions
+                            // The keyboard has done its work, and the answer appears where it
+                            // was standing: asked with it up, the card came back underneath it
+                            // and the reader saw an empty field and nothing else.
+                            keyboard?.hide()
+                            asking = true
+                            said = null
+                            nothing = false
+                            scope.launch {
+                                // Off the main thread: the engine opens a model of seventeen
+                                // megabytes for the direction nobody has been reading in.
+                                val answer = kotlinx.coroutines.withContext(
+                                    kotlinx.coroutines.Dispatchers.IO,
+                                ) {
+                                    Reading.say(context, asked, learning, have)
+                                }
+                                said = answer
+                                nothing = answer == null
+                                asking = false
+                            }
+                        },
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+        )
+        if (asking) {
+            Text(
+                "…",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        said?.let { answer ->
+            AnswerCard(answer = answer, palette = colours)
+        }
+        if (nothing) {
+            Text(
+                Wording.says["say-nothing"].orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Composable
 private fun LensCard(on: Boolean, onLens: (Boolean) -> Unit) {
     val colours = palette()
