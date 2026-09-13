@@ -58,6 +58,11 @@ object Lex {
      */
     external fun openPack(core: Long, path: String): String
 
+    /** One of the dictionaries the app carries, turned into a pack it can read. The bytes in
+     *  are the gzipped map as it ships; the bytes out are a pack, or nothing where the file is
+     *  not one of ours. */
+    external fun buildIpaPack(lang: String, gzipped: ByteArray, built: Long): ByteArray
+
     /**
      * What one word means, as JSON.
      *

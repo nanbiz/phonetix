@@ -68,6 +68,18 @@ pub fn phrase(text: &str, said: &str, source: &str, target: &str) -> String {
     ))
 }
 
+/// One of the dictionaries the product ships, turned into a pack this can read.
+///
+/// The maps travel as a fraction of what a pack is, so every language can be carried rather
+/// than fetched, and the language a reader actually reads becomes a pack the first time they
+/// read it. The bytes in are the file as it ships, gzipped; the bytes out are a pack, or
+/// nothing where the file is not one of ours.
+#[wasm_bindgen(js_name = buildIpaPack)]
+pub fn build_ipa_pack(lang: &str, gzipped: &[u8], built: f64) -> Option<Box<[u8]>> {
+    lexcore::packing::ipa_pack(lang, gzipped, built.max(0.0) as u64)
+        .map(|bytes| bytes.into_boxed_slice())
+}
+
 /// A transcription in an accent, where that accent's difference is a rule.
 #[wasm_bindgen(js_name = inAccent)]
 pub fn in_accent(ipa: &str, accent: &str, word: &str) -> String {

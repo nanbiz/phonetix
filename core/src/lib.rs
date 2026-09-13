@@ -15,6 +15,7 @@ pub mod homographs;
 pub mod json;
 pub mod languages;
 pub mod neighbours;
+pub mod packing;
 pub mod resolve;
 pub mod segment;
 pub mod sprinkle;

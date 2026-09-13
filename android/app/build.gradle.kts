@@ -74,24 +74,22 @@ android {
  * build time so the app has exactly one source for them and the repository keeps one copy.
  */
 /**
- * How English words are said, as a pack.
+ * How words are said, in every language the product knows.
  *
- * The app used to carry the extension's dictionary as a compressed map it parsed itself,
- * which was a second format only this platform could read. It is a pack now: the same reader
- * the meanings come through, built from the same table.
+ * The maps travel as they ship, gzipped, and the app builds a pack from the one it needs the
+ * first time it reads a screen in that language. It used to build one pack here, for English,
+ * at compile time - which left a reader of anything else with nothing to answer them and a
+ * dictionary host to go and find.
  */
-val bundleDictionaries by tasks.registering(Exec::class) {
-    val dict = rootProject.file("../assets/dictionaries/en.json.gz")
-    val out = layout.projectDirectory.file("src/main/assets/ipa-en.pack").asFile
+val bundleDictionaries by tasks.registering(Copy::class) {
+    val from = rootProject.file("../assets/dictionaries")
     doFirst {
-        require(dict.exists()) {
-            "Missing ${dict.path}. Run `pnpm fetch:dict` in the repository root first."
+        require(from.exists()) {
+            "Missing ${from.path}. Run `pnpm fetch:dict` in the repository root first."
         }
-        out.parentFile.mkdirs()
     }
-    workingDir = rootProject.file("../core")
-    commandLine("cargo", "run", "-q", "--release", "-p", "packbuild", "--",
-        "ipa", "en", dict.absolutePath, out.absolutePath)
+    from(from) { include("*.json.gz") }
+    into(layout.projectDirectory.dir("src/main/assets/dictionaries"))
 }
 
 /**

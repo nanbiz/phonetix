@@ -214,6 +214,45 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
     env.new_string(lexcore::json::of(&answer)).unwrap_or(empty)
 }
 
+/// One of the dictionaries the app ships, turned into a pack it can read.
+///
+/// The bytes in are the file as it ships, gzipped, read out of the app's own assets; the bytes
+/// out are a pack, or nothing where the file is not one of ours. Carried rather than fetched:
+/// the maps are a fraction of the size of the packs they become, so every language travels
+/// with the app and the one being read becomes a pack the first time it is read.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_buildIpaPack<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass,
+    lang: JString,
+    gzipped: jni::objects::JByteArray<'a>,
+    built: jlong,
+) -> jni::objects::JByteArray<'a> {
+    let empty = env
+        .new_byte_array(0)
+        .unwrap_or_else(|_| unsafe { jni::objects::JByteArray::from_raw(std::ptr::null_mut()) });
+    let Ok(lang) = env.get_string(&lang) else {
+        return empty;
+    };
+    let lang: String = lang.into();
+    let Ok(bytes) = env.convert_byte_array(&gzipped) else {
+        return empty;
+    };
+    let Some(pack) = lexcore::packing::ipa_pack(&lang, &bytes, built.max(0) as u64) else {
+        return empty;
+    };
+    let out = pack.iter().map(|b| *b as i8).collect::<Vec<i8>>();
+    match env.new_byte_array(out.len() as i32) {
+        Ok(array) => {
+            if env.set_byte_array_region(&array, 0, &out).is_err() {
+                return empty;
+            }
+            array
+        }
+        Err(_) => empty,
+    }
+}
+
 /// Several words asked as one, as JSON.
 ///
 /// No dictionary holds a phrase, so what answers it is the engine and the core is what marks

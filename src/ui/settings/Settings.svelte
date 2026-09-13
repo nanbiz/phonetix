@@ -35,7 +35,7 @@
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
-  import Start from './Start.svelte';
+  import Meanings from './Meanings.svelte';
   import Switchboard from './Switchboard.svelte';
   import Trouble from './Trouble.svelte';
   import Field from '@/ui/controls/Field.svelte';
@@ -188,17 +188,14 @@
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
 
-  /** What is still to be done before anything can be answered, in the order it has to be
-   *  done in: a language to read into, a host to fetch from, and a dictionary from it.
+  /** What is still missing before a word's meaning can be shown.
    *
-   *  Any dictionary, not this page's: a reader holding Spanish who opens a German page is not
-   *  in setup, they are missing German, and the dictionaries row is where that is said. The
-   *  view is also often open with no page in front of it at all, and a step that can never be
-   *  finished is worse than no step. */
-  let missing = $derived(
-    [!settings.target, !settings.host, settings.host !== '' && packs.held.length === 0]
-      .filter(Boolean).length
-  );
+   *  Not before anything can be shown: every language the product knows how to pronounce is
+   *  carried with it, so a reader who has set nothing at all still gets a page answered in the
+   *  sounds of its own language. Meanings need a language to read into and a dictionary for
+   *  the language being read, and that dictionary is built from a dump and is not something
+   *  the product can carry. */
+  let meaningsMissing = $derived(!settings.target || packs.held.length === 0);
 </script>
 
 <Screen name="main" on={view}>
@@ -217,9 +214,9 @@
 
   <Trouble {trouble} />
 
-  <!-- What is missing before any of this can answer a word, with the control that does each
-       step in the row that names it. Gone once they are done. -->
-  <Start left={missing}>
+  <!-- What meanings need, with the control that does each step in the row that names it.
+       Gone once they are there. -->
+  <Meanings missing={meaningsMissing}>
     {#if !settings.target}
       <Row name={SAYS['start-target']} row="start-target">
         {#snippet control()}
@@ -232,8 +229,8 @@
         {/snippet}
       </Row>
     {/if}
-    {#if !settings.host}
-      <Row name={SAYS['start-host']} row="start-host" about={ROWS.host.about}>
+    {#if packs.held.length === 0}
+      <Row name={SAYS['start-pack']} row="start-pack" about={ROWS.host.about}>
         {#snippet wide()}
           <Field
             value={settings.host}
@@ -244,28 +241,26 @@
           />
         {/snippet}
       </Row>
+      {#if settings.host}
+        <Row
+          name={ROWS.dictionaries.name}
+          row="start-fetch"
+          about={offered > 0
+            ? `${offered} on offer`
+            : `nothing on offer at ${settings.host}`}
+        >
+          {#snippet control()}
+            <button class="btn" onclick={() => (view = 'packs')}>{SAYS['start-go']}</button>
+          {/snippet}
+        </Row>
+      {/if}
     {/if}
-    {#if settings.host && packs.held.length === 0}
-      <Row
-        name={SAYS['start-pack']}
-        row="start-pack"
-        about={offered > 0 ? `${offered} on offer` : `nothing on offer at ${settings.host}`}
-      >
-        {#snippet control()}
-          <button class="btn" onclick={() => (view = 'packs')}>{SAYS['start-go']}</button>
-        {/snippet}
-      </Row>
-    {/if}
-  </Start>
+  </Meanings>
 
-  <!-- While something is still missing, none of this is shown: every one of these rows is a
-       choice about answers that cannot be given yet, and two of them are the very steps above
-       under another name. A first run is the three steps and nothing else.
-
-       In the order a reader decides: what they read into, where the dictionaries come from,
+  <!-- In the order a reader decides: what they read into, where the dictionaries come from,
        what appears over a word, and only then how much of the page. The bar used to be first
        and changed nothing at all until the two below it were set. -->
-  {#if missing === 0}
+  {#if !meaningsMissing}
   <div class="rows">
     <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
       {#snippet control()}
@@ -289,6 +284,7 @@
         : SAYS['no-source']}
     open={() => (view = 'packs')}
   />
+  {/if}
 
   <NavRow
     name={ROWS.layer.name}
@@ -316,11 +312,9 @@
   <NavRow
     name={ROWS.say.name}
     row="say"
-    about="into {nameOf(learning)}"
+    about={learning ? `into ${nameOf(learning)}` : SAYS['say-no-language']}
     open={() => (view = 'say')}
   />
-  {/if}
-
   <NavRow
     name={ROWS.more.name}
     row="more"

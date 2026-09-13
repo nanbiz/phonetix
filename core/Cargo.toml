@@ -11,11 +11,16 @@ description = "The reading core: what a word means, how it is said, and which of
 crate-type = ["lib"]
 
 [dependencies]
-# The pack is what the cascade reads; the core cannot reach a word any other way.
-lexpack = { path = "pack" }
+# The pack is what the cascade reads, and what it writes where a reader's own dictionaries are
+# turned into one. Without the reference compressor: this builds for WebAssembly and for a
+# phone, where a C library does not.
+lexpack = { path = "pack", features = ["write"] }
+# The dictionaries ship as gzipped maps, so the core unpacks one to build a pack from it. Pure
+# Rust, for the same reason.
+flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 unicode-segmentation = "1.13"
 
 [dev-dependencies]
 # The cascade is tested against packs built the way a real one is.
-lexpack = { path = "pack", features = ["write"] }
+lexpack = { path = "pack", features = ["zstd"] }
 serde_json = "1.0.151"

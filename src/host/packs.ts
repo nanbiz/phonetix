@@ -6,7 +6,7 @@
 //
 // The host it comes from is a runtime setting and appears nowhere in the source.
 import { createStore, get as read, set as keep, del, keys } from 'idb-keyval';
-import { closePack, openLanguages, openPack } from '@/core';
+import { buildIpaPack, closePack, openLanguages, openPack } from '@/core';
 
 const store = createStore('phonetix-packs', 'lang-pack');
 
@@ -50,7 +50,37 @@ async function cached(lang: string): Promise<Uint8Array | undefined> {
 export async function open(lang: string): Promise<string | null> {
   if ((await openLanguages()).includes(lang)) return lang;
   const bytes = await cached(lang);
-  return bytes ? openPack(bytes) : null;
+  if (bytes) return openPack(bytes);
+  return fromWhatWeCarry(lang);
+}
+
+/**
+ * The dictionary for a language out of what this build carries.
+ *
+ * Every language the product knows how to pronounce ships with it, as the gzipped map it has
+ * always shipped as - a fraction of the size of the pack it becomes. The pack is built the
+ * first time the language is read and kept, so the cost is paid once and a reader who has
+ * configured nothing at all is still answered.
+ *
+ * Nothing here reaches the network. What a host adds on top is what a dictionary cannot carry:
+ * meanings, which are built from the dumps and are far larger.
+ */
+async function fromWhatWeCarry(lang: string): Promise<string | null> {
+  if (!/^[a-z]{2,3}(-[a-z0-9]+)?$/i.test(lang)) return null;
+  try {
+    const res = await fetch(browser.runtime.getURL(`/dictionaries/${lang}.json.gz` as never));
+    if (!res.ok) return null;
+    const built = await buildIpaPack(lang, new Uint8Array(await res.arrayBuffer()));
+    if (!built) return null;
+    const opened = await openPack(built);
+    // Kept as a pack rather than rebuilt on every start: building one is seconds for a big
+    // language, and a reader opens a page more often than they install.
+    await keep(opened, built.slice().buffer, store);
+    await told();
+    return opened;
+  } catch {
+    return null;   // a build without the dictionaries answers what the host gives it
+  }
 }
 
 /**

@@ -43,3 +43,5 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+# The dictionaries the build carries, copied from assets by scripts/bundle-dictionaries.mjs.
+public/dictionaries/

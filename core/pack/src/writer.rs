@@ -14,6 +14,48 @@ pub enum WriteError {
     Compress(String),
 }
 
+/// One block, as the reader will find it.
+///
+/// With the reference compressor, which is where a pack built on a real machine comes from.
+#[cfg(feature = "zstd")]
+fn squeeze(plain: &[u8]) -> Result<Vec<u8>, WriteError> {
+    // Level three: the pack is downloaded once and read for as long as the language is
+    // installed, and the levels above it cost build minutes for single-figure percents.
+    zstd::encode_all(plain, 3).map_err(|e| WriteError::Compress(e.to_string()))
+}
+
+/// And without it: a zstd frame whose blocks are stored rather than compressed.
+///
+/// A pack built where the product runs - a browser, a phone - cannot carry the reference
+/// compressor: it is C, and building it for WebAssembly needs a toolchain a reader does not
+/// have. The frame below is written by hand and is a legal zstd stream, so the same reader
+/// reads both kinds and neither the format nor the reader knows the difference. It costs the
+/// size the compression would have saved, which is a device's disk rather than a download.
+#[cfg(not(feature = "zstd"))]
+fn squeeze(plain: &[u8]) -> Result<Vec<u8>, WriteError> {
+    /// What one raw block may hold, from the format: 128 KiB.
+    const MOST: usize = 128 * 1024;
+    let mut out = Vec::with_capacity(plain.len() + 16);
+    out.extend_from_slice(&0xFD2F_B528u32.to_le_bytes());
+    // No dictionary, no checksum, no declared content size, and a window big enough for the
+    // blocks below: the descriptor's exponent 10 is a window of a megabyte.
+    out.push(0x00);
+    out.push(10 << 3);
+    let mut left = plain;
+    loop {
+        let take = left.len().min(MOST);
+        let last = take == left.len();
+        let header = ((take as u32) << 3) | (0 << 1) | u32::from(last);
+        out.extend_from_slice(&header.to_le_bytes()[..3]);
+        out.extend_from_slice(&left[..take]);
+        left = &left[take..];
+        if last {
+            break;
+        }
+    }
+    Ok(out)
+}
+
 /// A pack under construction.
 pub struct Builder {
     lang: String,
@@ -91,10 +133,7 @@ impl Builder {
                 starts.push(plain.len() as u32);
                 write_entry(&mut plain, entry);
             }
-            // Level three: the pack is downloaded once and read for as long as the language is
-            // installed, and the levels above it cost build minutes for single-figure percents.
-            let block = zstd::encode_all(plain.as_slice(), 3)
-                .map_err(|e| WriteError::Compress(e.to_string()))?;
+            let block = squeeze(&plain)?;
             blocks.push((packed.len() as u64, block.len() as u64));
             packed.extend_from_slice(&block);
         }

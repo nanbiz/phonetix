@@ -7,6 +7,7 @@
 // answered on the phone go through one cascade, so the two cannot drift into disagreeing
 // about what a word means.
 import init, {
+  buildIpaPack as packFrom,
   Core,
   display as shown,
   phrase as asPhrase,
@@ -61,6 +62,20 @@ export function coreRunning(): boolean {
 export async function openPack(bytes: Uint8Array): Promise<string> {
   const it = await coreReady();
   return it.openPack(bytes);
+}
+
+/**
+ * One of the dictionaries this build carries, as a pack.
+ *
+ * The dictionaries ship as gzipped `{word: how it is said}` maps, which is a fraction of the
+ * size of the packs they become, so every language travels with the product rather than being
+ * fetched from anywhere. The one a reader actually reads becomes a pack the first time they
+ * read it.
+ */
+export async function buildIpaPack(lang: string, gzipped: Uint8Array): Promise<Uint8Array | null> {
+  await coreReady();
+  const built = packFrom(lang, gzipped, Math.floor(Date.now() / 1000));
+  return built && built.length > 0 ? built : null;
 }
 
 /** Give up a pack's memory. */

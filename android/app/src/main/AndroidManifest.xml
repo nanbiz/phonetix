@@ -17,7 +17,12 @@
         </intent>
     </queries>
 
+    <!-- A reader's dictionaries and translation models come from a host they name themselves,
+         which for most people is a box on their own network speaking plain HTTP. Blocked by
+         default since Android 9, and blocked silently: the fetch fails with nothing on screen
+         saying why, which is how a reader ends up believing the feature does not work. -->
     <application
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

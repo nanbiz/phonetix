@@ -18,8 +18,15 @@ ruzstd = "0.7"
 zstd = "0.13"
 
 [features]
-# Writing a pack. Off by default so a reader build carries no compressor at all.
-write = ["dep:zstd"]
+# Writing a pack at all. Off by default so a reader build carries no writer.
+#
+# On its own the blocks are stored rather than compressed, which is what a pack built where the
+# product runs can do: the reference compressor is C and does not build for WebAssembly without
+# a toolchain a reader does not have. What it writes is still a legal zstd stream, so one
+# reader reads both.
+write = []
+# And with the reference compressor, for the packs built on a real machine.
+zstd = ["write", "dep:zstd"]
 
 [dependencies.zstd]
 version = "0.13"

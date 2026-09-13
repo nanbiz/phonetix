@@ -229,3 +229,34 @@ fn an_empty_pack_opens_and_holds_nothing() {
     assert!(read.lookup("anything").is_empty());
     assert!(read.senses_glossed("anything").is_empty());
 }
+
+/// A pack built where the product runs, rather than in CI.
+///
+/// The reference compressor is C and does not build for WebAssembly, so a pack written on a
+/// phone or in a browser stores its blocks instead of compressing them. What it writes is a
+/// legal zstd stream either way, and this is the check that says so: the same words come back
+/// out of it, through the same reader, with nothing in the reader knowing which kind it has.
+#[test]
+fn a_pack_written_without_the_compressor_reads_the_same() {
+    let mut built = Builder::new("es", Kind::Ipa, 0);
+    for (lemma, ipa) in [
+        ("perro", "ˈpe.ro"),
+        ("camino", "ka.ˈmi.no"),
+        ("silla", "ˈsi.ʝa"),
+    ] {
+        built
+            .add(word(lemma, "noun", ipa, &[]), &NO_FORMS)
+            .expect("the word goes in");
+    }
+    let bytes = built.finish().expect("the pack is written");
+    let pack = Pack::open(bytes).expect("the pack opens");
+    assert_eq!(pack.lang(), "es");
+    let found = pack.lookup("camino");
+    assert_eq!(found.len(), 1, "one entry for camino");
+    assert_eq!(found[0].ipa, vec!["ka.ˈmi.no".to_string()]);
+    assert_eq!(pack.lookup("silla")[0].ipa, vec!["ˈsi.ʝa".to_string()]);
+    assert!(
+        pack.lookup("nada").is_empty(),
+        "a word it does not hold is absent"
+    );
+}

@@ -7,10 +7,10 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
+    "build": "pnpm bundle:dict && wxt build",
     "build:firefox": "wxt build -b firefox",
-    "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox",
+    "zip": "pnpm bundle:dict && wxt zip",
+    "zip:firefox": "pnpm bundle:dict && wxt zip -b firefox",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "cd core && cargo test --workspace",
     "install:browsers": "node scripts/install-browsers.mjs",
@@ -33,7 +33,8 @@
     "test:accent": "uv run python scripts/proofread/android_accent.py",
     "test:popup": "uv run scripts/proofread/popup_view.py",
     "test:phone-guesses": "uv run scripts/proofread/android_guesses.py",
-    "test:translates": "uv run scripts/proofread/translates.py"
+    "test:translates": "uv run scripts/proofread/translates.py",
+    "bundle:dict": "node scripts/bundle-dictionaries.mjs"
   },
   "devDependencies": {
     "@browsermt/bergamot-translator": "0.4.9",

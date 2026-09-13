@@ -908,3 +908,29 @@ fn the_sentences_own_translation_says_which_word_it_is() {
     let unrelated = read(Some("They published a benchmark of the banking system."));
     assert_eq!(unrelated.state, AnswerState::Homograph);
 }
+
+/// A dictionary as it ships, turned into a pack where the product runs.
+///
+/// The maps a reader gets are `{word: how it is said}`, gzipped, and the cascade reads packs.
+/// Doing that conversion on the device is what lets every language travel with the product
+/// rather than be fetched: this is the check that what comes out is a pack the reader reads,
+/// with the words that went in.
+#[test]
+fn a_shipped_dictionary_becomes_a_pack_that_answers() {
+    use std::io::Write;
+    let json = r#"{"perro":"ˈpe.ro","camino":"ka.ˈmi.no","silla":"ˈsi.ʝa","":"ignored"}"#;
+    let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    gz.write_all(json.as_bytes())
+        .expect("the fixture compresses");
+    let gzipped = gz.finish().expect("the fixture compresses");
+
+    let bytes = lexcore::packing::ipa_pack("es", &gzipped, 0).expect("the pack is built");
+    let pack = lexpack::Pack::open(bytes).expect("the pack opens");
+    assert_eq!(pack.lang(), "es");
+    assert_eq!(pack.lookup("perro")[0].ipa, vec!["ˈpe.ro".to_string()]);
+    assert_eq!(pack.lookup("silla")[0].ipa, vec!["ˈsi.ʝa".to_string()]);
+    assert!(
+        pack.lookup("nada").is_empty(),
+        "a word it does not hold is absent"
+    );
+}

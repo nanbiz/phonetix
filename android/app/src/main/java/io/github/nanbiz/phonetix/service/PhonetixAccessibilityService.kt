@@ -808,11 +808,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 lastScreenLanguage = screen.language
                 val reading = screen.language
                 io.post {
+                    // How this language's words are said, built out of what the app carries
+                    // the first time a screen in it is read. Before this, a reader of anything
+                    // but English met a screen the app could not answer at all.
+                    Dictionary.ensure(this, reading)
                     // What decides which word a spelling is, for the language on screen. The
                     // pack it belongs to may be the one bundled with the app rather than one
                     // the reader fetched, so this does not hang off a pack opening.
                     Packs.openClassifier(this, reading)
                     openTranslator()
+                    // The words it could not answer a moment ago can be answered now.
+                    main.post { readAgain() }
                 }
             }
             chooseWords(fresh, settings, screen.language, budget)
@@ -2282,8 +2288,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /**
      * Open the translation engine for the direction the reader is reading in.
      *
-     * Called when the service starts and whenever a setting that decides the direction moves.
-     * Nothing is fetched here: the model is what the reader asked for in the settings view.
+     * From the model files this phone already has. Nothing is fetched: what the product can
+     * answer is what it carries and what the reader has put there themselves.
      */
     private fun openTranslator() {
         val settings = SettingsStore.current
@@ -2291,8 +2297,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (target.isEmpty()) return
         val source = lastScreenLanguage ?: Language.OURS
         if (source == target) return
-        val started = Translator.start(Packs.models(this), source, target)
-        if (started) readAgain()
+        if (Translator.start(Packs.models(this), source, target)) readAgain()
     }
 
     /**

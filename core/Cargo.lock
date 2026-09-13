@@ -209,6 +209,7 @@ dependencies = [
 name = "lexcore"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "lexpack",
  "serde_json",
  "unicode-segmentation",
