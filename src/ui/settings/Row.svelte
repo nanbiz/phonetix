@@ -26,7 +26,9 @@
 </script>
 
 <div class="row" data-row={row || undefined} {...marks}>
-  <span class="r-name" data-name>{name}</span>
+  <!-- A row on a screen named after it says its name once: the screen's own title is the
+       name, and repeating it under itself is the title twice. -->
+  {#if name}<span class="r-name" data-name>{name}</span>{/if}
   {#if says}
     <span class="r-act" data-about>{says}</span>
   {/if}

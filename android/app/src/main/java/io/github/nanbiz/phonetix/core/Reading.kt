@@ -231,14 +231,10 @@ object Reading {
         Dictionary.ensureLoaded(context)
         Packs.openHeld(context)
         val models = Packs.models(context)
-        if (!Translator.start(models, target, source)) return null
-        val word = try {
-            Translator.lines(listOf(asked)).firstOrNull().orEmpty().trim()
-        } finally {
-            // Back to the direction the screen is read in, whatever happened above: an engine
-            // left pointing the other way answers every word on the next screen backwards.
-            Translator.start(models, source, target)
-        }
+        // The engine is turned round and turned back under one lock: a screen read while the
+        // reverse pair was open would be answered backwards.
+        val word = Translator.reversed(models, target, source, listOf(asked))
+            .firstOrNull().orEmpty().trim()
         if (word.isEmpty() || word.equals(asked, ignoreCase = true)) return null
         // A machine that answered with several words is answered as a phrase: no dictionary
         // holds one, and a card claiming an entry for it would be claiming one that is not

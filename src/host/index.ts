@@ -13,7 +13,7 @@ import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
 import { forget, get, held, offered, open } from './packs';
-import { audio, guessed, ipa } from './voice';
+import { audio, guessed, ipa, translatable } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
@@ -153,11 +153,18 @@ export function host(): void {
   });
 
   onMessage('say', async ({ data }) => {
+    // Whether the pair can be translated at all, so a reader whose host publishes no model
+    // for the direction is told that rather than that their word does not exist.
+    const missing = !(await translatable().catch(() => []))
+      .some((pair) => pair.from === data.target && pair.to === data.source);
+    if (missing) return { answer: null, missing };
     // The reading direction, reversed: what is typed is in the language the reader already
     // has, and the word wanted is in the one they are learning.
     const [word] = await guessed(data.target, data.source, [data.text]).catch(() => []);
     const wanted = (word ?? '').trim();
-    if (!wanted || wanted.toLowerCase() === data.text.trim().toLowerCase()) return null;
+    if (!wanted || wanted.toLowerCase() === data.text.trim().toLowerCase()) {
+      return { answer: null, missing: false };
+    }
     // And then the word's own entry, so what a machine handed over can be judged: how it is
     // said, what it means back in the reader's language, which sounds are in it.
     await Promise.all([
@@ -167,9 +174,10 @@ export function host(): void {
     ]);
     // One word is looked up as one word; a machine that answered with a phrase is answered
     // as a phrase, because no dictionary holds one.
-    return wanted.split(/\s+/).length > 1
+    const answer = await (wanted.split(/\s+/).length > 1
       ? phrase(wanted, data.text, data.source, data.target)
-      : lookUp(wanted, data.source, data.target, '', '');
+      : lookUp(wanted, data.source, data.target, '', ''));
+    return { answer, missing: false };
   });
 
   onMessage('lookUp', async ({ data }) => {

@@ -70,7 +70,10 @@
      *  dictionaries live there, and this view holds neither. The language to answer in is
      *  passed with it, since what a reader is learning is not always what the page in front
      *  of them is written in - the settings view is often open with no page at all. */
-    say?: (text: string, source: string) => Promise<Answer | null>;
+    say?: (
+      text: string,
+      source: string
+    ) => Promise<{ answer: Answer | null; missing: boolean } | null>;
   }
 
   let {
@@ -97,16 +100,22 @@
   let said = $state<Answer | null>(null);
   let asking = $state(false);
   let nothing = $state(false);
+  /** Whether there is no model for the direction at all, which is a different thing to be
+   *  told than that no word came back. */
+  let unmodelled = $state(false);
 
   async function ask(text: string) {
     wanted = text;
     said = null;
     nothing = false;
+    unmodelled = false;
     if (!text || !say || !learning) return;
     asking = true;
-    said = await say(text, learning).catch(() => null);
+    const came = await say(text, learning).catch(() => null);
     asking = false;
-    nothing = said === null;
+    said = came?.answer ?? null;
+    unmodelled = came?.missing ?? false;
+    nothing = said === null && !unmodelled;
   }
 
   /** Which screen the reader is on. */
@@ -397,6 +406,8 @@
     </div>
   {:else if asking}
     <p class="about">…</p>
+  {:else if unmodelled && wanted}
+    <p class="about">{SAYS['say-no-model']}</p>
   {:else if nothing && wanted}
     <p class="about">{SAYS['say-nothing']}</p>
   {/if}

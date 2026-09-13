@@ -88,6 +88,7 @@ export const SAYS: Record<string, string> = {
   "open-accessibility": "Open accessibility",
   "remove": "Remove",
   "say-no-language": "Choose a language to read into first.",
+  "say-no-model": "No translation model for that direction at your dictionary host.",
   "say-nothing": "no word for that",
   "say-placeholder": "what you want to say",
   "touch-name-off": "Words are not touchable",

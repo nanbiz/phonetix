@@ -555,6 +555,9 @@ private fun SayCard(settings: Settings) {
     var asking by remember { mutableStateOf(false) }
     var said by remember { mutableStateOf<io.github.nanbiz.phonetix.core.Answer?>(null) }
     var nothing by remember { mutableStateOf(false) }
+    /** Whether there is no model for the direction at all, which is a different thing to be
+     *  told than that no word came back. */
+    var unmodelled by remember { mutableStateOf(false) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     // What the reader already has is what they read into. What they are learning is whatever
@@ -612,6 +615,7 @@ private fun SayCard(settings: Settings) {
                             asking = true
                             said = null
                             nothing = false
+                            unmodelled = false
                             scope.launch {
                                 // Off the main thread: the engine opens a model of seventeen
                                 // megabytes for the direction nobody has been reading in.
@@ -621,7 +625,12 @@ private fun SayCard(settings: Settings) {
                                     Reading.say(context, asked, learning, have)
                                 }
                                 said = answer
-                                nothing = answer == null
+                                unmodelled = answer == null &&
+                                    !io.github.nanbiz.phonetix.core.Translator.ready(
+                                        io.github.nanbiz.phonetix.core.Packs.models(context),
+                                        have, learning,
+                                    )
+                                nothing = answer == null && !unmodelled
                                 asking = false
                             }
                         },
@@ -639,6 +648,13 @@ private fun SayCard(settings: Settings) {
         }
         said?.let { answer ->
             AnswerCard(answer = answer, palette = colours)
+        }
+        if (unmodelled) {
+            Text(
+                Wording.says["say-no-model"].orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         if (nothing) {
             Text(

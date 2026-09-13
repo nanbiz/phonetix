@@ -224,6 +224,7 @@
     "change": "Change",
     "use-this": "Use this",
     "get": "Get",
-    "remove": "Remove"
+    "remove": "Remove",
+    "say-no-model": "No translation model for that direction at your dictionary host."
   }
 }

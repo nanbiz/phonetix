@@ -25,6 +25,18 @@ object Translator {
         .getOrDefault(false)
 
     /**
+     * Whether a direction could be opened at all: the files for it are here.
+     *
+     * Asked before opening, because opening is seconds of work and because "no model for that
+     * direction" is a different thing to tell a reader than "no word for that".
+     */
+    fun ready(models: File, from: String, to: String): Boolean {
+        val here = File(models, "$from-$to").listFiles().orEmpty()
+        return here.any { it.name.startsWith("model") && it.name.endsWith(".bin") } &&
+            here.any { it.name.endsWith(".spm") }
+    }
+
+    /**
      * Open a direction, from the model files already fetched into [models].
      *
      * Returns whether it can answer. Opening is seconds of work the first time, so it is done
@@ -85,12 +97,38 @@ object Translator {
     }
 
     /**
+     * What these lines say the other way round, with the reading direction put back after.
+     *
+     * The engine holds one direction at a time, so asking the reverse question means opening
+     * the reverse pair - and a screen being read while that pair was open would be answered
+     * backwards. Opening, asking and restoring happen under the one lock that guards opening,
+     * so no other caller can see the engine pointing the wrong way.
+     */
+    @Synchronized
+    fun reversed(models: File, from: String, to: String, texts: List<String>): List<String> {
+        val back = open
+        if (!start(models, from, to)) return emptyList()
+        return try {
+            lines(texts)
+        } finally {
+            val (was, wants) = back.split("-").let {
+                if (it.size == 2) it[0] to it[1] else "" to ""
+            }
+            if (was.isNotEmpty()) start(models, was, wants)
+        }
+    }
+
+    /**
      * What these lines say in the reader's language, in the order they were given.
      *
      * Whole lines rather than words, and nothing dropped: a line that comes back as itself is
      * still what the engine made of it, which is not true of a word - there, a word that
      * answers itself is the engine having nothing to say.
+     *
+     * Under the same lock as opening a direction, so nothing can be asked of an engine that is
+     * in the middle of being turned round.
      */
+    @Synchronized
     fun lines(texts: List<String>): List<String> {
         if (!usable || texts.isEmpty()) return emptyList()
         val said = runCatching { Lex.translateSay(texts.toTypedArray()) }
@@ -106,6 +144,7 @@ object Translator {
      * Empty for anything the engine could not answer, which the caller leaves as the dictionary
      * left it rather than filling with a guess about a guess.
      */
+    @Synchronized
     fun meanings(words: List<String>): Map<String, String> {
         if (!usable || words.isEmpty()) return emptyMap()
         val asked = words.distinct()

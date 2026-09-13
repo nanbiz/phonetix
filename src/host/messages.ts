@@ -70,8 +70,13 @@ export interface HostProtocol {
   /** Several words a reader selected, which only an engine can answer. */
   phrase: { data: { text: string; source: string; target: string }; reply: Answer };
   /** The other direction: something the reader wants to say, in the language they are
-   *  learning, with that word's own entry so the machine's answer can be judged. */
-  say: { data: { text: string; source: string; target: string }; reply: Answer | null };
+   *  learning, with that word's own entry so the machine's answer can be judged. Nothing
+   *  comes back with a reason for it, because "no word for that" and "no model for that
+   *  direction" are different things to be told. */
+  say: {
+    data: { text: string; source: string; target: string };
+    reply: { answer: Answer | null; missing: boolean };
+  };
 }
 
 type Named = keyof HostProtocol;

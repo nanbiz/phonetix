@@ -80,6 +80,7 @@ object Wording {
         "open-accessibility" to "Open accessibility",
         "remove" to "Remove",
         "say-no-language" to "Choose a language to read into first.",
+        "say-no-model" to "No translation model for that direction at your dictionary host.",
         "say-nothing" to "no word for that",
         "say-placeholder" to "what you want to say",
         "touch-name-off" to "Words are not touchable",
