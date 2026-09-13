@@ -135,7 +135,7 @@ def ask(cdp, session, message, tries=1, gap=5):
             "expression": expression, "awaitPromise": True, "returnByValue": True,
         }, session=session, timeout=300)
         last = got.get("result", {}).get("value")
-        if last and '"failed"' not in last and '"ok":null' not in last:
+        if last and '"failed"' not in last:
             return json.loads(last)
         time.sleep(gap)
     return json.loads(last) if last else {"failed": "no answer"}
@@ -247,7 +247,7 @@ def main():
             "phonetix": "say",
             "data": {"text": WANTED, "source": "es", "target": "en"},
         }, tries=4, gap=15)
-        answer = said.get("ok")
+        answer = (said.get("ok") or {}).get("answer")
         print(f"  {WANTED!r} in Spanish: {json.dumps(answer)[:240] if answer else 'nothing'}")
 
         if not answer:
@@ -269,8 +269,17 @@ def main():
         nothing = ask(cdp, session, {
             "phonetix": "say", "data": {"text": "", "source": "es", "target": "en"},
         })
-        if nothing.get("ok") is not None:
+        if (nothing.get("ok") or {}).get("answer") is not None:
             failures.append(f"an empty question was answered: {nothing}")
+
+        # And a direction the reader's host publishes no model for says so, rather than
+        # telling them their word does not exist.
+        none = ask(cdp, session, {
+            "phonetix": "say", "data": {"text": "bench", "source": "fr", "target": "en"},
+        })
+        print(f"  a direction with no model: {none.get('ok')}")
+        if not (none.get("ok") or {}).get("missing"):
+            failures.append(f"a direction with no model was not reported as one: {none}")
 
         # And the surface a reader actually has: the row in the settings view, the field
         # behind it, and the card it answers with. A handler nobody can reach answers nobody.

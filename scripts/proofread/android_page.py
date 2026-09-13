@@ -154,15 +154,21 @@ def main():
     dev.set_enabled(True)
     dev.clear_log()
     # The page, with the mark on it and the engine pointed at English.
+    # A page long enough to scroll: what is being checked below is that the replacement
+    # follows the words it replaced, and five lines on one screen cannot move.
     dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
-                enable=1, density=1, touchWords=0, lens=0)
+                enable=1, density=1, touchWords=0, lens=0, repeat=6)
     time.sleep(5)
     # Asked for again so the mark says where it parked in a log this run can see, and so the
     # read happens with the engine already open: it loads seventeen megabytes the first time a
     # word needs it, and the first pass is a screen still getting ready.
-    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1)
+    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1,
+                repeat=6)
     time.sleep(8)
 
+    if not dev.annotated():
+        print("FAIL - nothing was annotated, so there is no page to replace")
+        sys.exit(1)
     where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.log())
     if not where:
         print("FAIL - the mark is not on screen, so there is nothing to press")
@@ -200,6 +206,27 @@ def main():
     if any(n > 0 for n in painted):
         failures.append(
             f"transcriptions were painted over the replaced page: {painted}")
+
+    # And it follows the page. A translation pinned where a line used to be is a translation
+    # over the wrong words, so what is checked is that the lines move with what they replaced.
+    was = drew(log)
+    where_was = re.findall(r"PAGEDREW \d+ (\d+),(\d+)", log)
+    dev.clear_log()
+    shell("input", "swipe", str(dev.width // 2), str(int(dev.height * 0.7)),
+          str(dev.width // 2), str(int(dev.height * 0.35)), "400")
+    time.sleep(6)
+    scrolled = dev.log()
+    where_now = re.findall(r"PAGEDREW \d+ (\d+),(\d+)", scrolled)
+    moved = bool(where_was and where_now and where_was[-1] != where_now[-1])
+    print(f"  the lines were at {where_was[-1:]} and are at {where_now[-1:]}")
+    if not where_now:
+        failures.append("the replaced page stopped drawing when the page was scrolled")
+    elif not moved:
+        failures.append(
+            f"the replaced page did not follow the scroll: still at {where_now[-1]}")
+    still = drew(scrolled)
+    if still and was and set(still) & set(was) == set() and not moved:
+        failures.append("the replaced page lost its translations on a scroll")
 
     # The second press, which gives the page back.
     dev.clear_log()

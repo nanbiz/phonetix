@@ -875,7 +875,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         } else if (mode == "spanish") {
             // A page in a language the reader is reading out of, for the thing the whole
             // merge was for: what its words mean, in the language they are reading into.
-            for (text in listOf(
+            // Repeated where a check needs a page that scrolls: five lines fit on any screen,
+            // and a page that cannot move is no test of anything that has to follow it.
+            val times = intent.getIntExtra("repeat", 1).coerceIn(1, 40)
+            for (round in 0 until times) for (text in listOf(
                 "El perro corre por el camino",
                 "El banco del parque esta libre",
                 "El perro descansa en el camino",

@@ -142,11 +142,59 @@ class Device:
         m = re.search(r"topResumedActivity=ActivityRecord\{\S+ \S+ (\S+)", out)
         return m.group(1) if m else ""
 
+    def annotated(self, seconds=60):
+        """Wait until the overlay has actually drawn something, and say what.
+
+        A service that has just been bound has neither unpacked the synthesiser nor opened its
+        dictionaries, and both take seconds: the first passes over a screen answer nothing and
+        draw nothing. A check that measures then measures a screen that is still getting ready
+        and reports the app as doing nothing at all.
+        """
+        until = time.time() + seconds
+        nudged = False
+        while time.time() < until:
+            # A device under load puts up "System UI isn't responding" over whatever is being
+            # measured, and everything under it is then a screen nothing can annotate. Waited
+            # for once rather than dismissed at once: the dialog usually goes by itself, and a
+            # check that taps blindly at a screen it has not looked at taps at the app.
+            if not nudged and time.time() > until - seconds / 2:
+                nudged = True
+                self.dismiss_anr()
+            # The tail of the log rather than all of it: every pass writes a line naming every
+            # box on screen, so a buffer read in full takes longer each time it is asked for,
+            # and a loop that asks every two seconds ends up timing out on its own logging.
+            boxes = self.boxes(adb("logcat", "-d", "-t", "600", timeout=120))
+            if boxes:
+                return boxes
+            time.sleep(2)
+        return {}
+
+    def dismiss_anr(self):
+        """Send away a system "isn't responding" dialog, if one is in the way."""
+        adb("shell", "uiautomator", "dump", "/sdcard/anr.xml", timeout=120)
+        dump = adb("shell", "cat", "/sdcard/anr.xml", timeout=120)
+        if "responding" not in dump:
+            return False
+        for node in re.finditer(r'<node[^>]*text="(Wait|Close app)"[^>]*'
+                                r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', dump):
+            if node.group(1) != "Wait":
+                continue
+            left, top, right, bottom = (int(v) for v in node.groups()[1:])
+            shell("input", "tap", str((left + right) // 2), str((top + bottom) // 2))
+            time.sleep(2)
+            return True
+        return False
+
     def clear_log(self):
         adb("logcat", "-c")
 
-    def log(self):
-        return adb("logcat", "-d")
+    def log(self, lines=6000):
+        # Bounded: this project's debug build writes a line naming every box on screen on
+        # every pass, and those lines are long. A buffer left to grow makes each read slower
+        # than the last until the read itself times out - which it did, at three minutes, on a
+        # device sharing a machine with two other emulators. Six thousand lines covers what
+        # any check reads back over, since each clears the log before the part it measures.
+        return adb("logcat", "-d", "-t", str(lines), timeout=180)
 
     # ---- what the overlay says ----------------------------------------------
 

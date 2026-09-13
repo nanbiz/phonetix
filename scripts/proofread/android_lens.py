@@ -37,7 +37,7 @@ def main():
     # Asked for again, so it says where it parked in a log this run can see.
     dev.surface(mode="spanish", enable=1, lens=1)
     time.sleep(3)
-    boxes = dev.boxes()
+    boxes = dev.annotated()
     if not boxes:
         print("FAIL - nothing was annotated, so there is nothing to look at")
         sys.exit(1)

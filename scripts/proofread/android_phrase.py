@@ -144,7 +144,7 @@ def main():
     dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1)
     time.sleep(8)
 
-    boxes = dev.boxes()
+    boxes = dev.annotated()
     where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.log())
     if not boxes or not where:
         print("FAIL - nothing to sweep, or no mark to sweep with")
