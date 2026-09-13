@@ -31,8 +31,15 @@ data class Settings(
      * answer should come back in.
      */
     val target: String = "",
-    /** What is drawn over a word: "ipa", "gloss", "gloss+ipa" or "replace". */
-    val layer: String = "gloss+ipa",
+    /**
+     * What is drawn over a word: "gloss", "ipa", or "off".
+     *
+     * The browser's two other answers - both at once, and the word swapped in place - are not
+     * things an overlay can do: it paints a chip the width of the word it covers, so there is
+     * no room for a second line and the chip is itself the replacement. A setting that arrives
+     * carrying one of them is read as the meaning.
+     */
+    val layer: String = "gloss",
     /**
      * Which accent to read each language in, as language tag to accent tag: en → en-us.
      *
@@ -104,7 +111,7 @@ object SettingsStore {
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, false),
             target = p.getString(K_TARGET, "") ?: "",
-            layer = p.getString(K_LAYER, "gloss+ipa") ?: "gloss+ipa",
+            layer = p.getString(K_LAYER, "gloss") ?: "gloss",
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             // Stored as one entry per language, because a set of strings is what preferences

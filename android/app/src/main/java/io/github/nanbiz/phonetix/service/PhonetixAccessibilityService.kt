@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
-    private lateinit var lens: LensController
+    private lateinit var hover: HoverController
 
     /** What the screen last turned out to be in, which is one half of the translation
      *  direction. Held because the engine is opened for a direction, not per screen. */
@@ -145,14 +145,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         speaker = Speaker(this)
         tooltip = TooltipController(this, speaker) { r -> net.post(r) }
         overlay = OverlayController(this) { box -> main.post { tooltip.show(box) } }
-        // The lens: a way to read a word that does not take the screen's touches. A
+        // The circle: a way to read a word that does not take the screen's touches. A
         // transcription that can be tapped swallows the swipe that began on it, and on a page
-        // of text that is most of the page, so the alternative is one small window the reader
-        // drags over what they want to know about.
-        lens = LensController(
+        // of text that is most of the page, so the alternative is one mark the reader drags,
+        // with the circle that does the looking riding clear above the hand.
+        hover = HoverController(
             this,
             wordAt = { x, y -> overlay.wordAt(x, y) },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
+            onHand = { y -> tooltip.clearOf(y) },
         )
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
@@ -207,10 +208,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (BuildConfig.DEBUG) {
                         android.util.Log.d(
                             "Phonetix",
-                            "LENS enabled=${s.enabled} wanted=${s.lens} up=${lens.showing}",
+                            "LENS enabled=${s.enabled} wanted=${s.lens} up=${hover.showing}",
                         )
                     }
-                    if (s.enabled && s.lens) lens.show() else lens.hide()
+                    if (s.enabled && s.lens) hover.show() else hover.hide()
                     overlay.applyTouchability()
                     scrollOnly = false
                     schedule(0L)
@@ -2086,11 +2087,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
         for ((at, token) in told.withIndex()) {
-            // What is drawn is what the reader asked for: the meaning where there is one, the
-            // transcription otherwise, and nothing at all where the core found neither.
+            // What is drawn is what the reader asked for, of the two things this surface can
+            // draw. A chip is painted over the word and has the width of the word it covers,
+            // so there is no second line to put anything on: the browser's "both" and its
+            // "in place" are not choices here, and a setting carried over from one - or from
+            // an older build of this one - is read as the meaning, which is what the chip
+            // would have shown anyway.
             if (!token.inline) continue
             val shown = when (settings.layer) {
-                "gloss", "replace" -> token.gloss
                 "ipa" -> token.ipa
                 else -> token.gloss.ifEmpty { token.ipa }
             }

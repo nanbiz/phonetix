@@ -145,6 +145,20 @@ class TooltipController(
         ) {}
     }
 
+    /**
+     * Where the hand is, so the answer opens clear of it.
+     *
+     * While the circle is being dragged the word is under the circle and the hand is below
+     * that, so everything from the word downwards is either what is being asked about or the
+     * hand asking: the card goes above. Zero while nothing is being dragged, and then the
+     * card sits below the word as it always has.
+     */
+    fun clearOf(handY: Int) {
+        hand = handY
+    }
+
+    private var hand = 0
+
     fun show(box: WordBox) {
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
@@ -256,8 +270,11 @@ class TooltipController(
         val height = card.height
         val below = (box.rect.bottom + dp(10)).roundToInt()
         val above = (box.rect.top - dp(10)).roundToInt() - height
+        // A hand on the screen is a hand over everything under the word it is pointing at.
+        val handInTheWay = hand > 0 && below + height > hand - dp(24)
         val y = when {
-            below + height + margin <= metrics.heightPixels -> below
+            !handInTheWay && below + height + margin <= metrics.heightPixels -> below
+            handInTheWay && above >= margin -> above
             above >= margin -> above
             else -> (metrics.heightPixels - height - margin).coerceAtLeast(margin)
         }

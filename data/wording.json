@@ -7,29 +7,61 @@
         {
           "value": "off",
           "label": "Nothing",
-          "about": "the page as it is; a card when you stop on a word"
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "the page as it is; a card when you stop on a word",
+            "phone": "the screen as it is; the circle when you want a word"
+          }
         },
         {
           "value": "gloss",
           "label": "What it means",
-          "about": "the meaning, above the word"
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "the meaning, above the word",
+            "phone": "the meaning, over the word"
+          }
         },
         {
           "value": "ipa",
           "label": "How it is said",
-          "about": "the pronunciation, above the word"
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "the pronunciation, above the word",
+            "phone": "the pronunciation, over the word"
+          }
         },
         {
           "value": "gloss+ipa",
           "label": "Both",
-          "about": "the meaning and the pronunciation, above the word"
+          "on": [
+            "browser"
+          ],
+          "about": {
+            "browser": "the meaning and the pronunciation, above the word"
+          }
         },
         {
           "value": "replace",
           "label": "In place of the word",
-          "about": "the word itself swapped for what it means; rest on it to see the word"
+          "on": [
+            "browser"
+          ],
+          "about": {
+            "browser": "the word itself swapped for what it means; rest on it to see the word"
+          }
         }
-      ]
+      ],
+      "note": "A browser owns the page and can make room above a line; an overlay on a phone can only paint over what an app has already drawn. So a choice carries where it is offered and, where the two differ, what it does there."
     },
     "detail": {
       "name": "Transcriptions",
@@ -37,12 +69,26 @@
         {
           "value": "broad",
           "label": "Broad",
-          "about": "the sounds that tell words apart"
+          "about": {
+            "browser": "the sounds that tell words apart",
+            "phone": "the sounds that tell words apart"
+          },
+          "on": [
+            "browser",
+            "phone"
+          ]
         },
         {
           "value": "narrow",
           "label": "Narrow",
-          "about": "every detail of how it is said, like aspiration and devoicing"
+          "about": {
+            "browser": "every detail of how it is said, like aspiration and devoicing",
+            "phone": "every detail of how it is said, like aspiration and devoicing"
+          },
+          "on": [
+            "browser",
+            "phone"
+          ]
         }
       ]
     }
