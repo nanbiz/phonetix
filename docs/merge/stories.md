@@ -35,6 +35,10 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 | A3 | Ask by pressing the word itself | A click | A press, where the reader has switched the transcriptions on to touches |
 | A4 | Have the answer clear of the hand | Nothing covers a pointer | The card opens above the word while a hand is on the screen |
 
+The phone's three ways of asking all go through the one mark, and the app's own screen names
+them where the mark is switched on: drag it for a word, hold it and sweep for a run, press it
+for the whole screen. A gesture nothing describes is a gesture nobody finds.
+
 ## Asking about more than one word
 
 | # | What the reader wants | Browser | Phone |
