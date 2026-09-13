@@ -73,7 +73,24 @@ export async function get(lang: string): Promise<string | null> {
   const bytes = new Uint8Array(await res.arrayBuffer());
   const opened = await openPack(bytes);
   await keep(opened, bytes.slice().buffer, store);
+  await told();
   return opened;
+}
+
+/**
+ * Say which dictionaries this machine holds, where a page can hear it.
+ *
+ * A page reading itself has no way of knowing a dictionary has arrived: it redraws when a
+ * setting changes, and which packs are held is not a setting. Without this, a reader who
+ * fetched the dictionary for the page in front of them sat looking at the same bare page until
+ * they touched something else or loaded it again.
+ */
+async function told(): Promise<void> {
+  try {
+    await browser.storage.local.set({ heldPacks: await held() });
+  } catch {
+    // A page that cannot be told redraws on the next setting it is given, as it did before.
+  }
 }
 
 /** One pack as the host that serves them describes it, which is what packbuild writes. */
@@ -112,4 +129,5 @@ export async function held(): Promise<string[]> {
 export async function forget(lang: string): Promise<void> {
   await del(lang, store);
   await closePack(lang);
+  await told();
 }

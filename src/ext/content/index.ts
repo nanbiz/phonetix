@@ -526,5 +526,12 @@ export async function session(): Promise<void> {
       else await draw();
     }
   });
+  // And when a dictionary arrives or is given up, which is not a setting and used to leave
+  // the page exactly as it was: a reader fetched the dictionary for the page they were
+  // looking at and nothing on it changed.
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !('heldPacks' in changes)) return;
+    void draw();
+  });
   await draw();
 }

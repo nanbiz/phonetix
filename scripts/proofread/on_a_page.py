@@ -544,6 +544,29 @@ def main():
             failures.append("both lines came back with the same sounds")
         cdp.send("Target.closeTarget", {"targetId": mixed["targetId"]})
 
+        # A dictionary that arrives while the page is open is answered on the page, without
+        # the reader loading it again. Which dictionaries are held is not a setting, so the
+        # page had no way of hearing about one and sat exactly as it was - a reader who
+        # fetched the dictionary for the page in front of them saw no change at all.
+        evaluate(cdp, settings, "chrome.storage.local.set({layer:'gloss',targetLanguage:'en'})")
+        time.sleep(2)
+        evaluate(cdp, settings, (
+            "chrome.runtime.sendMessage({phonetix:'forgetPack',data:{lang:'es'}})"
+            ".then(r => JSON.stringify(r))"
+        ))
+        bare = wait_for(cdp, page, "document.querySelectorAll('.px-gl').length",
+                        lambda v: v == 0)
+        evaluate(cdp, settings, (
+            "chrome.runtime.sendMessage({phonetix:'getPack',data:{lang:'es'}})"
+            ".then(r => JSON.stringify(r))"
+        ))
+        meant = wait_for(cdp, page, "document.querySelectorAll('.px-gl').length",
+                         lambda v: v and v > 0, tries=10)
+        print(f"  a dictionary fetched with the page open: {bare} meanings -> {meant}")
+        if not meant:
+            failures.append(
+                "a dictionary fetched while the page was open changed nothing on it")
+
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")
         after = wait_for(cdp, page, "document.querySelectorAll('.px-w').length",

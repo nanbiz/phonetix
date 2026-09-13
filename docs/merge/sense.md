@@ -76,10 +76,7 @@ Not more features:
 - **A complaint about a host clears when the host changes.** What failed against the old
   address was about the old address.
 
-## Still open
-
-- **A dictionary given up and taken back leaves the page half answered.** After a pack is
-  removed and fetched again with a page open, the words that pack holds are answered and the
-  words the synthesiser would answer stay bare until the page is loaded again. Found while
-  driving the settings view; the host answers those words correctly when asked directly, so it
-  is the page's own reuse of what it already had.
+- **A dictionary that arrives is answered on the page that is open.** A page redraws when a
+  setting changes, and which dictionaries are held is not a setting: a reader who fetched the
+  dictionary for the page in front of them saw nothing change until they touched something
+  else or loaded it again. The host says which packs it holds, and the page listens.
