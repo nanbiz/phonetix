@@ -169,6 +169,23 @@ class Device:
             time.sleep(2)
         return {}
 
+    def give(self, local, name, into):
+        """Put a file in the app's own storage, unless the same bytes are already there.
+
+        Pushing twenty megabytes of translation model into a running emulator is the heaviest
+        thing these checks do to it, and they do it on every run for files that have not
+        changed. Comparing sizes first takes a moment and skips it.
+        """
+        want = os.path.getsize(local)
+        listed = adb("shell", f"run-as {PKG} ls -l {into}/{name}", timeout=120)
+        found = re.search(r"\s(\d{3,})\s", listed)
+        if found and int(found.group(1)) == want:
+            return False
+        adb("push", local, f"/data/local/tmp/{name}", timeout=900)
+        adb("shell", f"run-as {PKG} sh -c "
+                     f"'cat \"/data/local/tmp/{name}\" > \"{into}/{name}\"'", timeout=900)
+        return True
+
     def dismiss_anr(self):
         """Send away a system "isn't responding" dialog, if one is in the way."""
         adb("shell", "uiautomator", "dump", "/sdcard/anr.xml", timeout=120)
@@ -188,12 +205,12 @@ class Device:
     def clear_log(self):
         adb("logcat", "-c")
 
-    def log(self, lines=6000):
-        # Bounded: this project's debug build writes a line naming every box on screen on
-        # every pass, and those lines are long. A buffer left to grow makes each read slower
-        # than the last until the read itself times out - which it did, at three minutes, on a
-        # device sharing a machine with two other emulators. Six thousand lines covers what
-        # any check reads back over, since each clears the log before the part it measures.
+    def log(self, lines=1500):
+        # Bounded, and tightly: this project's debug build writes a line naming every box on
+        # screen on every pass, and those lines are long. Reading six thousand of them took
+        # over three minutes on a busy emulator - longer than the read's own patience - while
+        # fifteen hundred comes back in a moment. Every check clears the log immediately before
+        # the thing it measures, so that is all any of them needs.
         return adb("logcat", "-d", "-t", str(lines), timeout=180)
 
     # ---- what the overlay says ----------------------------------------------

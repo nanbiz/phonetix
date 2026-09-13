@@ -228,15 +228,20 @@ def main():
     if still and was and set(still) & set(was) == set() and not moved:
         failures.append("the replaced page lost its translations on a scroll")
 
-    # The second press, which gives the page back.
+    # The second press, which gives the page back. Read at once and again after: the service
+    # writes a line naming every line it has replaced on every pass, so the press itself is out
+    # of the tail of the log within seconds, and what comes later is the transcriptions
+    # returning.
     dev.clear_log()
     shell("input", "tap", str(mark[0]), str(mark[1]))
+    time.sleep(1)
+    pressed = dev.log()
     time.sleep(8)
-    log = dev.log()
+    log = pressed + dev.log()
     print(f"  the page came down: {'yes' if 'PAGE down' in log else 'no'}")
     if "PAGE down" not in log:
         failures.append("a second press did not give the page back")
-    chips_after = len(dev.boxes(log))
+    chips_after = len(dev.boxes(dev.log()))
     print(f"  transcriptions before the press: {chips_before}, after it came down: {chips_after}")
     if chips_before and not chips_after:
         failures.append("the transcriptions never came back after the page came down")

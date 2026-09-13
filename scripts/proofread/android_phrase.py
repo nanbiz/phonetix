@@ -124,15 +124,10 @@ def main():
     failures = []
 
     shell("am", "force-stop", "io.github.nanbiz.phonetix")
-    adb("push", os.path.join(WORK, "es.pack"), "/data/local/tmp/lex-es.pack", timeout=180)
-    adb("shell", "run-as io.github.nanbiz.phonetix sh -c "
-                 "'cat /data/local/tmp/lex-es.pack > files/lex-es.pack'", timeout=180)
+    dev.give(os.path.join(WORK, "es.pack"), "lex-es.pack", "files")
     adb("shell", "run-as io.github.nanbiz.phonetix mkdir -p files/models/es-en", timeout=120)
     for name in FILES.values():
-        adb("push", os.path.join(MODELS, name), f"/data/local/tmp/{name}", timeout=900)
-        adb("shell", f"run-as io.github.nanbiz.phonetix sh -c "
-                     f"'cat \"/data/local/tmp/{name}\" > \"files/models/es-en/{name}\"'",
-            timeout=900)
+        dev.give(os.path.join(MODELS, name), name, "files/models/es-en")
 
     if not dev.enable_service():
         raise SystemExit("the service would not start")
@@ -141,13 +136,20 @@ def main():
     dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
                 enable=1, density=1, touchWords=0, lens=0)
     time.sleep(5)
+    # Cleared again here, so everything read below is small: pushing twenty megabytes of model
+    # to the device fills the log, and a read that has to wade through all of it takes minutes
+    # on this emulator - longer than the read's own patience.
+    dev.clear_log()
     dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1)
     time.sleep(8)
 
     boxes = dev.annotated()
+    if not boxes:
+        print("FAIL - nothing was annotated, so there is nothing to sweep over")
+        sys.exit(1)
     where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.log())
-    if not boxes or not where:
-        print("FAIL - nothing to sweep, or no mark to sweep with")
+    if not where:
+        print("FAIL - the mark never said where it is, so there is nothing to sweep with")
         sys.exit(1)
     x, y, w, h = (int(v) for v in where[-1])
     mark = (x + w // 2, y + h // 2)
@@ -186,8 +188,14 @@ def main():
             time.sleep(0.12)
         time.sleep(0.3)
     shell("input", "motionevent", "UP", str(over[-1][0]), str(int(over[-1][1] + up)))
+    # Read at once, while the sweep is still the newest thing in the log: the service keeps
+    # writing a line per box per pass, so the sweep's own lines are gone from the tail within
+    # seconds. Then wait for the card, which is a pass through the translation model, and read
+    # again; both halves together are what the run did.
+    time.sleep(1)
+    swept_log = dev.log()
     time.sleep(8)
-    log = dev.log()
+    log = swept_log + dev.log()
 
     shot = dev.screenshot(os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-phrase-shots"))
     print(f"  screenshot: {shot}")
@@ -196,6 +204,7 @@ def main():
     asked = re.findall(r"TOOLTIP phrase=(.*?) says=(.*)", log)
     unanswered = re.findall(r"PHRASE unanswered: (.*)", log)
     print(f"  the sweep was armed: {'yes' if 'LENSSWEEP on' in log else 'no'}")
+
     print(f"  it passed over: {[w for w in swept if w != 'nothing'][:6]}")
     print(f"  the card asked about: {asked[-1] if asked else (unanswered[-1] if unanswered else 'nothing')}")
 
@@ -217,7 +226,7 @@ def main():
         if not says.strip("[] "):
             failures.append(f"the card carries no translation for {text!r}")
     # And a card about one word never opened during the sweep: a run is one question.
-    during = log.split("LENSSWEEP on", 1)[1].split("TOOLTIP phrase", 1)[0] if asked else ""
+    during = swept_log.split("LENSSWEEP on", 1)[1].split("TOOLTIP phrase", 1)[0] if asked else ""
     if "TOOLTIP open word=" in during:
         failures.append("a card opened for a single word in the middle of a sweep")
 
