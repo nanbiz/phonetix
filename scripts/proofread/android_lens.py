@@ -54,6 +54,13 @@ def main():
     left, top, right, bottom = word["rect"]
     onto = ((left + right) // 2, (top + bottom) // 2)
 
+    # What the page was told to do, read before the log is cleared: the surface says it once,
+    # when it is launched.
+    told = dev.log()
+    # Cleared first, so what is read back is this drag and nothing else. The service writes a
+    # line naming every box on screen several times a second, and reading only the tail of the
+    # log meant the drag had already been pushed out of it by the time it was read.
+    dev.clear_log()
     shell("input", "swipe", str(parked[0]), str(parked[1]), str(onto[0]), str(onto[1]), "900")
     time.sleep(3)
     log = dev.log()
@@ -82,7 +89,7 @@ def main():
 
     # And the page it is dragged over is untouched: the transcriptions took nothing, which is
     # the whole reason the lens exists.
-    if "touchWords=true" in log:
+    if "touchWords=true" in told:
         failures.append("the words were made touchable, which is not what the lens is for")
 
     if failures:
