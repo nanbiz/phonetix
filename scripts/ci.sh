@@ -66,6 +66,7 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "every setting changes what is seen" uv run python scripts/proofread/settings_view.py
   step "the settings view looks like one surface" uv run scripts/proofread/popup_view.py
   step "a word no dictionary holds is translated" uv run scripts/proofread/translates.py
+  step "the word for something a reader wants to say" uv run scripts/proofread/says.py
   # The other engine, which differs in the one place that decides whether anything works:
   # awaiting the chrome namespace on Gecko returns nothing at all.
   step "the extension builds for the other engine" pnpm zip:firefox
