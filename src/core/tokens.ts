@@ -37,10 +37,16 @@ export interface Token {
   provenance: Provenance | null;
 }
 
-/** What a word the core could not answer needs from the host's engines. */
+/**
+ * What a word the core could not answer needs from the host's engines.
+ *
+ * "Sentence" is not about the word itself - the packs answered it - but about which of the
+ * words it could be: a spelling that is several words, with nothing yet deciding which. The
+ * engine reads the whole sentence to translate it, and that is context no table has.
+ */
 export interface Miss {
   token: number;
-  need: 'Gloss' | 'Ipa' | 'Both';
+  need: 'Gloss' | 'Ipa' | 'Both' | 'Sentence';
 }
 
 /** One pass over a batch of runs. */

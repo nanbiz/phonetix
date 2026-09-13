@@ -7,7 +7,7 @@ import {
   annotate, complete, curve, detect, lookUp, openHomographs, openLanguages, phrase, readRuns,
   readScreen, readWiktionary, symbolsOf, type Said,
 } from '@/core';
-import type { Batch } from '@/core/tokens';
+import type { Batch, TextRun } from '@/core/tokens';
 import { answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
@@ -42,10 +42,17 @@ export function host(): void {
       openHomographs(data.source).catch(() => 0),
     ]);
     const batch = await annotate(data.runs, data.source, data.target, data.options);
-    // Two engines, in the order the reader is owed them: how a word is said, then what it
-    // means. Each stamps its own name on what it filled, so a card can say which of them
-    // answered and neither is mistaken for the dictionary.
-    return meant(await said(batch, data.source), data.source, data.target);
+    const languages = {
+      source: data.source,
+      target: data.target,
+      accent: data.options.accent ?? '',
+    };
+    // Three passes, in the order the reader is owed them: which word a spelling is, how it is
+    // said, then what it means. Each stamps its own name on what it filled, so a card can say
+    // which of them answered and neither is mistaken for the dictionary.
+    const decided = await settled(batch, data.runs, languages);
+    const spoken = await said(decided, data.source, languages);
+    return meant(spoken, data.source, data.target, languages);
   });
 
   onMessage('curve', async () => curve());
@@ -159,6 +166,79 @@ export function host(): void {
   });
 }
 
+
+/** Which languages a batch is being read between, and in which accent. */
+interface Languages {
+  source: string;
+  target: string;
+  accent: string;
+}
+
+/**
+ * The batch a pass produced, still carrying what the core said was missing.
+ *
+ * A pass answers one part of a miss - the transcription, or the meaning - and the core's reply
+ * to it says nothing about what the next pass still has to answer. Without this a word that
+ * needed both came back spoken and never translated, because the second pass looked at a batch
+ * whose misses the first had already dropped.
+ */
+function carrying(asked: Batch, answered: Batch): Batch {
+  return { ...answered, misses: asked.misses };
+}
+
+/**
+ * Which word a spelling is, where the sentence it sits in can say.
+ *
+ * A spelling that is several words with nothing deciding which is a card asking the reader a
+ * question. Where the reader is being given a translation anyway, the engine has already read
+ * the whole sentence, and what it made of it decides: the core compares each reading's own
+ * answer against the translated line. One translation per line rather than per word, because
+ * a line is what the engine reads and what the core is asking about.
+ */
+async function settled(batch: Batch, runs: TextRun[], languages: Languages): Promise<Batch> {
+  const { source, target } = languages;
+  if (!target || target === source) return batch;
+  const wanted = batch.misses.filter((miss) => miss.need === 'Sentence');
+  if (wanted.length === 0) return batch;
+  const text = new Map<number, string>(runs.map((run) => [run.id, run.text]));
+  // One request per line, by the language that line is in: a line the engine cannot translate
+  // out of is a line it says nothing about.
+  const lines = new Map<string, Set<number>>();
+  for (const miss of wanted) {
+    const token = batch.tokens[miss.token];
+    if (!token) continue;
+    const from = token.lang || source;
+    if (from === target || !text.get(token.run)) continue;
+    const held = lines.get(from) ?? new Set<number>();
+    held.add(token.run);
+    lines.set(from, held);
+  }
+  const translated = new Map<number, string>();
+  for (const [from, ids] of lines) {
+    const wantedRuns = [...ids];
+    try {
+      const answers = await guessed(from, target, wantedRuns.map((id) => text.get(id) ?? ''));
+      answered('the translator');
+      wantedRuns.forEach((id, at) => {
+        const line = answers[at];
+        if (line) translated.set(id, line);
+      });
+    } catch (e) {
+      console.warn(`[Phonetix] Nothing translated the line out of ${from}:`, e);
+      noted('the translator', 'is not answering');
+    }
+  }
+  const results = wanted
+    .map((miss) => {
+      const token = batch.tokens[miss.token];
+      const sentence = token ? translated.get(token.run) : undefined;
+      return { token: miss.token, sentence };
+    })
+    .filter((result): result is { token: number; sentence: string } => Boolean(result.sentence));
+  if (results.length === 0) return batch;
+  return carrying(batch, await complete(batch.batch, results, 'bergamot', languages));
+}
+
 /**
  * Fill in how the words no pack could say are said.
  *
@@ -167,7 +247,7 @@ export function host(): void {
  * engine. What comes back goes through the core, so that it is marked as synthesised in the
  * one place that decides what a reader is told.
  */
-async function said(batch: Batch, lang: string): Promise<Batch> {
+async function said(batch: Batch, lang: string, languages: Languages): Promise<Batch> {
   const wanted = batch.misses.filter((miss) => miss.need !== 'Gloss');
   // The voice fills a transcription; what a word means is the other engine's, below.
   if (wanted.length === 0) return batch;
@@ -201,7 +281,7 @@ async function said(batch: Batch, lang: string): Promise<Batch> {
     })
     .filter((result): result is { token: number; ipa: string } => Boolean(result.ipa));
   if (results.length === 0) return batch;
-  return complete(batch.batch, results, 'espeak');
+  return carrying(batch, await complete(batch.batch, results, 'espeak', languages));
 }
 
 /**
@@ -216,7 +296,12 @@ async function said(batch: Batch, lang: string): Promise<Batch> {
  * answered by a pack never reaches this: the core says what it is missing and only that is
  * asked for.
  */
-async function meant(batch: Batch, source: string, target: string): Promise<Batch> {
+async function meant(
+  batch: Batch,
+  source: string,
+  target: string,
+  languages: Languages
+): Promise<Batch> {
   if (!target || target === source) return batch;
   const wanted = batch.misses.filter((miss) => miss.need !== 'Ipa');
   if (wanted.length === 0) return batch;
@@ -252,7 +337,7 @@ async function meant(batch: Batch, source: string, target: string): Promise<Batc
     .filter((result): result is { token: number; gloss: string } =>
       Boolean(result.gloss) && result.gloss !== '');
   if (results.length === 0) return batch;
-  return complete(batch.batch, results, 'bergamot');
+  return carrying(batch, await complete(batch.batch, results, 'bergamot', languages));
 }
 
 /**

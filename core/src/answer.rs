@@ -119,6 +119,10 @@ pub enum Need {
     Gloss,
     Ipa,
     Both,
+    /// The sentence this word is in, translated. Not for the word itself - the packs answered
+    /// it - but for which of the words it could be: the engine reads the whole sentence, and
+    /// that is the one thing no table here has.
+    Sentence,
 }
 
 /// A word the core could not answer, and what would answer it.
@@ -135,5 +139,7 @@ pub struct EngineResult {
     pub token_index: u32,
     pub gloss: Option<String>,
     pub ipa: Option<String>,
+    /// The token's whole sentence as the engine translated it, where that was asked for.
+    pub sentence: Option<String>,
     pub engine: String,
 }

@@ -197,6 +197,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         ipa_only: false,
         accent: &accent,
         accent_pack: core.packs.get(&accent),
+        said: None,
         classifier: None,
     };
     let answer = lexcore::resolve::read_in_context(
@@ -354,6 +355,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         ipa_only: false,
         accent: &accent_name,
         accent_pack: accent_pack.as_ref().and_then(|it| held.packs.get(it)),
+        said: None,
         classifier: held.classifiers.get(&source),
     };
     let options = lexcore::answer::AnnotateOptions {
@@ -407,6 +409,10 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
     tokens: jni::sys::jintArray,
     glosses: JObjectArray<'a>,
     ipas: JObjectArray<'a>,
+    sentences: JObjectArray<'a>,
+    source: JString<'a>,
+    target: JString<'a>,
+    accent: JString<'a>,
     engine: JString<'a>,
 ) -> jni::objects::JString<'a> {
     let empty = env
@@ -419,6 +425,12 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
         .get_string(&engine)
         .map(|it| it.into())
         .unwrap_or_default();
+    let text = |it: &JString<'a>, env: &mut JNIEnv<'a>| -> String {
+        env.get_string(it).map(|got| got.into()).unwrap_or_default()
+    };
+    let source = text(&source, &mut env);
+    let target = text(&target, &mut env);
+    let accent = text(&accent, &mut env);
     // Safety: the array comes from the vm, which owns it for the length of this call. It is
     // borrowed rather than taken, so nothing here frees what the vm will free itself.
     let array = unsafe { jni::objects::JIntArray::from_raw(tokens) };
@@ -450,6 +462,7 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
     };
     let said = strings(&glosses, &mut env);
     let sounds = strings(&ipas, &mut env);
+    let lines = strings(&sentences, &mut env);
     // Safety: as above.
     let held = unsafe { &mut *(core as *mut Core) };
     let Some((drawn, options)) = held.batches.get_mut(&(batch as u64)) else {
@@ -462,10 +475,28 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
             token_index: (*token).max(0) as u32,
             gloss: said.get(at).filter(|it| !it.is_empty()).cloned(),
             ipa: sounds.get(at).filter(|it| !it.is_empty()).cloned(),
+            sentence: lines.get(at).filter(|it| !it.is_empty()).cloned(),
             engine: engine.clone(),
         })
         .collect();
-    lexcore::annotate::complete(drawn, &results, options);
+    // The same packs the batch was drawn with, so a word read again because its sentence has
+    // been translated is read by the cascade rather than patched here.
+    let open = lexcore::resolve::Open {
+        source: held.packs.get(&source),
+        target: held.packs.get(&target),
+        ipa_only: false,
+        accent: &accent,
+        accent_pack: held.packs.get(&accent),
+        said: None,
+        classifier: held.classifiers.get(&source),
+    };
+    lexcore::annotate::complete(
+        drawn,
+        &results,
+        options,
+        &lexcore::answer::Lang(target.clone()),
+        &open,
+    );
     let written = lexcore::json::batch(batch as u64, drawn, &[]);
     env.new_string(written).unwrap_or(empty)
 }

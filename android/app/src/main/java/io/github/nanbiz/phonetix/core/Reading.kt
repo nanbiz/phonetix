@@ -57,7 +57,7 @@ object Reading {
         // missing and only that is asked for, so a word a dictionary answered keeps the
         // pronunciation the dictionary recorded and what a machine produced is marked as a
         // machine's - in the core, which is the one place that decides what a reader is told.
-        batch = filled(batch, source, accent)
+        batch = filled(batch, source, target, accent)
         // And what no dictionary could translate, translated. The engine answers only where a
         // reader has chosen a language to read into and the model for that direction is here.
         batch = meant(batch, source, target)
@@ -90,7 +90,12 @@ object Reading {
      * Nothing happens where the engine did not start: those words stay bare, exactly as they
      * read before the phone had one.
      */
-    private fun filled(batch: JSONObject, source: String, accent: String): JSONObject {
+    private fun filled(
+        batch: JSONObject,
+        source: String,
+        target: String,
+        accent: String,
+    ): JSONObject {
         if (!Speech.usable) return batch
         val misses = batch.optJSONArray("misses") ?: return batch
         val tokens = batch.optJSONArray("tokens") ?: return batch
@@ -122,6 +127,10 @@ object Reading {
                 kept.toIntArray(),
                 Array(kept.size) { "" },
                 sounds.toTypedArray(),
+                Array(kept.size) { "" },
+                source,
+                target,
+                accent,
                 "espeak",
             )
         }.getOrNull() ?: return batch
@@ -167,6 +176,10 @@ object Reading {
                 kept.toIntArray(),
                 meanings.toTypedArray(),
                 Array(kept.size) { "" },
+                Array(kept.size) { "" },
+                source,
+                target,
+                "",
                 "bergamot",
             )
         }.getOrNull() ?: return batch

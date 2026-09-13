@@ -157,6 +157,13 @@ object Lex {
         tokens: IntArray,
         glosses: Array<String>,
         ipas: Array<String>,
+        /** Each token's whole line as the engine translated it, where that was asked for. */
+        sentences: Array<String>,
+        /** The languages the batch was drawn between, so a word read again in the light of
+         *  its translated line is read by the same cascade with the same packs open. */
+        source: String,
+        target: String,
+        accent: String,
         engine: String,
     ): String
 

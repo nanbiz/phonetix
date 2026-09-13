@@ -147,8 +147,11 @@ export async function phrase(
  */
 export async function complete(
   batch: number,
-  results: { token: number; gloss?: string; ipa?: string }[],
-  engine: string
+  results: { token: number; gloss?: string; ipa?: string; sentence?: string }[],
+  engine: string,
+  // Which languages the batch was drawn for, so a word read again in the light of its
+  // translated sentence is read by the same cascade with the same packs open.
+  said: { source: string; target: string; accent?: string } = { source: '', target: '' }
 ): Promise<Batch> {
   const it = await coreReady();
   return JSON.parse(
@@ -157,6 +160,10 @@ export async function complete(
       new Uint32Array(results.map((r) => r.token)),
       results.map((r) => r.gloss ?? ''),
       results.map((r) => r.ipa ?? ''),
+      results.map((r) => r.sentence ?? ''),
+      said.source,
+      said.target,
+      said.accent ?? '',
       engine
     )
   ) as Batch;

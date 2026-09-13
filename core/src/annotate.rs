@@ -92,6 +92,16 @@ pub fn annotate<D: AsRef<[u8]>>(
                     });
                 }
             }
+            // A spelling that is several words and nothing decided which: the sentence it is
+            // in, translated, would. Only where there is a translation to be had - a language
+            // read into itself has no engine running and nothing to read - and only for a word
+            // the reader can see, since the cost is one translation of the line it is on.
+            if inline && answer.state == AnswerState::Homograph && target != &lang {
+                misses.push(Miss {
+                    token_index: index,
+                    need: Need::Sentence,
+                });
+            }
             tokens.push(Token {
                 run_id: run.id,
                 start: word.start,
@@ -129,11 +139,57 @@ fn missing(mode: InlineMode, has_gloss: bool, has_ipa: bool) -> Option<Need> {
 /// An engine's answer is marked as one. A reader deciding whether to trust a word is owed the
 /// difference between a dictionary and a machine, and the state and the provenance both carry
 /// it so neither the inline layer nor the card can lose it.
-pub fn complete(tokens: &mut [Token], results: &[EngineResult], options: &AnnotateOptions) {
+pub fn complete<D: AsRef<[u8]>>(
+    tokens: &mut [Token],
+    results: &[EngineResult],
+    options: &AnnotateOptions,
+    target: &Lang,
+    open: &Open<D>,
+) {
     for result in results {
         let Some(token) = tokens.get_mut(result.token_index as usize) else {
             continue;
         };
+        // The sentence, where the host had it translated for a spelling that is several
+        // words. The word is read again with it in hand, because which word it is can change
+        // what it means, how it is said and which entry the card is about - all of which the
+        // cascade decides in one place rather than patching one of them here.
+        if let Some(sentence) = &result.sentence {
+            if token.state == AnswerState::Homograph {
+                let with_sentence = Open {
+                    said: Some(sentence.as_str()),
+                    ..*open
+                };
+                let spelling = token.spelling.clone();
+                let lang = token.lang.clone();
+                let answer = crate::resolve::read_in_context(
+                    &spelling,
+                    None,
+                    &lang,
+                    target,
+                    &with_sentence,
+                );
+                if answer.state != AnswerState::Homograph {
+                    token.state = answer.state;
+                    token.provenance = answer.provenance.clone();
+                    if let Some(gloss) = answer
+                        .says
+                        .first()
+                        .or_else(|| answer.glosses.first())
+                        .map(|text| cut(text, GLOSS_LIMIT))
+                    {
+                        token.gloss = Some(gloss);
+                    }
+                    if let Some(ipa) = answer.ipa.first() {
+                        token.ipa = Some(crate::symbols::display(
+                            ipa,
+                            options.narrow,
+                            options.hide_stress,
+                        ));
+                    }
+                }
+            }
+        }
         if let Some(gloss) = &result.gloss {
             token.gloss = Some(cut(gloss, GLOSS_LIMIT));
             token.state = AnswerState::Guess;
@@ -303,9 +359,12 @@ mod tests {
                 token_index: 0,
                 gloss: Some("Hund".into()),
                 ipa: None,
+                sentence: None,
                 engine: "bergamot".into(),
             }],
             &options(InlineMode::Gloss, 1),
+            &Lang("de".into()),
+            &nothing_open(),
         );
         assert_eq!(tokens[0].gloss.as_deref(), Some("Hund"));
         assert_eq!(tokens[0].state, AnswerState::Guess);

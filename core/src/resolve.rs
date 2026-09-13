@@ -90,6 +90,7 @@ impl Answer {
 }
 
 /// The packs a lookup may use. Either may be missing, and which is missing decides the state.
+#[derive(Clone, Copy)]
 pub struct Open<'a, D: AsRef<[u8]>> {
     /// The language being read.
     pub source: Option<&'a Pack<D>>,
@@ -104,6 +105,10 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// That accent's own pack, where it has one. A few thousand words a dictionary tagged for
     /// one country, which is the half of an accent that no rule can produce.
     pub accent_pack: Option<&'a Pack<D>>,
+    /// What the translator made of the sentence this word is in, where the host had it
+    /// translated. The strongest signal there is about which word a spelling is: the engine
+    /// read the whole sentence to produce it, which is context no table has.
+    pub said: Option<&'a str>,
     /// The trained classifier for this language, where the host has one open.
     ///
     /// It outranks the neighbour rule, because it was trained on how the word is really used
@@ -120,6 +125,7 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
             ipa_only: false,
             accent: "",
             accent_pack: None,
+            said: None,
             classifier: None,
         }
     }
@@ -270,7 +276,10 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     let mut all: Vec<Answer> = std::iter::once(first).chain(answers).collect();
     // The first confident signal decides. A classifier trained on how this word is really used
     // outranks a rule about parts of speech; where it says nothing, the rule still has its say.
-    let decided = chosen_by_training(&all, spelling, before, open)
+    // Strongest first. What the translator made of the whole sentence outranks both tables:
+    // it read the sentence, and they read a word and its neighbour.
+    let decided = chosen_by_translation(&all, open.said)
+        .or_else(|| chosen_by_training(&all, spelling, before, open))
         .or_else(|| chosen_by_neighbour(&all, before, pack));
     if let Some(at) = decided {
         all.swap(0, at);
@@ -287,12 +296,93 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
     // than asking. Undecided, so it asks.
-    let told = chosen_by_training(&first.readings, spelling, before, open).is_some()
+    let told = chosen_by_translation(&first.readings, open.said).is_some()
+        || chosen_by_training(&first.readings, spelling, before, open).is_some()
         || chosen_by_neighbour(&first.readings, before, pack).is_some();
     if !told {
         first.state = AnswerState::Homograph;
     }
     first
+}
+
+/// Which reading the sentence's own translation says this is.
+///
+/// When the reader is being given a translation at all, the engine has already read the whole
+/// sentence and answered it: "modern" that came back as "rot" is the verb, and one that came
+/// back as "modern" is the adjective. That is context no table here has, which is why it
+/// outranks both of them.
+///
+/// What is compared is each reading's own answer in the reader's language against the words of
+/// the translated sentence, whole words only. It decides only when exactly one reading is in
+/// there: two readings both present is the sentence saying nothing about which of them this
+/// word was, and none present is the engine having chosen words neither reading lists.
+///
+/// This is the evidence the translation gives rather than the alignment it was meant to give:
+/// the published WebAssembly build of the engine exposes the translated text and nothing else
+/// - no alignment accessor in its bindings - so which target span this source word became
+/// cannot be asked for. Matching the sentence is weaker where a reading's word appears for
+/// some other reason, which is why it has to be the only one present to decide anything.
+fn chosen_by_translation<R: HasAnswers>(readings: &[R], said: Option<&str>) -> Option<usize> {
+    let said = said?;
+    if said.trim().is_empty() {
+        return None;
+    }
+    let sentence = normalised(said);
+    let mut found: Option<usize> = None;
+    for (at, reading) in readings.iter().enumerate() {
+        let inside = reading
+            .answers_with()
+            .iter()
+            .any(|answer| holds(&sentence, &normalised(answer)));
+        if !inside {
+            continue;
+        }
+        if found.is_some() {
+            // Two of them are in the sentence, so it says nothing about which this word was.
+            return None;
+        }
+        found = Some(at);
+    }
+    found
+}
+
+/// The words of a text, lowercased, with everything that is not a letter or a digit dropped.
+///
+/// Written as words rather than as one string, because "rot" is in "rotten" and a reading that
+/// matched half of another word would be a signal that decides by accident.
+fn normalised(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .map(|word| word.to_lowercase())
+        .collect()
+}
+
+/// Whether a sentence holds this answer, which may itself be several words, in order.
+fn holds(sentence: &[String], answer: &[String]) -> bool {
+    if answer.is_empty() || answer.len() > sentence.len() {
+        return false;
+    }
+    sentence
+        .windows(answer.len())
+        .any(|window| window == answer)
+}
+
+/// What a reading answers with in the reader's own language, which is what a translated
+/// sentence can be searched for.
+pub trait HasAnswers {
+    fn answers_with(&self) -> &[String];
+}
+
+impl HasAnswers for Answer {
+    fn answers_with(&self) -> &[String] {
+        &self.says
+    }
+}
+
+impl HasAnswers for Reading {
+    fn answers_with(&self) -> &[String] {
+        &self.says
+    }
 }
 
 /// Which reading the training says this is, where a classifier is open and a rule matched.

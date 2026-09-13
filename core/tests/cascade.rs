@@ -85,6 +85,7 @@ fn a_lemma_that_joins_is_an_entry() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
@@ -117,6 +118,7 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
@@ -140,6 +142,7 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
@@ -171,6 +174,7 @@ fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
@@ -195,6 +199,7 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
@@ -218,6 +223,7 @@ fn a_reader_of_english_needs_no_join_at_all() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
@@ -236,6 +242,7 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
@@ -252,6 +259,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     assert_eq!(
@@ -264,6 +272,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         ipa_only: true,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     assert_eq!(
@@ -293,6 +302,7 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
@@ -333,6 +343,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
@@ -349,6 +360,7 @@ fn a_sense_with_no_example_invents_none() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     assert_eq!(
@@ -380,6 +392,7 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
@@ -401,6 +414,7 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         ipa_only: false,
         accent: "",
         accent_pack: None,
+        said: None,
         classifier: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
@@ -463,6 +477,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "",
             accent_pack: None,
+            said: None,
             classifier: None,
         },
     );
@@ -478,6 +493,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&american),
+            said: None,
             classifier: None,
         },
     );
@@ -496,6 +512,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&american),
+            said: None,
             classifier: None,
         },
     );
@@ -541,6 +558,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             ipa_only: false,
             accent: "en-us",
             accent_pack: Some(&empty),
+            said: None,
             classifier: None,
         },
     );
@@ -755,6 +773,7 @@ fn what_the_training_says_outranks_the_rule() {
         &Open {
             source: Some(&pack),
             target: Some(&pack),
+            said: None,
             classifier: Some(&classifier),
             ..Default::default()
         },
@@ -819,6 +838,7 @@ fn the_trained_list_tells_read_from_read() {
     let open = Open {
         source: Some(&pack),
         target: Some(&pack),
+        said: None,
         classifier: Some(&classifier),
         ..Default::default()
     };
@@ -833,4 +853,58 @@ fn the_trained_list_tells_read_from_read() {
     // And where the list has nothing to say, the reader is still asked rather than guessed at.
     let alone = read_in_context("read", Some("qwerty"), &lang("en"), &lang("en"), &open);
     assert_eq!(alone.state, AnswerState::Homograph);
+}
+
+#[test]
+fn the_sentences_own_translation_says_which_word_it_is() {
+    // A spelling that is two words, in a sentence somebody is already translating. The engine
+    // read the whole sentence to produce that translation, which is context no table here has,
+    // so what it came back with decides: a translation carrying "bank" is the bank, one
+    // carrying "bench" is the bench, and one carrying both says nothing about which.
+    let mut source = Builder::new("es", Kind::Lex, 0);
+    source
+        .add(word("banco", "noun", "ˈbaŋ.ko", &["bench"]), &[] as &[&str])
+        .unwrap();
+    source
+        .add(word("banco", "verb", "ˈbaŋ.ko", &["bank"]), &[] as &[&str])
+        .unwrap();
+    let es = source.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let read = |said: Option<&str>| {
+        let open = Open {
+            source: Some(&es),
+            target: None,
+            ipa_only: false,
+            accent: "",
+            accent_pack: None,
+            said,
+            classifier: None,
+        };
+        look_up("banco", &lang("es"), &lang("en"), &open)
+    };
+
+    // Nothing translated: the cascade offers both, as it always has.
+    assert_eq!(read(None).state, AnswerState::Homograph);
+
+    let bench = read(Some("He sat on the bench in the square."));
+    assert_eq!(
+        bench.state,
+        AnswerState::Entry,
+        "a sentence that decides is not a question to put to the reader",
+    );
+    assert_eq!(bench.says, vec!["bench"]);
+
+    let bank = read(Some("He went to the bank on the corner."));
+    assert_eq!(bank.state, AnswerState::Entry);
+    assert_eq!(bank.says, vec!["bank"]);
+
+    // Both readings in one sentence is the translation saying nothing about which this word
+    // was, which is different from it saying the first one.
+    let neither = read(Some("The bank has a bench outside it."));
+    assert_eq!(neither.state, AnswerState::Homograph);
+
+    // And a word of a reading inside a longer word decides nothing: "bench" is not in
+    // "benchmark", and matching half a word would be a signal that decides by accident.
+    let unrelated = read(Some("They published a benchmark of the banking system."));
+    assert_eq!(unrelated.state, AnswerState::Homograph);
 }

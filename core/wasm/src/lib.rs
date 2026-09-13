@@ -205,6 +205,7 @@ impl Core {
             ipa_only: false,
             accent,
             accent_pack: self.packs.get(accent),
+            said: None,
             classifier: self.classifiers.get(source),
         };
         lexcore::json::of(&lexcore::resolve::read_in_context(
@@ -264,6 +265,7 @@ impl Core {
             ipa_only: false,
             accent: &accent,
             accent_pack: self.packs.get(&accent),
+            said: None,
             classifier: self.classifiers.get(source),
         };
         let options = AnnotateOptions {
@@ -303,12 +305,17 @@ impl Core {
     /// A batch the core no longer holds comes back empty rather than throwing: the reader has
     /// moved on, and a page that scrolled away is not an error.
     #[wasm_bindgen]
+    #[allow(clippy::too_many_arguments)]
     pub fn complete(
         &mut self,
         batch: u64,
         indices: Vec<u32>,
         glosses: Vec<String>,
         ipas: Vec<String>,
+        sentences: Vec<String>,
+        source: &str,
+        target: &str,
+        accent: String,
         engine: &str,
     ) -> String {
         let Some((mut tokens, options)) = self.batches.remove(&batch) else {
@@ -321,10 +328,28 @@ impl Core {
                 token_index: *index,
                 gloss: glosses.get(at).filter(|text| !text.is_empty()).cloned(),
                 ipa: ipas.get(at).filter(|text| !text.is_empty()).cloned(),
+                sentence: sentences.get(at).filter(|text| !text.is_empty()).cloned(),
                 engine: engine.to_string(),
             })
             .collect();
-        complete(&mut tokens, &results, &options);
+        // The same packs the batch was drawn with: a word read again because its sentence has
+        // been translated is read by the cascade, not patched here.
+        let open = Open {
+            source: self.packs.get(source),
+            target: self.packs.get(target),
+            ipa_only: false,
+            accent: &accent,
+            accent_pack: self.packs.get(&accent),
+            said: None,
+            classifier: self.classifiers.get(source),
+        };
+        complete(
+            &mut tokens,
+            &results,
+            &options,
+            &Lang(target.to_string()),
+            &open,
+        );
         let written = lexcore::json::batch(batch, &tokens, &[]);
         self.batches.insert(batch, (tokens, options));
         written
