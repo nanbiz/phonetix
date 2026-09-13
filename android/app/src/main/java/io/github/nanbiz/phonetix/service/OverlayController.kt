@@ -126,6 +126,12 @@ class OverlayController(
                 "RENDER only ${wanted.size} of ${boxes.size}; the rest have no window",
             )
         }
+        // How many transcriptions are on screen, as opposed to how many were planned. The
+        // two part company whenever something else owns the screen - the replaced page, a
+        // card, an app we do not read - and only this says which.
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "SHOWING ${wanted.size}")
+        }
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
             val chip = chips.getOrNull(i) ?: break

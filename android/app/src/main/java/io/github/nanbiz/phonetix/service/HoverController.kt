@@ -44,6 +44,13 @@ class HoverController(
     private val onWord: (WordBox?) -> Unit,
     /** Where the hand is, so the answer can open clear of it. */
     private val onHand: (Int) -> Unit = {},
+    /**
+     * A press that went nowhere: the other question the mark answers.
+     *
+     * Not one word but the whole screen, in the reader's own language, and the same press
+     * again to put it back. A drag asks about a word; a tap asks about the page.
+     */
+    private val onTap: () -> Unit = {},
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -316,6 +323,9 @@ class HoverController(
                         ballVy = 0f
                     } else {
                         hideLayer()
+                        // Nothing was dragged, so nothing was being asked about a word: this
+                        // is the press that asks about the whole screen.
+                        onTap()
                     }
                     return true
                 }

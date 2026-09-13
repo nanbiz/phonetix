@@ -45,7 +45,7 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 | # | What the reader wants | Browser | Phone |
 |---|---|---|---|
-| W1 | Read the page in my own language | Replace mode: every word swapped, the original on hover | **Missing**. Taplex laid the page's own lines over it, translated, on a tap of the mark, and took them away on the next tap |
+| W1 | Read the page in my own language | Replace mode: every word swapped, the original on hover | A press of the mark lays the page's own lines over it, translated, in the colours and at the sizes the app drew them; the next press takes them away. Nothing of ours is painted over it while it is up, and every scroll redraws it where the lines have moved to |
 | W2 | Have that read as sentences rather than words | **Missing on both**: DR-7 asks for aligned phrase units; the published engine build exposes no alignments, so nothing can partition a sentence yet |
 
 ## The other direction
@@ -69,6 +69,5 @@ three. The wording table (`data/wording.json`) now says which platform each choi
 
 1. **The phrase gesture on the phone** (P1): the one way of asking that the phone cannot do at
    all, and the browser can.
-2. **The page in one language on the phone** (W1): Taplex's, and the merge dropped it.
-3. **Say it** (S1): Taplex's other direction, dropped.
-4. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.
+2. **Say it** (S1): Taplex's other direction, dropped.
+3. **Phrase units for replace mode** (W2): blocked on an engine that reports alignments.

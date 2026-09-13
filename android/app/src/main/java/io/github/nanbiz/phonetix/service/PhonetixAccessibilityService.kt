@@ -43,6 +43,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
     private lateinit var hover: HoverController
+    private lateinit var page: PageController
 
     /** What the screen last turned out to be in, which is one half of the translation
      *  direction. Held because the engine is opened for a direction, not per screen. */
@@ -149,11 +150,32 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // transcription that can be tapped swallows the swipe that began on it, and on a page
         // of text that is most of the page, so the alternative is one mark the reader drags,
         // with the circle that does the looking riding clear above the hand.
+        // The whole screen in the reader's own language, which is the other question the mark
+        // answers: a drag asks about a word, a press asks about the page.
+        page = PageController(
+            this,
+            translate = { lines -> Translator.lines(lines) },
+            onShown = { up ->
+                // Nothing of ours draws over a page that has been replaced: the words under it
+                // are not the words on screen any more.
+                if (up) overlay.hideNow() else schedule(0L)
+            },
+        )
         hover = HoverController(
             this,
             wordAt = { x, y -> overlay.wordAt(x, y) },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y -> tooltip.clearOf(y) },
+            onTap = {
+                tooltip.hide()
+                val lines = if (page.showing) emptyList() else pageLines()
+                // Off the main thread: translating a screen is a round trip per line through
+                // the engine, and the mark must not freeze under the finger that pressed it.
+                io.post {
+                    page.prepare(lines)
+                    main.post { page.toggle(lines) }
+                }
+            },
         )
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.
@@ -211,6 +233,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                             "LENS enabled=${s.enabled} wanted=${s.lens} up=${hover.showing}",
                         )
                     }
+                    // Put up where there is something to read with it: the pass that reads
+                    // the screen takes it away again over anything this does not annotate.
                     if (s.enabled && s.lens) hover.show() else hover.hide()
                     overlay.applyTouchability()
                     scrollOnly = false
@@ -657,7 +681,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         val inFront = root?.packageName?.toString()
         if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
-            main.post { overlay.hideNow() }
+            main.post {
+                overlay.hideNow()
+                // And the circle with it. It belongs to the app being read: parked over a
+                // launcher, a keyboard or this app's own screen it is a mark sitting on
+                // somebody's home screen with nothing behind it to ask about.
+                hover.hide()
+            }
             // And look again in a moment. What is in front is usually on its way somewhere -
             // the notification shade closing, the recents screen going away - and while it
             // animates it is still the thing in front. The app underneath sends nothing more
@@ -686,6 +716,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         lookAgain = 0
         val pkg = if (root != null) root.packageName?.toString() else cachedPackage
+        // Something worth reading is in front, so the circle is there to reach for. It was
+        // taken away over whatever this does not annotate.
+        val wanted = SettingsStore.current
+        if (wanted.enabled && wanted.lens && !hover.showing) main.post { hover.show() }
         val t0 = android.os.SystemClock.uptimeMillis()
 
         // A scroll moved the words it did not change, so the nodes found last time are
@@ -1672,9 +1706,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         val colourMs = android.os.SystemClock.uptimeMillis() - tb
         val t2 = tb
+        // A replaced page owns the screen: the lines under it are covered, so painting
+        // transcriptions over them would draw on top of the translation. The same read that
+        // would have placed the chips places the lines again instead, which is how the
+        // translation follows the page as it scrolls. Asked for here, on the thread that read
+        // the screen, because whatever has scrolled into view has still to be translated.
+        val replaced = if (page.showing) pageLines().also { page.prepare(it) } else emptyList()
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            overlay.render(painted)
+            if (page.showing) page.draw(replaced) else overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
@@ -1822,6 +1862,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         val grow = (bottom - top)
         return RectF(left - grow, top, right + grow, bottom)
+    }
+
+    /**
+     * Every line on screen as the page overlay takes them: where it sits now, what it says,
+     * and the colours read off the app so it can be put back looking like itself.
+     */
+    private fun pageLines(): List<PageOverlayView.Line> = cachedPlan.mapNotNull { p ->
+        val where = p.measuredAt ?: return@mapNotNull null
+        val text = p.text.trim()
+        if (text.isEmpty()) return@mapNotNull null
+        val decision = colours.decide(p.text, where.top, colorRect(p))
+        val own = decision.colours ?: return@mapNotNull null
+        PageOverlayView.Line(
+            bounds = android.graphics.Rect(where),
+            text = text,
+            background = own.background,
+            ink = own.ink,
+            lineHeight = where.height(),
+        )
     }
 
     private class Planned(

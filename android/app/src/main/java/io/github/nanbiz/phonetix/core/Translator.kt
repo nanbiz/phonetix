@@ -85,6 +85,22 @@ object Translator {
     }
 
     /**
+     * What these lines say in the reader's language, in the order they were given.
+     *
+     * Whole lines rather than words, and nothing dropped: a line that comes back as itself is
+     * still what the engine made of it, which is not true of a word - there, a word that
+     * answers itself is the engine having nothing to say.
+     */
+    fun lines(texts: List<String>): List<String> {
+        if (!usable || texts.isEmpty()) return emptyList()
+        val said = runCatching { Lex.translateSay(texts.toTypedArray()) }
+            .onFailure { android.util.Log.w("Phonetix", "the translator refused a page", it) }
+            .getOrNull()
+            ?: return emptyList()
+        return texts.indices.map { at -> said.getOrNull(at).orEmpty().trim() }
+    }
+
+    /**
      * What these words mean, keyed by the word.
      *
      * Empty for anything the engine could not answer, which the caller leaves as the dictionary
