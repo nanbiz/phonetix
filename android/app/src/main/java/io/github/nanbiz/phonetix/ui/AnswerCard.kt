@@ -214,41 +214,41 @@ private fun TopRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f),
         ) {
-        androidx.compose.material3.Text(
-            text = answer.spelling,
-            color = Color(palette.ink),
-            fontSize = Tokens.Scale.fontSizeLemma.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f, fill = false)
-                .reported(answer.spelling, report),
-        )
-        Box(Modifier.width(Tokens.Scale.space2.dp))
-        // What it is being read as, and in which accent where the reader chose one: the two
-        // are one fact, so they share one neutral pill.
-        val named = Accents.of(answer.source).firstOrNull { it.id == accent }?.name
-        Badge(
-            text = if (named != null) "${answer.source.uppercase()} · $named"
-            else answer.source.uppercase(),
-            ink = Color(palette.chipInk),
-            background = Color(palette.chipBg),
-        )
-        val from = answer.provenance
-        if (from != null) {
-            Box(Modifier.width(Tokens.Scale.space2.dp))
-            val machine = from !is Answer.Provenance.Dictionary
-            Badge(
-                text = when (from) {
-                    is Answer.Provenance.Dictionary -> "dictionary"
-                    is Answer.Provenance.Guess -> from.engine.ifEmpty { "machine" }
-                    Answer.Provenance.Synthesised -> "espeak"
-                },
-                ink = Color(if (machine) palette.guess else palette.accent),
-                background = Color(if (machine) palette.guessBg else palette.accentBg),
+            androidx.compose.material3.Text(
+                text = answer.spelling,
+                color = Color(palette.ink),
+                fontSize = Tokens.Scale.fontSizeLemma.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .reported(answer.spelling, report),
             )
-        }
+            Box(Modifier.width(Tokens.Scale.space2.dp))
+            // What it is being read as, and in which accent where the reader chose one: the two
+            // are one fact, so they share one neutral pill.
+            val named = Accents.of(answer.source).firstOrNull { it.id == accent }?.name
+            Badge(
+                text = if (named != null) "${answer.source.uppercase()} · $named"
+                else answer.source.uppercase(),
+                ink = Color(palette.chipInk),
+                background = Color(palette.chipBg),
+            )
+            val from = answer.provenance
+            if (from != null) {
+                Box(Modifier.width(Tokens.Scale.space2.dp))
+                val machine = from !is Answer.Provenance.Dictionary
+                Badge(
+                    text = when (from) {
+                        is Answer.Provenance.Dictionary -> "dictionary"
+                        is Answer.Provenance.Guess -> from.engine.ifEmpty { "machine" }
+                        Answer.Provenance.Synthesised -> "espeak"
+                    },
+                    ink = Color(if (machine) palette.guess else palette.accent),
+                    background = Color(if (machine) palette.guessBg else palette.accentBg),
+                )
+            }
         }
         // The word's own entry, and it is here whether or not a dictionary answered: the
         // reader who got nothing is the one most likely to want it.
