@@ -23,6 +23,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, 'android/app/src/main/assets/ui'),
     emptyOutDir: true,
+    rollupOptions: {
+      // Named for what they are rather than for their contents. A hash in the name is how a
+      // browser is told a file has changed, and this page is not fetched over a network: it
+      // is read out of the app. What the hash bought instead was a page whose cached markup
+      // asked for a stylesheet the new build no longer had - and a screen with no palette,
+      // no controls and a sheet with no background over all of it.
+      output: {
+        entryFileNames: 'settings.js',
+        chunkFileNames: 'settings-[name].js',
+        assetFileNames: 'settings.[ext]',
+      },
+    },
     // Readable, like the extension's build: what ships in an app is what can be read back
     // out of it, and the bundle is nothing next to a dictionary.
     minify: false,

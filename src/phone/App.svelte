@@ -5,7 +5,7 @@
   // browser: what the reader has chosen, what the app has been allowed to do, and which
   // dictionaries are here. Nothing about the layout of this screen is decided twice.
   import Settings from '@/ui/settings/Settings.svelte';
-  import { DEFAULTS, type Settings as Chosen } from '@/settings/shape';
+  import { darkSide, DEFAULTS, type Settings as Chosen } from '@/settings/shape';
   import { themeOf } from '@/ui/theme';
   import type { Offered } from '@/host/packs';
   import { ask, whenChanged } from './bridge';
@@ -25,11 +25,12 @@
   let version = $state('');
   let trouble = $state<string[]>([]);
 
-  /** The palette on the document itself: the tokens are declared per theme and mode, so an
-   *  element naming no theme has no colours at all. */
-  function paint(theme: string) {
-    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.className = themeOf(dark, theme);
+  /** The palette on the document itself, and which side of it: the tokens are declared per
+   *  theme and mode, so an element naming no theme has no colours at all. Which side is the
+   *  reader's own answer where they gave one, and the device's where they did not. */
+  function paint(chosen: Chosen) {
+    const device = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.className = themeOf(darkSide(chosen, device), chosen.theme);
   }
 
   async function load() {
@@ -47,12 +48,13 @@
     permissions = told.permissions ?? { reading: false, overlay: false };
     version = told.version ?? '';
     trouble = told.trouble ?? [];
-    paint(settings.theme);
+    paint(settings);
   }
 
   function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
     if (settings) settings = { ...settings, [name]: value };
-    if (name === 'theme') paint(String(value));
+    // Drawn in what is being chosen, so choosing shows what it looks like.
+    if (settings && (name === 'theme' || name === 'dark')) paint(settings);
     void ask('set', { name, value }).then(() => {
       // Where the dictionaries come from decides what is on offer, so the list is asked for
       // again the moment a reader says where that is.

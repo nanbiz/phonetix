@@ -84,6 +84,10 @@ fun SettingsWeb(
                 @SuppressLint("SetJavaScriptEnabled")
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
+                // Never from the cache. The page is the app's own assets, so there is nothing
+                // to save by keeping a copy, and a kept copy is a screen from an older build
+                // asking for files that are no longer there.
+                settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 val web = this
                 addJavascriptInterface(
@@ -126,7 +130,20 @@ private class FromAssets(context: Context) : android.webkit.WebViewClient() {
                 "utf-8",
                 assets.open(path.trimStart('/')),
             )
-        }.getOrNull()
+        }.getOrElse {
+            // Answered rather than handed back to the browser. Answering "not mine" sends it
+            // to a network that cannot resolve this address either, and what the reader gets
+            // is a page missing a file with nothing anywhere saying which.
+            android.util.Log.w("Phonetix", "the settings screen has no $path")
+            android.webkit.WebResourceResponse(
+                "text/plain",
+                "utf-8",
+                404,
+                "no such file",
+                emptyMap(),
+                java.io.ByteArrayInputStream(ByteArray(0)),
+            )
+        }
     }
 
     /** What the browser is being handed, which it will not guess from a stream. */
