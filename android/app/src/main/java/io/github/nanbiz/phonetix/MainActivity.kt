@@ -22,6 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.service.PhonetixAccessibilityService
@@ -63,9 +65,26 @@ class MainActivity : ComponentActivity() {
         asked(intent)
         setContent {
             PhonetixTheme {
+                // The window itself, not only what is drawn in it. Edge to edge, the bands
+                // behind the status bar and the gesture bar show the window's own background,
+                // which is the system's idea of a light app: a dark palette came up with a
+                // white strip at each end of it. The icons in those bands are told which way
+                // round they are for the same reason.
+                val ground = MaterialTheme.colorScheme.background
+                val lightBars = ground.luminance() > 0.5f
+                androidx.compose.runtime.LaunchedEffect(ground) {
+                    window.setBackgroundDrawable(
+                        android.graphics.drawable.ColorDrawable(ground.toArgb()),
+                    )
+                    androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                        .apply {
+                            isAppearanceLightStatusBars = lightBars
+                            isAppearanceLightNavigationBars = lightBars
+                        }
+                }
                 Surface(
                     Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
+                    color = ground,
                 ) {
                     Scaffold { inner ->
                         Root(
@@ -163,8 +182,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Whether our service is among the ones the user switched on. */
+    /**
+     * Whether our service is among the ones the user switched on.
+     *
+     * Asked of the system's own list rather than read out of the setting it writes: a device
+     * can name a service there in a form that does not unflatten to what we compared against,
+     * and the app then told a reader to go and allow something their phone's own screen said
+     * was already on. Our own bound service settles it where there is one, since a service
+     * that is running is a service that was allowed.
+     */
     private fun accessibilityEnabled(): Boolean {
+        if (PhonetixAccessibilityService.running != null) return true
+        val manager = getSystemService(android.view.accessibility.AccessibilityManager::class.java)
+        val listed = runCatching {
+            manager.getEnabledAccessibilityServiceList(
+                android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK,
+            )
+        }.getOrNull()
+        if (listed != null && listed.any { it.resolveInfo?.serviceInfo?.packageName == packageName }) {
+            return true
+        }
         val want = ComponentName(this, PhonetixAccessibilityService::class.java)
         val enabled = AndroidSettings.Secure.getString(
             contentResolver, AndroidSettings.Secure.ENABLED_ACCESSIBILITY_SERVICES,

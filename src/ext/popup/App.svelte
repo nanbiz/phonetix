@@ -115,6 +115,7 @@
       {fetching}
       {site}
       {pageLang}
+      device={window.matchMedia('(prefers-color-scheme: dark)').matches}
       {icon}
       {siteIcon}
       {version}

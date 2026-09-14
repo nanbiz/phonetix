@@ -106,6 +106,7 @@
     <Settings
       where="phone"
       bind:view
+      {device}
       icon="./96.png"
       {settings}
       {curve}

@@ -7,10 +7,12 @@
   // is the same row, the same type and the same colours as everything else here, and a list
   // long enough to need one gets a filter.
   import { SAYS } from '@/data/wording';
+  import { standing } from './sheets.svelte';
 
   interface Props {
-    /** What each option says and the value it stands for, in the order to show them. */
-    options: { value: string; label: string }[];
+    /** What each option says and the value it stands for, in the order to show them, and a
+     *  line under it where the name alone does not say enough. */
+    options: { value: string; label: string; about?: string }[];
     chosen: string;
     label: string;
     /** From how many options the list is worth filtering. */
@@ -35,6 +37,16 @@
     typed = '';
     change(value);
   }
+
+  // While the list is up it is what the way back closes: on a phone, going back from an open
+  // list used to close the app.
+  $effect(() => {
+    if (!open) return;
+    return standing(() => {
+      open = false;
+      typed = '';
+    });
+  });
 </script>
 
 <button
@@ -76,7 +88,10 @@
           aria-selected={option.value === chosen}
           onclick={() => pick(option.value)}
         >
-          <span class="c-name">{option.label}</span>
+          <span class="c-what">
+            <span class="c-name">{option.label}</span>
+            {#if option.about}<span class="c-about">{option.about}</span>{/if}
+          </span>
           {#if option.value === chosen}<span class="c-mark" aria-hidden="true">✓</span>{/if}
         </button>
       {/each}

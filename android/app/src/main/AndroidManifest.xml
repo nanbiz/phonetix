@@ -8,12 +8,22 @@
          same files the extension links to. Nothing is sent, only fetched. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Dictation in the panel the mark opens: the word is spoken instead of typed, over
+         whatever is being read, because a keyboard there covers half the conversation. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Listing installed apps for the per-app picker. The launcher-intent query is
          enough, so the app never needs the far broader QUERY_ALL_PACKAGES. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Whatever the phone hears words with, so the panel can ask it directly rather than
+             through the system's own dictation screen: that screen is an activity, and an
+             activity started from an overlay puts the conversation away. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
         </intent>
     </queries>
 

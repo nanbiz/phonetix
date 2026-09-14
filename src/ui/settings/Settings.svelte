@@ -12,7 +12,8 @@
   import { ACCENTS, accentsOf } from '@/data/accents';
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
-  import { THEMES } from '@/ui/theme';
+  import { THEME, THEMES } from '@/ui/theme';
+  import { SIDES } from '@/ui/palettes';
   import { accentFor, readInto, setAccent, type Settings } from '@/settings/shape';
   import {
     aboutOf,
@@ -67,6 +68,9 @@
     site?: string;
     /** What the page being read turned out to be in, which decides the accents on offer. */
     pageLang?: string;
+    /** Whether the device is set to dark, which the surface around this one knows: a web
+     *  view inside an app is told light whatever the phone says. */
+    device?: boolean;
     onSite?: (on: boolean) => void;
     /** Fetch a language's dictionary, or give one up. */
     get?: (lang: string) => void;
@@ -109,6 +113,7 @@
     fetching = null,
     site = '',
     pageLang = '',
+    device = false,
     onSite,
     icon = '',
     siteIcon = '',
@@ -193,11 +198,23 @@
     ...(settings.target ? [] : [{ value: '', label: SAYS['choose-language'] }]),
     ...named.map((it) => ({ value: it.code, label: `${it.english} · ${it.native}` })),
   ]);
-  /** The palettes the tokens carry, named as a reader would name them. */
-  const themes = THEMES.map((name) => ({
-    value: name,
-    label: name.charAt(0).toUpperCase() + name.slice(1),
-  }));
+  /** Which side of a palette is being drawn: what the reader asked for, or what the device
+   *  is set to where they left it to the device. */
+  let side = $derived(settings.dark === 'system' ? (device ? 'dark' : 'light') : settings.dark);
+
+  /**
+   * The palettes on offer, which are the ones that have the side in force.
+   *
+   * Four of the eight are light only or dark only. Offering a light palette to a reader
+   * reading in the dark is offering them a choice that cannot be honoured: they pick it and
+   * the screen stays as it was, or comes back light in the middle of a dark evening.
+   */
+  let themes = $derived(
+    THEMES.filter((name) => (SIDES[name] ?? []).includes(side)).map((name) => ({
+      value: name,
+      label: name.charAt(0).toUpperCase() + name.slice(1),
+    }))
+  );
   let pageIs = $derived([
     { value: '', label: 'what the page says' },
     ...named.map((it) => ({ value: it.code, label: it.english })),
@@ -316,13 +333,19 @@
       {/snippet}
     </Row>
 
-    <!-- Which side of that palette. Every one of them has both. -->
+    <!-- Which side of the palette. Asking for the side a palette does not have moves the
+         reader to the product's own, because the alternative is a choice that changes
+         nothing: they asked to read in the dark and the screen stayed light. -->
     <Row name={ROWS.dark.name} row="dark">
       {#snippet wide()}
         <Segmented
           choices={DARK_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
           chosen={settings.dark}
-          change={(value) => change('dark', value)}
+          change={(value) => {
+            const wanted = value === 'system' ? (device ? 'dark' : 'light') : value;
+            if (!(SIDES[settings.theme] ?? []).includes(wanted)) change('theme', THEME);
+            change('dark', value);
+          }}
         />
       {/snippet}
     </Row>

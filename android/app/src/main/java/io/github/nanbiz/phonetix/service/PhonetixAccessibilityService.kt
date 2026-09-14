@@ -19,6 +19,10 @@ import io.github.nanbiz.phonetix.core.Pick
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Accents
+import io.github.nanbiz.phonetix.core.Wording
+import io.github.nanbiz.phonetix.ui.Tokens
+import io.github.nanbiz.phonetix.ui.themeNamed
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.Speech
@@ -2305,14 +2309,141 @@ class PhonetixAccessibilityService : AccessibilityService() {
         planned.addAll(kept)
     }
 
-    /** The other direction, on the screen that asks for it. */
+    /** The panel the mark opens, over whatever is being read. Nothing while it is down. */
+    private var asking: AskPanel? = null
+    private var listener: Dictation? = null
+
+    /**
+     * The other direction, asked over what the reader is looking at.
+     *
+     * A panel rather than a screen of the app's own: a word that exists only in the reader's
+     * head is asked for in the middle of whatever they are reading, and opening an activity
+     * puts that away. It is taken down by the way back, by a touch outside it, or by asking.
+     */
     private fun openSay() {
-        val intent = android.content.Intent(this, MainActivity::class.java)
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            .putExtra("view", "say")
-        runCatching { startActivity(intent) }
-            .onFailure { android.util.Log.w("Phonetix", "the app would not open", it) }
+        if (asking != null) return
+        val settings = SettingsStore.current
+        val into = settings.into
+        // Which language the answer comes back in: the screen's own where one has been read,
+        // and otherwise a language this phone keeps a dictionary for.
+        val held = Packs.held(this).filter { it != into }
+        val learning = (lastScreenLanguage?.takeIf { it != into } ?: held.firstOrNull()).orEmpty()
+        // The side of the palette the reader reads in: their own answer where they gave one,
+        // and the device's where they left it to the device.
+        val dark = when (settings.dark) {
+            "light" -> false
+            "dark" -> true
+            else -> (resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        val panel = AskPanel(this, Tokens.palette(themeNamed(settings.theme), dark))
+        panel.askFor(learning.ifEmpty { into })
+        panel.setLanguages(held, learning) { picked ->
+            panel.askFor(picked)
+            said(panel, picked, into, panel.field.text.toString())
+        }
+        panel.onSubmit = { asked -> said(panel, learning, into, asked) }
+        panel.onClose = { closeSay() }
+        // Saying it rather than typing it, where the phone can hear: the words go into the
+        // field as they arrive and the finished phrase is asked for without being pressed.
+        val hearing = Dictation(this)
+        if (hearing.canListen()) {
+            hearing.onPartial = { heard -> main.post { panel.heard(heard) } }
+            hearing.onFinal = { phrase ->
+                main.post {
+                    panel.heard(phrase)
+                    panel.listening(false)
+                    said(panel, learning, into, phrase)
+                }
+            }
+            hearing.onState = { on -> main.post { panel.listening(on) } }
+            panel.onDictate = { hearing.start(into.ifEmpty { Language.OURS }) }
+            listener = hearing
+        } else {
+            panel.onDictate = null
+        }
+        val lp = android.view.WindowManager.LayoutParams(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+            android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            // Focusable, because it is typed into; the touches it does not take go to the app
+            // underneath, and one outside it closes the panel.
+            android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            android.graphics.PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            y = (72 * resources.displayMetrics.density).toInt()
+            softInputMode =
+                android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
+        }
+        val wm = getSystemService(android.view.WindowManager::class.java)
+        runCatching { wm.addView(panel, lp) }
+            .onFailure {
+                android.util.Log.w("Phonetix", "the panel would not open", it)
+                return
+            }
+        asking = panel
+        panel.field.requestFocus()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // From Android 13 the way back does not arrive as a key, so it is registered for
+            // as well: a window that answers only one of the two cannot be closed on the other.
+            val leave = android.window.OnBackInvokedCallback { closeSay() }
+            panel.findOnBackInvokedDispatcher()?.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                leave,
+            )
+            back = leave
+        }
+    }
+
+    private var back: android.window.OnBackInvokedCallback? = null
+
+    /** What the panel answers with, off the thread it is typed on. */
+    private fun said(panel: AskPanel, learning: String, into: String, asked: String) {
+        val text = asked.trim()
+        if (text.isEmpty()) return
+        if (learning.isEmpty() || into.isEmpty() || learning == into) {
+            panel.saying(Wording.says["say-no-language"].orEmpty())
+            return
+        }
+        panel.saying("…")
+        io.post {
+            val answer = Reading.say(this, text, learning, into)
+            main.post {
+                if (asking !== panel) return@post
+                if (answer == null) {
+                    val missing = !Translator.ready(Packs.models(this), into, learning)
+                    panel.saying(
+                        Wording.says[if (missing) "say-no-model" else "say-nothing"].orEmpty(),
+                    )
+                } else {
+                    panel.show(answer) {
+                        speaker.say(answer.spelling, Accents.voiceOf(learning, ""))
+                    }
+                }
+            }
+        }
+    }
+
+    /** Take the panel down, and the keyboard with it. */
+    private fun closeSay() {
+        listener?.stop()
+        listener = null
+        val panel = asking ?: return
+        asking = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            back?.let { panel.findOnBackInvokedDispatcher()?.unregisterOnBackInvokedCallback(it) }
+        }
+        back = null
+        // Removing the window does not always take the keyboard with it, and a keyboard left
+        // up over a conversation with nothing to type into is the panel half gone.
+        getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+            ?.hideSoftInputFromWindow(panel.windowToken, 0)
+        panel.done()
+        runCatching { getSystemService(android.view.WindowManager::class.java).removeView(panel) }
     }
 
     /**
