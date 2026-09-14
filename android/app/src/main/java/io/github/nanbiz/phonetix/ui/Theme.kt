@@ -6,22 +6,25 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import io.github.nanbiz.phonetix.core.SettingsStore
 
 /**
- * The app's colours, which are the product's own theme rather than a second set.
+ * The app's colours, which are the product's own themes rather than a second set.
  *
- * The palette is the icon's - crimson brackets, a gold glyph, printed ink on paper - and it is
- * declared once, on the surface page, as the "phonetix" theme. Material's scheme is built from
- * it here, so a Material button and a control drawn from [Tokens] are the same colour and a
- * colour changed on that page moves both.
+ * Every palette is declared once, on the surface page, and generated into [Tokens]. Which one
+ * a surface is drawn in is the reader's choice, and it is the same choice on both surfaces.
+ * Material's scheme is built from the chosen palette here, so a Material button and a control
+ * drawn from [Tokens] are the same colour and a colour changed on that page moves both.
  */
-private val PALETTE_LIGHT = Tokens.palette(Tokens.Theme.PHONETIX, dark = false)
-private val PALETTE_DARK = Tokens.palette(Tokens.Theme.PHONETIX, dark = true)
+fun themeNamed(name: String): Tokens.Theme =
+    runCatching { Tokens.Theme.valueOf(name.uppercase()) }.getOrDefault(Tokens.Theme.PHONETIX)
 
 /** Crimson is the mark's, not a role any surface names: it is read off the palette's danger. */
 private fun scheme(p: Tokens.Palette, dark: Boolean) =
@@ -65,7 +68,10 @@ private fun scheme(p: Tokens.Palette, dark: Boolean) =
 
 /** The colours a screen draws its own controls in, which are the same ones Material got. */
 @Composable
-fun appPalette(): Tokens.Palette = if (isSystemInDarkTheme()) PALETTE_DARK else PALETTE_LIGHT
+fun appPalette(): Tokens.Palette {
+    val settings by SettingsStore.state.collectAsState()
+    return Tokens.palette(themeNamed(settings.theme), isSystemInDarkTheme())
+}
 
 /** Brand colours the screens reach for directly. */
 object Brand {
@@ -88,8 +94,9 @@ val IpaStyle = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.
 @Composable
 fun PhonetixTheme(content: @Composable () -> Unit) {
     val dark = isSystemInDarkTheme()
+    val settings by SettingsStore.state.collectAsState()
     MaterialTheme(
-        colorScheme = scheme(if (dark) PALETTE_DARK else PALETTE_LIGHT, dark),
+        colorScheme = scheme(Tokens.palette(themeNamed(settings.theme), dark), dark),
         typography = AppTypography,
         content = content,
     )

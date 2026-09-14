@@ -32,14 +32,15 @@ data class Settings(
      */
     val target: String = "",
     /**
-     * What is drawn over a word: "gloss", "ipa", or "off".
+     * What a word is replaced by: "meaning", "sound", "both", or "off".
      *
-     * The browser's two other answers - both at once, and the word swapped in place - are not
-     * things an overlay can do: it paints a chip the width of the word it covers, so there is
-     * no room for a second line and the chip is itself the replacement. A setting that arrives
-     * carrying one of them is read as the meaning.
+     * The same three the browser offers, in the same words, because they are the same product:
+     * what a word means, how it is said, or what it means and how to say that. Where the answer
+     * goes is not a choice on either surface - it takes the word's place.
      */
-    val layer: String = "gloss",
+    val layer: String = "meaning",
+    /** The palette every surface of ours is drawn in, by the name the tokens key it under. */
+    val theme: String = "phonetix",
     /**
      * Which accent to read each language in, as language tag to accent tag: en → en-us.
      *
@@ -93,6 +94,7 @@ object SettingsStore {
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
     private const val K_STRESS = "hide_stress"
+    private const val K_THEME = "theme"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -111,7 +113,8 @@ object SettingsStore {
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, false),
             target = p.getString(K_TARGET, "") ?: "",
-            layer = p.getString(K_LAYER, "gloss") ?: "gloss",
+            layer = mode(p.getString(K_LAYER, "") ?: ""),
+            theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             // Stored as one entry per language, because a set of strings is what preferences
@@ -125,6 +128,19 @@ object SettingsStore {
             narrow = p.getBoolean(K_NARROW, false),
             hideStress = p.getBoolean(K_STRESS, true),
         )
+    }
+
+    /**
+     * What was stored, in the words the core reads now.
+     *
+     * The two modes were called "gloss" and "ipa" before the third one existed. A phone that
+     * has been used since then holds one of those, and the core reads a word it does not know
+     * as off, which leaves a reader who changed nothing with a screen that stopped answering.
+     */
+    private fun mode(stored: String): String = when (stored) {
+        "gloss", "" -> "meaning"
+        "ipa" -> "sound"
+        else -> stored
     }
 
     private fun update(block: (Settings) -> Settings) {
@@ -143,6 +159,7 @@ object SettingsStore {
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
             ?.putBoolean(K_STRESS, next.hideStress)
+            ?.putString(K_THEME, next.theme)
             ?.apply()
     }
 
@@ -151,7 +168,11 @@ object SettingsStore {
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
     fun setTarget(v: String) = update { it.copy(target = v) }
-    fun setLayer(v: String) = update { it.copy(layer = v) }
+    /** In the words the core reads, whoever is asking: a shortcut, a test harness or a
+     *  build of the screen older than this one can still say "ipa", and a mode the core does
+     *  not know is a screen that stops answering. */
+    fun setLayer(v: String) = update { it.copy(layer = mode(v)) }
+    fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
     /** Read one language in one accent, leaving the choice made for every other alone. */

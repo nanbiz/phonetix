@@ -27,7 +27,7 @@ import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.service.PhonetixAccessibilityService
 import io.github.nanbiz.phonetix.ui.AppEntry
 import io.github.nanbiz.phonetix.ui.AppsScreen
-import io.github.nanbiz.phonetix.ui.HomeScreen
+import io.github.nanbiz.phonetix.ui.SettingsWeb
 import io.github.nanbiz.phonetix.ui.PhonetixTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -105,20 +105,16 @@ class MainActivity : ComponentActivity() {
                     onToggle = SettingsStore::toggleApp,
                 )
             } else {
-                HomeScreen(
-                    settings = settings,
-                    accessibilityOn = accessibilityOn,
-                    overlayOn = overlayOn,
+                // The product's own settings screen, which is the extension's: one view, built
+                // from src/ui/settings and drawn here. What it cannot do for itself - the two
+                // permissions, the dictionaries, the app list - is behind the bridge.
+                SettingsWeb(
+                    permissions = { accessibilityOn to overlayOn },
                     dictionaryReady = dictReady,
-                    onEnabled = SettingsStore::setEnabled,
-                    onDensity = SettingsStore::setDensity,
-                    onTarget = SettingsStore::setTarget,
-                    onLens = SettingsStore::setLens,
-                    onLayer = SettingsStore::setLayer,
-                    onTouchWords = SettingsStore::setTouchWords,
-                    onOpenAccessibility = { openAccessibilitySettings() },
+                    onOpenReading = { openAccessibilitySettings() },
                     onOpenOverlay = { openOverlaySettings() },
                     onOpenApps = { showApps = true },
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }

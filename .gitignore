@@ -45,3 +45,5 @@ android/app/build/
 android/local.properties
 # The dictionaries the build carries, copied from assets by scripts/bundle-dictionaries.mjs.
 public/dictionaries/
+# The settings screen, built from src/ui into the app's assets by the Gradle build.
+android/app/src/main/assets/ui/

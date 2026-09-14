@@ -2130,7 +2130,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             listOf(says),
             source = "en",
             target = "en",
-            mode = "ipa",
+            mode = "sound",
             density = SettingsStore.current.density,
         ).filter { it.inline && it.ipa.isNotEmpty() }
             .map { Pick(it.start, it.end - 1, it.spelling, it.ipa) }
@@ -2241,15 +2241,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         )
         val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
         for ((at, token) in told.withIndex()) {
-            // What is drawn is what the reader asked for, of the two things this surface can
-            // draw. A chip is painted over the word and has the width of the word it covers,
-            // so there is no second line to put anything on: the browser's "both" and its
-            // "in place" are not choices here, and a setting carried over from one - or from
-            // an older build of this one - is read as the meaning, which is what the chip
-            // would have shown anyway.
+            // What is drawn is what the reader asked for, in the same three modes the browser
+            // offers. The chip is painted over the word and has the width of the word it
+            // covers, so "both" is one line: what it means, then how to say that. Where the
+            // language read into has no dictionary here there is no sound to give for the
+            // meaning, and the chip carries the meaning alone.
             if (!token.inline) continue
             val shown = when (settings.layer) {
-                "ipa" -> token.ipa
+                "sound" -> token.ipa
+                "both" -> listOf(token.gloss, token.glossIpa).filter { it.isNotEmpty() }
+                    .joinToString(" ")
+                    .ifEmpty { token.ipa }
                 else -> token.gloss.ifEmpty { token.ipa }
             }
             if (shown.isEmpty()) continue

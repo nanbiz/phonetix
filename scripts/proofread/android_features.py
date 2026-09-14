@@ -20,6 +20,7 @@ import sys
 import time
 
 from android_harness import Device, shell
+from webview import View
 
 
 class Results:
@@ -928,15 +929,20 @@ def ui_text(dev):
 
 
 def check_settings_screen(r, dev):
-    # Anything the previous checks left open - a card, most of all - would swallow the
-    # first swipe and leave the screen where it started.
+    """The app's own screen, which is the extension's own screen.
+
+    One set of components, built into the app's assets and drawn in a web view, so it is asked
+    the same questions the browser suite asks it: which rows are there, and whether the
+    controls on them are controls. An accessibility dump sees a web view as one blank view and
+    would report every row of it missing.
+    """
+    # Anything the previous checks left open - a card, most of all - would swallow the tap.
     shell("input", "tap", "20", "20")
     time.sleep(1.0)
     # Brought forward and waited for, not started and hoped about. The test page is an
     # activity of this same app, so starting the settings screen behind it delivers the
-    # intent and leaves the page where it is - and the dump below then reads the page,
-    # reports every section of the settings screen missing, and blames the screen.
-    for attempt in range(6):
+    # intent and leaves the page where it is.
+    for _ in range(6):
         shell(
             "am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
             "--activity-reorder-to-front",
@@ -951,57 +957,79 @@ def check_settings_screen(r, dev):
                    "settings: the app's own screen comes to the front",
                    f"the device is showing {dev.top_activity()}"):
         return
-    to_top()
-    # A dump only contains what is on screen, and the screen is taller than the window, so
-    # the whole of it is collected by scrolling through it.
-    texts, dump = ui_text(dev)
-    # Short steps, and a dump after each. A long swipe scrolls a whole section past
-    # between two dumps, and the section is then reported missing from a screen that
-    # showed it perfectly well.
-    # Enough steps to reach the end of it: the screen has grown - transcriptions, accents -
-    # and a sweep that stops halfway reports the sections below as missing.
-    for _ in range(26):
-        shell("input", "swipe", "540", "1300", "540", "950", "400")
-        time.sleep(1.2)
-        more, more_dump = ui_text(dev)
-        texts += more
-        dump += more_dump
 
-    # The screen sets its section titles in capitals, so the comparison is on the words
-    # rather than on their case.
-    seen = {t.lower() for t in texts}
-    for wanted in ("Phonetix", "How often", "Apps"):
-        r.check(wanted.lower() in seen, f"settings: the screen shows {wanted}", str(texts[:12]))
-    # The preview says what it is a preview of, so it is found by what it starts with rather
-    # than by the bare word.
-    r.check(
-        any(t.lower().startswith("preview") for t in texts),
-        "settings: the screen shows a preview of what the bar does",
-        str([t for t in texts if "preview" in t.lower()][:3]),
-    )
+    words = wording()
+    try:
+        with View() as view:
+            drawn = None
+            for _ in range(20):
+                drawn = view.evaluate("""
+                    (() => {
+                      const panel = document.querySelector('main');
+                      if (!panel || !panel.querySelector('[data-row]')) return null;
+                      return JSON.stringify({
+                        rows: [...panel.querySelectorAll('[data-row]')]
+                          .map(r => r.getAttribute('data-row')),
+                        names: [...panel.querySelectorAll('[data-row] [data-name]')]
+                          .map(r => r.textContent.trim()),
+                        modes: [...panel.querySelectorAll('[data-row=layer] [data-choice]')]
+                          .map(c => c.getAttribute('data-choice')),
+                        languages: (panel.querySelector('[data-row=target] select') || {})
+                          .length || 0,
+                        first: (panel.querySelector('[data-row=target] select option') || {})
+                          .textContent || '',
+                        often: (panel.querySelector('[data-row=density] [data-about]') || {})
+                          .textContent || '',
+                        bar: Boolean(panel.querySelector('[data-row=density] input[type=range]')),
+                        themes: (panel.querySelector('[data-row=theme] select') || {})
+                          .length || 0,
+                        on: Boolean(panel.querySelector('[data-row=on] input')),
+                        ground: getComputedStyle(document.body).backgroundColor,
+                      });
+                    })()
+                """)
+                if drawn:
+                    break
+                time.sleep(1)
+            if not r.check(drawn, "settings: the screen draws itself", "nothing in the view"):
+                return
+            screen = json.loads(drawn)
+    except Exception as e:  # noqa: BLE001 - the reason is what a reader of the run needs
+        r.check(False, "settings: the screen draws itself", str(e))
+        return
 
-    # The frequency reads as one word in so many, and the preview shows what that does.
-    r.check(
-        any(re.match(r"1 in \d+", t) for t in texts),
-        "settings: the frequency is stated as one word in so many",
-        str([t for t in texts if "in" in t][:5]),
-    )
-    # In the words both platforms are written out of, whatever case the screen sets them in.
-    r.check(
-        any(t.lower() == "every word" for t in texts),
-        "settings: the dense end of the bar says it means every word",
-        str(texts[:12]),
-    )
-    r.check("SeekBar" in dump, "settings: the frequency bar is a real control", "no slider in the screen")
+    # The rows a reader of either surface finds, under the names both are written out of.
+    for row in ("on", "layer", "target", "density", "theme", "lens", "touch-words", "apps",
+                "say", "advanced"):
+        r.check(row in screen["rows"], f"settings: the screen has the {row} row",
+                str(screen["rows"]))
+    # Named as they are named on the other surface, because both are written out of
+    # data/wording.json.
+    for row in ("layer", "target", "density", "theme"):
+        r.check(words["rows"][row]["name"] in screen["names"],
+                f"settings: the {row} row is called {words['rows'][row]['name']}",
+                str(screen["names"][:12]))
 
-    # The preview shows which words the bar would answer, in a sentence, so what has to be
-    # there is the sentence: it used to be redrawn as transcriptions, which is not what the
-    # overlay does to a page and not what the reader's own setting asks for.
-    r.check(
-        any("teaches pronunciation" in t for t in texts),
-        "settings: the preview shows the sentence the bar is applied to",
-        "no transcription among the previewed text",
-    )
+    # What this does to a word: the three the core knows, and nothing else.
+    r.check(screen["modes"] == ["meaning", "sound", "both"],
+            "settings: the modes are the core's three", str(screen["modes"]))
+    # The language, whose first entry is the choice to leave the words alone.
+    r.check(screen["languages"] > 20, "settings: every language is offered",
+            str(screen["languages"]))
+    r.check(screen["first"].strip() == words["says"]["no-translation"],
+            "settings: not translating is the first choice",
+            repr(screen["first"]))
+    # The bar is a bar, and says what it means in words rather than as a ratio.
+    r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")
+    r.check("word" in screen["often"].lower(),
+            "settings: the frequency is stated in words", repr(screen["often"]))
+    # The palettes, which the phone offered none of until it drew this screen.
+    r.check(screen["themes"] >= 8, "settings: the palettes are offered", str(screen["themes"]))
+    # And the tokens reached it: a screen with no surface colour is a screen drawn in
+    # nothing, which is what a missing stylesheet looks like.
+    r.check("rgba(0, 0, 0, 0)" not in screen["ground"],
+            "settings: the screen is painted in the product's own colours",
+            screen["ground"])
 
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1019,21 +1047,43 @@ def wording():
 
 
 def check_switch_in_ui(r, dev):
-    """The switch on the screen is the same switch the overlay obeys."""
+    """The switch on the screen is the switch the overlay obeys.
+
+    Worked the way a reader works it - pressed, not stored behind its back - and then asked of
+    the settings the service reads, because a switch that moves and changes nothing is the
+    failure this is here to catch.
+    """
     shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
           "--activity-reorder-to-front")
     time.sleep(3)
-    to_top()
-    texts, _ = ui_text(dev)
-    # In the words both platforms are written out of: the state of the one switch a reader
-    # opens the app for.
-    on_word = wording()["says"]["master-on"]
-    off_word = wording()["says"]["master-off"]
-    r.check(
-        on_word in texts or off_word in texts,
-        "settings: the screen says whether it is on",
-        str(texts[:10]),
-    )
+    try:
+        with View() as view:
+            before = view.evaluate(
+                "(document.querySelector('[data-row=on] input') || {}).checked")
+            if not r.check(before is not None, "settings: the screen carries the switch",
+                           "no switch in the view"):
+                return
+            view.evaluate("(document.querySelector('[data-row=on] input') || {}).click?.()")
+            time.sleep(2)
+            after = view.evaluate(
+                "(document.querySelector('[data-row=on] input') || {}).checked")
+            r.check(after is not None and after != before,
+                    "settings: the switch moves when it is pressed", f"{before} -> {after}")
+            # And the app kept it: the screen writes through the bridge to the same store the
+            # service reads, so what the reader pressed is what the overlay is told.
+            stored = shell("run-as", "io.github.nanbiz.phonetix", "cat",
+                           "shared_prefs/phonetix.settings.xml")
+            r.check(
+                f'name="enabled" value="{str(bool(after)).lower()}"' in stored,
+                "settings: the switch is written where the service reads it",
+                stored[-200:] if stored else "nothing stored",
+            )
+            # Left as it was found, so the checks after this one read the screen they expect.
+            if after != before:
+                view.evaluate("(document.querySelector('[data-row=on] input') || {}).click?.()")
+                time.sleep(1)
+    except Exception as e:  # noqa: BLE001
+        r.check(False, "settings: the screen carries the switch", str(e))
 
 
 def main():
@@ -1046,7 +1096,7 @@ def main():
     # followed one leaving a target language behind counted the words of an English page that
     # were being answered in German, and reported the frequency bar as broken.
     shell("am", "start", "-n", "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
-          "--es", "target", "none", "--es", "layer", "ipa", "--ei", "enable", "1")
+          "--es", "target", "none", "--es", "layer", "sound", "--ei", "enable", "1")
     time.sleep(2)
 
     r = Results()

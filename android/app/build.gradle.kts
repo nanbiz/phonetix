@@ -93,6 +93,23 @@ val bundleDictionaries by tasks.registering(Copy::class) {
 }
 
 /**
+ * The settings screen, which is the extension's settings screen.
+ *
+ * One view for the whole product: the rows, the words and the palettes live in src/ui and are
+ * built into the app's assets here, so a row added to the popup is a row on the phone. What
+ * the app answers it with is in SettingsWeb.kt.
+ */
+val bundleSettingsUi by tasks.registering(Exec::class) {
+    val root = rootProject.file("..")
+    workingDir = root
+    commandLine("node", "node_modules/vite/bin/vite.js", "build", "-c", "vite.phone.config.ts")
+    inputs.dir(File(root, "src/ui"))
+    inputs.dir(File(root, "src/phone"))
+    inputs.file(File(root, "vite.phone.config.ts"))
+    outputs.dir(layout.projectDirectory.dir("src/main/assets/ui"))
+}
+
+/**
  * The synthesiser, for the words no pack holds.
  *
  * Built from source per ABI, like the core beside it, rather than committed. The script is
@@ -132,7 +149,7 @@ val bundleModel by tasks.registering(Copy::class) {
 }
 
 tasks.named("preBuild") {
-    dependsOn(bundleDictionaries, bundleModel, bundleSpeech, bundleHomographs)
+    dependsOn(bundleDictionaries, bundleModel, bundleSpeech, bundleHomographs, bundleSettingsUi)
 }
 
 // The native core, built from ../../core rather than committed.

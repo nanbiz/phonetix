@@ -1,0 +1,58 @@
+/* The phone's settings screen ground.
+ *
+ * The tokens and the settings surfaces are generated from docs/merge/surface.html, and are
+ * what the extension's popup, the card and the words on a page are drawn in. This file is the
+ * difference between a popup and a screen: a popup is a panel of a fixed width hanging off a
+ * toolbar, and this fills a device.
+ */
+@import "../ui/tokens.css";
+@import "../ui/settings/settings.css";
+/* The card, because the say screen answers with it: what a machine handed over is judged the
+   way every other answer in this product is. */
+@import "../ui/card/card.css";
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+html,
+body,
+#app {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--font-size-body);
+  line-height: var(--line-body);
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  /* Out from under the status bar and the gesture bar, which the app draws behind. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+#app {
+  width: 100%;
+}
+
+/* The panel fills the screen rather than sitting on it as a card: on a device of its own
+   there is nothing for a card to be raised above. */
+.panel {
+  max-width: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* A screen is taller than a popup, and its own scroll is the device's. */
+.panel section {
+  min-height: 0;
+}

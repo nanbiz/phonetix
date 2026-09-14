@@ -14,6 +14,9 @@ data class Annotated(
     val ipa: String,
     /** What it means, cut to what an inline annotation can carry. Empty when nothing does. */
     val gloss: String,
+    /** How that meaning is said, where the reader asked for both and the language they read
+     *  into has a dictionary here. The sound of the word being given, not of the word read. */
+    val glossIpa: String,
     /** Whether this occurrence is one the inline layer draws. */
     val inline: Boolean,
 )
@@ -78,6 +81,7 @@ object Reading {
                     spelling = row.optString("spelling"),
                     ipa = row.optString("ipa").takeIf { it != "null" }.orEmpty(),
                     gloss = row.optString("gloss").takeIf { it != "null" }.orEmpty(),
+                    glossIpa = row.optString("glossIpa").takeIf { it != "null" }.orEmpty(),
                     inline = row.optBoolean("inline"),
                 )
             }

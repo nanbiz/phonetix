@@ -43,6 +43,9 @@ data class Answer(
     val provenance: Provenance?,
     val source: String,
     val target: String,
+    /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
+     *  screen is a web view drawing the same card the extension draws, off the same JSON. */
+    val json: String = "",
 ) {
     /** What produced an answer. A reader deciding whether to trust a word is owed it. */
     sealed interface Provenance {
@@ -190,6 +193,7 @@ data class Answer(
                 },
                 source = o.optString("source"),
                 target = o.optString("target"),
+                json = json,
             )
         }
     }

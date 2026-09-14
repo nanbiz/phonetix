@@ -29,6 +29,7 @@ import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.ui.AnswerCard
 import io.github.nanbiz.phonetix.ui.Tokens
+import io.github.nanbiz.phonetix.ui.themeNamed
 import io.github.nanbiz.phonetix.core.SymbolInfo
 import io.github.nanbiz.phonetix.core.WordBox
 import io.github.nanbiz.phonetix.core.wikimediaFileUrl
@@ -377,7 +378,7 @@ class TooltipController(
         // is read against the screen it lands on. Which palette is the product's own, so the
         // card and the app that switches it on are one set of colours.
         val dark = box.background == 0 || isDark(box.background)
-        val palette = Tokens.palette(Tokens.Theme.PHONETIX, dark)
+        val palette = Tokens.palette(themeNamed(SettingsStore.current.theme), dark)
         // What the word means, asked of the cascade in the languages the reader is reading
         // between. Where no pack answers, what comes back is the transcription the overlay
         // already had, which is what the card then shows.
