@@ -48,6 +48,8 @@
 .toggle.big { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
 .toggle.big::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
 .toggle.big:checked::before, .toggle.big.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+/* A switch for something that cannot be switched on yet: still readable, plainly not ready. */
+.toggle:disabled { opacity: 0.5; cursor: default; }
 .toggle:checked, .toggle.on { background: var(--color-accent); }
 .toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
 .select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
@@ -96,6 +98,9 @@
 /* A line of prose on a screen that is otherwise controls: what a screen is for, and what came
    of asking. The answer a machine gave sits under it as the card the rest of the product
    answers with, so it is judged the same way. */
+/* A question mark beside a name, carrying what a reader would otherwise need a sentence of
+   explanation for. The sentence is there for whoever wants it and takes no room from the row. */
+.hint { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: var(--space-1); border: var(--border-width) solid var(--color-border); border-radius: 50%; font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: help; }
 .about { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .answer { padding: var(--space-3) var(--space-4); border-top: var(--border-width) solid var(--color-border); }
 .made { display: flex; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
@@ -128,6 +133,26 @@
 .choice.on .c-about { color: var(--color-accent); opacity: 0.85; }
 .choice .c-mark { flex: 0 0 auto; color: var(--color-accent); }
 .choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+
+/* A finger rather than a pointer, asked of the pointer itself.
+ *
+ * Not asked of the platform: a laptop with a touchscreen and a phone want exactly the same
+ * thing, and a phone with a mouse attached wants the other. What changes is how big a thing
+ * has to be to hit, and how much room a row has to give it - never what the row says or where
+ * it sits, so both surfaces stay the one screen a reader learns once. */
+@media (pointer: coarse) {
+  .row { padding: var(--space-4); gap: var(--space-2) var(--space-4); }
+  .nav { min-height: var(--touch-target); padding: var(--space-4); }
+  .choice { padding: var(--space-3) var(--space-4); }
+  .seg button { height: var(--touch-target); padding: 0 var(--space-4); font-size: var(--font-size-body); }
+  .toggle { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
+  .toggle::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
+  .toggle:checked::before, .toggle.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+  .select, .pick { min-height: var(--touch-target); }
+  .btn, .btn-text { min-height: var(--touch-target); }
+  /* A bar dragged with a finger, which lands nowhere near as precisely as a cursor. */
+  .slider { height: var(--touch-target); }
+}
 
 /* Shared with the card, where they are declared. */
 .chip { display: inline-flex; align-items: center; background: var(--color-chip-bg); color: var(--color-chip-ink); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); line-height: 1.6; white-space: nowrap; }

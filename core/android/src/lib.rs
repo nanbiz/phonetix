@@ -439,10 +439,9 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
     };
     let options = lexcore::answer::AnnotateOptions {
         mode: match mode.as_str() {
-            "gloss" => lexcore::answer::InlineMode::Gloss,
-            "gloss+ipa" => lexcore::answer::InlineMode::GlossIpa,
-            "ipa" => lexcore::answer::InlineMode::Ipa,
-            "replace" => lexcore::answer::InlineMode::Replace,
+            "meaning" => lexcore::answer::InlineMode::Meaning,
+            "sound" => lexcore::answer::InlineMode::Sound,
+            "both" => lexcore::answer::InlineMode::Both,
             _ => lexcore::answer::InlineMode::Off,
         },
         density: density.max(1) as u32,

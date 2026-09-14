@@ -282,10 +282,9 @@ impl Core {
         };
         let options = AnnotateOptions {
             mode: match mode {
-                "gloss" => InlineMode::Gloss,
-                "gloss+ipa" => InlineMode::GlossIpa,
-                "ipa" => InlineMode::Ipa,
-                "replace" => InlineMode::Replace,
+                "meaning" => InlineMode::Meaning,
+                "sound" => InlineMode::Sound,
+                "both" => InlineMode::Both,
                 _ => InlineMode::Off,
             },
             density,

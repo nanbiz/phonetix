@@ -17,7 +17,14 @@ const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
 
 let ready: Promise<void> | null = null;
 
-/** Make sure the page the engine lives in exists. Chromium only. */
+/**
+ * Make sure the page the engine lives in exists. Chromium only.
+ *
+ * The attempt is remembered so that a page of misses asks for one document rather than one
+ * each, and a failed attempt is forgotten again: held, it would be the answer to every later
+ * ask, and one bad moment while the worker was starting would leave the voice dead for as
+ * long as that worker lived - every word no dictionary holds silently unanswered.
+ */
 function offscreen(): Promise<void> {
   if (!ready) {
     ready = (async () => {
@@ -34,13 +41,28 @@ function offscreen(): Promise<void> {
       } catch (e) {
         // Two callers can ask at once and only one document may exist; the loser is not a
         // failure, it is the document already being there.
-        if (!String(e).includes('Only a single offscreen')) throw e;
+        if (!String(e).includes('Only a single offscreen')) {
+          console.warn('[Phonetix] The voice has nowhere to run:', e);
+          throw e;
+        }
       }
-    })();
+    })().catch((e) => {
+      ready = null;
+      throw e;
+    });
   }
   return ready;
 }
 
+/**
+ * Put one question to the engine, and put it again if the page it lives in has gone.
+ *
+ * An offscreen page can die - it is a document, and a document can be closed or run out of
+ * memory - and nothing tells the worker when it does. Asked once, the whole product quietly
+ * stops filling in how a word is said for as long as that worker lives: every word no
+ * dictionary holds reads as a word nobody wrote an entry for. So a question that reaches
+ * nobody is asked again, once, against a document made fresh.
+ */
 async function ask<T>(
   voice: 'ipa' | 'audio' | 'translate' | 'pairs',
   lang: string,
@@ -48,14 +70,31 @@ async function ask<T>(
   into?: string,
   base?: string,
 ): Promise<T> {
-  await offscreen();
-  const answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base })) as
-    | { ok: T }
-    | { failed: string }
-    | undefined;
-  if (!answered) throw new Error('the voice did not answer');
-  if ('failed' in answered) throw new Error(answered.failed);
-  return answered.ok;
+  for (let attempt = 0; ; attempt++) {
+    await offscreen();
+    let answered: { ok: T } | { failed: string } | undefined;
+    let reached = true;
+    try {
+      answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base })) as
+        | { ok: T }
+        | { failed: string }
+        | undefined;
+    } catch (e) {
+      // What a browser says when nothing is listening: the page is gone, rather than the
+      // engine having failed at something. Anything else is the engine's own answer.
+      if (!String(e).includes('Receiving end does not exist')) throw e;
+      reached = false;
+    }
+    if (answered && 'failed' in answered) throw new Error(answered.failed);
+    if (answered) return answered.ok;
+    if (attempt > 0) throw new Error('the voice did not answer');
+    // Nobody is there. The browser can still hold a record of a page that has died, and
+    // making another is refused while that record stands, so it is closed before asking for
+    // one - and only then is the question put again.
+    void reached;
+    ready = null;
+    await chrome.offscreen?.closeDocument?.().catch(() => undefined);
+  }
 }
 
 /**

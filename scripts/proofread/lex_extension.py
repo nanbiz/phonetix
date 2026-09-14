@@ -175,7 +175,7 @@ def main():
             "data": {
                 "runs": [{"id": 11, "text": sentence}],
                 "source": "es", "target": TARGET,
-                "options": {"mode": "gloss", "density": 1},
+                "options": {"mode": "meaning", "density": 1},
             },
         })
         drawn = (batch.get("ok") or {}).get("tokens")
@@ -208,7 +208,7 @@ def main():
             "data": {
                 "runs": [{"id": 12, "text": sentence}],
                 "source": "es", "target": TARGET,
-                "options": {"mode": "gloss", "density": 50},
+                "options": {"mode": "meaning", "density": 50},
             },
         })
         few = [t for t in ((sparse.get("ok") or {}).get("tokens") or []) if t["inline"]]

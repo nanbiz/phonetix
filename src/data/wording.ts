@@ -26,35 +26,33 @@ export interface Words {
 
 /** Transcriptions, as a browser can draw them. */
 export const DETAIL_CHOICES: Choice[] = [
-  { value: "broad", label: "Broad", about: "the sounds that tell words apart" },
-  { value: "narrow", label: "Narrow", about: "every detail of how it is said, like aspiration and devoicing" },
+  { value: "broad", label: "/ /", about: "the sounds that tell words apart" },
+  { value: "narrow", label: "[ ]", about: "every detail of how it is said, like aspiration and devoicing" },
 ];
 
-/** Show over a word, as a browser can draw them. */
+/** Mode, as a browser can draw them. */
 export const LAYER_CHOICES: Choice[] = [
-  { value: "off", label: "Nothing", about: "the page as it is; a card when you stop on a word" },
-  { value: "gloss", label: "What it means", about: "the meaning, above the word" },
-  { value: "ipa", label: "How it is said", about: "the pronunciation, above the word" },
-  { value: "gloss+ipa", label: "Both", about: "the meaning and the pronunciation, above the word" },
-  { value: "replace", label: "In place of the word", about: "the word itself swapped for what it means; rest on it to see the word" },
+  { value: "meaning", label: "Translation", about: "the word replaced by what it means" },
+  { value: "sound", label: "Pronunciation", about: "the word replaced by how it is said" },
+  { value: "both", label: "Both", about: "what it means, and how to say that" },
 ];
 
 /** Every row of the settings surfaces, by the name it reports itself under. */
 export const ROWS: Record<string, Words> = {
   "accent": { name: "Accent", about: "which accent each language is read in" },
+  "advanced": { name: "Advanced", about: "transcriptions, stress, dictionaries and how a page is read" },
   "animations": { name: "Animations", about: "the card eases in; off is instant" },
   "apps": { name: "Apps", about: "" },
   "delay": { name: "Rest before a card opens", about: "how long the cursor stays on a word before it answers" },
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
   "host": { name: "Where they come from", about: "Fetched once and kept on this machine, so a dictionary works on a train." },
-  "layer": { name: "Show over a word", about: "" },
+  "layer": { name: "Mode", about: "" },
   "lens": { name: "The mark", about: "One mark at the edge of the screen, and the three things it answers" },
   "lens-drag": { name: "Drag it over a word", about: "It says what it passes over and takes none of the screen's touches" },
   "lens-hold": { name: "Hold it, then sweep", about: "Every word it passes over joins the run, and the card answers the whole clause" },
   "lens-tap": { name: "Press it", about: "The whole screen in your own language; press it again to put the screen back" },
   "meanings": { name: "To see what a word means", about: "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read." },
-  "more": { name: "How it reads", about: "transcriptions, stress, how long a rest opens a card" },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
   "say": { name: "The word for something", about: "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you." },
@@ -64,8 +62,9 @@ export const ROWS: Record<string, Words> = {
   "site": { name: "On this site", about: "the default is what happens on sites you have not decided about" },
   "source": { name: "This page is in", about: "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong." },
   "start": { name: "Before it can answer a word", about: "Asked once. Nothing else appears until they are done." },
-  "stress": { name: "Stress marks", about: "over a word; the card always shows them" },
-  "target": { name: "I read into", about: "the language the answers come in" },
+  "stress": { name: "Stress marks", about: "in the transcription over a word; the card always shows them" },
+  "target": { name: "Language", about: "what the words are turned into" },
+  "theme": { name: "Theme", about: "the colours everything of ours is drawn in" },
   "touch": { name: "Touching a word", about: "" },
   "touch-words": { name: "Hold a word for its card", about: "" },
   "where": { name: "Where", about: "" },
@@ -80,7 +79,9 @@ export const ENDS: Record<string, [string, string]> = {
 /** Phrases both surfaces use, so neither invents its own wording. */
 export const SAYS: Record<string, string> = {
   "allow-overlay": "Allow overlay",
+  "broad-mark": "/ /",
   "change": "Change",
+  "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
   "dictionary-accent": "as the dictionary gives it",
   "every-app": "Every app",
   "get": "Get",
@@ -90,8 +91,10 @@ export const SAYS: Record<string, string> = {
   "master-on": "Reading",
   "master-unready": "Finish the steps below to switch on",
   "master-working": "The words in your apps are being answered",
+  "narrow-mark": "[ ]",
   "no-host": "Nothing is fetched until this is set.",
   "no-source": "no source for them yet",
+  "no-translation": "Don't translate",
   "nothing-yet": "nothing yet",
   "open-accessibility": "Open accessibility",
   "preview": "Preview",

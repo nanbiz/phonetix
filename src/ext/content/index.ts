@@ -7,8 +7,17 @@
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import { accentFor, allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
-import { hide, inside, moveTo, show, showing } from './card';
-import { isPainted, paint, reveal, unpaint, unreveal, WORD, wordAt } from './inline';
+import { hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing } from './card';
+import {
+  isPainted,
+  paint,
+  paintedIn,
+  reveal,
+  unpaint,
+  unreveal,
+  WORD,
+  wordAt,
+} from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { OURS, scan, type ScannedRun } from './scan';
@@ -503,6 +512,8 @@ function answerAsked(): void {
 /** Start reading this document. */
 export async function session(): Promise<void> {
   settings = await current();
+  paintedIn(settings.theme);
+  cardPaintedIn(settings.theme);
   answerAsked();
   gestures();
   follow();
@@ -520,8 +531,11 @@ export async function session(): Promise<void> {
       was.narrow !== fresh.narrow ||
       JSON.stringify(was.accents) !== JSON.stringify(fresh.accents) ||
       was.hideStress !== fresh.hideStress ||
+      was.theme !== fresh.theme ||
       was.off.join() !== fresh.off.join()
     ) {
+      paintedIn(fresh.theme);
+      cardPaintedIn(fresh.theme);
       if (!allowed(fresh, location.hostname) && isPainted()) unpaint();
       else await draw();
     }

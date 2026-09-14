@@ -178,13 +178,13 @@ object Tokens {
         )
         theme == Theme.DRACULA && dark -> Palette(
             accent = 0xFFFF79C6L,
-            accentBg = 0xFFFF79C6L,
+            accentBg = 0xFF48364CL,
             accentInk = 0xFF16050EL,
             border = 0xFF1F202AL,
             chipBg = 0xFF232530L,
             chipInk = 0xFFF8F8F3L,
             danger = 0xFFFF5555L,
-            dangerBg = 0xFF160202L,
+            dangerBg = 0xFF48303BL,
             guess = 0x00000000L,
             guessBg = 0x00000000L,
             ink = 0xFFF8F8F3L,
@@ -262,13 +262,13 @@ object Tokens {
         )
         theme == Theme.NORD && !dark -> Palette(
             accent = 0xFF5E81ACL,
-            accentBg = 0xFF5E81ACL,
+            accentBg = 0xFFD7DEE9L,
             accentInk = 0xFF03060BL,
             border = 0xFFD8DEE9L,
             chipBg = 0xFFE5E9F0L,
             chipInk = 0xFF2E3440L,
             danger = 0xFFBF616AL,
-            dangerBg = 0xFF0D0304L,
+            dangerBg = 0xFFE5DADFL,
             guess = 0x00000000L,
             guessBg = 0x00000000L,
             ink = 0xFF2E3440L,
@@ -402,13 +402,13 @@ object Tokens {
         )
         theme == Theme.SILK && !dark -> Palette(
             accent = 0xFF1C1C29L,
-            accentBg = 0xFF1C1C29L,
+            accentBg = 0xFFD6D4D5L,
             accentInk = 0xFFE1FF00L,
             border = 0xFFE2DDD9L,
             chipBg = 0xFFF3EDE9L,
             chipInk = 0xFF4B4743L,
             danger = 0xFFFF7878L,
-            dangerBg = 0xFF800001L,
+            dangerBg = 0xFFF8E2E1L,
             guess = 0x00000000L,
             guessBg = 0x00000000L,
             ink = 0xFF4B4743L,
@@ -430,13 +430,13 @@ object Tokens {
         )
         theme == Theme.WINTER && !dark -> Palette(
             accent = 0xFF0069FFL,
-            accentBg = 0xFF0069FFL,
+            accentBg = 0xFFD9E8FFL,
             accentInk = 0xFFCEE4FFL,
             border = 0xFFE3E9F4L,
             chipBg = 0xFFF2F7FEL,
             chipInk = 0xFF394E6AL,
             danger = 0xFFE58B8BL,
-            dangerBg = 0xFF120707L,
+            dangerBg = 0xFFFBEEEEL,
             guess = 0x00000000L,
             guessBg = 0x00000000L,
             ink = 0xFF394E6AL,

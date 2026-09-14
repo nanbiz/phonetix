@@ -4,7 +4,7 @@
   // The first thing in the popup and the first thing a reader came for. Two switches, because
   // they answer two different questions: the big one is what happens on a site the reader has
   // not decided about, and the small one is the decision about this site, which wins.
-  import { SAYS } from '@/data/wording';
+  import { ROWS, SAYS } from '@/data/wording';
   import Toggle from '@/ui/controls/Toggle.svelte';
 
   interface Props {
@@ -18,12 +18,25 @@
     here?: boolean;
     /** Whether this site has a decision of its own, rather than following the default. */
     decided?: boolean;
+    /** Whether the surface can answer a word at all. A phone that has not been allowed to
+     *  read the screen cannot, and a switch that does nothing is worse than a switch that
+     *  says why it is waiting. */
+    ready?: boolean;
     change: (on: boolean) => void;
     onSite?: (on: boolean) => void;
   }
 
-  let { icon = '', on, site = '', siteIcon = '', here = true, decided = false, change, onSite }:
-    Props = $props();
+  let {
+    icon = '',
+    on,
+    site = '',
+    siteIcon = '',
+    here = true,
+    decided = false,
+    ready = true,
+    change,
+    onSite,
+  }: Props = $props();
 </script>
 
 <div class="switchboard">
@@ -34,9 +47,11 @@
       <!-- What the product does, which is what belongs under its own name. This line used to
            explain what happens on sites the reader has not decided about - an edge case, as
            the first sentence anybody reads. -->
-      <span class="board-sub">{SAYS['tagline']}</span>
+      <span class="board-sub" data-about>
+        {ready ? SAYS['tagline'] : ROWS.start.about}
+      </span>
     </span>
-    <Toggle {on} big label="annotate what I read" {change} />
+    <Toggle on={on && ready} big label="annotate what I read" enabled={ready} {change} />
   </div>
 
   {#if site}

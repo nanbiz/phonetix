@@ -7,6 +7,7 @@
   import Settings from '@/ui/settings/Settings.svelte';
   import { current, set, setSite, type Settings as Chosen } from '@/settings';
   import { sendMessage } from '@/host/messages';
+  import { themeOf } from '@/ui/theme';
   import type { Offered } from '@/host/packs';
 
   let settings = $state<Chosen | null>(null);
@@ -70,6 +71,12 @@
 
   function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
     if (settings) settings = { ...settings, [name]: value };
+    // The view is drawn in the palette being chosen, so choosing one shows what it looks
+    // like rather than describing it.
+    if (name === 'theme') {
+      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.className = themeOf(dark, String(value));
+    }
     void set(name, value).then(() => {
       // A reader who has just said where their dictionaries live means now: without this the
       // list they were typing the address for stays empty until the popup is opened again.

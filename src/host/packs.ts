@@ -9,6 +9,18 @@ import { createStore, get as read, set as keep, del, keys } from 'idb-keyval';
 import { buildIpaPack, closePack, openLanguages, openPack } from '@/core';
 
 const store = createStore('phonetix-packs', 'lang-pack');
+/**
+ * The packs built out of what the product carries, kept apart from the ones a reader fetched.
+ *
+ * Two different things under one name would be one thing: a carried pack says how a language's
+ * words are said, a fetched one says what they mean, and the core holds one pack per language.
+ * Separate stores keep "what this machine holds" honest - a carried pack is not a dictionary a
+ * reader went and got - and let a fetched one take the open slot when it arrives.
+ */
+const carriedStore = createStore('phonetix-packs', 'carried-pack');
+
+/** Languages whose open pack is one we carried, so a fetched one may take its place. */
+const carried = new Set<string>();
 
 /**
  * Where the packs are served from, or nothing when the reader has not said.
@@ -40,6 +52,12 @@ async function cached(lang: string): Promise<Uint8Array | undefined> {
   return bytes === undefined ? undefined : new Uint8Array(bytes);
 }
 
+/** The pack built from what we carry, where one has been built already. */
+async function carriedPack(lang: string): Promise<Uint8Array | undefined> {
+  const bytes = await read<ArrayBuffer>(lang, carriedStore);
+  return bytes === undefined ? undefined : new Uint8Array(bytes);
+}
+
 /**
  * A language's pack, open in the core, from what this machine already holds.
  *
@@ -50,7 +68,10 @@ async function cached(lang: string): Promise<Uint8Array | undefined> {
 export async function open(lang: string): Promise<string | null> {
   if ((await openLanguages()).includes(lang)) return lang;
   const bytes = await cached(lang);
-  if (bytes) return openPack(bytes);
+  if (bytes) {
+    carried.delete(lang);
+    return openPack(bytes);
+  }
   return fromWhatWeCarry(lang);
 }
 
@@ -68,6 +89,12 @@ export async function open(lang: string): Promise<string | null> {
 async function fromWhatWeCarry(lang: string): Promise<string | null> {
   if (!/^[a-z]{2,3}(-[a-z0-9]+)?$/i.test(lang)) return null;
   try {
+    const already = await carriedPack(lang);
+    if (already) {
+      const opened = await openPack(already);
+      carried.add(opened);
+      return opened;
+    }
     const res = await fetch(browser.runtime.getURL(`/dictionaries/${lang}.json.gz` as never));
     if (!res.ok) return null;
     const built = await buildIpaPack(lang, new Uint8Array(await res.arrayBuffer()));
@@ -75,8 +102,8 @@ async function fromWhatWeCarry(lang: string): Promise<string | null> {
     const opened = await openPack(built);
     // Kept as a pack rather than rebuilt on every start: building one is seconds for a big
     // language, and a reader opens a page more often than they install.
-    await keep(opened, built.slice().buffer, store);
-    await told();
+    await keep(opened, built.slice().buffer, carriedStore);
+    carried.add(opened);
     return opened;
   } catch {
     return null;   // a build without the dictionaries answers what the host gives it
@@ -93,7 +120,10 @@ async function fromWhatWeCarry(lang: string): Promise<string | null> {
  */
 export async function get(lang: string): Promise<string | null> {
   const already = await open(lang);
-  if (already) return already;
+  // Unless what is open is one we carried: that one says how the language's words are said,
+  // and what is being fetched says what they mean. The fetched pack takes the place of the
+  // carried one, which is where the meanings a reader asked for come from.
+  if (already && !carried.has(already)) return already;
 
   const base = await host();
   if (!base) return null;
@@ -103,6 +133,7 @@ export async function get(lang: string): Promise<string | null> {
   const bytes = new Uint8Array(await res.arrayBuffer());
   const opened = await openPack(bytes);
   await keep(opened, bytes.slice().buffer, store);
+  carried.delete(opened);
   await told();
   return opened;
 }
@@ -160,4 +191,7 @@ export async function forget(lang: string): Promise<void> {
   await del(lang, store);
   await closePack(lang);
   await told();
+  // And back to what the product carries, so giving up a dictionary leaves the language
+  // readable rather than bare.
+  await fromWhatWeCarry(lang);
 }

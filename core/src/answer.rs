@@ -81,20 +81,31 @@ pub struct Token {
     pub gloss: Option<String>,
     /// The transcription after the broad or narrow display transform.
     pub ipa: Option<String>,
+    /// How the translation is said, where the reader asked for both and the language they
+    /// read into has a dictionary here. The sound of the word they are being given, not of
+    /// the word on the page: a reader shown "bench" wants to know how to say "bench".
+    pub gloss_ipa: Option<String>,
     /// Whether the sprinkle chose this word for an inline annotation.
     pub inline: bool,
     pub provenance: Option<Provenance>,
 }
 
-/// What the inline layer draws, which is a reader's setting rather than a platform's.
+/// What a reader is being shown, which is a setting rather than a platform's habit.
+///
+/// Two things this product does - say what a word means, and say how it is said - and the one
+/// combination of them that is worth anything: the meaning, and how to say *that*. Where it
+/// goes is not a choice: the word is replaced by the answer, which is the only thing that
+/// works where there is no pointer to rest, and asking about a word is the gesture that gives
+/// the rest.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InlineMode {
     Off,
-    Gloss,
-    GlossIpa,
-    Ipa,
-    /// The word repainted as its translation, in the page's own colours.
-    Replace,
+    /// What the word means, in the language the reader reads into.
+    Meaning,
+    /// How the word on the page is said.
+    Sound,
+    /// What it means, and how that is said.
+    Both,
 }
 
 /// What the reader asked the inline layer to show, which is a setting rather than a platform's

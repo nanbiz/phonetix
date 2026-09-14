@@ -11,10 +11,12 @@
     label: string;
     /** Larger, for the one switch a reader opens the popup to find. */
     big?: boolean;
+    /** Off, when the thing it switches is not ready to be switched on yet. */
+    enabled?: boolean;
     change: (on: boolean) => void;
   }
 
-  let { on, label, big = false, change }: Props = $props();
+  let { on, label, big = false, enabled = true, change }: Props = $props();
 </script>
 
 <input
@@ -22,5 +24,6 @@
   class="toggle{big ? ' big' : ''}"
   aria-label={label}
   checked={on}
+  disabled={!enabled}
   onchange={(event) => change((event.currentTarget as HTMLInputElement).checked)}
 />

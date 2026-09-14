@@ -12,7 +12,8 @@
   import { ACCENTS, accentsOf } from '@/data/accents';
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
-  import { accentFor, setAccent, type Settings } from '@/settings';
+  import { THEMES } from '@/ui/theme';
+  import { accentFor, setAccent, type Settings } from '@/settings/shape';
   import {
     aboutOf,
     DETAIL_CHOICES,
@@ -35,7 +36,6 @@
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
-  import Meanings from './Meanings.svelte';
   import Switchboard from './Switchboard.svelte';
   import Trouble from './Trouble.svelte';
   import Field from '@/ui/controls/Field.svelte';
@@ -43,6 +43,15 @@
   import type { Answer } from '@/core/answer';
 
   interface Props {
+    /**
+     * Which surface this is drawn on.
+     *
+     * One view for the whole product: the rows a surface cannot do are the ones it does not
+     * draw. A browser has sites and a pointer; a phone has apps, permissions and a mark to
+     * drag. Everything else - the mode, the language, how often, the palette, the word for
+     * something - is the same question on both, asked once here.
+     */
+    where?: 'browser' | 'phone';
     settings: Settings;
     /** The densities the bar's positions mean, from the core, so the number a reader sees is
      *  the number the annotation is decided by. */
@@ -75,9 +84,17 @@
       text: string,
       source: string
     ) => Promise<{ answer: Answer | null; missing: boolean } | null>;
+    /** What the phone has been allowed to do, which is what decides whether it can answer a
+     *  word at all. Nothing on a browser, which asks for neither. */
+    permissions?: { reading: boolean; overlay: boolean };
+    onOpenReading?: () => void;
+    onOpenOverlay?: () => void;
+    /** How many apps are read, for the row that opens the system's own list of them. */
+    onOpenApps?: () => void;
   }
 
   let {
+    where = 'browser',
     settings,
     curve,
     packs,
@@ -93,7 +110,17 @@
     version = '',
     trouble = [],
     say,
+    permissions,
+    onOpenReading,
+    onOpenOverlay,
+    onOpenApps,
   }: Props = $props();
+
+  /** Whether the phone may read a screen and draw over it. A browser needs neither and is
+   *  ready the moment it is installed. */
+  let ready = $derived(
+    where === 'browser' || Boolean(permissions?.reading && permissions?.overlay)
+  );
 
   /** What the reader asked for in their own language, what came back, and whether the
    *  machine is still thinking about it. */
@@ -159,9 +186,14 @@
     .sort((a, b) => a.english.localeCompare(b.english));
 
   let readInto = $derived([
-    { value: '', label: SAYS['nothing-yet'] },
+    { value: '', label: SAYS['no-translation'] },
     ...named.map((it) => ({ value: it.code, label: `${it.english} · ${it.native}` })),
   ]);
+  /** The palettes the tokens carry, named as a reader would name them. */
+  const themes = THEMES.map((name) => ({
+    value: name,
+    label: name.charAt(0).toUpperCase() + name.slice(1),
+  }));
   let pageIs = $derived([
     { value: '', label: 'what the page says' },
     ...named.map((it) => ({ value: it.code, label: it.english })),
@@ -188,14 +220,6 @@
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
 
-  /** What is still missing before a word's meaning can be shown.
-   *
-   *  Not before anything can be shown: every language the product knows how to pronounce is
-   *  carried with it, so a reader who has set nothing at all still gets a page answered in the
-   *  sounds of its own language. Meanings need a language to read into and a dictionary for
-   *  the language being read, and that dictionary is built from a dump and is not something
-   *  the product can carry. */
-  let meaningsMissing = $derived(!settings.target || packs.held.length === 0);
 </script>
 
 <Screen name="main" on={view}>
@@ -206,62 +230,48 @@
     {siteIcon}
     {site}
     on={settings.on}
+    ready={ready}
     {here}
     decided={settings.off.includes(site)}
     change={(on) => change('on', on)}
     onSite={(on) => onSite?.(on)}
   />
 
+  <!-- What the phone has to be allowed to do before any of this can happen, asked once. A
+       browser asks for neither and never draws these. -->
+  {#if where === 'phone' && permissions && !ready}
+    <div class="rows" data-row="setup">
+      <NavRow
+        name={ROWS['setup-reading'].name}
+        row="setup-reading"
+        about={permissions.reading ? SAYS['start-done'] : ROWS['setup-reading'].about}
+        open={() => onOpenReading?.()}
+      />
+      <NavRow
+        name={ROWS['setup-overlay'].name}
+        row="setup-overlay"
+        about={permissions.overlay ? SAYS['start-done'] : ROWS['setup-overlay'].about}
+        open={() => onOpenOverlay?.()}
+      />
+    </div>
+  {/if}
+
   <Trouble {trouble} />
 
-  <!-- What meanings need, with the control that does each step in the row that names it.
-       Gone once they are there. -->
-  <Meanings missing={meaningsMissing}>
-    {#if !settings.target}
-      <Row name={SAYS['start-target']} row="start-target">
-        {#snippet control()}
-          <Picker
-            options={readInto}
-            chosen={settings.target}
-            label={ROWS.target.name}
-            change={(value) => change('target', value)}
-          />
-        {/snippet}
-      </Row>
-    {/if}
-    {#if packs.held.length === 0}
-      <Row name={SAYS['start-pack']} row="start-pack" about={ROWS.host.about}>
-        {#snippet wide()}
-          <Field
-            value={settings.host}
-            label={ROWS.host.name}
-            placeholder="https://…"
-            kind="url"
-            change={(said) => change('host', said)}
-          />
-        {/snippet}
-      </Row>
-      {#if settings.host}
-        <Row
-          name={ROWS.dictionaries.name}
-          row="start-fetch"
-          about={offered > 0
-            ? `${offered} on offer`
-            : `nothing on offer at ${settings.host}`}
-        >
-          {#snippet control()}
-            <button class="btn" onclick={() => (view = 'packs')}>{SAYS['start-go']}</button>
-          {/snippet}
-        </Row>
-      {/if}
-    {/if}
-  </Meanings>
-
-  <!-- In the order a reader decides: what they read into, where the dictionaries come from,
-       what appears over a word, and only then how much of the page. The bar used to be first
-       and changed nothing at all until the two below it were set. -->
-  {#if !meaningsMissing}
+  <!-- What this does, which is two things and the one combination of them worth having. Where
+       the answer goes is not a choice: it takes the word's place. -->
   <div class="rows">
+    <Row name={ROWS.layer.name} row="layer">
+      {#snippet wide()}
+        <Segmented
+          choices={layers.map((row) => ({ value: row.value, label: row.label }))}
+          chosen={settings.layer}
+          change={(value) => change('layer', value as Layer)}
+        />
+      {/snippet}
+    </Row>
+
+    <!-- The language the words are turned into, and the way to say "leave them alone". -->
     <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
       {#snippet control()}
         <Picker
@@ -274,38 +284,66 @@
     </Row>
   </div>
 
-  <NavRow
-    name={ROWS.dictionaries.name}
-    row="dictionaries"
-    about={offered > 0
-      ? `${held} of ${offered} here, ${packs.open.length} open`
-      : settings.host
-        ? `nothing on offer at ${settings.host}`
-        : SAYS['no-source']}
-    open={() => (view = 'packs')}
-  />
-  {/if}
-
-  <NavRow
-    name={ROWS.layer.name}
-    row="layer"
-    about={layerName}
-    open={() => (view = 'layer')}
-  />
-
   <!-- The bar a reader comes back to, on a row of its own. -->
   <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
 
-  <!-- This page: what it is being read as, and how that language is read. The row used to
-       name the page and open a screen about stress marks and card timing. -->
-  <NavRow
-    name={reading ? nameOf(reading) : ROWS.source.name}
-    row="page"
-    about="{settings.source ? 'set by you' : 'what the page says'}{accentName
-      ? ` · ${accentName}`
-      : ''}{words ? ` · ${words}` : ''}"
-    open={() => (view = 'page')}
-  />
+  <div class="rows">
+    <!-- The colours everything of ours is drawn in: the card, this view, and the words on the
+         page. The product has carried eight palettes since before the merge and offered none
+         of them. -->
+    <Row name={ROWS.theme.name} row="theme" about={ROWS.theme.about}>
+      {#snippet control()}
+        <Picker
+          options={themes}
+          chosen={settings.theme}
+          label={ROWS.theme.name}
+          change={(value) => change('theme', value)}
+        />
+      {/snippet}
+    </Row>
+  </div>
+
+  {#if where === 'phone'}
+    <div class="rows">
+      <!-- A phone has no pointer to rest on a word, so the mark is the way a reader asks. -->
+      <Row name={ROWS['lens-drag'].name} row="lens" about={ROWS['lens-drag'].about}>
+        {#snippet control()}
+          <Toggle on={settings.lens} label="the mark" change={(on) => change('lens', on)} />
+        {/snippet}
+      </Row>
+      {#if settings.lens}
+        <Row name={ROWS['lens-hold'].name} row="lens-hold" about={ROWS['lens-hold'].about} />
+        <Row name={ROWS['lens-tap'].name} row="lens-tap" about={ROWS['lens-tap'].about} />
+      {/if}
+
+      <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
+           scroll would have no way of guessing why. -->
+      <Row
+        name={ROWS['touch-words'].name}
+        row="touch-words"
+        about={SAYS[settings.touchWords ? 'touch-on' : 'touch-off']}
+      >
+        {#snippet control()}
+          <Toggle
+            on={settings.touchWords}
+            label="touching a word"
+            change={(on) => change('touchWords', on)}
+          />
+        {/snippet}
+      </Row>
+    </div>
+
+    <!-- Which apps are read. The list itself is the system's, with its own icons, so it is
+         the one screen the phone draws for itself. -->
+    <NavRow
+      name={ROWS.apps.name}
+      row="apps"
+      about={settings.allApps
+        ? SAYS['every-app']
+        : `${settings.apps.length} app${settings.apps.length === 1 ? '' : 's'} chosen`}
+      open={() => onOpenApps?.()}
+    />
+  {/if}
 
   <!-- The other direction. Everything above answers a word somebody else wrote; this one
        answers a word the reader is looking for. -->
@@ -315,10 +353,11 @@
     about={learning ? `into ${nameOf(learning)}` : SAYS['say-no-language']}
     open={() => (view = 'say')}
   />
+
   <NavRow
-    name={ROWS.more.name}
-    row="more"
-    about={ROWS.more.about}
+    name={ROWS.advanced.name}
+    row="advanced"
+    about={ROWS.advanced.about}
     open={() => (view = 'more')}
   />
 
@@ -473,12 +512,38 @@
   {/if}
 </Screen>
 
-<Screen name="more" on={view} title={ROWS.more.name} back={() => (view = 'main')}>
+<Screen name="more" on={view} title={ROWS.advanced.name} back={() => (view = 'main')}>
+  <!-- What a word means comes out of a dictionary for the language being read, which is the
+       one thing the product cannot carry: the pronunciations travel with it, the meanings are
+       built from a dump and are far larger. -->
+  <NavRow
+    name={ROWS.dictionaries.name}
+    row="dictionaries"
+    about={offered > 0
+      ? `${held} of ${offered} here, ${packs.open.length} open`
+      : settings.host
+        ? `nothing on offer at ${settings.host}`
+        : SAYS['no-source']}
+    open={() => (view = 'packs')}
+  />
+
+  <!-- What this page is being read as, and how that language is read. -->
+  <NavRow
+    name={reading ? nameOf(reading) : where === 'phone' ? ROWS.accent.name : ROWS.source.name}
+    row="page"
+    about={reading
+      ? `${settings.source ? 'set by you' : 'what the page says'}${
+          accentName ? ` · ${accentName}` : ''
+        }${words ? ` · ${words}` : ''}`
+      : `${elsewhere.length} languages offer a choice`}
+    open={() => (view = 'page')}
+  />
+
   <div class="rows">
     <Row
       name={ROWS.narrow.name}
       row="narrow"
-      about={aboutOf(DETAIL_CHOICES, settings.narrow ? 'narrow' : 'broad')}
+      hint={SAYS['detail-explained']}
     >
       {#snippet control()}
         <Segmented
@@ -503,6 +568,7 @@
       {/snippet}
     </Row>
 
+    {#if where === 'browser'}
     <Row name={ROWS.delay.name} row="delay" says="{settings.delay} ms">
       {#snippet wide()}
         <Slider
@@ -525,6 +591,7 @@
         />
       {/snippet}
     </Row>
+    {/if}
   </div>
 
   <!-- What actually answers a word, in the order it is asked. A reader deciding whether to

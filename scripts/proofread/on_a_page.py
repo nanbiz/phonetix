@@ -170,7 +170,7 @@ def main():
         time.sleep(2)
         evaluate(cdp, settings, (
             f"chrome.storage.local.set({{packBaseUrl:'{base}',targetLanguage:'de',"
-            "on:true,layer:'gloss+ipa',density:1})"
+            "on:true,layer:'both',density:1})"
         ))
         # The dictionaries, asked for the way the settings view asks: nothing is fetched
         # because a page happened to be in a language.
@@ -194,13 +194,18 @@ def main():
               return JSON.stringify({
                 count: words.length,
                 glosses: words.map(w => (w.querySelector('.px-gl') || {}).textContent || ''),
-                spellings: words.map(w => w.lastChild ? w.lastChild.textContent : ''),
+                // The word the page wrote, which the box keeps beside the answer for the
+                // reveal to show.
+                spellings: words.map(
+                  w => ((w.querySelector('.px-was') || w.lastChild) || {}).textContent || ''),
                 inCode: document.querySelector('#code .px-w') !== null,
                 inNav: document.querySelector('nav .px-w') !== null,
+                // What a reader reads: the answers where there are answers, and the page's own
+                // words where there are none.
                 words: [...document.getElementById('prose').childNodes].map(
-                  n => n.nodeType === 3 ? n.textContent
-                     : [...n.childNodes].filter(c => c.nodeType === 3)
-                                        .map(c => c.textContent).join('')
+                  n => n.nodeType === 3
+                    ? n.textContent
+                    : ((n.querySelector && n.querySelector('.px-rep')) || n).textContent
                 ).join(''),
               });
             })()
@@ -234,10 +239,16 @@ def main():
             failures.append("code was annotated")
         if painted["inNav"]:
             failures.append("the navigation was annotated")
-        # The words themselves are untouched: the annotation is a box over the word, so the
-        # text a reader reads has to still be the sentence with nothing inserted into it.
-        if painted["words"] != SENTENCE:
-            failures.append(f"the words now read {painted['words']!r}")
+        # The answer takes the word's place, so what a reader reads is the sentence with the
+        # answered words swapped and everything else exactly as the page wrote it. The word
+        # itself is still in the page, beside the answer, for the reveal to show.
+        reading = painted["words"]
+        for word, answer in (("perro", "Hund"), ("camino", "Weg")):
+            if answer not in reading:
+                failures.append(f"{word} was not replaced by {answer}: {reading!r}")
+        for kept in ("corre", "descansa", "calle"):
+            if kept not in reading:
+                failures.append(f"{kept}, which nothing answered, is not on the page: {reading!r}")
 
         # The page stops moving.
         #
@@ -469,7 +480,11 @@ def main():
         time.sleep(0.4)
 
         # A word no pack holds still gets a transcription, from the voice rather than from a
-        # dictionary, and the annotation says which by its own state.
+        # dictionary, and the annotation says which by its own state. Asked in the mode that
+        # shows how a word is said, because that is the mode the answer belongs to: the others
+        # show what a word means.
+        evaluate(cdp, settings, "chrome.storage.local.set({layer:'sound'})")
+        time.sleep(3)
         spoken = evaluate(cdp, page, """
             (() => {
               const words = [...document.querySelectorAll('.px-w')];
@@ -499,6 +514,10 @@ def main():
             failures.append(f"the voice said nothing ({said})")
 
         # A page that says nothing about its language is read rather than assumed English.
+        # Asked in the mode that shows what a word means, which is what says it was read as
+        # Spanish: the step above left the setting on how words are said.
+        evaluate(cdp, settings, "chrome.storage.local.set({layer:'meaning'})")
+        time.sleep(2)
         undeclared = cdp.send("Target.createTarget", {"url": f"{base}/undeclared.html"})
         other = cdp.send(
             "Target.attachToTarget", {"targetId": undeclared["targetId"], "flatten": True},
@@ -517,7 +536,10 @@ def main():
             failures.append(f"an undeclared Spanish page was not read as Spanish ({found})")
         cdp.send("Target.closeTarget", {"targetId": undeclared["targetId"]})
 
-        # A line in another language is read as that language, rather than as the page's.
+        # A line in another language is read as that language, rather than as the page's. Told
+        # in sounds, because that is what differs between the two languages for these words.
+        evaluate(cdp, settings, "chrome.storage.local.set({layer:'sound'})")
+        time.sleep(2)
         mixed = cdp.send("Target.createTarget", {"url": f"{base}/mixed.html"})
         other = cdp.send(
             "Target.attachToTarget", {"targetId": mixed["targetId"], "flatten": True},
@@ -548,7 +570,7 @@ def main():
         # the reader loading it again. Which dictionaries are held is not a setting, so the
         # page had no way of hearing about one and sat exactly as it was - a reader who
         # fetched the dictionary for the page in front of them saw no change at all.
-        evaluate(cdp, settings, "chrome.storage.local.set({layer:'gloss',targetLanguage:'en'})")
+        evaluate(cdp, settings, "chrome.storage.local.set({layer:'meaning',targetLanguage:'en'})")
         time.sleep(2)
         evaluate(cdp, settings, (
             "chrome.runtime.sendMessage({phonetix:'forgetPack',data:{lang:'es'}})"

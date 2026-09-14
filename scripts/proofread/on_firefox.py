@@ -144,7 +144,7 @@ def main():
         told = driver.script(
             "const done = arguments[0];"
             f"browser.storage.local.set({{packBaseUrl: '{base}', targetLanguage: 'de',"
-            " density: 1, layer: 'gloss'})"
+            " density: 1, layer: 'meaning'})"
             "  .then(() => Promise.all(['es', 'de'].map(lang =>"
             "     browser.runtime.sendMessage({phonetix: 'openPack', data: {lang}}))))"
             "  .then(r => done(JSON.stringify(r)), e => done('failed: ' + e));",

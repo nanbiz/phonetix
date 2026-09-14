@@ -12,6 +12,9 @@
     row?: string;
     /** A sentence under the name, where the name alone does not say enough. */
     about?: string;
+    /** What a reader would otherwise need that sentence for, behind a question mark: there for
+     *  whoever wants it, taking no room from the row. */
+    hint?: string;
     /** What the row is set to, said beside the name rather than by the control. */
     says?: string;
     /** Anything else the row identifies itself by, such as which language it is about. */
@@ -22,13 +25,18 @@
     wide?: Snippet;
   }
 
-  let { name, row = '', about = '', says = '', marks = {}, control, wide }: Props = $props();
+  let { name, row = '', about = '', hint = '', says = '', marks = {}, control, wide }:
+    Props = $props();
 </script>
 
 <div class="row" data-row={row || undefined} {...marks}>
   <!-- A row on a screen named after it says its name once: the screen's own title is the
        name, and repeating it under itself is the title twice. -->
-  {#if name}<span class="r-name" data-name>{name}</span>{/if}
+  {#if name}
+    <span class="r-name" data-name>
+      {name}{#if hint}<span class="hint" title={hint} aria-label={hint}>?</span>{/if}
+    </span>
+  {/if}
   {#if says}
     <span class="r-act" data-about>{says}</span>
   {/if}

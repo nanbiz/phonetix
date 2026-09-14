@@ -156,13 +156,13 @@ def main():
     # The page, with the mark on it and the engine pointed at English.
     # A page long enough to scroll: what is being checked below is that the replacement
     # follows the words it replaced, and five lines on one screen cannot move.
-    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
+    dev.surface(mode="spanish", packHost=base, target="en", layer="meaning",
                 enable=1, density=1, touchWords=0, lens=0, repeat=6)
     time.sleep(5)
     # Asked for again so the mark says where it parked in a log this run can see, and so the
     # read happens with the engine already open: it loads seventeen megabytes the first time a
     # word needs it, and the first pass is a screen still getting ready.
-    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1,
+    dev.surface(mode="spanish", packHost=base, target="en", layer="meaning", enable=1, lens=1,
                 repeat=6)
     time.sleep(8)
 

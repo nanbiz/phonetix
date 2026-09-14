@@ -2,73 +2,53 @@
   "note": "The words the settings surfaces are made of. Authored here because both platforms say them: a row named one thing in the extension and another on the phone is one product speaking with two voices, and a one-word label is only a choice for somebody who already knows what the other options are. tools/gen_types.py writes them into both.",
   "choices": {
     "layer": {
-      "name": "Show over a word",
+      "name": "Mode",
       "options": [
         {
-          "value": "off",
-          "label": "Nothing",
+          "value": "meaning",
+          "label": "Translation",
           "on": [
             "browser",
             "phone"
           ],
           "about": {
-            "browser": "the page as it is; a card when you stop on a word",
-            "phone": "the screen as it is; the mark when you want a word"
+            "browser": "the word replaced by what it means",
+            "phone": "the word replaced by what it means"
           }
         },
         {
-          "value": "gloss",
-          "label": "What it means",
+          "value": "sound",
+          "label": "Pronunciation",
           "on": [
             "browser",
             "phone"
           ],
           "about": {
-            "browser": "the meaning, above the word",
-            "phone": "the meaning, over the word"
+            "browser": "the word replaced by how it is said",
+            "phone": "the word replaced by how it is said"
           }
         },
         {
-          "value": "ipa",
-          "label": "How it is said",
-          "on": [
-            "browser",
-            "phone"
-          ],
-          "about": {
-            "browser": "the pronunciation, above the word",
-            "phone": "the pronunciation, over the word"
-          }
-        },
-        {
-          "value": "gloss+ipa",
+          "value": "both",
           "label": "Both",
           "on": [
-            "browser"
+            "browser",
+            "phone"
           ],
           "about": {
-            "browser": "the meaning and the pronunciation, above the word"
-          }
-        },
-        {
-          "value": "replace",
-          "label": "In place of the word",
-          "on": [
-            "browser"
-          ],
-          "about": {
-            "browser": "the word itself swapped for what it means; rest on it to see the word"
+            "browser": "what it means, and how to say that",
+            "phone": "what it means, and how to say that"
           }
         }
       ],
-      "note": "A browser owns the page and can make room above a line; an overlay on a phone can only paint over what an app has already drawn. So a choice carries where it is offered and, where the two differ, what it does there."
+      "note": "What the product does, which is two things and one combination of them. Where the answer goes is not a choice: it takes the word's place, which is the only thing that works without a pointer to rest on, and the card is what a reader asks for when they want more."
     },
     "detail": {
       "name": "Transcriptions",
       "options": [
         {
           "value": "broad",
-          "label": "Broad",
+          "label": "/ /",
           "about": {
             "browser": "the sounds that tell words apart",
             "phone": "the sounds that tell words apart"
@@ -80,7 +60,7 @@
         },
         {
           "value": "narrow",
-          "label": "Narrow",
+          "label": "[ ]",
           "about": {
             "browser": "every detail of how it is said, like aspiration and devoicing",
             "phone": "every detail of how it is said, like aspiration and devoicing"
@@ -103,7 +83,7 @@
       "about": "the default is what happens on sites you have not decided about"
     },
     "layer": {
-      "name": "Show over a word",
+      "name": "Mode",
       "about": ""
     },
     "density": {
@@ -111,8 +91,8 @@
       "about": "how much of the page is annotated"
     },
     "target": {
-      "name": "I read into",
-      "about": "the language the answers come in"
+      "name": "Language",
+      "about": "what the words are turned into"
     },
     "source": {
       "name": "This page is in",
@@ -136,7 +116,7 @@
     },
     "stress": {
       "name": "Stress marks",
-      "about": "over a word; the card always shows them"
+      "about": "in the transcription over a word; the card always shows them"
     },
     "delay": {
       "name": "Rest before a card opens",
@@ -145,10 +125,6 @@
     "animations": {
       "name": "Animations",
       "about": "the card eases in; off is instant"
-    },
-    "more": {
-      "name": "How it reads",
-      "about": "transcriptions, stress, how long a rest opens a card"
     },
     "say": {
       "name": "The word for something",
@@ -205,6 +181,14 @@
     "meanings": {
       "name": "To see what a word means",
       "about": "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."
+    },
+    "theme": {
+      "name": "Theme",
+      "about": "the colours everything of ours is drawn in"
+    },
+    "advanced": {
+      "name": "Advanced",
+      "about": "transcriptions, stress, dictionaries and how a page is read"
     }
   },
   "ends": {
@@ -249,6 +233,10 @@
     "master-idle": "Nothing is drawn over your apps",
     "master-unready": "Finish the steps below to switch on",
     "preview": "Preview",
-    "preview-about": "the words on a page this would answer"
+    "preview-about": "the words on a page this would answer",
+    "no-translation": "Don't translate",
+    "broad-mark": "/ /",
+    "narrow-mark": "[ ]",
+    "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it."
   }
 }

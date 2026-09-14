@@ -186,7 +186,7 @@ def main():
             "data": {
                 "runs": [{"id": 1, "text": SENTENCE}],
                 "source": "es", "target": "en",
-                "options": {"mode": "gloss", "density": 1},
+                "options": {"mode": "meaning", "density": 1},
             },
         }, tries=4, gap=10)
         tokens = (batch.get("ok") or {}).get("tokens") or []

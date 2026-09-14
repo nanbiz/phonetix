@@ -32,6 +32,9 @@ export interface Token {
   /** The headline gloss, already cut to what an inline annotation can carry. */
   gloss: string | null;
   ipa: string | null;
+  /** How the translation is said, where the reader asked for both: the sound of the word they
+   *  are being given, not of the word on the page. */
+  glossIpa: string | null;
   /** Whether the sprinkle chose this word for an inline annotation. */
   inline: boolean;
   provenance: Provenance | null;
@@ -57,7 +60,7 @@ export interface Batch {
 }
 
 /** What the reader asked the inline layer to show. */
-export type InlineMode = 'off' | 'gloss' | 'gloss+ipa' | 'ipa' | 'replace';
+export type InlineMode = 'off' | 'meaning' | 'sound' | 'both';
 
 /** How a batch is asked for: the reader's settings, not the platform's habits. */
 export interface AnnotateOptions {

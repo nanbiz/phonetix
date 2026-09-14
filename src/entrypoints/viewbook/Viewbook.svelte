@@ -5,7 +5,7 @@
   // and a card that needs a dictionary open before it can be seen is a card nobody can check
   // until everything else works.
   import Opened from '@/ui/card/Opened.svelte';
-  import { THEME } from '@/ui/theme';
+  import { themeOf } from '@/ui/theme';
   import { sendMessage } from '@/host/messages';
   import type { Answer } from '@/core/answer';
   import '@/ui/tokens.css';
@@ -107,7 +107,7 @@
 
 <main>
   {#each modes as mode (mode)}
-    <section class="{THEME} mode-{mode}" data-mode={mode}>
+    <section class={themeOf(mode === 'dark')} data-mode={mode}>
       {#each drawn as state (state.uid)}
         <div class="slot" data-uid={state.uid}>
           <div class="label">{state.uid}</div>

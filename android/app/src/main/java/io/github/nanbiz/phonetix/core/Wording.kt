@@ -20,33 +20,33 @@ data class Words(val name: String, val about: String)
 object Wording {
     /** Transcriptions, as an overlay can draw them. */
     val detail = listOf(
-        Choice("broad", "Broad", "the sounds that tell words apart"),
-        Choice("narrow", "Narrow", "every detail of how it is said, like aspiration and devoicing"),
+        Choice("broad", "/ /", "the sounds that tell words apart"),
+        Choice("narrow", "[ ]", "every detail of how it is said, like aspiration and devoicing"),
     )
 
-    /** Show over a word, as an overlay can draw them. */
+    /** Mode, as an overlay can draw them. */
     val layer = listOf(
-        Choice("off", "Nothing", "the screen as it is; the mark when you want a word"),
-        Choice("gloss", "What it means", "the meaning, over the word"),
-        Choice("ipa", "How it is said", "the pronunciation, over the word"),
+        Choice("meaning", "Translation", "the word replaced by what it means"),
+        Choice("sound", "Pronunciation", "the word replaced by how it is said"),
+        Choice("both", "Both", "what it means, and how to say that"),
     )
 
     /** Every row of the settings surfaces, by the name it reports itself under. */
     val rows = mapOf(
         "accent" to Words("Accent", "which accent each language is read in"),
+        "advanced" to Words("Advanced", "transcriptions, stress, dictionaries and how a page is read"),
         "animations" to Words("Animations", "the card eases in; off is instant"),
         "apps" to Words("Apps", ""),
         "delay" to Words("Rest before a card opens", "how long the cursor stays on a word before it answers"),
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
         "host" to Words("Where they come from", "Fetched once and kept on this machine, so a dictionary works on a train."),
-        "layer" to Words("Show over a word", ""),
+        "layer" to Words("Mode", ""),
         "lens" to Words("The mark", "One mark at the edge of the screen, and the three things it answers"),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over and takes none of the screen's touches"),
         "lens-hold" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),
         "lens-tap" to Words("Press it", "The whole screen in your own language; press it again to put the screen back"),
         "meanings" to Words("To see what a word means", "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."),
-        "more" to Words("How it reads", "transcriptions, stress, how long a rest opens a card"),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
         "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
@@ -56,8 +56,9 @@ object Wording {
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "start" to Words("Before it can answer a word", "Asked once. Nothing else appears until they are done."),
-        "stress" to Words("Stress marks", "over a word; the card always shows them"),
-        "target" to Words("I read into", "the language the answers come in"),
+        "stress" to Words("Stress marks", "in the transcription over a word; the card always shows them"),
+        "target" to Words("Language", "what the words are turned into"),
+        "theme" to Words("Theme", "the colours everything of ours is drawn in"),
         "touch" to Words("Touching a word", ""),
         "touch-words" to Words("Hold a word for its card", ""),
         "where" to Words("Where", ""),
@@ -72,7 +73,9 @@ object Wording {
     /** Phrases both surfaces use, so neither invents its own wording. */
     val says = mapOf(
         "allow-overlay" to "Allow overlay",
+        "broad-mark" to "/ /",
         "change" to "Change",
+        "detail-explained" to "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
         "dictionary-accent" to "as the dictionary gives it",
         "every-app" to "Every app",
         "get" to "Get",
@@ -82,8 +85,10 @@ object Wording {
         "master-on" to "Reading",
         "master-unready" to "Finish the steps below to switch on",
         "master-working" to "The words in your apps are being answered",
+        "narrow-mark" to "[ ]",
         "no-host" to "Nothing is fetched until this is set.",
         "no-source" to "no source for them yet",
+        "no-translation" to "Don't translate",
         "nothing-yet" to "nothing yet",
         "open-accessibility" to "Open accessibility",
         "preview" to "Preview",

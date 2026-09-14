@@ -934,3 +934,60 @@ fn a_shipped_dictionary_becomes_a_pack_that_answers() {
         "a word it does not hold is absent"
     );
 }
+
+/// Both: what a word means, and how to say *that*.
+///
+/// The pronunciation a reader is shown in this mode is of the word they are being handed, not
+/// of the word on the page - a reader shown "bench" wants to know how to say "bench" - which
+/// means looking it up in the language they read into.
+#[test]
+fn both_says_how_the_translation_is_said() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let source = Pack::open(spanish()).expect("the Spanish pack opens");
+    // The language read into, as the product carries it: a word and how it is said.
+    let mut into = Builder::new("en", Kind::Ipa, 0);
+    let no_forms: [&str; 0] = [];
+    into.add(word("dog", "", "dɒɡ", &[]), &no_forms).unwrap();
+    into.add(word("way", "", "weɪ", &[]), &no_forms).unwrap();
+    let target = Pack::open(into.finish().expect("the English pack is written"))
+        .expect("the English pack opens");
+
+    let open = Open {
+        source: Some(&source),
+        target: Some(&target),
+        ..Open::default()
+    };
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "El perro corre por el camino".to_string(),
+            lang_hint: None,
+        }],
+        &lang("es"),
+        &lang("en"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Both,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+        },
+    );
+    let perro = tokens
+        .iter()
+        .find(|token| token.spelling == "perro")
+        .expect("the word is a token");
+    assert_eq!(perro.gloss.as_deref(), Some("dog"));
+    assert_eq!(perro.gloss_ipa.as_deref(), Some("dɒɡ"), "how to say the answer");
+    let camino = tokens
+        .iter()
+        .find(|token| token.spelling == "camino")
+        .expect("the word is a token");
+    // A gloss is a headword and sometimes a phrase around it; the sound is of the head.
+    assert_eq!(camino.gloss.as_deref(), Some("way, route"));
+    assert_eq!(camino.gloss_ipa.as_deref(), Some("weɪ"));
+}

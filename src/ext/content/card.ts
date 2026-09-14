@@ -10,7 +10,7 @@ import type { Answer } from '@/core/answer';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
 import { darkPage } from './inline';
-import { themeOf } from '@/ui/theme';
+import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
 /** How far from the word the card sits, so the word it is about stays readable. */
@@ -22,6 +22,15 @@ let frame: HTMLElement | null = null;
 let drawn: ReturnType<typeof mount> | null = null;
 /** What the card on screen is about, so a second ask about the same word is not a redraw. */
 let about: string | null = null;
+/** The palette the reader chose, which every surface of ours is drawn in. */
+let theme = THEME;
+
+/** Draw in this palette from now on. */
+export function paintedIn(chosen: string): void {
+  if (chosen === theme) return;
+  theme = chosen;
+  if (frame) frame.className = themeOf(darkPage(), theme);
+}
 
 function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   if (shadow && frame) return { shadow, frame };
@@ -43,7 +52,7 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   // no theme would have no colours at all. Which one comes from the page it is drawn over,
   // the same way the annotations decide, so a card and the words it is about never come out
   // of two different palettes.
-  frame.className = themeOf(darkPage());
+  frame.className = themeOf(darkPage(), theme);
   frame.style.cssText = 'position:fixed;width:var(--card-width);max-width:calc(100vw - 16px);';
   shadow.appendChild(frame);
   return { shadow, frame };

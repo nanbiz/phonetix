@@ -374,15 +374,20 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    ------------------------------------------------------------------ */
 .page { background: var(--color-surface); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-card); padding: var(--space-4) var(--space-4) var(--space-3); font-family: var(--font-page); font-size: var(--font-size-page); line-height: var(--line-page); position: relative; overflow: hidden; }
 .page p { margin: 0; }
-.page.ruby p, .page.ruby-2 p { line-height: var(--line-page); }
-.w { position: relative; display: inline-block; line-height: var(--ruby-glyph-line); padding-top: var(--ruby-room-1); vertical-align: baseline; }
-.page.ruby-2 .w { padding-top: var(--ruby-room-2); }
-.w > .rb { position: absolute; left: 50%; bottom: calc(var(--ruby-glyph-line) - var(--ruby-overlap)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; font-family: var(--font-ui); line-height: 1.1; pointer-events: none; }
-.rb .gl { font-size: calc(1em * var(--ruby-scale)); color: var(--color-ruby-ink); }
-.rb .gl.guess { color: var(--color-guess); }
-.rb .ph { font-size: calc(1em * var(--ruby-ipa-scale)); font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
+/* The answer takes the word's place. Nothing sits above the line any more: a line over a word
+   is something a reader has to be pointing at to read, and half the readers of this have no
+   pointer at all. The word itself stays in the box, hidden, for the reveal. */
+.w { position: relative; display: inline-block; vertical-align: baseline; }
 .w.seen { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--border-width); text-underline-offset: 3px; }
-.rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }   /* the swap cue lives inside the painted box: a dotted rule on its bottom edge */
+/* The swap cue lives on the answer itself: a dotted rule under it says this is not what the
+   page wrote, and the page's own ink is kept for everything that is. */
+.rep { font-family: var(--font-ui); color: var(--color-ruby-ink); border-bottom: var(--border-width) dotted var(--color-ink-faint); }
+.rep .gl { }
+.rep .gl.guess { color: var(--color-guess); }
+/* How to say it, beside what it means, in the type transcriptions are set in. On its own -
+   the mode that shows only the sounds - it carries the whole box and needs no gap. */
+.rep .ph { font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
+.rep .gl + .ph { margin-left: 0.3em; font-size: calc(1em * var(--ruby-ipa-scale)); }
 .keep { }                                                                    /* an unswapped unit: untouched pixels, tappable */
 /* What the swap covered up, shown in place while the cursor is on it. No measuring: it is laid
    at the painted box's own origin, so it lands on the same pixels in every browser, and it
@@ -391,9 +396,6 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .was { position: absolute; left: 0; bottom: 0; display: none; white-space: nowrap; background: var(--px-page-bg, var(--color-surface)); color: var(--color-ink); border-radius: var(--radius-bar); padding: 0 2px; z-index: 1; }
 .w.showing > .was { display: inline-block; }
 .w.showing > .rep { visibility: hidden; }
-.page.inbox .w { padding-top: 0; }
-.page.inbox .w > .rb { bottom: calc(var(--ruby-glyph-line) - var(--ruby-inbox-overlap)); background: var(--color-annotation-backing); border-radius: var(--radius-bar); padding: 0 var(--space-1); }
-.page.inbox .rb .gl { font-size: calc(1em * var(--ruby-inbox-scale)); }
 .page-bar { display: flex; justify-content: flex-end; margin-bottom: var(--space-2); }
 .scan-pill { font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-muted); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-chip); padding: 2px var(--space-2) 2px var(--space-2); display: inline-flex; align-items: center; gap: var(--space-1); }
 .scan-pill i { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--color-accent); border-right-color: transparent; display: inline-block; }
@@ -628,6 +630,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .toggle.big { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
 .toggle.big::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
 .toggle.big:checked::before, .toggle.big.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+/* A switch for something that cannot be switched on yet: still readable, plainly not ready. */
+.toggle:disabled { opacity: 0.5; cursor: default; }
 .toggle:checked, .toggle.on { background: var(--color-accent); }
 .toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
 .select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
@@ -676,6 +680,9 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* A line of prose on a screen that is otherwise controls: what a screen is for, and what came
    of asking. The answer a machine gave sits under it as the card the rest of the product
    answers with, so it is judged the same way. */
+/* A question mark beside a name, carrying what a reader would otherwise need a sentence of
+   explanation for. The sentence is there for whoever wants it and takes no room from the row. */
+.hint { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: var(--space-1); border: var(--border-width) solid var(--color-border); border-radius: 50%; font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: help; }
 .about { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .answer { padding: var(--space-3) var(--space-4); border-top: var(--border-width) solid var(--color-border); }
 .made { display: flex; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
@@ -708,6 +715,26 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .choice.on .c-about { color: var(--color-accent); opacity: 0.85; }
 .choice .c-mark { flex: 0 0 auto; color: var(--color-accent); }
 .choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+
+/* A finger rather than a pointer, asked of the pointer itself.
+ *
+ * Not asked of the platform: a laptop with a touchscreen and a phone want exactly the same
+ * thing, and a phone with a mouse attached wants the other. What changes is how big a thing
+ * has to be to hit, and how much room a row has to give it - never what the row says or where
+ * it sits, so both surfaces stay the one screen a reader learns once. */
+@media (pointer: coarse) {
+  .row { padding: var(--space-4); gap: var(--space-2) var(--space-4); }
+  .nav { min-height: var(--touch-target); padding: var(--space-4); }
+  .choice { padding: var(--space-3) var(--space-4); }
+  .seg button { height: var(--touch-target); padding: 0 var(--space-4); font-size: var(--font-size-body); }
+  .toggle { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
+  .toggle::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
+  .toggle:checked::before, .toggle.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+  .select, .pick { min-height: var(--touch-target); }
+  .btn, .btn-text { min-height: var(--touch-target); }
+  /* A bar dragged with a finger, which lands nowhere near as precisely as a cursor. */
+  .slider { height: var(--touch-target); }
+}
 
 /* ------------------------------------------------------------------
    Docked form. When the space beside the anchor cannot hold a Compact

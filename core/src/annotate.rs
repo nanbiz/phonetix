@@ -82,6 +82,18 @@ pub fn annotate<D: AsRef<[u8]>>(
                 .ipa
                 .first()
                 .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
+            // And how the translation is said, where that is what the reader asked for: the
+            // word they are being handed is the one they will try to say. Out of the pack for
+            // the language they read into, which is open because the join between the two is
+            // what produced the gloss in the first place.
+            let gloss_ipa = if options.mode == InlineMode::Both {
+                gloss
+                    .as_deref()
+                    .and_then(|said| said_in(said, target, open))
+                    .map(|ipa| crate::symbols::display(&ipa, options.narrow, options.hide_stress))
+            } else {
+                None
+            };
 
             let index = tokens.len() as u32;
             if inline {
@@ -111,6 +123,7 @@ pub fn annotate<D: AsRef<[u8]>>(
                 state: answer.state,
                 gloss,
                 ipa,
+                gloss_ipa,
                 inline,
                 provenance: answer.provenance,
             });
@@ -119,13 +132,36 @@ pub fn annotate<D: AsRef<[u8]>>(
     (tokens, misses)
 }
 
+/// How one word is said in the language being read into.
+///
+/// The first word of the gloss, because a gloss is a headword and sometimes a phrase around
+/// it - "way, route" is answered by looking up "way" - and nothing at all where the reader
+/// has no dictionary for that language.
+fn said_in<D: AsRef<[u8]>>(gloss: &str, target: &Lang, open: &Open<D>) -> Option<String> {
+    let head = gloss
+        .split(|c: char| c == ',' || c == ';' || c == '(')
+        .next()?
+        .trim();
+    if head.is_empty() {
+        return None;
+    }
+    let pack = open.target?;
+    if pack.lang() != target.0 {
+        return None;
+    }
+    let found = pack.lookup(head);
+    let entry = found.first().or_else(|| {
+        // A gloss carries the article a dictionary writes with it - "to bank", "a road" - and
+        // the entry is under the word itself.
+        None
+    })?;
+    entry.ipa.first().cloned()
+}
+
 /// What is still missing for what the reader asked to see, or nothing when the tokens have it.
 fn missing(mode: InlineMode, has_gloss: bool, has_ipa: bool) -> Option<Need> {
-    let wants_gloss = matches!(
-        mode,
-        InlineMode::Gloss | InlineMode::GlossIpa | InlineMode::Replace
-    );
-    let wants_ipa = matches!(mode, InlineMode::Ipa | InlineMode::GlossIpa);
+    let wants_gloss = matches!(mode, InlineMode::Meaning | InlineMode::Both);
+    let wants_ipa = matches!(mode, InlineMode::Sound);
     match (wants_gloss && !has_gloss, wants_ipa && !has_ipa) {
         (true, true) => Some(Need::Both),
         (true, false) => Some(Need::Gloss),
@@ -263,7 +299,7 @@ mod tests {
             &Lang("es".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
         );
         assert_eq!(tokens.len(), 3);
         assert_eq!(tokens[1].spelling, "perro");
@@ -278,7 +314,7 @@ mod tests {
             &Lang("es".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
         );
         assert_eq!(misses.len(), tokens.len());
         assert!(misses.iter().all(|m| m.need == Need::Gloss));
@@ -300,7 +336,7 @@ mod tests {
 
     #[test]
     fn a_word_the_reader_asked_about_is_always_drawn() {
-        let mut chosen = options(InlineMode::Gloss, 50);
+        let mut chosen = options(InlineMode::Meaning, 50);
         chosen.seen = vec!["Perro".into()];
         let (tokens, _) = annotate(
             &runs("El perro corre por el camino"),
@@ -321,7 +357,7 @@ mod tests {
             &Lang("es".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
         )
         .0;
         let sparse = annotate(
@@ -329,7 +365,7 @@ mod tests {
             &Lang("es".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 50),
+            &options(InlineMode::Meaning, 50),
         )
         .0;
         let drawn = |tokens: &[Token]| tokens.iter().filter(|t| t.inline).count();
@@ -346,7 +382,7 @@ mod tests {
             &Lang("es".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
         );
         complete(
             &mut tokens,
@@ -357,7 +393,7 @@ mod tests {
                 sentence: None,
                 engine: "bergamot".into(),
             }],
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
             &Lang("de".into()),
             &nothing_open(),
         );
@@ -382,7 +418,7 @@ mod tests {
             &Lang("ja".into()),
             &Lang("de".into()),
             &nothing_open(),
-            &options(InlineMode::Gloss, 1),
+            &options(InlineMode::Meaning, 1),
         );
         assert!(tokens.is_empty());
         assert!(misses.is_empty());

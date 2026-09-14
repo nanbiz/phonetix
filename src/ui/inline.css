@@ -5,15 +5,20 @@
  * page that has its own.
  */
 
-.px-w { position: relative; display: inline-block; line-height: var(--ruby-glyph-line); padding-top: var(--ruby-room-1); vertical-align: baseline; }
-.px.px-ruby-2 .px-w { padding-top: var(--ruby-room-2); }
-.px-w > .px-rb { position: absolute; left: 50%; bottom: calc(var(--ruby-glyph-line) - var(--ruby-overlap)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; white-space: nowrap; font-family: var(--font-ui); line-height: 1.1; pointer-events: none; }
-.px-rb .px-gl { font-size: calc(1em * var(--ruby-scale)); color: var(--color-ruby-ink); }
-.px-rb .px-gl.px-guess { color: var(--color-guess); }
-.px-rb .px-ph { font-size: calc(1em * var(--ruby-ipa-scale)); font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
+/* The answer takes the word's place. Nothing sits above the line any more: a line over a word
+   is something a reader has to be pointing at to read, and half the readers of this have no
+   pointer at all. The word itself stays in the box, hidden, for the reveal. */
+.px-w { position: relative; display: inline-block; vertical-align: baseline; }
 .px-w.px-seen { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--border-width); text-underline-offset: 3px; }
-.px-rep { border-bottom: var(--border-width) dotted var(--color-ink-faint); }
-/* the swap cue lives inside the painted box: a dotted rule on its bottom edge */
+/* The swap cue lives on the answer itself: a dotted rule under it says this is not what the
+   page wrote, and the page's own ink is kept for everything that is. */
+.px-rep { font-family: var(--font-ui); color: var(--color-ruby-ink); border-bottom: var(--border-width) dotted var(--color-ink-faint); }
+.px-rep .px-gl { }
+.px-rep .px-gl.px-guess { color: var(--color-guess); }
+/* How to say it, beside what it means, in the type transcriptions are set in. On its own -
+   the mode that shows only the sounds - it carries the whole box and needs no gap. */
+.px-rep .px-ph { font-family: var(--font-ipa); color: var(--color-ruby-ipa); }
+.px-rep .px-gl + .px-ph { margin-left: 0.3em; font-size: calc(1em * var(--ruby-ipa-scale)); }
 .px-keep { }
 /* an unswapped unit: untouched pixels, tappable */
 /* What the swap covered up, shown in place while the cursor is on it. No measuring: it is laid
@@ -23,6 +28,3 @@
 .px-was { position: absolute; left: 0; bottom: 0; display: none; white-space: nowrap; background: var(--px-page-bg, var(--color-surface)); color: var(--color-ink); border-radius: var(--radius-bar); padding: 0 2px; z-index: 1; }
 .px-w.px-showing > .px-was { display: inline-block; }
 .px-w.px-showing > .px-rep { visibility: hidden; }
-.px.px-inbox .px-w { padding-top: 0; }
-.px.px-inbox .px-w > .px-rb { bottom: calc(var(--ruby-glyph-line) - var(--ruby-inbox-overlap)); background: var(--color-annotation-backing); border-radius: var(--radius-bar); padding: 0 var(--space-1); }
-.px.px-inbox .px-rb .px-gl { font-size: calc(1em * var(--ruby-inbox-scale)); }

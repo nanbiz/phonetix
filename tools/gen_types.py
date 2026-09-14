@@ -80,15 +80,11 @@ INLINE_SECTION = "Page (inline layer)"
 INLINE_CLASSES = {
     "page": "px",
     "w": "px-w",
-    "rb": "px-rb",
     "gl": "px-gl",
     "ph": "px-ph",
     "rep": "px-rep",
     "keep": "px-keep",
     "seen": "px-seen",
-    "ruby": "px-ruby",
-    "ruby-2": "px-ruby-2",
-    "inbox": "px-inbox",
     "was": "px-was",
     "showing": "px-showing",
     "guess": "px-guess",
@@ -307,6 +303,15 @@ def read_daisy():
             ink, surface = palette.get("--p-ink"), palette.get("--p-surface")
             if ink and surface:
                 palette[role] = blend(ink, surface, mix)
+        # The tint a coloured word sits on, which these themes do not state: the colour itself
+        # stepped most of the way to the surface. Mapped to the colour it belongs to, the
+        # frequency bar's reading was painted in the accent on the accent - a filled pill with
+        # nothing readable in it - and an alert was its own text colour on itself.
+        surface = palette.get("--p-surface")
+        for role, of in (("--p-accent-bg", "--p-accent"), ("--p-danger-bg", "--p-danger")):
+            colour = palette.get(of)
+            if colour and surface:
+                palette[role] = blend(colour, surface, 0.85)
         if palette:
             palettes[f"{name}-{mode}"] = palette
     return palettes

@@ -111,7 +111,7 @@ def main():
     # Through the harness, which insists the page is really in front: the app's own screen is
     # an activity of the same app, and with it on top a bare `am start` delivers the intent to
     # the task behind it and reports success.
-    dev.surface(mode="spanish", packHost=base, target="de", layer="gloss+ipa",
+    dev.surface(mode="spanish", packHost=base, target="de", layer="both",
                 enable=1, density=1)
     time.sleep(8)
     # What is written over each word, which is the whole question here.

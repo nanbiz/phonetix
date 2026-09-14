@@ -110,12 +110,11 @@ def main():
         if panel["width"] < 300:
             failures.append(f"the view measured {panel['width']}px wide")
 
-        # The first step the view asks for, and the reason it asks: until a language to read
-        # into is chosen there is nothing to answer a word with, and the view shows the steps
-        # rather than settings that cannot do anything.
+        # The language read into, which is a row on the first screen: one menu whose first
+        # entry is to leave the words alone.
         control(cdp, view, """
             (() => {
-              const picked = document.querySelector('[data-row=start-target] select');
+              const picked = document.querySelector('[data-row=target] select');
               picked.value = 'en';
               picked.dispatchEvent(new Event('change', {bubbles: true}));
             })()
@@ -172,12 +171,9 @@ def main():
         if "Hund" not in german["glosses"]:
             failures.append(f"the answers are {german['glosses'][:6]}, not German")
 
-        # What is shown over a word: the sound rather than the meaning.
+        # What a word is replaced by: how it is said rather than what it means.
         control(cdp, view, """
-            (() => {
-              document.querySelector('[data-row=layer]').click();
-              document.querySelector('[data-choice="ipa"]').click();
-            })()
+            (() => document.querySelector('[data-row=layer] [data-choice=sound]').click())()
         """)
         sound = words(cdp, page)
         print(f"  showing the sound: {sound['sounds'][:3]}")
@@ -186,89 +182,23 @@ def main():
         if not sound["sounds"]:
             failures.append("nothing is said about how the words sound")
 
-        # In place: the word repainted as what it means.
-        control(cdp, view, "document.querySelector('[data-choice=replace]').click()")
-        swapped = words(cdp, page)
-        print(f"  in place: {swapped['swapped'][:4]}")
-        if "Hund" not in swapped["swapped"]:
-            failures.append(f"nothing was repainted: {swapped['swapped'][:4]}")
-
-        # And what the swap covered is shown in place while the cursor is on it: a reader who
-        # wants to know what the word actually was rests on it, rather than hunting for the
-        # browser's own tooltip.
-        under = json.loads(evaluate(cdp, page, """
-            (async () => {
-              const box = [...document.querySelectorAll('.px-w')]
-                .find(w => w.querySelector('.px-was'));
-              if (!box) return JSON.stringify({found: false});
-              const was = box.querySelector('.px-was');
-              const before = getComputedStyle(was).display;
-              const at = box.getBoundingClientRect();
-              box.dispatchEvent(new MouseEvent('mouseover', {
-                bubbles: true, clientX: at.left + 2, clientY: at.top + 2,
-              }));
-              await new Promise(r => setTimeout(r, 200));
-              return JSON.stringify({
-                found: true,
-                word: was.textContent,
-                before,
-                after: getComputedStyle(was).display,
-                ground: getComputedStyle(was).backgroundColor,
-              });
-            })()
-        """) or "{}")
-        if not under.get("found"):
-            failures.append("no swapped word kept what it had covered")
-        else:
-            print(f"  resting on the swap shows {under['word']!r} "
-                  f"({under['before']} -> {under['after']} on {under['ground']})")
-            if under["before"] != "none" or under["after"] == "none":
-                failures.append(
-                    f"the original went from {under['before']} to {under['after']}")
-            if "rgba(0, 0, 0, 0)" in under["ground"]:
-                failures.append("the revealed word has no ground, so both forms show at once")
-
-        # How often: the sparse end of the bar draws fewer words than the dense end.
+        # Both: what it means, and how to say that.
         control(cdp, view, """
-            (() => {
-              document.querySelector('[data-choice="gloss"]').click();
-              document.querySelector('[data-view=layer] .back').click();
-            })()
+            (() => document.querySelector('[data-row=layer] [data-choice=both]').click())()
         """)
-        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
-                           "s.value = 0; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        sparse = words(cdp, page)
-        print(f"  dense {dense['count']} words ({told}), sparse {sparse['count']}")
-        if dense["count"] <= sparse["count"]:
-            failures.append(
-                f"the bar changed nothing: {dense['count']} dense, {sparse['count']} sparse")
-        # At the dense end every word is annotated, and the view says so in those words
-        # rather than as "one word in 1", which is a ratio nobody reads.
-        if "every word" not in (told or "").lower():
-            failures.append(f"the dense end says {told!r}")
+        time.sleep(2)
+        together = words(cdp, page)
+        print(f"  both: {together['glosses'][:3]} said {together['sounds'][:3]}")
+        if not together["glosses"]:
+            failures.append("both showed no meanings")
+        if not together["sounds"]:
+            failures.append("both showed no pronunciations for the meanings")
 
-        # The dictionaries a reader can have, and the two things to do with one.
-        offered = wait_for(cdp, view, """
-            (() => {
-              const rows = [...document.querySelectorAll('[data-row="pack"]')]
-                .filter(r => r.querySelector('[data-does]'));
-              if (rows.length === 0) return null;
-              return JSON.stringify(rows.map(r => ({
-                name: r.querySelector('[data-name]').textContent.trim(),
-                about: r.querySelector('[data-about]').textContent.trim(),
-                action: r.querySelector('[data-does]').textContent.trim(),
-              })));
-            })()
-        """, lambda v: v is not None)
-        listed = json.loads(offered or "[]")
-        print(f"  dictionaries offered: {[(d['name'], d['action']) for d in listed]}")
-        if len(listed) != 2:
-            failures.append(f"the view offers {listed}")
-        elif not all(
-            "words" in row["about"] and any(u in row["about"] for u in (" B", "KB", "MB"))
-            for row in listed
-        ):
-            failures.append(f"a dictionary row says nothing about its cost: {listed}")
+        # Back to meanings for what follows.
+        control(cdp, view, """
+            (() => document.querySelector('[data-row=layer] [data-choice=meaning]').click())()
+        """)
+        time.sleep(2)
 
         # An accent whose difference is a rule changes the transcriptions on the page.
         # Every word again first: the bar was left at its sparse end by the check above, and
@@ -276,10 +206,7 @@ def main():
         control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
         control(cdp, view, """
-            (() => {
-              document.querySelector('[data-row=layer]').click();
-              document.querySelector('[data-choice="ipa"]').click();
-            })()
+            (() => document.querySelector('[data-row=layer] [data-choice=sound]').click())()
         """)
         def sound_of(word):
             said = evaluate(cdp, page, """
@@ -298,9 +225,13 @@ def main():
         for _ in range(8):
             if sound_of("calle"):
                 break
+            # Down and back up, because the bar is already at its dense end: a control set to
+            # the value it already holds changes no setting, so nothing asks the page again.
             control(cdp, view, """
                 (() => {
                   const s = document.querySelector('[data-row=density] input');
+                  s.value = 0;
+                  s.dispatchEvent(new Event('input', {bubbles: true}));
                   s.value = s.max;
                   s.dispatchEvent(new Event('input', {bubbles: true}));
                 })()
@@ -333,6 +264,39 @@ def main():
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
 
+
+        # How often: the sparse end of the bar draws fewer words than the dense end.
+        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
+                           "s.value = 0; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        sparse = words(cdp, page)
+        print(f"  dense {dense['count']} words ({told}), sparse {sparse['count']}")
+        if dense["count"] <= sparse["count"]:
+            failures.append(
+                f"the bar changed nothing: {dense['count']} dense, {sparse['count']} sparse")
+
+        # The dictionaries a reader can have, and the two things to do with one. Behind the
+        # advanced screen, because a reader who has one never opens this again.
+        offered = wait_for(cdp, view, """
+            (() => {
+              const rows = [...document.querySelectorAll('[data-row="pack"]')]
+                .filter(r => r.querySelector('[data-does]'));
+              if (rows.length === 0) return null;
+              return JSON.stringify(rows.map(r => ({
+                name: r.querySelector('[data-name]').textContent.trim(),
+                about: r.querySelector('[data-about]').textContent.trim(),
+                action: r.querySelector('[data-does]').textContent.trim(),
+              })));
+            })()
+        """, lambda v: v is not None)
+        listed = json.loads(offered or "[]")
+        print(f"  dictionaries offered: {[(d['name'], d['action']) for d in listed]}")
+        if len(listed) != 2:
+            failures.append(f"the view offers {listed}")
+        elif not all(
+            "words" in row["about"] and any(u in row["about"] for u in (" B", "KB", "MB"))
+            for row in listed
+        ):
+            failures.append(f"a dictionary row says nothing about its cost: {listed}")
 
         # Giving one up: the row offers it back, and the page loses the answers it gave.
         held_before = json.loads(offered)

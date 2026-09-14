@@ -165,11 +165,11 @@ def main():
     # passes it took to load a model.
     for _ in range(6):
         dev.clear_log()
-        dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
+        dev.surface(mode="spanish", packHost=base, target="en", layer="meaning",
                     enable=1, density=1)
         time.sleep(6)
         # Again, so a read happens with the engine already open.
-        dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
+        dev.surface(mode="spanish", packHost=base, target="en", layer="meaning",
                     enable=1, density=1, nudge=1)
         time.sleep(8)
         log = dev.log()

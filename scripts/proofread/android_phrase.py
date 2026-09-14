@@ -133,14 +133,14 @@ def main():
         raise SystemExit("the service would not start")
     dev.set_enabled(True)
     dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss",
+    dev.surface(mode="spanish", packHost=base, target="en", layer="meaning",
                 enable=1, density=1, touchWords=0, lens=0)
     time.sleep(5)
     # Cleared again here, so everything read below is small: pushing twenty megabytes of model
     # to the device fills the log, and a read that has to wade through all of it takes minutes
     # on this emulator - longer than the read's own patience.
     dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="en", layer="gloss", enable=1, lens=1)
+    dev.surface(mode="spanish", packHost=base, target="en", layer="meaning", enable=1, lens=1)
     time.sleep(8)
 
     boxes = dev.annotated()

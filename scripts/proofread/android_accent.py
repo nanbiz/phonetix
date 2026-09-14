@@ -143,7 +143,7 @@ def main():
 
     # The standard reading first, so what the accent changed is a difference and not a guess.
     dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="de", layer="ipa", accent="none",
+    dev.surface(mode="spanish", packHost=base, target="de", layer="sound", accent="none",
                 enable=1, density=1, touchWords=1)
     time.sleep(8)
     standard = drawn(dev).get(WORD)
@@ -157,7 +157,7 @@ def main():
 
     # And in the accent, which is a rule rather than a pack of its own.
     dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="de", layer="ipa", accent="es-ar",
+    dev.surface(mode="spanish", packHost=base, target="de", layer="sound", accent="es-ar",
                 enable=1, density=1, touchWords=1)
     time.sleep(8)
     said = drawn(dev).get(WORD)

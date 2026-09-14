@@ -67,7 +67,7 @@ pub fn batch(id: u64, tokens: &[crate::answer::Token], misses: &[crate::answer::
 fn token(token: &crate::answer::Token) -> String {
     format!(
         "{{\"run\":{},\"start\":{},\"end\":{},\"spelling\":{},\"lang\":{},\
-\"state\":\"{:?}\",\"gloss\":{},\"ipa\":{},\"inline\":{},\"provenance\":{}}}",
+\"state\":\"{:?}\",\"gloss\":{},\"ipa\":{},\"glossIpa\":{},\"inline\":{},\"provenance\":{}}}",
         token.run_id,
         token.start,
         token.end,
@@ -76,6 +76,7 @@ fn token(token: &crate::answer::Token) -> String {
         token.state,
         maybe(&token.gloss),
         maybe(&token.ipa),
+        maybe(&token.gloss_ipa),
         token.inline,
         provenance(&token.provenance),
     )

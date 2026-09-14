@@ -9,10 +9,10 @@
 // annotation over a word in a browser and the one over a word on a phone are the same design.
 import type { Token } from '@/core/tokens';
 import type { ScannedRun } from './scan';
-import { themeOf } from '@/ui/theme';
+import { THEME, themeOf } from '@/ui/theme';
 
 /** What the reader asked to see over a word. */
-export type Layer = 'off' | 'gloss' | 'gloss+ipa' | 'ipa' | 'replace';
+export type Layer = 'off' | 'meaning' | 'sound' | 'both';
 
 /** What one annotated word is wrapped in. Named once: the session recognises its own work by it. */
 export const WORD = 'px-w';
@@ -37,10 +37,18 @@ const painted: Painted[] = [];
  * heights are the design page's own.
  */
 function room(layer: Layer): void {
-  const root = document.documentElement.classList;
-  root.remove('px-ruby', 'px-ruby-2');
-  if (layer === 'gloss' || layer === 'ipa') root.add('px', 'px-ruby');
-  if (layer === 'gloss+ipa') root.add('px', 'px-ruby-2');
+  // Nothing to make room for: the answer takes the word's place rather than sitting above the
+  // line, so the page keeps its own layout. The page used to be given a taller line height for
+  // a ruby line that no longer exists.
+  if (layer !== 'off') document.documentElement.classList.add('px');
+}
+
+/** The palette the reader chose, which the words are drawn in as much as the card. */
+let theme = THEME;
+
+/** Draw in this palette from now on. The page is repainted by whoever changed the setting. */
+export function paintedIn(chosen: string): void {
+  theme = chosen;
 }
 
 /** The words on screen, so a gesture can ask about the one under the cursor. */
@@ -121,18 +129,34 @@ function span(className: string, text?: string): HTMLSpanElement {
  * Absolutely positioned above the word rather than in the line, so a page's own line height
  * is not pushed apart by an annotation the page never planned for.
  */
-function annotation(token: Token, layer: Layer): HTMLElement | null {
-  const stack = span('px-rb');
-  if ((layer === 'gloss' || layer === 'gloss+ipa') && token.gloss) {
-    const gloss = span('px-gl', token.gloss);
-    // A machine's answer is marked as one, in the inline layer as much as on the card.
-    if (token.provenance?.kind === 'guess') gloss.classList.add('px-guess');
-    stack.appendChild(gloss);
+/**
+ * What takes the word's place: what it means, how it is said, or both.
+ *
+ * Always in place of the word rather than above it. A line over a word is something a reader
+ * has to be pointing at to read, and half the readers of this have no pointer at all; the word
+ * itself is where the answer goes, and the word comes back where they ask for it.
+ */
+function instead(token: Token, layer: Layer): HTMLElement | null {
+  if (layer === 'sound') {
+    if (!token.ipa) return null;
+    const said = span('px-rep');
+    said.appendChild(span('px-ph', token.ipa));
+    return said;
   }
-  if ((layer === 'ipa' || layer === 'gloss+ipa') && token.ipa) {
-    stack.appendChild(span('px-ph', token.ipa));
+  if (!token.gloss) return null;
+  const swapped = span('px-rep');
+  // Marked for what each piece is: a meaning and a pronunciation are drawn differently and
+  // read differently, and anything looking at the page - the styles, a check - asks which it
+  // is rather than reading the text of both at once.
+  const meaning = span('px-gl', token.gloss);
+  // A machine's answer is marked as one, in the page as much as on the card.
+  if (token.provenance?.kind === 'guess') meaning.classList.add('px-guess');
+  swapped.appendChild(meaning);
+  if (layer === 'both' && token.glossIpa) {
+    // How to say the word they have just been handed, which is the one they will try to say.
+    swapped.appendChild(span('px-ph', token.glossIpa));
   }
-  return stack.childElementCount > 0 ? stack : null;
+  return swapped;
 }
 
 /**
@@ -163,18 +187,16 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
     const spelling = text.slice(token.start, token.end);
     // The theme the tokens are keyed by, on the box itself: every colour is defined inside
     // one, so a box naming no theme would have none of them.
-    const box = span(`${WORD} ${themeOf(onDark)}`);
-    const mark = annotation(token, layer);
-    if (layer === 'replace' && token.gloss) {
-      // The word repainted as what it means, with the cue that it was swapped, and the word
-      // itself kept beside it: a reader who wants to know what was there rests on it, rather
-      // than hunting for a tooltip the browser draws whenever it feels like it.
-      const swapped = span('px-rep', token.gloss);
+    const box = span(`${WORD} ${themeOf(onDark, theme)}`);
+    const swapped = instead(token, layer);
+    if (swapped) {
+      // The word repainted as the answer, with the word itself kept beside it: a reader who
+      // wants to know what was there asks for it - a rest, a tap - rather than hunting for a
+      // tooltip the browser draws whenever it feels like it.
       swapped.title = spelling;
       box.appendChild(swapped);
       box.appendChild(span('px-was', spelling));
     } else {
-      if (mark) box.appendChild(mark);
       box.appendChild(document.createTextNode(spelling));
     }
     words.set(box, token);
@@ -235,7 +257,7 @@ function behind(element: HTMLElement | null): string {
  * outwards puts a node back into a parent that is about to be replaced itself.
  */
 export function unpaint(): void {
-  document.documentElement.classList.remove('px', 'px-ruby', 'px-ruby-2');
+  document.documentElement.classList.remove('px');
   revealed = null;
   for (let i = painted.length - 1; i >= 0; i--) {
     const { drawn, was, parent } = painted[i];
