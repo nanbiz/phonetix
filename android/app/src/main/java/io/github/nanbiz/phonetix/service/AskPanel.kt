@@ -13,6 +13,9 @@ import android.widget.EditText
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Languages
 import io.github.nanbiz.phonetix.core.Wording
@@ -106,6 +109,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     var onClose: () -> Unit = {}
 
     init {
+        // The owners a composition needs are looked for up the view tree from the window's
+        // root, which is this panel rather than the view inside it: set only on that view, a
+        // card drawn in here brought the service down with "ViewTreeLifecycleOwner not found".
+        setViewTreeLifecycleOwner(answer)
+        setViewTreeViewModelStoreOwner(answer)
+        setViewTreeSavedStateRegistryOwner(answer)
         orientation = VERTICAL
         background = GradientDrawable().apply {
             cornerRadius = Tokens.Scale.radiusCard * density
