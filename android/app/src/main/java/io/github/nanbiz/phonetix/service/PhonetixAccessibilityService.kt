@@ -79,11 +79,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Looks again once a system window has finished coming or going. */
     private val afterASystemWindow = Runnable { scrollOnly = false; schedule(0L) }
 
-    /** The page has stopped moving: read it as it now stands and put the words back. */
+    /**
+     * The page has stopped moving: put the words back where they now are.
+     *
+     * The lines are the ones already found, asked where they are now. A scroll moves words
+     * without changing them, so walking the tree again is a few hundred milliseconds spent
+     * learning what is already known - it is what this pass was cut from, measured, when the
+     * overlay was made fast: seventy-odd calls into the app become none, and the pass goes
+     * from hundreds of milliseconds to single figures. A page that has genuinely changed
+     * falls back to a full read on its own, from the check inside the pass.
+     */
     private val afterMoving = Runnable {
-        scrollOnly = false
+        scrollOnly = cachedPlan.isNotEmpty()
+        replaceNow = scrollOnly
         schedule(0L)
     }
+
+    /** Whether the next pass is the one that puts the words back after a movement, which asks
+     *  the lines it already has where they are now rather than looking for them again. */
+    @Volatile private var replaceNow = false
 
     /** Anything that is only worth naming to say it is deliberately unused. */
     private fun void(@Suppress("UNUSED_PARAMETER") value: Any?) = Unit
@@ -634,14 +648,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (since > FOLLOW_IDLE_MS) {
                 if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "LOOPIDLE after ${since}ms")
                 following = false
-                // One last read, and a full one. Following carries the words by how far the
-                // lines report they have moved, and if that has gone wrong - a list that
-                // recycles its rows, a line that answered for a different line - the error
-                // stays on screen until something happens to ask again, which in an app that
-                // says nothing while it is idle is never. Reading the screen properly is what
-                // ends a movement.
-                scrollOnly = false
-                cachedPlan = emptyList()
+                // One last read, of the lines already in hand.
+                //
+                // This used to throw them away and walk the tree again, because the words
+                // were carried along by how far each line reported it had moved and that
+                // drifts: a list that recycles its rows, a line answering for another line.
+                // Nothing is carried any more - the words come down while the page moves -
+                // so there is no accumulated error to correct, and a full walk here was a few
+                // hundred milliseconds at the end of every scroll. The pass falls back to one
+                // by itself the moment the lines turn out to be different ones.
+                scrollOnly = cachedPlan.isNotEmpty()
+                replaceNow = scrollOnly
                 runCatching { scan() }
                 return
             }
@@ -724,7 +741,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val settings = SettingsStore.current
         val sinceFull = android.os.SystemClock.uptimeMillis() - lastFullReadAt
         val settled = android.os.SystemClock.uptimeMillis() - lastMotionAt > STILL_MS
-        val overdue = sinceFull > FULL_READ_MS && settled || sinceFull > FULL_READ_MOVING_MS
+        // A full read is due on a page that has been sitting still, not on the pass that puts
+        // the words back the moment a scroll ends: a scroll lasts longer than the age that
+        // makes one due, so every scroll ended in a tree walk of a few hundred milliseconds
+        // where asking the lines where they are now costs single figures. The walk still
+        // happens, a moment later, from the loop that reads a settled page.
+        val replacing = replaceNow
+        replaceNow = false
+        val overdue = !replacing &&
+            (sinceFull > FULL_READ_MS && settled || sinceFull > FULL_READ_MOVING_MS)
         // Following needs the lines, which are already in hand; it does not need the window
         // they are in. Asking for the whole window costs thirty to ninety milliseconds while
         // the app is busy scrolling, and every one of those is a millisecond the positions
@@ -2888,7 +2913,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  enough to cover the pause between two strokes of a scroll, because a reader who
          *  moves the page in short pushes stops for a moment between them, and a loop that
          *  gave up in that moment had to be woken by an event that arrives late. */
-        const val FOLLOW_IDLE_MS = 900L
+        /**
+         * How long the loop keeps looking after the last thing that announced itself.
+         *
+         * It used to wait most of a second, because it was carrying the words along and a
+         * page that goes quiet mid-scroll would have stranded them. Nothing is carried now -
+         * the words are down while the page moves - so all this loop does on a still page is
+         * ask it where its lines are, sixty times a second, for nothing. It stops as soon as
+         * the page has been still for longer than the gap between a scroll's own events.
+         */
+        const val FOLLOW_IDLE_MS = 200L
         /** However well the following is going, a settled screen is read in full this often. */
         const val FULL_READ_MS = 900L
         /** And a moving one this often, to pick up the words scrolling into it. */

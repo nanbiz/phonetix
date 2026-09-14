@@ -205,6 +205,15 @@ private fun TopRow(
     onOpen: (String) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // The word and what it is marked with, together, taking whatever room is left over.
+        //
+        // The word and the spacer beside it were each given a share of the free space, so the
+        // spacer got half of it and the link at the end of the row stopped in the middle of
+        // the card: what shares the row is one thing, and the space after it is the rest.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f),
+        ) {
         androidx.compose.material3.Text(
             text = answer.spelling,
             color = Color(palette.ink),
@@ -240,7 +249,7 @@ private fun TopRow(
                 background = Color(if (machine) palette.guessBg else palette.accentBg),
             )
         }
-        Box(Modifier.weight(1f))
+        }
         // The word's own entry, and it is here whether or not a dictionary answered: the
         // reader who got nothing is the one most likely to want it.
         Box(

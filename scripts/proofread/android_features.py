@@ -558,8 +558,23 @@ def check_language(r, dev):
     german, german_log = {}, ""
     for _ in range(4):
         german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
-        if any("DRAWN " in line and len(line.split("DRAWN ", 1)[1]) > 3
-               for line in german_log.splitlines()):
+        # What was written over each word, taken while the German page is the last thing
+        # drawn, and asked of the device: the overlay writes one long line per pass, so the
+        # one naming the words scrolls out of any window worth reading and is dropped from
+        # the log outright when the device is busy.
+        said = {}
+        for line in reversed(dev.lines("DRAWN ").splitlines()):
+            if "DRAWN " not in line:
+                continue
+            pairs = dict(
+                pair.split("=", 1)
+                for pair in line.split("DRAWN ", 1)[1].split()
+                if "=" in pair
+            )
+            if pairs:
+                said = pairs
+                break
+        if said:
             break
     english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
     r.check(
@@ -567,22 +582,6 @@ def check_language(r, dev):
         "language: an English page is still transcribed",
         f"{len(english)} transcriptions on it",
     )
-    # What was written over each word, which the geometry line does not carry.
-    # The last report that drew anything, rather than the last report: a pass that read the
-    # screen and drew nothing is an ordinary moment between two that did, and taking it leaves
-    # this asking its question of an empty set.
-    said = {}
-    for line in reversed(german_log.splitlines()):
-        if "DRAWN " not in line:
-            continue
-        pairs = dict(
-            pair.split("=", 1)
-            for pair in line.split("DRAWN ", 1)[1].split()
-            if "=" in pair
-        )
-        if pairs:
-            said = pairs
-            break
     r.check(
         len(german) > 0,
         "language: a German page is transcribed too",
@@ -955,7 +954,6 @@ def check_settings_screen(r, dev):
                           .map(r => r.textContent.trim()),
                         modes: [...panel.querySelectorAll('[data-row=layer] [data-choice]')]
                           .map(c => c.getAttribute('data-choice')),
-                        into: Boolean(panel.querySelector('[data-row=target] .select')),
                         often: (panel.querySelector('[data-row=density] [data-about]') || {})
                           .textContent || '',
                         bar: Boolean(panel.querySelector('[data-row=density] input[type=range]')),
@@ -986,13 +984,36 @@ def check_settings_screen(r, dev):
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
 
-    # What this does to a word: the three the core knows, and nothing else.
-    r.check(screen["modes"] == ["meaning", "sound", "both"],
-            "settings: the modes are the core's three", str(screen["modes"]))
+    # What a word is replaced by: the three the core answers with, and nothing, which is the
+    # reader who wants the product there to be asked rather than answering over everything.
+    r.check(screen["modes"] == ["meaning", "sound", "both", "off"],
+            "settings: the modes are the core's, and off", str(screen["modes"]))
     # The language a word is turned into, asked for by the modes that turn it into one and by
-    # nothing else: the mode is already that question's first half.
-    r.check(screen["into"], "settings: the language to read into is offered",
-            str(screen["rows"]))
+    # nothing else: the mode is already that question's first half. So it is asked for after
+    # choosing one of those, and gone after choosing the one that does not.
+    into = None
+    try:
+        with View() as view:
+            for mode, want in (("meaning", True), ("sound", False)):
+                view.evaluate(
+                    "(document.querySelector('[data-row=layer] [data-choice=%s]')"
+                    " || {}).click?.()" % mode
+                )
+                time.sleep(1)
+                there = view.evaluate(
+                    "Boolean(document.querySelector('[data-row=target] .select'))")
+                r.check(there == want,
+                        f"settings: the language is {'offered' if want else 'not asked for'}"
+                        f" in {mode}", str(there))
+                if mode == "meaning":
+                    into = there
+            # Left as this suite expects to find it.
+            view.evaluate(
+                "(document.querySelector('[data-row=layer] [data-choice=meaning]')"
+                " || {}).click?.()")
+    except Exception as e:  # noqa: BLE001
+        r.check(False, "settings: the language to read into follows the mode", str(e))
+    void = into
     # The bar is a bar, and says what it means in words rather than as a ratio.
     r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")
     r.check("word" in screen["often"].lower(),
