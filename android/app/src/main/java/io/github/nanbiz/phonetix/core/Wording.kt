@@ -31,11 +31,12 @@ object Wording {
         Choice("narrow", "[ ]", "every detail of how it is said, like aspiration and devoicing"),
     )
 
-    /** Mode, as an overlay can draw them. */
+    /** Replacement mode, as an overlay can draw them. */
     val layer = listOf(
         Choice("meaning", "Translation", "the word replaced by what it means"),
         Choice("sound", "Pronunciation", "the word replaced by how it is said"),
         Choice("both", "Both", "what it means, and how to say that"),
+        Choice("off", "Off", "nothing is replaced; the mark still answers a word"),
     )
 
     /** Every row of the settings surfaces, by the name it reports itself under. */
@@ -49,7 +50,7 @@ object Wording {
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
         "host" to Words("Where they come from", "Fetched once and kept on this machine, so a dictionary works on a train."),
-        "layer" to Words("Mode", ""),
+        "layer" to Words("Replacement mode", ""),
         "lens" to Words("The mark", "One mark at the edge of the screen, and the three things it answers"),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over and takes none of the screen's touches"),
         "lens-hold" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),

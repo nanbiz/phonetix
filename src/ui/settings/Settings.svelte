@@ -307,39 +307,6 @@
   <!-- The bar a reader comes back to, on a row of its own. -->
   <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
 
-  <div class="rows">
-    <!-- The colours everything of ours is drawn in: the card, this view, and the words on the
-         page. The product has carried eight palettes since before the merge and offered none
-         of them. -->
-    <Row name={ROWS.theme.name} row="theme" about={ROWS.theme.about}>
-      {#snippet control()}
-        <Picker
-          options={themes}
-          chosen={settings.theme}
-          label={ROWS.theme.name}
-          change={(value) => change('theme', value)}
-        />
-      {/snippet}
-    </Row>
-
-    <!-- Which side of the palette. Asking for the side a palette does not have moves the
-         reader to the product's own, because the alternative is a choice that changes
-         nothing: they asked to read in the dark and the screen stayed light. -->
-    <Row name={ROWS.dark.name} row="dark">
-      {#snippet wide()}
-        <Segmented
-          choices={DARK_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
-          chosen={settings.dark}
-          change={(value) => {
-            const wanted = value === 'system' ? (device ? 'dark' : 'light') : value;
-            if (!(SIDES[settings.theme] ?? []).includes(wanted)) change('theme', THEME);
-            change('dark', value);
-          }}
-        />
-      {/snippet}
-    </Row>
-  </div>
-
   {#if where === 'phone'}
     <!-- Which apps are read. The list itself is the system's, with its own icons, so it is
          the one screen the phone draws for itself. -->
@@ -529,19 +496,67 @@
 </Screen>
 
 <Screen name="more" on={view} title={ROWS.advanced.name} back={() => (view = 'main')}>
-  <!-- What a word means comes out of a dictionary for the language being read, which is the
+  <!-- Where dictionaries come from, and only then the dictionaries themselves.
+       What a word means comes out of a dictionary for the language being read, which is the
        one thing the product cannot carry: the pronunciations travel with it, the meanings are
-       built from a dump and are far larger. -->
-  <NavRow
-    name={ROWS.dictionaries.name}
-    row="dictionaries"
-    about={offered > 0
-      ? `${held} of ${offered} here, ${packs.open.length} open`
-      : settings.host
-        ? `nothing on offer at ${settings.host}`
-        : SAYS['no-source']}
-    open={() => (view = 'packs')}
-  />
+       built from a dump and are far larger. Until a reader says where theirs are there is
+       nothing to list, and a screen saying "0 of 0" over an empty box is a screen that exists
+       to disappoint. -->
+  <div class="rows">
+    <!-- The colours everything of ours is drawn in: the card, this view, and the words on the
+         page. The product has carried eight palettes since before the merge and offered none
+         of them. -->
+    <Row name={ROWS.theme.name} row="theme" about={ROWS.theme.about}>
+      {#snippet control()}
+        <Picker
+          options={themes}
+          chosen={settings.theme}
+          label={ROWS.theme.name}
+          change={(value) => change('theme', value)}
+        />
+      {/snippet}
+    </Row>
+
+    <!-- Which side of the palette. Asking for the side a palette does not have moves the
+         reader to the product's own, because the alternative is a choice that changes
+         nothing: they asked to read in the dark and the screen stayed light. -->
+    <Row name={ROWS.dark.name} row="dark">
+      {#snippet wide()}
+        <Segmented
+          choices={DARK_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+          chosen={settings.dark}
+          change={(value) => {
+            const wanted = value === 'system' ? (device ? 'dark' : 'light') : value;
+            if (!(SIDES[settings.theme] ?? []).includes(wanted)) change('theme', THEME);
+            change('dark', value);
+          }}
+        />
+      {/snippet}
+    </Row>
+  </div>
+
+  <div class="rows">
+    <Row name={ROWS.host.name} row="host" about={ROWS.host.about}>
+      {#snippet wide()}
+        <Field
+          value={settings.host}
+          label={ROWS.host.name}
+          kind="url"
+          placeholder="https://…"
+          change={(said) => change('host', said)}
+        />
+      {/snippet}
+    </Row>
+  </div>
+
+  {#if offered > 0}
+    <NavRow
+      name={ROWS.dictionaries.name}
+      row="dictionaries"
+      about={`${held} of ${offered} here, ${packs.open.length} open`}
+      open={() => (view = 'packs')}
+    />
+  {/if}
 
   <!-- What this page is being read as, and how that language is read. -->
   <NavRow

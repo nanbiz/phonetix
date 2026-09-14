@@ -23,6 +23,15 @@ export interface Settings {
   target: string;
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
+  /**
+   * The language the reader is learning, which is what a word they are looking for comes
+   * back in.
+   *
+   * Set where it is asked - in the panel the mark opens, and on the say screen - because that
+   * is the one place a reader is thinking about it. Empty until they say, and then it is the
+   * page in front of them or a language they keep a dictionary for.
+   */
+  learning: string;
   /** Narrow transcriptions rather than broad ones. The card always shows the full form. */
   narrow: boolean;
   /** Leave the stress marks off the line over a word. */
@@ -80,6 +89,7 @@ export const DEFAULTS: Settings = {
   density: 12,
   target: '',
   source: '',
+  learning: '',
   narrow: false,
   hideStress: true,
   accents: {},

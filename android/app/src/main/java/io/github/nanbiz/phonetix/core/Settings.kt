@@ -31,6 +31,9 @@ data class Settings(
      * answer should come back in.
      */
     val target: String = "",
+    /** The language the reader is learning, which is what a word they are looking for comes
+     *  back in. Set in the panel that asks for one. */
+    val learning: String = "",
     /**
      * What a word is replaced by: "meaning", "sound", "both", or "off".
      *
@@ -99,6 +102,7 @@ object SettingsStore {
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
     private const val K_TARGET = "target"
+    private const val K_LEARNING = "learning"
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
@@ -125,6 +129,7 @@ object SettingsStore {
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, false),
             target = p.getString(K_TARGET, "") ?: "",
+            learning = p.getString(K_LEARNING, "") ?: "",
             layer = mode(p.getString(K_LAYER, "") ?: ""),
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             dark = p.getString(K_DARK, "system") ?: "system",
@@ -166,6 +171,7 @@ object SettingsStore {
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
             ?.putString(K_TARGET, next.target)
+            ?.putString(K_LEARNING, next.learning)
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
@@ -182,6 +188,7 @@ object SettingsStore {
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
     fun setTarget(v: String) = update { it.copy(target = v) }
+    fun setLearning(v: String) = update { it.copy(learning = v) }
     /** In the words the core reads, whoever is asking: a shortcut, a test harness or a
      *  build of the screen older than this one can still say "ipa", and a mode the core does
      *  not know is a screen that stops answering. */

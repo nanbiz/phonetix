@@ -24,6 +24,7 @@ import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.ui.themeNamed
 import io.github.nanbiz.phonetix.core.Answer
+import io.github.nanbiz.phonetix.core.Languages
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.Speech
@@ -1802,7 +1803,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val replaced = if (pageUp) pageLines().also { page.prepare(it) } else emptyList()
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            if (pageUp) page.draw(replaced) else overlay.render(painted)
+            if (pageUp) page.draw(replaced)
+            else if (SettingsStore.current.layer == "off") overlay.known(painted)
+            else overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
                 "plan=${t1 - t0}ms (ipc=${stats.ipcNs / 1_000_000}ms in ${stats.calls} calls, ours=${stats.computeNs / 1_000_000}ms) nodes=${MAX_NODES - budget.nodes} " +
@@ -2263,11 +2266,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "lines=${planned.size} first=${planned.firstOrNull()?.text?.take(40)}",
             )
         }
+        // Nothing is replaced, and the mark still answers a word.
+        //
+        // The words are read and their answers kept - that is what the mark is dragged over -
+        // and nothing is painted over the page. A reader who wants the product there to be
+        // asked rather than answering over everything they read is the case this is for, and
+        // without the reading there would be nothing under the mark to answer with.
+        val silent = settings.layer == "off"
         val told = Reading.annotate(
             planned.map { it.text },
             source = source,
             target = settings.into.ifEmpty { source },
-            mode = settings.layer,
+            mode = if (silent) "sound" else settings.layer,
             density = settings.density,
             narrow = settings.narrow,
             hideStress = settings.hideStress,
@@ -2321,6 +2331,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         planned.addAll(kept)
     }
 
+    /** The app itself, from the mark on the panel. */
+    private fun openApp() {
+        val intent = android.content.Intent(this, MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        runCatching { startActivity(intent) }
+            .onFailure { android.util.Log.w("Phonetix", "the app would not open", it) }
+    }
+
     /** The panel the mark opens, over whatever is being read. Nothing while it is down. */
     private var asking: AskPanel? = null
     private var listener: Dictation? = null
@@ -2336,10 +2355,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (asking != null) return
         val settings = SettingsStore.current
         val into = settings.into
-        // Which language the answer comes back in: the screen's own where one has been read,
-        // and otherwise a language this phone keeps a dictionary for.
-        val held = Packs.held(this).filter { it != into }
-        val learning = (lastScreenLanguage?.takeIf { it != into } ?: held.firstOrNull()).orEmpty()
+        // Which language the answer comes back in: what the reader said in this panel, and
+        // until they say, the screen in front of them or a language they keep a dictionary
+        // for. Every language is on offer, not only the ones a dictionary is held for - a
+        // reader asking for the word for something usually has no dictionary for it, which is
+        // why they are asking.
+        val held = Packs.held(this)
+        val learning = settings.learning.ifEmpty {
+            lastScreenLanguage?.takeIf { it != into } ?: held.firstOrNull { it != into }.orEmpty()
+        }
+        val offered = (listOfNotNull(learning.takeIf { it.isNotEmpty() }) + held +
+            Languages.all().sortedBy { Languages.english(it) }).distinct().filter { it != into }
         // The side of the palette the reader reads in: their own answer where they gave one,
         // and the device's where they left it to the device.
         val dark = when (settings.dark) {
@@ -2351,11 +2377,26 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         val panel = AskPanel(this, Tokens.palette(themeNamed(settings.theme), dark))
         panel.askFor(learning.ifEmpty { into })
-        panel.setLanguages(held, learning) { picked ->
+        // What the reader picks here is what they are learning, and it is remembered: this is
+        // the one place they are thinking about it.
+        var answering = learning
+        panel.setLanguages(offered, learning) { picked ->
+            answering = picked
+            SettingsStore.setLearning(picked)
             panel.askFor(picked)
+            panel.setLanguages(offered, picked) { again ->
+                answering = again
+                SettingsStore.setLearning(again)
+                panel.askFor(again)
+                said(panel, again, into, panel.field.text.toString())
+            }
             said(panel, picked, into, panel.field.text.toString())
         }
-        panel.onSubmit = { asked -> said(panel, learning, into, asked) }
+        panel.onSubmit = { asked -> said(panel, answering, into, asked) }
+        panel.onOpenApp = {
+            closeSay()
+            openApp()
+        }
         panel.onClose = { closeSay() }
         // Saying it rather than typing it, where the phone can hear: the words go into the
         // field as they arrive and the finished phrase is asked for without being pressed.

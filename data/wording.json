@@ -2,7 +2,7 @@
   "note": "The words the settings surfaces are made of. Authored here because both platforms say them: a row named one thing in the extension and another on the phone is one product speaking with two voices, and a one-word label is only a choice for somebody who already knows what the other options are. tools/gen_types.py writes them into both.",
   "choices": {
     "layer": {
-      "name": "Mode",
+      "name": "Replacement mode",
       "options": [
         {
           "value": "meaning",
@@ -39,9 +39,21 @@
             "browser": "what it means, and how to say that",
             "phone": "what it means, and how to say that"
           }
+        },
+        {
+          "value": "off",
+          "label": "Off",
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "nothing is replaced; ask about a word yourself",
+            "phone": "nothing is replaced; the mark still answers a word"
+          }
         }
       ],
-      "note": "What the product does, which is two things and one combination of them. Where the answer goes is not a choice: it takes the word's place, which is the only thing that works without a pointer to rest on, and the card is what a reader asks for when they want more."
+      "note": "What a word on the page is replaced by, which is two things and one combination of them - and nothing, for a reader who wants the product there to be asked rather than answering over everything they read."
     },
     "detail": {
       "name": "Transcriptions",
@@ -125,7 +137,7 @@
       "about": "the default is what happens on sites you have not decided about"
     },
     "layer": {
-      "name": "Mode",
+      "name": "Replacement mode",
       "about": ""
     },
     "density": {

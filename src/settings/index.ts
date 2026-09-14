@@ -15,6 +15,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   density: 'local:density',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
+  learning: 'local:learning',
   accents: 'local:accents',
   narrow: 'local:narrow',
   hideStress: 'local:hideStress',

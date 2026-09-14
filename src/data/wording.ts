@@ -37,11 +37,12 @@ export const DETAIL_CHOICES: Choice[] = [
   { value: "narrow", label: "[ ]", about: "every detail of how it is said, like aspiration and devoicing" },
 ];
 
-/** Mode, as a browser can draw them. */
+/** Replacement mode, as a browser can draw them. */
 export const LAYER_CHOICES: Choice[] = [
   { value: "meaning", label: "Translation", about: "the word replaced by what it means" },
   { value: "sound", label: "Pronunciation", about: "the word replaced by how it is said" },
   { value: "both", label: "Both", about: "what it means, and how to say that" },
+  { value: "off", label: "Off", about: "nothing is replaced; ask about a word yourself" },
 ];
 
 /** Every row of the settings surfaces, by the name it reports itself under. */
@@ -55,7 +56,7 @@ export const ROWS: Record<string, Words> = {
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
   "host": { name: "Where they come from", about: "Fetched once and kept on this machine, so a dictionary works on a train." },
-  "layer": { name: "Mode", about: "" },
+  "layer": { name: "Replacement mode", about: "" },
   "lens": { name: "The mark", about: "One mark at the edge of the screen, and the three things it answers" },
   "lens-drag": { name: "Drag it over a word", about: "It says what it passes over and takes none of the screen's touches" },
   "lens-hold": { name: "Hold it, then sweep", about: "Every word it passes over joins the run, and the card answers the whole clause" },

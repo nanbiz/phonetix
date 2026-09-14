@@ -113,6 +113,19 @@ class OverlayController(
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
     }
 
+    /**
+     * Know where the words are without painting anything over them.
+     *
+     * What the mark is dragged over is this list, so a reader who has asked for nothing to be
+     * replaced still has every word to ask about - the page is simply left as its app wrote
+     * it.
+     */
+    fun known(boxes: List<WordBox>) {
+        if (motion.isRunning) motion.stop()
+        lastRendered = boxes
+        hideNow()
+    }
+
     fun render(boxes: List<WordBox>) {
         // Painting the small windows means the motion is over, whether it ended by settling
         // or because the screen changed under it. Leaving the layer up would hide every one

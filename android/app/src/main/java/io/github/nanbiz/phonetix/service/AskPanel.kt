@@ -111,6 +111,32 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     /** The panel is being taken down, however that was asked for. */
     var onClose: () -> Unit = {}
 
+    /** The mark, which opens the app: the panel stays about the word being asked for, and
+     *  everything else is set where everything else is set. */
+    private val mark = TextView(context).apply {
+        text = "[ɤ]"
+        textSize = 15f
+        setTextColor(palette.accent.toInt())
+        typeface = Typeface.SERIF
+        setTypeface(typeface, Typeface.BOLD)
+        gravity = Gravity.CENTER
+    }
+
+    /** The top line: what is being answered, and the way through to the app. */
+    private val header = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(prompt, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        addView(mark, LayoutParams(dp(40f), dp(40f)))
+    }
+
+    /** Opens the app, from the mark on the panel. */
+    var onOpenApp: (() -> Unit)? = null
+        set(value) {
+            field = value
+            mark.setOnClickListener { value?.invoke() }
+        }
+
     init {
         // The owners a composition needs are looked for up the view tree from the window's
         // root, which is this panel rather than the view inside it: set only on that view, a
@@ -126,7 +152,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         }
         val pad = dp(14f)
         setPadding(pad, pad, pad, pad)
-        addView(prompt)
+        addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(chipStrip)
         addView(
             asking,
@@ -197,7 +223,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
      */
     fun setLanguages(languages: List<String>, chosen: String, onPick: (String) -> Unit) {
         chipRow.removeAllViews()
-        if (languages.size < 2) {
+        if (languages.isEmpty()) {
             chipStrip.visibility = GONE
             return
         }
