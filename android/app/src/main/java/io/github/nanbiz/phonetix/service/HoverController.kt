@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.Rect
+import android.graphics.RectF
 import android.os.Build
 import android.view.Choreographer
 import android.view.Gravity
@@ -84,6 +85,9 @@ class HoverController(
     private var markY = -1
 
     private var hovered: WordBox? = null
+
+    /** When the thumb was last told it had taken a word, so it cannot be told without pause. */
+    private var lastTick = 0L
 
     /** The words a sweep has taken in, in the order the circle met them. Empty unless the
      *  reader held the mark down before dragging, which is what asks about a run rather than
@@ -225,15 +229,33 @@ class HoverController(
     /** What the circle is over now, told once per word rather than once per frame. */
     private fun hoverAt(x: Int, y: Int) {
         val found = wordAt(x.toFloat(), y.toFloat())
-        if (found?.word == hovered?.word && found?.rect == hovered?.rect) return
+        // The same word, even where its box has shifted: the screen is read again several
+        // times a second, and on one whose content keeps changing - a chat, a feed - the box
+        // under a still finger arrives a pixel from where it was. Compared exactly, every one
+        // of those was a new word: a tick under the thumb and a card built again, without end.
+        val was = hovered
+        val same = found?.word == was?.word &&
+            (found == null || was == null || RectF.intersects(found.rect, was.rect))
+        if (same) {
+            // The newest box all the same, so what is asked about is where the word is now.
+            hovered = found
+            if (found != null && !sweeping) onWord(found)
+            return
+        }
         hovered = found
         highlight?.mark(found?.rect?.let {
             Rect(it.left.toInt(), it.top.toInt(), it.right.toInt(), it.bottom.toInt())
         })
         if (found != null) {
             // A tick under the thumb each time the circle takes a new word, since the eye is
-            // on the word rather than on the circle.
-            mark?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            // on the word rather than on the circle. Never faster than a reader can move
+            // between words: whatever else goes wrong above, the phone must not buzz without
+            // stopping in a reader's hand.
+            val now = android.os.SystemClock.uptimeMillis()
+            if (now - lastTick > TICK_APART_MS) {
+                lastTick = now
+                mark?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
             if (sweeping && swept.none { it.word == found.word && it.rect == found.rect }) {
                 swept.add(found)
                 highlight?.gather(swept.map {
@@ -481,6 +503,9 @@ class HoverController(
     }
 
     private companion object {
+        /** The shortest gap between two ticks under the thumb. */
+        const val TICK_APART_MS = 90L
+
         const val MATCH = FrameLayout.LayoutParams.MATCH_PARENT
 
         /** The mark's width. */

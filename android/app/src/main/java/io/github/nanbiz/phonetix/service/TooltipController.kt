@@ -161,17 +161,37 @@ class TooltipController(
     private var hand = 0
 
     fun show(box: WordBox) {
-        if (BuildConfig.DEBUG) {
+        // The same word again, where its box has only moved: the screen under the card is
+        // read several times a second and a word that reflows by a pixel arrives as a new
+        // box. Rebuilding the card for it tore the window down and put another up over and
+        // over - a card that flickered, a tick under the thumb for each one, and on a screen
+        // whose own content keeps changing, that without end. It is moved instead.
+        val again = view != null && given == null && shown?.word == box.word
+        if (BuildConfig.DEBUG && !again) {
             android.util.Log.d(
                 "Phonetix",
                 "TOOLTIP open word=${box.word} ipa=${box.full} " +
                     "symbols=${IpaSymbols.explain(box.full).size}",
             )
         }
-        expanded = null
         shown = box
+        if (again) {
+            moveTo(box)
+            return
+        }
+        expanded = null
         given = null
         render(box)
+    }
+
+    /** Where the card that is up was put, so the same card can be moved rather than rebuilt. */
+    private var where: WindowManager.LayoutParams? = null
+
+    /** The card follows the word it is about, without being built again. */
+    private fun moveTo(box: WordBox) {
+        val card = view ?: return
+        val lp = where ?: return
+        place(card, lp, box)
     }
 
     /**
@@ -205,6 +225,7 @@ class TooltipController(
         host = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
+        where = null
         list = null
         scroller = null
         shown = null
@@ -217,6 +238,7 @@ class TooltipController(
         host = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
+        where = null
         placed.clear()
 
         val card = build(box)
@@ -258,6 +280,7 @@ class TooltipController(
         runCatching { wm.addView(card, lp) }
             .onSuccess {
                 view = card
+                where = lp
                 host?.shown()
                 card.post {
                     place(card, lp, box)
