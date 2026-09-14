@@ -53,6 +53,14 @@ fun SettingsWeb(
     val context = androidx.compose.ui.platform.LocalContext.current
     /** What the device is set to, which the page cannot ask for itself. */
     val night = androidx.compose.foundation.isSystemInDarkTheme()
+    // What the bridge answers with, kept current.
+    //
+    // The bridge is built once, with the view, and a lambda handed to it then answers with
+    // what this composition knew then - for the life of the screen. So a reader who granted a
+    // permission and came back was told by the page that they had not: the app knew, the
+    // screen it drew did not, and the button went on asking for something already given.
+    val asking = androidx.compose.runtime.rememberUpdatedState(permissions)
+    val dark = androidx.compose.runtime.rememberUpdatedState(night)
     val view = remember { mutableStateOf<WebView?>(null) }
     /** Whether the reader is on a screen behind the first one, so the phone's own back
      *  gesture leaves that screen instead of the app. */
@@ -115,8 +123,8 @@ fun SettingsWeb(
                 val web = this
                 addJavascriptInterface(
                     Bridge(
-                        { night }, ctx, work, web, permissions, onOpenReading, onOpenOverlay,
-                        onOpenApps,
+                        { dark.value }, ctx, work, web, { asking.value() }, onOpenReading,
+                        onOpenOverlay, onOpenApps,
                     ) { screen -> inside.value = screen != "main" },
                     "Phonetix",
                 )

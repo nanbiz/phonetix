@@ -44,7 +44,9 @@ def main():
 
     # Where the lens actually parked, which it says rather than a check assuming: the window
     # sits in the display's own metrics and those are not the screen's dimensions.
-    where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.log())
+    # Asked of the device rather than read out of a tail: the overlay writes one long line
+    # per pass, and where the mark parked scrolls out of that window while a check waits.
+    where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
     if not where:
         print("FAIL - the lens is not on screen")
         sys.exit(1)

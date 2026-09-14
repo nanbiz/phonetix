@@ -169,7 +169,9 @@ def main():
     if not dev.annotated():
         print("FAIL - nothing was annotated, so there is no page to replace")
         sys.exit(1)
-    where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.log())
+    # Asked of the device rather than read out of a tail: the overlay writes one long line
+    # per pass, and where the mark parked scrolls out of that window while a check waits.
+    where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
     if not where:
         print("FAIL - the mark is not on screen, so there is nothing to press")
         sys.exit(1)
