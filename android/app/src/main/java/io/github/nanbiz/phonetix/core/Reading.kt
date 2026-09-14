@@ -56,11 +56,21 @@ object Reading {
             accent,
         )
         var batch = JSONObject(written)
+        // What the core could not answer, carried across both engines.
+        //
+        // Completing a batch gives back the tokens as they are now, and what is still missing
+        // from them is a question the core answers about a fresh batch rather than about this
+        // one: filling in how a word is said left a batch that says nothing is missing, and
+        // the translator was then asked for nothing at all. Every word no dictionary held
+        // went without a meaning on a product whose point is telling a reader what a word
+        // means. The browser carries them the same way, in its own host.
+        val asked = batch.optJSONArray("misses") ?: JSONArray()
         // What the packs could not say, said by the synthesiser. The core reports what it is
         // missing and only that is asked for, so a word a dictionary answered keeps the
         // pronunciation the dictionary recorded and what a machine produced is marked as a
         // machine's - in the core, which is the one place that decides what a reader is told.
         batch = filled(batch, source, target, accent)
+        batch.put("misses", asked)
         // And what no dictionary could translate, translated. The engine answers only where a
         // reader has chosen a language to read into and the model for that direction is here.
         batch = meant(batch, source, target)
@@ -164,6 +174,9 @@ object Reading {
         }
         if (wanted.isEmpty()) return batch
         val said = Translator.meanings(words)
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "MEANT ${words.size} asked, ${said.size} answered")
+        }
         if (said.isEmpty()) return batch
         val kept = ArrayList<Int>(wanted.size)
         val meanings = ArrayList<String>(wanted.size)
