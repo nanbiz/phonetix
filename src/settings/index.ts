@@ -4,13 +4,16 @@
 // draws the same view from: this half is the browser's storage and nothing else.
 import { DEFAULTS, type Settings } from './shape';
 
-export { DEFAULTS, accentFor, allowed, setAccent, type Settings } from './shape';
+export {
+  DEFAULTS, accentFor, allowed, darkSide, readInto, setAccent, type Settings,
+} from './shape';
 
 /** Where each setting lives, as the storage key it is watched under. */
 const KEYS: Record<keyof Settings, `local:${string}`> = {
   on: 'local:on',
   layer: 'local:layer',
   density: 'local:density',
+  translate: 'local:translate',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
   accents: 'local:accents',
@@ -20,6 +23,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   animations: 'local:animations',
   host: 'local:packBaseUrl',
   theme: 'local:theme',
+  dark: 'local:dark',
   off: 'local:sitesOff',
   lens: 'local:lens',
   touchWords: 'local:touchWords',
@@ -30,12 +34,16 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
 /** Everything the reader has chosen, with the defaults filled in. */
 export async function current(): Promise<Settings> {
   const out = { ...DEFAULTS };
+  /** Which settings were actually stored, so one that never was can be filled in from the
+   *  others rather than from its own default. */
+  const stored = new Set<string>();
   await Promise.all(
     (Object.keys(KEYS) as (keyof Settings)[]).map(async (name) => {
       try {
         const value = await storage.getItem(KEYS[name]);
         if (value !== null && value !== undefined) {
           (out as Record<string, unknown>)[name] = value;
+          stored.add(name);
         }
       } catch {
         // Storage unavailable is the default, not a failure: a reader with no stored choice
@@ -43,6 +51,9 @@ export async function current(): Promise<Settings> {
       }
     })
   );
+  // A reader who chose a language before choosing was two settings is still reading into it:
+  // the switch is new, and nothing they did says they wanted it off.
+  if (!stored.has('translate') && out.target !== '') out.translate = true;
   return out;
 }
 

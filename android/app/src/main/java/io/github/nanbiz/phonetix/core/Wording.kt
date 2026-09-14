@@ -18,6 +18,13 @@ data class Choice(val value: String, val label: String, val about: String)
 data class Words(val name: String, val about: String)
 
 object Wording {
+    /** Light or dark, as an overlay can draw them. */
+    val dark = listOf(
+        Choice("system", "System", "whatever this device is set to"),
+        Choice("light", "Light", "always the light side of the palette"),
+        Choice("dark", "Dark", "always the dark side of the palette"),
+    )
+
     /** Transcriptions, as an overlay can draw them. */
     val detail = listOf(
         Choice("broad", "/ /", "the sounds that tell words apart"),
@@ -37,6 +44,7 @@ object Wording {
         "advanced" to Words("Advanced", "transcriptions, stress, dictionaries and how a page is read"),
         "animations" to Words("Animations", "the card eases in; off is instant"),
         "apps" to Words("Apps", ""),
+        "dark" to Words("Light or dark", ""),
         "delay" to Words("Rest before a card opens", "how long the cursor stays on a word before it answers"),
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
@@ -61,6 +69,7 @@ object Wording {
         "theme" to Words("Theme", "the colours everything of ours is drawn in"),
         "touch" to Words("Touching a word", ""),
         "touch-words" to Words("Hold a word for its card", ""),
+        "translate" to Words("Translate", "turn the words into another language"),
         "where" to Words("Where", ""),
     )
 
@@ -75,6 +84,8 @@ object Wording {
         "allow-overlay" to "Allow overlay",
         "broad-mark" to "/ /",
         "change" to "Change",
+        "choose-language" to "Choose a language",
+        "close" to "Close",
         "detail-explained" to "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
         "dictionary-accent" to "as the dictionary gives it",
         "every-app" to "Every app",
@@ -89,6 +100,7 @@ object Wording {
         "no-host" to "Nothing is fetched until this is set.",
         "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
+        "nothing-found" to "Nothing by that name",
         "nothing-yet" to "nothing yet",
         "open-accessibility" to "Open accessibility",
         "preview" to "Preview",
@@ -98,6 +110,7 @@ object Wording {
         "say-no-model" to "No translation model for that direction at your dictionary host.",
         "say-nothing" to "no word for that",
         "say-placeholder" to "what you want to say",
+        "search" to "Search",
         "start-done" to "done",
         "start-go" to "Set this",
         "start-host" to "Say where your dictionaries come from",

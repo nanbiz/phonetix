@@ -615,6 +615,11 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    cursor, dragged into a selection and reached neither the keyboard nor a screen reader. */
 .seg button { font-family: var(--font-ui); padding: 0 var(--space-3); height: calc(var(--button-height) - 4px); display: inline-flex; align-items: center; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: var(--color-surface); border: none; border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
 .seg button:last-child { border-right: none; }
+/* Each choice the same width as its neighbours, so a control of three reads as one control
+   rather than as three buttons of different sizes. Given its own row it fills the width: on a
+   phone a three-choice control huddled against the left edge left half the screen empty. */
+.seg button { flex: 1 0 auto; justify-content: center; min-width: 4em; }
+.r-wide .seg { display: flex; width: 100%; }
 .seg button.on { background: var(--color-accent); color: var(--color-accent-ink); }
 .slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }
 /* The switch is a checkbox wearing a switch, rather than a div that has to be taught what a
@@ -634,7 +639,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .toggle:disabled { opacity: 0.5; cursor: default; }
 .toggle:checked, .toggle.on { background: var(--color-accent); }
 .toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
-.select { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
+.select { font-family: var(--font-ui); background: none; text-align: left; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
 .select::after { content: "⌄"; color: var(--color-ink-faint); line-height: 1; }
 /* A real menu inside that frame. The caret has to be the frame's, because a select cannot draw
    a pseudo-element of its own: styled as the control itself it came out as a box with no sign
@@ -682,7 +687,15 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    answers with, so it is judged the same way. */
 /* A question mark beside a name, carrying what a reader would otherwise need a sentence of
    explanation for. The sentence is there for whoever wants it and takes no room from the row. */
-.hint { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: var(--space-1); border: var(--border-width) solid var(--color-border); border-radius: 50%; font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: help; }
+/* A button, because a finger cannot hover: as a span with a title it was a mark that answered
+   nothing at all on a phone. Large enough to hit, drawn the size it always was. */
+.hint { display: inline-flex; align-items: center; justify-content: center; width: var(--touch-target); height: var(--touch-target); margin-left: calc(var(--space-1) - 10px); padding: 0; background: none; border: none; font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: pointer; }
+.hint::before { content: "?"; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: var(--border-width) solid var(--color-border); border-radius: 50%; }
+/* The mark itself is drawn by the rule above; the character in the markup would be a second. */
+.hint { font-size: 0; }
+.hint::before { font-size: var(--font-size-label); }
+/* What it answers, once asked. */
+.r-sub.asked { color: var(--color-ink); }
 .about { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .answer { padding: var(--space-3) var(--space-4); border-top: var(--border-width) solid var(--color-border); }
 .made { display: flex; align-items: center; justify-content: center; gap: var(--space-1); padding: var(--space-3) var(--space-4); font-size: var(--font-size-small); color: var(--color-ink-muted); }
@@ -715,6 +728,24 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .choice.on .c-about { color: var(--color-accent); opacity: 0.85; }
 .choice .c-mark { flex: 0 0 auto; color: var(--color-accent); }
 .choices { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); }
+
+/* Choosing one of many, drawn here rather than by the operating system.
+ *
+ * A native menu is the platform's, not the product's: on a phone it opens as a white Material
+ * dialog with radio buttons, in whatever font and colours that device uses, over a surface
+ * drawn in the reader's chosen palette. It also cannot be searched, and this product offers
+ * fifty-four languages. So the list is ours: the palette, the type and the row height are the
+ * ones every other row uses, and a list long enough to need one gets a filter.
+ */
+.sheet { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: var(--color-surface); color: var(--color-ink); }
+.sheet-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); }
+.sheet-head .field { flex: 1 1 auto; }
+.sheet-head .sheet-name { font-weight: var(--weight-bold); }
+.sheet-list { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4) var(--space-4); }
+.sheet-none { color: var(--color-ink-muted); font-size: var(--font-size-small); padding: var(--space-3) var(--space-4); }
+
+/* The mark, which is a control: held, it asks the other direction. Drawn as the image alone. */
+.mark-button { display: inline-flex; padding: 0; margin: 0; background: none; border: none; cursor: pointer; }
 
 /* A finger rather than a pointer, asked of the pointer itself.
  *

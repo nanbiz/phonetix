@@ -27,6 +27,11 @@
 
   let { name, row = '', about = '', hint = '', says = '', marks = {}, control, wide }:
     Props = $props();
+
+  /** Whether the explanation behind the question mark is showing. A title attribute is a
+   *  hover, and a finger cannot hover: on a phone the mark was a decoration that answered
+   *  nothing at all. */
+  let asked = $state(false);
 </script>
 
 <div class="row" data-row={row || undefined} {...marks}>
@@ -34,7 +39,13 @@
        name, and repeating it under itself is the title twice. -->
   {#if name}
     <span class="r-name" data-name>
-      {name}{#if hint}<span class="hint" title={hint} aria-label={hint}>?</span>{/if}
+      {name}{#if hint}<button
+          class="hint"
+          title={hint}
+          aria-label={hint}
+          aria-expanded={asked}
+          onclick={() => (asked = !asked)}
+        >?</button>{/if}
     </span>
   {/if}
   {#if says}
@@ -42,6 +53,9 @@
   {/if}
   {#if about}
     <span class="r-sub" data-about={says ? undefined : ''}>{about}</span>
+  {/if}
+  {#if hint && asked}
+    <span class="r-sub asked">{hint}</span>
   {/if}
   {#if control && !says}
     <span class="r-act">{@render control()}</span>

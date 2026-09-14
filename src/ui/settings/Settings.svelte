@@ -13,9 +13,10 @@
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import type { Layer } from '@/ext/content/inline';
   import { THEMES } from '@/ui/theme';
-  import { accentFor, setAccent, type Settings } from '@/settings/shape';
+  import { accentFor, readInto, setAccent, type Settings } from '@/settings/shape';
   import {
     aboutOf,
+    DARK_CHOICES,
     DETAIL_CHOICES,
     ENDS,
     labelOf,
@@ -52,6 +53,9 @@
      * something - is the same question on both, asked once here.
      */
     where?: 'browser' | 'phone';
+    /** Which screen the reader is on. Bound, so the surface around this view can leave a
+     *  screen when the device's own way back is used. */
+    view?: string;
     settings: Settings;
     /** The densities the bar's positions mean, from the core, so the number a reader sees is
      *  the number the annotation is decided by. */
@@ -95,6 +99,7 @@
 
   let {
     where = 'browser',
+    view = $bindable('main'),
     settings,
     curve,
     packs,
@@ -146,8 +151,7 @@
     nothing = said === null && !unmodelled;
   }
 
-  /** Which screen the reader is on. */
-  let view = $state('main');
+
 
   let here = $derived(site !== '' && !settings.off.includes(site));
   /** What the page is being read as: what the reader chose, or what the page says it is. */
@@ -185,8 +189,8 @@
     .map(([code, row]) => ({ code, english: row.english, native: row.native }))
     .sort((a, b) => a.english.localeCompare(b.english));
 
-  let readInto = $derived([
-    { value: '', label: SAYS['no-translation'] },
+  let languages = $derived([
+    ...(settings.target ? [] : [{ value: '', label: SAYS['choose-language'] }]),
     ...named.map((it) => ({ value: it.code, label: `${it.english} · ${it.native}` })),
   ]);
   /** The palettes the tokens carry, named as a reader would name them. */
@@ -213,9 +217,8 @@
   /** Which language the reader is learning, for a question asked away from a page: what the
    *  page in front of them is in where there is one, and otherwise whatever they keep a
    *  dictionary for. A reader with a Spanish pack is learning Spanish. */
-  let learning = $derived(
-    reading || packs.held.find((lang) => lang !== settings.target) || ''
-  );
+  let into = $derived(readInto(settings));
+  let learning = $derived(reading || packs.held.find((lang) => lang !== into) || '');
 
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
@@ -235,6 +238,7 @@
     decided={settings.off.includes(site)}
     change={(on) => change('on', on)}
     onSite={(on) => onSite?.(on)}
+    onSay={() => (view = 'say')}
   />
 
   <!-- What the phone has to be allowed to do before any of this can happen, asked once. A
@@ -271,17 +275,32 @@
       {/snippet}
     </Row>
 
-    <!-- The language the words are turned into, and the way to say "leave them alone". -->
-    <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
+    <!-- Whether the words are turned into another language at all, and only then which one.
+         Two questions rather than a language list with "don't" hidden at the top of it, and
+         switching it off keeps the choice: a reader who reads their own language for an
+         afternoon comes back to the one they were learning. -->
+    <Row name={ROWS.translate.name} row="translate" about={ROWS.translate.about}>
       {#snippet control()}
-        <Picker
-          options={readInto}
-          chosen={settings.target}
-          label={ROWS.target.name}
-          change={(value) => change('target', value)}
+        <Toggle
+          on={settings.translate}
+          label={ROWS.translate.name}
+          change={(on) => change('translate', on)}
         />
       {/snippet}
     </Row>
+
+    {#if settings.translate}
+      <Row name={ROWS.target.name} row="target">
+        {#snippet control()}
+          <Picker
+            options={languages}
+            chosen={settings.target}
+            label={ROWS.target.name}
+            change={(value) => change('target', value)}
+          />
+        {/snippet}
+      </Row>
+    {/if}
   </div>
 
   <!-- The bar a reader comes back to, on a row of its own. -->
@@ -301,38 +320,20 @@
         />
       {/snippet}
     </Row>
+
+    <!-- Which side of that palette. Every one of them has both. -->
+    <Row name={ROWS.dark.name} row="dark">
+      {#snippet wide()}
+        <Segmented
+          choices={DARK_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+          chosen={settings.dark}
+          change={(value) => change('dark', value)}
+        />
+      {/snippet}
+    </Row>
   </div>
 
   {#if where === 'phone'}
-    <div class="rows">
-      <!-- A phone has no pointer to rest on a word, so the mark is the way a reader asks. -->
-      <Row name={ROWS['lens-drag'].name} row="lens" about={ROWS['lens-drag'].about}>
-        {#snippet control()}
-          <Toggle on={settings.lens} label="the mark" change={(on) => change('lens', on)} />
-        {/snippet}
-      </Row>
-      {#if settings.lens}
-        <Row name={ROWS['lens-hold'].name} row="lens-hold" about={ROWS['lens-hold'].about} />
-        <Row name={ROWS['lens-tap'].name} row="lens-tap" about={ROWS['lens-tap'].about} />
-      {/if}
-
-      <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
-           scroll would have no way of guessing why. -->
-      <Row
-        name={ROWS['touch-words'].name}
-        row="touch-words"
-        about={SAYS[settings.touchWords ? 'touch-on' : 'touch-off']}
-      >
-        {#snippet control()}
-          <Toggle
-            on={settings.touchWords}
-            label="touching a word"
-            change={(on) => change('touchWords', on)}
-          />
-        {/snippet}
-      </Row>
-    </div>
-
     <!-- Which apps are read. The list itself is the system's, with its own icons, so it is
          the one screen the phone draws for itself. -->
     <NavRow
@@ -344,15 +345,6 @@
       open={() => onOpenApps?.()}
     />
   {/if}
-
-  <!-- The other direction. Everything above answers a word somebody else wrote; this one
-       answers a word the reader is looking for. -->
-  <NavRow
-    name={ROWS.say.name}
-    row="say"
-    about={learning ? `into ${nameOf(learning)}` : SAYS['say-no-language']}
-    open={() => (view = 'say')}
-  />
 
   <NavRow
     name={ROWS.advanced.name}
@@ -386,12 +378,12 @@
 <Screen
   name="page"
   on={view}
-  title={reading ? nameOf(reading) : ROWS.source.name}
+  title={reading ? nameOf(reading) : where === 'phone' ? ROWS.accent.name : ROWS.source.name}
   note={words}
   back={() => (view = 'main')}
 >
   <div class="rows">
-    <Row name={ROWS.source.name} row="source" about={ROWS.source.about}>
+    <Row name="" row="source" about={ROWS.source.about}>
       {#snippet control()}
         <Picker
           options={pageIs}
@@ -493,7 +485,7 @@
       {/snippet}
     </Row>
   </div>
-  {#if !learning || !settings.target || learning === settings.target}
+  {#if !learning || !into || learning === into}
     <p class="about">{SAYS['say-no-language']}</p>
   {/if}
   <!-- The answer is the card the rest of the product answers with, so what a machine gave
@@ -538,6 +530,33 @@
       : `${elsewhere.length} languages offer a choice`}
     open={() => (view = 'page')}
   />
+
+  {#if where === 'phone'}
+    <div class="rows">
+      <!-- A phone has no pointer to rest on a word, so the mark is the way a reader asks. -->
+      <Row name={ROWS.lens.name} row="lens" about={ROWS['lens-drag'].about}>
+        {#snippet control()}
+          <Toggle on={settings.lens} label="the mark" change={(on) => change('lens', on)} />
+        {/snippet}
+      </Row>
+
+      <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
+           scroll would have no way of guessing why. -->
+      <Row
+        name={ROWS['touch-words'].name}
+        row="touch-words"
+        about={SAYS[settings.touchWords ? 'touch-on' : 'touch-off']}
+      >
+        {#snippet control()}
+          <Toggle
+            on={settings.touchWords}
+            label="touching a word"
+            change={(on) => change('touchWords', on)}
+          />
+        {/snippet}
+      </Row>
+    </div>
+  {/if}
 
   <div class="rows">
     <Row

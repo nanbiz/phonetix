@@ -386,7 +386,7 @@ class TooltipController(
         val source = box.language.ifEmpty { Language.OURS }
         val answer = given
             ?: Reading.lookUp(
-                box.word, source, settings.target.ifEmpty { source },
+                box.word, source, settings.into.ifEmpty { source },
                 settings.accentFor(source), box.before,
             )
                 ?.takeIf { it.found }

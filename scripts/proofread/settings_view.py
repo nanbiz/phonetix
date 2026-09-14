@@ -89,7 +89,11 @@ def main():
                 on: panel.querySelector('[data-row="on"] input').checked,
                 often: (panel.querySelector('[data-row="density"] [data-about]') || {})
                   .textContent || '',
-                languages: panel.querySelectorAll('select')[0].options.length,
+                languages: (() => {
+                  const row = panel.querySelector('[data-row=theme] .select');
+                  return row ? panel.querySelectorAll('[data-row=layer] [data-choice]').length
+                             : 0;
+                })(),
                 surface: getComputedStyle(document.body).backgroundColor,
                 width: Math.round(panel.getBoundingClientRect().width),
               });
@@ -99,7 +103,7 @@ def main():
             print("FAIL - the settings view drew nothing")
             sys.exit(1)
         panel = json.loads(drawn)
-        print(f"  {len(panel['rows'])} settings, {panel['languages'] - 1} languages, "
+        print(f"  {len(panel['rows'])} settings, {panel['languages']} modes, "
               f"{panel['width']}px wide on {panel['surface']}")
         if len(panel["rows"]) < 5:
             failures.append(f"the view offers {panel['rows']}")
@@ -110,13 +114,13 @@ def main():
         if panel["width"] < 300:
             failures.append(f"the view measured {panel['width']}px wide")
 
-        # The language read into, which is a row on the first screen: one menu whose first
-        # entry is to leave the words alone.
+        # Whether to translate at all, and only then into what: a switch, and the list behind
+        # the row under it. Driven the way a reader drives it, through both.
+        control(cdp, view, "document.querySelector('[data-row=translate] input').click()")
         control(cdp, view, """
             (() => {
-              const picked = document.querySelector('[data-row=target] select');
-              picked.value = 'en';
-              picked.dispatchEvent(new Event('change', {bubbles: true}));
+              document.querySelector('[data-row=target] .select').click();
+              document.querySelector('[data-sheet] [data-choice=en]').click();
             })()
         """)
         time.sleep(1)
@@ -161,9 +165,8 @@ def main():
         # Reading into German: the answers change language.
         control(cdp, view, """
             (() => {
-              const picked = document.querySelector('[data-row=target] select');
-              picked.value = 'de';
-              picked.dispatchEvent(new Event('change', {bubbles: true}));
+              document.querySelector('[data-row=target] .select').click();
+              document.querySelector('[data-sheet] [data-choice=de]').click();
             })()
         """)
         german = words(cdp, page)

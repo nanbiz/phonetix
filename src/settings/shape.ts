@@ -18,8 +18,14 @@ export interface Settings {
   layer: Layer;
   /** One word in every N, from the reader's frequency bar. */
   density: number;
-  /** The language the reader is reading into. Empty until they choose one, and with nothing
-   *  chosen the answer is a pronunciation rather than a translation. */
+  /** Whether the words are turned into another language at all.
+   *
+   *  Separate from which language, so that switching it off and on again does not throw the
+   *  choice away: a reader who reads a page in their own language for an afternoon comes back
+   *  to the language they were learning. */
+  translate: boolean;
+  /** The language the reader is reading into. Empty until they choose one. What is read into
+   *  while translation is switched off is nothing: see [readInto]. */
   target: string;
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
@@ -50,6 +56,10 @@ export interface Settings {
   /** The palette everything of ours is drawn in: the card, the settings, the words on the
    *  page. The product's own unless the reader picks another. */
   theme: string;
+  /** Which side of that palette: "system", "light" or "dark". Every palette has both, and
+   *  following the device is only the default - a reader who keeps one app light on a dark
+   *  phone is choosing for a reason. */
+  dark: string;
   /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
    *  wants this on the web does not want to name every site it should work on. */
   off: string[];
@@ -74,6 +84,7 @@ export const DEFAULTS: Settings = {
   on: true,
   layer: 'meaning',
   density: 12,
+  translate: false,
   target: '',
   source: '',
   narrow: false,
@@ -83,6 +94,7 @@ export const DEFAULTS: Settings = {
   animations: false,
   host: '',
   theme: 'phonetix',
+  dark: 'system',
   off: [],
   lens: true,
   touchWords: false,
@@ -90,6 +102,21 @@ export const DEFAULTS: Settings = {
   allApps: true,
 };
 
+
+/**
+ * The language to read into, which is nothing at all while translation is switched off.
+ *
+ * Asked for here rather than read off `target` directly, because the two are one question with
+ * two parts: whether to translate, and into what. Every surface that answers a word asks this.
+ */
+export function readInto(settings: Settings): string {
+  return settings.translate ? settings.target : '';
+}
+
+/** Whether the dark side of the palette is the one to draw, given what the device says. */
+export function darkSide(settings: Settings, device: boolean): boolean {
+  return settings.dark === 'system' ? device : settings.dark === 'dark';
+}
 
 /** Which accent this language is read in, or none, which is how its dictionary lists it. */
 export function accentFor(settings: Settings, lang: string): string {

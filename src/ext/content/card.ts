@@ -9,7 +9,7 @@ import Opened from '@/ui/card/Opened.svelte';
 import type { Answer } from '@/core/answer';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
-import { darkPage } from './inline';
+import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
@@ -24,12 +24,15 @@ let drawn: ReturnType<typeof mount> | null = null;
 let about: string | null = null;
 /** The palette the reader chose, which every surface of ours is drawn in. */
 let theme = THEME;
+/** Which side of it, where the reader insisted rather than leaving it to the page. */
+let side = 'system';
 
 /** Draw in this palette from now on. */
-export function paintedIn(chosen: string): void {
-  if (chosen === theme) return;
+export function paintedIn(chosen: string, lightOrDark = 'system'): void {
+  if (chosen === theme && lightOrDark === side) return;
   theme = chosen;
-  if (frame) frame.className = themeOf(darkPage(), theme);
+  side = lightOrDark;
+  if (frame) frame.className = themeOf(darkHere(), theme);
 }
 
 function build(): { shadow: ShadowRoot; frame: HTMLElement } {
@@ -52,7 +55,7 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   // no theme would have no colours at all. Which one comes from the page it is drawn over,
   // the same way the annotations decide, so a card and the words it is about never come out
   // of two different palettes.
-  frame.className = themeOf(darkPage(), theme);
+  frame.className = themeOf(darkHere(), theme);
   frame.style.cssText = 'position:fixed;width:var(--card-width);max-width:calc(100vw - 16px);';
   shadow.appendChild(frame);
   return { shadow, frame };

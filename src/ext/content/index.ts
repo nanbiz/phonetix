@@ -6,7 +6,9 @@
 // chose.
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
-import { accentFor, allowed, current, DEFAULTS, watch, type Settings } from '@/settings';
+import {
+  accentFor, allowed, current, darkSide, DEFAULTS, readInto, watch, type Settings,
+} from '@/settings';
 import { hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing } from './card';
 import {
   isPainted,
@@ -153,7 +155,7 @@ async function draw(): Promise<void> {
     const batch = await sendMessage('annotate', {
       runs: runs.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
-      target: settings.target || source,
+      target: readInto(settings) || source,
       options: {
         mode: settings.layer,
         density: settings.density,
@@ -226,7 +228,7 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
   const answer = await sendMessage('lookUp', {
     word: token.spelling,
     source,
-    target: settings.target || source,
+    target: readInto(settings) || source,
     accent: accentFor(settings, source),
     // What the inline layer already knew: a spelling that is several words is decided by the
     // one before it, and the card must not ask a question the page has answered.
@@ -284,7 +286,7 @@ async function selected(): Promise<void> {
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement as Node))) return;
   const source = pageLanguage();
-  const target = settings.target || source;
+  const target = readInto(settings) || source;
   if (!target || target === source) return;
   const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
   if (!answer) return;
@@ -512,8 +514,8 @@ function answerAsked(): void {
 /** Start reading this document. */
 export async function session(): Promise<void> {
   settings = await current();
-  paintedIn(settings.theme);
-  cardPaintedIn(settings.theme);
+  paintedIn(settings.theme, settings.dark);
+  cardPaintedIn(settings.theme, settings.dark);
   answerAsked();
   gestures();
   follow();
@@ -526,16 +528,18 @@ export async function session(): Promise<void> {
       was.on !== fresh.on ||
       was.layer !== fresh.layer ||
       was.density !== fresh.density ||
+      was.translate !== fresh.translate ||
       was.target !== fresh.target ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||
       JSON.stringify(was.accents) !== JSON.stringify(fresh.accents) ||
       was.hideStress !== fresh.hideStress ||
       was.theme !== fresh.theme ||
+      was.dark !== fresh.dark ||
       was.off.join() !== fresh.off.join()
     ) {
-      paintedIn(fresh.theme);
-      cardPaintedIn(fresh.theme);
+      paintedIn(fresh.theme, fresh.dark);
+      cardPaintedIn(fresh.theme, fresh.dark);
       if (!allowed(fresh, location.hostname) && isPainted()) unpaint();
       else await draw();
     }

@@ -45,10 +45,24 @@ function room(layer: Layer): void {
 
 /** The palette the reader chose, which the words are drawn in as much as the card. */
 let theme = THEME;
+/** Which side of it: the page's own by default, or the one the reader insisted on. */
+let side = 'system';
 
 /** Draw in this palette from now on. The page is repainted by whoever changed the setting. */
-export function paintedIn(chosen: string): void {
+export function paintedIn(chosen: string, lightOrDark = 'system'): void {
   theme = chosen;
+  side = lightOrDark;
+}
+
+/**
+ * Whether to draw the dark side of the palette over this page.
+ *
+ * The page's own by default, because an annotation is read against the text it replaces and a
+ * dark card on a white page is a hole in it. A reader who has said light or dark means it
+ * everywhere, so their answer outranks the page's.
+ */
+export function darkHere(): boolean {
+  return side === 'system' ? darkPage() : side === 'dark';
 }
 
 /** The words on screen, so a gesture can ask about the one under the cursor. */
@@ -169,7 +183,7 @@ function instead(token: Token, layer: Layer): HTMLElement | null {
 export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
   if (layer === 'off') return;
   room(layer);
-  if (painted.length === 0) onDark = darkPage();
+  if (painted.length === 0) onDark = darkHere();
   const drawn = tokens.filter((token) => token.inline && token.run === run.id);
   if (drawn.length === 0) return;
   const parent = run.node.parentNode;

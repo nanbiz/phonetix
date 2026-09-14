@@ -955,15 +955,11 @@ def check_settings_screen(r, dev):
                           .map(r => r.textContent.trim()),
                         modes: [...panel.querySelectorAll('[data-row=layer] [data-choice]')]
                           .map(c => c.getAttribute('data-choice')),
-                        languages: (panel.querySelector('[data-row=target] select') || {})
-                          .length || 0,
-                        first: (panel.querySelector('[data-row=target] select option') || {})
-                          .textContent || '',
+                        translate: Boolean(panel.querySelector('[data-row=translate] input')),
                         often: (panel.querySelector('[data-row=density] [data-about]') || {})
                           .textContent || '',
                         bar: Boolean(panel.querySelector('[data-row=density] input[type=range]')),
-                        themes: (panel.querySelector('[data-row=theme] select') || {})
-                          .length || 0,
+                        palettes: Boolean(panel.querySelector('[data-row=theme] .select')),
                         on: Boolean(panel.querySelector('[data-row=on] input')),
                         ground: getComputedStyle(document.body).backgroundColor,
                       });
@@ -980,13 +976,12 @@ def check_settings_screen(r, dev):
         return
 
     # The rows a reader of either surface finds, under the names both are written out of.
-    for row in ("on", "layer", "target", "density", "theme", "lens", "touch-words", "apps",
-                "say", "advanced"):
+    for row in ("on", "layer", "translate", "density", "theme", "dark", "apps", "advanced"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
     # Named as they are named on the other surface, because both are written out of
     # data/wording.json.
-    for row in ("layer", "target", "density", "theme"):
+    for row in ("layer", "translate", "density", "theme"):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
@@ -994,18 +989,31 @@ def check_settings_screen(r, dev):
     # What this does to a word: the three the core knows, and nothing else.
     r.check(screen["modes"] == ["meaning", "sound", "both"],
             "settings: the modes are the core's three", str(screen["modes"]))
-    # The language, whose first entry is the choice to leave the words alone.
-    r.check(screen["languages"] > 20, "settings: every language is offered",
-            str(screen["languages"]))
-    r.check(screen["first"].strip() == words["says"]["no-translation"],
-            "settings: not translating is the first choice",
-            repr(screen["first"]))
+    # Whether to translate at all is a switch of its own, above the language it turns the
+    # words into: a reader who switches it off keeps the language they were learning.
+    r.check(screen["translate"], "settings: translating is a switch", str(screen["rows"]))
     # The bar is a bar, and says what it means in words rather than as a ratio.
     r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")
     r.check("word" in screen["often"].lower(),
             "settings: the frequency is stated in words", repr(screen["often"]))
-    # The palettes, which the phone offered none of until it drew this screen.
-    r.check(screen["themes"] >= 8, "settings: the palettes are offered", str(screen["themes"]))
+    # The palettes, which the phone offered none of until it drew this screen. Opened the way
+    # a reader opens them: this product draws its own list, because a native menu is the
+    # platform's - on a phone a white dialog of radio buttons over a surface in the reader's
+    # own colours, and no way to search fifty-four languages.
+    r.check(screen["palettes"], "settings: the palettes can be opened", "no theme row")
+    themes = 0
+    if screen["palettes"]:
+        try:
+            with View() as view:
+                view.evaluate("document.querySelector('[data-row=theme] .select').click()")
+                time.sleep(1)
+                themes = view.evaluate(
+                    "document.querySelectorAll('[data-sheet] [data-choice]').length") or 0
+                view.evaluate(
+                    "(document.querySelector('[data-sheet] .btn-text') || {}).click?.()")
+        except Exception as e:  # noqa: BLE001
+            themes = f"the list did not open ({e})"
+    r.check(themes == 8, "settings: all eight palettes are in the list", str(themes))
     # And the tokens reached it: a screen with no surface colour is a screen drawn in
     # nothing, which is what a missing stylesheet looks like.
     r.check("rgba(0, 0, 0, 0)" not in screen["ground"],

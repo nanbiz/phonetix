@@ -49,6 +49,12 @@ fun SettingsWeb(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val view = remember { mutableStateOf<WebView?>(null) }
+    /** Whether the reader is on a screen behind the first one, so the phone's own back
+     *  gesture leaves that screen instead of the app. */
+    val inside = remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = inside.value) {
+        view.value?.evaluateJavascript("window.phonetixBack && window.phonetixBack()", null)
+    }
     val work = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     DisposableEffect(Unit) {
         onDispose {
@@ -79,8 +85,11 @@ fun SettingsWeb(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                val web = this
                 addJavascriptInterface(
-                    Bridge(ctx, work, this, permissions, onOpenReading, onOpenOverlay, onOpenApps),
+                    Bridge(
+                        ctx, work, web, permissions, onOpenReading, onOpenOverlay, onOpenApps,
+                    ) { screen -> inside.value = screen != "main" },
                     "Phonetix",
                 )
                 webViewClient = FromAssets(ctx)
@@ -147,6 +156,7 @@ private class Bridge(
     private val onOpenReading: () -> Unit,
     private val onOpenOverlay: () -> Unit,
     private val onOpenApps: () -> Unit,
+    private val onView: (String) -> Unit,
 ) {
 
     @JavascriptInterface
@@ -175,6 +185,13 @@ private class Bridge(
                     "openReading" -> { onOpenReading(); JSONObject() }
                     "openOverlay" -> { onOpenOverlay(); JSONObject() }
                     "openApps" -> { onOpenApps(); JSONObject() }
+                    // Which screen the reader is on. The phone's back gesture belongs to the
+                    // app, and without this it left the app from a screen the reader had only
+                    // opened a moment ago.
+                    "view" -> {
+                        onView(asked.optString("view").ifEmpty { "main" })
+                        JSONObject()
+                    }
                     else -> throw IllegalArgumentException("nothing here answers $kind")
                 }
             }
@@ -241,6 +258,7 @@ private class Bridge(
         .put("on", settings.enabled)
         .put("layer", settings.layer)
         .put("density", settings.density)
+        .put("translate", settings.translate)
         .put("target", settings.target)
         .put("source", "")
         .put("narrow", settings.narrow)
@@ -250,6 +268,7 @@ private class Bridge(
         .put("animations", true)
         .put("host", settings.packHost)
         .put("theme", settings.theme)
+        .put("dark", settings.dark)
         .put("off", JSONArray())
         .put("lens", settings.lens)
         .put("touchWords", settings.touchWords)
@@ -266,6 +285,8 @@ private class Bridge(
             "narrow" -> SettingsStore.setNarrow(value == true)
             "hideStress" -> SettingsStore.setHideStress(value == true)
             "theme" -> SettingsStore.setTheme(value?.toString().orEmpty())
+            "dark" -> SettingsStore.setDark(value?.toString().orEmpty())
+            "translate" -> SettingsStore.setTranslate(value == true)
             "host" -> SettingsStore.setPackHost(value?.toString().orEmpty())
             "lens" -> SettingsStore.setLens(value == true)
             "touchWords" -> SettingsStore.setTouchWords(value == true)

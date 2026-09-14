@@ -190,7 +190,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // reader's own as the fallback asks the engine to translate English into
                 // English and answers nothing.
                 val source = first.language.ifEmpty { lastScreenLanguage ?: Language.OURS }
-                val target = SettingsStore.current.target.ifEmpty { source }
+                val target = SettingsStore.current.into.ifEmpty { source }
                 // Off the main thread: a clause is a pass through the translation model, and
                 // the finger that finished the sweep is still on the screen.
                 io.post {
@@ -828,8 +828,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // open, and it was opened for the old one: without this the phone translates
             // nothing until the screen's own language happens to change, which on a reader's
             // own page is never.
-            if (settings.target != lastTarget) {
-                lastTarget = settings.target
+            if (settings.into != lastTarget) {
+                lastTarget = settings.into
                 io.post {
                     openTranslator()
                     main.post { readAgain() }
@@ -2239,14 +2239,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
-                "READING source=$source target=${settings.target} layer=${settings.layer} " +
+                "READING source=$source target=${settings.into} layer=${settings.layer} " +
                     "lines=${planned.size} first=${planned.firstOrNull()?.text?.take(40)}",
             )
         }
         val told = Reading.annotate(
             planned.map { it.text },
             source = source,
-            target = settings.target.ifEmpty { source },
+            target = settings.into.ifEmpty { source },
             mode = settings.layer,
             density = settings.density,
             narrow = settings.narrow,
@@ -2309,7 +2309,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
      */
     private fun openTranslator() {
         val settings = SettingsStore.current
-        val target = settings.target
+        val target = settings.into
         val source = lastScreenLanguage ?: Language.OURS
         if (BuildConfig.DEBUG) {
             android.util.Log.d("Phonetix", "OPENING $source->$target")

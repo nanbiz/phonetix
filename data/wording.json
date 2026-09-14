@@ -71,6 +71,48 @@
           ]
         }
       ]
+    },
+    "dark": {
+      "name": "Light or dark",
+      "options": [
+        {
+          "value": "system",
+          "label": "System",
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "whatever this device is set to",
+            "phone": "whatever this device is set to"
+          }
+        },
+        {
+          "value": "light",
+          "label": "Light",
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "always the light side of the palette",
+            "phone": "always the light side of the palette"
+          }
+        },
+        {
+          "value": "dark",
+          "label": "Dark",
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "always the dark side of the palette",
+            "phone": "always the dark side of the palette"
+          }
+        }
+      ],
+      "note": "Every palette has a light and a dark side. Which one is drawn follows the device unless the reader says otherwise, because a reader who keeps one app light on a dark phone is choosing for a reason."
     }
   },
   "rows": {
@@ -189,6 +231,14 @@
     "advanced": {
       "name": "Advanced",
       "about": "transcriptions, stress, dictionaries and how a page is read"
+    },
+    "translate": {
+      "name": "Translate",
+      "about": "turn the words into another language"
+    },
+    "dark": {
+      "name": "Light or dark",
+      "about": ""
     }
   },
   "ends": {
@@ -237,6 +287,10 @@
     "no-translation": "Don't translate",
     "broad-mark": "/ /",
     "narrow-mark": "[ ]",
-    "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it."
+    "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
+    "choose-language": "Choose a language",
+    "search": "Search",
+    "close": "Close",
+    "nothing-found": "Nothing by that name"
   }
 }

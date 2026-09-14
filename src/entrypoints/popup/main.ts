@@ -3,17 +3,17 @@ import { mount } from 'svelte';
 import App from '@/ext/popup/App.svelte';
 import './app.css';
 import { themeOf } from '@/ui/theme';
-import { current } from '@/settings';
+import { current, darkSide } from '@/settings';
 
 // The palette on the document itself. The tokens are defined per theme and mode, so a
 // stylesheet binding a component library to them has to find them at the root: put them on an
 // element inside the page instead and :root carries none of them, the library falls back to
 // its own colours, and the settings view comes out in a palette this product does not use.
 const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-// The palette the reader chose, read before the view is drawn so it opens in it rather than
-// flickering out of the product's own into theirs.
+// The palette the reader chose and the side of it they asked for, read before the view is
+// drawn so it opens in theirs rather than flickering out of the product's own.
 void current().then((settings) => {
-  document.documentElement.className = themeOf(dark, settings.theme);
+  document.documentElement.className = themeOf(darkSide(settings, dark), settings.theme);
 });
 document.documentElement.classList.add(...themeOf(dark).split(' '));
 

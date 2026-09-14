@@ -5,7 +5,7 @@
   // changed: every surface watches the same keys, so a page annotates itself again without
   // being told by this one.
   import Settings from '@/ui/settings/Settings.svelte';
-  import { current, set, setSite, type Settings as Chosen } from '@/settings';
+  import { current, darkSide, readInto, set, setSite, type Settings as Chosen } from '@/settings';
   import { sendMessage } from '@/host/messages';
   import { themeOf } from '@/ui/theme';
   import type { Offered } from '@/host/packs';
@@ -73,9 +73,10 @@
     if (settings) settings = { ...settings, [name]: value };
     // The view is drawn in the palette being chosen, so choosing one shows what it looks
     // like rather than describing it.
-    if (name === 'theme') {
-      const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.className = themeOf(dark, String(value));
+    if (name === 'theme' || name === 'dark') {
+      const device = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const next = { ...(settings as Chosen), [name]: value } as Chosen;
+      document.documentElement.className = themeOf(darkSide(next, device), next.theme);
     }
     void set(name, value).then(() => {
       // A reader who has just said where their dictionaries live means now: without this the
@@ -122,7 +123,7 @@
         // Into the language the reader is learning, out of the one they already have. Which
         // language that is the view decides, since it is the one that knows whether there is
         // a page in front of it.
-        sendMessage('say', { text, source, target: settings?.target || '' }).catch(() => null)}
+        sendMessage('say', { text, source, target: settings ? readInto(settings) : '' }).catch(() => null)}
       onSite={(on) => {
         if (settings) void setSite(settings, site, on).then(load);
       }}

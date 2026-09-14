@@ -24,6 +24,13 @@ export interface Words {
   about: string;
 }
 
+/** Light or dark, as a browser can draw them. */
+export const DARK_CHOICES: Choice[] = [
+  { value: "system", label: "System", about: "whatever this device is set to" },
+  { value: "light", label: "Light", about: "always the light side of the palette" },
+  { value: "dark", label: "Dark", about: "always the dark side of the palette" },
+];
+
 /** Transcriptions, as a browser can draw them. */
 export const DETAIL_CHOICES: Choice[] = [
   { value: "broad", label: "/ /", about: "the sounds that tell words apart" },
@@ -43,6 +50,7 @@ export const ROWS: Record<string, Words> = {
   "advanced": { name: "Advanced", about: "transcriptions, stress, dictionaries and how a page is read" },
   "animations": { name: "Animations", about: "the card eases in; off is instant" },
   "apps": { name: "Apps", about: "" },
+  "dark": { name: "Light or dark", about: "" },
   "delay": { name: "Rest before a card opens", about: "how long the cursor stays on a word before it answers" },
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
@@ -67,6 +75,7 @@ export const ROWS: Record<string, Words> = {
   "theme": { name: "Theme", about: "the colours everything of ours is drawn in" },
   "touch": { name: "Touching a word", about: "" },
   "touch-words": { name: "Hold a word for its card", about: "" },
+  "translate": { name: "Translate", about: "turn the words into another language" },
   "where": { name: "Where", about: "" },
 };
 
@@ -81,6 +90,8 @@ export const SAYS: Record<string, string> = {
   "allow-overlay": "Allow overlay",
   "broad-mark": "/ /",
   "change": "Change",
+  "choose-language": "Choose a language",
+  "close": "Close",
   "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
   "dictionary-accent": "as the dictionary gives it",
   "every-app": "Every app",
@@ -95,6 +106,7 @@ export const SAYS: Record<string, string> = {
   "no-host": "Nothing is fetched until this is set.",
   "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
+  "nothing-found": "Nothing by that name",
   "nothing-yet": "nothing yet",
   "open-accessibility": "Open accessibility",
   "preview": "Preview",
@@ -104,6 +116,7 @@ export const SAYS: Record<string, string> = {
   "say-no-model": "No translation model for that direction at your dictionary host.",
   "say-nothing": "no word for that",
   "say-placeholder": "what you want to say",
+  "search": "Search",
   "start-done": "done",
   "start-go": "Set this",
   "start-host": "Say where your dictionaries come from",

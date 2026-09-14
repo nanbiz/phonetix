@@ -147,11 +147,14 @@ def main():
     with View() as view:
         opened = None
         for _ in range(20):
+            # Behind the mark rather than in the settings: it is not a setting. A reader
+            # holds the mark; a check asks for the same gesture the other way a pointer has
+            # of meaning "and what else does this do".
             opened = view.evaluate("""
                 (() => {
-                  const row = document.querySelector('[data-row=say]');
-                  if (!row) return null;
-                  row.click();
+                  const mark = document.querySelector('[data-does=say]');
+                  if (!mark) return null;
+                  mark.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true}));
                   const field = document.querySelector('[data-row=say-field] input');
                   return field ? 'open' : 'no field';
                 })()

@@ -24,6 +24,10 @@
     ready?: boolean;
     change: (on: boolean) => void;
     onSite?: (on: boolean) => void;
+    /** The other direction, which is what the mark answers: everything else here is about a
+     *  word somebody else wrote, and this is a word the reader is looking for. Behind the
+     *  mark rather than in the list, because it is not a setting. */
+    onSay?: () => void;
   }
 
   let {
@@ -36,12 +40,51 @@
     ready = true,
     change,
     onSite,
+    onSay,
   }: Props = $props();
+
+  /** A press held on the mark, which is how the other direction is asked for. A tap does
+   *  nothing, so a reader who meant to press the switch beside it has lost nothing. */
+  let held: ReturnType<typeof setTimeout> | null = null;
+
+  function start() {
+    held = setTimeout(() => {
+      held = null;
+      onSay?.();
+    }, 400);
+  }
+
+  function stop() {
+    if (held) clearTimeout(held);
+    held = null;
+  }
 </script>
 
 <div class="switchboard">
   <div class="board-row" data-row="on">
-    {#if icon}<img class="board-mark" src={icon} alt="" />{/if}
+    {#if icon && onSay}
+      <!-- The mark is a button: held, it answers the other direction. A tap does nothing, so
+           a reader who meant the switch beside it has lost nothing. -->
+      <button
+        class="mark-button"
+        data-does="say"
+        aria-label={ROWS.say.name}
+        onpointerdown={start}
+        onpointerup={stop}
+        onpointerleave={stop}
+        oncontextmenu={(event) => {
+          event.preventDefault();
+          onSay();
+        }}
+        onkeydown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') onSay();
+        }}
+      >
+        <img class="board-mark" src={icon} alt="" />
+      </button>
+    {:else if icon}
+      <img class="board-mark" src={icon} alt="" />
+    {/if}
     <span class="board-what">
       <span class="board-name" data-name>Phonetix</span>
       <!-- What the product does, which is what belongs under its own name. This line used to

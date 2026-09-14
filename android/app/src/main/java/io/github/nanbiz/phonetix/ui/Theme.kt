@@ -70,7 +70,15 @@ private fun scheme(p: Tokens.Palette, dark: Boolean) =
 @Composable
 fun appPalette(): Tokens.Palette {
     val settings by SettingsStore.state.collectAsState()
-    return Tokens.palette(themeNamed(settings.theme), isSystemInDarkTheme())
+    return Tokens.palette(themeNamed(settings.theme), darkSide(settings.dark))
+}
+
+/** Which side of the palette to draw: what the device says, unless the reader said otherwise. */
+@Composable
+fun darkSide(chosen: String): Boolean = when (chosen) {
+    "light" -> false
+    "dark" -> true
+    else -> isSystemInDarkTheme()
 }
 
 /** Brand colours the screens reach for directly. */
@@ -93,8 +101,8 @@ val IpaStyle = TextStyle(fontFamily = FontFamily.Serif, fontWeight = FontWeight.
 
 @Composable
 fun PhonetixTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
     val settings by SettingsStore.state.collectAsState()
+    val dark = darkSide(settings.dark)
     MaterialTheme(
         colorScheme = scheme(Tokens.palette(themeNamed(settings.theme), dark), dark),
         typography = AppTypography,

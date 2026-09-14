@@ -11,6 +11,9 @@
   import { ask, whenChanged } from './bridge';
 
   let settings = $state<Chosen | null>(null);
+  /** Which screen the reader is on, told to the app so the device's own way back leaves that
+   *  screen rather than the app, and taken from it when they use it. */
+  let view = $state('main');
   let curve = $state<number[]>([]);
   let packs = $state<{ held: string[]; open: string[]; offered: Offered[] }>({
     held: [],
@@ -72,6 +75,15 @@
   // The app tells this view when something it did not do has changed: a permission granted in
   // the system's own settings, an app chosen on the app's own screen.
   whenChanged(() => void load());
+  // The app's own back gesture: it hands it to this view, which leaves one screen.
+  window.phonetixBack = () => {
+    if (view === 'main') return false;
+    view = 'main';
+    return true;
+  };
+  $effect(() => {
+    void ask('view', { view });
+  });
   void load();
 </script>
 
@@ -79,6 +91,7 @@
   {#if settings}
     <Settings
       where="phone"
+      bind:view
       icon="./96.png"
       {settings}
       {curve}
