@@ -218,7 +218,20 @@
    *  page in front of them is in where there is one, and otherwise whatever they keep a
    *  dictionary for. A reader with a Spanish pack is learning Spanish. */
   let into = $derived(readInto(settings));
-  let learning = $derived(reading || packs.held.find((lang) => lang !== into) || '');
+  /** Which languages this reader could be learning: the ones they keep a dictionary for,
+   *  other than the one they read into. */
+  let learnable = $derived(packs.held.filter((lang) => lang !== into));
+  /** The one they said they are asking in, where there is more than one to choose between. */
+  let asked = $state('');
+  /**
+   * Which language a word is asked for in.
+   *
+   * The page in front of them where there is one. Otherwise a language they keep a dictionary
+   * for - and where they keep several, the one they chose, because guessing at the first of
+   * them is how a reader with German and Spanish open was answered in the direction they were
+   * not asking about, and told there was no model for it.
+   */
+  let learning = $derived(reading || (learnable.includes(asked) ? asked : learnable[0]) || '');
 
   let held = $derived(packs.held.length);
   let offered = $derived(packs.offered.length);
@@ -472,6 +485,23 @@
 <Screen name="say" on={view} title={ROWS.say.name} back={() => (view = 'main')}>
   <p class="about">{ROWS.say.about}</p>
   <div class="rows">
+    <!-- Which language the answer comes back in, where this reader keeps more than one
+         dictionary and there is no page in front of them to read it off. -->
+    {#if !reading && learnable.length > 1}
+      <Row name={SAYS['say-into']} row="say-into">
+        {#snippet wide()}
+          <Segmented
+            choices={learnable.map((lang) => ({ value: lang, label: nameOf(lang) }))}
+            chosen={learning}
+            change={(value) => {
+              asked = value;
+              if (wanted) void ask(wanted);
+            }}
+          />
+        {/snippet}
+      </Row>
+    {/if}
+
     <!-- The field carries the whole row: the screen it is on is named after it already, and
          a row that repeats its own screen's title is the title twice. -->
     <Row name="" row="say-field">

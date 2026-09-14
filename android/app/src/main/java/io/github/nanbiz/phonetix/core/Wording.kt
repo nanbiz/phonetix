@@ -106,6 +106,7 @@ object Wording {
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
         "remove" to "Remove",
+        "say-into" to "Answer in",
         "say-no-language" to "Choose a language to read into first.",
         "say-no-model" to "No translation model for that direction at your dictionary host.",
         "say-nothing" to "no word for that",

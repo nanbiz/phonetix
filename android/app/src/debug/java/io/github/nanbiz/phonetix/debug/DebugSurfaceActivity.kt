@@ -562,6 +562,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 io.github.nanbiz.phonetix.core.SettingsStore.setTarget(
                     if (wanted == "none") "" else wanted,
                 )
+                // Naming a language is asking for translation: the screen asks the two
+                // separately, and a check that named one and got nothing was measuring a
+                // reader who had said what to read into and not that they wanted it.
+                io.github.nanbiz.phonetix.core.SettingsStore.setTranslate(wanted != "none")
             }
             if (i.hasExtra("layer")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setLayer(

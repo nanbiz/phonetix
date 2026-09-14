@@ -291,6 +291,7 @@
     "choose-language": "Choose a language",
     "search": "Search",
     "close": "Close",
-    "nothing-found": "Nothing by that name"
+    "nothing-found": "Nothing by that name",
+    "say-into": "Answer in"
   }
 }

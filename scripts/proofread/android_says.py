@@ -165,20 +165,31 @@ def main():
         if opened != "open":
             print(f"FAIL - the app has no field to ask in ({opened})")
             sys.exit(1)
-        # Typed the way a reader types it, so the field's own listener is what answers.
+        # Which language the answer comes back in, where this phone holds more than one
+        # dictionary: the reader says so, and so does this.
         view.evaluate("""
             (() => {
-              const field = document.querySelector('[data-row=say-field] input');
-              field.focus();
-              field.value = %r;
-              field.dispatchEvent(new Event('input', {bubbles: true}));
-              field.dispatchEvent(new Event('change', {bubbles: true}));
+              const pick = document.querySelector('[data-row=say-into] [data-choice=es]');
+              if (pick) pick.click();
             })()
-        """ % WANTED)
-        # The engine opens a model of seventeen megabytes for a direction nobody has been
-        # reading in, so the answer is given room to arrive.
-        for _ in range(20):
-            time.sleep(5)
+        """)
+        time.sleep(1)
+        # Typed the way a reader types it, so the field's own listener is what answers - and
+        # asked again rather than watched, because the engine opens a model of seventeen
+        # megabytes for a direction nobody has been reading in: the first ask can be put to an
+        # engine that is not up yet, and a screen that answered "no model" once will go on
+        # saying so until somebody asks again. Which is what a reader does.
+        for _ in range(12):
+            view.evaluate("""
+                (() => {
+                  const field = document.querySelector('[data-row=say-field] input');
+                  field.focus();
+                  field.value = %r;
+                  field.dispatchEvent(new Event('input', {bubbles: true}));
+                  field.dispatchEvent(new Event('change', {bubbles: true}));
+                })()
+            """ % WANTED)
+            time.sleep(6)
             said = view.evaluate(
                 "(document.querySelector('[data-view=say]') || {}).textContent || ''") or ""
             if EXPECTED in said:
