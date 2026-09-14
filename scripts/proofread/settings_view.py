@@ -114,15 +114,12 @@ def main():
         if panel["width"] < 300:
             failures.append(f"the view measured {panel['width']}px wide")
 
-        # Whether to translate at all, and only then into what: a switch, and the list behind
-        # the row under it. Driven the way a reader drives it, through both.
-        control(cdp, view, "document.querySelector('[data-row=translate] input').click()")
-        control(cdp, view, """
-            (() => {
-              document.querySelector('[data-row=target] .select').click();
-              document.querySelector('[data-sheet] [data-choice=en]').click();
-            })()
-        """)
+        # The language the words are turned into, asked for by the mode that turns them into
+        # one and by nothing else.
+        # Opened and then chosen from, with a moment between: the list is drawn in answer to
+        # the press, so a check that opens it and picks in the same breath picks from nothing.
+        control(cdp, view, "document.querySelector('[data-row=target] .select').click()")
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=en]').click()")
         time.sleep(1)
 
         # The dictionaries, fetched the way a reader fetches them: from the list, by name,
@@ -163,12 +160,16 @@ def main():
             failures.append(f"the dense end says {told!r}")
 
         # Reading into German: the answers change language.
-        control(cdp, view, """
-            (() => {
-              document.querySelector('[data-row=target] .select').click();
-              document.querySelector('[data-sheet] [data-choice=de]').click();
-            })()
-        """)
+        control(cdp, view, "document.querySelector('[data-row=target] .select').click()")
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=de]').click()")
+        print("  DEBUG after de:", evaluate(cdp, view, """
+            (() => JSON.stringify({
+              sheet: Boolean(document.querySelector('[data-sheet]')),
+              chose: (document.querySelector('[data-row=target] .select') || {}).textContent,
+              density: (document.querySelector('[data-row=density] input') || {}).value,
+              max: (document.querySelector('[data-row=density] input') || {}).max,
+            }))()
+        """))
         german = words(cdp, page)
         print(f"  reading into German: {german['glosses'][:4]}")
         if "Hund" not in german["glosses"]:
@@ -412,6 +413,10 @@ def main():
     finally:
         cdp.close()
 
+    for m in cdp.events:
+        text = json.dumps(m.get("params", {}))[:200]
+        if '"error"' in text or "Error" in text:
+            print("  LOG", text)
     if failures:
         print("\nFAIL")
         for line in failures:

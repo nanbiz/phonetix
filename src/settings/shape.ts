@@ -18,14 +18,8 @@ export interface Settings {
   layer: Layer;
   /** One word in every N, from the reader's frequency bar. */
   density: number;
-  /** Whether the words are turned into another language at all.
-   *
-   *  Separate from which language, so that switching it off and on again does not throw the
-   *  choice away: a reader who reads a page in their own language for an afternoon comes back
-   *  to the language they were learning. */
-  translate: boolean;
-  /** The language the reader is reading into. Empty until they choose one. What is read into
-   *  while translation is switched off is nothing: see [readInto]. */
+  /** The language the reader is reading into. Empty until they choose one, and asked for
+   *  only by the modes that turn a word into another language: see [readInto]. */
   target: string;
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
@@ -84,7 +78,6 @@ export const DEFAULTS: Settings = {
   on: true,
   layer: 'meaning',
   density: 12,
-  translate: false,
   target: '',
   source: '',
   narrow: false,
@@ -104,13 +97,16 @@ export const DEFAULTS: Settings = {
 
 
 /**
- * The language to read into, which is nothing at all while translation is switched off.
+ * The language to read into, which is nothing at all where the mode does not translate.
  *
- * Asked for here rather than read off `target` directly, because the two are one question with
- * two parts: whether to translate, and into what. Every surface that answers a word asks this.
+ * Asked for here rather than read off `target` directly, because the two are one question:
+ * what this does to a word, and what language that leaves it in.
  */
 export function readInto(settings: Settings): string {
-  return settings.translate ? settings.target : '';
+  // The mode is the answer: two of the three turn a word into another language and one does
+  // not. A switch beside it saying the same thing again was a second way to say no, and a
+  // reader who set one and not the other got a screen that did nothing.
+  return settings.layer === 'meaning' || settings.layer === 'both' ? settings.target : '';
 }
 
 /** Whether the dark side of the palette is the one to draw, given what the device says. */

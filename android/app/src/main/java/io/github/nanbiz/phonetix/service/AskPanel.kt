@@ -94,8 +94,11 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         addView(mic, LayoutParams(dp(40f), dp(40f)))
     }
 
-    /** Called with what was typed, when it is asked for. */
+    /** Called with what was typed, as it is typed. */
     var onSubmit: (String) -> Unit = {}
+
+    /** The ask that has not happened yet, replaced by every keystroke. */
+    private var pending: Runnable = Runnable {}
 
     /** Starts or stops listening, from the microphone on the panel. */
     var onDictate: (() -> Unit)? = null
@@ -144,6 +147,21 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
             },
         )
         answer.shown()
+        // Answered as it is typed rather than when a key is pressed: the question is short,
+        // the answer is wanted while it is being written, and pressing something to ask is a
+        // step a reader should not have to find. The last keystroke wins - what is being
+        // typed now is not a question yet.
+        field.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(edited: android.text.Editable?) {
+                val asked = edited?.toString().orEmpty().trim()
+                removeCallbacks(pending)
+                pending = Runnable { if (asked.isNotEmpty()) onSubmit(asked) }
+                postDelayed(pending, 450)
+            }
+
+            override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) = Unit
+        })
         field.setOnEditorActionListener { _, actionId, event ->
             // A key reports its press and its release, and asking twice cancels the first
             // answer on its way back, so only the press counts.

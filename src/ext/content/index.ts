@@ -528,7 +528,6 @@ export async function session(): Promise<void> {
       was.on !== fresh.on ||
       was.layer !== fresh.layer ||
       was.density !== fresh.density ||
-      was.translate !== fresh.translate ||
       was.target !== fresh.target ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||

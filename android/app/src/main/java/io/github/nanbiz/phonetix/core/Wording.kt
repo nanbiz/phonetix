@@ -69,7 +69,6 @@ object Wording {
         "theme" to Words("Theme", "the colours everything of ours is drawn in"),
         "touch" to Words("Touching a word", ""),
         "touch-words" to Words("Hold a word for its card", ""),
-        "translate" to Words("Translate", "turn the words into another language"),
         "where" to Words("Where", ""),
     )
 

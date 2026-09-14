@@ -75,7 +75,6 @@ export const ROWS: Record<string, Words> = {
   "theme": { name: "Theme", about: "the colours everything of ours is drawn in" },
   "touch": { name: "Touching a word", about: "" },
   "touch-words": { name: "Hold a word for its card", about: "" },
-  "translate": { name: "Translate", about: "turn the words into another language" },
   "where": { name: "Where", about: "" },
 };
 

@@ -23,6 +23,7 @@ import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.ui.themeNamed
+import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Placement
 import io.github.nanbiz.phonetix.core.Speech
@@ -76,6 +77,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var blockers: List<android.graphics.Rect> = emptyList()
     /** Looks again once a system window has finished coming or going. */
     private val afterASystemWindow = Runnable { scrollOnly = false; schedule(0L) }
+
+    /** The page has stopped moving: read it as it now stands and put the words back. */
+    private val afterMoving = Runnable {
+        scrollOnly = false
+        schedule(0L)
+    }
+
+    /** Anything that is only worth naming to say it is deliberately unused. */
+    private fun void(@Suppress("UNUSED_PARAMETER") value: Any?) = Unit
 
     /** How many times running the thing in front has been something we do not transcribe,
      *  so a shade closing is waited out and a launcher sitting there is not polled for ever. */
@@ -463,22 +473,24 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "LATE ${android.os.SystemClock.uptimeMillis() - told}ms",
                 )
             }
-            // Nothing of ours rides a moving page while the page has been replaced: what is
-            // on screen then is the translation, and the transcriptions belong to words that
-            // are not showing.
-            if (::overlay.isInitialized && !pageUp) {
-                main.post {
-                    overlay.beginMotion()
-                    if (USE_SAID_SCROLL && kotlin.math.abs(carried) >= SAID_TOO_SMALL &&
-                        kotlin.math.abs(carried) < SAID_TOO_FAR
-                    ) {
-                        overlay.told(carried, exact, told)
-                    }
-                }
-            }
+            // Nothing of ours on a page that is moving.
+            //
+            // The words were carried along with the scroll instead, predicted between
+            // readings. What a reader saw was a screenful of transcriptions sliding at a
+            // slightly different speed to the words under them - and every apparent delay in
+            // the app is a word sitting where its word no longer is. So they come down the
+            // instant the page moves and go back the instant it stops: the page is either
+            // being read or being scrolled, and only one of those needs them.
+            if (::overlay.isInitialized && !pageUp) main.post { overlay.hideNow() }
+            void(carried)
+            void(exact)
+            void(told)
             lastMotionAt = android.os.SystemClock.uptimeMillis()
             scrollOnly = scrollOnly || cachedPlan.isNotEmpty()
-            startFollowing()
+            // Read again as soon as it has stopped. Short, because it is the gap between the
+            // page settling and the words being back, and a reader is looking at it.
+            main.removeCallbacks(afterMoving)
+            main.postDelayed(afterMoving, AFTER_MOVING)
             return
         }
         // A scroll event is not the only way a page moves, and waiting for one is why a
@@ -2401,32 +2413,67 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private var back: android.window.OnBackInvokedCallback? = null
 
-    /** What the panel answers with, off the thread it is typed on. */
+    /**
+     * What the panel answers with, off the thread it is typed on.
+     *
+     * Which language it was typed in is worked out rather than assumed: a reader asks for the
+     * word for something in whatever language it came to them in, which is not always the one
+     * this app was set up with. The machine on the phone turns it into the language they are
+     * learning and fetches what that pair needs itself; the dictionary is then asked about the
+     * word that came back, so the answer carries its entry and how it is said. Where there is
+     * no entry - most of a vocabulary - the translation is still the answer, said by the
+     * synthesiser, because a reader who asked for a word wants the word.
+     */
     private fun said(panel: AskPanel, learning: String, into: String, asked: String) {
         val text = asked.trim()
         if (text.isEmpty()) return
-        if (learning.isEmpty() || into.isEmpty() || learning == into) {
+        val wanted = learning.ifEmpty { lastScreenLanguage.orEmpty() }
+        if (wanted.isEmpty()) {
             panel.saying(Wording.says["say-no-language"].orEmpty())
             return
         }
         panel.saying("…")
+        val turn = ++asks
         io.post {
-            val answer = Reading.say(this, text, learning, into)
-            main.post {
-                if (asking !== panel) return@post
-                if (answer == null) {
-                    val missing = !Translator.ready(Packs.models(this), into, learning)
-                    panel.saying(
-                        Wording.says[if (missing) "say-no-model" else "say-nothing"].orEmpty(),
-                    )
-                } else {
-                    panel.show(answer) {
-                        speaker.say(answer.spelling, Accents.voiceOf(learning, ""))
+            val held = Packs.held(this).toSet()
+            val from = kotlinx.coroutines.runBlocking {
+                Machine.language(text, held + into) ?: into.ifEmpty { Language.OURS }
+            }
+            val word = if (from == wanted) {
+                text
+            } else {
+                kotlinx.coroutines.runBlocking { Machine.said(text, from, wanted) }
+            }
+            if (word.isNullOrBlank()) {
+                main.post {
+                    if (asking === panel && turn == asks) {
+                        panel.saying(Wording.says["say-nothing"].orEmpty())
                     }
                 }
+                return@post
+            }
+            // The entry for the word that came back, in the language it is in, read into the
+            // one the reader asked in: what it means back is how a machine's answer is judged.
+            Dictionary.ensure(this, wanted)
+            Packs.openHeld(this)
+            val entry = Reading.lookUp(word, wanted, from)?.takeIf { it.found }
+            // No entry is the ordinary case - a dictionary holds a few thousand words - and
+            // the word is still the answer. How it is said comes from the synthesiser, which
+            // is what the overlay falls back to for every word no pack holds.
+            val answer = entry ?: Answer.ofTranscription(
+                word,
+                Speech.phonemes(Accents.voiceOf(wanted, ""), listOf(word))[word].orEmpty(),
+                wanted,
+            )
+            main.post {
+                if (asking !== panel || turn != asks) return@post
+                panel.show(answer) { speaker.say(word, Accents.voiceOf(wanted, "")) }
             }
         }
     }
+
+    /** Which question is the current one: everything typed before it is stale. */
+    private var asks = 0
 
     /** Take the panel down, and the keyboard with it. */
     private fun closeSay() {
@@ -2950,6 +2997,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How long to let a system window - the shade, the recents screen - finish coming
          *  or going before looking at what is in front, and how many times to try. */
         const val AFTER_A_SYSTEM_WINDOW = 600L
+
+        /** How long after the last movement a page counts as still. Long enough not to read
+         *  between the events of one fling, short enough that a reader does not wait. */
+        const val AFTER_MOVING = 120L
         const val LOOK_AGAIN_MS = 500L
         const val LOOK_AGAIN_TIMES = 6
 

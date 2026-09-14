@@ -955,7 +955,7 @@ def check_settings_screen(r, dev):
                           .map(r => r.textContent.trim()),
                         modes: [...panel.querySelectorAll('[data-row=layer] [data-choice]')]
                           .map(c => c.getAttribute('data-choice')),
-                        translate: Boolean(panel.querySelector('[data-row=translate] input')),
+                        into: Boolean(panel.querySelector('[data-row=target] .select')),
                         often: (panel.querySelector('[data-row=density] [data-about]') || {})
                           .textContent || '',
                         bar: Boolean(panel.querySelector('[data-row=density] input[type=range]')),
@@ -976,12 +976,12 @@ def check_settings_screen(r, dev):
         return
 
     # The rows a reader of either surface finds, under the names both are written out of.
-    for row in ("on", "layer", "translate", "density", "theme", "dark", "apps", "advanced"):
+    for row in ("on", "layer", "density", "theme", "dark", "apps", "advanced"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
     # Named as they are named on the other surface, because both are written out of
     # data/wording.json.
-    for row in ("layer", "translate", "density", "theme"):
+    for row in ("layer", "density", "theme"):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
@@ -989,9 +989,10 @@ def check_settings_screen(r, dev):
     # What this does to a word: the three the core knows, and nothing else.
     r.check(screen["modes"] == ["meaning", "sound", "both"],
             "settings: the modes are the core's three", str(screen["modes"]))
-    # Whether to translate at all is a switch of its own, above the language it turns the
-    # words into: a reader who switches it off keeps the language they were learning.
-    r.check(screen["translate"], "settings: translating is a switch", str(screen["rows"]))
+    # The language a word is turned into, asked for by the modes that turn it into one and by
+    # nothing else: the mode is already that question's first half.
+    r.check(screen["into"], "settings: the language to read into is offered",
+            str(screen["rows"]))
     # The bar is a bar, and says what it means in words rather than as a ratio.
     r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")
     r.check("word" in screen["often"].lower(),
@@ -1013,7 +1014,10 @@ def check_settings_screen(r, dev):
                     "(document.querySelector('[data-sheet] .btn-text') || {}).click?.()")
         except Exception as e:  # noqa: BLE001
             themes = f"the list did not open ({e})"
-    r.check(themes == 8, "settings: all eight palettes are in the list", str(themes))
+    # The palettes that have the side in force, which is never none and never all eight: four
+    # of them carry one side only, and offering a light one to a reader reading in the dark is
+    # offering a choice that cannot be honoured.
+    r.check(4 <= themes <= 7, "settings: the palettes for this side are in the list", str(themes))
     # And the tokens reached it: a screen with no surface colour is a screen drawn in
     # nothing, which is what a missing stylesheet looks like.
     r.check("rgba(0, 0, 0, 0)" not in screen["ground"],

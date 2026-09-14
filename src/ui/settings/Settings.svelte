@@ -287,22 +287,11 @@
       {/snippet}
     </Row>
 
-    <!-- Whether the words are turned into another language at all, and only then which one.
-         Two questions rather than a language list with "don't" hidden at the top of it, and
-         switching it off keeps the choice: a reader who reads their own language for an
-         afternoon comes back to the one they were learning. -->
-    <Row name={ROWS.translate.name} row="translate" about={ROWS.translate.about}>
-      {#snippet control()}
-        <Toggle
-          on={settings.translate}
-          label={ROWS.translate.name}
-          change={(on) => change('translate', on)}
-        />
-      {/snippet}
-    </Row>
-
-    {#if settings.translate}
-      <Row name={ROWS.target.name} row="target">
+    <!-- The language the words are turned into, asked for only by the modes that turn them
+         into one. The mode is already that question's first half, and a switch beside it
+         saying the same thing again was a second way to say no. -->
+    {#if settings.layer === 'meaning' || settings.layer === 'both'}
+      <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
         {#snippet control()}
           <Picker
             options={languages}

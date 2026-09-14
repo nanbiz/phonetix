@@ -32,31 +32,37 @@
       : options.filter((it) => it.label.toLowerCase().includes(typed.trim().toLowerCase()))
   );
 
-  function pick(value: string) {
-    open = false;
+  /** How to stop being what the way back closes, once this list is down. */
+  let listed: (() => void) | null = null;
+
+  function show() {
     typed = '';
-    change(value);
+    open = true;
+    // While the list is up it is what the way back closes: on a phone, going back from an
+    // open list used to close the app. Said here rather than in an effect - an effect that
+    // both reads this and writes it from its own cleanup is a loop, and Svelte stops the
+    // whole view when it finds one: every control on the screen went dead.
+    listed = standing(close);
   }
 
-  // While the list is up it is what the way back closes: on a phone, going back from an open
-  // list used to close the app.
-  $effect(() => {
-    if (!open) return;
-    return standing(() => {
-      open = false;
-      typed = '';
-    });
-  });
+  function close() {
+    open = false;
+    typed = '';
+    listed?.();
+    listed = null;
+  }
+
+  function pick(value: string) {
+    close();
+    change(value);
+  }
 </script>
 
 <button
   class="select"
   aria-label={label}
   aria-haspopup="listbox"
-  onclick={() => {
-    typed = '';
-    open = true;
-  }}
+  onclick={show}
 >
   {name}
 </button>
@@ -77,7 +83,7 @@
       {:else}
         <span class="sheet-name">{label}</span>
       {/if}
-      <button class="btn-text" onclick={() => (open = false)}>{SAYS['close']}</button>
+      <button class="btn-text" onclick={close}>{SAYS['close']}</button>
     </div>
     <div class="sheet-list" role="listbox">
       {#each shown as option (option.value)}

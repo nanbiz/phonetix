@@ -232,10 +232,6 @@
       "name": "Advanced",
       "about": "transcriptions, stress, dictionaries and how a page is read"
     },
-    "translate": {
-      "name": "Translate",
-      "about": "turn the words into another language"
-    },
     "dark": {
       "name": "Light or dark",
       "about": ""

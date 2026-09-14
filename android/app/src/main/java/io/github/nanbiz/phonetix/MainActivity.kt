@@ -121,6 +121,11 @@ class MainActivity : ComponentActivity() {
      *  opened, so coming back from one does not send them straight out again. */
     private var alreadyAsked = false
 
+    /** Read the permissions again, which is what the screen is drawn from. */
+    private fun bump() {
+        resumeTick++
+    }
+
     @Composable
     private fun Root(modifier: Modifier, resumeTick: Int, dictReady: Boolean) {
         val settings by SettingsStore.state.collectAsState()
@@ -141,15 +146,25 @@ class MainActivity : ComponentActivity() {
                 alreadyAsked = false
                 return@LaunchedEffect
             }
+            // Asked again after a moment before anybody is sent anywhere. A service that has
+            // been allowed is bound by the system a beat after the app starts, and this reads
+            // the gap: opening cold, the app sent a reader who had granted everything to the
+            // screen where they had already granted it.
+            kotlinx.coroutines.delay(1200)
+            val reading = accessibilityEnabled()
+            val over = AndroidSettings.canDrawOverlays(this@MainActivity)
             if (BuildConfig.DEBUG) {
-                android.util.Log.d(
-                    "Phonetix",
-                    "PERMISSIONS reading=$accessibilityOn overlay=$overlayOn",
-                )
+                android.util.Log.d("Phonetix", "PERMISSIONS reading=$reading overlay=$over")
+            }
+            if (reading && over) {
+                alreadyAsked = false
+                // What the screen was told at the first composition is no longer true.
+                bump()
+                return@LaunchedEffect
             }
             if (alreadyAsked) return@LaunchedEffect
             alreadyAsked = true
-            if (!accessibilityOn) openAccessibilitySettings() else openOverlaySettings()
+            if (!reading) openAccessibilitySettings() else openOverlaySettings()
         }
 
         LaunchedEffect(showApps) {

@@ -206,6 +206,13 @@ dependencies {
     // it did not: the microphone read as a lollipop until somebody looked at it closely.
     implementation(libs.compose.material.icons)
     implementation(libs.kotlinx.coroutines.android)
+    // The machine that answers a word the reader is looking for, and the one that says which
+    // language they typed it in. These download what they need themselves, which is why the
+    // panel works on a phone nobody has configured: the packs and the bergamot models are a
+    // reader's own choice, and this question is asked before they have made it.
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
     // The list most apps are built from, for the test pages only: what a scroll event says
     // about how far it moved differs by container, and the answer for this one decides
     // whether the overlay can follow an ordinary app's list.

@@ -13,7 +13,6 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   on: 'local:on',
   layer: 'local:layer',
   density: 'local:density',
-  translate: 'local:translate',
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
   accents: 'local:accents',
@@ -51,9 +50,6 @@ export async function current(): Promise<Settings> {
       }
     })
   );
-  // A reader who chose a language before choosing was two settings is still reading into it:
-  // the switch is new, and nothing they did says they wanted it off.
-  if (!stored.has('translate') && out.target !== '') out.translate = true;
   return out;
 }
 

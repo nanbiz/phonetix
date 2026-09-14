@@ -31,9 +31,6 @@ data class Settings(
      * answer should come back in.
      */
     val target: String = "",
-    /** Whether the words are turned into another language at all. Separate from which one, so
-     *  that switching it off and on again does not throw the choice away. */
-    val translate: Boolean = false,
     /**
      * What a word is replaced by: "meaning", "sound", "both", or "off".
      *
@@ -82,10 +79,11 @@ data class Settings(
     /**
      * The language to read into, which is nothing at all while translation is switched off.
      *
-     * Asked for here rather than read off [target] directly, because the two are one question
-     * with two parts: whether to translate, and into what. The browser asks the same way.
+     * Asked for here rather than read off [target] directly, because the two are one
+     * question: what this does to a word, and what language that leaves it in. The browser
+     * asks the same way.
      */
-    val into: String get() = if (translate) target else ""
+    val into: String get() = if (layer == "meaning" || layer == "both") target else ""
 }
 
 /**
@@ -109,7 +107,6 @@ object SettingsStore {
     private const val K_STRESS = "hide_stress"
     private const val K_THEME = "theme"
     private const val K_DARK = "dark"
-    private const val K_TRANSLATE = "translate"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -131,9 +128,6 @@ object SettingsStore {
             layer = mode(p.getString(K_LAYER, "") ?: ""),
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             dark = p.getString(K_DARK, "system") ?: "system",
-            // A phone that was reading into a language before this was a choice of its own is
-            // still reading into it.
-            translate = p.getBoolean(K_TRANSLATE, (p.getString(K_TARGET, "") ?: "").isNotEmpty()),
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             // Stored as one entry per language, because a set of strings is what preferences
@@ -180,7 +174,6 @@ object SettingsStore {
             ?.putBoolean(K_STRESS, next.hideStress)
             ?.putString(K_THEME, next.theme)
             ?.putString(K_DARK, next.dark)
-            ?.putBoolean(K_TRANSLATE, next.translate)
             ?.apply()
     }
 
@@ -195,7 +188,6 @@ object SettingsStore {
     fun setLayer(v: String) = update { it.copy(layer = mode(v)) }
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
-    fun setTranslate(v: Boolean) = update { it.copy(translate = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
     /** Read one language in one accent, leaving the choice made for every other alone. */

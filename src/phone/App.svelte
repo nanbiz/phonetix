@@ -9,6 +9,7 @@
   import { themeOf } from '@/ui/theme';
   import type { Offered } from '@/host/packs';
   import { ask, whenChanged } from './bridge';
+  import { covered, uncover } from '@/ui/controls/sheets.svelte';
 
   let settings = $state<Chosen | null>(null);
   /** Which screen the reader is on, told to the app so the device's own way back leaves that
@@ -91,12 +92,17 @@
   };
   // The app's own back gesture: it hands it to this view, which leaves one screen.
   window.phonetixBack = () => {
+    // Whatever is open over the screen goes first: a list opened over the settings is not a
+    // screen the system knows about, and going back from one used to close the app.
+    if (uncover()) return true;
     if (view === 'main') return false;
     view = 'main';
     return true;
   };
   $effect(() => {
-    void ask('view', { view });
+    // The app takes the way back while there is anything to leave, which is a screen behind
+    // the first one or a list standing over it.
+    void ask('view', { view: covered() ? 'sheet' : view });
   });
   void load();
 </script>
