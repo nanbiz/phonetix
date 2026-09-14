@@ -54,6 +54,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
      *  direction. Held because the engine is opened for a direction, not per screen. */
     @Volatile
     private var lastScreenLanguage: String? = null
+    /** The language the engine was last opened for reading into, so choosing another opens it
+     *  for the new direction rather than waiting for the screen's own language to change. */
+    private var lastTarget: String? = null
     private lateinit var tooltip: TooltipController
     private lateinit var speaker: Speaker
     private lateinit var io: Handler
@@ -818,6 +821,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     Packs.openClassifier(this, reading)
                     openTranslator()
                     // The words it could not answer a moment ago can be answered now.
+                    main.post { readAgain() }
+                }
+            }
+            // The reader chose another language to read into. The engine holds one direction
+            // open, and it was opened for the old one: without this the phone translates
+            // nothing until the screen's own language happens to change, which on a reader's
+            // own page is never.
+            if (settings.target != lastTarget) {
+                lastTarget = settings.target
+                io.post {
+                    openTranslator()
                     main.post { readAgain() }
                 }
             }
@@ -2296,9 +2310,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private fun openTranslator() {
         val settings = SettingsStore.current
         val target = settings.target
-        if (target.isEmpty()) return
         val source = lastScreenLanguage ?: Language.OURS
-        if (source == target) return
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "OPENING $source->$target")
+        }
+        if (target.isEmpty() || source == target) return
         if (Translator.start(Packs.models(this), source, target)) readAgain()
     }
 
