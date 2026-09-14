@@ -10,6 +10,7 @@ import {
   accentFor, allowed, current, darkSide, DEFAULTS, readInto, watch, type Settings,
 } from '@/settings';
 import { hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing } from './card';
+import { open as openAsk } from './ask';
 import {
   isPainted,
   paint,
@@ -505,10 +506,21 @@ function follow(): void {
 function answerAsked(): void {
   chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
     const asked = message as { phonetix?: string };
+    if (asked?.phonetix === 'askForAWord') {
+      askedForAWord();
+      respond({ ok: true });
+      return true;
+    }
     if (asked?.phonetix !== 'pageLanguage') return false;
     respond({ ok: pageLanguage() });
     return true;
   });
+}
+
+/** The panel the keyboard shortcut opens, which is the other direction: everything else on
+ *  this page is about a word somebody else wrote. */
+function askedForAWord(): void {
+  void openAsk();
 }
 
 /** Start reading this document. */

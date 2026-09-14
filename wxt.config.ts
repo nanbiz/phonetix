@@ -59,6 +59,16 @@ export default defineConfig({
       ? ['storage', 'tabs']
       : ['storage', 'tabs', 'offscreen'],
     host_permissions: ['<all_urls>'],
+    // The word a reader is looking for, without reaching for the mouse: the same question the
+    // phone's mark answers, on the surface where a reader already has both hands on the
+    // keyboard. Alt rather than Ctrl or Command, which every page and every site has already
+    // taken.
+    commands: {
+      'ask-for-a-word': {
+        suggested_key: { default: 'Alt+Shift+P' },
+        description: 'Ask for the word for something',
+      },
+    },
     content_security_policy: {
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
