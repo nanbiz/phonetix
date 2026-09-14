@@ -183,5 +183,9 @@ object Packs {
         file(context, lang).delete()
         open.remove(lang)
         if (Reading.core != 0L) runCatching { Lex.closePack(Reading.core, lang) }
+        // And the pronunciations this app carries answer that language again: they were held
+        // back while a fetched dictionary was there, since only one pack per language answers.
+        Dictionary.released(lang)
+        Dictionary.ensure(context, lang)
     }
 }

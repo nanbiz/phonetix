@@ -87,7 +87,7 @@ object Wording {
         "master-working" to "The words in your apps are being answered",
         "narrow-mark" to "[ ]",
         "no-host" to "Nothing is fetched until this is set.",
-        "no-source" to "no source for them yet",
+        "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
         "nothing-yet" to "nothing yet",
         "open-accessibility" to "Open accessibility",

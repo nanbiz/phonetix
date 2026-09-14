@@ -909,25 +909,6 @@ def only_this_page(log):
     return log[marks[-1]:] if marks else log
 
 
-def to_top():
-    """Back to the top of the app's own screen before reading it.
-
-    It keeps where it was scrolled to, so a check that left it half way down had the next
-    one reading the second half twice and reporting the first half missing from a screen
-    that showed it perfectly well.
-    """
-    for _ in range(8):
-        shell("input", "swipe", "540", "700", "540", "1500", "300")
-        time.sleep(0.4)
-    time.sleep(1.2)
-
-
-def ui_text(dev):
-    shell("uiautomator", "dump", "/sdcard/ui.xml")
-    dump = shell("cat", "/sdcard/ui.xml")
-    return re.findall(r'text="([^"]+)"', dump), dump
-
-
 def check_settings_screen(r, dev):
     """The app's own screen, which is the extension's own screen.
 

@@ -69,12 +69,26 @@ object Dictionary {
      * Runs where the caller is: it is tens of milliseconds for a small language and a few
      * seconds for a big one, and the callers are background threads.
      */
+    /** Forget that this language is answered, so the next ask opens what is there now. */
+    fun released(lang: String) {
+        open.remove(lang)
+    }
+
     fun ensure(context: Context, lang: String): Boolean {
         if (lang.isBlank() || Reading.core == 0L) return false
         if (lang in open) return true
         synchronized(open) {
             if (lang in open) return true
             val app = context.applicationContext
+            // A dictionary the reader has is not covered by the pronunciations this app
+            // carries. The core holds one pack per language, so whichever opened last is the
+            // one that answers: the carried pack opened over a fetched one took the language
+            // and every meaning in it, and a reader who had gone and got Spanish was answered
+            // with transcriptions and nothing else.
+            if (File(app.filesDir, "lex-$lang.pack").exists()) {
+                open.add(lang)
+                return true
+            }
             val file = File(app.filesDir, "ipa-$lang.pack")
             if (!file.exists() || file.length() == 0L) {
                 // Either name: the packager unpacks a `.gz` asset and drops the suffix, so

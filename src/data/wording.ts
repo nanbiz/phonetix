@@ -93,7 +93,7 @@ export const SAYS: Record<string, string> = {
   "master-working": "The words in your apps are being answered",
   "narrow-mark": "[ ]",
   "no-host": "Nothing is fetched until this is set.",
-  "no-source": "no source for them yet",
+  "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
   "nothing-yet": "nothing yet",
   "open-accessibility": "Open accessibility",

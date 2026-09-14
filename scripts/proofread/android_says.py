@@ -23,6 +23,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from android_harness import Device, adb, shell
+from webview import View
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -106,26 +107,6 @@ def serve():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
-def screen():
-    """What the app's own screen says, as uiautomator sees it."""
-    adb("shell", "uiautomator", "dump", "/sdcard/win.xml", timeout=120)
-    return adb("shell", "cat", "/sdcard/win.xml", timeout=120)
-
-
-def where(dump, text):
-    """The middle of the first node whose text or hint is this, or None."""
-    for node in re.finditer(r'<node[^>]*>', dump):
-        tag = node.group(0)
-        if f'text="{text}"' not in tag and f'content-desc="{text}"' not in tag:
-            continue
-        box = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', tag)
-        if not box:
-            continue
-        left, top, right, bottom = (int(v) for v in box.groups())
-        return ((left + right) // 2, (top + bottom) // 2)
-    return None
-
-
 def push_models():
     for (source, target), files in PAIRS.items():
         into = f"files/models/{source}-{target}"
@@ -160,37 +141,46 @@ def main():
     shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity")
     time.sleep(4)
 
-    dump = screen()
-    field = where(dump, "what you want to say")
-    if not field:
-        # The screen scrolls; the say card is below the fold on a short device.
-        for _ in range(6):
-            shell("input", "swipe", "540", "1600", "540", "700", "300")
-            time.sleep(1)
-            dump = screen()
-            field = where(dump, "what you want to say")
-            if field:
-                break
-    if not field:
-        print("FAIL - the app has no field to ask in")
-        sys.exit(1)
-
-    shell("input", "tap", str(field[0]), str(field[1]))
-    time.sleep(1)
-    shell("input", "text", WANTED)
-    time.sleep(1)
-    # The IME's own action, which is what the field listens for.
-    shell("input", "keyevent", "66")
-
-    # The engine opens a model of seventeen megabytes for a direction nobody has been reading
-    # in, so the answer is given room to arrive.
+    # Driven in the screen itself, which is the product's own settings screen drawn in a web
+    # view: the row that opens it, the field on it, and the card that comes back.
     said = ""
-    for _ in range(20):
-        time.sleep(5)
-        dump = screen()
-        if EXPECTED in dump:
-            said = dump
-            break
+    with View() as view:
+        opened = None
+        for _ in range(20):
+            opened = view.evaluate("""
+                (() => {
+                  const row = document.querySelector('[data-row=say]');
+                  if (!row) return null;
+                  row.click();
+                  const field = document.querySelector('[data-row=say-field] input');
+                  return field ? 'open' : 'no field';
+                })()
+            """)
+            if opened:
+                break
+            time.sleep(1)
+        if opened != "open":
+            print(f"FAIL - the app has no field to ask in ({opened})")
+            sys.exit(1)
+        # Typed the way a reader types it, so the field's own listener is what answers.
+        view.evaluate("""
+            (() => {
+              const field = document.querySelector('[data-row=say-field] input');
+              field.focus();
+              field.value = %r;
+              field.dispatchEvent(new Event('input', {bubbles: true}));
+              field.dispatchEvent(new Event('change', {bubbles: true}));
+            })()
+        """ % WANTED)
+        # The engine opens a model of seventeen megabytes for a direction nobody has been
+        # reading in, so the answer is given room to arrive.
+        for _ in range(20):
+            time.sleep(5)
+            said = view.evaluate(
+                "(document.querySelector('[data-view=say]') || {}).textContent || ''") or ""
+            if EXPECTED in said:
+                break
+
     os.makedirs(SHOTS, exist_ok=True)
     for name in os.listdir(SHOTS):
         os.remove(os.path.join(SHOTS, name))
@@ -198,15 +188,17 @@ def main():
     time.sleep(2)
     shot = [f for f in os.listdir(SHOTS) if f.endswith(".png")]
     print(f"  screenshot: {os.path.join(SHOTS, shot[0]) if shot else 'none'}")
+    print(f"  the screen says: {said[:160]!r}")
 
-    words = re.findall(r'text="([^"]{1,40})"', said or dump)
-    print(f"  the screen says: {[w for w in words if w.strip()][-12:]}")
-
-    if not said:
+    if EXPECTED not in said:
         failures.append(f"nothing on the phone answered {WANTED!r} with {EXPECTED!r}")
     else:
-        # The entry under the word, which is what makes a machine's answer judgeable.
-        if not re.search(r'text="[^"]*[ˈˌbaŋko][^"]*"', said):
+        # The entry under the word, which is what makes a machine's answer judgeable. The
+        # stress mark and the syllable break belong to the transcription and are what a
+        # reader is being shown, so they are taken out of the comparison rather than out of
+        # the card.
+        bare = re.sub(r"[ˈˌ.ˑ\s]", "", said)
+        if "baŋko" not in bare:
             failures.append("the word came back without its pronunciation")
         if "bench" not in said:
             failures.append("the word came back without a meaning in the reader's language")
