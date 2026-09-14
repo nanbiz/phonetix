@@ -51,6 +51,8 @@ fun SettingsWeb(
     modifier: Modifier = Modifier,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    /** What the device is set to, which the page cannot ask for itself. */
+    val night = androidx.compose.foundation.isSystemInDarkTheme()
     val view = remember { mutableStateOf<WebView?>(null) }
     /** Whether the reader is on a screen behind the first one, so the phone's own back
      *  gesture leaves that screen instead of the app. */
@@ -71,7 +73,7 @@ fun SettingsWeb(
     // Told again whenever this screen comes back to the front: a permission is granted in the
     // system's settings, so the only honest moment to re-read it is on the way back.
     val granted = permissions()
-    androidx.compose.runtime.LaunchedEffect(granted, dictionaryReady) {
+    androidx.compose.runtime.LaunchedEffect(granted, dictionaryReady, night) {
         view.value?.evaluateJavascript("window.phonetixChanged && window.phonetixChanged()", null)
     }
     // Asked for again on every arrival, because the same screen can be asked for twice: the
@@ -113,7 +115,8 @@ fun SettingsWeb(
                 val web = this
                 addJavascriptInterface(
                     Bridge(
-                        ctx, work, web, permissions, onOpenReading, onOpenOverlay, onOpenApps,
+                        { night }, ctx, work, web, permissions, onOpenReading, onOpenOverlay,
+                        onOpenApps,
                     ) { screen -> inside.value = screen != "main" },
                     "Phonetix",
                 )
@@ -187,6 +190,7 @@ private class FromAssets(context: Context) : android.webkit.WebViewClient() {
  * it and the answer handed back when it is done.
  */
 private class Bridge(
+    private val dark: () -> Boolean,
     private val context: Context,
     private val work: CoroutineScope,
     private val web: WebView,
@@ -287,6 +291,11 @@ private class Bridge(
                 "permissions",
                 JSONObject().put("reading", reading).put("overlay", overlay),
             )
+            // Whether this device is set to dark. Asked of the app rather than of the web
+            // view: a view only answers prefers-color-scheme when the app has opted into
+            // being darkened, so "follow the system" was always light however the phone was
+            // set.
+            .put("device", dark())
             .put("version", io.github.nanbiz.phonetix.BuildConfig.VERSION_NAME)
             .put("trouble", JSONArray())
     }

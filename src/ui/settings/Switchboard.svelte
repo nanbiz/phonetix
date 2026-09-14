@@ -4,7 +4,7 @@
   // The first thing in the popup and the first thing a reader came for. Two switches, because
   // they answer two different questions: the big one is what happens on a site the reader has
   // not decided about, and the small one is the decision about this site, which wins.
-  import { ROWS, SAYS } from '@/data/wording';
+  import { SAYS } from '@/data/wording';
   import Toggle from '@/ui/controls/Toggle.svelte';
 
   interface Props {
@@ -28,6 +28,9 @@
      *  word somebody else wrote, and this is a word the reader is looking for. Behind the
      *  mark rather than in the list, because it is not a setting. */
     onSay?: () => void;
+    /** What to do about a surface that is not allowed to answer anything yet: pressing the
+     *  switch asks for what is missing rather than doing nothing. */
+    onReady?: () => void;
   }
 
   let {
@@ -41,6 +44,7 @@
     change,
     onSite,
     onSay,
+    onReady,
   }: Props = $props();
 
   /** A press held on the mark, which is how the other direction is asked for. A tap does
@@ -68,7 +72,7 @@
       <button
         class="mark-button"
         data-does="say"
-        aria-label={ROWS.say.name}
+        aria-label={SAYS["say-into"]}
         onpointerdown={start}
         onpointerup={stop}
         onpointerleave={stop}
@@ -91,10 +95,18 @@
            explain what happens on sites the reader has not decided about - an edge case, as
            the first sentence anybody reads. -->
       <span class="board-sub" data-about>
-        {ready ? SAYS['tagline'] : ROWS.start.about}
+        {ready ? SAYS['tagline'] : SAYS['master-unready']}
       </span>
     </span>
-    <Toggle on={on && ready} big label="annotate what I read" enabled={ready} {change} />
+    {#if ready}
+      <Toggle on={on} big label="annotate what I read" {change} />
+    {:else}
+      <!-- Not a switch that does nothing: what is missing is a permission, and pressing it
+           asks for that. -->
+      <button class="btn" data-does="allow" onclick={() => onReady?.()}>
+        {SAYS['allow']}
+      </button>
+    {/if}
   </div>
 
   {#if site}

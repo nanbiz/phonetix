@@ -252,26 +252,8 @@
     change={(on) => change('on', on)}
     onSite={(on) => onSite?.(on)}
     onSay={() => (view = 'say')}
+    onReady={() => (permissions?.reading ? onOpenOverlay?.() : onOpenReading?.())}
   />
-
-  <!-- What the phone has to be allowed to do before any of this can happen, asked once. A
-       browser asks for neither and never draws these. -->
-  {#if where === 'phone' && permissions && !ready}
-    <div class="rows" data-row="setup">
-      <NavRow
-        name={ROWS['setup-reading'].name}
-        row="setup-reading"
-        about={permissions.reading ? SAYS['start-done'] : ROWS['setup-reading'].about}
-        open={() => onOpenReading?.()}
-      />
-      <NavRow
-        name={ROWS['setup-overlay'].name}
-        row="setup-overlay"
-        about={permissions.overlay ? SAYS['start-done'] : ROWS['setup-overlay'].about}
-        open={() => onOpenOverlay?.()}
-      />
-    </div>
-  {/if}
 
   <Trouble {trouble} />
 

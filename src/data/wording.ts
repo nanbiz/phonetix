@@ -69,7 +69,7 @@ export const ROWS: Record<string, Words> = {
   "setup-reading": { name: "Reading the screen", about: "Lets Phonetix see the words in other apps. Nothing leaves your device." },
   "site": { name: "On this site", about: "the default is what happens on sites you have not decided about" },
   "source": { name: "This page is in", about: "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong." },
-  "start": { name: "Before it can answer a word", about: "Asked once. Nothing else appears until they are done." },
+  "start": { name: "Before it can answer a word", about: "" },
   "stress": { name: "Stress marks", about: "in the transcription over a word; the card always shows them" },
   "target": { name: "Language", about: "what the words are turned into" },
   "theme": { name: "Theme", about: "the colours everything of ours is drawn in" },
@@ -87,6 +87,7 @@ export const ENDS: Record<string, [string, string]> = {
 
 /** Phrases both surfaces use, so neither invents its own wording. */
 export const SAYS: Record<string, string> = {
+  "allow": "Allow",
   "allow-overlay": "Allow overlay",
   "broad-mark": "/ /",
   "change": "Change",
@@ -100,7 +101,7 @@ export const SAYS: Record<string, string> = {
   "master-idle": "Nothing is drawn over your apps",
   "master-off": "Paused",
   "master-on": "Reading",
-  "master-unready": "Finish the steps below to switch on",
+  "master-unready": "Allow it to read the screen and draw over your apps",
   "master-working": "The words in your apps are being answered",
   "narrow-mark": "[ ]",
   "no-host": "Nothing is fetched until this is set.",

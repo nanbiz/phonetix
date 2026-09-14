@@ -63,7 +63,7 @@ object Wording {
         "setup-reading" to Words("Reading the screen", "Lets Phonetix see the words in other apps. Nothing leaves your device."),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
-        "start" to Words("Before it can answer a word", "Asked once. Nothing else appears until they are done."),
+        "start" to Words("Before it can answer a word", ""),
         "stress" to Words("Stress marks", "in the transcription over a word; the card always shows them"),
         "target" to Words("Language", "what the words are turned into"),
         "theme" to Words("Theme", "the colours everything of ours is drawn in"),
@@ -81,6 +81,7 @@ object Wording {
 
     /** Phrases both surfaces use, so neither invents its own wording. */
     val says = mapOf(
+        "allow" to "Allow",
         "allow-overlay" to "Allow overlay",
         "broad-mark" to "/ /",
         "change" to "Change",
@@ -94,7 +95,7 @@ object Wording {
         "master-idle" to "Nothing is drawn over your apps",
         "master-off" to "Paused",
         "master-on" to "Reading",
-        "master-unready" to "Finish the steps below to switch on",
+        "master-unready" to "Allow it to read the screen and draw over your apps",
         "master-working" to "The words in your apps are being answered",
         "narrow-mark" to "[ ]",
         "no-host" to "Nothing is fetched until this is set.",

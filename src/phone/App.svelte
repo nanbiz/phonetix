@@ -22,6 +22,10 @@
   });
   let fetching = $state<string | null>(null);
   let permissions = $state({ reading: false, overlay: false });
+  /** Whether this device is set to dark, which the app says: a web view answers
+   *  prefers-color-scheme as light whatever the phone is set to, unless the app has opted
+   *  into being darkened - which would darken the page itself rather than let it choose. */
+  let device = $state(false);
   let version = $state('');
   let trouble = $state<string[]>([]);
 
@@ -29,7 +33,6 @@
    *  theme and mode, so an element naming no theme has no colours at all. Which side is the
    *  reader's own answer where they gave one, and the device's where they did not. */
   function paint(chosen: Chosen) {
-    const device = window.matchMedia('(prefers-color-scheme: dark)').matches;
     document.documentElement.className = themeOf(darkSide(chosen, device), chosen.theme);
   }
 
@@ -39,6 +42,7 @@
       curve: number[];
       packs: { held: string[]; open: string[]; offered: Offered[] };
       permissions: { reading: boolean; overlay: boolean };
+      device: boolean;
       version: string;
       trouble: string[];
     }>('state');
@@ -46,6 +50,7 @@
     curve = told.curve ?? [];
     packs = told.packs ?? { held: [], open: [], offered: [] };
     permissions = told.permissions ?? { reading: false, overlay: false };
+    device = told.device ?? false;
     version = told.version ?? '';
     trouble = told.trouble ?? [];
     paint(settings);

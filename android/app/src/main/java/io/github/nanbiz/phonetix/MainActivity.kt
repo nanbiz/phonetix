@@ -98,6 +98,10 @@ class MainActivity : ComponentActivity() {
         dictReady = Dictionary.ready
     }
 
+    /** Whether the reader has already been sent to a system screen this time the app was
+     *  opened, so coming back from one does not send them straight out again. */
+    private var alreadyAsked = false
+
     @Composable
     private fun Root(modifier: Modifier, resumeTick: Int, dictReady: Boolean) {
         val settings by SettingsStore.state.collectAsState()
@@ -107,6 +111,27 @@ class MainActivity : ComponentActivity() {
         // Re-read on every return from Settings; the key makes the read happen again.
         val accessibilityOn = remember(resumeTick) { accessibilityEnabled() }
         val overlayOn = remember(resumeTick) { AndroidSettings.canDrawOverlays(this) }
+
+        // Asked for rather than described. Neither permission can be granted inside this app
+        // - both are screens of the system's - and a reader who has just installed something
+        // that cannot do anything until they visit two of them should be taken to the first
+        // one, not handed a list of what they have not done. Once per opening: coming back
+        // from a screen they decided against must not push them into it again.
+        LaunchedEffect(accessibilityOn, overlayOn) {
+            if (accessibilityOn && overlayOn) {
+                alreadyAsked = false
+                return@LaunchedEffect
+            }
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "PERMISSIONS reading=$accessibilityOn overlay=$overlayOn",
+                )
+            }
+            if (alreadyAsked) return@LaunchedEffect
+            alreadyAsked = true
+            if (!accessibilityOn) openAccessibilitySettings() else openOverlaySettings()
+        }
 
         LaunchedEffect(showApps) {
             if (showApps && apps.isEmpty()) apps = withContext(Dispatchers.IO) { launcherApps() }

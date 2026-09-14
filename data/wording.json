@@ -214,7 +214,7 @@
     },
     "start": {
       "name": "Before it can answer a word",
-      "about": "Asked once. Nothing else appears until they are done."
+      "about": ""
     },
     "touch-words": {
       "name": "Hold a word for its card",
@@ -281,7 +281,7 @@
     "master-off": "Paused",
     "master-working": "The words in your apps are being answered",
     "master-idle": "Nothing is drawn over your apps",
-    "master-unready": "Finish the steps below to switch on",
+    "master-unready": "Allow it to read the screen and draw over your apps",
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "no-translation": "Don't translate",
@@ -292,6 +292,7 @@
     "search": "Search",
     "close": "Close",
     "nothing-found": "Nothing by that name",
-    "say-into": "Answer in"
+    "say-into": "Answer in",
+    "allow": "Allow"
   }
 }
