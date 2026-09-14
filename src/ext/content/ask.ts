@@ -10,6 +10,7 @@ import askCss from '@/ui/settings/settings.css?inline';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
 import { current, set } from '@/settings';
+import { asked } from '@/settings/shape';
 import { sendMessage } from '@/host/messages';
 import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
@@ -63,14 +64,20 @@ export async function open(): Promise<void> {
   shadow.appendChild(frame);
 
   let learning = settings.learning || packs.held.find((lang) => lang !== settings.target) || '';
+  let recent = settings.recent;
   drawn = mount(Ask, {
     target: frame,
     props: {
       learning,
       held: packs.held,
+      recent,
       onLearning: (lang: string) => {
         learning = lang;
         void set('learning', lang);
+        // Kept so the next panel offers it near the top: the list is every language there is,
+        // and a reader asks in a handful of them.
+        recent = asked(recent, lang);
+        void set('recent', recent);
       },
       ask: async (text: string, into: string) => {
         // What language it was typed in, asked of the core rather than assumed.

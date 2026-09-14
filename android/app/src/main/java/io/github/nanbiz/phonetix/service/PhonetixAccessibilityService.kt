@@ -2389,8 +2389,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val learning = settings.learning.ifEmpty {
             lastScreenLanguage?.takeIf { it != into } ?: held.firstOrNull { it != into }.orEmpty()
         }
-        val offered = (listOfNotNull(learning.takeIf { it.isNotEmpty() }) + held +
-            Languages.all().sortedBy { Languages.english(it) }).distinct().filter { it != into }
+        // In the order worth offering: the one being asked in, then the ones asked in lately,
+        // then the ones a dictionary is held for, and the rest of them by name behind those.
+        val offered = (listOfNotNull(learning.takeIf { it.isNotEmpty() }) + settings.recent +
+            held + Languages.all().sortedBy { Languages.english(it) })
+            .distinct().filter { it.isNotBlank() && it != into }
         // The side of the palette the reader reads in: their own answer where they gave one,
         // and the device's where they left it to the device.
         val dark = when (settings.dark) {
@@ -2401,22 +2404,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
         val panel = AskPanel(this, Tokens.palette(themeNamed(settings.theme), dark))
-        panel.askFor(learning.ifEmpty { into })
         // What the reader picks here is what they are learning, and it is remembered: this is
         // the one place they are thinking about it.
         var answering = learning
-        panel.setLanguages(offered, learning) { picked ->
-            answering = picked
-            SettingsStore.setLearning(picked)
-            panel.askFor(picked)
-            panel.setLanguages(offered, picked) { again ->
-                answering = again
-                SettingsStore.setLearning(again)
-                panel.askFor(again)
-                said(panel, again, into, panel.field.text.toString())
+        fun offer(chosen: String) {
+            panel.setLanguages(offered, chosen) { picked ->
+                answering = picked
+                SettingsStore.setLearning(picked)
+                offer(picked)
+                said(panel, picked, into, panel.field.text.toString())
             }
-            said(panel, picked, into, panel.field.text.toString())
         }
+        offer(learning)
         panel.onSubmit = { asked -> said(panel, answering, into, asked) }
         panel.onOpenApp = {
             closeSay()

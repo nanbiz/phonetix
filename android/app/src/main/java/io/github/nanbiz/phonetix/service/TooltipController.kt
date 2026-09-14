@@ -295,14 +295,20 @@ class TooltipController(
         val above = (box.rect.top - dp(10)).roundToInt() - height
         // A hand on the screen is a hand over everything under the word it is pointing at.
         val handInTheWay = hand > 0 && below + height > hand - dp(24)
+        // The lowest the card can start and still be whole on the screen.
+        val lowest = (metrics.heightPixels - height - margin).coerceAtLeast(margin)
+        // Beside the word, always: under it, over it where the hand or the screen's edge is
+        // in the way, and pushed back onto the screen where neither side has room for the
+        // whole card. The last case used to drop it at the foot of the screen, which for a
+        // word near the top meant an answer a long way from what it was about - and behind
+        // the keyboard, where a word is asked about while something is being typed.
         val y = when {
-            !handInTheWay && below + height + margin <= metrics.heightPixels -> below
-            handInTheWay && above >= margin -> above
+            !handInTheWay && below <= lowest -> below
             above >= margin -> above
-            else -> (metrics.heightPixels - height - margin).coerceAtLeast(margin)
+            else -> below.coerceIn(margin, lowest)
         }
         // Above the word means the arrow is on the card's underside, pointing down at it.
-        pointsDown?.value = y != below
+        pointsDown?.value = y + height <= box.rect.top
         if (y == lp.y) return
         lp.y = y
         runCatching { wm.updateViewLayout(card, lp) }

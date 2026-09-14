@@ -33,10 +33,10 @@ object Wording {
 
     /** Replacement mode, as an overlay can draw them. */
     val layer = listOf(
+        Choice("off", "Off", "nothing is replaced; the mark still answers a word"),
         Choice("meaning", "Translation", "the word replaced by what it means"),
         Choice("sound", "Pronunciation", "the word replaced by how it is said"),
         Choice("both", "Both", "what it means, and how to say that"),
-        Choice("off", "Off", "nothing is replaced; the mark still answers a word"),
     )
 
     /** Every row of the settings surfaces, by the name it reports itself under. */

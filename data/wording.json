@@ -5,6 +5,18 @@
       "name": "Replacement mode",
       "options": [
         {
+          "value": "off",
+          "label": "Off",
+          "on": [
+            "browser",
+            "phone"
+          ],
+          "about": {
+            "browser": "nothing is replaced; ask about a word yourself",
+            "phone": "nothing is replaced; the mark still answers a word"
+          }
+        },
+        {
           "value": "meaning",
           "label": "Translation",
           "on": [
@@ -38,18 +50,6 @@
           "about": {
             "browser": "what it means, and how to say that",
             "phone": "what it means, and how to say that"
-          }
-        },
-        {
-          "value": "off",
-          "label": "Off",
-          "on": [
-            "browser",
-            "phone"
-          ],
-          "about": {
-            "browser": "nothing is replaced; ask about a word yourself",
-            "phone": "nothing is replaced; the mark still answers a word"
           }
         }
       ],

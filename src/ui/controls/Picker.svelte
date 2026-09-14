@@ -15,17 +15,19 @@
     options: { value: string; label: string; about?: string }[];
     chosen: string;
     label: string;
+    /** What the control says while nothing is chosen, where that can happen. */
+    empty?: string;
     /** From how many options the list is worth filtering. */
     filterFrom?: number;
     change: (value: string) => void;
   }
 
-  let { options, chosen, label, filterFrom = 12, change }: Props = $props();
+  let { options, chosen, label, empty = '', filterFrom = 12, change }: Props = $props();
 
   let open = $state(false);
   let typed = $state('');
 
-  let name = $derived(options.find((it) => it.value === chosen)?.label ?? '');
+  let name = $derived(options.find((it) => it.value === chosen)?.label ?? empty);
   let shown = $derived(
     typed.trim() === ''
       ? options
@@ -62,7 +64,8 @@
   class="select"
   aria-label={label}
   aria-haspopup="listbox"
-  onclick={show}
+  aria-expanded={open}
+  onclick={() => (open ? close() : show())}
 >
   {name}
 </button>

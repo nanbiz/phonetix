@@ -32,6 +32,14 @@ export interface Settings {
    * page in front of them or a language they keep a dictionary for.
    */
   learning: string;
+  /**
+   * The languages asked in lately, most recent first.
+   *
+   * The list a word can be asked for in is every language there is, and a reader asks in two
+   * or three of them: kept so those are at the top of it rather than wherever the alphabet
+   * puts them.
+   */
+  recent: string[];
   /** Narrow transcriptions rather than broad ones. The card always shows the full form. */
   narrow: boolean;
   /** Leave the stress marks off the line over a word. */
@@ -90,6 +98,7 @@ export const DEFAULTS: Settings = {
   target: '',
   source: '',
   learning: '',
+  recent: [],
   narrow: false,
   hideStress: true,
   accents: {},
@@ -140,4 +149,34 @@ export function setAccent(settings: Settings, lang: string, accent: string): Rec
 /** Whether this site is one the reader switched off. */
 export function allowed(settings: Settings, host: string): boolean {
   return settings.on && !settings.off.includes(host);
+}
+
+/** How many languages asked in lately are kept. Enough for the two or three a reader works
+ *  in, few enough that the top of the list is still the top of the list. */
+export const RECENT = 5;
+
+/** The list of languages asked in lately, once one has been asked in again. */
+export function asked(recent: string[], language: string): string[] {
+  return [language, ...recent]
+    .filter((lang) => lang !== '')
+    .filter((lang, at, all) => all.indexOf(lang) === at)
+    .slice(0, RECENT);
+}
+
+/**
+ * The languages a word can be asked for in, in the order worth offering them.
+ *
+ * The one being asked in, then the ones asked in lately, then the ones a dictionary is held
+ * for, and the rest of them behind those - a reader asking for the word for something usually
+ * has no dictionary for it, which is why they are asking, so every language is on offer.
+ */
+export function offering(
+  learning: string,
+  recent: string[],
+  held: string[],
+  all: string[]
+): string[] {
+  return [...new Set([...(learning ? [learning] : []), ...recent, ...held, ...all])].filter(
+    (lang) => lang !== ''
+  );
 }

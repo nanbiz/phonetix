@@ -34,6 +34,9 @@ data class Settings(
     /** The language the reader is learning, which is what a word they are looking for comes
      *  back in. Set in the panel that asks for one. */
     val learning: String = "",
+    /** The languages they have asked in, most recent first: a reader asks in two or three,
+     *  and a list of fifty in alphabetical order makes them hunt for one of them every time. */
+    val recent: List<String> = emptyList(),
     /**
      * What a word is replaced by: "meaning", "sound", "both", or "off".
      *
@@ -96,6 +99,9 @@ data class Settings(
  */
 object SettingsStore {
     private const val FILE = "phonetix.settings"
+
+    /** How many languages are worth remembering: a reader asks in two or three. */
+    private const val RECENT = 5
     private const val K_ENABLED = "enabled"
     private const val K_DENSITY = "density"
     private const val K_APPS = "apps"
@@ -103,6 +109,7 @@ object SettingsStore {
     private const val K_TOUCH = "touch_words"
     private const val K_TARGET = "target"
     private const val K_LEARNING = "learning"
+    private const val K_RECENT = "recent"
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
@@ -130,6 +137,7 @@ object SettingsStore {
             touchWords = p.getBoolean(K_TOUCH, false),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
+            recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
             layer = mode(p.getString(K_LAYER, "") ?: ""),
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             dark = p.getString(K_DARK, "system") ?: "system",
@@ -172,6 +180,7 @@ object SettingsStore {
             ?.putBoolean(K_TOUCH, next.touchWords)
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARNING, next.learning)
+            ?.putString(K_RECENT, next.recent.joinToString(","))
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
@@ -188,7 +197,15 @@ object SettingsStore {
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
     fun setTarget(v: String) = update { it.copy(target = v) }
-    fun setLearning(v: String) = update { it.copy(learning = v) }
+    /** What they are learning now, and the few they have asked in before it. */
+    fun setLearning(v: String) = update {
+        it.copy(
+            learning = v,
+            recent = (listOf(v) + it.recent).filter { lang -> lang.isNotBlank() }
+                .distinct()
+                .take(RECENT),
+        )
+    }
     /** In the words the core reads, whoever is asking: a shortcut, a test harness or a
      *  build of the screen older than this one can still say "ipa", and a mode the core does
      *  not know is a screen that stops answering. */

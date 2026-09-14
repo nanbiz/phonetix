@@ -162,6 +162,22 @@
 .sheet-list { flex: 1 1 auto; overflow-y: auto; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4) var(--space-4); }
 .sheet-none { color: var(--color-ink-muted); font-size: var(--font-size-small); padding: var(--space-3) var(--space-4); }
 
+/* The same list, in the panel a reader asks a word in rather than over a screen of its own.
+ *
+ * That panel is drawn over the page being read and is two rows tall, so the list opens inside
+ * it and takes only the room it needs, which is how the same list behaves in the panel the
+ * phone's mark opens. Over the whole page it would take the reader away from what they were
+ * reading, which is the one thing this panel exists not to do. */
+.ask .sheet { position: static; z-index: auto; background: none; flex-basis: 100%; order: 3; }
+.ask .sheet-head { padding: var(--space-2) 0; }
+.ask .sheet-head .btn-text { display: none; }
+.ask .sheet-list { max-height: 16rem; padding: var(--space-2) 0 0; }
+/* The row the list opens under: the control on the left, the way out on the right, and the
+ * list itself across both once it is open. */
+.ask-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.ask-top .select { order: 1; }
+.ask-close { order: 2; margin-left: auto; }
+
 /* The mark, which is a control: held, it asks the other direction. Drawn as the image alone. */
 .mark-button { display: inline-flex; padding: 0; margin: 0; background: none; border: none; cursor: pointer; }
 

@@ -39,10 +39,10 @@ export const DETAIL_CHOICES: Choice[] = [
 
 /** Replacement mode, as a browser can draw them. */
 export const LAYER_CHOICES: Choice[] = [
+  { value: "off", label: "Off", about: "nothing is replaced; ask about a word yourself" },
   { value: "meaning", label: "Translation", about: "the word replaced by what it means" },
   { value: "sound", label: "Pronunciation", about: "the word replaced by how it is said" },
   { value: "both", label: "Both", about: "what it means, and how to say that" },
-  { value: "off", label: "Off", about: "nothing is replaced; ask about a word yourself" },
 ];
 
 /** Every row of the settings surfaces, by the name it reports itself under. */

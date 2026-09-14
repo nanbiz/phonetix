@@ -40,6 +40,17 @@ class OverlayController(
     private var lastRendered: List<WordBox> = emptyList()
 
     /**
+     * Nothing is painted over a word, and every word is still known.
+     *
+     * The replacement mode the reader can choose is off: they want the page as its app wrote
+     * it and the mark to answer a word they point at. Asked here, of the one place that
+     * paints, because there are four ways a word reaches the screen - a full read, the layer
+     * a scroll rides on, the end of that scroll, and the reveal - and a guard on one of them
+     * left the other three painting.
+     */
+    private val silent: Boolean get() = SettingsStore.current.layer == "off"
+
+    /**
      * The word under a point on the screen, or nothing when the point is on no word.
      *
      * What the lens is dragged over: it does not take the app's touches, so it has to ask
@@ -65,7 +76,7 @@ class OverlayController(
      * because those are what can be tapped.
      */
     fun beginMotion() {
-        if (motion.isRunning) return
+        if (silent || motion.isRunning) return
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
         motion.start(lastRendered)
     }
@@ -77,6 +88,7 @@ class OverlayController(
      */
     fun motionMeasured(boxes: List<WordBox>, at: Long, speed: Float, movedSince: Boolean) {
         lastRendered = boxes
+        if (silent) return
         motion.measured(boxes, at, speed, movedSince)
     }
 
@@ -86,6 +98,13 @@ class OverlayController(
     fun endMotion(boxes: List<WordBox>) {
         motion.stop()
         render(boxes)
+    }
+
+    /** Where the words are, without painting anything over them: see [silent]. */
+    private fun keep(boxes: List<WordBox>) {
+        if (motion.isRunning) motion.stop()
+        lastRendered = boxes
+        hideNow()
     }
 
     val inMotion: Boolean get() = motion.isRunning
@@ -120,13 +139,13 @@ class OverlayController(
      * replaced still has every word to ask about - the page is simply left as its app wrote
      * it.
      */
-    fun known(boxes: List<WordBox>) {
-        if (motion.isRunning) motion.stop()
-        lastRendered = boxes
-        hideNow()
-    }
+    fun known(boxes: List<WordBox>) = keep(boxes)
 
     fun render(boxes: List<WordBox>) {
+        if (silent) {
+            keep(boxes)
+            return
+        }
         // Painting the small windows means the motion is over, whether it ended by settling
         // or because the screen changed under it. Leaving the layer up would hide every one
         // of them, and nothing would be tappable again.

@@ -38,18 +38,44 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 
     private fun dp(value: Float) = (value * density).toInt()
 
-    /** What will be answered, which is the whole question. */
-    private val prompt = TextView(context).apply {
-        setTextColor(palette.inkMuted.toInt())
-        textSize = 13f
+    /**
+     * Which language the answer comes back in.
+     *
+     * A button that opens a list, rather than a strip of fifty chips in alphabetical order: a
+     * reader asks in two or three languages and had to hunt past forty-seven others to reach
+     * one of them. The list is searchable, and the ones they have asked in lately are at the
+     * top of it.
+     */
+    private val picked = TextView(context).apply {
+        textSize = 14f
+        setTextColor(palette.ink.toInt())
+        setPadding(dp(12f), dp(8f), dp(12f), dp(8f))
+        background = GradientDrawable().apply {
+            cornerRadius = Tokens.Scale.radiusButton * density
+            setColor(palette.chipBg.toInt())
+            setStroke(dp(Tokens.Scale.borderWidth), palette.border.toInt())
+        }
     }
 
-    /** The languages a word can be asked for in, where there is more than one to choose. */
-    private val chipRow = LinearLayout(context).apply { orientation = HORIZONTAL }
-    private val chipStrip = HorizontalScrollView(context).apply {
-        isHorizontalScrollBarEnabled = false
-        addView(chipRow)
+    /** The list itself, over the panel, filtered by what is typed into it. */
+    private val search = EditText(context).apply {
+        setTextColor(palette.ink.toInt())
+        setHintTextColor(palette.inkFaint.toInt())
+        hint = Wording.says["search"].orEmpty()
+        isSingleLine = true
+        background = null
+        setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
+        textSize = 15f
+    }
+    private val listed = LinearLayout(context).apply { orientation = VERTICAL }
+    private val chooser = LinearLayout(context).apply {
+        orientation = VERTICAL
         visibility = GONE
+        addView(search, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        addView(
+            android.widget.ScrollView(context).apply { addView(listed) },
+            LayoutParams(LayoutParams.MATCH_PARENT, dp(260f)),
+        )
     }
 
     val field = EditText(context).apply {
@@ -122,11 +148,13 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         gravity = Gravity.CENTER
     }
 
-    /** The top line: what is being answered, and the way through to the app. */
+    /** The top line: which language the answer comes back in, and the way through to the app.
+     *  One row rather than two, because a panel of two rows has nothing to spare. */
     private val header = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(prompt, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        addView(picked, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(android.view.View(context), LayoutParams(0, 0, 1f))
         addView(mark, LayoutParams(dp(40f), dp(40f)))
     }
 
@@ -153,7 +181,15 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         val pad = dp(14f)
         setPadding(pad, pad, pad, pad)
         addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        addView(chipStrip)
+        addView(chooser, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        search.addTextChangedListener(object : android.text.TextWatcher {
+            override fun afterTextChanged(edited: android.text.Editable?) {
+                searching(edited?.toString().orEmpty())
+            }
+
+            override fun beforeTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(t: CharSequence?, a: Int, b: Int, c: Int) = Unit
+        })
         addView(
             asking,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
@@ -200,11 +236,6 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         }
     }
 
-    /** Which language the answer will come back in, since that is the whole question. */
-    fun askFor(language: String) {
-        prompt.text = "${Wording.row("say").name} · ${Languages.english(language)}"
-    }
-
     /** What has been heard so far, put in the field as if it had been typed. */
     fun heard(text: String) {
         field.setText(text)
@@ -214,46 +245,82 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     /** Whether the phone is listening right now, which the microphone shows. */
     fun listening(on: Boolean) {
         mic.alpha = if (on) 1f else 0.7f
-        prompt.alpha = if (on) 0.6f else 1f
     }
 
     /**
-     * The languages there is a dictionary to answer in. With one there is nothing to choose
-     * and the row stays hidden; with more, each is a chip and the chosen one is lit.
+     * The languages a word can be asked for in, in the order they are worth offering: the
+     * ones this reader has asked in lately first, then the rest by name.
      */
     fun setLanguages(languages: List<String>, chosen: String, onPick: (String) -> Unit) {
-        chipRow.removeAllViews()
-        if (languages.isEmpty()) {
-            chipStrip.visibility = GONE
-            return
+        picked.text = if (chosen.isBlank()) {
+            Wording.says["choose-language"].orEmpty()
+        } else {
+            Languages.english(chosen)
         }
-        chipStrip.visibility = VISIBLE
-        for (code in languages) {
-            val lit = code == chosen
-            val chip = TextView(context).apply {
-                text = Languages.english(code)
-                textSize = 13f
-                setTypeface(typeface, if (lit) Typeface.BOLD else Typeface.NORMAL)
-                setTextColor((if (lit) palette.accentInk else palette.ink).toInt())
-                setPadding(dp(12f), dp(6f), dp(12f), dp(6f))
-                background = GradientDrawable().apply {
-                    cornerRadius = Tokens.Scale.radiusChip * density
-                    setColor((if (lit) palette.accent else palette.chipBg).toInt())
-                }
-                setOnClickListener { onPick(code) }
+        picked.setOnClickListener {
+            if (chooser.visibility == VISIBLE) {
+                closeChooser()
+            } else {
+                chooser.visibility = VISIBLE
+                search.setText("")
+                fill(languages, chosen, onPick, "")
+                search.requestFocus()
             }
-            chipRow.addView(
-                chip,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ).apply {
-                    rightMargin = dp(6f)
-                    topMargin = dp(6f)
-                    bottomMargin = dp(6f)
-                },
+        }
+        searching = { typed -> fill(languages, chosen, onPick, typed) }
+        fill(languages, chosen, onPick, "")
+    }
+
+    /** What the filter does, kept so a keystroke reaches the list that is open. */
+    private var searching: (String) -> Unit = {}
+
+    private fun fill(
+        languages: List<String>,
+        chosen: String,
+        onPick: (String) -> Unit,
+        typed: String,
+    ) {
+        listed.removeAllViews()
+        val wanted = typed.trim().lowercase()
+        for (code in languages) {
+            val name = Languages.english(code)
+            if (wanted.isNotEmpty() && !name.lowercase().contains(wanted)) continue
+            val row = TextView(context).apply {
+                text = name
+                textSize = 15f
+                val lit = code == chosen
+                setTextColor((if (lit) palette.accent else palette.ink).toInt())
+                setTypeface(typeface, if (lit) Typeface.BOLD else Typeface.NORMAL)
+                setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+                setOnClickListener {
+                    closeChooser()
+                    onPick(code)
+                }
+            }
+            listed.addView(
+                row,
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
             )
         }
+        if (listed.childCount == 0) {
+            listed.addView(
+                TextView(context).apply {
+                    text = Wording.says["nothing-found"].orEmpty()
+                    textSize = 14f
+                    setTextColor(palette.inkMuted.toInt())
+                    setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+                },
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT),
+            )
+        }
+    }
+
+    /** Puts the list away, and the keyboard it opened with it. */
+    private fun closeChooser() {
+        chooser.visibility = GONE
+        search.setText("")
+        context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+            ?.hideSoftInputFromWindow(search.windowToken, 0)
     }
 
     /** Something to read while the engine opens a model for a direction nobody was reading. */
@@ -278,6 +345,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     /** Taken down by the way back, which arrives as a key on older phones. */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
+            // The way back takes away the one thing that is open, the list before the panel:
+            // a reader who opened the list to look at it expects to get back to the question.
+            if (chooser.visibility == VISIBLE) {
+                closeChooser()
+                return true
+            }
             onClose()
             return true
         }
