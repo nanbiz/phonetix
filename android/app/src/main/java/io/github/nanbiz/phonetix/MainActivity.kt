@@ -38,6 +38,9 @@ class MainActivity : ComponentActivity() {
      *  the only honest moment to re-read them is when the user comes back. */
     private var resumeTick by mutableStateOf(0)
     private var dictReady by mutableStateOf(false)
+    /** The screen something outside asked the app to open on, with the moment it was asked:
+     *  the same screen can be asked for twice, and the second ask must be a change. */
+    private var opening by mutableStateOf("")
     /** Whether the synthesiser is up, so the preview can draw the words no dictionary holds. */
     private var voiceReady by mutableStateOf(false)
 
@@ -57,6 +60,7 @@ class MainActivity : ComponentActivity() {
             }
         }.start()
 
+        asked(intent)
         setContent {
             PhonetixTheme {
                 Surface(
@@ -73,6 +77,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        asked(intent)
+    }
+
+    /** Which screen the app was opened on, where it was opened by something other than the
+     *  reader tapping its icon. */
+    private fun asked(intent: Intent?) {
+        val wanted = intent?.getStringExtra("view").orEmpty()
+        opening = if (wanted.isEmpty()) "" else "$wanted:${android.os.SystemClock.uptimeMillis()}"
     }
 
     override fun onResume() {
@@ -111,6 +128,7 @@ class MainActivity : ComponentActivity() {
                 SettingsWeb(
                     permissions = { accessibilityOn to overlayOn },
                     dictionaryReady = dictReady,
+                    open = opening,
                     onOpenReading = { openAccessibilitySettings() },
                     onOpenOverlay = { openOverlaySettings() },
                     onOpenApps = { showApps = true },

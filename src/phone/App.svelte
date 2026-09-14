@@ -77,6 +77,13 @@
   // The app tells this view when something it did not do has changed: a permission granted in
   // the system's own settings, an app chosen on the app's own screen.
   whenChanged(() => void load());
+  // A screen the app was asked to open on: the reader held the mark over whatever they were
+  // reading, which asks for the word they are looking for rather than one on the screen.
+  window.phonetixOpen = (wanted: string) => {
+    if (!settings) return false;
+    view = wanted;
+    return true;
+  };
   // The app's own back gesture: it hands it to this view, which leaves one screen.
   window.phonetixBack = () => {
     if (view === 'main') return false;

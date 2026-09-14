@@ -547,7 +547,18 @@ def stylesheet(scalars, palettes, roles, scope=None):
     for key in sorted(palettes):
         name, mode = key.rsplit("-", 1)
         lines.append("")
-        lines.append(theme(f".theme-{name}.mode-{mode}") + " {")
+        # A theme that carries one side answers for the other as well. Every palette is named
+        # by a surface as a theme and a mode, and the two are chosen separately: a theme with
+        # no rule for the mode in force leaves every colour undefined, which is not a surface
+        # in the wrong colours but a surface with none - a settings screen in the browser's
+        # own type with no palette, no controls, and sheets with no background over it. The
+        # Kotlin below has always answered this way.
+        other = "light" if mode == "dark" else "dark"
+        both = f"{name}-{other}" not in palettes
+        selector = theme(f".theme-{name}.mode-{mode}")
+        if both:
+            selector += ", " + theme(f".theme-{name}.mode-{other}")
+        lines.append(selector + " {")
         for name, value in sorted(palettes[key].items()):
             lines.append(f"  {name}: {value};")
         lines.append("}")

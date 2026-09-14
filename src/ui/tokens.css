@@ -137,7 +137,7 @@
   --p-surface-raised: #f4f0e4;
 }
 
-.theme-dracula.mode-dark {
+.theme-dracula.mode-dark, .theme-dracula.mode-light {
   --p-accent: #ff79c6;
   --p-accent-bg: #48364c;
   --p-accent-ink: #16050e;
@@ -205,7 +205,7 @@
   --p-surface-raised: #f2f2f2;
 }
 
-.theme-nord.mode-light {
+.theme-nord.mode-light, .theme-nord.mode-dark {
   --p-accent: #5e81ac;
   --p-accent-bg: #d7dee9;
   --p-accent-ink: #03060b;
@@ -325,7 +325,7 @@
   --p-surface-raised: #f4ead2;
 }
 
-.theme-silk.mode-light {
+.theme-silk.mode-light, .theme-silk.mode-dark {
   --p-accent: #1c1c29;
   --p-accent-bg: #d6d4d5;
   --p-accent-ink: #e1ff00;
@@ -341,7 +341,7 @@
   --p-surface-raised: #f3ede9;
 }
 
-.theme-winter.mode-light {
+.theme-winter.mode-light, .theme-winter.mode-dark {
   --p-accent: #0069ff;
   --p-accent-bg: #d9e8ff;
   --p-accent-ink: #cee4ff;

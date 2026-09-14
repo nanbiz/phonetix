@@ -59,6 +59,15 @@ class HoverController(
      * dragged - and every word the circle passes over joins it.
      */
     private val onPhrase: (List<WordBox>) -> Unit = {},
+    /**
+     * The mark held and let go without moving: the other direction.
+     *
+     * Everything else the mark answers is about a word somebody else wrote. This one is the
+     * word the reader is looking for, and it is the one gesture the mark had left: a press
+     * held long enough to arm a sweep and then released where it started asked for nothing
+     * at all.
+     */
+    private val onHold: () -> Unit = {},
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -406,7 +415,7 @@ class HoverController(
                         // enough to arm a sweep and then let go asked for nothing, and
                         // replacing the page under it would be the opposite of what the
                         // reader had just decided not to do.
-                        if (!held) onTap()
+                        if (!held) onTap() else onHold()
                     }
                     return true
                 }

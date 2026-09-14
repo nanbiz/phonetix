@@ -42,6 +42,9 @@ fun SettingsWeb(
     /** Whether the bundled dictionary is open yet, so the screen is told when it becomes so
      *  and asks again for what this phone can answer. */
     dictionaryReady: Boolean,
+    /** Which screen to open on, where something outside asked for one: holding the mark asks
+     *  for the word a reader is looking for, and the app opens there. */
+    open: String = "",
     onOpenReading: () -> Unit,
     onOpenOverlay: () -> Unit,
     onOpenApps: () -> Unit,
@@ -52,6 +55,8 @@ fun SettingsWeb(
     /** Whether the reader is on a screen behind the first one, so the phone's own back
      *  gesture leaves that screen instead of the app. */
     val inside = remember { mutableStateOf(false) }
+    /** Whether the screen something outside asked for has been opened. */
+    val asked = remember(open) { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = inside.value) {
         view.value?.evaluateJavascript("window.phonetixBack && window.phonetixBack()", null)
     }
@@ -68,6 +73,22 @@ fun SettingsWeb(
     val granted = permissions()
     androidx.compose.runtime.LaunchedEffect(granted, dictionaryReady) {
         view.value?.evaluateJavascript("window.phonetixChanged && window.phonetixChanged()", null)
+    }
+    // Asked for again on every arrival, because the same screen can be asked for twice: the
+    // reader holds the mark, reads an answer, goes back, and holds it again.
+    androidx.compose.runtime.LaunchedEffect(open) {
+        if (open.isEmpty()) return@LaunchedEffect
+        // Waited for: the page is loading when the app is opened cold, and a screen asked for
+        // before it has drawn is a screen nobody opens.
+        repeat(20) {
+            val web = view.value ?: return@repeat
+            web.evaluateJavascript(
+                "Boolean(window.phonetixOpen && " +
+                    "window.phonetixOpen(${JSONObject.quote(open.substringBefore(':'))}))",
+            ) { said -> if (said == "true") asked.value = true }
+            if (asked.value) return@LaunchedEffect
+            kotlinx.coroutines.delay(300)
+        }
     }
     AndroidView(
         modifier = modifier,

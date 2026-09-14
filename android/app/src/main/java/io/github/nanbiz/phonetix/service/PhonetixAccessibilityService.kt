@@ -10,6 +10,7 @@ import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.nanbiz.phonetix.BuildConfig
+import io.github.nanbiz.phonetix.MainActivity
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
@@ -177,6 +178,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y -> tooltip.clearOf(y) },
+            // Held and let go where it started: the word the reader is looking for, rather
+            // than one somebody else wrote. The app opens on the screen that asks for it.
+            onHold = { main.post { openSay() } },
             onPhrase = { run ->
                 // The clause as the app wrote it, not the words the circle happened to land
                 // on: only some words of a line carry a transcription, so a run made of those
@@ -2299,6 +2303,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         planned.clear()
         planned.addAll(kept)
+    }
+
+    /** The other direction, on the screen that asks for it. */
+    private fun openSay() {
+        val intent = android.content.Intent(this, MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra("view", "say")
+        runCatching { startActivity(intent) }
+            .onFailure { android.util.Log.w("Phonetix", "the app would not open", it) }
     }
 
     /**

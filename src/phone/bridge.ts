@@ -23,6 +23,10 @@ declare global {
     /** Called by the app when something changed that this view did not change itself: a
      *  permission granted in the system's settings, an app chosen on the app's own screen. */
     phonetixChanged?: () => void;
+    /** Called by the app to open one of this view's screens, where something outside asked
+     *  for it: holding the mark asks for the word a reader is looking for. Answers whether
+     *  the view was ready to open it. */
+    phonetixOpen?: (view: string) => boolean;
     /** Called by the app when the reader uses the device's own way back. Answers whether
      *  there was a screen to leave; when there is not, the app closes as it always would. */
     phonetixBack?: () => boolean;
