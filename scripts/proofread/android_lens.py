@@ -65,10 +65,13 @@ def main():
     dev.clear_log()
     shell("input", "swipe", str(parked[0]), str(parked[1]), str(onto[0]), str(onto[1]), "900")
     time.sleep(3)
-    log = dev.log()
 
-    passed = re.findall(r"LENSAT [\d.,]+ -> (\S+)", log)
-    opened = re.findall(r"TOOLTIP open word=(\S+)", log)
+    # Asked of the device, line by line: the overlay writes one long line naming every box on
+    # screen several times a second, so a drag is pushed out of any window worth reading and
+    # the device drops the odd long line from its own buffer under load. Either way the check
+    # read a log with no drag in it and called that a mark that took no touches.
+    passed = re.findall(r"LENSAT [\d.,]+ -> (\S+)", dev.lines("LENSAT "))
+    opened = re.findall(r"TOOLTIP open word=(\S+)", dev.lines("TOOLTIP open"))
     print(f"  the lens passed over: {passed[:6]}")
     print(f"  the card opened for: {opened[-3:] if opened else 'nothing'}")
 

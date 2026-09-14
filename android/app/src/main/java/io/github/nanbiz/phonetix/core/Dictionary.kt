@@ -69,6 +69,37 @@ object Dictionary {
      * Runs where the caller is: it is tens of milliseconds for a small language and a few
      * seconds for a big one, and the callers are background threads.
      */
+    /** Build this language's pronunciations out of what the app carries. */
+    private fun build(app: Context, lang: String, into: File): Boolean {
+        // Either name: the packager unpacks a `.gz` asset and drops the suffix, so what is in
+        // the apk is the JSON itself, but a build that leaves it alone is read just as well.
+        val carried = sequenceOf("$CARRIED/$lang.json", "$CARRIED/$lang.json.gz")
+            .mapNotNull { name ->
+                runCatching { app.assets.open(name).use { it.readBytes() } }.getOrNull()
+            }
+            .firstOrNull()
+        if (carried == null) {
+            android.util.Log.w("Phonetix", "no dictionary is carried for $lang")
+            return false
+        }
+        val built = runCatching {
+            Lex.buildIpaPack(lang, carried, System.currentTimeMillis() / 1000)
+        }.getOrNull()
+        if (built == null || built.isEmpty()) {
+            android.util.Log.w("Phonetix", "no pronunciations could be built for $lang")
+            return false
+        }
+        // Written whole and then moved: a half-written pack left by a process that went away
+        // is a file that opens and answers nonsense.
+        val part = File(app.filesDir, "${into.name}.part")
+        part.outputStream().use { it.write(built) }
+        if (!part.renameTo(into)) {
+            part.delete()
+            return false
+        }
+        return true
+    }
+
     /** Forget that this language is answered, so the next ask opens what is there now. */
     fun released(lang: String) {
         open.remove(lang)
@@ -91,37 +122,27 @@ object Dictionary {
             }
             val file = File(app.filesDir, "ipa-$lang.pack")
             if (!file.exists() || file.length() == 0L) {
-                // Either name: the packager unpacks a `.gz` asset and drops the suffix, so
-                // what is in the apk is the JSON itself, but a build that leaves it alone is
-                // read just as well.
-                val carried = sequenceOf("$CARRIED/$lang.json", "$CARRIED/$lang.json.gz")
-                    .mapNotNull { name ->
-                        runCatching { app.assets.open(name).use { it.readBytes() } }.getOrNull()
-                    }
-                    .firstOrNull()
-                if (carried == null) {
-                    android.util.Log.w("Phonetix", "no dictionary is carried for $lang")
-                    return false
-                }
-                val built = runCatching {
-                    Lex.buildIpaPack(lang, carried, System.currentTimeMillis() / 1000)
-                }.getOrNull()
-                if (built == null || built.isEmpty()) {
-                    android.util.Log.w("Phonetix", "no pronunciations could be built for $lang")
-                    return false
-                }
-                // Written whole and then moved: a half-written pack left by a process that
-                // went away is a file that opens and answers nonsense.
-                val part = File(app.filesDir, "ipa-$lang.pack.part")
-                part.outputStream().use { it.write(built) }
-                if (!part.renameTo(file)) {
-                    part.delete()
-                    return false
-                }
+                if (!build(app, lang, file)) return false
             }
-            val opened = runCatching { Lex.openPack(Reading.core, file.absolutePath) }
+            var opened = runCatching { Lex.openPack(Reading.core, file.absolutePath) }
                 .getOrNull()
                 .orEmpty()
+            if (opened.isEmpty()) {
+                // A pack that will not open is built again from what the app carries, once.
+                //
+                // It is a file this app wrote, and the format it writes has changed: a phone
+                // that has been through an update holds one an older build made, the core
+                // refuses it, and every word of that language comes back as though no
+                // dictionary existed at all - on a phone that carries one. Kept rather than
+                // thrown away on the first failure, because the file is also how the language
+                // is answered on a train.
+                android.util.Log.w("Phonetix", "the $lang pronunciations did not open; building them again")
+                file.delete()
+                if (!build(app, lang, file)) return false
+                opened = runCatching { Lex.openPack(Reading.core, file.absolutePath) }
+                    .getOrNull()
+                    .orEmpty()
+            }
             if (opened.isEmpty()) {
                 android.util.Log.w("Phonetix", "the $lang pronunciations did not open")
                 return false
