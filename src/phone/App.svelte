@@ -79,7 +79,7 @@
   {#if settings}
     <Settings
       where="phone"
-      icon="./icon/96.png"
+      icon="./96.png"
       {settings}
       {curve}
       {packs}

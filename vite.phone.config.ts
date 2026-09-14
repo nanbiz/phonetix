@@ -13,6 +13,9 @@ export default defineConfig({
   // Loaded from file:///android_asset, which has no origin to resolve an absolute path
   // against: every reference has to be relative to the document.
   base: './',
+  // The marks the extension ships, rather than a second copy of them beside this entry: the
+  // product has one icon, in public/icon, and both surfaces are drawn with it.
+  publicDir: path.resolve(__dirname, 'public/icon'),
   plugins: [svelte(), Icons({ autoInstall: true, compiler: 'svelte' })],
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
