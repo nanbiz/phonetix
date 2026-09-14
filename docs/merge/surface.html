@@ -618,7 +618,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* Each choice the same width as its neighbours, so a control of three reads as one control
    rather than as three buttons of different sizes. Given its own row it fills the width: on a
    phone a three-choice control huddled against the left edge left half the screen empty. */
-.seg button { flex: 1 0 auto; justify-content: center; min-width: 4em; }
+.seg button { flex: 1 1 0; justify-content: center; min-width: max-content; }
 .r-wide .seg { display: flex; width: 100%; }
 .seg button.on { background: var(--color-accent); color: var(--color-accent-ink); }
 .slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }

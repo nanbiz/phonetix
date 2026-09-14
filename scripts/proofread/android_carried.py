@@ -40,13 +40,26 @@ def main():
     # one of the big ones.
     boxes = dev.annotated(seconds=120)
     log = dev.log()
+    # What was drawn, asked of the device rather than read out of a tail: waiting two minutes
+    # for a pack to be built writes thousands of lines, and the answer had scrolled out of the
+    # window this used to read - which reads exactly like a screen that was never annotated.
+    #
+    # Waited for, too. The first passes over a screen in a language the app has never built a
+    # pack for draw nothing while it is being built, and a busy device drops the odd long line
+    # from its own log, so the pass that says what it drew is not always the one that drew.
     said = {}
-    for line in reversed(log.splitlines()):
-        if "DRAWN " not in line:
-            continue
-        said = dict(p.split("=", 1) for p in line.split("DRAWN ", 1)[1].split() if "=" in p)
+    for _ in range(20):
+        for line in reversed(dev.lines("DRAWN ").splitlines()):
+            if "DRAWN " not in line:
+                continue
+            said = dict(
+                p.split("=", 1) for p in line.split("DRAWN ", 1)[1].split() if "=" in p
+            )
+            if said:
+                break
         if said:
             break
+        time.sleep(3)
 
     built = re.findall(r"CARRIED (\S+) opened as (\S+)", log)
     print(f"  what it built: {built[:3]}")

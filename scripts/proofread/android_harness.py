@@ -160,10 +160,12 @@ class Device:
             if not nudged and time.time() > until - seconds / 2:
                 nudged = True
                 self.dismiss_anr()
-            # The tail of the log rather than all of it: every pass writes a line naming every
-            # box on screen, so a buffer read in full takes longer each time it is asked for,
-            # and a loop that asks every two seconds ends up timing out on its own logging.
-            boxes = self.boxes(adb("logcat", "-d", "-t", "600", timeout=120))
+            # The lines that name the boxes, filtered on the device. A tail cannot do it: the
+            # overlay writes one long line per pass and the device drops the odd one under
+            # load, so a window of the last six hundred lines can hold a reading in which
+            # nothing was drawn while the screen in front of the reader is covered in
+            # transcriptions - which reads exactly like an app doing nothing at all.
+            boxes = self.boxes(self.lines("BOXES ", keep=8))
             if boxes:
                 return boxes
             time.sleep(2)
@@ -212,6 +214,19 @@ class Device:
         # fifteen hundred comes back in a moment. Every check clears the log immediately before
         # the thing it measures, so that is all any of them needs.
         return adb("logcat", "-d", "-t", str(lines), timeout=180)
+
+    def lines(self, naming, keep=40):
+        """Every line of the log that names this, filtered on the device.
+
+        The tail above is bounded because this build writes a line naming every box on screen
+        on every pass, and those lines are long. That bound is also how a check that waited a
+        while for something to be drawn ends up reading a log in which it has scrolled past:
+        this asks the device for the lines that matter instead, so how long the waiting took
+        stops deciding what can be read.
+        """
+        return adb(
+            "shell", f"logcat -d | grep -F '{naming}' | tail -{keep}", timeout=180,
+        )
 
     # ---- what the overlay says ----------------------------------------------
 
