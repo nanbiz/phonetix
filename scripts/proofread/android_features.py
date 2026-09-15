@@ -556,24 +556,33 @@ def check_language(r, dev):
     # Asked again while nothing has been drawn: a German page is read by the synthesiser, which
     # starts a moment after the first screen and fills on the pass after that.
     german, german_log = {}, ""
+    said = {}
     for _ in range(4):
         german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
         # What was written over each word, taken while the German page is the last thing
         # drawn, and asked of the device: the overlay writes one long line per pass, so the
         # one naming the words scrolls out of any window worth reading and is dropped from
         # the log outright when the device is busy.
-        said = {}
-        for line in reversed(dev.lines("DRAWN ").splitlines()):
-            if "DRAWN " not in line:
-                continue
-            pairs = dict(
-                pair.split("=", 1)
-                for pair in line.split("DRAWN ", 1)[1].split()
-                if "=" in pair
-            )
-            if pairs:
-                said = pairs
+        #
+        # Waited for rather than read once. A read of the tree takes a moment on a machine
+        # with nothing to spare and seconds on one that is loaded; asked once at a fixed
+        # remove, this found no line and reported a German page read in English while the app
+        # was reading it in German.
+        for _ in range(12):
+            for line in reversed(dev.lines("DRAWN ").splitlines()):
+                if "DRAWN " not in line:
+                    continue
+                pairs = dict(
+                    pair.split("=", 1)
+                    for pair in line.split("DRAWN ", 1)[1].split()
+                    if "=" in pair
+                )
+                if pairs:
+                    said = pairs
+                    break
+            if said:
                 break
+            time.sleep(1)
         if said:
             break
     english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
