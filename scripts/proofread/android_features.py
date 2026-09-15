@@ -984,10 +984,11 @@ def check_settings_screen(r, dev):
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
 
-    # What a word is replaced by: the three the core answers with, and nothing, which is the
-    # reader who wants the product there to be asked rather than answering over everything.
-    r.check(screen["modes"] == ["meaning", "sound", "both", "off"],
-            "settings: the modes are the core's, and off", str(screen["modes"]))
+    # What a word is replaced by: nothing, then the three the core answers with. Off leads
+    # because it is the one a reader reaches for to stop the product drawing over what they
+    # are reading, and the strip is read left to right.
+    r.check(screen["modes"] == ["off", "meaning", "sound", "both"],
+            "settings: off leads the modes, and the rest are the core's", str(screen["modes"]))
     # The language a word is turned into, asked for by the modes that turn it into one and by
     # nothing else: the mode is already that question's first half. So it is asked for after
     # choosing one of those, and gone after choosing the one that does not.
