@@ -41,6 +41,9 @@ class HoverController(
     private val context: Context,
     /** What word is at a point on the screen, which only the overlay knows. */
     private val wordAt: (Float, Float) -> WordBox?,
+    /** Every word the overlay believes is on screen, for the state dump alone: a card about
+     *  the wrong word is explained by which boxes were near the circle and how near. */
+    private val onScreen: () -> List<WordBox> = { emptyList() },
     /** The word the circle is over, as it moves, and nothing when it is over none. */
     private val onWord: (WordBox?) -> Unit,
     /** Where the hand is, so the answer can open clear of it. */
@@ -97,6 +100,54 @@ class HoverController(
 
     /** Whether the circle is on screen at all. */
     val showing: Boolean get() = mark != null
+
+    /** Where the circle last looked, which is not where the finger is: the circle is carried
+     *  above the thumb so the word can be seen, and what it reports is its own centre. */
+    private var lookedAt = android.graphics.Point(-1, -1)
+
+    /** Everything this believes, for [StateDump]: what is on screen, where the mark is, what
+     *  the circle is over and whether a sweep is being gathered. */
+    fun state(): org.json.JSONObject = org.json.JSONObject()
+        .put("markShowing", showing)
+        .put("markAt", org.json.JSONObject().put("x", markX).put("y", markY))
+        .put("dragging", layer != null)
+        .put("lookingAt", org.json.JSONObject()
+            .put("x", lookedAt.x).put("y", lookedAt.y))
+        .put("hovered", StateDump.box(hovered))
+        // Why that word and not another: the circle is wider than a word and sits between two
+        // of them as often as on one, so what it takes is the nearest box within a line's
+        // height - and a card about a word the reader was not pointing at is decided here.
+        .put("nearest", nearest())
+        .put("sweeping", sweeping)
+        .put("swept", StateDump.boxes(swept, limit = 40))
+
+    /** The words closest to where the circle is looking, nearest first, with how far off it
+     *  is from each: for [StateDump], where a wrong word has to be explained. */
+    private fun nearest(): org.json.JSONArray {
+        val out = org.json.JSONArray()
+        if (lookedAt.x < 0) return out
+        val x = lookedAt.x.toFloat()
+        val y = lookedAt.y.toFloat()
+        val near = onScreen()
+            .map { box ->
+                val dx = kotlin.math.abs(x - box.rect.centerX()) - box.rect.width() / 2f
+                val dy = kotlin.math.abs(y - box.rect.centerY()) - box.rect.height() / 2f
+                Triple(box, dx.coerceAtLeast(0f), dy.coerceAtLeast(0f))
+            }
+            .sortedBy { (_, dx, dy) -> hypot(dx, dy) }
+            .take(4)
+        for ((box, dx, dy) in near) {
+            out.put(
+                org.json.JSONObject()
+                    .put("word", box.word)
+                    .put("rect", StateDump.rect(box.rect))
+                    .put("pastLeftOrRight", dx.toInt())
+                    .put("aboveOrBelow", dy.toInt())
+                    .put("inside", box.rect.contains(x, y)),
+            )
+        }
+        return out
+    }
 
     private fun dp(value: Float): Float = value * density
 
@@ -228,6 +279,7 @@ class HoverController(
 
     /** What the circle is over now, told once per word rather than once per frame. */
     private fun hoverAt(x: Int, y: Int) {
+        lookedAt.set(x, y)
         val found = wordAt(x.toFloat(), y.toFloat())
         // The same word, even where its box has shifted: the screen is read again several
         // times a second, and on one whose content keeps changing - a chat, a feed - the box

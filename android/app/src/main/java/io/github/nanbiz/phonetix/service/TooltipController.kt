@@ -146,6 +146,26 @@ class TooltipController(
         ) {}
     }
 
+    /** What the card that is up is about and where it ended up, for [StateDump]: a card is an
+     *  overlay window, which nothing reading the screen can see. */
+    fun state(): org.json.JSONObject {
+        val card = view
+        val at = IntArray(2)
+        card?.getLocationOnScreen(at)
+        return org.json.JSONObject()
+            .put("up", card != null)
+            .put("about", StateDump.box(shown))
+            .put("answerGiven", given != null)
+            .put("expanded", expanded ?: org.json.JSONObject.NULL)
+            .put("clearOfHandAt", hand)
+            .put(
+                "card",
+                if (card == null) org.json.JSONObject.NULL else org.json.JSONObject()
+                    .put("x", at[0]).put("y", at[1])
+                    .put("width", card.width).put("height", card.height),
+            )
+    }
+
     /**
      * Where the hand is, so the answer opens clear of it.
      *

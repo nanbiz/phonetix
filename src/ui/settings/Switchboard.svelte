@@ -91,12 +91,12 @@
     {/if}
     <span class="board-what">
       <span class="board-name" data-name>Phonetix</span>
-      <!-- What the product does, which is what belongs under its own name. This line used to
-           explain what happens on sites the reader has not decided about - an edge case, as
-           the first sentence anybody reads. -->
-      <span class="board-sub" data-about>
-        {ready ? SAYS['tagline'] : SAYS['master-unready']}
-      </span>
+      <!-- Only what the reader has to act on. The product's own name needs no sentence
+           explaining it to the person who installed it and is looking at its settings; what
+           does belong here is a permission that is still missing. -->
+      {#if !ready}
+        <span class="board-sub" data-about>{SAYS['master-unready']}</span>
+      {/if}
     </span>
     {#if ready}
       <Toggle on={on} big label="annotate what I read" {change} />

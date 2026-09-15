@@ -125,7 +125,6 @@ export const SAYS: Record<string, string> = {
   "start-pack": "Get a dictionary for the language you are reading",
   "start-permission": "Let it read the screen, and draw over it",
   "start-target": "Choose the language you read into",
-  "tagline": "What the words you read mean, and how they are said",
   "touch-off": "Every touch goes to the app underneath, so scrolling is untouched. Turn this on to open a word's card by holding it.",
   "touch-on": "Hold a transcription to open its card. While this is on, a swipe that starts on a transcription will not scroll the page.",
   "use-this": "Use this",

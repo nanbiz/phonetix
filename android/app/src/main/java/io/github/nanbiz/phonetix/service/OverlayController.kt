@@ -50,6 +50,19 @@ class OverlayController(
      */
     private val silent: Boolean get() = SettingsStore.current.layer == "off"
 
+    /** The words this believes are on screen, which is what the mark asks about. */
+    fun onScreen(): List<WordBox> = lastRendered
+
+    /** What is on screen as far as this believes, for [StateDump]: the mark asks this list
+     *  what it is over, so a card about the wrong word starts here. */
+    fun state(): org.json.JSONObject = org.json.JSONObject()
+        .put("silent", silent)
+        .put("inMotion", motion.isRunning)
+        .put("chips", chips.size)
+        .put("chipsShown", chips.count { it.visibility == View.VISIBLE })
+        .put("words", lastRendered.size)
+        .put("boxes", StateDump.boxes(lastRendered))
+
     /**
      * The word under a point on the screen, or nothing when the point is on no word.
      *

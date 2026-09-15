@@ -168,6 +168,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // app reaches the service otherwise: it is started by the system, not by us.
         running = this
         SettingsStore.init(this)
+        // A way to ask the service what it believes, from a phone in a reader's hand at the
+        // moment something is wrong.
+        //
+        // Debug builds only, and exported there because a broadcast from adb arrives as if
+        // from another app: a receiver that is not exported never hears it, which is what
+        // "Broadcast completed: result=0" and no file meant. A release build registers
+        // nothing, so nothing on the device can ask a reader's phone for this.
+        if (BuildConfig.DEBUG) {
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                dumpAsked,
+                android.content.IntentFilter(StateDump.ACTION),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+            )
+        }
         val thread = HandlerThread("phonetix-scan").apply { start() }
         worker = Handler(thread.looper)
         // A separate thread for capture and for fetching a diagram. Both were queued behind
@@ -205,6 +220,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // belong to are covered by the translation, and a card about one of them would be
             // about a word the reader cannot see.
             wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
+            onScreen = { overlay.onScreen() },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y -> tooltip.clearOf(y) },
             // Held and let go where it started: the word the reader is looking for, rather
@@ -606,7 +622,73 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (::sampler.isInitialized) sampler.raceTheCamera(times, gapMs)
     }
 
+    /**
+     * Everything this service believes, written where it can be read from outside the app.
+     *
+     * What the overlay draws is decided by what it believes, and none of that is visible from
+     * a screenshot: an overlay window is invisible to anything reading the screen, and a log
+     * line carries one pass's worth. This is the whole of it at one moment, asked for while
+     * the thing is going wrong.
+     */
+    fun dumpState(): java.io.File {
+        val settings = SettingsStore.current
+        val state = org.json.JSONObject()
+            .put("at", System.currentTimeMillis())
+            .put("app", org.json.JSONObject()
+                .put("version", BuildConfig.VERSION_NAME)
+                .put("debug", BuildConfig.DEBUG))
+            .put("settings", org.json.JSONObject()
+                .put("on", settings.enabled)
+                .put("layer", settings.layer)
+                .put("density", settings.density)
+                .put("into", settings.into)
+                .put("learning", settings.learning)
+                .put("recent", org.json.JSONArray(settings.recent))
+                .put("lens", settings.lens)
+                .put("touchWords", settings.touchWords)
+                .put("narrow", settings.narrow)
+                .put("hideStress", settings.hideStress)
+                .put("theme", settings.theme)
+                .put("dark", settings.dark)
+                .put("host", settings.packHost)
+                .put("allApps", settings.allApps)
+                .put("apps", org.json.JSONArray(settings.apps)))
+            .put("screen", org.json.JSONObject()
+                .put("package", cachedPackage ?: org.json.JSONObject.NULL)
+                .put("language", lastScreenLanguage ?: org.json.JSONObject.NULL)
+                .put("target", lastTarget ?: org.json.JSONObject.NULL)
+                .put("pageReplaced", pageUp)
+                .put("lines", cachedPlan.size)
+                .put("scrollOnly", scrollOnly)
+                .put("following", following)
+                .put("blockers", org.json.JSONArray().also { out ->
+                    for (r in blockers) out.put(StateDump.rect(r))
+                }))
+            .put("overlay", if (::overlay.isInitialized) overlay.state() else org.json.JSONObject.NULL)
+            .put("mark", if (::hover.isInitialized) hover.state() else org.json.JSONObject.NULL)
+            .put("card", if (::tooltip.isInitialized) tooltip.state() else org.json.JSONObject.NULL)
+            .put("dictionaries", org.json.JSONArray(Packs.held(this)))
+            .put("ask", org.json.JSONObject()
+                .put("panelUp", asking != null)
+                .put("asked", askedFor ?: org.json.JSONObject.NULL)
+                .put("into", askedInto ?: org.json.JSONObject.NULL)
+                .put("stage", askStage ?: org.json.JSONObject.NULL)
+                .put("waitingMs", if (askedAt == 0L) 0 else System.currentTimeMillis() - askedAt)
+                .put("machineTrouble", Machine.trouble ?: org.json.JSONObject.NULL))
+        return StateDump.write(this, state)
+    }
+
+    /** Asked for from outside: `am broadcast -a io.github.nanbiz.phonetix.DUMP`. */
+    private val dumpAsked = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            main.post { runCatching { dumpState() }.onFailure {
+                android.util.Log.w("Phonetix", "the state could not be written out", it)
+            } }
+        }
+    }
+
     override fun onDestroy() {
+        if (BuildConfig.DEBUG) runCatching { unregisterReceiver(dumpAsked) }
         settingsWatch?.cancel()
         if (::tooltip.isInitialized) tooltip.hide()
         if (::speaker.isInitialized) speaker.destroy()
@@ -2499,17 +2581,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         panel.saying("…")
         val turn = ++asks
+        // What this question is doing, for the state dump: a panel showing "…" says only that
+        // something has not come back, and which step it is waiting in is the whole answer.
+        askedFor = text
+        askedInto = wanted
+        askedAt = System.currentTimeMillis()
+        askStage = "identifying the language"
         io.post {
             val held = Packs.held(this).toSet()
             val from = kotlinx.coroutines.runBlocking {
                 Machine.language(text, held + into) ?: into.ifEmpty { Language.OURS }
             }
+            askStage = if (from == wanted) "already in $wanted" else "translating $from to $wanted"
             val word = if (from == wanted) {
                 text
             } else {
                 kotlinx.coroutines.runBlocking { Machine.said(text, from, wanted) }
             }
             if (word.isNullOrBlank()) {
+                askStage = "nothing came back"
                 main.post {
                     if (asking === panel && turn == asks) {
                         panel.saying(Wording.says["say-nothing"].orEmpty())
@@ -2517,6 +2607,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
                 return@post
             }
+            askStage = "looking $word up in $wanted"
             // The entry for the word that came back, in the language it is in, read into the
             // one the reader asked in: what it means back is how a machine's answer is judged.
             Dictionary.ensure(this, wanted)
@@ -2530,12 +2621,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 Speech.phonemes(Accents.voiceOf(wanted, ""), listOf(word))[word].orEmpty(),
                 wanted,
             )
+            askStage = "answered with $word"
             main.post {
                 if (asking !== panel || turn != asks) return@post
                 panel.show(answer) { speaker.say(word, Accents.voiceOf(wanted, "")) }
             }
         }
     }
+
+    /** The last question put to the panel, and how far it got: see [dumpState]. */
+    @Volatile private var askedFor: String? = null
+    @Volatile private var askedInto: String? = null
+    @Volatile private var askedAt = 0L
+    @Volatile private var askStage: String? = null
 
     /** Which question is the current one: everything typed before it is stale. */
     private var asks = 0

@@ -32,11 +32,37 @@ object Machine {
     /** What has already been answered, so the same phrase is never asked twice. */
     private val known = HashMap<String, String>()
 
+    /**
+     * How long any one step of this may take before the reader is told nothing came back.
+     *
+     * The engine is somebody else's and runs in another process; a call to it can simply never
+     * come back, and this one is made from a thread the panel is waiting on. Without a limit
+     * the panel sat at "…" for as long as it was open and every later question queued behind
+     * the one that hung.
+     */
+    const val PATIENCE_MS = 12_000L
+
+    /** How long a model may take to arrive the first time a pair is asked for. */
+    const val FETCH_MS = 60_000L
+
+    /** What went wrong last, for the state dump: an engine that answers nothing says nothing
+     *  about why, and the reader sees the same empty panel either way. */
+    @Volatile
+    var trouble: String? = null
+        private set
+
     /** Which language this was written in, or nothing when it is too short to tell. */
     suspend fun language(text: String, answerable: Set<String> = emptySet()): String? {
         if (text.isBlank()) return null
-        val listed = runCatching { names.identifyPossibleLanguages(text).await() }.getOrNull()
-            ?: return null
+        val listed = kotlinx.coroutines.withTimeoutOrNull(PATIENCE_MS) {
+            runCatching { names.identifyPossibleLanguages(text).await() }
+                .onFailure { trouble = "the language could not be identified: ${it.message}" }
+                .getOrNull()
+        }
+        if (listed == null) {
+            trouble = "the language was not identified within ${PATIENCE_MS}ms"
+            return null
+        }
         val guesses = listed.mapNotNull { guess ->
             guess.languageTag.takeIf { it != "und" }?.substringBefore('-')
         }
@@ -57,13 +83,20 @@ object Machine {
         val asked = text.trim()
         if (asked.isEmpty() || from.isEmpty() || to.isEmpty() || from == to) return null
         known["$from>$to>$asked"]?.let { return it }
-        val engine = engineFor(from, to) ?: return null
-        return runCatching {
-            engine.downloadModelIfNeeded().await()
-            engine.translate(asked).await()
-        }.onFailure {
-            android.util.Log.w("Phonetix", "the machine could not answer $from>$to", it)
-        }.getOrNull()
+        val engine = engineFor(from, to)
+        if (engine == null) {
+            trouble = "this machine has no $from to $to"
+            return null
+        }
+        return kotlinx.coroutines.withTimeoutOrNull(FETCH_MS) {
+            runCatching {
+                engine.downloadModelIfNeeded().await()
+                kotlinx.coroutines.withTimeoutOrNull(PATIENCE_MS) { engine.translate(asked).await() }
+            }.onFailure {
+                trouble = "$from>$to: ${it.message}"
+                android.util.Log.w("Phonetix", "the machine could not answer $from>$to", it)
+            }.getOrNull()
+        }.also { if (it == null && trouble == null) trouble = "$from>$to took too long" }
             ?.takeIf { !it.equals(asked, ignoreCase = true) }
             ?.also { known["$from>$to>$asked"] = it }
     }

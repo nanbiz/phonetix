@@ -119,7 +119,6 @@ object Wording {
         "start-pack" to "Get a dictionary for the language you are reading",
         "start-permission" to "Let it read the screen, and draw over it",
         "start-target" to "Choose the language you read into",
-        "tagline" to "What the words you read mean, and how they are said",
         "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched. Turn this on to open a word's card by holding it.",
         "touch-on" to "Hold a transcription to open its card. While this is on, a swipe that starts on a transcription will not scroll the page.",
         "use-this" to "Use this",
