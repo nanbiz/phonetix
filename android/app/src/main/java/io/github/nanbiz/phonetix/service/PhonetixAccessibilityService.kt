@@ -2100,11 +2100,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * the same line with fewer pixels of it.
      */
     private fun colorRect(p: Planned): RectF {
-        val at = p.measuredAt
-        if (at != null) {
-            val r = android.graphics.Rect(at)
-            if (r.intersect(p.clip) && r.width() > 2 && r.height() > 2) return RectF(r)
-        }
+        // The band the words themselves stand in, not the whole row they came from.
+        //
+        // A row is taller than its text and in a real app holds more than one thing - a name,
+        // a timestamp, an avatar - each its own colour. The ink is taken as the colours
+        // furthest from the surface, so a brighter neighbour inside the same row wins against
+        // the text being replaced: on a page of white lines with one amber line among them,
+        // the amber line came back white and every word of it was drawn in a colour it never
+        // had. Reading the words' own band leaves nothing in the sample but them and what
+        // they stand on.
         val first = p.boxes.first().rect
         var left = first.left
         var right = first.right
@@ -2114,8 +2118,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             left = minOf(left, b.rect.left); right = maxOf(right, b.rect.right)
             top = minOf(top, b.rect.top); bottom = maxOf(bottom, b.rect.bottom)
         }
+        // Wider than the words, for enough of the surface to outweigh the letters, and a
+        // little taller for the parts of a glyph that sit outside the reported box.
         val grow = (bottom - top)
-        return RectF(left - grow, top, right + grow, bottom)
+        return RectF(left - grow, top - grow * 0.15f, right + grow, bottom + grow * 0.15f)
     }
 
     /**

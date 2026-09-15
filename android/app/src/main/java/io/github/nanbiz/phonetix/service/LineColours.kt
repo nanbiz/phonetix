@@ -31,6 +31,10 @@ class LineColours(
 
     private val lines = HashMap<String, WordColors>(64)
 
+    /** When each line's colours were read, so a reading that went wrong does not stand for
+     *  the life of the screen: see [STALE_MS]. */
+    private val readAt = HashMap<String, Long>(64)
+
     /** How often a line has been looked for without being read, and when it was last
      *  tried, so the overlay steps aside a bounded number of times for a line it cannot
      *  resolve - and so a screen that failed while the device was busy is tried again later
@@ -118,6 +122,15 @@ class LineColours(
     fun wanted(text: String, now: Long = SystemClock.uptimeMillis()): Boolean {
         val k = key(text)
         val tried = tries[k]
+        // A colour already read is read again once it is old enough.
+        //
+        // What is read can be wrong: a frame taken before our own paint had left the display
+        // gives our ink back as the app's, and kept for ever that one bad reading is what
+        // every word of that line is drawn in for as long as the reader stays on the screen -
+        // there was no way back from it. Re-reading costs a capture at most every few
+        // seconds, and the words keep the colours they have until the new ones arrive, so
+        // nothing flickers while it happens.
+        if (k in lines && now - (readAt[k] ?: 0L) > STALE_MS) return true
         return k !in lines && (
             tried == null || tried.count < COLOR_TRIES || tried.blind < BLIND_TRIES ||
                 now - tried.at > COLOR_RETRY_MS
@@ -283,7 +296,10 @@ class LineColours(
                 var read = 0
                 for ((k, rect) in asked) {
                     countAttempt(k, sawFrame = true)
-                    if (k in lines) continue
+                    // Held colours are skipped, except where they are old enough to be worth
+                    // reading again - which is how a bad reading is undone.
+                    val now = SystemClock.uptimeMillis()
+                    if (k in lines && now - (readAt[k] ?: 0L) <= STALE_MS) continue
                     val c = sampler.sampleRegion(rect)
                     if (c == null) {
                         // Its text could not be told from what it is written on, but what it
@@ -301,6 +317,7 @@ class LineColours(
                         continue
                     }
                     lines[k] = c
+                    readAt[k] = SystemClock.uptimeMillis()
                     read++
                 }
                 // Whatever could not be read still has to be covered by something, and the
@@ -382,6 +399,9 @@ class LineColours(
          * nothing to wait: a colour read is throttled to one every second and a half anyway.
          */
         const val SETTLE_MS = 160L
+        /** How old a line's colours may be before they are read again. */
+        const val STALE_MS = 20_000L
+
         /** How many apps' colours are kept, so switching between two is not a fresh read. */
         const val REMEMBERED_APPS = 4
     }
