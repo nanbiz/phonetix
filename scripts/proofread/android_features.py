@@ -579,6 +579,13 @@ def check_language(r, dev):
         # remove, this found no line and reported a German page read in English while the app
         # was reading it in German.
         for _ in range(12):
+            # Only a reading of the German page counts. The page is asked for and does not
+            # always come forward at once on a loaded device, and the words drawn meanwhile
+            # are the last page's - which is an English reading of an English page, reported
+            # as a German page read in English.
+            if "source=de" not in dev.lines("READING source=de"):
+                time.sleep(1)
+                continue
             for line in reversed(dev.lines("DRAWN ").splitlines()):
                 if "DRAWN " not in line:
                     continue
@@ -610,6 +617,13 @@ def check_language(r, dev):
     # ich-Laut, and the front rounded vowels. One of them is enough to say which voice read
     # the page, and looking for a set rather than for one word does not depend on which words
     # the bar happened to draw.
+    # Whether the page ever came forward at all. Without this the check reports a German page
+    # read in English when what it actually read was the English page that was still up.
+    r.check(
+        "source=de" in dev.lines("READING source=de"),
+        "language: the German page came forward to be read",
+        "nothing read a page in German, so what was measured is the page before it",
+    )
     GERMAN_ONLY = ("x", "ç", "yː", "ʏ", "øː", "œ")
     marked = {word: ipa for word, ipa in said.items()
               if any(sound in ipa for sound in GERMAN_ONLY)}
