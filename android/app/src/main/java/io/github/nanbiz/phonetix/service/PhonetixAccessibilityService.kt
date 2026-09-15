@@ -2120,8 +2120,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         // Wider than the words, for enough of the surface to outweigh the letters, and a
         // little taller for the parts of a glyph that sit outside the reported box.
+        // Half a line above and below as well: the parts of a glyph that fall outside the
+        // reported box, and enough of what the line stands on to be told from the letters at
+        // all. Too tight a band and a line whose text cannot be separated from its surface
+        // has nothing to fall back on either, and its words are drawn in a palette of ours on
+        // a page that is not that colour.
         val grow = (bottom - top)
-        return RectF(left - grow, top - grow * 0.15f, right + grow, bottom + grow * 0.15f)
+        return RectF(left - grow, top - grow * 0.5f, right + grow, bottom + grow * 0.5f)
     }
 
     /**
