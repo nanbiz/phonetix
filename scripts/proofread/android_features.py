@@ -661,7 +661,14 @@ def check_shade(r, dev):
     events are dropped as a bystander's before anything is looked at.
     """
     reset(dev)
-    boxes, _ = show(dev, mode="unique", density=3, scrollTo=200, settle=4)
+    # Asked for again where the first read has not landed. A read of the tree takes a moment
+    # on a machine with nothing to spare and seconds on one that is loaded, and a check that
+    # gives up after one settle reports an app drawing nothing while it is still drawing.
+    boxes = {}
+    for _ in range(4):
+        boxes, _ = show(dev, mode="unique", density=3, scrollTo=200, settle=4)
+        if boxes:
+            break
     if not r.check(bool(boxes), "the shade: there is something to cover", "nothing transcribed"):
         return
     try:
