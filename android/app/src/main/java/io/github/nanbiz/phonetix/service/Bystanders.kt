@@ -21,7 +21,18 @@ import android.view.inputmethod.InputMethodManager
 class Bystanders(private val context: Context) {
 
     @Volatile private var packages: Set<String> = emptySet()
+
+    /** The keyboards among them, which cover the app being read rather than replacing it. */
+    @Volatile private var typing: Set<String> = emptySet()
     @Volatile private var lookedUpAt = 0L
+
+    /** Whether this is a keyboard: the app behind one is still the app the reader is reading. */
+    fun isKeyboard(pkg: String?): Boolean {
+        if (pkg == null) return false
+        val now = SystemClock.uptimeMillis()
+        if (now - lookedUpAt > REFRESH_MS) refresh()
+        return pkg in typing
+    }
 
     fun contains(pkg: String?): Boolean {
         if (pkg == null) return false
@@ -59,10 +70,15 @@ class Bystanders(private val context: Context) {
                 null
             }
         }.getOrNull()?.let { found.add(it) }
+        val keyboards = HashSet<String>(4)
         runCatching {
             val imm = context.getSystemService(InputMethodManager::class.java)
-            imm?.enabledInputMethodList?.forEach { found.add(it.packageName) }
+            imm?.enabledInputMethodList?.forEach {
+                found.add(it.packageName)
+                keyboards.add(it.packageName)
+            }
         }
+        typing = keyboards
         packages = found
     }
 

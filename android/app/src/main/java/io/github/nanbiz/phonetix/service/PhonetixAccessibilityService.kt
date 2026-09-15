@@ -885,7 +885,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             settings.density == plannedDensity && !overdue &&
             SettingsStore.allows(cachedPackage) && !bystanders.contains(cachedPackage) &&
             Dictionary.ready
-        val root = if (followOnly) null else {
+        var root = if (followOnly) null else {
             val askedRoot = android.os.SystemClock.uptimeMillis()
             val fetched = rootInActiveWindow ?: run {
                 if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "NOROOT")
@@ -897,6 +897,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.util.Log.d("Phonetix", "ROOT took ${rootMs}ms")
             }
             fetched
+        }
+        // A window that covers part of the screen does not replace it.
+        //
+        // A keyboard, the status bar, a heads-up notification: each of them can be the active
+        // window while the reader goes on reading the app underneath. Treated as "something
+        // else is in front", every transcription came down and the mark was put away, and
+        // nothing read that app again - it had not changed, so it announced nothing. A reader
+        // who typed a message and then went to ask about a word found nothing under the
+        // circle. The shade and the launcher do replace the screen, and those still count.
+        val front = root?.packageName?.toString()
+        if (root != null && bystanders.contains(front) && !coversTheScreen()) {
+            behindTheSystem()?.let { root = it }
         }
         val inFront = root?.packageName?.toString()
         if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
@@ -2931,6 +2943,43 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         blockers = found
     }
+
+    /**
+     * Whether what is in front takes the whole screen.
+     *
+     * The shade and the recents screen do, and over those there is nothing of the app to
+     * read. A keyboard, the status bar and a notification that drops in do not, and the app
+     * behind them is still what the reader is reading.
+     */
+    private fun coversTheScreen(): Boolean = runCatching {
+        val screen = resources.displayMetrics
+        val active = windows.firstOrNull { it.isActive } ?: return@runCatching true
+        val r = android.graphics.Rect()
+        active.getBoundsInScreen(r)
+        r.height() >= screen.heightPixels * 0.7f && r.width() >= screen.widthPixels * 0.9f
+    }.getOrDefault(true)
+
+    /**
+     * The app a system window is standing over, so it can be read while that window is up.
+     *
+     * The window list rather than the active window: while a keyboard has focus the active
+     * window is the keyboard's, and the app the reader is reading is the topmost application
+     * window under it.
+     */
+    private fun behindTheSystem(): android.view.accessibility.AccessibilityNodeInfo? =
+        runCatching {
+            windows
+                .filter {
+                    it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION
+                }
+                .sortedByDescending { it.layer }
+                .firstNotNullOfOrNull { w ->
+                    w.root?.takeIf { node ->
+                        val pkg = node.packageName?.toString()
+                        SettingsStore.allows(pkg) && !bystanders.contains(pkg)
+                    }
+                }
+        }.getOrNull()
 
     /** Whether a window is one of ours, which nothing of ours is hidden by. */
     private fun ours(w: android.view.accessibility.AccessibilityWindowInfo): Boolean =
