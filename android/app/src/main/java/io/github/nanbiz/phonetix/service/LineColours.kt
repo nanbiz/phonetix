@@ -371,9 +371,17 @@ class LineColours(
         const val COLOR_RETRY_MS = 8000L
         /** After this a capture is treated as lost rather than still on its way. */
         const val CAPTURE_TIMEOUT_MS = 2500L
-        /** How long after the overlay comes down before a frame is free of it: what was
-         *  drawn is still on the display for a frame or two after the window has gone. */
-        const val SETTLE_MS = 48L
+        /**
+         * How long after the overlay comes down before a frame is free of it.
+         *
+         * What was drawn is still on the display for a frame or two after the window has
+         * gone, and on a device with nothing to spare that is longer than three frames at
+         * sixty. Read too early, what comes back is our own paint: the green line of the
+         * colour fixture was read as near-white - the ink of the transcriptions lying over it
+         * - and every word on it was then drawn in a colour the page never used. It costs
+         * nothing to wait: a colour read is throttled to one every second and a half anyway.
+         */
+        const val SETTLE_MS = 160L
         /** How many apps' colours are kept, so switching between two is not a fresh read. */
         const val REMEMBERED_APPS = 4
     }
