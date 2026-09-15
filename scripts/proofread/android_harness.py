@@ -128,13 +128,26 @@ class Device:
         # moment - two pages in one log, and a timeline that runs backwards.
         for _ in range(10):
             if "DebugSurfaceActivity" in self.top_activity():
-                return
+                return self._became(mode)
             time.sleep(0.3)
         shell(*(args + ["--activity-clear-task", "--activity-new-task"]))
         for _ in range(10):
             if "DebugSurfaceActivity" in self.top_activity():
-                return
+                return self._became(mode)
             time.sleep(0.3)
+
+    def _became(self, mode, seconds=20):
+        """Wait for the page to say which mode it is in.
+
+        The activity is the same one in every mode and rebuilds itself when the mode changes,
+        so the name of what is in front says nothing about which page it is. A check that went
+        on without waiting measured the page before it - and on a loaded device, where the
+        rebuild takes seconds, asking again each time only made the rebuilding worse.
+        """
+        for _ in range(int(seconds * 2)):
+            if f"mode={mode} " in self.lines(f"SETTINGS "):
+                return
+            time.sleep(0.5)
 
     def top_activity(self):
         """Which activity the device says the reader is actually looking at."""

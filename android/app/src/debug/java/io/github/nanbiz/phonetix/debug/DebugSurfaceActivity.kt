@@ -661,7 +661,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private fun announce() {
         val s = io.github.nanbiz.phonetix.core.SettingsStore.current
-        Log.d(TAG, "SETTINGS ${SystemClock.uptimeMillis()} enabled=${s.enabled} " +
+        // Which page this is, as well as what it was told. A check that asks for one page and
+        // measures whatever is on screen measures the page before it when this one has not
+        // come forward yet, and reports the app doing the wrong thing to the wrong text.
+        Log.d(TAG, "SETTINGS ${SystemClock.uptimeMillis()} mode=$mode enabled=${s.enabled} " +
             "density=${s.density} allApps=${s.allApps}")
     }
 

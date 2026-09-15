@@ -71,7 +71,10 @@ def show(dev, settle=2.5, **extras):
         log = dev.log()
         # The surface says when it applied the setting. Only a reading taken after that
         # describes the setting under test; anything earlier describes the previous one.
-        applied = [int(m) for m in re.findall(r"SETTINGS (\d+) ", log)]
+        # And this page, not the one before it: the surface says which it is, and a page that
+        # has been asked for does not always come forward at once on a loaded device.
+        applied = [int(m) for m, said in re.findall(r"SETTINGS (\d+) mode=(\S+)", log)
+                   if said == mode]
         if not applied:
             continue
         after = [(t, b) for t, b in dev.box_frames(log) if t >= applied[-1]]
@@ -567,6 +570,7 @@ def check_language(r, dev):
     # starts a moment after the first screen and fills on the pass after that.
     german, german_log = {}, ""
     said = {}
+    read_in_german = False
     for _ in range(4):
         german, german_log = show(dev, mode="german", density=1, scrollTo=0, settle=4)
         # What was written over each word, taken while the German page is the last thing
@@ -586,6 +590,9 @@ def check_language(r, dev):
             if "source=de" not in dev.lines("READING source=de"):
                 time.sleep(1)
                 continue
+            # Noted while the German page is the last thing read: the English page below
+            # clears the log, and asking afterwards asks about the wrong page.
+            read_in_german = True
             for line in reversed(dev.lines("DRAWN ").splitlines()):
                 if "DRAWN " not in line:
                     continue
@@ -620,7 +627,7 @@ def check_language(r, dev):
     # Whether the page ever came forward at all. Without this the check reports a German page
     # read in English when what it actually read was the English page that was still up.
     r.check(
-        "source=de" in dev.lines("READING source=de"),
+        read_in_german,
         "language: the German page came forward to be read",
         "nothing read a page in German, so what was measured is the page before it",
     )
