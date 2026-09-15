@@ -288,23 +288,21 @@ class TooltipController(
             width = (metrics.widthPixels * 0.88f).roundToInt()
             height = WindowManager.LayoutParams.WRAP_CONTENT
             x = ((metrics.widthPixels - width) / 2f).roundToInt()
-            // Below the word to start with; where it really ends up is settled once the
-            // card has been measured, since how tall it is depends on how many symbols the
-            // word has.
-            y = (box.rect.bottom + dp(10)).roundToInt()
+            // Where it will stay, as nearly as can be known before it has been measured.
+            //
+            // How tall it is depends on how many symbols the word has, and that is only known
+            // once it has been laid out - so this uses the height of the card before it,
+            // which is within a line or two of the next one. Placed below the word and moved
+            // above a frame later, the reader saw it appear under the word and jump over the
+            // circle; held invisible until placed, they saw nothing at all while the circle
+            // was moving, because each card was torn down for the next word before the frame
+            // that would have shown it, and one finally appeared as the finger lifted.
+            y = wouldBeAt(box, lastHeight)
         }
         card.setOnTouchListener { _, e ->
             if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hide()
             false
         }
-        // Not shown until it has been put where it belongs.
-        //
-        // Where it belongs depends on how tall it is, and how tall it is is only known once it
-        // has been laid out - so it is added below the word and moved above it a frame later
-        // whenever the hand is in the way. Added visible, that is what the reader sees: the
-        // card appears under the word and jumps over the circle. Invisible until placed, they
-        // see it once, where it stays.
-        card.visibility = View.INVISIBLE
         runCatching { wm.addView(card, lp) }
             .onSuccess {
                 view = card
@@ -338,10 +336,30 @@ class TooltipController(
 
     private fun density(): Float = context.resources.displayMetrics.density
 
+    /** How tall the last card was, as the guess for where the next one goes. */
+    private var lastHeight = 0
+
+    /** Where a card of this height belongs, which is the rule [place] settles by. */
+    private fun wouldBeAt(box: WordBox, height: Int): Int {
+        val metrics = context.resources.displayMetrics
+        val margin = dp(8).roundToInt()
+        val below = (box.rect.bottom + dp(10)).roundToInt()
+        if (height <= 0) return below
+        val above = (box.rect.top - dp(10)).roundToInt() - height
+        val handInTheWay = hand > 0 && below + height > hand - dp(24)
+        val lowest = (metrics.heightPixels - height - margin).coerceAtLeast(margin)
+        return when {
+            !handInTheWay && below <= lowest -> below
+            above >= margin -> above
+            else -> below.coerceIn(margin, lowest)
+        }
+    }
+
     private fun place(card: View, lp: WindowManager.LayoutParams, box: WordBox) {
         val metrics = context.resources.displayMetrics
         val margin = dp(8).roundToInt()
         val height = card.height
+        if (height > 0) lastHeight = height
         val below = (box.rect.bottom + dp(10)).roundToInt()
         val above = (box.rect.top - dp(10)).roundToInt() - height
         // A hand on the screen is a hand over everything under the word it is pointing at.
@@ -373,13 +391,9 @@ class TooltipController(
                     "shown=${card.visibility == View.VISIBLE}",
             )
         }
-        if (y == lp.y) {
-            card.visibility = View.VISIBLE
-            return
-        }
+        if (y == lp.y) return
         lp.y = y
         runCatching { wm.updateViewLayout(card, lp) }
-        card.visibility = View.VISIBLE
     }
 
     /** Every piece of text the card put on screen, with where it ended up. */

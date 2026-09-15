@@ -760,6 +760,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 scrollOnly = cachedPlan.isNotEmpty()
                 replaceNow = scrollOnly
                 runCatching { scan() }
+                // And a proper read of the tree afterwards.
+                //
+                // The pass above only puts the words back where the lines already in hand say
+                // they are, and is deliberately not allowed to become a full read. Nothing
+                // asked for one after it, so on a screen that keeps announcing changes - a
+                // conversation with an answer arriving in it - the loop restarted on every
+                // announcement and the tree went unwalked: on the reader's phone, ten lines
+                // known and three of them still alive, on a screen full of new text, with
+                // nothing for the mark to ask about. This stands down if anything else reads
+                // in the meantime.
+                readAgainSoon(FULL_READ_MS)
                 return
             }
             runCatching { scan() }
@@ -908,9 +919,31 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // circle. The shade and the launcher do replace the screen, and those still count.
         val front = root?.packageName?.toString()
         if (root != null && bystanders.contains(front) && !coversTheScreen()) {
-            behindTheSystem()?.let { root = it }
+            behindTheSystem()?.let {
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "BEHIND $front -> ${it.packageName} (${it.childCount} children)",
+                    )
+                }
+                root = it
+            }
         }
         val inFront = root?.packageName?.toString()
+        // Said only when the window in front is not the one being read, which is the case
+        // worth explaining: the rest of the time it is one line per pass and drowns the log.
+        if (BuildConfig.DEBUG && front != inFront) {
+            android.util.Log.d(
+                "Phonetix",
+                "WINDOW front=$front read=$inFront windows=" + runCatching {
+                    windows.joinToString(",") { w ->
+                        val r = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+                        "${w.type}/${w.layer}@${r.top}..${r.bottom}" +
+                            (if (w.isActive) "*" else "")
+                    }
+                }.getOrDefault("?"),
+            )
+        }
         if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
             main.post {
                 overlay.hideNow()
@@ -968,7 +1001,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val reuse = followOnly || (scrollOnly && pkg != null && pkg == cachedPackage &&
             cachedPlan.isNotEmpty() && settings.density == plannedDensity && !overdue)
         val planned: List<Planned>
-        val budget = Budget()
+        // Room for more words where none of them is drawn: the cost of a word kept is the
+        // core's answer and a rectangle, and what a pass really spends is the asking of each
+        // line for its character positions. A reader who has turned replacing off has only
+        // the mark to ask with, and it can only ask about words this pass kept.
+        val budget = Budget(
+            words = if (settings.layer == "off") MAX_WORDS_SILENT else MAX_WORDS,
+        )
         val stats = Stats()
         if (reuse) {
             planned = cachedPlan
@@ -2464,7 +2503,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // covers, so "both" is one line: what it means, then how to say that. Where the
             // language read into has no dictionary here there is no sound to give for the
             // meaning, and the chip carries the meaning alone.
-            if (!token.inline) continue
+            // Which words are kept.
+            //
+            // Ordinarily the ones the core says are worth replacing: the bar decides how many
+            // and the mode decides which, and a word that is not replaced is not there to be
+            // asked about either. With nothing being replaced that rule has nothing left to
+            // stand on - the mark is the only way to ask, and the reader means to ask about
+            // whatever they point at, not about the handful a bar would have drawn. So every
+            // word the core read is kept, and none of them is painted.
+            if (!silent && !token.inline) continue
             val shown = when (settings.layer) {
                 "sound" -> token.ipa
                 "both" -> listOf(token.gloss, token.glossIpa).filter { it.isNotEmpty() }
@@ -3339,6 +3386,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60
+
+        /** And with nothing drawn, where every word is one the mark may be asked about. */
+        const val MAX_WORDS_SILENT = 240
         const val MAX_TEXT = 2000
     }
 }

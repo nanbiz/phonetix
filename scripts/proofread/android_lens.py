@@ -20,10 +20,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from android_harness import Device, shell
 
 
+def repark(dev):
+    """Put the mark back where it parks by itself, halfway down the right edge.
+
+    It stays where a drag last left it, and a drag can leave it in the status bar - where the
+    system takes the touch and pulls the notification shade rather than the mark, so the next
+    run reports a mark that takes no touches. Where it rests lives in the service and nowhere
+    else, so the service has to go; stopping the app switches accessibility off, which is why
+    it is turned on again straight afterwards.
+    """
+    shell("cmd", "statusbar", "collapse")
+    shell("am", "force-stop", "io.github.nanbiz.phonetix")
+    time.sleep(2)
+    return dev.enable_service()
+
+
 def main():
     dev = Device()
     if not dev.enable_service():
         raise SystemExit("the service would not start")
+    if not repark(dev):
+        raise SystemExit("the service would not start again after being re-parked")
     dev.set_enabled(True)
     failures = []
 
@@ -52,9 +69,19 @@ def main():
         sys.exit(1)
     x, y, w, h = (int(v) for v in where[-1])
     parked = (x + w // 2, y + h // 2)
-    word = list(boxes.values())[0]
+    # A word in the middle of the screen, not the first one on it. The circle rides a couple
+    # of hundred pixels above the finger so it can be seen, so a word near the top of the
+    # screen is one the circle passes over while it is off the top edge - and the drag reports
+    # nothing, which reads as a mark that takes no touches.
+    middle = sorted(boxes.values(), key=lambda b: b["rect"][1])
+    word = middle[len(middle) // 2]
     left, top, right, bottom = word["rect"]
-    onto = ((left + right) // 2, (top + bottom) // 2)
+    # Where the finger has to end for the circle to be on that word. The circle is carried
+    # clear above the hand so the word can be seen, so a drag that puts the *finger* on the
+    # word leaves the circle a couple of hundred pixels above it, over nothing - which reads
+    # as a lens that passes over no words at all.
+    lift = int(dev.height * 0.09)
+    onto = ((left + right) // 2, (top + bottom) // 2 + lift)
 
     # What the page was told to do, read before the log is cleared: the surface says it once,
     # when it is launched.
@@ -63,7 +90,11 @@ def main():
     # line naming every box on screen several times a second, and reading only the tail of the
     # log meant the drag had already been pushed out of it by the time it was read.
     dev.clear_log()
-    shell("input", "swipe", str(parked[0]), str(parked[1]), str(onto[0]), str(onto[1]), "900")
+    # Slow enough that the circle keeps up. It is carried on a leash and asks what it is over
+    # on every other frame, so on a machine drawing at a tenth of its frame rate a quick drag
+    # is over before the circle has caught the finger: two samples in nine hundred
+    # milliseconds, both of them between the words.
+    shell("input", "swipe", str(parked[0]), str(parked[1]), str(onto[0]), str(onto[1]), "2500")
     time.sleep(3)
 
     # Asked of the device, line by line: the overlay writes one long line naming every box on

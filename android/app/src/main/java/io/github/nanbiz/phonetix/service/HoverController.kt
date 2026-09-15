@@ -285,6 +285,9 @@ class HoverController(
         // times a second, and on one whose content keeps changing - a chat, a feed - the box
         // under a still finger arrives a pixel from where it was. Compared exactly, every one
         // of those was a new word: a tick under the thumb and a card built again, without end.
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "LENSAT $x,$y -> ${found?.word ?: "nothing"}")
+        }
         val was = hovered
         val same = found?.word == was?.word &&
             (found == null || was == null || RectF.intersects(found.rect, was.rect))
@@ -315,9 +318,6 @@ class HoverController(
                         it.rect.right.toInt(), it.rect.bottom.toInt())
                 })
             }
-        }
-        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-            android.util.Log.d("Phonetix", "LENSAT $x,$y -> ${found?.word ?: "nothing"}")
         }
         // A sweep is one question, asked when it ends. Opening a card for each word along the
         // way would answer the wrong thing and put a card over the words still to be swept.
