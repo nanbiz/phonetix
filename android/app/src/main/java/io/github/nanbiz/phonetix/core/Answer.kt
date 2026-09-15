@@ -80,18 +80,15 @@ data class Answer(
 
     /** The sense that applies, which the card leads with.
      *
-     *  The word itself where there is no sense at all. The spelling is kept off the headline
-     *  because the answer takes that place and the page is already showing the word; with no
-     *  answer there is nothing else to lead with, and a headless card is worse than a repeated
-     *  word. */
+     *  Never the word itself. The row above the card already names it and the transcription
+     *  under it is the same word again, so leading with the spelling showed a reader the same
+     *  word three times over; a card with no sense to lead with leads with nothing. */
     val headline: String?
-        get() = says.firstOrNull()
-            ?: glosses.firstOrNull()
-            ?: spelling.takeIf { it.isNotBlank() && ipa.isNotEmpty() }
+        get() = says.firstOrNull() ?: glosses.firstOrNull()
 
     /** Whether anything was found at all, which decides between a card and a message. */
     val found: Boolean
-        get() = headline != null || ipa.isNotEmpty()
+        get() = headline != null || ipa.isNotEmpty() || spelling.isNotBlank()
 
     companion object {
         /**

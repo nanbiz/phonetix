@@ -297,6 +297,14 @@ class TooltipController(
             if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hide()
             false
         }
+        // Not shown until it has been put where it belongs.
+        //
+        // Where it belongs depends on how tall it is, and how tall it is is only known once it
+        // has been laid out - so it is added below the word and moved above it a frame later
+        // whenever the hand is in the way. Added visible, that is what the reader sees: the
+        // card appears under the word and jumps over the circle. Invisible until placed, they
+        // see it once, where it stays.
+        card.visibility = View.INVISIBLE
         runCatching { wm.addView(card, lp) }
             .onSuccess {
                 view = card
@@ -352,9 +360,26 @@ class TooltipController(
         }
         // Above the word means the arrow is on the card's underside, pointing down at it.
         pointsDown?.value = y + height <= box.rect.top
-        if (y == lp.y) return
+        val why = when {
+            y == below -> "below"
+            y == above -> "above"
+            else -> "pushed back on screen"
+        }
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "CARDAT ${box.word} y=$y ($why) from=${lp.y} height=$height " +
+                    "word=${box.rect.top.toInt()}..${box.rect.bottom.toInt()} hand=$hand " +
+                    "shown=${card.visibility == View.VISIBLE}",
+            )
+        }
+        if (y == lp.y) {
+            card.visibility = View.VISIBLE
+            return
+        }
         lp.y = y
         runCatching { wm.updateViewLayout(card, lp) }
+        card.visibility = View.VISIBLE
     }
 
     /** Every piece of text the card put on screen, with where it ended up. */

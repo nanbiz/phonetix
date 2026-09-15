@@ -120,7 +120,7 @@ fun AnswerCard(
                 return@Column
             }
             if (answer.readings.size < 2) {
-                Headline(answer, palette, report)
+                if (!answer.headline.isNullOrBlank()) Headline(answer, palette, report)
             } else {
                 // Nothing leads: the reader is choosing between the readings below, and a headline
                 // would be the card choosing for them.
@@ -560,7 +560,12 @@ private fun Modifier.underlined(colour: Color?): Modifier =
 /** Where a word's own page is, which is the same URL the extension builds. */
 internal fun wiktionary(answer: Answer): String {
     val word = answer.lemma ?: answer.spelling
-    return "https://en.wiktionary.org/wiki/" + java.net.URLEncoder.encode(word, "UTF-8")
+    val page = "https://en.wiktionary.org/wiki/" + java.net.URLEncoder.encode(word, "UTF-8")
+    // At the section for the language it is being read as: a spelling like "stops" is an entry
+    // in four languages, every section arriving collapsed, and the page alone leaves the reader
+    // to work out which of them they were reading. Wiktionary names its sections in English.
+    val language = io.github.nanbiz.phonetix.core.Languages.english(answer.source)
+    return if (answer.source.isBlank()) page else "$page#" + java.net.URLEncoder.encode(language, "UTF-8")
 }
 
 @Composable

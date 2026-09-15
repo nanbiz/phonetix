@@ -28,7 +28,9 @@ WANT = {
     "guess": {"headline": "Regenschauer", "badges": ["guess"], "symbols": 10},
     "anchored": {"headline": "way, route", "badges": ["in English"]},
     "senses": {"headline": "Punkt", "others": ["dot", "stitch"], "more": "1 more sense"},
-    "ipa-only": {"headline": "perro", "foot": "", "symbols": 6},
+    # Nothing leads a card that knows only how the word is said. The word is on the row above
+    # and its transcription is under it, so a headline here is the same word three times.
+    "ipa-only": {"headline": "", "foot": "", "symbols": 6},
     "no-pack": {"note": "No dictionary for Spanish yet"},
     "none": {"note": "Nothing found for perro"},
 }

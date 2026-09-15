@@ -222,7 +222,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
             wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
             onScreen = { overlay.onScreen() },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
-            onHand = { y -> tooltip.clearOf(y) },
+            onHand = { y ->
+                tooltip.clearOf(y)
+                // While the mark is being dragged, the words under it must be where the app
+                // has them now. A screen that moves without scrolling - a message being
+                // written into a conversation, a list growing - announces nothing this service
+                // acts on, so between reads the boxes drift behind the text: the reader points
+                // at one word and is answered about the word that used to be there. Reading is
+                // not free, so it is done at most this often, and only while a finger is down.
+                // Asked for rather than scheduled: scheduling cancels whatever the worker
+                // was about to do, and a finger moves thirty times a second, so every read
+                // was cancelled by the next move before it could run - one read in six
+                // seconds of dragging. This stands in the queue and stands down if anything
+                // else reads first.
+                //
+                // A read of the tree rather than a follow: a follow carries the boxes by how
+                // far each line says it has moved, and a screen that grows without scrolling
+                // says nothing at all.
+                readWhileDragging()
+            },
             // Held and let go where it started: the word the reader is looking for, rather
             // than one somebody else wrote. The app opens on the screen that asks for it.
             onHold = { main.post { openSay() } },
@@ -779,8 +797,34 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }, delay)
     }
 
+    /**
+     * Read the tree again while the mark is being dragged over it.
+     *
+     * Neither of the other two ways would do it. Scheduling cancels whatever the worker was
+     * about to do, and a finger moves thirty times a second, so every read was cancelled by
+     * the next move before it could run. Asking to read again soon stands down while the
+     * follow loop is going, and that loop carries boxes by how far each line reports it has
+     * moved - which a screen that grows without scrolling never reports, so the boxes drift
+     * behind the text and the reader is answered about the word that used to be there.
+     */
+    private fun readWhileDragging() {
+        if (!::worker.isInitialized || dragReadQueued) return
+        dragReadQueued = true
+        worker.postDelayed({
+            dragReadQueued = false
+            following = false
+            scrollOnly = false
+            runCatching { scan() }
+        }, WHILE_DRAGGING_MS)
+    }
+
+    /** Whether a read for the drag is already waiting its turn. */
+    private var dragReadQueued = false
+
     private fun schedule(minGap: Long, trailing: Boolean = false) {
         if (!::worker.isInitialized) return
+        // Everything the worker was going to do is about to be cleared, this among it.
+        dragReadQueued = false
         val mine = ++generation
         val now = android.os.SystemClock.uptimeMillis()
         if (BuildConfig.DEBUG && following) {
@@ -3001,6 +3045,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // The smallest gap between passes. Not a wait before acting: the first event after
         // a quiet moment runs immediately, and this only spaces out a flood.
         const val GAP_MS = 16L
+
+        /** How often the screen is read again while the mark is being dragged over it. */
+        const val WHILE_DRAGGING_MS = 150L
         // A scroll is followed rather than waited out, so this only spaces the passes to
         // about one a frame.
         const val GAP_SCROLL_MS = 16L

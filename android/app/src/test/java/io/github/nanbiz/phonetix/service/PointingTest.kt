@@ -1,0 +1,84 @@
+package io.github.nanbiz.phonetix.service
+
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+/**
+ * Which word the circle means, put as the geometry a reader actually produces: a message of
+ * wrapped lines, and a circle that lands between two of them as often as on one.
+ *
+ * The case this exists for is a card about a word the reader was not pointing at, which is
+ * what "the lens does not work" looks like from the outside.
+ */
+class PointingTest {
+
+    /** Two lines of a message bubble, as a chat lays them out: 63px tall, 72px apart. */
+    private val line1 = listOf(
+        Pointing.Box(60f, 500f, 190f, 563f),    // 0 "What"
+        Pointing.Box(200f, 500f, 260f, 563f),   // 1 "the"
+        Pointing.Box(270f, 500f, 700f, 563f),   // 2 "words you read" - a long one
+    )
+    private val line2 = listOf(
+        Pointing.Box(60f, 572f, 200f, 635f),    // 3 "mean"
+        Pointing.Box(210f, 572f, 280f, 635f),   // 4 "and"
+        Pointing.Box(290f, 572f, 380f, 635f),   // 5 "how"
+    )
+    private val bubble = line1 + line2
+
+    @Test
+    fun a_point_on_a_word_is_that_word() {
+        assertEquals(4, Pointing.nearest(bubble, 240f, 600f))
+    }
+
+    @Test
+    fun a_point_under_a_long_word_is_that_word_and_not_a_short_one_below() {
+        // Two pixels under "words you read" and directly beneath its middle, seven pixels
+        // above the line below. Measured from the middles of boxes, the short word on the
+        // line below won - which is a card about a word the reader is not pointing at, and
+        // what "the lens does not work" looks like from the outside.
+        assertEquals(2, Pointing.nearest(bubble, 270f, 565f))
+    }
+
+    @Test
+    fun a_point_over_a_word_is_that_word_and_not_its_neighbour() {
+        // Above "What", inside its width. The neighbour's middle used to be nearer.
+        assertEquals(0, Pointing.nearest(bubble, 180f, 469f))
+    }
+
+    @Test
+    fun a_point_under_a_word_is_that_word_and_not_its_neighbour() {
+        // Two pixels under "mean", inside its width, with "and" beside it.
+        assertEquals(3, Pointing.nearest(bubble, 190f, 637f))
+    }
+
+    @Test
+    fun a_point_just_under_a_line_stays_on_that_line() {
+        // Ten pixels below "and": still that word, not the line below.
+        assertEquals(4, Pointing.nearest(bubble, 240f, 645f))
+    }
+
+    @Test
+    fun a_point_between_two_lines_takes_the_nearer_line() {
+        // In the gap, four pixels under line one and five above line two: line one.
+        assertEquals(1, Pointing.nearest(bubble, 230f, 567f))
+        // And the other way about.
+        assertEquals(4, Pointing.nearest(bubble, 230f, 570f))
+    }
+
+    @Test
+    fun a_point_a_line_away_is_no_word_at_all() {
+        // A whole line below the last line: the reader is pointing at nothing, and a card
+        // about the nearest word would be about a word they are not looking at.
+        assertEquals(-1, Pointing.nearest(bubble, 240f, 720f))
+    }
+
+    @Test
+    fun a_point_far_to_the_side_is_no_word_at_all() {
+        assertEquals(-1, Pointing.nearest(bubble, 900f, 600f))
+    }
+
+    @Test
+    fun nothing_on_screen_is_nothing_pointed_at() {
+        assertEquals(-1, Pointing.nearest(emptyList(), 100f, 100f))
+    }
+}

@@ -20,9 +20,17 @@ export function commonsAt(file: string, width: number): string {
   return `${commons(file)}?width=${width}`;
 }
 
-/** A word's own entry, which is where a reader who wants the whole thing goes. */
-export function wiktionary(word: string): string {
-  return `https://en.wiktionary.org/wiki/${encodeURIComponent(word)}`;
+/**
+ * A word's own entry, at the language it is being read as.
+ *
+ * The anchor matters: a spelling like "stops" is an entry in four languages, every section
+ * collapsed, and a link to the page alone leaves the reader to find which of them they were
+ * reading. Wiktionary names its sections in English - "Spanish", "German" - and opens the one
+ * the address points at.
+ */
+export function wiktionary(word: string, language = ''): string {
+  const page = `https://en.wiktionary.org/wiki/${encodeURIComponent(word)}`;
+  return language ? `${page}#${encodeURIComponent(language)}` : page;
 }
 
 /** What is known about one sound, on the article the symbol table names. */

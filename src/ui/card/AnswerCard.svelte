@@ -65,7 +65,9 @@
 
   /** Where a word's own page is: its dictionary form where there is one, since that is the
    *  entry, and the spelling on the page otherwise. */
-  const entry = (it: Answer) => wiktionary(it.lemma ?? it.spelling);
+  // At the section for the language it is being read as, since a spelling is an entry in
+  // several and they all arrive collapsed.
+  const entry = (it: Answer) => wiktionary(it.lemma ?? it.spelling, named(it.source));
 
   let lead = $derived(headlineOf(answer));
   let chooses = $derived(answer.readings.length >= 2);
@@ -169,7 +171,12 @@
                headline would be the card choosing for them. -->
           <span class="tr quiet">{answer.spelling} is more than one word</span>
         {:else}
-          <span class="tr">{lead ?? answer.spelling}</span>
+          <!-- What it means, where that is something other than the word itself. A word with
+               no translation to show used to repeat its own spelling here, under the spelling
+               in the row above and over the transcription below: the same word three times. -->
+          {#if lead && lead !== answer.spelling}
+            <span class="tr">{lead}</span>
+          {/if}
           <!-- Which kind of word it is, beside what it means rather than on a row of its own:
                alone on a line a single chip reads as a leftover. -->
           {#if answer.pos && !phrase}<span class="chip">{answer.pos}</span>{/if}

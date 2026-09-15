@@ -82,23 +82,17 @@ export function readingHeadline(reading: Reading): string | null {
   return reading.says[0] ?? reading.glosses[0] ?? null;
 }
 
-/**
- * The sense that applies, which the card leads with.
- *
- * The word itself where there is no sense at all. The spelling is kept off the headline
- * because the answer takes that place and the page is already showing the word.
- */
+/** The sense that applies, which the card leads with. */
 export function headline(answer: Answer): string | null {
-  return (
-    answer.says[0] ??
-    answer.glosses[0] ??
-    (answer.spelling.trim() !== '' && answer.ipa.length > 0 ? answer.spelling : null)
-  );
+  // The word itself is never the headline. The row above the card already names it and the
+  // transcription under it is the same word again, so leading with it showed the reader the
+  // same word three times over; a card with no sense to lead with leads with nothing.
+  return answer.says[0] ?? answer.glosses[0] ?? null;
 }
 
 /** Whether anything was found at all, which decides between a card and a message. */
 export function found(answer: Answer): boolean {
-  return headline(answer) !== null || answer.ipa.length > 0;
+  return headline(answer) !== null || answer.ipa.length > 0 || answer.spelling.trim() !== '';
 }
 
 /** What is known about a word when all that is known is how it is said. */
