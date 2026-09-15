@@ -138,7 +138,11 @@ def main():
     # accessibility service off, so the commonest reason for silence is that nobody has
     # turned it back on - which is worth saying rather than leaving as "no dump".
     bound = shell(serial, "dumpsys", "accessibility")
-    if "Phonetix transcriptions" not in bound.split("Bound services:", 1)[-1].split("\n", 1)[0]:
+    # The whole of the bound list, not its first line: a device with several services bound -
+    # a password manager, another reader - lists one per line, and reading only the first said
+    # the service was off on a phone where it was running.
+    listed = bound.split("Bound services:", 1)[-1].split("Enabled services:", 1)[0]
+    if "Phonetix transcriptions" not in listed:
         raise SystemExit(
             f"{serial}: the accessibility service is not running, so there is no state to "
             f"ask for. Switch Phonetix on again (installing the app switches it off).")
