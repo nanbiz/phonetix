@@ -48,6 +48,8 @@ class HoverController(
     private val onWord: (WordBox?) -> Unit,
     /** Where the hand is, so the answer can open clear of it. */
     private val onHand: (Int) -> Unit = {},
+    /** A drag that passed over nothing, so what would explain it can be written down. */
+    private val onFoundNothing: () -> Unit = {},
     /**
      * A press that went nowhere: the other question the mark answers.
      *
@@ -91,6 +93,9 @@ class HoverController(
 
     /** When the thumb was last told it had taken a word, so it cannot be told without pause. */
     private var lastTick = 0L
+
+    /** Whether the drag under way has been over any word at all: see [onFoundNothing]. */
+    private var tookAnything = false
 
     /** The words a sweep has taken in, in the order the circle met them. Empty unless the
      *  reader held the mark down before dragging, which is what asks about a run rather than
@@ -302,6 +307,7 @@ class HoverController(
             Rect(it.left.toInt(), it.top.toInt(), it.right.toInt(), it.bottom.toInt())
         })
         if (found != null) {
+            tookAnything = true
             // A tick under the thumb each time the circle takes a new word, since the eye is
             // on the word rather than on the circle. Never faster than a reader can move
             // between words: whatever else goes wrong above, the phone must not buzz without
@@ -468,6 +474,12 @@ class HoverController(
                     // No hand on the screen any more: a card opened by a press after this
                     // would otherwise still be dodging a finger that had gone.
                     onHand(0)
+                    // A drag that passed over nothing is the fault a reader reports as "it
+                    // does nothing", and what would explain it - which words this believed
+                    // were on screen, and where - is gone by the time anyone can be asked. So
+                    // it is written down as it happens.
+                    if (dragging && !tookAnything) onFoundNothing?.invoke()
+                    tookAnything = false
                     if (dragging) {
                         // The thread falls back into the mark where the mark comes to rest,
                         // and the mark reappears only once it has: no disc slides home.

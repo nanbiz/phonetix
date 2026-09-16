@@ -25,8 +25,11 @@ object Pointing {
      * directly over its end, and measuring from middles let a short word on the line above
      * win against the word actually being pointed at.
      *
-     * Reach: half a line above or below, and a line's height to either side. It used to be a
-     * whole line vertically, which is how a point between two lines took the wrong one.
+     * Reach: half a line above or below, and to either side the wider of a line's height and
+     * the word's own width. The vertical reach used to be a whole line, which is how a point
+     * between two lines took the wrong one; the sideways reach used to be a line's height
+     * alone, which on a grid of short labels - a home screen, a row of shortcuts - is thirty
+     * pixels, so a circle passing beside the labels found none of them.
      */
     fun nearest(boxes: List<Box>, x: Float, y: Float): Int {
         var best = -1
@@ -35,7 +38,8 @@ object Pointing {
             if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) return at
             val across = gap(x, box.left, box.right)
             val down = gap(y, box.top, box.bottom)
-            if (down > box.height / 2f || across > box.height) continue
+            val reach = maxOf(box.height, box.right - box.left)
+            if (down > box.height / 2f || across > reach) continue
             val far = hypot(across, down)
             if (far < bestFar) {
                 bestFar = far

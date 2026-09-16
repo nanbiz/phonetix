@@ -72,6 +72,28 @@ class PointingTest {
         assertEquals(-1, Pointing.nearest(bubble, 240f, 720f))
     }
 
+    /** A row of shortcuts on a home screen: short labels with wide gaps between them. */
+    private val shortcuts = listOf(
+        Pointing.Box(60f, 500f, 190f, 535f),    // 0 "Google"
+        Pointing.Box(260f, 500f, 430f, 535f),   // 1 "Wikipedia"
+        Pointing.Box(500f, 500f, 640f, 535f),   // 2 "YouTube"
+    )
+
+    @Test
+    fun a_point_beside_a_short_label_still_takes_it() {
+        // Sixty pixels to the right of "YouTube", which is less than the label's own width.
+        // Reaching only a line's height - thirty-five pixels here - the circle passing beside
+        // a grid of shortcuts found none of them, which is what a reader sees as the mark
+        // doing nothing on a home screen.
+        assertEquals(2, Pointing.nearest(shortcuts, 700f, 517f))
+    }
+
+    @Test
+    fun a_point_between_two_labels_takes_the_nearer() {
+        assertEquals(0, Pointing.nearest(shortcuts, 210f, 517f))
+        assertEquals(1, Pointing.nearest(shortcuts, 245f, 517f))
+    }
+
     @Test
     fun a_point_far_to_the_side_is_no_word_at_all() {
         assertEquals(-1, Pointing.nearest(bubble, 900f, 600f))

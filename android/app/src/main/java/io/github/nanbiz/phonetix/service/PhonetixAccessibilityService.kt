@@ -244,6 +244,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Held and let go where it started: the word the reader is looking for, rather
             // than one somebody else wrote. The app opens on the screen that asks for it.
             onHold = { main.post { openSay() } },
+            // A drag that passed over nothing writes down what this believed at that moment,
+            // so "it does nothing" can be answered from the phone afterwards rather than from
+            // whatever anyone manages to catch live. Debug builds only, and at most one every
+            // half minute, so a reader waving the mark about does not fill their phone.
+            onFoundNothing = {
+                val now = System.currentTimeMillis()
+                if (BuildConfig.DEBUG && now - lastNothingDump > NOTHING_DUMP_MS) {
+                    lastNothingDump = now
+                    main.post {
+                        runCatching { dumpState() }.onFailure {
+                            android.util.Log.w("Phonetix", "the state could not be written", it)
+                        }
+                    }
+                }
+            },
             onPhrase = { run ->
                 // The clause as the app wrote it, not the words the circle happened to land
                 // on: only some words of a line carry a transcription, so a run made of those
@@ -2743,6 +2758,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
     }
 
+    /** When a drag that found nothing last wrote the state out. */
+    private var lastNothingDump = 0L
+
     /** The last question put to the panel, and how far it got: see [dumpState]. */
     @Volatile private var askedFor: String? = null
     @Volatile private var askedInto: String? = null
@@ -3389,6 +3407,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         /** And with nothing drawn, where every word is one the mark may be asked about. */
         const val MAX_WORDS_SILENT = 240
+
+        /** The shortest gap between two dumps written by drags that found nothing. */
+        const val NOTHING_DUMP_MS = 30_000L
         const val MAX_TEXT = 2000
     }
 }
