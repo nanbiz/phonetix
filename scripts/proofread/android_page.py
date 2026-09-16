@@ -166,7 +166,16 @@ def main():
                 repeat=6)
     time.sleep(8)
 
-    if not dev.annotated():
+    # Waited for rather than read once: the dictionary and the engine both load in their own
+    # time, and on a machine with nothing to spare a page that is annotated a second later
+    # reads here as a page that was never annotated at all.
+    drawn = {}
+    for _ in range(10):
+        drawn = dev.annotated()
+        if drawn:
+            break
+        time.sleep(2)
+    if not drawn:
         print("FAIL - nothing was annotated, so there is no page to replace")
         sys.exit(1)
     # Asked of the device rather than read out of a tail: the overlay writes one long line
