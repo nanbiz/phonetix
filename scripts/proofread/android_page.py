@@ -3,8 +3,8 @@
 
 A word at a time answers "what is that". A page in a language somebody is still learning is a
 different question, and a reader who has to ask it word by word has stopped reading. Taplex
-answered it by laying the page's own lines over it, translated, on a tap of the mark, and
-taking them away on the next tap; the merge dropped it.
+answered it by laying the page's own lines over it, translated, on a press of the mark, and
+taking them away on the next press; the merge dropped it.
 
 So this presses the mark on a Spanish page and asks three things: that the page comes back in
 the reader's language where its own lines were, that our transcriptions are not painted on top
@@ -133,6 +133,16 @@ def push(name, into):
                  f"'cat \"/data/local/tmp/{name}\" > \"{into}/{name}\"'", timeout=900)
 
 
+def hold(mark):
+    """A press held on the mark, which is what replaces the page now.
+
+    Held rather than tapped: the tap opens the panel a reader asks a word in, and the whole
+    screen belongs to the heavier gesture. `input swipe` that goes nowhere is a touch that
+    stays put, which is a hold.
+    """
+    shell("input", "swipe", str(mark[0]), str(mark[1]), str(mark[0]), str(mark[1]), "900")
+
+
 def main():
     fetch_model()
     build_packs()
@@ -189,7 +199,7 @@ def main():
 
     chips_before = len(dev.boxes())
     dev.clear_log()
-    shell("input", "tap", str(mark[0]), str(mark[1]))
+    hold(mark)
     time.sleep(10)
     log = dev.log()
     up = re.findall(r"PAGE up with (\d+) lines", log)
@@ -244,7 +254,7 @@ def main():
     # of the tail of the log within seconds, and what comes later is the transcriptions
     # returning.
     dev.clear_log()
-    shell("input", "tap", str(mark[0]), str(mark[1]))
+    hold(mark)
     time.sleep(1)
     pressed = dev.log()
     time.sleep(8)

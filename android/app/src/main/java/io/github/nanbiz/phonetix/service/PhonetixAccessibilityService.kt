@@ -243,7 +243,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             },
             // Held and let go where it started: the word the reader is looking for, rather
             // than one somebody else wrote. The app opens on the screen that asks for it.
-            onHold = { main.post { openSay() } },
+            // Held: the whole screen in the reader's own language, and held again to put it
+            // back. The heavier of the two questions on the heavier gesture.
+            onHold = {
+                main.post { tooltip.hide() }
+                val lines = if (page.showing) emptyList() else pageLines()
+                // Off the main thread: translating a screen is a round trip per line through
+                // the engine, and the mark must not freeze under the finger that pressed it.
+                io.post {
+                    page.prepare(lines)
+                    main.post { page.toggle(lines) }
+                }
+            },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from
             // whatever anyone manages to catch live. Debug builds only, and at most one every
@@ -292,16 +303,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     }
                 }
             },
-            onTap = {
-                tooltip.hide()
-                val lines = if (page.showing) emptyList() else pageLines()
-                // Off the main thread: translating a screen is a round trip per line through
-                // the engine, and the mark must not freeze under the finger that pressed it.
-                io.post {
-                    page.prepare(lines)
-                    main.post { page.toggle(lines) }
-                }
-            },
+            // Tapped: the word the reader is looking for, which is the question they ask
+            // oftenest and so belongs on the easiest gesture.
+            onTap = { main.post { openSay() } },
         )
         // Which language a line is in, which decides whether it is transcribed at all. Read
         // on the io thread: it is a megabyte of ngrams and the service must not wait for it.

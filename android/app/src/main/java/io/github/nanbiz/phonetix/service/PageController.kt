@@ -40,6 +40,19 @@ class PageController(
             hide()
             return
         }
+        // Nothing to replace is not a replaced page.
+        //
+        // A press with no lines to hand put an empty sheet up: nothing was drawn, and
+        // everything that asks whether the page has been replaced - the mark above all -
+        // answered yes and refused to say anything about any word. The reader is left
+        // dragging a circle over a screen of text that answers nothing, with no way back
+        // except another press they have no reason to make.
+        if (lines.isEmpty()) {
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "PAGE nothing to replace")
+            }
+            return
+        }
         show(lines)
     }
 
