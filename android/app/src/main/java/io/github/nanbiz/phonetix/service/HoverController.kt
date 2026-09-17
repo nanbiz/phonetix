@@ -49,6 +49,9 @@ class HoverController(
     private val onWord: (WordBox?) -> Unit,
     /** Where the hand is, so the answer can open clear of it. */
     private val onHand: (Int) -> Unit = {},
+    /** The top of the keyboard while one is open, and zero while none is: the button waits
+     *  above it, since a button under a keyboard cannot be picked up. */
+    private val keyboardTop: () -> Int = { 0 },
     /** A drag that passed over nothing, so what would explain it can be written down. */
     private val onFoundNothing: () -> Unit = {},
     /**
@@ -170,34 +173,27 @@ class HoverController(
             Rect(0, 0, wm.defaultDisplay.width, wm.defaultDisplay.height)
         }
 
-    /** Where the mark waits, as the top left of a mark this big.
+    /** Which side the reader keeps the button on, which is the hand they hold the phone in. */
+    private fun restsRight(): Boolean = SettingsStore.current.side != "left"
+
+    /**
+     * Where the button waits, as the top left of a button this big.
      *
-     *  Where the reader put it, if they did: a place chosen on a picture of the screen, kept
-     *  as a share of it across and down so that it means the same place however big the
-     *  screen is. Otherwise the edge the side setting names, down by the hand.
+     * On the side the reader keeps it, as far down as they put it, and never behind the
+     * keyboard: a button under an open keyboard cannot be picked up at all, and a reader
+     * typing is exactly the reader who wants to ask about what they are reading.
      */
     private fun restingAt(size: Int): Point {
         val edges = screen()
-        val settings = SettingsStore.current
         val margin = dp(EDGE_DP).roundToInt()
         val foot = dp(FOOT_DP).roundToInt()
-        if (settings.pin) {
-            // Whole on the screen and out of the strip the system takes at the bottom: a mark
-            // half off the edge is a mark that cannot be picked up.
-            val x = (settings.pinX * edges.width() - size / 2f).roundToInt()
-            val y = (settings.pinY * edges.height() - size / 2f).roundToInt()
-            return Point(
-                x.coerceIn(0, (edges.width() - size).coerceAtLeast(0)),
-                y.coerceIn(margin, (edges.height() - size - foot).coerceAtLeast(margin)),
-            )
-        }
         val x = if (restsRight()) edges.width() - size - margin else margin
-        val y = (edges.height() * HOME_DOWN).roundToInt() - size / 2
-        return Point(x, y.coerceIn(margin, (edges.height() - size - foot).coerceAtLeast(margin)))
+        // Above whatever the system has put over the bottom of the screen, which is the
+        // keyboard when one is open and the gesture strip otherwise.
+        val floor = (keyboardTop().takeIf { it > 0 } ?: (edges.height() - foot)) - size - margin
+        val y = (SettingsStore.current.restY * edges.height()).roundToInt() - size / 2
+        return Point(x, y.coerceIn(margin, floor.coerceAtLeast(margin)))
     }
-
-    /** Which side the reader keeps the mark on, which is the hand they hold the phone in. */
-    private fun restsRight(): Boolean = SettingsStore.current.side != "left"
 
     private fun restingX(size: Int): Int = restingAt(size).x
 
@@ -210,6 +206,13 @@ class HoverController(
             // while a finger is on it, which would be the mark jumping out from under a hand.
             val size = up.width.takeIf { it > 0 } ?: markPx()
             val belongs = restingAt(size)
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "PARKS at $markX,$markY belongs $belongs holding=$holding " +
+                        "keyboard=${keyboardTop()} restY=${SettingsStore.current.restY}",
+                )
+            }
             if ((markX != belongs.x || markY != belongs.y) && !holding) {
                 markX = belongs.x
                 markY = belongs.y

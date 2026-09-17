@@ -190,9 +190,6 @@
   // are the choice, and they are the same words on the phone.
   const layers = LAYER_CHOICES;
 
-  /** Where the mark waits when nobody has put it anywhere: the side it rests on, down by the
-   *  hand. The same two numbers the phone itself uses. */
-  let restsAt = $derived({ x: settings.side === 'left' ? 0.06 : 0.94, y: 0.8 });
 
   /** The shape of the screen being placed on, which on a phone is the reader's own. */
   let screenAcross = $state(9);
@@ -309,7 +306,13 @@
          into one. The mode is already that question's first half, and a switch beside it
          saying the same thing again was a second way to say no. -->
     {#if settings.layer === 'meaning' || settings.layer === 'both'}
-      <Row name={ROWS.target.name} row="target" about={ROWS.target.about}>
+      <Row
+        name={ROWS.target.name}
+        row="target"
+        about={reading && settings.target === reading
+          ? SAYS['already-in'].replace('%s', nameOf(reading))
+          : ROWS.target.about}
+      >
         {#snippet control()}
           <Picker
             options={languages}
@@ -464,20 +467,13 @@
 
 <Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
   <Resting
-    x={settings.pinX}
-    y={settings.pinY}
-    pinned={settings.pin}
+    y={settings.restY}
     side={settings.side}
     across={screenAcross}
     down={screenDown}
-    pin={(x, y) => {
-      change('pinX', Number(x.toFixed(4)));
-      change('pinY', Number(y.toFixed(4)));
-      if (!settings.pin) change('pin', true);
-    }}
-    rest={(edge) => {
+    put={(edge, y) => {
       if (settings.side !== edge) change('side', edge);
-      if (settings.pin) change('pin', false);
+      change('restY', Number(y.toFixed(4)));
     }}
   />
 </Screen>
@@ -611,9 +607,10 @@
         <NavRow
           name={ROWS.rest.name}
           row="rest"
-          about={settings.pin
-            ? SAYS['rest-own']
-            : SAYS['rest-edge'].replace('%s', labelOf(SIDE_CHOICES, settings.side).toLowerCase())}
+          about={SAYS['rest-edge'].replace(
+            '%s',
+            labelOf(SIDE_CHOICES, settings.side).toLowerCase()
+          )}
           open={() => (view = 'rest')}
         />
       {/if}

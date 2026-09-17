@@ -251,7 +251,7 @@ def main():
     # where the mark is built, the setting did nothing until something else took it down.
     for side, edge in (("left", "near"), ("right", "far")):
         dev.clear_log()
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side, pin=0)
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
         time.sleep(4)
         where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         if not where:
@@ -259,8 +259,8 @@ def main():
             # this. Ask for the page again so it says so afresh.
             dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
             time.sleep(2)
-            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side,
-                        pin=0)
+            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off",
+                        side=side)
             time.sleep(5)
             where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)",
                                dev.lines("LENSPARKED"))
@@ -287,46 +287,69 @@ def main():
                 f"on the {side} the circle is carried {carried:+}px from the finger, which is "
                 f"towards the hand rather than away from it")
 
-    # And where the reader put it, if they put it anywhere.
+    # And where the reader put it on that side.
     #
-    # The mark waits where it is pinned rather than on an edge, and the circle is carried away
-    # from wherever that is - so a reader who keeps it in the middle of the screen is not left
-    # pointing at words through their own hand.
+    # The button rides its side at whatever height the reader chose, and the circle is carried
+    # away from wherever that is - so a reader who keeps it high up is not left pointing at
+    # words through their own hand.
     import math
     dev.clear_log()
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", pin=1, pinX=25, pinY=25)
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="right", restY=30)
     time.sleep(5)
-    pinned = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
-    if not pinned:
-        failures.append("the mark said nothing about where it parked when it was pinned")
+    high = parked_at(dev, side="right", restY=30)
+    if high is None:
+        failures.append("the button never said where it parked when it was put up high")
     else:
-        qx, qy, qw, qh = (int(v) for v in pinned[-1])
-        waits = (qx + qw // 2, qy + qh // 2)
-        wanted = (dev.width // 4, dev.height // 4)
-        off = math.hypot(waits[0] - wanted[0], waits[1] - wanted[1])
+        wanted = int(dev.height * 0.3)
+        print(f"  put a third of the way down: waits at {high}, {abs(high[1] - wanted)}px from it")
+        if abs(high[1] - wanted) > 80:
+            failures.append(
+                f"put a third of the way down, the button waits at {high[1]} rather than "
+                f"{wanted}")
         dev.clear_log()
-        aim = (max(40, waits[0] - 300), min(dev.height - 60, waits[1] + 300))
-        shell("input", "swipe", str(waits[0]), str(waits[1]), str(aim[0]), str(aim[1]), "3000")
+        aim = (max(40, high[0] - 300), min(dev.height - 60, high[1] + 300))
+        shell("input", "swipe", str(high[0]), str(high[1]), str(aim[0]), str(aim[1]), "3000")
         time.sleep(2)
         went = [(int(a), int(b)) for a, b in
                 re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]*", dev.lines("LENSAT "))]
         further = 0.0
         if went:
-            further = (math.hypot(went[-1][0] - waits[0], went[-1][1] - waits[1])
-                       - math.hypot(aim[0] - waits[0], aim[1] - waits[1]))
-        print(f"  pinned a quarter in: waits at {waits}, {off:.0f}px from where it was put, "
-              f"carried {further:+.0f}px past the finger")
-        if off > 60:
-            failures.append(
-                f"pinned at {wanted}, the mark waits at {waits}, {off:.0f}px away")
+            further = (math.hypot(went[-1][0] - high[0], went[-1][1] - high[1])
+                       - math.hypot(aim[0] - high[0], aim[1] - high[1]))
         if not went:
-            failures.append("nothing was reported under a pinned mark")
+            failures.append("nothing was reported under the button put up high")
         elif further <= 0:
             failures.append(
-                f"the circle is carried {further:+.0f}px from a pinned mark, which is towards "
-                f"it rather than away from it")
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", pin=0)
-    time.sleep(3)
+                f"the circle is carried {further:+.0f}px from a button put up high, which is "
+                f"towards it rather than away from it")
+
+    # And it stands clear of a keyboard.
+    #
+    # A keyboard opens over the foot of the screen, and a button sitting there is behind it:
+    # it takes none of the touches meant for it and cannot be moved out of the way either, so
+    # a reader typing - who is exactly the reader asking about what they are reading - is left
+    # without it.
+    dev.surface(mode="typing", enable=1, density=1, lens=1, layer="off", side="right", restY=92)
+    time.sleep(5)
+    low = parked_at(dev, side="right", restY=92)
+    told = shell("uiautomator", "dump", "/sdcard/ui.xml") and shell("cat", "/sdcard/ui.xml")
+    node = next((n for n in re.findall(r"<node[^>]*>", told) if "the composer" in n), "")
+    box = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node)
+    if low is None or not box:
+        failures.append("the page with something to type into never came up")
+    else:
+        shell("input", "tap", str((int(box.group(1)) + int(box.group(3))) // 2),
+              str((int(box.group(2)) + int(box.group(4))) // 2))
+        time.sleep(4)
+        lifted = parked_at(dev, side="right", restY=92)
+        shown = re.search(r"mInputShown=(\w+)", shell("dumpsys", "input_method"))
+        print(f"  with a keyboard open ({shown.group(1) if shown else '?'}): "
+              f"the button moved from {low} to {lifted}")
+        if not shown or shown.group(1) != "true":
+            print("  no keyboard came up, so standing clear of one was not measured")
+        elif lifted is None or lifted[1] >= low[1]:
+            failures.append(
+                f"a keyboard opened and the button stayed at {lifted}, behind it")
 
     # And never where a word is drawn over: there, a guessed position is a transcription on
     # the wrong word.

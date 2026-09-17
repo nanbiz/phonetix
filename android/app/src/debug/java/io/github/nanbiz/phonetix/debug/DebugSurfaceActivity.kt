@@ -557,16 +557,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     i.getStringExtra("side").orEmpty(),
                 )
             }
-            // Where the mark waits, so a check can put it somewhere and see what follows.
-            if (i.hasExtra("pin")) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setPin(
-                    i.getIntExtra("pin", 0) == 1,
-                )
-            }
-            if (i.hasExtra("pinX") && i.hasExtra("pinY")) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setPinAt(
-                    i.getIntExtra("pinX", 50) / 100f,
-                    i.getIntExtra("pinY", 50) / 100f,
+            // How far down its side the button waits, so a check can put it somewhere and
+            // see what follows.
+            if (i.hasExtra("restY")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setRestY(
+                    i.getIntExtra("restY", 80) / 100f,
                 )
             }
             if (i.hasExtra("packHost")) {
@@ -874,6 +869,21 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             for (text in TestWords.DISTINCT.drop(6).take(6)) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "typing") {
+            // A page with something to type into, which is what a reader's own conversation
+            // is: the keyboard comes up over the foot of the screen, and whatever was sitting
+            // there is behind it.
+            for (text in TestWords.DISTINCT.take(5)) addView(line(text, Color.WHITE, BACKGROUND))
+            addView(
+                android.widget.EditText(this@DebugSurfaceActivity).apply {
+                    hint = "Write something"
+                    setTextColor(Color.WHITE)
+                    setHintTextColor(Color.GRAY)
+                    setBackgroundColor(Color.rgb(0x22, 0x22, 0x22))
+                    setPadding(DebugMarks.GUTTER, pad(), pad(), pad())
+                    contentDescription = "the composer"
+                },
+            )
         } else if (mode == "mute" || mode == "spoken") {
             // "spoken" is the same page answering the request, so a check can hold a guess
             // against what the app really did with the same words in the same place.

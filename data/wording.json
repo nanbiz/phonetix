@@ -228,7 +228,7 @@
     },
     "rest": {
       "name": "Where the button sits",
-      "about": "the corner it waits in when you are not using it"
+      "about": "which side it waits on, and how far down"
     },
     "lens-drag": {
       "name": "Drag it over a word",
@@ -296,6 +296,7 @@
   "says": {
     "allow": "Allow",
     "allow-overlay": "Allow overlay",
+    "already-in": "This page is already in %s",
     "broad-mark": "/ /",
     "change": "Change",
     "choose-language": "Choose a language",
@@ -314,14 +315,14 @@
     "no-source": "for what a word means; how it is said is built in",
     "no-translation": "Don't translate",
     "nothing-found": "Nothing by that name",
+    "nothing-here": "Nothing on this screen to put into your language",
     "nothing-yet": "nothing yet",
     "open-accessibility": "Open accessibility",
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
     "rest-edge": "On the %s",
-    "rest-own": "Where you put it",
-    "rest-put": "Tap or drag to move the button. Put it against a side and it stays there.",
+    "rest-put": "Drag the button up or down, or across to the other side.",
     "say-into": "Answer in",
     "say-no-language": "Choose a language to read into first.",
     "say-no-model": "No translation model for that direction at your dictionary host.",

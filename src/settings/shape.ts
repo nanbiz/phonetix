@@ -85,13 +85,9 @@ export interface Settings {
   /** Which side of the screen the mark rests on: "right" or "left". The hand is taken to come
    *  onto the screen from that corner, and the circle is carried away from it. The phone's. */
   side: string;
-  /** Whether the mark waits where the reader put it rather than on the side it rests.
-   *  The phone's. */
-  pin: boolean;
-  /** Where that is, as a share of the screen across and down, so it means the same thing on
-   *  a phone of any size. The phone's. */
-  pinX: number;
-  pinY: number;
+  /** How far down its side the button waits, as a share of the screen, so it means the same
+   *  place on a phone of any size. The phone's. */
+  restY: number;
   /** Whether the transcriptions themselves take touches, which costs every swipe that begins
    *  on one. The phone's. */
   touchWords: boolean;
@@ -120,9 +116,7 @@ export const DEFAULTS: Settings = {
   off: [],
   lens: true,
   side: 'right',
-  pin: false,
-  pinX: 0.94,
-  pinY: 0.8,
+  restY: 0.8,
   touchWords: false,
   apps: [],
   allApps: true,

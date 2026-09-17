@@ -257,6 +257,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // about a word the reader cannot see.
             wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
             onScreen = { overlay.onScreen() },
+            keyboardTop = { keyboardTop() },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y ->
                 tooltip.clearOf(y)
@@ -288,7 +289,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // the engine, and the mark must not freeze under the finger that pressed it.
                 io.post {
                     page.prepare(lines)
-                    main.post { page.toggle(lines) }
+                    main.post {
+                        // A press that finds nothing says so. Silence here is the fault the
+                        // reader reported as "I long pressed it and literally nothing
+                        // happened": a screen whose words were never read looks exactly like
+                        // a gesture that does not work.
+                        if (lines.isEmpty() && !page.showing) {
+                            android.widget.Toast.makeText(
+                                this@PhonetixAccessibilityService,
+                                Wording.says["nothing-here"].orEmpty(),
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        page.toggle(lines)
+                    }
                 }
             },
             // A drag that passed over nothing writes down what this believed at that moment,
@@ -625,6 +639,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // A window appearing or going away can mean a different app is in front, and a
         // follow pass does not look at which one it is - it works from the lines it already
         // holds. So this one is always answered by reading the screen properly.
+        // A window appearing or going away is usually the keyboard, which the button has to
+        // stand clear of: it costs a look at where the button belongs rather than a read of
+        // the screen, and the screen itself has not changed.
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "WINDOWS changed, keyboard at ${keyboardTop()}")
+            }
+            val now = SettingsStore.current
+            if (now.enabled && now.lens) main.post { hover.show() }
+            return
+        }
         val windowChanged = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
         if (!windowChanged && cachedPlan.isNotEmpty() && cachedPackage != null) {
             scrollOnly = true
@@ -736,6 +761,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("pageReplaced", pageUp)
                 .put("lines", cachedPlan.size)
                 .put("walk", lastWalk ?: org.json.JSONObject.NULL)
+                // Where the keyboard's top edge is, or zero: the button waits above it, and
+                // when it does not, this says whether the keyboard was seen at all.
+                .put("keyboardTop", keyboardTop())
+                .put("windows", org.json.JSONArray(windowsSeen()))
                 .put("linesPlanned", plannedLines)
                 .put("linesWithoutCharacters", unplaceable)
                 .put("scrollOnly", scrollOnly)
@@ -1061,7 +1090,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Something worth reading is in front, so the circle is there to reach for. It was
         // taken away over whatever this does not annotate.
         val wanted = SettingsStore.current
-        if (wanted.enabled && wanted.lens && !hover.showing) main.post { hover.show() }
+        // Put up where it is missing, and put back where it belongs where it is not: a
+        // keyboard opening over the foot of the screen swallows a button sitting there, and
+        // the screen it opened over is read again on this same pass.
+        if (wanted.enabled && wanted.lens) main.post { hover.show() }
         val t0 = android.os.SystemClock.uptimeMillis()
 
         // A scroll moved the words it did not change, so the nodes found last time are
@@ -2643,6 +2675,39 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val holdsText: Boolean,
     )
 
+
+    /** Every window the service can see, as "type at rectangle": what the keyboard is, and
+     *  whether it is there at all, is otherwise invisible from outside. */
+    private fun windowsSeen(): List<String> = runCatching {
+        windows.map { window ->
+            val at = android.graphics.Rect()
+            window.getBoundsInScreen(at)
+            "${window.type}:$at"
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * The top of the keyboard, or zero where none is open.
+     *
+     * A keyboard is a window of its own, so where it is has to be asked of the system rather
+     * than worked out. What it is for is keeping the button above it: a button under an open
+     * keyboard takes none of the touches meant for it, and cannot be moved out of the way
+     * either, so a reader typing - exactly the reader who wants to ask about what they are
+     * reading - is left without it.
+     */
+    private fun keyboardTop(): Int {
+        val ime = runCatching {
+            windows.firstOrNull {
+                it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+            }
+        }.getOrNull() ?: return 0
+        val at = android.graphics.Rect()
+        ime.getBoundsInScreen(at)
+        val tall = resources.displayMetrics.heightPixels
+        // Only a keyboard along the foot of the screen counts. One that floats, or one that
+        // reports nothing, is not something to stand clear of.
+        return if (!at.isEmpty && at.bottom >= tall - 8 && at.top > tall / 3) at.top else 0
+    }
 
     /**
      * Whether a box is really a backdrop rather than something that hides a word.

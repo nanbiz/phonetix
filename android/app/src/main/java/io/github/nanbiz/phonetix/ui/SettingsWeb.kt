@@ -326,9 +326,7 @@ private class Bridge(
         .put("off", JSONArray())
         .put("lens", settings.lens)
         .put("side", settings.side)
-        .put("pin", settings.pin)
-        .put("pinX", settings.pinX.toDouble())
-        .put("pinY", settings.pinY.toDouble())
+        .put("restY", settings.restY.toDouble())
         .put("touchWords", settings.touchWords)
         .put("apps", JSONArray(settings.apps.toList()))
         .put("allApps", settings.allApps)
@@ -347,15 +345,7 @@ private class Bridge(
             "host" -> SettingsStore.setPackHost(value?.toString().orEmpty())
             "lens" -> SettingsStore.setLens(value == true)
             "side" -> SettingsStore.setSide(value?.toString().orEmpty())
-            "pin" -> SettingsStore.setPin(value == true)
-            "pinX" -> SettingsStore.setPinAt(
-                (value as? Number)?.toFloat() ?: return,
-                SettingsStore.current.pinY,
-            )
-            "pinY" -> SettingsStore.setPinAt(
-                SettingsStore.current.pinX,
-                (value as? Number)?.toFloat() ?: return,
-            )
+            "restY" -> SettingsStore.setRestY((value as? Number)?.toFloat() ?: return)
             "touchWords" -> SettingsStore.setTouchWords(value == true)
             "accents" -> {
                 val said = value as? JSONObject ?: return

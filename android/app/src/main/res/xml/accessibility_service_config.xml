@@ -16,13 +16,17 @@
   phone where that shortcut has not been set up. The shade tile is the trigger instead, and a
   reader who wants the button can bind it from the same page.
 
+  Windows changing is asked for so that the button can stand clear of a keyboard: a keyboard
+  is a window of its own, and it opening or closing is announced as nothing else. It costs a
+  cheap look at where the button belongs, not a read of the screen.
+
   notificationTimeout is zero rather than the usual 100ms: it is how often the system is
   allowed to hand us anything at all, and at 100ms a fling delivered one or two events in
   its whole length, so the transcriptions were re-read twice during a movement of two
   thousand pixels.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeViewScrolled|typeWindowStateChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault|flagReportViewIds|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
