@@ -170,13 +170,36 @@ class HoverController(
             Rect(0, 0, wm.defaultDisplay.width, wm.defaultDisplay.height)
         }
 
+    /** Where the mark waits, as the top left of a mark this big.
+     *
+     *  Where the reader put it, if they did: a place chosen on a picture of the screen, kept
+     *  as a share of it across and down so that it means the same place however big the
+     *  screen is. Otherwise the edge the side setting names, down by the hand.
+     */
+    private fun restingAt(size: Int): Point {
+        val edges = screen()
+        val settings = SettingsStore.current
+        val margin = dp(EDGE_DP).roundToInt()
+        val foot = dp(FOOT_DP).roundToInt()
+        if (settings.pin) {
+            // Whole on the screen and out of the strip the system takes at the bottom: a mark
+            // half off the edge is a mark that cannot be picked up.
+            val x = (settings.pinX * edges.width() - size / 2f).roundToInt()
+            val y = (settings.pinY * edges.height() - size / 2f).roundToInt()
+            return Point(
+                x.coerceIn(0, (edges.width() - size).coerceAtLeast(0)),
+                y.coerceIn(margin, (edges.height() - size - foot).coerceAtLeast(margin)),
+            )
+        }
+        val x = if (restsRight()) edges.width() - size - margin else margin
+        val y = (edges.height() * HOME_DOWN).roundToInt() - size / 2
+        return Point(x, y.coerceIn(margin, (edges.height() - size - foot).coerceAtLeast(margin)))
+    }
+
     /** Which side the reader keeps the mark on, which is the hand they hold the phone in. */
     private fun restsRight(): Boolean = SettingsStore.current.side != "left"
 
-    /** Where the mark rests: the edge the reader chose, a margin in. */
-    private fun restingX(size: Int): Int =
-        if (restsRight()) screen().width() - size - dp(EDGE_DP).roundToInt()
-        else dp(EDGE_DP).roundToInt()
+    private fun restingX(size: Int): Int = restingAt(size).x
 
     /** Put the circle up, parked at the edge. */
     fun show() {
@@ -186,9 +209,10 @@ class HoverController(
             // stayed on the old edge until something else took it down. Left where it is
             // while a finger is on it, which would be the mark jumping out from under a hand.
             val size = up.width.takeIf { it > 0 } ?: markPx()
-            val belongs = restingX(size)
-            if (markX != belongs && !holding) {
-                markX = belongs
+            val belongs = restingAt(size)
+            if ((markX != belongs.x || markY != belongs.y) && !holding) {
+                markX = belongs.x
+                markY = belongs.y
                 runCatching { wm.updateViewLayout(up, markParams(size)) }
             }
             // Where it is is said again anyway: a reader cannot see the window list, and
@@ -199,9 +223,9 @@ class HoverController(
             return
         }
         val size = markPx()
-        markX = restingX(size)
-        // Where the hand comes onto the screen, which is where the mark waits for it.
-        if (markY <= 0) markY = (screen().height() * HOME_DOWN).roundToInt() - size / 2
+        val waits = restingAt(size)
+        markX = waits.x
+        markY = waits.y
         val view = HoverBubbleView(context)
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
@@ -547,15 +571,10 @@ class HoverController(
          */
         private fun park(): Point {
             val size = view.width
-            val target = restingX(size)
+            val waits = restingAt(size)
+            val target = waits.x
             val from = markX
-            // Never against an edge the system takes touches at: parked in the strip along
-            // the bottom, every press on the mark belonged to the navigation bar instead and
-            // the mark could not be picked up at all.
-            val margin = dp(EDGE_DP).roundToInt()
-            val foot = dp(FOOT_DP).roundToInt()
-            val restY = markY.coerceIn(margin, (screen().height() - size - foot)
-                .coerceAtLeast(margin))
+            val restY = waits.y
             ValueAnimator.ofInt(from, target).apply {
                 duration = PARK_MS
                 // Comes to rest rather than stopping dead. At a constant speed a thing that
@@ -583,13 +602,13 @@ class HoverController(
             runCatching { wm.updateViewLayout(view, markParams(size)) }
             // The circle is carried away from where the hand comes onto the screen.
             //
-            // A hand holding a phone comes in at the bottom corner on the side the mark
-            // rests on. Everything the thumb covers is between that corner and wherever it is
-            // pointing, so carrying the circle further out along that line is what keeps the
-            // hand off the word.
+            // The point it is measured from is where the mark waits - the corner the hand
+            // comes in at, or wherever the reader put it. Everything the thumb covers is
+            // between that place and whatever it is pointing at, so carrying the circle
+            // further out along that line is what keeps the hand off the word.
             //
-            // It grows with the distance from that corner: nothing at all when the finger is
-            // in it - so the corner itself can be pointed at - and the full carry a fifth of a
+            // It grows with the distance from there: nothing at all when the finger is on
+            // it - so that place itself can be pointed at - and the full carry a fifth of a
             // screen away and beyond. That makes the whole screen reachable: the circle is
             // always further out than the finger, so the far edges come within reach, and the
             // near ones are had by bringing the hand back to where it rests.
@@ -601,8 +620,9 @@ class HoverController(
             // past it, so nothing can be aimed at precisely. Here the aim is one for one
             // outside the growing part and half as much again inside it.
             val edges = screen()
-            val homeX = if (restsRight()) edges.width().toFloat() else 0f
-            val homeY = edges.height().toFloat()
+            val waits = restingAt(size)
+            val homeX = waits.x + size / 2f
+            val homeY = waits.y + size / 2f
             val awayX = event.rawX - homeX
             val awayY = event.rawY - homeY
             val away = kotlin.math.hypot(awayX, awayY)

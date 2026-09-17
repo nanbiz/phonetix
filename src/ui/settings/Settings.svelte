@@ -36,6 +36,7 @@
   import Choice from './Choice.svelte';
   import Frequency from './Frequency.svelte';
   import NavRow from './NavRow.svelte';
+  import Resting from './Resting.svelte';
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
@@ -188,6 +189,22 @@
   // What is drawn over a word, and what each choice does, from data/choices.json: the words
   // are the choice, and they are the same words on the phone.
   const layers = LAYER_CHOICES;
+
+  /** Where the mark waits when nobody has put it anywhere: the side it rests on, down by the
+   *  hand. The same two numbers the phone itself uses. */
+  let restsAt = $derived({ x: settings.side === 'left' ? 0.06 : 0.94, y: 0.8 });
+
+  /** The shape of the screen being placed on, which on a phone is the reader's own. */
+  let screenAcross = $state(9);
+  let screenDown = $state(19.5);
+  $effect(() => {
+    const across = globalThis.screen?.width ?? 0;
+    const down = globalThis.screen?.height ?? 0;
+    if (across > 0 && down > 0 && where === 'phone') {
+      screenAcross = across;
+      screenDown = down;
+    }
+  });
   let layerName = $derived(labelOf(LAYER_CHOICES, settings.layer));
 
   // The languages a reader can pick between, by the name they know them under.
@@ -445,6 +462,45 @@
   />
 </Screen>
 
+<Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
+  <p class="about">{ROWS.rest.about}</p>
+  <div class="rows">
+    <!-- The side is what it falls back to, and what a reader who wants nothing else gets. -->
+    <Row name={ROWS.side.name} row="side" about={ROWS.side.about}>
+      {#snippet wide()}
+        <Segmented
+          choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+          chosen={settings.side}
+          change={(value: string) => change('side', value)}
+        />
+      {/snippet}
+    </Row>
+
+    <!-- Or somewhere of the reader's own, which is what the board below is for. -->
+    <Row name={SAYS['rest-pin']} row="pin">
+      {#snippet control()}
+        <Toggle
+          on={settings.pin}
+          label={SAYS['rest-pin']}
+          change={(on) => change('pin', on)}
+        />
+      {/snippet}
+    </Row>
+  </div>
+
+  <Resting
+    x={settings.pin ? settings.pinX : restsAt.x}
+    y={settings.pin ? settings.pinY : restsAt.y}
+    across={screenAcross}
+    down={screenDown}
+    on={settings.pin}
+    change={(x, y) => {
+      change('pinX', Number(x.toFixed(4)));
+      change('pinY', Number(y.toFixed(4)));
+    }}
+  />
+</Screen>
+
 <Screen name="say" on={view} title={ROWS.say.name} back={() => (view = 'main')}>
   <p class="about">{ROWS.say.about}</p>
   <div class="rows">
@@ -567,19 +623,18 @@
         {/snippet}
       </Row>
 
-      <!-- Which side it rests on, which is the hand the phone is held in. The circle the mark
-           carries is held away from that corner, so a reader's own hand is never over the word
-           they are pointing at. -->
+      <!-- Where it waits, which is also the point the circle is carried away from, so a
+           reader's own hand is never over the word they are pointing at. A screen of its own,
+           because the answer is a place rather than a word. -->
       {#if settings.lens}
-        <Row name={ROWS.side.name} row="side" about={ROWS.side.about}>
-          {#snippet wide()}
-            <Segmented
-              choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
-              chosen={settings.side}
-              change={(value: string) => change('side', value)}
-            />
-          {/snippet}
-        </Row>
+        <NavRow
+          name={ROWS.rest.name}
+          row="rest"
+          about={settings.pin
+            ? SAYS['rest-pinned']
+            : labelOf(SIDE_CHOICES, settings.side) + ' · ' + SAYS['rest-side']}
+          open={() => (view = 'rest')}
+        />
       {/if}
 
       <!-- The trade this costs, said plainly: a reader who turns it on and then cannot

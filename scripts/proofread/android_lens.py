@@ -234,7 +234,7 @@ def main():
     # where the mark is built, the setting did nothing until something else took it down.
     for side, edge in (("left", "near"), ("right", "far")):
         dev.clear_log()
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side, pin=0)
         time.sleep(4)
         where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         if not where:
@@ -242,7 +242,8 @@ def main():
             # this. Ask for the page again so it says so afresh.
             dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
             time.sleep(2)
-            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
+            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side,
+                        pin=0)
             time.sleep(5)
             where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)",
                                dev.lines("LENSPARKED"))
@@ -268,6 +269,47 @@ def main():
             failures.append(
                 f"on the {side} the circle is carried {carried:+}px from the finger, which is "
                 f"towards the hand rather than away from it")
+
+    # And where the reader put it, if they put it anywhere.
+    #
+    # The mark waits where it is pinned rather than on an edge, and the circle is carried away
+    # from wherever that is - so a reader who keeps it in the middle of the screen is not left
+    # pointing at words through their own hand.
+    import math
+    dev.clear_log()
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", pin=1, pinX=25, pinY=25)
+    time.sleep(5)
+    pinned = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+    if not pinned:
+        failures.append("the mark said nothing about where it parked when it was pinned")
+    else:
+        qx, qy, qw, qh = (int(v) for v in pinned[-1])
+        waits = (qx + qw // 2, qy + qh // 2)
+        wanted = (dev.width // 4, dev.height // 4)
+        off = math.hypot(waits[0] - wanted[0], waits[1] - wanted[1])
+        dev.clear_log()
+        aim = (max(40, waits[0] - 300), min(dev.height - 60, waits[1] + 300))
+        shell("input", "swipe", str(waits[0]), str(waits[1]), str(aim[0]), str(aim[1]), "3000")
+        time.sleep(2)
+        went = [(int(a), int(b)) for a, b in
+                re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]*", dev.lines("LENSAT "))]
+        further = 0.0
+        if went:
+            further = (math.hypot(went[-1][0] - waits[0], went[-1][1] - waits[1])
+                       - math.hypot(aim[0] - waits[0], aim[1] - waits[1]))
+        print(f"  pinned a quarter in: waits at {waits}, {off:.0f}px from where it was put, "
+              f"carried {further:+.0f}px past the finger")
+        if off > 60:
+            failures.append(
+                f"pinned at {wanted}, the mark waits at {waits}, {off:.0f}px away")
+        if not went:
+            failures.append("nothing was reported under a pinned mark")
+        elif further <= 0:
+            failures.append(
+                f"the circle is carried {further:+.0f}px from a pinned mark, which is towards "
+                f"it rather than away from it")
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", pin=0)
+    time.sleep(3)
 
     # And never where a word is drawn over: there, a guessed position is a transcription on
     # the wrong word.

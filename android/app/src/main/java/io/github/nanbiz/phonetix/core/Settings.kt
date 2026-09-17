@@ -72,6 +72,12 @@ data class Settings(
      *  come onto the screen from that corner, and the circle the mark carries is held away
      *  from it, so the hand is never over the word it is on. */
     val side: String = "right",
+    /** Whether the mark waits where the reader put it rather than on the side it rests. */
+    val pin: Boolean = false,
+    /** Where that is, as a share of the screen across and down, so it means the same thing
+     *  however big the screen is and whichever way round it is held. */
+    val pinX: Float = 0.94f,
+    val pinY: Float = 0.8f,
     /**
      * Narrow transcriptions rather than broad ones.
      *
@@ -118,6 +124,9 @@ object SettingsStore {
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
     private const val K_SIDE = "side"
+    private const val K_PIN = "pin"
+    private const val K_PIN_X = "pin_x"
+    private const val K_PIN_Y = "pin_y"
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
     private const val K_STRESS = "hide_stress"
@@ -149,6 +158,9 @@ object SettingsStore {
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             side = p.getString(K_SIDE, "right") ?: "right",
+            pin = p.getBoolean(K_PIN, false),
+            pinX = p.getFloat(K_PIN_X, 0.94f),
+            pinY = p.getFloat(K_PIN_Y, 0.8f),
             // Stored as one entry per language, because a set of strings is what preferences
             // can hold and a map is what the rest of this asks for.
             accents = (p.getStringSet(K_ACCENTS, emptySet()) ?: emptySet())
@@ -191,6 +203,9 @@ object SettingsStore {
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
             ?.putString(K_SIDE, next.side)
+            ?.putBoolean(K_PIN, next.pin)
+            ?.putFloat(K_PIN_X, next.pinX)
+            ?.putFloat(K_PIN_Y, next.pinY)
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
             ?.putBoolean(K_STRESS, next.hideStress)
@@ -220,6 +235,13 @@ object SettingsStore {
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
+    fun setPin(on: Boolean) = update { it.copy(pin = on) }
+
+    /** Where the mark waits, as a share of the screen: kept inside it whatever is asked. */
+    fun setPinAt(x: Float, y: Float) = update {
+        it.copy(pinX = x.coerceIn(0f, 1f), pinY = y.coerceIn(0f, 1f))
+    }
+
     fun setSide(v: String) = update { it.copy(side = if (v == "left") "left" else "right") }
 
     fun setLens(v: Boolean) = update { it.copy(lens = v) }

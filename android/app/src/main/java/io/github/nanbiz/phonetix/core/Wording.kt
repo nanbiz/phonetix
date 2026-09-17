@@ -39,6 +39,12 @@ object Wording {
         Choice("both", "Both", "what it means, and how to say that"),
     )
 
+    /** Which side, as an overlay can draw them. */
+    val side = listOf(
+        Choice("right", "Right", "for a phone held in the right hand"),
+        Choice("left", "Left", "for a phone held in the left hand"),
+    )
+
     /** Every row of the settings surfaces, by the name it reports itself under. */
     val rows = mapOf(
         "accent" to Words("Accent", "which accent each language is read in"),
@@ -58,10 +64,12 @@ object Wording {
         "meanings" to Words("To see what a word means", "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
+        "rest" to Words("Where it waits", "the corner the mark sits in, and the point the circle is carried away from"),
         "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
         "setup" to Words("Setup", ""),
         "setup-overlay" to Words("Drawing over apps", "Lets it paint the transcription on top of the word."),
         "setup-reading" to Words("Reading the screen", "Lets Phonetix see the words in other apps. Nothing leaves your device."),
+        "side" to Words("Which side", "which side of the screen the mark rests on"),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "start" to Words("Before it can answer a word", ""),
@@ -106,6 +114,10 @@ object Wording {
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
         "remove" to "Remove",
+        "rest-pin" to "Put it somewhere of your own",
+        "rest-pinned" to "Where you put it",
+        "rest-put" to "Drag the mark where you want it",
+        "rest-side" to "On the side it rests, down by the hand",
         "say-into" to "Answer in",
         "say-no-language" to "Choose a language to read into first.",
         "say-no-model" to "No translation model for that direction at your dictionary host.",
