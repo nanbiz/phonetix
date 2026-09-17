@@ -190,6 +190,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.content.IntentFilter(StateDump.ACTION),
                 androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
             )
+            androidx.core.content.ContextCompat.registerReceiver(
+                this,
+                probeAsked,
+                android.content.IntentFilter(StateDump.PROBE),
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+            )
         }
         val thread = HandlerThread("phonetix-scan").apply { start() }
         worker = Handler(thread.looper)
@@ -725,6 +731,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
         return StateDump.write(this, state)
     }
 
+    /**
+     * Turned on from outside, for one investigation on a reader's own phone.
+     *
+     * What an app answers when it is asked where its characters are cannot be reasoned about
+     * from here - the app in the reader's hand is the only one that knows - and the answer
+     * decides whether a word can be pointed at at all.
+     */
+    private val probeAsked = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            PROBE_TREE = intent?.getBooleanExtra("on", true) ?: true
+            android.util.Log.d("Phonetix", "PROBE ${if (PROBE_TREE) "on" else "off"}")
+        }
+    }
+
     /** Asked for from outside: `am broadcast -a io.github.nanbiz.phonetix.DUMP`. */
     private val dumpAsked = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
@@ -735,7 +755,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
-        if (BuildConfig.DEBUG) runCatching { unregisterReceiver(dumpAsked) }
+        if (BuildConfig.DEBUG) {
+            runCatching { unregisterReceiver(dumpAsked) }
+            runCatching { unregisterReceiver(probeAsked) }
+        }
         settingsWatch?.cancel()
         if (::tooltip.isInitialized) tooltip.hide()
         if (::speaker.isInitialized) speaker.destroy()
@@ -1787,7 +1810,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                                 rowHeight,
                             )
                             if (guessed.isNotEmpty()) {
+                                val from = boxes.size
                                 Placement.boxes(p.picks, guessed, p.from, boxes)
+                                // The line keeps its own words, as every measured line does:
+                                // boxes appended here and left unowned belong to no line, and
+                                // everything downstream works from the line.
+                                p.boxes = boxes.subList(from, boxes.size).toList()
                                 p.measuredAt = rect
                             }
                         }

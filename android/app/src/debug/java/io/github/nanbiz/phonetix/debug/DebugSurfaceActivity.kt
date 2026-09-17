@@ -854,6 +854,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             for (text in TestWords.DISTINCT.drop(6).take(6)) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "mute") {
+            // The same wrapped paragraphs as "essay", from a page that answers no request for
+            // character positions: read, and unplaceable. What a reader's own conversation
+            // does while an answer is being written into it.
+            for (n in 0 until TestWords.DISTINCT.size / 2) {
+                val from = (n * 2) % TestWords.DISTINCT.size
+                val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
+                addView(line(paragraph, Color.WHITE, BACKGROUND))
+            }
         } else if (mode == "essay") {
             // Paragraphs that wrap, of words that appear nowhere else on the page.
             //
@@ -935,6 +944,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
 
     private fun line(text: String, ink: Int, bg: Int) = MarkedLine(this).apply {
         this.text = text
+        // A page that will not say where its characters are, which is what the reader's own
+        // conversation does while it is being written into.
+        saysWhereCharactersAre = mode != "mute"
         setTextColor(ink)
         setBackgroundColor(bg)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)

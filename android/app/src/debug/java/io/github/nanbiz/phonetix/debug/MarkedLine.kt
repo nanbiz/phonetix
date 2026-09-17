@@ -15,7 +15,26 @@ import android.widget.TextView
  */
 class MarkedLine(context: Context) : TextView(context) {
 
+    /**
+     * Whether this line will say where its characters are.
+     *
+     * Some apps answer no such request at all, and some - a conversation with an answer being
+     * written into it - stop answering while their text changes, which is exactly when a
+     * reader is looking at them. A line that refuses is read and then cannot be placed, and
+     * what the product does about that has to be checked against a page that behaves so.
+     */
+    var saysWhereCharactersAre = true
+
     private val mark = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = DebugMarks.LINE }
+
+    override fun addExtraDataToAccessibilityNodeInfo(
+        info: android.view.accessibility.AccessibilityNodeInfo,
+        extraDataKey: String,
+        arguments: android.os.Bundle?,
+    ) {
+        if (!saysWhereCharactersAre) return
+        super.addExtraDataToAccessibilityNodeInfo(info, extraDataKey, arguments)
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)

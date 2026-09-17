@@ -123,6 +123,31 @@ def main():
         failures.append(
             f"the lens ended over {over[-1]!r} and the card is about {opened[-1]!r}")
 
+    # A page that will not say where its characters are.
+    #
+    # Some apps answer no such request, and some stop answering while their text is being
+    # written into - a conversation with an answer arriving in it, which is when a reader is
+    # looking at it. Those lines used to be read and dropped, leaving the mark a screenful of
+    # text to answer nothing about. With nothing drawn over the words, they are laid out
+    # evenly across the line's own rectangle instead: near enough to point at.
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off")
+    time.sleep(8)
+    guessed = dev.annotated()
+    print(f"  on a page that will not say where its characters are: {len(guessed)} words known")
+    if not guessed:
+        failures.append("the mark knows nothing on a page that will not place its characters")
+    # And never where a word is drawn over: there, a guessed position is a transcription on
+    # the wrong word.
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="sound", target="none")
+    time.sleep(8)
+    drawn = dev.annotated()
+    if drawn:
+        failures.append(
+            f"{len(drawn)} words were drawn from guessed positions, which puts a "
+            f"transcription on the wrong word")
+    dev.surface(mode="spanish", enable=1, density=1, lens=1, layer="meaning")
+    time.sleep(4)
+
     # Nothing keeps asking once the finger has gone.
     #
     # The mark is taken down and put up again whenever a setting changes, and a gesture in
