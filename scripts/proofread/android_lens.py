@@ -191,7 +191,7 @@ def main():
         # above the finger, the circle could still reach most of the page - what it could not
         # reach was the last couple of hundred pixels, which is where a message's own last
         # line sits above the keyboard.
-        floor = dev.height - 150
+        floor = dev.height - 120
         # From where the mark is now: the drag before this one left it wherever it ended, and
         # a swipe that starts anywhere else never touches it.
         dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
@@ -201,8 +201,11 @@ def main():
         rest = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         rx, ry, rw, rh = (int(v) for v in rest[-1])
         dev.clear_log()
+        # Slowly, and to the lowest a finger goes: the circle is on a leash and a synthetic
+        # swipe lifts the moment it arrives, so a quick drag is measured while the circle is
+        # still catching up - a hundred and fifty pixels short of where it settles.
         shell("input", "swipe", str(rx + rw // 2), str(ry + rh // 2),
-              str(dev.width // 2), str(dev.height - 60), "2500")
+              str(dev.width // 2), str(dev.height - 20), "5000")
         time.sleep(3)
         samples = [(int(x), int(y), name) for x, y, name in
                    re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]* -> (\S+)", dev.lines("LENSAT "))]
@@ -234,6 +237,15 @@ def main():
         dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
         time.sleep(4)
         where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        if not where:
+            # It says where it is when it is put up or moved, and the log was cleared for
+            # this. Ask for the page again so it says so afresh.
+            dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
+            time.sleep(2)
+            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
+            time.sleep(5)
+            where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)",
+                               dev.lines("LENSPARKED"))
         if not where:
             failures.append(f"the mark said nothing about where it parked on the {side}")
             continue

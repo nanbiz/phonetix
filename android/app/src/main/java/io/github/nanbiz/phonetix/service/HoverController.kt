@@ -583,13 +583,13 @@ class HoverController(
             runCatching { wm.updateViewLayout(view, markParams(size)) }
             // The circle is carried away from where the hand comes onto the screen.
             //
-            // A hand holding a phone pivots about one place: four fifths of the way across
-            // towards the side the mark rests on, four fifths of the way down. Everything the
-            // thumb covers is between that point and wherever it is pointing, so carrying the
-            // circle further out along that line is what keeps the hand off the word.
+            // A hand holding a phone comes in at the bottom corner on the side the mark
+            // rests on. Everything the thumb covers is between that corner and wherever it is
+            // pointing, so carrying the circle further out along that line is what keeps the
+            // hand off the word.
             //
-            // It grows with the distance from that point: nothing at all when the finger is
-            // on it - so the point itself can be pointed at - and the full carry a fifth of a
+            // It grows with the distance from that corner: nothing at all when the finger is
+            // in it - so the corner itself can be pointed at - and the full carry a fifth of a
             // screen away and beyond. That makes the whole screen reachable: the circle is
             // always further out than the finger, so the far edges come within reach, and the
             // near ones are had by bringing the hand back to where it rests.
@@ -601,8 +601,8 @@ class HoverController(
             // past it, so nothing can be aimed at precisely. Here the aim is one for one
             // outside the growing part and half as much again inside it.
             val edges = screen()
-            val homeX = edges.width() * (if (restsRight()) HOME_ACROSS else 1f - HOME_ACROSS)
-            val homeY = edges.height() * HOME_DOWN
+            val homeX = if (restsRight()) edges.width().toFloat() else 0f
+            val homeY = edges.height().toFloat()
             val awayX = event.rawX - homeX
             val awayY = event.rawY - homeY
             val away = kotlin.math.hypot(awayX, awayY)
@@ -638,12 +638,12 @@ class HoverController(
         /** How much of the bottom the system's own gesture strip takes, in dp. */
         const val FOOT_DP = 56f
 
-        /** Where the hand comes onto the screen: this far across towards the side the mark
-         *  rests on, and this far down. */
-        const val HOME_ACROSS = 0.8f
+        /** Where the mark waits, as a share of the screen's height: down by the hand, without
+         *  being in the corner it comes in at. */
         const val HOME_DOWN = 0.8f
 
-        /** How far from there the carry reaches its full length, as a share of the screen. */
+        /** How far from that corner the carry reaches its full length, as a share of the
+         *  screen. */
         const val GROWS_WITHIN = 0.2f
 
         /** The shortest gap between two ticks under the thumb. */
