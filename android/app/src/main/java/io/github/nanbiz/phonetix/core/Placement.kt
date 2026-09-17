@@ -98,6 +98,39 @@ object Placement {
      * lands exactly on the word however the app laid the line out; characters scrolled
      * out of view come back empty and those words are dropped rather than half-placed.
      */
+    /**
+     * Where the characters of a line probably are, for an app that will not say.
+     *
+     * Some apps answer no request for character positions at all, and some stop answering
+     * while their text is being written into - which is exactly when a reader is looking at
+     * it. Those lines are read, found to be unplaceable, and dropped: their words are known
+     * to nothing, so the mark has nothing to answer about over most of the screen.
+     *
+     * This lays the line out evenly instead: the node's own rectangle, split into as many
+     * rows as its height holds and each row into as many characters as the text has to share
+     * between them. It is a guess, and a proportional font makes it a few characters wrong at
+     * the ends of a row - which is why it is only ever used where nothing is drawn over a
+     * word, and the reader is pointing at one rather than reading a chip placed on it.
+     */
+    fun evenly(text: CharSequence, where: RectF, lineHeight: Float): Array<RectF?> {
+        val n = text.length
+        if (n == 0 || where.width() <= 0f || where.height() <= 0f) return arrayOfNulls(0)
+        val rows = if (lineHeight <= 0f) 1
+        else (where.height() / lineHeight).toInt().coerceAtLeast(1)
+        val perRow = ((n + rows - 1) / rows).coerceAtLeast(1)
+        val rowHeight = where.height() / rows
+        val out = arrayOfNulls<RectF>(n)
+        for (i in 0 until n) {
+            val row = (i / perRow).coerceAtMost(rows - 1)
+            val col = i - row * perRow
+            val width = where.width() / perRow
+            val left = where.left + col * width
+            val top = where.top + row * rowHeight
+            out[i] = RectF(left, top, left + width, top + rowHeight)
+        }
+        return out
+    }
+
     fun boxes(
         picks: List<Pick>,
         charRects: Array<RectF?>,

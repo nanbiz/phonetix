@@ -90,6 +90,12 @@ def summarise(state):
     print(f"  screen    {screen.get('package')} in {screen.get('language')} "
           f"lines={screen.get('lines')} replaced={screen.get('pageReplaced')} "
           f"following={screen.get('following')}")
+    lost = screen.get("linesWithoutCharacters") or 0
+    if lost:
+        # A line the app will not say the character positions of is read and then dropped:
+        # its words are known to nothing, so the mark has nothing to answer about there.
+        print(f"  NOCHARS   {lost} of {screen.get('linesPlanned')} lines were dropped "
+              f"because {screen.get('package')} would not say where its characters are")
     print(f"  overlay   {overlay.get('words')} words believed, "
           f"{overlay.get('chipsShown')}/{overlay.get('chips')} drawn, "
           f"silent={overlay.get('silent')} moving={overlay.get('inMotion')}")

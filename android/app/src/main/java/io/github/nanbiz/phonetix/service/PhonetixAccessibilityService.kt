@@ -109,6 +109,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private val waitedOut = HashSet<String>(4)
     /** Apps already named in the log as giving no character bounds, so each is said once. */
     private val noCharacters = HashSet<String>(4)
+
+    /** How many lines of the last read could not be placed because the app would not say
+     *  where its characters are: see [dumpState]. Those lines are read and then dropped, so
+     *  the mark has nothing to answer about on that part of the screen. */
+    @Volatile private var unplaceable = 0
+
+    /** And how many lines that read planned at all, to say it against. */
+    @Volatile private var plannedLines = 0
     /** Apps already named in the log as bystanders, so each is said once. */
     private val ignored = HashSet<String>(4)
     /** Whether the last event found the overlay switched on, so switching off hides once. */
@@ -696,6 +704,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("target", lastTarget ?: org.json.JSONObject.NULL)
                 .put("pageReplaced", pageUp)
                 .put("lines", cachedPlan.size)
+                .put("linesPlanned", plannedLines)
+                .put("linesWithoutCharacters", unplaceable)
                 .put("scrollOnly", scrollOnly)
                 .put("following", following)
                 .put("blockers", org.json.JSONArray().also { out ->
@@ -1688,6 +1698,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
 
         val boxes = ArrayList<WordBox>(planned.size * 2)
+        // Counted afresh for this read: what the state dump reports is this screen, not the
+        // sum of every screen since the service started.
+        unplaceable = 0
+        plannedLines = planned.size
         /** How many lines this read has measured from scratch while the page was moving. */
         var measuredMoving = 0
         var waited = 0
@@ -1750,6 +1764,34 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // Some apps will not say where the characters of a line are. Without them
                     // a transcription cannot be put on one word, so the line is left alone -
                     // and it is worth knowing which apps those are.
+                    // Counted every time, not only the first: which app refuses is worth
+                    // saying once, but how much of a screen is being lost to it is what
+                    // decides whether the mark has anything to answer about at all.
+                    unplaceable++
+                    // With nothing drawn over the words, a guess at where they are is worth
+                    // more than nothing at all: the reader is pointing at a word rather than
+                    // reading something placed on it, and an app that will not say where its
+                    // characters are - or stops saying while its text is being written into,
+                    // which is when a reader is looking at it - otherwise leaves the mark
+                    // with a screenful of text and nothing to answer about.
+                    if (SettingsStore.current.layer == "off" && p.length > 0) {
+                        val rect = p.measuredAt ?: android.graphics.Rect().also {
+                            p.node.getBoundsInScreen(it)
+                        }
+                        if (!rect.isEmpty) {
+                            val guessed = Placement.evenly(
+                                p.text.substring(p.from, (p.from + p.length).coerceAtMost(p.text.length)),
+                                RectF(rect),
+                                // What one line of this screen is worth in pixels, learned
+                                // from the spacing of the lines already measured.
+                                rowHeight,
+                            )
+                            if (guessed.isNotEmpty()) {
+                                Placement.boxes(p.picks, guessed, p.from, boxes)
+                                p.measuredAt = rect
+                            }
+                        }
+                    }
                     if (BuildConfig.DEBUG && noCharacters.add(pkg.orEmpty())) {
                         android.util.Log.d(
                             "Phonetix",
