@@ -2388,11 +2388,36 @@ class PhonetixAccessibilityService : AccessibilityService() {
         p.node.getBoundsInScreen(at)
         val remembered = layouts.recall(p.text, p.from, p.length)
         val placed = layouts.place(remembered, at, p.viewport)
-        if (placed == null && !allowedToAsk) return false
+        // An even layout costs nothing but the rectangle already in hand, so it is not held
+        // back by the rule that keeps a follow from asking an app to lay its text out again.
+        // Held back, a line nobody will place had no words on a follow pass at all, and the
+        // follow gave up on the whole screen for want of them.
+        val guessing = placed == null && SettingsStore.current.layer == "off" &&
+            p.length > 0 && !at.isEmpty
+        if (placed == null && !allowedToAsk && !guessing) return false
         val rects = placed
-            ?: charRects(p.node, p.from, p.length)?.also { fresh ->
-                againstWhereItIsNow(p, at)
-                layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
+            ?: (
+                if (allowedToAsk) {
+                    charRects(p.node, p.from, p.length)?.also { fresh ->
+                        againstWhereItIsNow(p, at)
+                        layouts.remember(p.text, p.from, p.length, at, p.viewport, fresh)
+                    }
+                } else {
+                    null
+                }
+                )
+            // A line nobody will place is laid out evenly across where it is now, the same way
+            // the full read does it - and without asking the app anything, so a follow pass
+            // stays as cheap as it was. Followed rather than dropped: a line with no words on
+            // a follow pass took the whole screen's follow down with it.
+            ?: if (guessing) {
+                Placement.evenly(
+                    p.text.substring(p.from, (p.from + p.length).coerceAtMost(p.text.length)),
+                    RectF(at),
+                    rowHeight,
+                ).takeIf { it.isNotEmpty() }
+            } else {
+                null
             }
             ?: return false
         val made = ArrayList<WordBox>(p.picks.size)
