@@ -20,6 +20,7 @@ import sys
 import time
 
 from android_harness import Device, shell
+import state as State
 from webview import View
 
 
@@ -609,6 +610,30 @@ def check_language(r, dev):
             time.sleep(1)
         if said:
             break
+    # And the words themselves carry it, not only the reading that was chosen for them.
+    #
+    # What language a word is in is asked again when the card for it is built - the card looks
+    # the word up and says which language it is answering about - and the words used to reach
+    # it carrying nothing. Every card on a German page was then built in English: no entry,
+    # no meaning, and a chip saying EN under a German word.
+    carried = {}
+    serial = State.device()
+    dumped = State.ask(serial)
+    if dumped:
+        for box in (State.fetch(serial, dumped).get("overlay") or {}).get("boxes", []):
+            reads = box.get("language") or ""
+            carried[reads] = carried.get(reads, 0) + 1
+            # What was drawn over each word, from the app itself rather than from a log line.
+            # The line naming every word on screen is thousands of characters long, and a
+            # loaded device drops it from its own buffer: asked for out of the log alone, this
+            # reported a German page read in English on a device that was reading it in German.
+            if box.get("word") and box.get("drawn"):
+                said.setdefault(box["word"], box["drawn"])
+    r.check(
+        carried.get("de", 0) > 0 and list(carried) == ["de"],
+        "language: the words of a German page carry German, so a card about one is German",
+        f"the words say {carried or 'nothing'}",
+    )
     english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
     r.check(
         len(english) > 0,

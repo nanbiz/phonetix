@@ -232,21 +232,35 @@ def main():
     # over the wrong words, so what is checked is that the lines move with what they replaced.
     was = drew(log)
     where_was = re.findall(r"PAGEDREW \d+ (\d+),(\d+)", log)
-    dev.clear_log()
-    shell("input", "swipe", str(dev.width // 2), str(int(dev.height * 0.7)),
-          str(dev.width // 2), str(int(dev.height * 0.35)), "400")
-    time.sleep(6)
-    scrolled = dev.log()
-    where_now = re.findall(r"PAGEDREW \d+ (\d+),(\d+)", scrolled)
+    # Swiped until the page itself says it moved. A swipe on a busy device is dropped
+    # outright, and the page that did not move has nothing for the replacement to follow:
+    # asked once and taken on trust, this reported an overlay that had stopped drawing when
+    # what had happened was that nothing scrolled.
+    scrolled, where_now, went = "", [], []
+    for _ in range(3):
+        dev.clear_log()
+        shell("input", "swipe", str(dev.width // 2), str(int(dev.height * 0.7)),
+              str(dev.width // 2), str(int(dev.height * 0.35)), "400")
+        time.sleep(6)
+        scrolled = dev.log()
+        where_now = re.findall(r"PAGEDREW \d+ (\d+),(\d+)", scrolled)
+        went = [where for _, where in dev.scroll_timeline(scrolled)]
+        if len(set(went)) > 1:
+            break
+    if len(set(went)) <= 1:
+        print(f"  the page did not move: it reported {sorted(set(went))[:3]}")
     moved = bool(where_was and where_now and where_was[-1] != where_now[-1])
     print(f"  the lines were at {where_was[-1:]} and are at {where_now[-1:]}")
-    if not where_now:
+    if len(set(went)) <= 1:
+        # Nothing moved, so nothing here is evidence either way about following a scroll.
+        pass
+    elif not where_now:
         failures.append("the replaced page stopped drawing when the page was scrolled")
     elif not moved:
         failures.append(
             f"the replaced page did not follow the scroll: still at {where_now[-1]}")
     still = drew(scrolled)
-    if still and was and set(still) & set(was) == set() and not moved:
+    if len(set(went)) > 1 and still and was and set(still) & set(was) == set() and not moved:
         failures.append("the replaced page lost its translations on a scroll")
 
     # The second press, which gives the page back. Read at once and again after: the service

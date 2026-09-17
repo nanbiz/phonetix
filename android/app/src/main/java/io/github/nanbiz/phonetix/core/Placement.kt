@@ -220,6 +220,7 @@ object Placement {
         charRects: Array<RectF?>,
         offset: Int,
         into: MutableList<WordBox>,
+        language: String = "",
     ) {
         for (p in picks) {
             var l = Float.MAX_VALUE; var t = Float.MAX_VALUE
@@ -244,6 +245,10 @@ object Placement {
                         // Carried from the pick, so a tap asks the same question the line
                         // already answered about which word this spelling is.
                         p.before,
+                        // What the screen this word came from was read as. Without it the
+                        // card looked every word up in English: a German page answered a
+                        // German word with nothing at all, under a chip saying EN.
+                        language,
                         at = p.start,
                         to = p.end,
                     ),

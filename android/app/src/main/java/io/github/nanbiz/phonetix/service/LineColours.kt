@@ -296,10 +296,10 @@ class LineColours(
                 var read = 0
                 for ((k, rect) in asked) {
                     countAttempt(k, sawFrame = true)
-                    // Held colours are skipped, except where they are old enough to be worth
-                    // reading again - which is how a bad reading is undone.
-                    val now = SystemClock.uptimeMillis()
-                    if (k in lines && now - (readAt[k] ?: 0L) <= STALE_MS) continue
+                    // Every line asked for is read from this frame, held colours included.
+                    // The capture has already been paid for, and a line keeping what it was
+                    // read as on another screen of the same app is a line wearing a
+                    // background it is no longer standing on.
                     val c = sampler.sampleRegion(rect)
                     if (c == null) {
                         // Its text could not be told from what it is written on, but what it

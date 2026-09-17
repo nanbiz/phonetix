@@ -86,9 +86,14 @@ data class Answer(
     val headline: String?
         get() = says.firstOrNull() ?: glosses.firstOrNull()
 
-    /** Whether anything was found at all, which decides between a card and a message. */
+    /** Whether anything was found at all, which decides between a card and a message.
+     *
+     *  Not the spelling: that is the word the reader is already pointing at, and counting it
+     *  made this true of every answer there is. A lookup that reached nothing then stood in
+     *  front of the transcription the overlay already had, and the card for a word out of a
+     *  language with no pack was the word, a chip and nothing else. */
     val found: Boolean
-        get() = headline != null || ipa.isNotEmpty() || spelling.isNotBlank()
+        get() = headline != null || ipa.isNotEmpty() || state == State.Phrase
 
     companion object {
         /**

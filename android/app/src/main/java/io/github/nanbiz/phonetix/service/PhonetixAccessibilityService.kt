@@ -110,6 +110,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Apps already named in the log as giving no character bounds, so each is said once. */
     private val noCharacters = HashSet<String>(4)
 
+    /** What the screen being read was read as, which is the language its words are in. */
+    @Volatile private var readingSource = Language.OURS
+
     /**
      * How tall a row is on the screen being read, where the app will not say where its
      * characters are and the layout has to be guessed. Zero until a read has had to guess.
@@ -712,7 +715,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("apps", org.json.JSONArray(settings.apps)))
             .put("screen", org.json.JSONObject()
                 .put("package", cachedPackage ?: org.json.JSONObject.NULL)
-                .put("language", lastScreenLanguage ?: org.json.JSONObject.NULL)
+                // What the last read actually read this screen as, rather than the last
+                // language any screen was read as: those differ, and the sticky one had a
+                // page reported as Spanish while its words were being read as English.
+                .put("language", readingSource)
                 .put("target", lastTarget ?: org.json.JSONObject.NULL)
                 .put("pageReplaced", pageUp)
                 .put("lines", cachedPlan.size)
@@ -1829,7 +1835,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // now. If it has moved on, the picks describe a screen that is gone.
             if (reuse && p.node.text?.toString() != p.text) { stale = true; break }
             val before = boxes.size
-            Placement.boxes(p.picks, rects, p.from, boxes)
+            Placement.boxes(p.picks, rects, p.from, boxes, readingSource)
             // Remember where this line was when its characters were measured, so a scroll
             // can carry its words rather than measuring them again.
             if (remembered != null) p.node.getBoundsInScreen(at)
@@ -1912,7 +1918,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 )
                 if (guessed.isEmpty()) continue
                 val from = boxes.size
-                Placement.boxes(line.picks, guessed, line.from, boxes)
+                Placement.boxes(line.picks, guessed, line.from, boxes, readingSource)
                 // The line keeps its own words, as every measured line does: boxes appended
                 // here and left unowned belong to no line, and everything downstream works
                 // from the line.
@@ -2029,7 +2035,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val unread = if (!stillEnough) emptyList()
         else planned.filter { it.boxes.isNotEmpty() && colours.wanted(it.text) }
         if (unread.isNotEmpty()) {
-            colours.read(unread.map { colours.key(it.text) to colorRect(it) })
+            // Every line of the screen, not only the ones that asked. What a capture costs is
+            // the capture: the overlay comes down, a frame is taken, and it goes back up.
+            // Reading another line out of the frame already in hand costs nothing, and a line
+            // whose colours were read on a different screen of the same app - the same words
+            // on another background, which is what a page of a chat or a list is full of -
+            // has no other way of being told that it has moved on to something else.
+            val all = planned.filter { it.boxes.isNotEmpty() }
+            colours.read(all.map { colours.key(it.text) to colorRect(it) })
         }
 
         // The colours ride on the boxes the lines keep, so that following a scroll carries
@@ -2458,7 +2471,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             ?: return false
         val made = ArrayList<WordBox>(p.picks.size)
-        Placement.boxes(p.picks, rects, p.from, made)
+        Placement.boxes(p.picks, rects, p.from, made, readingSource)
         // Where the line is now, with its words brought along.
         //
         // A line placed from what it said last time has its words worked out against the
@@ -2517,7 +2530,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * gesture is a check of the gesture rather than of the card. This asks for the card itself,
      * so what is looked at is what a reader would see.
      */
-    fun showCardFor(word: String, ipa: String) {
+    fun showCardFor(word: String, ipa: String, language: String = "") {
         if (!::tooltip.isInitialized) return
         val middle = resources.displayMetrics.widthPixels / 2f
         val box = WordBox(
@@ -2525,6 +2538,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             ipa = ipa,
             full = ipa,
             word = word,
+            // What the word is in, which is what the card looks it up as. Left out, a card
+            // asked for about a German word was built in English, which is the fault this
+            // exists to be able to look at.
+            language = language,
         )
         main.post { tooltip.show(box) }
     }
@@ -2532,14 +2549,33 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private fun rewriteRow(p: Planned, says: String, into: MutableList<WordBox>) {
         if (says.isBlank() || says.length > MAX_TEXT) return
         if (rewrittenThisPass >= MEASURE_MOVING_MAX || !Dictionary.ready) return
+        // In the language the screen was read in and the mode the reader asked for, which is
+        // what every other line of it gets. Read as English and always as a transcription, a
+        // row recycled into view on a German list carried an English reading of a German
+        // word, between rows that had been read in German.
+        val settings = SettingsStore.current
+        val source = readingSource
         val picks = Reading.annotate(
             listOf(says),
-            source = "en",
-            target = "en",
-            mode = "sound",
-            density = SettingsStore.current.density,
-        ).filter { it.inline && it.ipa.isNotEmpty() }
-            .map { Pick(it.start, it.end - 1, it.spelling, it.ipa) }
+            source = source,
+            target = settings.into.ifEmpty { source },
+            mode = if (settings.layer == "off") "sound" else settings.layer,
+            density = settings.density,
+            narrow = settings.narrow,
+            hideStress = settings.hideStress,
+            accent = settings.accentFor(source),
+        ).filter { it.inline }
+            .mapNotNull { token ->
+                val shown = when (settings.layer) {
+                    "sound" -> token.ipa
+                    "both" -> listOf(token.gloss, token.glossIpa).filter { it.isNotEmpty() }
+                        .joinToString(" ")
+                        .ifEmpty { token.ipa }
+                    else -> token.gloss.ifEmpty { token.ipa }
+                }
+                if (shown.isEmpty()) null
+                else Pick(token.start, token.end - 1, token.spelling, shown)
+            }
         if (picks.isEmpty()) return
         rewrittenThisPass++
         val now = Planned(
@@ -2628,6 +2664,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // a word. All three were hardcoded to English and a transcription once, which is how
         // an app whose whole point is translation showed nothing but pronunciations.
         val source = screenLanguage ?: Language.OURS
+        // Kept for the words themselves, so that what the card asks about a word is asked in
+        // the language the word was read in. A follow pass places words without reading the
+        // screen again, and takes the source from here.
+        readingSource = source
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",

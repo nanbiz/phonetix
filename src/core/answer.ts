@@ -90,9 +90,15 @@ export function headline(answer: Answer): string | null {
   return answer.says[0] ?? answer.glosses[0] ?? null;
 }
 
-/** Whether anything was found at all, which decides between a card and a message. */
+/**
+ * Whether anything was found at all, which decides between a card and a message.
+ *
+ * Not the spelling: that is the word the reader is already pointing at, and counting it made
+ * this true of every answer there is, so a lookup that reached nothing stood in front of the
+ * transcription that was already in hand.
+ */
 export function found(answer: Answer): boolean {
-  return headline(answer) !== null || answer.ipa.length > 0 || answer.spelling.trim() !== '';
+  return headline(answer) !== null || answer.ipa.length > 0 || answer.state === 'Phrase';
 }
 
 /** What is known about a word when all that is known is how it is said. */

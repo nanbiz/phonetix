@@ -547,6 +547,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     ?.showCardFor(
                         i.getStringExtra("cardWord") ?: "paragraph",
                         i.getStringExtra("cardIpa") ?: "ˈpæɹəɡɹæf",
+                        i.getStringExtra("cardLanguage").orEmpty(),
                     )
             }
             if (i.hasExtra("packHost")) {

@@ -46,7 +46,11 @@ def boxes(device, serial, mode):
     shell("am", "force-stop", PKG)
     time.sleep(1)
     device.enable_service()
-    device.surface(mode)
+    # Nothing drawn over the words, which is the only state a guess is made in: with the
+    # overlay painting, a guessed position would put a transcription on the wrong word, so
+    # the app does not guess at all. Left to whatever the last check set, this measured a
+    # page that was never guessed about.
+    device.surface(mode, enable=1, density=1, lens=1, layer="off", target="none")
     time.sleep(1)
     device.annotated(seconds=40)
     time.sleep(2)
