@@ -384,7 +384,16 @@ class HoverController(
 
         private val swing = object : Choreographer.FrameCallback {
             override fun doFrame(frameTimeNanos: Long) {
-                if (!active) return
+                // The mark this hand belongs to may have been taken down mid-gesture - the
+                // reader changed a setting, the service re-showed it - and a hand whose view
+                // has gone never sees the finger lift. Its loop then runs for the life of the
+                // app, asking what is under the point the circle was last at: a card opened
+                // by itself whenever the app moved a word under that spot, over the keyboard,
+                // coming and going as the reader typed.
+                if (!active || !view.isAttachedToWindow) {
+                    active = false
+                    return
+                }
                 val now = android.os.SystemClock.uptimeMillis()
                 val dt = if (lastSwing == 0L) 0.016f else (now - lastSwing) / 1000f
                 lastSwing = now
