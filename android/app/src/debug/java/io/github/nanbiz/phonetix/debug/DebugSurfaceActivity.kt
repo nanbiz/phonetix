@@ -550,6 +550,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                         i.getStringExtra("cardLanguage").orEmpty(),
                     )
             }
+            // Which side the mark rests on, so a check can ask for the other one without
+            // driving the settings screen.
+            if (i.hasExtra("side")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setSide(
+                    i.getStringExtra("side").orEmpty(),
+                )
+            }
             if (i.hasExtra("packHost")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setPackHost(
                     i.getStringExtra("packHost").orEmpty(),

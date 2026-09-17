@@ -223,6 +223,40 @@ def main():
             failures.append(
                 "nothing in the bottom quarter of the page could be pointed at")
 
+    # The side the reader keeps it on.
+    #
+    # It decides two things: which edge the mark waits at, and which way the circle is carried
+    # from the hand - away from the corner the hand comes in at, so the hand is never over the
+    # word. Asked with the mark already up, because that is when a reader changes it: read only
+    # where the mark is built, the setting did nothing until something else took it down.
+    for side, edge in (("left", "near"), ("right", "far")):
+        dev.clear_log()
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
+        time.sleep(4)
+        where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        if not where:
+            failures.append(f"the mark said nothing about where it parked on the {side}")
+            continue
+        px, py, pw, ph = (int(v) for v in where[-1])
+        dev.clear_log()
+        shell("input", "swipe", str(px + pw // 2), str(py + ph // 2),
+              str(dev.width // 2), str(dev.height // 2), "3000")
+        time.sleep(2)
+        seen = [(int(a), int(b)) for a, b in
+                re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]*", dev.lines("LENSAT "))]
+        carried = (seen[-1][0] - dev.width // 2) if seen else 0
+        print(f"  on the {side}: parked at x={px} of {dev.width}, "
+              f"carried {carried:+}px from the finger")
+        rested = px < dev.width // 2 if side == "left" else px > dev.width // 2
+        if not rested:
+            failures.append(f"asked to rest on the {side}, the mark parked at x={px}")
+        if not seen:
+            failures.append(f"nothing was reported under the mark on the {side}")
+        elif (carried > 0) != (side == "left"):
+            failures.append(
+                f"on the {side} the circle is carried {carried:+}px from the finger, which is "
+                f"towards the hand rather than away from it")
+
     # And never where a word is drawn over: there, a guessed position is a transcription on
     # the wrong word.
     dev.surface(mode="mute", enable=1, density=1, lens=1, layer="sound", target="none")

@@ -90,6 +90,9 @@ class HoverController(
     private var markX = -1
     private var markY = -1
 
+    /** Whether a finger is on the mark, so that nothing moves it out from under one. */
+    @Volatile private var holding = false
+
     private var hovered: WordBox? = null
 
     /** When the thumb was last told it had taken a word, so it cannot be told without pause. */
@@ -177,11 +180,21 @@ class HoverController(
 
     /** Put the circle up, parked at the edge. */
     fun show() {
-        if (mark != null) {
-            // Already up. Where it is is said again anyway: a reader cannot see the window
-            // list, and neither can a check - all either has is what the service reports, and
-            // reporting it only the once means the mark is invisible to anything that started
-            // watching afterwards.
+        mark?.let { up ->
+            // Already up, but not necessarily where it now belongs: the side it rests on is
+            // the reader's to choose, and a mark that only moves when it is built again
+            // stayed on the old edge until something else took it down. Left where it is
+            // while a finger is on it, which would be the mark jumping out from under a hand.
+            val size = up.width.takeIf { it > 0 } ?: markPx()
+            val belongs = restingX(size)
+            if (markX != belongs && !holding) {
+                markX = belongs
+                runCatching { wm.updateViewLayout(up, markParams(size)) }
+            }
+            // Where it is is said again anyway: a reader cannot see the window list, and
+            // neither can a check - all either has is what the service reports, and reporting
+            // it only the once means the mark is invisible to anything that started watching
+            // afterwards.
             parked()
             return
         }
@@ -443,6 +456,7 @@ class HoverController(
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.rawX
                     downY = event.rawY
+                    holding = true
                     dragging = false
                     formed = false
                     active = true
@@ -467,6 +481,7 @@ class HoverController(
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    holding = false
                     active = false
                     view.active = false
                     main.removeCallbacks(hold)

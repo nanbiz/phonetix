@@ -39,12 +39,6 @@ object Wording {
         Choice("both", "Both", "what it means, and how to say that"),
     )
 
-    /** Which side, as an overlay can draw them. */
-    val side = listOf(
-        Choice("right", "Right", "for a phone held in the right hand"),
-        Choice("left", "Left", "for a phone held in the left hand"),
-    )
-
     /** Every row of the settings surfaces, by the name it reports itself under. */
     val rows = mapOf(
         "accent" to Words("Accent", "which accent each language is read in"),
@@ -68,7 +62,6 @@ object Wording {
         "setup" to Words("Setup", ""),
         "setup-overlay" to Words("Drawing over apps", "Lets it paint the transcription on top of the word."),
         "setup-reading" to Words("Reading the screen", "Lets Phonetix see the words in other apps. Nothing leaves your device."),
-        "side" to Words("Which side", "which side of the screen the mark rests on"),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "start" to Words("Before it can answer a word", ""),

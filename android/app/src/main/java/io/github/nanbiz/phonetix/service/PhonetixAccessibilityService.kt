@@ -172,6 +172,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var verifyFrom = 0
     /** Whether this screen has been seen handing a row to a different line. */
     @Volatile private var recycling = false
+    /** Below this many words, a screen is too small to judge a follow by what it kept. */
+    private val FEW_WORDS = 6
+
+    /** How small a share of the plan's words a follow may keep and still be a follow: one in
+     *  this many. */
+    private val KEPT_ENOUGH = 3
+
     /** How many passes in a row have kept no words at all. */
     @Volatile private var blankFollows = 0
     /** And how many in a row have had no line answer where it is. */
@@ -1177,6 +1184,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             var asks = 0
             var colourNs = 0L
             val moved = ArrayList<WordBox>(16)
+            /** How many words the plan held before this pass, to say how much it kept. */
+            val had = planned.sumOf { it.boxes.size }
             var ok = true
             var why = ""
             var alive = 0
@@ -1579,6 +1588,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (ok && gone > alive) {
                 ok = false
                 why = "more lines recycled ($gone) than kept ($alive)"
+            }
+            // And so does a pass that kept a handful of words out of a screenful.
+            //
+            // Keeping nothing is caught above; keeping almost nothing was counted a success,
+            // and it is what a conversation being written into looks like - the lines under
+            // the plan change as the answer arrives, every word of them falls outside the line
+            // it was measured in, and the one or two that happened not to change are all that
+            // is left. Painted, that is a single word on a page full of them, and the mark can
+            // answer about nothing else: dragged over the page, it says "nothing" from one end
+            // to the other. Read from a reader's own phone while an answer was being written:
+            // one word believed, where a full read of the same screen found forty-seven.
+            if (ok && had >= FEW_WORDS && moved.size * KEPT_ENOUGH < had) {
+                ok = false
+                why = "kept ${moved.size} of $had words"
             }
             // A screen that has largely scrolled away is a screen whose words are mostly new
             // ones, and following cannot transcribe a word it has never read. Carried on to

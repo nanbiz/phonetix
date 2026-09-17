@@ -63,6 +63,11 @@ object LazyListPage {
     // fill about a screen and a half, so a drag of a screen reached the end of the list a
     // third of the way through and the checks spent the rest of the movement judging a page
     // that had stopped - as a movement.
+    /** What the last message is written into with, once the rows have all arrived. */
+    private val WRITTEN = listOf(
+        "harbour", "ivory", "jungle", "kernel", "ladder", "magnet", "nectar", "oyster",
+    )
+
     private val MESSAGES: List<String> =
         (0 until TestWords.DISTINCT.size / 2 * 3).map { i ->
             val from = (i * 2) % TestWords.DISTINCT.size
@@ -110,6 +115,22 @@ object LazyListPage {
                         shown += base[next]
                         android.util.Log.d("PhonetixTest", "ARRIVED ${'$'}next ${'$'}{base[next]}")
                         next++
+                    }
+                    // And then the last message keeps being written into, a word at a time,
+                    // which is what a reader actually watches: rows arriving is a list filling
+                    // up, and it is over in a moment. An answer being written goes on, and the
+                    // lines under it change under whatever is drawn over them.
+                    var word = 0
+                    while (true) {
+                        kotlinx.coroutines.delay(growEvery.toLong())
+                        val said = WRITTEN[word % WRITTEN.size]
+                        // Into a row near the top, where it can be seen: written into the
+                        // last one, the page changed off the bottom of the screen and
+                        // nothing watching the screen could tell it was changing at all.
+                        val at = minOf(1, shown.size - 1)
+                        shown[at] = shown[at] + " " + said
+                        android.util.Log.d("PhonetixTest", "WRITTEN " + said)
+                        word++
                     }
                 }
             }
