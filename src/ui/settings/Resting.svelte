@@ -1,77 +1,115 @@
 <script lang="ts">
   // Where the mark waits, chosen by putting it there.
   //
-  // The thing being chosen is a place on the screen, so the way to choose it is a screen with
-  // the mark on it: a number of pixels would mean nothing to a reader and nothing on a phone
-  // of a different size. What is stored is a share of the screen across and down, so the same
-  // choice means the same place on any phone and in either orientation.
+  // The thing being chosen is a place on a screen, so the way to choose it is a screen with
+  // the mark on it. A number of pixels would mean nothing to a reader and nothing on a phone
+  // of another size: what is stored is a share of the screen across and down, so the same
+  // choice means the same place on any phone.
   //
-  // The board also says what the place is for. The mark waits there, and the circle it carries
-  // is pushed away from there while a finger drags it, so the hand is never over the word: the
-  // ray shows that direction and the ring shows how far out the carry takes its full length.
+  // One gesture decides everything the place is made of. Dropped against either edge the mark
+  // rests on that side, the way it always has, and settles to where a hand holds it; dropped
+  // anywhere else it stays exactly there. So the side, and whether it is kept where it was
+  // put, are the same act of putting it somewhere - there is nothing to read and no switch to
+  // find.
+  //
+  // The board says what the place is for as well as where it is: the ring is how far from it
+  // the carry grows to its full length, and the line running out of it is where a word in the
+  // middle of the page gets pointed at from, since the circle is always carried away from
+  // where the mark waits.
   import { SAYS } from '@/data/wording';
 
   interface Props {
-    /** Where it waits now, as a share of the screen. */
+    /** Where it waits now, as a share of the screen, and whether that is the reader's doing. */
     x: number;
     y: number;
-    /** The screen this is standing in for, so the board is the shape of the reader's phone. */
+    pinned: boolean;
+    /** Which edge it rests on when it is not. */
+    side: string;
+    /** The screen this stands in for, so the board is the shape of the reader's own. */
     across?: number;
     down?: number;
-    /** Whether the reader is choosing it, as opposed to being shown where it goes by itself. */
-    on?: boolean;
-    change: (x: number, y: number) => void;
+    /** Put somewhere of their own. */
+    pin: (x: number, y: number) => void;
+    /** Or left to rest on an edge. */
+    rest: (side: string) => void;
   }
 
-  let { x, y, across = 9, down = 19.5, on = true, change }: Props = $props();
+  let { x, y, pinned, side, across = 9, down = 19.5, pin, rest }: Props = $props();
 
   let board: HTMLDivElement | undefined = $state();
   let holding = $state(false);
+  /** Where the mark is while a finger is on it, before it is let go and settles. */
+  let held: { x: number; y: number } | null = $state(null);
 
+  /** How close to an edge counts as being dropped on it. */
+  const EDGE = 0.14;
+  /** Where a mark resting on an edge sits: in from it, and down where a hand holds the phone. */
+  const IN = 0.06;
+  const DOWN = 0.8;
   /** How far the arrow keys move it, and how far with a shift held. */
   const STEP = 0.02;
   const STRIDE = 0.1;
 
-  /**
-   * Where the circle ends up when a finger is in the middle of the page, which is what the
-   * ray and the second circle stand for: the carry is always away from where the mark waits,
-   * so one line from the mark towards the middle says the whole rule.
-   */
-  let away = $derived.by(() => {
-    const dx = 0.5 - x;
-    const dy = 0.5 - y;
-    const far = Math.hypot(dx * across, dy * down) || 1;
-    const reach = 0.42;
-    return { x: x + (dx * across / far) * reach * (down / across) * 0.5, y: y + (dy * down / far) * reach };
+  /** Where the mark is drawn: under the finger while it is being moved, at rest otherwise. */
+  let at = $derived(
+    held ?? (pinned ? { x, y } : { x: side === 'left' ? IN : 1 - IN, y: DOWN })
+  );
+
+  /** Which edge it would land on, if any, shown while it is being dragged. */
+  let landing = $derived.by(() => {
+    const put = held;
+    if (!put) return '';
+    return put.x <= EDGE ? 'left' : put.x >= 1 - EDGE ? 'right' : '';
   });
 
-  function put(event: PointerEvent) {
+  /**
+   * Where the circle ends up when a finger is in the middle of the page, which is what the
+   * line and the second circle stand for: the carry is away from where the mark waits, so one
+   * line towards the middle says the whole rule.
+   */
+  let away = $derived.by(() => {
+    const dx = (0.5 - at.x) * across;
+    const dy = (0.5 - at.y) * down;
+    const far = Math.hypot(dx, dy) || 1;
+    const reach = down * 0.16;
+    return { x: at.x + ((dx / far) * reach) / across, y: at.y + ((dy / far) * reach) / down };
+  });
+
+  function whereOn(event: PointerEvent) {
     const box = board?.getBoundingClientRect();
-    if (!box || !on) return;
-    change(
-      Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
-      Math.min(1, Math.max(0, (event.clientY - box.top) / box.height))
-    );
+    if (!box) return null;
+    return {
+      x: Math.min(1, Math.max(0, (event.clientX - box.left) / box.width)),
+      y: Math.min(1, Math.max(0, (event.clientY - box.top) / box.height)),
+    };
+  }
+
+  /** Put where it was let go: against an edge it rests there, anywhere else it stays. */
+  function settle(put: { x: number; y: number }) {
+    if (put.x <= EDGE) rest('left');
+    else if (put.x >= 1 - EDGE) rest('right');
+    else pin(put.x, put.y);
   }
 
   function grab(event: PointerEvent) {
-    if (!on) return;
     holding = true;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    put(event);
+    held = whereOn(event);
   }
 
   function move(event: PointerEvent) {
-    if (holding) put(event);
+    if (holding) held = whereOn(event);
   }
 
   function drop(event: PointerEvent) {
-    holding = false;
     (event.currentTarget as HTMLElement).releasePointerCapture?.(event.pointerId);
+    holding = false;
+    const put = held;
+    held = null;
+    if (put) settle(put);
   }
 
   function typed(event: KeyboardEvent) {
-    if (!on) return;
     const by = event.shiftKey ? STRIDE : STEP;
     const moved: Record<string, [number, number]> = {
       ArrowLeft: [-by, 0],
@@ -82,20 +120,20 @@
     const step = moved[event.key];
     if (!step) return;
     event.preventDefault();
-    change(
-      Math.min(1, Math.max(0, x + step[0])),
-      Math.min(1, Math.max(0, y + step[1]))
-    );
+    settle({
+      x: Math.min(1, Math.max(0, at.x + step[0])),
+      y: Math.min(1, Math.max(0, at.y + step[1])),
+    });
   }
 </script>
 
 <div class="rest">
   <div
-    class="board{on ? '' : ' idle'}"
+    class="board"
     style="aspect-ratio: {across} / {down}"
     bind:this={board}
     role="application"
-    tabindex={on ? 0 : -1}
+    tabindex="0"
     aria-label={SAYS['rest-put']}
     onpointerdown={grab}
     onpointermove={move}
@@ -103,25 +141,40 @@
     onpointercancel={drop}
     onkeydown={typed}
   >
-    <!-- The page under it, said in two lines so the board reads as a screen rather than a
-         box: what is being placed is a thing that sits over somebody's reading. -->
+    <!-- A page under it, so the board reads as a screen rather than as a box: what is being
+         placed is a thing that sits over somebody's reading. -->
     <div class="page" aria-hidden="true">
-      {#each Array(9) as _, line}
+      {#each Array(13) as _, line}
         <span class="line" style="width: {line % 3 === 2 ? 52 : 86}%"></span>
       {/each}
     </div>
-    <!-- How far out the carry grows to its full length: a fifth of the shorter side of the
-         screen, which on a phone is its width. Drawn as an element rather than in the drawing
-         below, so that it is a circle on a screen of any shape rather than an ellipse. -->
-    <span class="ring" style="left: {x * 100}%; top: {y * 100}%" aria-hidden="true"></span>
+
+    <!-- The edges it can be left to rest on, lit while it is over one. -->
+    <span class="edge left{landing === 'left' ? ' taking' : ''}" aria-hidden="true"></span>
+    <span class="edge right{landing === 'right' ? ' taking' : ''}" aria-hidden="true"></span>
+
+    <!-- How far from it the carry grows to its full length: a fifth of the shorter side of the
+         screen. An element rather than a shape in the drawing below, because a circle in a
+         drawing stretched to the shape of a phone is an ellipse. -->
+    <span class="ring" style="left: {at.x * 100}%; top: {at.y * 100}%" aria-hidden="true"></span>
     <svg class="over" viewBox="0 0 {across} {down}" preserveAspectRatio="none" aria-hidden="true">
-      <line class="ray" x1={x * across} y1={y * down} x2={away.x * across} y2={away.y * down} />
+      <line
+        class="ray"
+        x1={at.x * across}
+        y1={at.y * down}
+        x2={away.x * across}
+        y2={away.y * down}
+      />
     </svg>
-    <span class="mark" style="left: {x * 100}%; top: {y * 100}%" aria-hidden="true"></span>
     <span class="circle" style="left: {away.x * 100}%; top: {away.y * 100}%" aria-hidden="true"
     ></span>
+    <span
+      class="mark{holding ? ' held' : ''}"
+      style="left: {at.x * 100}%; top: {at.y * 100}%"
+      aria-hidden="true"
+    ></span>
   </div>
-  <p class="said">{on ? SAYS['rest-put'] : SAYS['rest-side']}</p>
+  <p class="said">{SAYS['rest-put']}</p>
 </div>
 
 <style>
@@ -130,29 +183,27 @@
     flex-direction: column;
     align-items: center;
     gap: var(--space-3);
-    padding: var(--space-3) 0 var(--space-4);
+    padding: var(--space-4) 0;
   }
 
   .board {
     position: relative;
-    width: min(58%, 15rem);
+    width: min(64%, 17rem);
     border-radius: var(--radius-card);
-    border: 1px solid var(--color-border);
+    border: var(--border-width) solid var(--color-border);
     background: var(--color-page-bg);
     overflow: hidden;
     touch-action: none;
-    cursor: crosshair;
-    transition: opacity 120ms ease;
+    cursor: grab;
+  }
+
+  .board:active {
+    cursor: grabbing;
   }
 
   .board:focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: var(--border-width) solid var(--color-accent);
     outline-offset: 2px;
-  }
-
-  .board.idle {
-    opacity: 0.55;
-    cursor: default;
   }
 
   .page {
@@ -160,16 +211,52 @@
     inset: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 7%;
-    padding: 0 8%;
+    justify-content: space-evenly;
+    padding: 6% 8%;
   }
 
   .line {
     height: 2px;
     border-radius: 2px;
     background: var(--color-ink-faint);
-    opacity: 0.35;
+    opacity: 0.3;
+  }
+
+  .edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 14%;
+    background: linear-gradient(
+      to right,
+      color-mix(in srgb, var(--color-accent) 18%, transparent),
+      transparent
+    );
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .edge.left {
+    left: 0;
+  }
+
+  .edge.right {
+    right: 0;
+    transform: scaleX(-1);
+  }
+
+  .edge.taking {
+    opacity: 1;
+  }
+
+  .ring {
+    position: absolute;
+    width: 40%;
+    aspect-ratio: 1;
+    margin: -20% 0 0 -20%;
+    border-radius: 50%;
+    border: var(--border-width) dashed color-mix(in srgb, var(--color-accent) 40%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 6%, transparent);
   }
 
   .over {
@@ -179,19 +266,8 @@
     height: 100%;
   }
 
-  .ring {
-    position: absolute;
-    width: 40%;
-    aspect-ratio: 1;
-    margin: -20% 0 0 -20%;
-    border-radius: 50%;
-    border: 1px dashed color-mix(in srgb, var(--color-accent) 45%, transparent);
-    background: color-mix(in srgb, var(--color-accent) 7%, transparent);
-    pointer-events: none;
-  }
-
   .ray {
-    stroke: color-mix(in srgb, var(--color-accent) 55%, transparent);
+    stroke: color-mix(in srgb, var(--color-accent) 50%, transparent);
     stroke-width: 1;
     stroke-linecap: round;
     vector-effect: non-scaling-stroke;
@@ -199,12 +275,17 @@
 
   .mark {
     position: absolute;
-    width: 14%;
+    width: 15%;
     aspect-ratio: 1;
-    margin: -7% 0 0 -7%;
+    margin: -7.5% 0 0 -7.5%;
     border-radius: 50%;
     background: var(--color-accent);
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.25);
+    box-shadow: 0 1px 5px rgb(0 0 0 / 0.28);
+    transition: transform 120ms ease;
+  }
+
+  .mark.held {
+    transform: scale(1.12);
   }
 
   .circle {
@@ -213,12 +294,13 @@
     aspect-ratio: 1;
     margin: -5.5% 0 0 -5.5%;
     border-radius: 50%;
-    border: 2px solid var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    border: 2px solid color-mix(in srgb, var(--color-accent) 70%, transparent);
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
   }
 
   .said {
     margin: 0;
+    max-width: 22rem;
     color: var(--color-ink-muted);
     font-size: var(--font-size-small);
     text-align: center;

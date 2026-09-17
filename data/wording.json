@@ -228,7 +228,7 @@
     },
     "rest": {
       "name": "Where it waits",
-      "about": "the corner the mark sits in, and the point the circle is carried away from"
+      "about": "and the point the circle is carried away from, so your hand is never over the word"
     },
     "lens-drag": {
       "name": "Drag it over a word",
@@ -319,10 +319,9 @@
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
-    "rest-pin": "Put it somewhere of your own",
-    "rest-pinned": "Where you put it",
-    "rest-put": "Drag the mark where you want it",
-    "rest-side": "On the side it rests, down by the hand",
+    "rest-edge": "Rests on the %s",
+    "rest-own": "Where you put it",
+    "rest-put": "Drop it at an edge to let it rest there, or anywhere to keep it there",
     "say-into": "Answer in",
     "say-no-language": "Choose a language to read into first.",
     "say-no-model": "No translation model for that direction at your dictionary host.",

@@ -463,40 +463,21 @@
 </Screen>
 
 <Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
-  <p class="about">{ROWS.rest.about}</p>
-  <div class="rows">
-    <!-- The side is what it falls back to, and what a reader who wants nothing else gets. -->
-    <Row name={ROWS.side.name} row="side" about={ROWS.side.about}>
-      {#snippet wide()}
-        <Segmented
-          choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
-          chosen={settings.side}
-          change={(value: string) => change('side', value)}
-        />
-      {/snippet}
-    </Row>
-
-    <!-- Or somewhere of the reader's own, which is what the board below is for. -->
-    <Row name={SAYS['rest-pin']} row="pin">
-      {#snippet control()}
-        <Toggle
-          on={settings.pin}
-          label={SAYS['rest-pin']}
-          change={(on) => change('pin', on)}
-        />
-      {/snippet}
-    </Row>
-  </div>
-
   <Resting
-    x={settings.pin ? settings.pinX : restsAt.x}
-    y={settings.pin ? settings.pinY : restsAt.y}
+    x={settings.pinX}
+    y={settings.pinY}
+    pinned={settings.pin}
+    side={settings.side}
     across={screenAcross}
     down={screenDown}
-    on={settings.pin}
-    change={(x, y) => {
+    pin={(x, y) => {
       change('pinX', Number(x.toFixed(4)));
       change('pinY', Number(y.toFixed(4)));
+      if (!settings.pin) change('pin', true);
+    }}
+    rest={(edge) => {
+      if (settings.side !== edge) change('side', edge);
+      if (settings.pin) change('pin', false);
     }}
   />
 </Screen>
@@ -631,8 +612,8 @@
           name={ROWS.rest.name}
           row="rest"
           about={settings.pin
-            ? SAYS['rest-pinned']
-            : labelOf(SIDE_CHOICES, settings.side) + ' · ' + SAYS['rest-side']}
+            ? SAYS['rest-own']
+            : SAYS['rest-edge'].replace('%s', labelOf(SIDE_CHOICES, settings.side).toLowerCase())}
           open={() => (view = 'rest')}
         />
       {/if}
