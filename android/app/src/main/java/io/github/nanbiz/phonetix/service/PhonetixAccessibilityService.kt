@@ -2163,7 +2163,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the amber line came back white and every word of it was drawn in a colour it never
         // had. Reading the words' own band leaves nothing in the sample but them and what
         // they stand on.
-        val first = p.boxes.first().rect
+        // A line with no words of its own still has to be given a colour: the whole page is
+        // replaced on a press of the mark, lines included that carry no transcription, and
+        // reading the band of words that are not there crashed the service under the reader's
+        // finger. Its own rectangle is the band in that case.
+        val first = p.boxes.firstOrNull()?.rect
+            ?: return RectF(p.measuredAt ?: p.clip)
         var left = first.left
         var right = first.right
         var top = first.top
