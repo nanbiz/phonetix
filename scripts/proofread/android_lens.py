@@ -123,6 +123,25 @@ def main():
         failures.append(
             f"the lens ended over {over[-1]!r} and the card is about {opened[-1]!r}")
 
+    # Nothing keeps asking once the finger has gone.
+    #
+    # The mark is taken down and put up again whenever a setting changes, and a gesture in
+    # flight when that happens never sees the finger lift: its frame loop ran for the life of
+    # the app, asking every other frame what was under the point the circle was last at. That
+    # is quiet until the app moves a word under that spot, and then a card opens by itself -
+    # on the reader's phone, over the keyboard, coming and going as they typed.
+    dev.surface(mode="spanish", enable=1, density=1, lens=0)
+    time.sleep(2)
+    dev.surface(mode="spanish", enable=1, density=1, lens=1)
+    time.sleep(3)
+    dev.clear_log()
+    time.sleep(6)
+    asking = dev.lines("LENSAT ").count("LENSAT ")
+    print(f"  with no finger on the screen, the lens asked {asking} times")
+    if asking:
+        failures.append(
+            f"the lens went on asking {asking} times with no finger on the screen")
+
     # And the page it is dragged over is untouched: the transcriptions took nothing, which is
     # the whole reason the lens exists.
     if "touchWords=true" in told:
