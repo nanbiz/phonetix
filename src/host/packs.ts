@@ -23,7 +23,19 @@ const carriedStore = createStore('phonetix-packs', 'carried-pack');
 const carried = new Set<string>();
 
 /**
- * Where the packs are served from, or nothing when the reader has not said.
+ * Where the packs are published: a release of this project, which is a static file on a host
+ * somebody else keeps running.
+ *
+ * A pack is built once from a dump of gigabytes and does not change again, which is what a
+ * release asset is for - the pronunciations the app carries are fetched the same way at build
+ * time. Before this the reader was asked to name a host themselves, and since nobody served
+ * them anywhere, a fresh install could fetch nothing at all.
+ */
+export const PUBLISHED = 'https://github.com/nanbiz/phonetix/releases/download/packs-v1';
+
+/**
+ * Where the packs are fetched from: where they are published, unless something has said
+ * otherwise - a check serving its own, or a build pointed elsewhere.
  *
  * Read from the browser's own store rather than through the framework's helper. The helper is
  * an auto-import, and an auto-import exists only in the bundles the framework builds that way:
@@ -41,9 +53,11 @@ export async function host(): Promise<string | undefined> {
     const said = got?.packBaseUrl;
     return typeof said === 'string' && said !== ''
       ? said.replace(/\/+$/, '')
-      : undefined;
+      : PUBLISHED;
   } catch {
-    return undefined;   // storage unavailable is not a reason to fail a lookup
+    // Storage being unavailable is not a reason to fail a lookup, and the published packs are
+    // where they always were.
+    return PUBLISHED;
   }
 }
 
@@ -128,7 +142,7 @@ export async function get(lang: string): Promise<string | null> {
   const base = await host();
   if (!base) return null;
 
-  const res = await fetch(`${base}/packs/${lang}.pack`);
+  const res = await fetch(`${base}/${lang}.pack`);
   if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
   const bytes = new Uint8Array(await res.arrayBuffer());
   const opened = await openPack(bytes);

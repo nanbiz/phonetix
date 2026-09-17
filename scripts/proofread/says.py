@@ -105,7 +105,7 @@ def serve():
                     self.send_error(404)
                     return
                 body, kind = open(path, "rb").read(), "application/octet-stream"
-            elif self.path.startswith("/packs/"):
+            elif self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if not os.path.exists(path):
                     self.send_error(404)

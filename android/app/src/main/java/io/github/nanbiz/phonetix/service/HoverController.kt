@@ -16,6 +16,7 @@ import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
+import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.WordBox
 import kotlin.math.hypot
 import kotlin.math.roundToInt
@@ -166,8 +167,13 @@ class HoverController(
             Rect(0, 0, wm.defaultDisplay.width, wm.defaultDisplay.height)
         }
 
-    /** Where the mark rests: the right edge, a margin in. */
-    private fun restingX(size: Int): Int = screen().width() - size - dp(EDGE_DP).roundToInt()
+    /** Which side the reader keeps the mark on, which is the hand they hold the phone in. */
+    private fun restsRight(): Boolean = SettingsStore.current.side != "left"
+
+    /** Where the mark rests: the edge the reader chose, a margin in. */
+    private fun restingX(size: Int): Int =
+        if (restsRight()) screen().width() - size - dp(EDGE_DP).roundToInt()
+        else dp(EDGE_DP).roundToInt()
 
     /** Put the circle up, parked at the edge. */
     fun show() {
@@ -181,7 +187,8 @@ class HoverController(
         }
         val size = markPx()
         markX = restingX(size)
-        if (markY <= 0) markY = screen().height() / 2
+        // Where the hand comes onto the screen, which is where the mark waits for it.
+        if (markY <= 0) markY = (screen().height() * HOME_DOWN).roundToInt() - size / 2
         val view = HoverBubbleView(context)
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
@@ -379,6 +386,7 @@ class HoverController(
         private var wantY = 0f
         private var fingerX = 0f
         private var fingerY = 0f
+
         private var lastSwing = 0L
         private var asked = false
 
@@ -526,7 +534,13 @@ class HoverController(
             val size = view.width
             val target = restingX(size)
             val from = markX
-            val restY = markY.coerceIn(0, screen().height() - size)
+            // Never against an edge the system takes touches at: parked in the strip along
+            // the bottom, every press on the mark belonged to the navigation bar instead and
+            // the mark could not be picked up at all.
+            val margin = dp(EDGE_DP).roundToInt()
+            val foot = dp(FOOT_DP).roundToInt()
+            val restY = markY.coerceIn(margin, (screen().height() - size - foot)
+                .coerceAtLeast(margin))
             ValueAnimator.ofInt(from, target).apply {
                 duration = PARK_MS
                 // Comes to rest rather than stopping dead. At a constant speed a thing that
@@ -552,13 +566,43 @@ class HoverController(
             markX = (event.rawX - radius).roundToInt()
             markY = (event.rawY - radius).roundToInt()
             runCatching { wm.updateViewLayout(view, markParams(size)) }
+            // The circle is carried away from where the hand comes onto the screen.
+            //
+            // A hand holding a phone pivots about one place: four fifths of the way across
+            // towards the side the mark rests on, four fifths of the way down. Everything the
+            // thumb covers is between that point and wherever it is pointing, so carrying the
+            // circle further out along that line is what keeps the hand off the word.
+            //
+            // It grows with the distance from that point: nothing at all when the finger is
+            // on it - so the point itself can be pointed at - and the full carry a fifth of a
+            // screen away and beyond. That makes the whole screen reachable: the circle is
+            // always further out than the finger, so the far edges come within reach, and the
+            // near ones are had by bringing the hand back to where it rests.
+            //
+            // A carry that is the same everywhere leaves a band as deep as itself along the
+            // edge it points away from, which is why the last strip of a page could not be
+            // pointed at at all. Turning the carry to face the way the hand is moving was
+            // tried and is worse: a nudge towards a word swings the circle a finger's length
+            // past it, so nothing can be aimed at precisely. Here the aim is one for one
+            // outside the growing part and half as much again inside it.
+            val edges = screen()
+            val homeX = edges.width() * (if (restsRight()) HOME_ACROSS else 1f - HOME_ACROSS)
+            val homeY = edges.height() * HOME_DOWN
+            val awayX = event.rawX - homeX
+            val awayY = event.rawY - homeY
+            val away = kotlin.math.hypot(awayX, awayY)
+            val grows = minOf(edges.width(), edges.height()) * GROWS_WITHIN
+            val carry = lift * (away / grows).coerceIn(0f, 1f)
+            wantX = if (away > 0f) event.rawX + awayX / away * carry else event.rawX
+            wantY = if (away > 0f) event.rawY + awayY / away * carry else event.rawY
+            wantX = wantX.coerceIn(0f, edges.width().toFloat())
+            wantY = wantY.coerceIn(0f, edges.height().toFloat())
             fingerX = event.rawX
             fingerY = event.rawY
-            wantX = event.rawX
-            wantY = event.rawY - lift
             onHand(event.rawY.roundToInt())
             if (!formed) {
                 formed = true
+
                 view.masked = true
                 // It appears where it is wanted, above the finger, rather than at the finger
                 // and springing up: that spring was one frame of the circle low by the hand
@@ -576,6 +620,17 @@ class HoverController(
     }
 
     private companion object {
+        /** How much of the bottom the system's own gesture strip takes, in dp. */
+        const val FOOT_DP = 56f
+
+        /** Where the hand comes onto the screen: this far across towards the side the mark
+         *  rests on, and this far down. */
+        const val HOME_ACROSS = 0.8f
+        const val HOME_DOWN = 0.8f
+
+        /** How far from there the carry reaches its full length, as a share of the screen. */
+        const val GROWS_WITHIN = 0.2f
+
         /** The shortest gap between two ticks under the thumb. */
         const val TICK_APART_MS = 90L
 

@@ -45,6 +45,12 @@ export const LAYER_CHOICES: Choice[] = [
   { value: "both", label: "Both", about: "what it means, and how to say that" },
 ];
 
+/** Which side, as a browser can draw them. */
+export const SIDE_CHOICES: Choice[] = [
+  { value: "right", label: "Right", about: "for a phone held in the right hand" },
+  { value: "left", label: "Left", about: "for a phone held in the left hand" },
+];
+
 /** Every row of the settings surfaces, by the name it reports itself under. */
 export const ROWS: Record<string, Words> = {
   "accent": { name: "Accent", about: "which accent each language is read in" },
@@ -55,7 +61,6 @@ export const ROWS: Record<string, Words> = {
   "delay": { name: "Rest before a card opens", about: "how long the cursor stays on a word before it answers" },
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
-  "host": { name: "Where they come from", about: "Fetched once and kept on this machine, so a dictionary works on a train." },
   "layer": { name: "Replacement mode", about: "" },
   "lens": { name: "The mark", about: "One mark at the edge of the screen, and the three things it answers" },
   "lens-drag": { name: "Drag it over a word", about: "It says what it passes over and takes none of the screen's touches" },
@@ -69,6 +74,7 @@ export const ROWS: Record<string, Words> = {
   "setup": { name: "Setup", about: "" },
   "setup-overlay": { name: "Drawing over apps", about: "Lets it paint the transcription on top of the word." },
   "setup-reading": { name: "Reading the screen", about: "Lets Phonetix see the words in other apps. Nothing leaves your device." },
+  "side": { name: "Which side", about: "which side of the screen the mark rests on" },
   "site": { name: "On this site", about: "the default is what happens on sites you have not decided about" },
   "source": { name: "This page is in", about: "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong." },
   "start": { name: "Before it can answer a word", about: "" },
@@ -105,7 +111,6 @@ export const SAYS: Record<string, string> = {
   "master-unready": "Allow it to read the screen and draw over your apps",
   "master-working": "The words in your apps are being answered",
   "narrow-mark": "[ ]",
-  "no-host": "Nothing is fetched until this is set.",
   "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
   "nothing-found": "Nothing by that name",
@@ -122,7 +127,6 @@ export const SAYS: Record<string, string> = {
   "search": "Search",
   "start-done": "done",
   "start-go": "Set this",
-  "start-host": "Say where your dictionaries come from",
   "start-pack": "Get a dictionary for the language you are reading",
   "start-permission": "Let it read the screen, and draw over it",
   "start-target": "Choose the language you read into",

@@ -68,6 +68,10 @@ data class Settings(
      * only decorates.
      */
     val lens: Boolean = true,
+    /** Which side of the screen the mark rests on: "right" or "left". The hand is taken to
+     *  come onto the screen from that corner, and the circle the mark carries is held away
+     *  from it, so the hand is never over the word it is on. */
+    val side: String = "right",
     /**
      * Narrow transcriptions rather than broad ones.
      *
@@ -113,6 +117,7 @@ object SettingsStore {
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
+    private const val K_SIDE = "side"
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
     private const val K_STRESS = "hide_stress"
@@ -143,6 +148,7 @@ object SettingsStore {
             dark = p.getString(K_DARK, "system") ?: "system",
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
+            side = p.getString(K_SIDE, "right") ?: "right",
             // Stored as one entry per language, because a set of strings is what preferences
             // can hold and a map is what the rest of this asks for.
             accents = (p.getStringSet(K_ACCENTS, emptySet()) ?: emptySet())
@@ -184,6 +190,7 @@ object SettingsStore {
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
+            ?.putString(K_SIDE, next.side)
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
             ?.putBoolean(K_STRESS, next.hideStress)
@@ -213,6 +220,8 @@ object SettingsStore {
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
+    fun setSide(v: String) = update { it.copy(side = if (v == "left") "left" else "right") }
+
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
     /** Read one language in one accent, leaving the choice made for every other alone. */
     fun setAccent(lang: String, accent: String) = update {

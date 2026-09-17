@@ -82,11 +82,25 @@ object Packs {
         }.onFailure { android.util.Log.w("Phonetix", "no classifier for $lang", it) }
     }
 
-    /** What the reader's host has to offer, or nothing when they have not said where. */
+    /**
+     * Where the packs are published: a release of this project, which is a static file on a
+     * host somebody else keeps running.
+     *
+     * A pack is built once out of a dump of gigabytes and does not change again, which is
+     * what a release asset is for - the pronunciations the app carries are fetched the same
+     * way when it is built. Before this the reader was asked to name a host themselves, and
+     * since nobody served them anywhere, a fresh install could fetch nothing at all.
+     */
+    const val PUBLISHED = "https://github.com/nanbiz/phonetix/releases/download/packs-v1"
+
+    /** Where to fetch from: what was asked for, or where they are published. */
+    private fun from(base: String): String =
+        base.ifBlank { PUBLISHED }.trimEnd('/')
+
+    /** What there is to be had, listed by the release that holds them. */
     fun offered(base: String): List<Offered> {
-        if (base.isBlank()) return emptyList()
         val text = runCatching {
-            URL("${base.trimEnd('/')}/packs.json").readText()
+            URL("${from(base)}/packs.json").readText()
         }.getOrNull() ?: return emptyList()
         val listed = runCatching { JSONArray(text) }.getOrNull() ?: return emptyList()
         return (0 until listed.length()).mapNotNull { at ->
@@ -108,12 +122,12 @@ object Packs {
      * from it, and the pack says which language it turned out to be for.
      */
     fun get(context: Context, base: String, lang: String): Boolean {
-        if (base.isBlank() || Reading.core == 0L) return false
+        if (Reading.core == 0L) return false
         val into = file(context, lang)
         val temporary = File(into.parentFile, "${into.name}.part")
         return runCatching {
-            URL("${base.trimEnd('/')}/packs/$lang.pack").openStream().use { from ->
-                temporary.outputStream().use { to -> from.copyTo(to) }
+            URL("${from(base)}/$lang.pack").openStream().use { source ->
+                temporary.outputStream().use { to -> source.copyTo(to) }
             }
             val opened = Lex.openPack(Reading.core, temporary.path)
             require(opened.isNotEmpty()) { "not a pack" }

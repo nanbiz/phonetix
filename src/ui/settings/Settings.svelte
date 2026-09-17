@@ -18,6 +18,7 @@
   import {
     aboutOf,
     DARK_CHOICES,
+    SIDE_CHOICES,
     DETAIL_CHOICES,
     ENDS,
     labelOf,
@@ -441,8 +442,6 @@
     {fetching}
     {get}
     {forget}
-    host={settings.host}
-    onHost={(said) => change('host', said)}
   />
 </Screen>
 
@@ -538,20 +537,6 @@
     </Row>
   </div>
 
-  <div class="rows">
-    <Row name={ROWS.host.name} row="host" about={ROWS.host.about}>
-      {#snippet wide()}
-        <Field
-          value={settings.host}
-          label={ROWS.host.name}
-          kind="url"
-          placeholder="https://…"
-          change={(said) => change('host', said)}
-        />
-      {/snippet}
-    </Row>
-  </div>
-
   {#if offered > 0}
     <NavRow
       name={ROWS.dictionaries.name}
@@ -581,6 +566,21 @@
           <Toggle on={settings.lens} label="the mark" change={(on) => change('lens', on)} />
         {/snippet}
       </Row>
+
+      <!-- Which side it rests on, which is the hand the phone is held in. The circle the mark
+           carries is held away from that corner, so a reader's own hand is never over the word
+           they are pointing at. -->
+      {#if settings.lens}
+        <Row name={ROWS.side.name} row="side" about={ROWS.side.about}>
+          {#snippet wide()}
+            <Segmented
+              choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+              chosen={settings.side}
+              change={(value: string) => change('side', value)}
+            />
+          {/snippet}
+        </Row>
+      {/if}
 
       <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
            scroll would have no way of guessing why. -->

@@ -103,7 +103,7 @@ def serve():
                 self.end_headers()
                 self.wfile.write(body)
                 return
-            if self.path.startswith("/packs/"):
+            if self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if os.path.exists(path):
                     body = open(path, "rb").read()

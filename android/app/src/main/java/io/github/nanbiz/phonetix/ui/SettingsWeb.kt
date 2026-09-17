@@ -325,6 +325,7 @@ private class Bridge(
         .put("dark", settings.dark)
         .put("off", JSONArray())
         .put("lens", settings.lens)
+        .put("side", settings.side)
         .put("touchWords", settings.touchWords)
         .put("apps", JSONArray(settings.apps.toList()))
         .put("allApps", settings.allApps)
@@ -342,6 +343,7 @@ private class Bridge(
             "dark" -> SettingsStore.setDark(value?.toString().orEmpty())
             "host" -> SettingsStore.setPackHost(value?.toString().orEmpty())
             "lens" -> SettingsStore.setLens(value == true)
+            "side" -> SettingsStore.setSide(value?.toString().orEmpty())
             "touchWords" -> SettingsStore.setTouchWords(value == true)
             "accents" -> {
                 val said = value as? JSONObject ?: return

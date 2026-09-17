@@ -89,7 +89,7 @@ def serve():
                 body, kind = packs, "application/json"
             elif self.path == "/models.json":
                 body, kind = registry, "application/json"
-            elif self.path.startswith("/packs/"):
+            elif self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if not os.path.exists(path):
                     self.send_error(404)

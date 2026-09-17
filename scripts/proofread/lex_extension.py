@@ -98,7 +98,7 @@ def serve():
             SERVED.append(self.path)
             name = os.path.basename(self.path)
             path = os.path.join(WORK, name)
-            if self.path.startswith("/packs/") and os.path.exists(path):
+            if self.path.endswith(".pack") and os.path.exists(path):
                 body = open(path, "rb").read()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
@@ -258,7 +258,7 @@ def main():
     finally:
         cdp.close()
 
-    fetched = [p for p in SERVED if p.startswith("/packs/")]
+    fetched = [p for p in SERVED if p.endswith(".pack")]
     print(f"\npacks served from the host: {fetched}")
     if len(fetched) != 2:
         failures.append(f"expected both packs to come from the host, got {fetched}")

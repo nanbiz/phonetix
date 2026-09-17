@@ -39,6 +39,12 @@ object Wording {
         Choice("both", "Both", "what it means, and how to say that"),
     )
 
+    /** Which side, as an overlay can draw them. */
+    val side = listOf(
+        Choice("right", "Right", "for a phone held in the right hand"),
+        Choice("left", "Left", "for a phone held in the left hand"),
+    )
+
     /** Every row of the settings surfaces, by the name it reports itself under. */
     val rows = mapOf(
         "accent" to Words("Accent", "which accent each language is read in"),
@@ -49,7 +55,6 @@ object Wording {
         "delay" to Words("Rest before a card opens", "how long the cursor stays on a word before it answers"),
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
-        "host" to Words("Where they come from", "Fetched once and kept on this machine, so a dictionary works on a train."),
         "layer" to Words("Replacement mode", ""),
         "lens" to Words("The mark", "One mark at the edge of the screen, and the three things it answers"),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over and takes none of the screen's touches"),
@@ -63,6 +68,7 @@ object Wording {
         "setup" to Words("Setup", ""),
         "setup-overlay" to Words("Drawing over apps", "Lets it paint the transcription on top of the word."),
         "setup-reading" to Words("Reading the screen", "Lets Phonetix see the words in other apps. Nothing leaves your device."),
+        "side" to Words("Which side", "which side of the screen the mark rests on"),
         "site" to Words("On this site", "the default is what happens on sites you have not decided about"),
         "source" to Words("This page is in", "Each block is read on its own, so a page in two languages already reads correctly. Set this only where that goes wrong."),
         "start" to Words("Before it can answer a word", ""),
@@ -99,7 +105,6 @@ object Wording {
         "master-unready" to "Allow it to read the screen and draw over your apps",
         "master-working" to "The words in your apps are being answered",
         "narrow-mark" to "[ ]",
-        "no-host" to "Nothing is fetched until this is set.",
         "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
         "nothing-found" to "Nothing by that name",
@@ -116,7 +121,6 @@ object Wording {
         "search" to "Search",
         "start-done" to "done",
         "start-go" to "Set this",
-        "start-host" to "Say where your dictionaries come from",
         "start-pack" to "Get a dictionary for the language you are reading",
         "start-permission" to "Let it read the screen, and draw over it",
         "start-target" to "Choose the language you read into",

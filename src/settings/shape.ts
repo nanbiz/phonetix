@@ -82,6 +82,9 @@ export interface Settings {
    * surface that cannot do a thing does not draw its row.
    */
   lens: boolean;
+  /** Which side of the screen the mark rests on: "right" or "left". The hand is taken to come
+   *  onto the screen from that corner, and the circle is carried away from it. The phone's. */
+  side: string;
   /** Whether the transcriptions themselves take touches, which costs every swipe that begins
    *  on one. The phone's. */
   touchWords: boolean;
@@ -109,6 +112,7 @@ export const DEFAULTS: Settings = {
   dark: 'system',
   off: [],
   lens: true,
+  side: 'right',
   touchWords: false,
   apps: [],
   allApps: true,

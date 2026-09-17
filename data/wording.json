@@ -125,6 +125,32 @@
         }
       ],
       "note": "Every palette has a light and a dark side. Which one is drawn follows the device unless the reader says otherwise, because a reader who keeps one app light on a dark phone is choosing for a reason."
+    },
+    "side": {
+      "name": "Which side",
+      "options": [
+        {
+          "value": "right",
+          "label": "Right",
+          "on": [
+            "phone"
+          ],
+          "about": {
+            "phone": "for a phone held in the right hand"
+          }
+        },
+        {
+          "value": "left",
+          "label": "Left",
+          "on": [
+            "phone"
+          ],
+          "about": {
+            "phone": "for a phone held in the left hand"
+          }
+        }
+      ],
+      "note": "The mark rests on this side, and the hand is taken to come onto the screen from that corner: the circle is carried away from there, so the hand is never over the word it is on."
     }
   },
   "rows": {
@@ -159,10 +185,6 @@
     "dictionaries": {
       "name": "Dictionaries",
       "about": "the words this can answer without asking anyone"
-    },
-    "host": {
-      "name": "Where they come from",
-      "about": "Fetched once and kept on this machine, so a dictionary works on a train."
     },
     "narrow": {
       "name": "Transcriptions",
@@ -199,6 +221,10 @@
     "lens": {
       "name": "The mark",
       "about": "One mark at the edge of the screen, and the three things it answers"
+    },
+    "side": {
+      "name": "Which side",
+      "about": "which side of the screen the mark rests on"
     },
     "lens-drag": {
       "name": "Drag it over a word",
@@ -265,7 +291,6 @@
   },
   "says": {
     "dictionary-accent": "as the dictionary gives it",
-    "no-host": "Nothing is fetched until this is set.",
     "no-source": "for what a word means; how it is said is built in",
     "nothing-yet": "nothing yet",
     "say-placeholder": "what you want to say",
@@ -283,7 +308,6 @@
     "remove": "Remove",
     "say-no-model": "No translation model for that direction at your dictionary host.",
     "start-target": "Choose the language you read into",
-    "start-host": "Say where your dictionaries come from",
     "start-pack": "Get a dictionary for the language you are reading",
     "start-permission": "Let it read the screen, and draw over it",
     "start-go": "Set this",

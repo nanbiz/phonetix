@@ -91,7 +91,7 @@ def serve():
         def do_GET(self):
             if self.path == "/packs.json":
                 body, kind = packs, "application/json"
-            elif self.path.startswith("/packs/"):
+            elif self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 body, kind = open(path, "rb").read(), "application/octet-stream"
             else:

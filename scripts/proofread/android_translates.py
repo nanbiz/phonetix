@@ -64,7 +64,7 @@ def serve():
             if self.path == "/packs.json":
                 body = manifest()
                 kind = "application/json"
-            elif self.path.startswith("/packs/"):
+            elif self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if not os.path.exists(path):
                     self.send_error(404)

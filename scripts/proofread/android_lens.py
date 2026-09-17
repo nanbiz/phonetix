@@ -136,6 +136,93 @@ def main():
     print(f"  on a page that will not say where its characters are: {len(guessed)} words known")
     if not guessed:
         failures.append("the mark knows nothing on a page that will not place its characters")
+    # And dragged over one, it answers about it.
+    #
+    # Knowing the words is not the same as answering about one: the positions here are
+    # guessed, so the circle can be over a word the mark believes is somewhere else and open
+    # nothing at all. That is what a reader in a chat app sees - the mark passing over a
+    # screenful of text with no card - and it is the case this whole guess exists for.
+    else:
+        # Where the mark is now, not where it was on the page before this one: it is taken
+        # down and parked again whenever the page changes, and a drag that starts from the
+        # old place never touches it - which reads as a mark that passes over nothing.
+        # Asked for once more so it says where it parked in a log this drag can see: it says
+        # it when it goes up, which was before this page was even asked for.
+        dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
+        time.sleep(2)
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off")
+        time.sleep(6)
+        again = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        mx, my, mw, mh = (int(v) for v in again[-1])
+        from_here = (mx + mw // 2, my + mh // 2)
+        middle = sorted(guessed.values(), key=lambda b: b["rect"][1])
+        word = middle[len(middle) // 2]
+        left, top, right, bottom = word["rect"]
+        dev.clear_log()
+        shell("input", "swipe", str(from_here[0]), str(from_here[1]),
+              str((left + right) // 2), str((top + bottom) // 2 + lift), "2500")
+        time.sleep(3)
+        over = [name for name in re.findall(r"LENSAT [\d.,]+ -> (\S+)", dev.lines("LENSAT "))
+                if name != "nothing"]
+        cards = re.findall(r"TOOLTIP open word=(\S+)", dev.lines("TOOLTIP open"))
+        print(f"  on guessed positions it passed over {over[-3:]} and opened {cards[-3:]}")
+        if not over:
+            failures.append(
+                "the mark passed over nothing on a page whose words it had to guess at")
+        elif not cards:
+            failures.append(
+                f"the mark was over {over[-1]!r} on a guessed page and opened no card")
+        elif cards[-1] != over[-1]:
+            failures.append(
+                f"on a guessed page the lens ended over {over[-1]!r} and the card is "
+                f"about {cards[-1]!r}")
+
+        # The foot of the page.
+        #
+        # The circle used to be carried straight above the finger, so the lowest word it
+        # could reach was a couple of hundred pixels from the bottom: to point at anything
+        # below that the finger would have to go past the edge of the screen, into the
+        # navigation bar or the keyboard. A reader asked how they were supposed to mark the
+        # fields at the bottom of a page, and the answer was that they could not.
+        #
+        # Asked of where the circle actually went, not of which words a box list holds: what
+        # is being checked is reach.
+        # The last strip of the screen, not merely the lower part of it: carried straight
+        # above the finger, the circle could still reach most of the page - what it could not
+        # reach was the last couple of hundred pixels, which is where a message's own last
+        # line sits above the keyboard.
+        floor = dev.height - 150
+        # From where the mark is now: the drag before this one left it wherever it ended, and
+        # a swipe that starts anywhere else never touches it.
+        dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
+        time.sleep(2)
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off")
+        time.sleep(6)
+        rest = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        rx, ry, rw, rh = (int(v) for v in rest[-1])
+        dev.clear_log()
+        shell("input", "swipe", str(rx + rw // 2), str(ry + rh // 2),
+              str(dev.width // 2), str(dev.height - 60), "2500")
+        time.sleep(3)
+        samples = [(int(x), int(y), name) for x, y, name in
+                   re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]* -> (\S+)", dev.lines("LENSAT "))]
+        deep = [y for _, y, _ in samples if y >= floor]
+        # Whether it answers down there is asked of the part of the page that has words on
+        # it: the last strip of this fixture is below its text, and a circle over nothing is
+        # a circle doing as it should.
+        low = dev.height - dev.height // 4
+        answered = [name for _, y, name in samples if y >= low and name != "nothing"]
+        print(f"  dragged to the foot of the page: reached {max((y for _, y, _ in samples), default=0)} "
+              f"of {dev.height}, {len(deep)} samples in the last strip, "
+              f"answering {answered[-3:] or 'nothing'} below {low}")
+        if not deep:
+            failures.append(
+                f"the circle never got below {floor} on a drag to the bottom of the screen: "
+                f"it stopped at {max((y for _, y, _ in samples), default=0)}")
+        if not answered:
+            failures.append(
+                "nothing in the bottom quarter of the page could be pointed at")
+
     # And never where a word is drawn over: there, a guessed position is a transcription on
     # the wrong word.
     dev.surface(mode="mute", enable=1, density=1, lens=1, layer="sound", target="none")

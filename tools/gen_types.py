@@ -934,14 +934,16 @@ def choices_ts():
         lines.append(f"/** {table[name]['name']}, as a browser can draw them. */")
         lines.append(f"export const {name.upper()}_CHOICES: Choice[] = [")
         for row in table[name]["options"]:
-            if "browser" not in row["on"]:
-                continue
+            # Every option a surface offers, because this file is read by the one settings
+            # view both surfaces draw: the phone renders it in a WebView. Which of them a row
+            # appears on is the view's to decide, from the surface it was opened as.
+            about = row["about"].get("browser") or row["about"]["phone"]
             lines.append(
                 "  { value: %s, label: %s, about: %s },"
                 % (
                     json.dumps(row["value"]),
                     json.dumps(row["label"], ensure_ascii=False),
-                    json.dumps(row["about"]["browser"], ensure_ascii=False),
+                    json.dumps(about, ensure_ascii=False),
                 )
             )
         lines.append("];")

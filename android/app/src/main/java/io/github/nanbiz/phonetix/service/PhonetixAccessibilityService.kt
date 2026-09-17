@@ -113,6 +113,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** What the screen being read was read as, which is the language its words are in. */
     @Volatile private var readingSource = Language.OURS
 
+    /** What the last full read made of the screen's tree, for [dumpState]: how many nodes
+     *  carried text, and how many were passed over, and why. A screen the mark has nothing
+     *  to answer about is a screen whose text never got this far, and nothing outside the
+     *  walk could say which of its reasons was the one. */
+    @Volatile private var lastWalk: org.json.JSONObject? = null
+
     /**
      * How tall a row is on the screen being read, where the app will not say where its
      * characters are and the layout has to be guessed. Zero until a read has had to guess.
@@ -722,6 +728,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("target", lastTarget ?: org.json.JSONObject.NULL)
                 .put("pageReplaced", pageUp)
                 .put("lines", cachedPlan.size)
+                .put("walk", lastWalk ?: org.json.JSONObject.NULL)
                 .put("linesPlanned", plannedLines)
                 .put("linesWithoutCharacters", unplaceable)
                 .put("scrollOnly", scrollOnly)
@@ -1091,6 +1098,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // says too little, and says it confidently. Nothing is left out for being in the
             // wrong language any more - a screen the packs cannot answer comes back with
             // nothing to draw, which is the same outcome decided in one place.
+            lastWalk = org.json.JSONObject()
+                .put("withText", stats.withText)
+                .put("unseen", stats.unseen)
+                .put("clipped", stats.clipped)
+                .put("tooLong", stats.tooLong)
+                .put("longest", stats.longest)
+                .put("overBudget", stats.overBudget)
+                .put("maxText", MAX_TEXT)
             val screen = stats.tongue.read()
             // Kept, because the direction the reader is translating in is this and their own
             // language, and the engine has to be opened for a direction before it can answer.
@@ -2632,6 +2647,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
          *  below it with it. */
         var unseen: Int = 0,
         var clipped: Int = 0,
+        /** Nodes holding text that was left out for being longer than [MAX_TEXT], and the
+         *  longest piece of text the walk saw. An app that puts a whole message in one node -
+         *  a chat, a reader - loses the message itself to that cap while its labels and its
+         *  buttons are read, which from the outside is a mark with nothing to answer about. */
+        var tooLong: Int = 0,
+        var longest: Int = 0,
+        /** Nodes carrying text that were planned, and nodes that ran out of budget. */
+        var withText: Int = 0,
+        var overBudget: Int = 0,
         /** The text of the screen, for deciding what language it is in. */
         val tongue: Language.Screen = Language.Screen(),
     )
@@ -3014,7 +3038,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         inherited: android.graphics.Rect,
         painted: MutableList<Painted>,
     ) {
-        if (node == null || budget.nodes <= 0 || budget.words <= 0 || budget.visits <= 0) return
+        if (node == null) return
+        if (budget.nodes <= 0 || budget.words <= 0 || budget.visits <= 0) {
+            stats.overBudget++
+            return
+        }
         budget.visits--
         val enter = budget.order++
         var mark = System.nanoTime()
@@ -3048,7 +3076,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             painted.add(Painted(enter, android.graphics.Rect(bounds), !text.isNullOrBlank()))
         }
 
+        if (!text.isNullOrBlank()) {
+            if (text.length > stats.longest) stats.longest = text.length
+            if (text.length > MAX_TEXT) stats.tooLong++
+        }
         if (!text.isNullOrBlank() && text.length <= MAX_TEXT) {
+            stats.withText++
             budget.nodes--
             // Every line counts towards what language the screen is in, including the ones
             // that hold nothing worth transcribing: a page's German is mostly in its labels
