@@ -13,7 +13,7 @@
           ],
           "about": {
             "browser": "nothing is replaced; ask about a word yourself",
-            "phone": "nothing is replaced; the mark still answers a word"
+            "phone": "nothing is replaced; the button still answers a word"
           }
         },
         {
@@ -150,7 +150,7 @@
           }
         }
       ],
-      "note": "The mark rests on this side, and the hand is taken to come onto the screen from that corner: the circle is carried away from there, so the hand is never over the word it is on."
+      "note": "The button sits on this side, and the circle it carries is held away from there, so a hand is never over the word it is on."
     }
   },
   "rows": {
@@ -219,20 +219,20 @@
       "about": "Lets it paint the transcription on top of the word."
     },
     "lens": {
-      "name": "The mark",
-      "about": "One mark at the edge of the screen, and the three things it answers"
+      "name": "The button",
+      "about": "a button on the screen you use over the words you are reading"
     },
     "side": {
       "name": "Which side",
-      "about": "which side of the screen the mark rests on"
+      "about": "which side of the screen the button sits on"
     },
     "rest": {
-      "name": "Where it waits",
-      "about": "and the point the circle is carried away from, so your hand is never over the word"
+      "name": "Where the button sits",
+      "about": "the corner it waits in when you are not using it"
     },
     "lens-drag": {
       "name": "Drag it over a word",
-      "about": "It says what it passes over and takes none of the screen's touches"
+      "about": "It says what it passes over, and the page under it still scrolls"
     },
     "lens-sweep": {
       "name": "Hold it, then sweep",
@@ -319,9 +319,9 @@
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
-    "rest-edge": "Rests on the %s",
+    "rest-edge": "On the %s",
     "rest-own": "Where you put it",
-    "rest-put": "Drop it at an edge to let it rest there, or anywhere to keep it there",
+    "rest-put": "Tap or drag to move the button. Put it against a side and it stays there.",
     "say-into": "Answer in",
     "say-no-language": "Choose a language to read into first.",
     "say-no-model": "No translation model for that direction at your dictionary host.",
