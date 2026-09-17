@@ -1,6 +1,7 @@
 package io.github.nanbiz.phonetix.core
 
 import android.graphics.RectF
+import kotlin.math.sqrt
 
 /**
  * A transcription, the word it replaces, the screen rectangle of that word, and the colours
@@ -92,45 +93,128 @@ object Placement {
     const val APOSTROPHE = '\''.code
     const val RIGHT_QUOTE = '\u2019'.code
 
+    /** How tall a row of Latin text is against how wide its average character is. */
+    private const val ROW_TO_CHARACTER = 2.7f
+
+    /** How much of a text block's own box the text inside it covers. */
+    private const val FILLED = 0.83f
+
+    private const val NARROW = "iljItf.,;:'!|()[]"
+    private const val WIDE = "mwMW"
+
+    /**
+     * How wide one character is against the average one, in a proportional Latin face.
+     *
+     * Every character the same width breaks a row at the wrong word: a row of "whistle
+     * yoghurt acorn bamboo cinnamon" is thirty-seven characters and nearly a row wide, while
+     * thirty-seven narrow ones are two thirds of one. The numbers are the advances of a
+     * grotesque sans - Roboto, what a phone draws with - rounded into four kinds.
+     */
+    private fun advance(c: Char): Float = when {
+        c.isWhitespace() -> 0.47f
+        NARROW.indexOf(c) >= 0 -> 0.53f
+        WIDE.indexOf(c) >= 0 -> 1.53f
+        c.isUpperCase() -> 1.16f
+        else -> 1f
+    }
+
+    /**
+     * How tall one row of a block of text probably is, for a caller that wants the number
+     * itself: a block the screen cuts off reports only the part of its box that is showing,
+     * so the shape of that part says nothing about its rows, and the rows of the whole blocks
+     * around it have to stand in.
+     */
+    fun rowTall(chars: Int, where: RectF): Float =
+        if (chars <= 0 || where.width() <= 0f || where.height() <= 0f) {
+            0f
+        } else {
+            sqrt(ROW_TO_CHARACTER * FILLED * where.width() * where.height() / chars)
+        }
+
+    /**
+     * Where the characters of a block of text probably are, when the app holding it will not
+     * say.
+     *
+     * The shape comes from the block's own box and the number of characters in it: a row of
+     * Latin text is between two and three of its average characters tall, and the text covers
+     * about four fifths of the box, the rest being the padding around it and the ragged ends
+     * of the rows. That fixes the row height, the row height fixes how wide the average
+     * character is, and the widths above spread the rest.
+     *
+     * Every position is a guess: a row that breaks one word early moves every word after it,
+     * and nothing here knows the widths of the glyphs the app actually drew. Measured against
+     * the same page answering the request for character positions, nine words in ten land
+     * within half a word of where they are, which is what deciding between one word and its
+     * neighbour comes down to.
+     *
+     * @param knownRowTall how tall a row is, where the caller knows better than this block's
+     *   own box does - a short block is mostly the padding around its text, and a block the
+     *   screen cuts off reports only the part of its box that is showing.
+     */
+    fun evenly(text: CharSequence, where: RectF, knownRowTall: Float = 0f): Array<RectF?> {
+        val n = text.length
+        if (n == 0 || where.width() <= 0f || where.height() <= 0f) return arrayOfNulls(0)
+        var total = 0f
+        val widths = FloatArray(n) { advance(text[it]).also { w -> total += w } }
+        val rowTall = if (knownRowTall > 0f) knownRowTall else rowTall(n, where)
+        // Pixels per unit of the widths above, set so that the average character of this text
+        // comes out as wide as the row height says it should be.
+        val unit = rowTall / ROW_TO_CHARACTER / (total / n)
+        val rowOf = IntArray(n)
+        val startOf = FloatArray(n)
+        // Broken where the text breaks: at the spaces between words, greedily, the way any
+        // layout wraps. Cut at a fixed count instead, every row after the first is out by
+        // however far the previous row's last word ran over - which is why the guess held at
+        // the top of a message and drifted towards the bottom.
+        var row = 0
+        var x = 0f
+        var i = 0
+        while (i < n) {
+            var j = i
+            var wordWide = 0f
+            while (j < n && !text[j].isWhitespace()) {
+                wordWide += widths[j] * unit
+                j++
+            }
+            if (x > 0f && x + wordWide > where.width()) {
+                row++
+                x = 0f
+            }
+            var k = i
+            while (k < j) {
+                rowOf[k] = row
+                startOf[k] = x
+                x += widths[k] * unit
+                k++
+            }
+            // The spaces that follow, which sit on the row the word ended on.
+            while (k < n && text[k].isWhitespace()) {
+                rowOf[k] = row
+                startOf[k] = x
+                x += widths[k] * unit
+                k++
+            }
+            i = k
+        }
+        // The rows this tall leave the rest of the box as padding, half above and half below.
+        // Spread over the whole box instead, every row after the first sits below the one it
+        // belongs to, by more with every row.
+        val padding = ((where.height() - (row + 1) * rowTall) / 2f).coerceAtLeast(0f)
+        val out = arrayOfNulls<RectF>(n)
+        for (at in 0 until n) {
+            val left = where.left + startOf[at]
+            val top = where.top + padding + rowOf[at] * rowTall
+            out[at] = RectF(left, top, left + widths[at] * unit, top + rowTall)
+        }
+        return out
+    }
+
     /**
      * Places already-chosen words, given the per-character screen rectangles the
      * accessibility API returned. A word's box is the union of its characters, so it
      * lands exactly on the word however the app laid the line out; characters scrolled
      * out of view come back empty and those words are dropped rather than half-placed.
      */
-    /**
-     * Where the characters of a line probably are, for an app that will not say.
-     *
-     * Some apps answer no request for character positions at all, and some stop answering
-     * while their text is being written into - which is exactly when a reader is looking at
-     * it. Those lines are read, found to be unplaceable, and dropped: their words are known
-     * to nothing, so the mark has nothing to answer about over most of the screen.
-     *
-     * This lays the line out evenly instead: the node's own rectangle, split into as many
-     * rows as its height holds and each row into as many characters as the text has to share
-     * between them. It is a guess, and a proportional font makes it a few characters wrong at
-     * the ends of a row - which is why it is only ever used where nothing is drawn over a
-     * word, and the reader is pointing at one rather than reading a chip placed on it.
-     */
-    fun evenly(text: CharSequence, where: RectF, lineHeight: Float): Array<RectF?> {
-        val n = text.length
-        if (n == 0 || where.width() <= 0f || where.height() <= 0f) return arrayOfNulls(0)
-        val rows = if (lineHeight <= 0f) 1
-        else (where.height() / lineHeight).toInt().coerceAtLeast(1)
-        val perRow = ((n + rows - 1) / rows).coerceAtLeast(1)
-        val rowHeight = where.height() / rows
-        val out = arrayOfNulls<RectF>(n)
-        for (i in 0 until n) {
-            val row = (i / perRow).coerceAtMost(rows - 1)
-            val col = i - row * perRow
-            val width = where.width() / perRow
-            val left = where.left + col * width
-            val top = where.top + row * rowHeight
-            out[i] = RectF(left, top, left + width, top + rowHeight)
-        }
-        return out
-    }
-
     fun boxes(
         picks: List<Pick>,
         charRects: Array<RectF?>,

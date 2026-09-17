@@ -110,6 +110,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Apps already named in the log as giving no character bounds, so each is said once. */
     private val noCharacters = HashSet<String>(4)
 
+    /**
+     * How tall a row is on the screen being read, where the app will not say where its
+     * characters are and the layout has to be guessed. Zero until a read has had to guess.
+     */
+    @Volatile private var guessedRowTall = 0f
+
     /** How many lines of the last read could not be placed because the app would not say
      *  where its characters are: see [dumpState]. Those lines are read and then dropped, so
      *  the mark has nothing to answer about on that part of the screen. */
@@ -1733,6 +1739,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         var readAt = t1
         /** And when each of them was, since they are not measured together. */
         val lineReadAt = HashMap<Planned, Long>(planned.size)
+        /** The blocks of this read nobody would place, to be guessed at once it is over. */
+        val toGuess = ArrayList<Pair<Planned, android.graphics.Rect>>()
         for (p in planned) {
             // Where the characters of this line sit within it is a property of the line, not
             // of where the page has scrolled to, so a line already measured once is placed
@@ -1801,24 +1809,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         val rect = p.measuredAt ?: android.graphics.Rect().also {
                             p.node.getBoundsInScreen(it)
                         }
-                        if (!rect.isEmpty) {
-                            val guessed = Placement.evenly(
-                                p.text.substring(p.from, (p.from + p.length).coerceAtMost(p.text.length)),
-                                RectF(rect),
-                                // What one line of this screen is worth in pixels, learned
-                                // from the spacing of the lines already measured.
-                                rowHeight,
-                            )
-                            if (guessed.isNotEmpty()) {
-                                val from = boxes.size
-                                Placement.boxes(p.picks, guessed, p.from, boxes)
-                                // The line keeps its own words, as every measured line does:
-                                // boxes appended here and left unowned belong to no line, and
-                                // everything downstream works from the line.
-                                p.boxes = boxes.subList(from, boxes.size).toList()
-                                p.measuredAt = rect
-                            }
-                        }
+                        // Laid out once the whole screen has been read, because how tall a
+                        // row is is a property of the screen rather than of one block: a
+                        // short block is mostly the padding around its text, and a block the
+                        // screen cuts off reports only the part of its box that is showing,
+                        // so either one on its own puts its rows at the wrong height.
+                        if (!rect.isEmpty) toGuess.add(p to android.graphics.Rect(rect))
                     }
                     if (BuildConfig.DEBUG && noCharacters.add(pkg.orEmpty())) {
                         android.util.Log.d(
@@ -1883,6 +1879,45 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         boxes[i] = boxes[i].copy(line = numbered)
                     }
                 }
+            }
+        }
+        // The blocks nobody would place, laid out evenly now that the whole screen is known.
+        //
+        // With nothing drawn over the words, a guess at where they are is worth more than
+        // nothing at all: the reader is pointing at a word rather than reading something
+        // placed on it, and an app that will not say where its characters are - or stops
+        // saying while its text is being written into, which is when a reader is looking at
+        // it - otherwise leaves the mark with a screenful of text and nothing to answer
+        // about.
+        //
+        // One row height for the whole screen, taken from the longest block on it. A block's
+        // own box says how tall its rows are only in so far as its text fills it, which the
+        // text of a long block does and that of a short or a cut-off one does not. Measured
+        // against the same page answering the request - scripts/proofread/android_guessed.py
+        // - letting every block judge its own rows put 123 of 160 words within half a word of
+        // where they really are, and the longest block judging for all of them 149.
+        if (toGuess.isNotEmpty()) {
+            val longest = toGuess.maxByOrNull { (line, _) -> line.length }
+            guessedRowTall = longest?.let { (line, rect) ->
+                Placement.rowTall(line.length, RectF(rect))
+            } ?: 0f
+            for ((line, rect) in toGuess) {
+                val guessed = Placement.evenly(
+                    line.text.substring(
+                        line.from,
+                        (line.from + line.length).coerceAtMost(line.text.length),
+                    ),
+                    RectF(rect),
+                    guessedRowTall,
+                )
+                if (guessed.isEmpty()) continue
+                val from = boxes.size
+                Placement.boxes(line.picks, guessed, line.from, boxes)
+                // The line keeps its own words, as every measured line does: boxes appended
+                // here and left unowned belong to no line, and everything downstream works
+                // from the line.
+                line.boxes = boxes.subList(from, boxes.size).toList()
+                line.measuredAt = rect
             }
         }
         // How fast the page went during this read, measured by the read itself: the first
@@ -2414,7 +2449,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 Placement.evenly(
                     p.text.substring(p.from, (p.from + p.length).coerceAtMost(p.text.length)),
                     RectF(at),
-                    rowHeight,
+                    // The row height the full read settled on for this screen, so that a line
+                    // followed onto the screen is laid out like the ones already on it.
+                    guessedRowTall,
                 ).takeIf { it.isNotEmpty() }
             } else {
                 null

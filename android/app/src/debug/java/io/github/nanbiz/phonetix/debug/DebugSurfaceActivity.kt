@@ -854,13 +854,18 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             for (text in TestWords.DISTINCT.drop(6).take(6)) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
-        } else if (mode == "mute") {
+        } else if (mode == "mute" || mode == "spoken") {
+            // "spoken" is the same page answering the request, so a check can hold a guess
+            // against what the app really did with the same words in the same place.
             // The same wrapped paragraphs as "essay", from a page that answers no request for
             // character positions: read, and unplaceable. What a reader's own conversation
             // does while an answer is being written into it.
-            for (n in 0 until TestWords.DISTINCT.size / 2) {
-                val from = (n * 2) % TestWords.DISTINCT.size
-                val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
+            // Long enough to wrap over several rows, which is where a guess at where the
+            // characters are drifts: the rows after the first start wherever the row above
+            // broke, and a guess that cuts at a fixed count is out by more with every row.
+            for (n in 0 until 4) {
+                val from = (n * 8) % TestWords.DISTINCT.size
+                val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(8).joinToString(" ")
                 addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
         } else if (mode == "essay") {
