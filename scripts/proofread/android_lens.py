@@ -18,6 +18,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from android_harness import Device, shell
+import state as State
 
 
 def repark(dev):
@@ -33,6 +34,44 @@ def repark(dev):
     shell("am", "force-stop", "io.github.nanbiz.phonetix")
     time.sleep(2)
     return dev.enable_service()
+
+
+# How tall the button is, so "above the keyboard" means the whole of it rather than its top
+# left corner. It is square, and the service says its size when it parks.
+MARK_PX = 105
+
+
+def believed():
+    """Everything the service holds, or nothing where it has not answered yet.
+
+    A dump that is not there yet is not an answer, and reading one as JSON threw and took the
+    whole suite with it on a freshly booted emulator.
+    """
+    try:
+        serial = State.device()
+        name = State.ask(serial)
+        return State.fetch(serial, name) if name else {}
+    except Exception:
+        return {}
+
+
+def keyboard_top(dev):
+    """Where the service believes the keyboard's top edge is, or zero for no keyboard."""
+    return (believed().get("screen") or {}).get("keyboardTop") or 0
+
+
+def mark_at(dev):
+    """Where the button actually is, asked of the service rather than read out of the log.
+
+    The log says where it parked when it parked, so a check reads the newest such line and
+    hopes it belongs to the thing it just did. It does not always: the button moved out of a
+    keyboard's way exactly as it should and the check read a line from before the keyboard and
+    called it broken. This is the position the service holds right now.
+    """
+    at = ((believed().get("mark") or {}).get("markAt") or {})
+    if at.get("x") is None:
+        return None
+    return (at["x"], at["y"])
 
 
 def parked_at(dev, mode="mute", **extras):
@@ -284,7 +323,19 @@ def main():
         time.sleep(2)
         seen = [(int(a), int(b)) for a, b in
                 re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]*", dev.lines("LENSAT "))]
-        carried = (seen[-1][0] - dev.width // 2) if seen else 0
+        # Measured across the whole drag, against where the finger was at the time.
+        #
+        # The last sample alone is taken after the finger has stopped, and a leash that has
+        # caught up is carrying nothing: the same build reported -177px, -36px and +11px on
+        # three runs, and the sign of the last one is what the check was reading. The finger
+        # travels in a straight line at a constant speed, so where it was at each sample is
+        # known, and the middle of those offsets is what the leash is actually doing.
+        started, ended = px + pw // 2, dev.width // 2
+        offsets = []
+        for i, (sx, _) in enumerate(seen):
+            along = i / (len(seen) - 1) if len(seen) > 1 else 1.0
+            offsets.append(sx - (started + (ended - started) * along))
+        carried = int(sorted(offsets)[len(offsets) // 2]) if offsets else 0
         print(f"  on the {side}: parked at x={px} of {dev.width}, "
               f"carried {carried:+}px from the finger")
         rested = px < dev.width // 2 if side == "left" else px > dev.width // 2
@@ -365,35 +416,35 @@ def main():
     # without it.
     dev.surface(mode="typing", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=92)
     time.sleep(5)
-    low = parked_at(dev, mode="typing", side="right", pin=1, restY=92)
+    low = mark_at(dev)
     told = shell("uiautomator", "dump", "/sdcard/ui.xml") and shell("cat", "/sdcard/ui.xml")
     node = next((n for n in re.findall(r"<node[^>]*>", told) if "the composer" in n), "")
     box = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node)
     if low is None or not box:
         failures.append("the page with something to type into never came up")
     else:
-        # Cleared first, so where it parks with the keyboard open is the only answer in the
-        # log. Where it parked before is still in there otherwise, and reading that back says
-        # the button did not move when what happened is that nobody asked it again.
-        dev.clear_log()
         shell("input", "tap", str((int(box.group(1)) + int(box.group(3))) // 2),
               str((int(box.group(2)) + int(box.group(4))) // 2))
-        time.sleep(4)
-        # Not through parked_at: asking for the page again would take the keyboard down with
-        # it, which is the one thing being measured here.
-        said = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
-        lifted = None
-        if said:
-            lx, ly, lw, lh = (int(v) for v in said[-1])
-            lifted = (lx + lw // 2, ly + lh // 2)
+        # Waited for rather than sampled once. A keyboard animates in, and the service is told
+        # where its top edge is more than once on the way: measured at 2176 and then 1517 for
+        # the same keyboard. A reading taken between the two catches the button on its way up
+        # and reads as a button that never moved.
+        lifted, top = None, 0
+        for _ in range(14):
+            lifted, top = mark_at(dev), keyboard_top(dev)
+            if top and lifted and lifted[1] + MARK_PX <= top:
+                break
+            time.sleep(1)
         shown = re.search(r"mInputShown=(\w+)", shell("dumpsys", "input_method"))
-        print(f"  with a keyboard open ({shown.group(1) if shown else '?'}): "
+        print(f"  with a keyboard open ({shown.group(1) if shown else '?'}, top {top}): "
               f"the button moved from {low} to {lifted}")
         if not shown or shown.group(1) != "true":
             print("  no keyboard came up, so standing clear of one was not measured")
-        elif lifted is None or lifted[1] >= low[1]:
+        elif lifted is None or not top or lifted[1] + MARK_PX > top:
+            # Against the keyboard's own edge, not against where the button was. What has to
+            # be true is that none of it is behind the keys.
             failures.append(
-                f"a keyboard opened and the button stayed at {lifted}, behind it")
+                f"a keyboard opened at {top} and the button is at {lifted}, behind it")
 
     # And never where a word is drawn over: there, a guessed position is a transcription on
     # the wrong word.
