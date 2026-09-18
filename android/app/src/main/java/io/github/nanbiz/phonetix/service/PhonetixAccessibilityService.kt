@@ -69,6 +69,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private lateinit var io: Handler
     private val main = Handler(Looper.getMainLooper())
     private lateinit var worker: Handler
+    /** Asks the system about its windows, which is work that can block. */
+    private lateinit var watcher: Handler
     private lateinit var sampler: ScreenSampler
     private lateinit var bystanders: Bystanders
     private var settingsWatch: kotlinx.coroutines.CoroutineScope? = null
@@ -253,6 +255,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         val thread = HandlerThread("phonetix-scan").apply { start() }
         worker = Handler(thread.looper)
+        // A thread of its own for asking the system what its windows are. It cannot be the
+        // main thread, because those calls reach into an app that is busy and block - that is
+        // an ANR, seen as "Phonetix isn't responding" with the stack in getRootInActiveWindow
+        // under onAccessibilityEvent. It cannot be the scan worker, which scheduling clears,
+        // nor the io thread, which loads a seventeen megabyte engine: queued behind that, the
+        // keyboard was noticed too late to move the button and it sat behind the keys.
+        val windowThread = HandlerThread("phonetix-windows").apply { start() }
+        watcher = Handler(windowThread.looper)
         // A separate thread for capture and for fetching a diagram. Both were queued behind
         // the scans on the worker, and a scan can hold that thread for most of a second, so
         // the screenshot callback simply never arrived and the colours never came.
@@ -289,7 +299,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // about a word the reader cannot see.
             wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
             onScreen = { overlay.onScreen() },
-            keyboardTop = { keyboardTop() },
+            // The last look's answer rather than a fresh one: where the button parks is decided
+            // on the main thread, and asking the system for its windows there is a call that
+            // can block. It is looked at whenever the windows change, which is exactly when a
+            // keyboard comes or goes.
+            keyboardTop = { lastKeyboardTop },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
             onHand = { y ->
                 tooltip.clearOf(y)
@@ -728,31 +742,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // stand clear of: it costs a look at where the button belongs rather than a read of
         // the screen, and the screen itself has not changed.
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            // What this is for is the keyboard, so nothing is done unless the keyboard has
-            // actually come or gone. Windows change constantly - every dialog, every system
-            // window, every one of our own - and asking the system where its windows are on
-            // each of them is an IPC per event.
-            // The words of the app before come down as soon as another app's window is in
-            // front, which is sooner than that app's own events arrive - they wait for its
-            // window to finish animating in. Only taken down: the plan is left for the read
-            // that the app's own events will ask for, because scheduling a read on every
-            // window change starves the one that matters.
-            val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
-            if (front != null && front != packageName && cachedPackage != null &&
-                front != cachedPackage && !bystanders.contains(front) &&
-                SettingsStore.allows(front) && ::overlay.isInitialized
-            ) {
-                overlay.hideNow()
-            }
-            val top = keyboardTop()
-            if (top != lastKeyboardTop) {
-                lastKeyboardTop = top
-                val now = SettingsStore.current
-                if (now.enabled && now.lens) main.post { hover.show() }
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d("Phonetix", "KEYBOARD at $top")
-                }
-            }
+            // Asked of the system away from the main thread, always.
+            //
+            // Both of the questions below are calls into the system, and one of them reaches
+            // into the app in front for its window. An app that is busy - which an app whose
+            // windows have just changed is - answers in its own time, and this callback is
+            // the main thread: the service froze inside it long enough for the platform to
+            // put up "Phonetix isn't responding", with the stack standing in
+            // getRootInActiveWindow under onAccessibilityEvent. Nothing that can block
+            // belongs on this thread.
+            //
+            // Not through the usual scheduling, which clears the worker to make room for a
+            // read: this is not a read and must not cancel one.
+            if (::watcher.isInitialized) watcher.post { lookAtTheWindows() }
             return
         }
         val windowChanged = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
@@ -2827,6 +2829,39 @@ class PhonetixAccessibilityService : AccessibilityService() {
             "${window.type}:$at"
         }
     }.getOrDefault(emptyList())
+
+    /**
+     * What the windows now are: whether the app in front changed, and where the keyboard is.
+     *
+     * Runs away from the main thread because everything in it can block. What it decides is
+     * posted back, because only the main thread may draw.
+     */
+    private fun lookAtTheWindows() {
+        // The words of the app before come down as soon as another app's window is in front,
+        // which is sooner than that app's own events arrive - they wait for its window to
+        // finish animating in. Only taken down: the plan is left for the read that the app's
+        // own events will ask for, because scheduling a read on every window change starves
+        // the one that matters.
+        val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        if (front != null && front != packageName && cachedPackage != null &&
+            front != cachedPackage && !bystanders.contains(front) &&
+            SettingsStore.allows(front) && ::overlay.isInitialized
+        ) {
+            main.post { overlay.hideNow() }
+        }
+        // What the rest of this is for is the keyboard, so nothing is done unless it has
+        // actually come or gone. Windows change constantly - every dialog, every system
+        // window, every one of ours - and the button is only in the way of one of them.
+        val top = keyboardTop()
+        if (top != lastKeyboardTop) {
+            lastKeyboardTop = top
+            val now = SettingsStore.current
+            if (now.enabled && now.lens) main.post { hover.show() }
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "KEYBOARD at $top")
+            }
+        }
+    }
 
     /**
      * The top of the keyboard, or zero where none is open.

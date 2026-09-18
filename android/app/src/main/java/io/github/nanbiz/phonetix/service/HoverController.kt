@@ -179,19 +179,30 @@ class HoverController(
     /**
      * Where the button waits, as the top left of a button this big.
      *
-     * On the side the reader keeps it, as far down as they put it, and never behind the
-     * keyboard: a button under an open keyboard cannot be picked up at all, and a reader
-     * typing is exactly the reader who wants to ask about what they are reading.
+     * On the side the reader keeps it, and never behind the keyboard: a button under an open
+     * keyboard cannot be picked up at all, and a reader typing is exactly the reader who
+     * wants to ask about what they are reading.
+     *
+     * How far down is the reader's only where they have pinned it. Unpinned there is no
+     * height to go to: coming to rest is the shortest way to the side, which is straight
+     * across from wherever the button already is. Only before it has ever been placed is
+     * there nothing to keep, and then it starts at [HOME_DOWN], low on the side, where a
+     * thumb holding the phone already is.
      */
     private fun restingAt(size: Int): Point {
         val edges = screen()
+        val settings = SettingsStore.current
         val margin = dp(EDGE_DP).roundToInt()
         val foot = dp(FOOT_DP).roundToInt()
         val x = if (restsRight()) edges.width() - size - margin else margin
         // Above whatever the system has put over the bottom of the screen, which is the
         // keyboard when one is open and the gesture strip otherwise.
         val floor = (keyboardTop().takeIf { it > 0 } ?: (edges.height() - foot)) - size - margin
-        val y = (SettingsStore.current.restY * edges.height()).roundToInt() - size / 2
+        val y = when {
+            settings.pin -> (settings.restY * edges.height()).roundToInt() - size / 2
+            markY >= 0 -> markY
+            else -> (HOME_DOWN * edges.height()).roundToInt() - size / 2
+        }
         return Point(x, y.coerceIn(margin, floor.coerceAtLeast(margin)))
     }
 

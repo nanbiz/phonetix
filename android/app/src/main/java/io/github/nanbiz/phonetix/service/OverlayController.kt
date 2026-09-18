@@ -114,8 +114,14 @@ class OverlayController(
         // Measured at the start of a scroll, ninety-six of them held the main thread - which
         // is what draws - for 733ms, so the words stood still through the first half second
         // of the movement they were meant to be riding. Fading is a draw and nothing more:
-        // 274ms for eighty. They are solid again in [render], which is what ends the motion.
+        // 274ms for eighty.
+        //
+        // They do go down, a moment later and through [putAway], rather than being left up
+        // and transparent for the length of the scroll: a window nothing can see still has a
+        // surface to composite, and ninety-six of them standing through every scroll is work
+        // for no picture. [render] ends the motion and makes them solid again.
         for (c in chips) if (c.visibility != View.GONE && c.alpha != 0f) c.alpha = 0f
+        main.postDelayed(putAway, PUT_AWAY_MS)
         motion.start(lastRendered)
     }
 
