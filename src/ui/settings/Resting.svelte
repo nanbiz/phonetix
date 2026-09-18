@@ -23,7 +23,7 @@
 
   let { y, side, across = 9, down = 19.5, put }: Props = $props();
 
-  let board: HTMLDivElement | undefined = $state();
+  let board: HTMLButtonElement | undefined = $state();
   let holding = $state(false);
   /** Where it is while a finger is on it, before it is let go. */
   let held: { side: string; y: number } | null = $state(null);
@@ -48,6 +48,32 @@
     const said = mine;
     if (said && said.side === side && Math.abs(said.y - y) < 0.001) mine = null;
   });
+
+  /**
+   * How much room is left under the title, and how wide the board may be to fit in it.
+   *
+   * The board is the shape of the reader's own screen, so its height follows from its width:
+   * sized by width alone it either leaves a band of nothing beneath it on a phone or runs off
+   * the bottom of the extension's popup. Measured rather than written in the stylesheet as a
+   * `vh`, because in the app's web view `vh` resolves against a height of about four pixels -
+   * a board asked for a third of the screen's height came out a pixel and a half wide.
+   */
+  let holder: HTMLDivElement | undefined = $state();
+  let room = $state(0);
+  $effect(() => {
+    const measure = () => {
+      const top = holder?.getBoundingClientRect().top ?? 0;
+      const seen = globalThis.innerHeight ?? 0;
+      room = seen > 0 ? Math.max(MIN_ROOM, seen - top - EDGE) : 0;
+    };
+    measure();
+    globalThis.addEventListener?.('resize', measure);
+    return () => globalThis.removeEventListener?.('resize', measure);
+  });
+  /** How close to the bottom of what is left the board may come. */
+  const EDGE = 24;
+  const MIN_ROOM = 180;
+  let wide = $derived(room > 0 ? Math.round((room * across) / down) : 0);
 
   let at = $derived(held ?? mine ?? { side, y });
   let where = $derived({ x: at.side === 'left' ? IN : 1 - IN, y: at.y });
@@ -116,13 +142,12 @@
   }
 </script>
 
-<div class="rest">
-  <div
+<div class="rest" bind:this={holder}>
+  <button
+    type="button"
     class="board"
-    style="aspect-ratio: {across} / {down}"
+    style="aspect-ratio: {across} / {down}{wide ? `; width: min(84%, ${wide}px)` : ''}"
     bind:this={board}
-    role="application"
-    tabindex="0"
     aria-label={SAYS['rest-put']}
     onpointerdown={grab}
     onpointermove={move}
@@ -141,11 +166,11 @@
 
     <!-- A page under it, so the board reads as a screen rather than as a box: what is being
          placed is a thing that sits over somebody's reading. -->
-    <div class="page" aria-hidden="true">
+    <span class="page" aria-hidden="true">
       {#each Array(12) as _, line}
         <span class="line" style="width: {line % 3 === 2 ? 54 : 88}%"></span>
       {/each}
-    </div>
+    </span>
 
     <!-- The two sides it can sit on, the one it is headed for lit while it is moving. -->
     <span class="rail left{at.side === 'left' ? ' taking' : ''}" aria-hidden="true"></span>
@@ -156,7 +181,7 @@
       style="left: {where.x * 100}%; top: {where.y * 100}%"
       aria-hidden="true"
     ></span>
-  </div>
+  </button>
 </div>
 
 <style>
@@ -164,14 +189,17 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* The board is the whole screen's business, so it sits in the middle of what is left of
-       the screen rather than under the title with a void beneath it. */
-    padding: var(--space-5) var(--space-4);
+    padding: var(--space-4);
   }
 
   .board {
     position: relative;
-    width: min(72%, 17rem);
+    appearance: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    display: block;
+    width: min(84%, 17rem);
     border-radius: var(--radius-card);
     border: var(--border-width) solid var(--color-border);
     background: var(--color-page-bg);
@@ -190,8 +218,8 @@
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
-    height: 3.2%;
+    width: 26%;
+    height: 2.6%;
     border-radius: 0 0 var(--radius-symbol) var(--radius-symbol);
     background: var(--color-border);
   }
@@ -214,7 +242,9 @@
     display: flex;
     flex-direction: column;
     justify-content: space-evenly;
-    padding: 9% 8% 8%;
+    /* Inside the rails, so a line of the page never runs under the track the button sits
+       on. */
+    padding: 11% 22% 13%;
   }
 
   .line {
@@ -232,7 +262,7 @@
     width: 2px;
     border-radius: 2px;
     background: var(--color-ink-faint);
-    opacity: 0.18;
+    opacity: 0.26;
     transition: opacity 120ms ease, background 120ms ease;
   }
 
@@ -265,14 +295,9 @@
   }
 
   .mark.held {
+    transform: scale(1.12);
     box-shadow:
       0 2px 8px rgb(0 0 0 / 0.35),
       0 0 0 8px color-mix(in srgb, var(--color-accent) 26%, transparent);
   }
-
-  .mark.held {
-    transform: scale(1.12);
-  }
-
-
 </style>
