@@ -37,7 +37,9 @@
     "test:translates": "uv run scripts/proofread/translates.py",
     "bundle:dict": "node scripts/bundle-dictionaries.mjs",
     "build:phone": "vite build -c vite.phone.config.ts",
-    "publish:packs": "node scripts/publish-packs.mjs"
+    "publish:packs": "node scripts/publish-packs.mjs",
+    "test:switch": "uv run python scripts/proofread/android_switch.py",
+    "test:written": "uv run python scripts/proofread/android_written.py"
   },
   "devDependencies": {
     "@browsermt/bergamot-translator": "0.4.9",
