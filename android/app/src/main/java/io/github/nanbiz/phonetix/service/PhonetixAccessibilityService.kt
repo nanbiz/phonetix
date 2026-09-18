@@ -117,6 +117,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** The app whose arrival has already had the words taken down, so that one switch does
      *  it once however many events the app sends while it comes up. */
     @Volatile private var clearedFor: String? = null
+    /**
+     * How many reads in a row have found exactly the screen that was already known.
+     *
+     * A screen nobody is touching is read again every [FULL_READ_MS] regardless, because a
+     * list can change without announcing it. Asking the app for its window blocks the whole
+     * service while it answers - the platform holds one lock for that call and for delivering
+     * events - and an app that is starting up takes its time: measured at 1445ms, during
+     * which no event reaches the service and nothing can be drawn. So the reader switched
+     * apps and the words of the app before stayed painted over the new one for as long as
+     * that call took. Reading a screen that has not changed is what puts that call in flight
+     * for no gain, so the quiet gets longer the longer it lasts, and anything at all resets
+     * it.
+     */
+    @Volatile private var sameAgain = 0
+    /** When the app in front last changed, so the words can come off the screen first. */
+    @Volatile private var switchedAt = 0L
 
     /** Which screenful is being read: a number that changes whenever the plan is built
      *  afresh, so anything that takes a moment can tell whether it still belongs. */
@@ -521,11 +537,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // for; the words come down once, and the next event after it is switched back on
         // is answered as usual.
         if (!SettingsStore.current.enabled) {
-            if (wasEnabled && ::overlay.isInitialized) main.post { overlay.hideNow() }
+            if (wasEnabled && ::overlay.isInitialized) overlay.hideNow()
             wasEnabled = false
             return
         }
         wasEnabled = true
+        // Something happened on a screen, so it is not a screen to leave alone.
+        sameAgain = 0
         // The app in front changed, so nothing held from the app before it is worth a thing.
         //
         // The words are placed where that app had them, and the new one has its own text in
@@ -545,7 +563,27 @@ class PhonetixAccessibilityService : AccessibilityService() {
             clearedFor = from
             cachedPlan = emptyList()
             scrollOnly = false
-            if (::overlay.isInitialized) main.post { overlay.hideNow() }
+            // Taken down here rather than posted for later: an event arrives on the main
+            // thread, so this is already the thread that draws, and one frame is all it
+            // takes.
+            if (::overlay.isInitialized) overlay.hideNow()
+            switchedAt = android.os.SystemClock.uptimeMillis()
+            if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "SWITCHED to $from")
+        }
+        // Nothing is read for a moment after arriving at another app.
+        //
+        // Asking an app that is still starting up for its window blocks the service whole:
+        // the platform holds one lock for that call and for delivering events, so no event
+        // arrives, no message on the main thread runs, and nothing is drawn until the app
+        // answers - measured at 1445ms on an app being brought to the front. The words were
+        // taken down just above, and a read begun in the same breath froze the service before
+        // the frame that would have taken them off the screen could be drawn, so they stayed
+        // over the new app for the whole of it. This waits long enough to draw that frame,
+        // and the app is usually readier by then as well.
+        val settling = android.os.SystemClock.uptimeMillis() - switchedAt < AFTER_A_SWITCH
+        if (settling) {
+            schedule(AFTER_A_SWITCH, trailing = true)
+            return
         }
         // A scroll says how far the content moved, and the words moved exactly that far, so
         // the transcriptions are carried along in this same frame rather than being taken
@@ -686,6 +724,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // actually come or gone. Windows change constantly - every dialog, every system
             // window, every one of our own - and asking the system where its windows are on
             // each of them is an IPC per event.
+            // The words of the app before come down as soon as another app's window is in
+            // front, which is sooner than that app's own events arrive - they wait for its
+            // window to finish animating in. Only taken down: the plan is left for the read
+            // that the app's own events will ask for, because scheduling a read on every
+            // window change starves the one that matters.
+            val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+            if (front != null && front != packageName && cachedPackage != null &&
+                front != cachedPackage && !bystanders.contains(front) &&
+                SettingsStore.allows(front) && ::overlay.isInitialized
+            ) {
+                overlay.hideNow()
+            }
             val top = keyboardTop()
             if (top != lastKeyboardTop) {
                 lastKeyboardTop = top
@@ -924,13 +974,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // known and three of them still alive, on a screen full of new text, with
                 // nothing for the mark to ask about. This stands down if anything else reads
                 // in the meantime.
-                readAgainSoon(FULL_READ_MS)
+                readAgainSoon(quietGap())
                 return
             }
             runCatching { scan() }
             worker.postDelayed(this, gapMs)
         }
     }
+
+    /**
+     * How long to leave a screen that keeps turning out to be the same screen.
+     *
+     * Doubles up to [FULL_READ_IDLE_MS] and drops back to [FULL_READ_MS] the moment anything
+     * happens, so a page being read is still re-read promptly and a page nobody is touching
+     * stops putting a blocking call to the app in flight four times a second.
+     */
+    private fun quietGap(): Long =
+        (FULL_READ_MS shl sameAgain.coerceIn(0, 4)).coerceAtMost(FULL_READ_IDLE_MS)
 
     /**
      * Run on the leading edge, not the trailing one.
@@ -1232,6 +1292,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val wasHere = cachedPlan.mapTo(HashSet(cachedPlan.size)) { it.text }
             val kept = if (fresh.isEmpty()) 0 else fresh.count { wasHere.contains(it.text) }
             val another = cachedPackage != pkg || kept * 2 < fresh.size
+            sameAgain = if (another || kept != fresh.size || fresh.size != cachedPlan.size) {
+                0
+            } else {
+                sameAgain + 1
+            }
             cachedPlan = fresh
             if (another) {
                 screenful++
@@ -1851,9 +1916,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // list after a drag: six of seventeen lines carried a transcription, and
                 // stayed that way for as long as the reader looked at it.
                 if (!following && !moving) {
-                    val due = FULL_READ_MS -
-                        (android.os.SystemClock.uptimeMillis() - lastFullReadAt)
-                    readAgainSoon(due.coerceIn(0L, FULL_READ_MS))
+                    val gap = quietGap()
+                    val due = gap - (android.os.SystemClock.uptimeMillis() - lastFullReadAt)
+                    readAgainSoon(due.coerceIn(0L, gap))
                 }
                 return
             }
@@ -2207,6 +2272,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
         }
+
+        // A screen whose words are not all on it yet is not a screen to leave alone, however
+        // unchanged it is: the colours of a line are read from a photograph of a still screen,
+        // and until they arrive that line carries nothing. Backing off here would have left a
+        // screen bare for as long as seven seconds.
+        if (painted.size < planned.sumOf { it.boxes.size }) sameAgain = 0
 
         if (PUT_THEM_WRONG_BY != 0f) {
             val wronged = putThemWrong(painted)
@@ -3559,6 +3630,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val FOLLOW_IDLE_MS = 200L
         /** However well the following is going, a settled screen is read in full this often. */
         const val FULL_READ_MS = 900L
+        /**
+         * How long the words are left off the screen after the app in front changes, before
+         * the new one is read. Long enough for the frame that takes them down to be drawn.
+         */
+        const val AFTER_A_SWITCH = 350L
+        /** The longest a screen that nothing is happening on goes unread. */
+        const val FULL_READ_IDLE_MS = 7200L
         /** And a moving one this often, to pick up the words scrolling into it. */
         const val FULL_READ_MOVING_MS = 2500L
         /** How much of a plan's words have to survive the following for it to still describe

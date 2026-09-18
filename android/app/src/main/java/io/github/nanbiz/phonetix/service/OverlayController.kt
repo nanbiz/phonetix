@@ -38,6 +38,25 @@ class OverlayController(
     private val chips = ArrayList<ChipView>(MAX_CHIPS)
     private val motion = MotionLayer(context)
     private var lastRendered: List<WordBox> = emptyList()
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * The windows themselves, once there is no hurry about it.
+     *
+     * A window's visibility is a call into the window manager, and there is a window per
+     * word. Forty-nine of those at once, while the platform was animating another app into
+     * the front, held the main thread for 1.4 seconds - and the main thread is what draws,
+     * so the words of the app before stayed painted over the new app for the whole of it.
+     * [hideNow] therefore fades them, which is a draw and nothing more, and the windows go
+     * down here, after the transition that made the calls expensive is over.
+     */
+    private val putAway = Runnable {
+        for (c in chips) {
+            if (c.visibility == View.GONE) continue
+            c.moveToken++
+            c.visibility = View.GONE
+        }
+    }
 
     /**
      * Nothing is painted over a word, and every word is still known.
@@ -87,6 +106,7 @@ class OverlayController(
      */
     fun beginMotion() {
         if (silent || motion.isRunning) return
+        main.removeCallbacks(putAway)
         for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
         motion.start(lastRendered)
     }
@@ -139,7 +159,20 @@ class OverlayController(
      */
     fun hideNow() {
         motion.stop()
-        for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
+        var faded = false
+        for (c in chips) {
+            if (c.visibility == View.GONE || c.alpha == 0f) continue
+            c.moveToken++
+            c.alpha = 0f
+            faded = true
+        }
+        // Off the screen in this frame, and out of the window manager shortly after. See
+        // [putAway] for why the two are not the same thing. Always later, never here: a
+        // second hide arriving during the same transition would otherwise make exactly the
+        // call this exists to keep out of it.
+        if (!faded && chips.none { it.visibility != View.GONE }) return
+        main.removeCallbacks(putAway)
+        main.postDelayed(putAway, PUT_AWAY_MS)
     }
 
     /**
@@ -152,6 +185,7 @@ class OverlayController(
     fun known(boxes: List<WordBox>) = keep(boxes)
 
     fun render(boxes: List<WordBox>) {
+        main.removeCallbacks(putAway)
         if (silent) {
             keep(boxes)
             return
@@ -193,6 +227,7 @@ class OverlayController(
             // nothing at all. Photographed while the page moved with the words back on these
             // windows, that is most of the screen bare: every word moves every pass, so
             // every window spent every other frame invisible.
+            if (chip.alpha != 1f) chip.alpha = 1f
             if (place(chip, box.rect) && says) {
                 chip.visibility = View.INVISIBLE
                 val token = ++chip.moveToken
@@ -295,6 +330,9 @@ class OverlayController(
     ).apply { gravity = Gravity.TOP or Gravity.START }
 
     private companion object {
+        /** How long the faded windows are left up for, past the transition that made taking
+         *  them down expensive. */
+        const val PUT_AWAY_MS = 700L
         const val MAX_CHIPS = 96
         const val BLEED = 1.5f
     }
