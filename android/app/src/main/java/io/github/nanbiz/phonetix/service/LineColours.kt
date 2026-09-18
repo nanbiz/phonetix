@@ -27,6 +27,11 @@ class LineColours(
      *  under it: the frame is taken a moment after it is asked for, and a frame of the page
      *  before answers for lines that were never in it. */
     private val screenful: () -> Int = { 0 },
+    /** When the screen being read arrived. A frame older than that is a photograph of the
+     *  page before: the tree changes as soon as the app lays a new screen out and the pixels
+     *  follow, so a capture already in flight comes back showing what was there before. */
+    private val screenfulAt: () -> Long = { 0L },
+
     /** Take the overlay down now, on the main thread; returns once it is down. */
     private val hideOverlay: () -> Unit,
     /** Ask for the screen to be read again, because colours have arrived or not. */
@@ -271,6 +276,8 @@ class LineColours(
         }
         capturing = true
         capturingSince = now
+        /** When the last capture was allowed, so one thrown away does not count as one. */
+        val lastAllowed = cleanFrameAt
         cleanFrameAt = now
         val asked = wanted.toList()
         /** The screenful these lines belong to. */
@@ -303,10 +310,20 @@ class LineColours(
                 // reader opening something - photographs as the page before, and every line
                 // of the new one then takes its colours from text that was never there: on a
                 // page of coloured bands, every word came out the white of the page before.
-                if (screenful() != of) {
+                // And a photograph of this screen rather than of the one before it.
+                val older = sampler.frameAt < screenfulAt()
+                if (screenful() != of || older) {
                     capturing = false
+                    // A frame thrown away is not a frame read: without this the throttle
+                    // counts it, and the lines wait the whole gap again for a colour that
+                    // was never taken - which reads as a screen that draws nothing.
+                    cleanFrameAt = lastAllowed
                     if (BuildConfig.DEBUG) {
-                        android.util.Log.d("Phonetix", "COLOURS the screen changed under it")
+                        android.util.Log.d(
+                            "Phonetix",
+                            "COLOURS the screen was " +
+                                (if (older) "not the one photographed" else "changed under it"),
+                        )
                     }
                     readAgain()
                     return@postDelayed

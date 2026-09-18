@@ -110,9 +110,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Apps already named in the log as giving no character bounds, so each is said once. */
     private val noCharacters = HashSet<String>(4)
 
+    /** Where the keyboard's top edge was when it was last looked at, so that windows changing
+     *  for any other reason costs nothing. */
+    @Volatile private var lastKeyboardTop = -1
+
+    /** The app whose arrival has already had the words taken down, so that one switch does
+     *  it once however many events the app sends while it comes up. */
+    @Volatile private var clearedFor: String? = null
+
     /** Which screenful is being read: a number that changes whenever the plan is built
      *  afresh, so anything that takes a moment can tell whether it still belongs. */
     @Volatile private var screenful = 0
+
+    /** When that screenful was read, so anything that photographs the screen can let the app
+     *  finish drawing it first. */
+    @Volatile private var screenfulAt = 0L
 
     /** What the screen being read was read as, which is the language its words are in. */
     @Volatile private var readingSource = Language.OURS
@@ -389,6 +401,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         colours = LineColours(
             sampler, main, io,
             screenful = { screenful },
+            screenfulAt = { screenfulAt },
             hideOverlay = { overlay.hideNow() },
             // Not while a movement is being followed. Scheduling clears the loop that
             // follows it, and this fires whenever a reading of the colours has to be tried
@@ -523,8 +536,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // that is a pile of chips in the corner of the settings screen, each carrying a word
         // from the page before.
         if (from != null && cachedPackage != null && from != cachedPackage &&
-            from != packageName && SettingsStore.allows(from)
+            from != packageName && SettingsStore.allows(from) && clearedFor != from
         ) {
+            // Once for each app arrived at, not on every event it sends while it is loading:
+            // the plan is cleared and a read scheduled, and a stream of events each clearing
+            // it again pushes that read out of the way for as long as the app keeps talking -
+            // which on a real app is a screenful of English with nothing on it.
+            clearedFor = from
             cachedPlan = emptyList()
             scrollOnly = false
             if (::overlay.isInitialized) main.post { overlay.hideNow() }
@@ -664,36 +682,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // stand clear of: it costs a look at where the button belongs rather than a read of
         // the screen, and the screen itself has not changed.
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            val now = SettingsStore.current
-            if (now.enabled && now.lens) main.post { hover.show() }
-            // And whether the app in front is still the one the words belong to. The app's
-            // own events arrive when its window has finished animating in, which is half a
-            // second of another app's transcriptions sitting over it; the windows change at
-            // the start of that.
-            val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
-            if (BuildConfig.DEBUG) {
-                android.util.Log.d(
-                    "Phonetix",
-                    "WINDOWS changed, keyboard at ${keyboardTop()}, $front in front",
-                )
-            }
-            // Only where the thing in front is an app whose words would be read at all.
-            // The window with the focus is often none: a system window, a launcher, or this
-            // service's own overlay, and treating those as a change of app threw the plan
-            // away several times a second - a screen that never finished being read and never
-            // drew anything.
-            val elsewhere = front != null && front != packageName && cachedPackage != null &&
-                front != cachedPackage && !bystanders.contains(front) &&
-                SettingsStore.allows(front)
-            if (elsewhere) {
-                cachedPlan = emptyList()
-                scrollOnly = false
-                if (::overlay.isInitialized) main.post { overlay.hideNow() }
-                // Once the new window has finished arriving, not while it is animating in:
-                // a read taken then finds a window that is still on its way, keeps nothing,
-                // and nothing else prompts another - the app is simply there, not changing.
-                main.removeCallbacks(afterASystemWindow)
-                main.postDelayed(afterASystemWindow, AFTER_A_SYSTEM_WINDOW)
+            // What this is for is the keyboard, so nothing is done unless the keyboard has
+            // actually come or gone. Windows change constantly - every dialog, every system
+            // window, every one of our own - and asking the system where its windows are on
+            // each of them is an IPC per event.
+            val top = keyboardTop()
+            if (top != lastKeyboardTop) {
+                lastKeyboardTop = top
+                val now = SettingsStore.current
+                if (now.enabled && now.lens) main.post { hover.show() }
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d("Phonetix", "KEYBOARD at $top")
+                }
             }
             return
         }
@@ -1225,9 +1225,24 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             chooseWords(fresh, settings, screen.language, budget)
             planned = fresh
+            // A screen counts as a new one when its lines are not the ones that were there
+            // a moment ago. Every read builds a plan afresh, so counting each of those as a
+            // new screen put off photographing the colours for ever - and a line whose
+            // colours have not been read is a line that is not drawn at all.
+            val wasHere = cachedPlan.mapTo(HashSet(cachedPlan.size)) { it.text }
+            val kept = if (fresh.isEmpty()) 0 else fresh.count { wasHere.contains(it.text) }
+            val another = cachedPackage != pkg || kept * 2 < fresh.size
             cachedPlan = fresh
-            screenful++
+            if (another) {
+                screenful++
+                screenfulAt = android.os.SystemClock.uptimeMillis()
+            }
             cachedPackage = pkg
+            // The words on screen are this app's again, so the next arrival at another one
+            // takes them down afresh. Left set, this remembered that it had already cleared
+            // for that app once and never did it again: the second visit to a screen kept
+            // the previous app's transcriptions over it for as long as it was open.
+            clearedFor = null
             cachedPainted = seen
             previousTops = before
             plannedDensity = settings.density

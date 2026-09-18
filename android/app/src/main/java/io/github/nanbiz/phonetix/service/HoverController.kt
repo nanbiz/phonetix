@@ -206,13 +206,6 @@ class HoverController(
             // while a finger is on it, which would be the mark jumping out from under a hand.
             val size = up.width.takeIf { it > 0 } ?: markPx()
             val belongs = restingAt(size)
-            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-                android.util.Log.d(
-                    "Phonetix",
-                    "PARKS at $markX,$markY belongs $belongs holding=$holding " +
-                        "keyboard=${keyboardTop()} restY=${SettingsStore.current.restY}",
-                )
-            }
             if ((markX != belongs.x || markY != belongs.y) && !holding) {
                 markX = belongs.x
                 markY = belongs.y

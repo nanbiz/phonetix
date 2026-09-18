@@ -62,7 +62,14 @@ def main():
     dev.enable_service()
     dev.surface(mode="chat", enable=1, density=1, lens=1, layer="off")
     time.sleep(8)
-    settled = believed(serial)
+    # Waited for rather than asked once: a page that has just come up has not been read yet,
+    # and "nothing believed" then is the check measuring its own impatience.
+    settled = 0
+    for _ in range(10):
+        settled = believed(serial)
+        if settled:
+            break
+        time.sleep(2)
     print(f"  holding still, the overlay believed in up to {settled} words")
     if settled < 8:
         print("\nFAIL - the still page was never read, so there is nothing to compare against")
