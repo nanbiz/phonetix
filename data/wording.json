@@ -228,7 +228,11 @@
     },
     "rest": {
       "name": "Where the button sits",
-      "about": "which side it waits on, and how far down"
+      "about": "which side it waits on, and whether it stays put"
+    },
+    "rest-pin": {
+      "name": "Pin",
+      "about": ""
     },
     "lens-drag": {
       "name": "Drag it over a word",

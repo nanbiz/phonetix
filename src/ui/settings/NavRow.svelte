@@ -10,13 +10,17 @@
     about?: string;
     /** The name this row reports itself under. */
     row?: string;
+    /** Nothing to set here yet, because what it sets only applies once something else is on.
+     *  Shown rather than hidden, so the reader can see the screen exists and what turns it
+     *  on. */
+    disabled?: boolean;
     open: () => void;
   }
 
-  let { name, about = '', row = '', open }: Props = $props();
+  let { name, about = '', row = '', disabled = false, open }: Props = $props();
 </script>
 
-<button class="nav" data-row={row || undefined} onclick={open}>
+<button class="nav" data-row={row || undefined} {disabled} onclick={open}>
   <span class="n-name" data-name>{name}</span>
   {#if about}<span class="n-sub" data-about>{about}</span>{/if}
   <span class="chev" aria-hidden="true">›</span>

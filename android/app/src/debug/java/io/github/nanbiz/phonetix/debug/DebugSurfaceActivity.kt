@@ -557,6 +557,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     i.getStringExtra("side").orEmpty(),
                 )
             }
+            // Whether the height below is honoured at all, which is the reader's choice and
+            // is off unless they made it: a check that asks for a height without this is
+            // asking what the button does when nobody has chosen one.
+            if (i.hasExtra("pin")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setPin(i.getIntExtra("pin", 0) == 1)
+            }
             // How far down its side the button waits, so a check can put it somewhere and
             // see what follows.
             if (i.hasExtra("restY")) {

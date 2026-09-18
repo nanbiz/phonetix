@@ -28,6 +28,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   off: 'local:sitesOff',
   lens: 'local:lens',
   side: 'local:markSide',
+  pin: 'local:markPinned',
   restY: 'local:markRestY',
   touchWords: 'local:touchWords',
   apps: 'local:apps',

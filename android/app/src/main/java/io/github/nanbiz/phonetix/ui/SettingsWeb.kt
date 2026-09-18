@@ -326,6 +326,7 @@ private class Bridge(
         .put("off", JSONArray())
         .put("lens", settings.lens)
         .put("side", settings.side)
+        .put("pin", settings.pin)
         .put("restY", settings.restY.toDouble())
         .put("touchWords", settings.touchWords)
         .put("apps", JSONArray(settings.apps.toList()))
@@ -345,6 +346,7 @@ private class Bridge(
             "host" -> SettingsStore.setPackHost(value?.toString().orEmpty())
             "lens" -> SettingsStore.setLens(value == true)
             "side" -> SettingsStore.setSide(value?.toString().orEmpty())
+            "pin" -> SettingsStore.setPin(value == true)
             "restY" -> SettingsStore.setRestY((value as? Number)?.toFloat() ?: return)
             "touchWords" -> SettingsStore.setTouchWords(value == true)
             "accents" -> {

@@ -14,6 +14,10 @@
     /** How far down it sits, as a share of the screen, and which side it sits on. */
     y: number;
     side: string;
+    /** Whether the height is the reader's choice at all. Where it is not, the button is drawn
+     *  where it actually waits - low on its side, by the hand - and drawn as the standing
+     *  arrangement rather than as a choice already made. */
+    pinned?: boolean;
     /** The screen this stands in for, so the board is the shape of the reader's own. */
     across?: number;
     down?: number;
@@ -21,7 +25,7 @@
     put: (side: string, y: number) => void;
   }
 
-  let { y, side, across = 9, down = 19.5, put }: Props = $props();
+  let { y, side, pinned = false, across = 9, down = 19.5, put }: Props = $props();
 
   let board: HTMLButtonElement | undefined = $state();
   let holding = $state(false);
@@ -62,20 +66,37 @@
   let room = $state(0);
   $effect(() => {
     const measure = () => {
-      const top = holder?.getBoundingClientRect().top ?? 0;
+      const box = holder?.getBoundingClientRect();
       const seen = globalThis.innerHeight ?? 0;
-      room = seen > 0 ? Math.max(MIN_ROOM, seen - top - EDGE) : 0;
+      // Nothing to measure against while the screen is still put away. Every screen stays in
+      // the document and the one being read is the one shown, so this runs first on a section
+      // that is hidden, where the top reads zero and the board comes out a screen and a half
+      // tall - hanging off the bottom the moment it is opened.
+      if (seen <= 0 || !box || box.width === 0) return;
+      const next = Math.max(MIN_ROOM, seen - box.top - EDGE);
+      if (Math.abs(next - room) > 1) room = next;
     };
     measure();
+    // Watched rather than measured once: what changes is the screen being opened, which is
+    // not an event of its own but is the moment this gets a size at all.
+    const watch = globalThis.ResizeObserver ? new ResizeObserver(measure) : null;
+    if (watch && holder) watch.observe(holder);
     globalThis.addEventListener?.('resize', measure);
-    return () => globalThis.removeEventListener?.('resize', measure);
+    return () => {
+      watch?.disconnect();
+      globalThis.removeEventListener?.('resize', measure);
+    };
   });
   /** How close to the bottom of what is left the board may come. */
   const EDGE = 24;
   const MIN_ROOM = 180;
   let wide = $derived(room > 0 ? Math.round((room * across) / down) : 0);
 
-  let at = $derived(held ?? mine ?? { side, y });
+  /** Where it waits when the height is not the reader's: low on its side, where a thumb is.
+   *  The same share of the screen the button itself uses. */
+  const HOME = 0.8;
+
+  let at = $derived(held ?? mine ?? { side, y: pinned ? y : HOME });
   let where = $derived({ x: at.side === 'left' ? IN : 1 - IN, y: at.y });
 
   function whereOn(touch: { clientX: number; clientY: number }) {
@@ -172,12 +193,13 @@
       {/each}
     </span>
 
-    <!-- The two sides it can sit on, the one it is headed for lit while it is moving. -->
-    <span class="rail left{at.side === 'left' ? ' taking' : ''}" aria-hidden="true"></span>
-    <span class="rail right{at.side === 'right' ? ' taking' : ''}" aria-hidden="true"></span>
+    <!-- The corner the button belongs to, lit. The hand comes onto the screen there, and
+         everything the button does is measured from it, so the side being chosen is shown as
+         the corner warming rather than as a pair of tracks drawn on the page. -->
+    <span class="corner {at.side}" aria-hidden="true"></span>
 
     <span
-      class="mark{holding ? ' held' : ''}"
+      class="mark{holding ? ' held' : ''}{pinned || held || mine ? '' : ' loose'}"
       style="left: {where.x * 100}%; top: {where.y * 100}%"
       aria-hidden="true"
     ></span>
@@ -254,29 +276,27 @@
     opacity: 0.3;
   }
 
-  /* The two places it can sit, drawn as the tracks they are. */
-  .rail {
+  /* Which side is chosen, said as the corner it is. */
+  .corner {
     position: absolute;
-    top: 8%;
-    bottom: 8%;
-    width: 2px;
-    border-radius: 2px;
-    background: var(--color-ink-faint);
-    opacity: 0.26;
-    transition: opacity 120ms ease, background 120ms ease;
+    inset: 0;
+    transition: background 160ms ease;
   }
 
-  .rail.left {
-    left: 12%;
+  .corner.right {
+    background: radial-gradient(
+      circle at 100% 100%,
+      color-mix(in srgb, var(--color-accent) 24%, transparent) 0%,
+      transparent 58%
+    );
   }
 
-  .rail.right {
-    right: 12%;
-  }
-
-  .rail.taking {
-    background: var(--color-accent);
-    opacity: 0.35;
+  .corner.left {
+    background: radial-gradient(
+      circle at 0% 100%,
+      color-mix(in srgb, var(--color-accent) 24%, transparent) 0%,
+      transparent 58%
+    );
   }
 
   .mark {
@@ -292,6 +312,14 @@
       0 1px 5px rgb(0 0 0 / 0.3),
       0 0 0 4px color-mix(in srgb, var(--color-accent) 22%, transparent);
     transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+
+  /* Not a choice yet: the button is shown where it does wait, but as the arrangement it
+     falls back to rather than as a place somebody picked. */
+  .mark.loose {
+    background: var(--color-ink-faint);
+    box-shadow: 0 1px 5px rgb(0 0 0 / 0.3);
+    opacity: 0.55;
   }
 
   .mark.held {

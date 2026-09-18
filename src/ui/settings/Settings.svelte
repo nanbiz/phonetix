@@ -466,9 +466,11 @@
 </Screen>
 
 <Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
+  <!-- Only reachable when it is pinned, so there is always a place being set here. -->
   <Resting
     y={settings.restY}
     side={settings.side}
+    pinned={settings.pin}
     across={screenAcross}
     down={screenDown}
     put={(edge, y) => {
@@ -600,17 +602,38 @@
         {/snippet}
       </Row>
 
-      <!-- Where it waits, which is also the point the circle is carried away from, so a
-           reader's own hand is never over the word they are pointing at. A screen of its own,
-           because the answer is a place rather than a word. -->
+      <!-- Which side it comes back to, which is the hand the phone is held in. Asked here
+           rather than on the screen below, because it is the answer whether or not the button
+           is pinned: unpinned, coming to rest is the shortest way to this side. -->
       {#if settings.lens}
+        <Row name={ROWS.side.name} row="side">
+          {#snippet wide()}
+            <Segmented
+              choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+              chosen={settings.side}
+              change={(value) => change('side', value)}
+            />
+          {/snippet}
+        </Row>
+
+        <!-- Pinned, it waits at one place and nowhere else. Unpinned there is no place to
+             set, so the screen that sets one is greyed until this is on. -->
+        <Row name={ROWS['rest-pin'].name} row="rest-pin">
+          {#snippet control()}
+            <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
+          {/snippet}
+        </Row>
+
         <NavRow
           name={ROWS.rest.name}
           row="rest"
-          about={SAYS['rest-edge'].replace(
-            '%s',
-            labelOf(SIDE_CHOICES, settings.side).toLowerCase()
-          )}
+          disabled={!settings.pin}
+          about={settings.pin
+            ? SAYS['rest-edge'].replace(
+                '%s',
+                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
+              )
+            : ''}
           open={() => (view = 'rest')}
         />
       {/if}

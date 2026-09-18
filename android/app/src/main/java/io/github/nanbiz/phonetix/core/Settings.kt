@@ -72,8 +72,11 @@ data class Settings(
      *  come onto the screen from that corner, and the circle the mark carries is held away
      *  from it, so the hand is never over the word it is on. */
     val side: String = "right",
-    /** How far down its side the button waits, as a share of the screen, so it means the
-     *  same place however big the screen is. */
+    /** Whether the button waits at the height the reader chose rather than down by the hand.
+     *  Off is the ordinary thing: it sits low on its side, where a thumb is. */
+    val pin: Boolean = false,
+    /** How far down its side the button waits when it is pinned, as a share of the screen,
+     *  so it means the same place however big the screen is. */
     val restY: Float = 0.8f,
     /**
      * Narrow transcriptions rather than broad ones.
@@ -121,6 +124,7 @@ object SettingsStore {
     private const val K_HOST = "pack_host"
     private const val K_LENS = "lens"
     private const val K_SIDE = "side"
+    private const val K_PIN = "pinned"
     private const val K_REST_Y = "rest_y"
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
@@ -153,6 +157,7 @@ object SettingsStore {
             packHost = p.getString(K_HOST, "") ?: "",
             lens = p.getBoolean(K_LENS, true),
             side = p.getString(K_SIDE, "right") ?: "right",
+            pin = p.getBoolean(K_PIN, false),
             restY = p.getFloat(K_REST_Y, 0.8f),
             // Stored as one entry per language, because a set of strings is what preferences
             // can hold and a map is what the rest of this asks for.
@@ -196,6 +201,7 @@ object SettingsStore {
             ?.putString(K_HOST, next.packHost)
             ?.putBoolean(K_LENS, next.lens)
             ?.putString(K_SIDE, next.side)
+            ?.putBoolean(K_PIN, next.pin)
             ?.putFloat(K_REST_Y, next.restY)
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
@@ -226,6 +232,9 @@ object SettingsStore {
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }
+    /** Whether the button waits where it was put rather than down by the hand. */
+    fun setPin(v: Boolean) = update { it.copy(pin = v) }
+
     /** How far down its side the button waits: on the screen whatever is asked for. */
     fun setRestY(y: Float) = update { it.copy(restY = y.coerceIn(0f, 1f)) }
 
