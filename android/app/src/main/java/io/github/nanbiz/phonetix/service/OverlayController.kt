@@ -109,7 +109,13 @@ class OverlayController(
     fun beginMotion() {
         if (silent || motion.isRunning) return
         main.removeCallbacks(putAway)
-        for (c in chips) if (c.visibility != View.GONE) c.visibility = View.GONE
+        // Faded rather than taken down, for the reason [putAway] gives: there is a window
+        // per word, and changing their visibility is a call into the window manager each.
+        // Measured at the start of a scroll, ninety-six of them held the main thread - which
+        // is what draws - for 733ms, so the words stood still through the first half second
+        // of the movement they were meant to be riding. Fading is a draw and nothing more:
+        // 274ms for eighty. They are solid again in [render], which is what ends the motion.
+        for (c in chips) if (c.visibility != View.GONE && c.alpha != 0f) c.alpha = 0f
         motion.start(lastRendered)
     }
 
