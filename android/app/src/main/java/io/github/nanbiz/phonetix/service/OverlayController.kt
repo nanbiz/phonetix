@@ -78,7 +78,9 @@ class OverlayController(
         .put("silent", silent)
         .put("inMotion", motion.isRunning)
         .put("chips", chips.size)
-        .put("chipsShown", chips.count { it.visibility == View.VISIBLE })
+        // Visible and solid: a window faded by [hideNow] is still up for a moment afterwards,
+        // and what this reports is what a reader can see.
+        .put("chipsShown", chips.count { it.visibility == View.VISIBLE && it.alpha > 0f })
         .put("words", lastRendered.size)
         .put("boxes", StateDump.boxes(lastRendered))
 
