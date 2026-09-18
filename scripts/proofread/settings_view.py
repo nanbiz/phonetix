@@ -318,43 +318,33 @@ def main():
         else:
             failures.append(f"no dictionary was held to give up: {held_before}")
 
-        # Where the dictionaries come from is a setting, and the only way a reader has of
-        # pointing this at their own host. Emptied and typed back the way they would: nothing
-        # is on offer without it, and what they type is what is asked.
-        control(cdp, view, """
-            (() => {
-              const field = document.querySelector('[data-row=host] input');
-              field.value = '';
-              field.dispatchEvent(new Event('change', {bubbles: true}));
-            })()
-        """)
+        # Where the dictionaries come from is not a setting any more - the reader does not run
+        # a host and has nothing to type - but it is still a value, and what the view offers
+        # still comes from whatever it points at. Changed where it actually lives, which is
+        # storage, and the view opened again after it, because that is what the reader does.
+        def pointed_at(where):
+            control(cdp, view, "chrome.storage.local.set({packBaseUrl: %r})" % where)
+            evaluate(cdp, view, "location.reload()")
+            time.sleep(4)
+
+        pointed_at("http://127.0.0.1:9")
         without = evaluate(cdp, view, """
             (() => document.querySelectorAll('[data-row=pack]').length)()
         """)
-        control(cdp, view, """
-            (() => {
-              const field = document.querySelector('[data-row=host] input');
-              field.value = %r;
-              field.dispatchEvent(new Event('change', {bubbles: true}));
-            })()
-        """ % base)
-        time.sleep(3)
+        pointed_at(base)
         back = wait_for(cdp, view, """
             (() => document.querySelectorAll('[data-row=pack]').length)()
         """, lambda v: v)
-        print(f"  with no host: {without} dictionaries; with one: {back}")
+        print(f"  from a host with nothing on it: {without} dictionaries; "
+              f"from one that has them: {back}")
+        if without:
+            failures.append(f"a host with nothing on it still offered {without} dictionaries")
 
         # And when something really stops answering, the view says so. A dictionary host that
         # is set and answers nothing is the case a reader cannot otherwise see: what it would
         # have served is simply missing from the page, which looks like a word nobody wrote an
         # entry for.
-        control(cdp, view, """
-            (() => {
-              const field = document.querySelector('[data-row=host] input');
-              field.value = 'http://127.0.0.1:9';
-              field.dispatchEvent(new Event('change', {bubbles: true}));
-            })()
-        """)
+        pointed_at("http://127.0.0.1:9")
         said = wait_for(cdp, view, """
             (() => (document.querySelector('[data-row=trouble] [data-name]') || {})
               .textContent || null)()
@@ -365,14 +355,7 @@ def main():
 
         # And says nothing once it answers again: a warning that stays after the trouble has
         # passed is a warning a reader learns to ignore.
-        control(cdp, view, """
-            (() => {
-              const field = document.querySelector('[data-row=host] input');
-              field.value = %r;
-              field.dispatchEvent(new Event('change', {bubbles: true}));
-            })()
-        """ % base)
-        time.sleep(3)
+        pointed_at(base)
         quiet = wait_for(cdp, view, """
             (() => !document.querySelector('[data-row=trouble]'))()
         """, lambda v: v, tries=10)
