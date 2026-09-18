@@ -19,7 +19,57 @@ import time
 PKG = "io.github.nanbiz.phonetix"
 SERVICE = f"{PKG}/{PKG}.service.PhonetixAccessibilityService"
 SURFACE = f"{PKG}/.debug.DebugSurfaceActivity"
-SERIAL = os.environ.get("PHONETIX_ANDROID_SERIAL", "emulator-5600")
+# Which emulator is ours, by the name of the virtual device rather than by a port.
+#
+# A port is not an identity. This machine runs several emulators and the ports are handed out
+# in the order they start, so an emulator that dies frees its port for the next one - and a
+# check pinned to the port then drives whatever took it. That happened: this suite installed
+# the app onto another project's emulator and drove it there, which put our debug page in the
+# middle of their screen recordings. So the serial is resolved from the AVD name, and a serial
+# given by hand is checked against it rather than believed.
+AVD = os.environ.get("PHONETIX_AVD", "phonetix36")
+
+
+def _avd_of(serial):
+    """The name of the virtual device behind a serial, or an empty string."""
+    try:
+        out = subprocess.run(
+            ["adb", "-s", serial, "emu", "avd", "name"],
+            capture_output=True, text=True, timeout=20,
+        ).stdout
+    except Exception:
+        return ""
+    for line in out.splitlines():
+        line = line.strip()
+        if line and line != "OK":
+            return line
+    return ""
+
+
+def _ours():
+    """The serial of our own emulator, refusing anything that is somebody else's."""
+    asked = os.environ.get("PHONETIX_ANDROID_SERIAL")
+    if asked and not asked.startswith("emulator-"):
+        # A phone, named outright. There is no AVD to check it against.
+        return asked
+    if asked:
+        name = _avd_of(asked)
+        if name and name != AVD:
+            raise SystemExit(
+                f"{asked} is running {name!r}, not {AVD!r}. That is somebody else's "
+                f"emulator - start {AVD} or set PHONETIX_AVD."
+            )
+        if name == AVD:
+            return asked
+    listed = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=30).stdout
+    for line in listed.splitlines()[1:]:
+        serial = line.split("\t")[0].strip()
+        if serial.startswith("emulator-") and _avd_of(serial) == AVD:
+            return serial
+    raise SystemExit(f"no emulator running {AVD!r}; start one before running this")
+
+
+SERIAL = _ours()
 
 
 def adb(*args, timeout=90):
@@ -331,14 +381,22 @@ class Device:
         something was drawn, not where it is how often the screen can be photographed.
         """
         os.makedirs(into, exist_ok=True)
-        for name in os.listdir(into):
-            os.remove(os.path.join(into, name))
-        adb("emu", "screenrecord", "screenshot", into)
-        for _ in range(20):
-            files = [f for f in os.listdir(into) if f.endswith(".png")]
-            if files:
-                return os.path.join(into, files[0])
-            time.sleep(0.3)
+        # Asked for again when it does not arrive, rather than once.
+        #
+        # The emulator's renderer drops a capture now and then under load, and a check that
+        # took that for an answer reported the app as having drawn nothing - "nothing
+        # transcribed" on a screen that was full of transcriptions. One missing photograph is
+        # evidence about the photograph, not about the app.
+        for attempt in range(3):
+            for name in os.listdir(into):
+                os.remove(os.path.join(into, name))
+            adb("emu", "screenrecord", "screenshot", into)
+            for _ in range(20):
+                files = [f for f in os.listdir(into) if f.endswith(".png")]
+                if files:
+                    return os.path.join(into, files[0])
+                time.sleep(0.3)
+            time.sleep(1.0 + attempt)
         return None
 
 

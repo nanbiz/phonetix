@@ -898,6 +898,10 @@ def settled_coverage(dev, where, tries=3):
     best = (0, 0)
     for _ in range(tries):
         got = rows_of_ours(dev, where)
+        # No photograph, so nothing was measured. Tried again rather than counted as zero.
+        if got is None:
+            time.sleep(2.5)
+            continue
         share = got[0] / got[1] if got[1] else 0
         if share > (best[0] / best[1] if best[1] else 0):
             best = got
@@ -933,11 +937,20 @@ def rows_of_ours(dev, where):
     # service just switched on has read nothing yet: a fixed sleep photographed the gap and
     # reported the overlay as having lost the screen when it was still finding it.
     drawn_again(dev)
-    ours = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-ours")).convert("RGB")
+    # A capture that never arrives is not an answer about the overlay, so this declines to
+    # judge rather than reporting a screen full of transcriptions as bare - and it puts the
+    # service back first, because it is switched off in the middle of this.
+    took = dev.screenshot(f"/tmp/phonetix-real/{where}-ours")
+    if took is None:
+        return None
+    ours = Image.open(took).convert("RGB")
     shell("settings", "put", "secure", "enabled_accessibility_services", "none")
     time.sleep(3.5)
-    bare = Image.open(dev.screenshot(f"/tmp/phonetix-real/{where}-bare")).convert("RGB")
+    took = dev.screenshot(f"/tmp/phonetix-real/{where}-bare")
     dev.enable_service()
+    if took is None:
+        return None
+    bare = Image.open(took).convert("RGB")
     drawn_again(dev)
     diff = ImageChops.difference(ours, bare)
     width, height = diff.size

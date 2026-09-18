@@ -31,20 +31,18 @@ ACTION = f"{PKG}.DUMP"
 
 
 def device():
-    """Which device to ask. The named one, the only one, or the phone."""
-    named = os.environ.get("PHONETIX_ANDROID_SERIAL")
-    if named:
-        return named
-    found = subprocess.run(["adb", "devices"], capture_output=True, text=True).stdout
-    alive = [line.split("\t")[0] for line in found.splitlines()[1:]
-             if line.strip().endswith("\tdevice")]
-    if len(alive) == 1:
-        return alive[0]
-    phone = subprocess.run(["adb-phone"], capture_output=True, text=True).stdout.strip()
-    if phone:
-        return phone.splitlines()[0]
-    raise SystemExit(f"which device? {alive or 'none attached'} "
-                     f"(set PHONETIX_ANDROID_SERIAL)")
+    """Which device to ask: ours, resolved the same way the harness resolves it.
+
+    Never chosen for us. This used to fall back to whatever `adb-phone` answered when more
+    than one device was attached, so a check driving the emulator read its answers off the
+    reader's own phone: it reported the settings app as never having been read while the
+    emulator was drawing it perfectly, because it was looking at a phone showing something
+    else entirely. A serial can still be named outright, which is how the phone is read on
+    purpose.
+    """
+    import android_harness
+
+    return android_harness.SERIAL
 
 
 def shell(serial, *args, timeout=60):

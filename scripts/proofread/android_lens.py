@@ -35,21 +35,31 @@ def repark(dev):
     return dev.enable_service()
 
 
-def parked_at(dev, **extras):
+def parked_at(dev, mode="mute", **extras):
     """Where the mark is parked, asked until it says.
 
     It says so when it is put up or moved, and a check that has cleared the log to watch one
     drag has thrown that line away. Asking for the page again with the mark off and on makes
     it say so afresh, which beats guessing where it is.
+
+    The log is cleared before asking, every time. Read without that, the newest line in the
+    log can be where the mark parked before whatever this check just changed - so a button
+    that never moved and a button nobody asked to move read exactly alike, and the keyboard
+    check reported the button as sitting behind the keys when it had simply been told nothing.
     """
     for _ in range(3):
+        dev.clear_log()
+        # In the caller's own fixture. Asking in a fixed one put the mute page up over
+        # whatever the check had arranged: the keyboard check lost the box it types into and
+        # reported the page as never having come up.
+        dev.surface(mode=mode, enable=1, density=1, lens=0, layer="off", **extras)
+        time.sleep(2)
+        dev.surface(mode=mode, enable=1, density=1, lens=1, layer="off", **extras)
+        time.sleep(3)
         found = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         if found:
             x, y, w, h = (int(v) for v in found[-1])
             return (x + w // 2, y + h // 2)
-        dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off", **extras)
-        time.sleep(2)
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", **extras)
         time.sleep(5)
     return None
 
@@ -294,9 +304,9 @@ def main():
     # words through their own hand.
     import math
     dev.clear_log()
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="right", restY=30)
+    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=30)
     time.sleep(5)
-    high = parked_at(dev, side="right", restY=30)
+    high = parked_at(dev, side="right", pin=1, restY=30)
     if high is None:
         failures.append("the button never said where it parked when it was put up high")
     else:
@@ -323,25 +333,59 @@ def main():
                 f"the circle is carried {further:+.0f}px from a button put up high, which is "
                 f"towards it rather than away from it")
 
+    # And unpinned, coming to rest is the shortest way to its side and nothing more.
+    #
+    # Pinning is the option; without it there is no height to go to, so the button keeps the
+    # one it has and only crosses to the side the reader keeps it on. Measured by unpinning it
+    # where it stands and asking for the other side: it has to arrive at the same height.
+    if high is not None:
+        dev.clear_log()
+        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="left", pin=0,
+                    restY=30)
+        time.sleep(5)
+        across = parked_at(dev, side="left", pin=0, restY=30)
+        if across is None:
+            failures.append("the button never said where it parked once it was unpinned")
+        else:
+            print(f"  unpinned and sent to the other side: {high} -> {across}")
+            if across[0] > dev.width // 2:
+                failures.append(
+                    f"unpinned, the button stayed on the right at {across[0]} rather than "
+                    f"crossing to the left")
+            elif abs(across[1] - high[1]) > 120:
+                failures.append(
+                    f"unpinned, the button went to {across[1]} rather than staying at "
+                    f"{high[1]}, which is the shortest way to its side")
+
     # And it stands clear of a keyboard.
     #
     # A keyboard opens over the foot of the screen, and a button sitting there is behind it:
     # it takes none of the touches meant for it and cannot be moved out of the way either, so
     # a reader typing - who is exactly the reader asking about what they are reading - is left
     # without it.
-    dev.surface(mode="typing", enable=1, density=1, lens=1, layer="off", side="right", restY=92)
+    dev.surface(mode="typing", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=92)
     time.sleep(5)
-    low = parked_at(dev, side="right", restY=92)
+    low = parked_at(dev, mode="typing", side="right", pin=1, restY=92)
     told = shell("uiautomator", "dump", "/sdcard/ui.xml") and shell("cat", "/sdcard/ui.xml")
     node = next((n for n in re.findall(r"<node[^>]*>", told) if "the composer" in n), "")
     box = re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node)
     if low is None or not box:
         failures.append("the page with something to type into never came up")
     else:
+        # Cleared first, so where it parks with the keyboard open is the only answer in the
+        # log. Where it parked before is still in there otherwise, and reading that back says
+        # the button did not move when what happened is that nobody asked it again.
+        dev.clear_log()
         shell("input", "tap", str((int(box.group(1)) + int(box.group(3))) // 2),
               str((int(box.group(2)) + int(box.group(4))) // 2))
         time.sleep(4)
-        lifted = parked_at(dev, side="right", restY=92)
+        # Not through parked_at: asking for the page again would take the keyboard down with
+        # it, which is the one thing being measured here.
+        said = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        lifted = None
+        if said:
+            lx, ly, lw, lh = (int(v) for v in said[-1])
+            lifted = (lx + lw // 2, ly + lh // 2)
         shown = re.search(r"mInputShown=(\w+)", shell("dumpsys", "input_method"))
         print(f"  with a keyboard open ({shown.group(1) if shown else '?'}): "
               f"the button moved from {low} to {lifted}")
