@@ -2843,9 +2843,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // own events will ask for, because scheduling a read on every window change starves
         // the one that matters.
         val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
-        if (front != null && front != packageName && cachedPackage != null &&
-            front != cachedPackage && !bystanders.contains(front) &&
-            SettingsStore.allows(front) && ::overlay.isInitialized
+        // Our own screen counts as another app here, though it is never read.
+        //
+        // Everywhere else this service asks whether an app is one to transcribe, and ours is
+        // not - but the question here is only whose words are on the screen, and the answer
+        // over our own screen is "the last app's". Left out of this, the settings screen came
+        // up under a full page of the accessibility settings' transcriptions and kept them:
+        // nothing else takes them down, because nothing reads our screen to replace them.
+        val mine = front == packageName
+        if (front != null && cachedPackage != null && front != cachedPackage &&
+            !bystanders.contains(front) && (mine || SettingsStore.allows(front)) &&
+            ::overlay.isInitialized
         ) {
             main.post { overlay.hideNow() }
         }

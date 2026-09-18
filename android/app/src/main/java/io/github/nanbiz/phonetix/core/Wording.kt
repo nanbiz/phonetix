@@ -125,6 +125,7 @@ object Wording {
         "say-nothing" to "no word for that",
         "say-placeholder" to "what you want to say",
         "search" to "Search",
+        "service-stopped" to "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
         "start-done" to "done",
         "start-go" to "Set this",
         "start-pack" to "Get a dictionary for the language you are reading",

@@ -624,16 +624,12 @@
           {/snippet}
         </Row>
 
+        <!-- No note under it saying which side. That is the row above, and saying it twice
+             reads as two settings for the same thing. -->
         <NavRow
           name={ROWS.rest.name}
           row="rest"
           disabled={!settings.pin}
-          about={settings.pin
-            ? SAYS['rest-edge'].replace(
-                '%s',
-                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
-              )
-            : ''}
           open={() => (view = 'rest')}
         />
       {/if}

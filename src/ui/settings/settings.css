@@ -125,10 +125,6 @@
    the two they change daily. */
 .nav { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; text-align: left; font: inherit; color: var(--color-ink); background: none; border: none; border-bottom: var(--border-width) solid var(--color-border); padding: var(--space-3) var(--space-4); min-height: var(--touch-target); cursor: pointer; }
 .nav:hover { background: var(--color-surface-raised); }
-/* Nothing to set here until what it depends on is switched on. Left in place and greyed
-   rather than taken away, so the reader can see the screen is there. */
-.nav:disabled { color: var(--color-ink-faint); cursor: default; }
-.nav:disabled:hover { background: none; }
 .nav .n-name { font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); }
 .nav .n-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .nav .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-ink-faint); font-size: var(--font-size-ipa); }

@@ -15,6 +15,7 @@ import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Wording
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -305,7 +306,24 @@ private class Bridge(
             // set.
             .put("device", dark())
             .put("version", io.github.nanbiz.phonetix.BuildConfig.VERSION_NAME)
-            .put("trouble", JSONArray())
+            // Allowed to read the screen and yet not running is the one broken state that
+            // looks exactly like a working one: every switch on this screen is a stored value
+            // and reads back the same whether anything is listening to it. A reader in it sees
+            // a settings screen that answers normally and an overlay that does nothing at all -
+            // no words, no button, and a press on it that goes nowhere - with nothing anywhere
+            // saying why.
+            .put(
+                "trouble",
+                JSONArray(
+                    if (reading &&
+                        io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running == null
+                    ) {
+                        listOf(Wording.says["service-stopped"].orEmpty())
+                    } else {
+                        emptyList()
+                    },
+                ),
+            )
     }
 
     /** The reader's choices under the names the view knows them by, which are the browser's. */

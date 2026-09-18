@@ -131,6 +131,7 @@ export const SAYS: Record<string, string> = {
   "say-nothing": "no word for that",
   "say-placeholder": "what you want to say",
   "search": "Search",
+  "service-stopped": "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
   "start-done": "done",
   "start-go": "Set this",
   "start-pack": "Get a dictionary for the language you are reading",
