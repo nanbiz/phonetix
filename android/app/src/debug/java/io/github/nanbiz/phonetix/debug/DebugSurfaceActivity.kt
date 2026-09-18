@@ -918,6 +918,16 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
                 addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "bare") {
+            // A page with nothing on it to read. What a press of the mark does here is the
+            // one thing the reader cannot otherwise tell from the gesture not working at all:
+            // there is nothing to put into their own language, and it has to say so.
+            addView(View(this@DebugSurfaceActivity).apply {
+                setBackgroundColor(BACKGROUND)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 1200,
+                )
+            })
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "spanish") {

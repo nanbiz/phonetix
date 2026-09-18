@@ -133,6 +133,30 @@ def push(name, into):
                  f"'cat \"/data/local/tmp/{name}\" > \"{into}/{name}\"'", timeout=900)
 
 
+def nothing_here():
+    """What the app says when a press finds nothing, taken from where the words are written.
+
+    Read from the source rather than copied into this file: the words of both surfaces come
+    from data/wording.json, and a check carrying its own copy is a second place to change.
+    """
+    said = json.load(open(os.path.join(ROOT, "data", "wording.json")))
+
+    def find(node):
+        if isinstance(node, dict):
+            for name, value in node.items():
+                if name == "nothing-here":
+                    return value
+                found = find(value)
+                if found:
+                    return found
+        return None
+
+    return find(said)
+
+
+NOTHING_HERE = None
+
+
 def hold(mark):
     """A press held on the mark, which is what replaces the page now.
 
@@ -144,6 +168,8 @@ def hold(mark):
 
 
 def main():
+    global NOTHING_HERE
+    NOTHING_HERE = nothing_here()
     fetch_model()
     build_packs()
     serve()
@@ -280,6 +306,32 @@ def main():
     print(f"  transcriptions before the press: {chips_before}, after it came down: {chips_after}")
     if chips_before and not chips_after:
         failures.append("the transcriptions never came back after the page came down")
+
+    # And a press on a screen with nothing to read, which is the case the reader reported as
+    # "I long pressed the logo and literally nothing happened". There is nothing to put into
+    # their language here and the app has to say so rather than sit there.
+    dev.surface(mode="bare", packHost=base, target="en", layer="meaning", enable=1, density=1,
+                touchWords=0, lens=1)
+    time.sleep(8)
+    where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+    if not where:
+        failures.append("the mark is not on a screen with nothing on it, so it cannot be asked")
+    else:
+        x, y, w, h = (int(v) for v in where[-1])
+        dev.clear_log()
+        hold((x + w // 2, y + h // 2))
+        time.sleep(3)
+        bare = dev.log()
+        said = re.findall(r"NOTHINGHERE (.+)", bare)
+        print(f"  pressed with nothing to replace: {said[-1].strip() if said else 'nothing said'}")
+        if not said:
+            failures.append("a press with nothing to replace said nothing at all")
+        elif said[-1].strip() != NOTHING_HERE:
+            failures.append(
+                f"the press said {said[-1].strip()!r}, and the words are written once, "
+                f"in data/wording.json, as {NOTHING_HERE!r}")
+        if "PAGE up" in bare:
+            failures.append("a screen with nothing on it was replaced anyway")
 
     if failures:
         print("\nFAIL")

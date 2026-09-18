@@ -327,9 +327,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         // happened": a screen whose words were never read looks exactly like
                         // a gesture that does not work.
                         if (lines.isEmpty() && !page.showing) {
+                            val said = Wording.says["nothing-here"].orEmpty()
+                            // Said in the log as well as on the screen. A toast is not in the
+                            // tree and not in a screenshot worth trusting, so this is the only
+                            // way a check can tell the press answered from the press being
+                            // ignored - which is the whole difference this branch exists for.
+                            if (BuildConfig.DEBUG) {
+                                android.util.Log.d("Phonetix", "NOTHINGHERE $said")
+                            }
                             android.widget.Toast.makeText(
                                 this@PhonetixAccessibilityService,
-                                Wording.says["nothing-here"].orEmpty(),
+                                said,
                                 android.widget.Toast.LENGTH_SHORT,
                             ).show()
                         }
