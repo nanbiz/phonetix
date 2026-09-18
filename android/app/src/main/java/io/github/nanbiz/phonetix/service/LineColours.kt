@@ -23,6 +23,10 @@ class LineColours(
     private val sampler: ScreenSampler,
     private val main: Handler,
     private val io: Handler,
+    /** Which screenful the service is on, so a capture can tell whether the screen changed
+     *  under it: the frame is taken a moment after it is asked for, and a frame of the page
+     *  before answers for lines that were never in it. */
+    private val screenful: () -> Int = { 0 },
     /** Take the overlay down now, on the main thread; returns once it is down. */
     private val hideOverlay: () -> Unit,
     /** Ask for the screen to be read again, because colours have arrived or not. */
@@ -269,6 +273,8 @@ class LineColours(
         capturingSince = now
         cleanFrameAt = now
         val asked = wanted.toList()
+        /** The screenful these lines belong to. */
+        val of = screenful()
         // When the overlay was really taken down, which is not when it was asked to be: the
         // request is posted to the main thread and waits its turn there. A frame captured
         // between the asking and the hiding still has our own paint in it, and reading that
@@ -289,6 +295,19 @@ class LineColours(
                     for ((k, _) in asked) countAttempt(k, sawFrame = false)
                     capturing = false
                     if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
+                    readAgain()
+                    return@postDelayed
+                }
+                // And it is a frame of the screen these lines are on. A page that changed
+                // while the capture was in flight - a check moving to the next fixture, a
+                // reader opening something - photographs as the page before, and every line
+                // of the new one then takes its colours from text that was never there: on a
+                // page of coloured bands, every word came out the white of the page before.
+                if (screenful() != of) {
+                    capturing = false
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d("Phonetix", "COLOURS the screen changed under it")
+                    }
                     readAgain()
                     return@postDelayed
                 }

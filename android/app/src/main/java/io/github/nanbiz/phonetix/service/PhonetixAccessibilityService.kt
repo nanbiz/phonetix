@@ -110,6 +110,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** Apps already named in the log as giving no character bounds, so each is said once. */
     private val noCharacters = HashSet<String>(4)
 
+    /** Which screenful is being read: a number that changes whenever the plan is built
+     *  afresh, so anything that takes a moment can tell whether it still belongs. */
+    @Volatile private var screenful = 0
+
     /** What the screen being read was read as, which is the language its words are in. */
     @Volatile private var readingSource = Language.OURS
 
@@ -384,6 +388,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         sampler = ScreenSampler(this) { r -> io.post(r) }
         colours = LineColours(
             sampler, main, io,
+            screenful = { screenful },
             hideOverlay = { overlay.hideNow() },
             // Not while a movement is being followed. Scheduling clears the loop that
             // follows it, and this fires whenever a reading of the colours has to be tried
@@ -508,6 +513,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
             return
         }
         wasEnabled = true
+        // The app in front changed, so nothing held from the app before it is worth a thing.
+        //
+        // The words are placed where that app had them, and the new one has its own text in
+        // its own places. Two things then go wrong at once: what is painted stays painted
+        // over the new screen, and the next scroll it announces is followed - which carries
+        // the old app's plan rather than reading the new app at all, because following
+        // deliberately does not fetch the window. Filmed while switching between two apps,
+        // that is a pile of chips in the corner of the settings screen, each carrying a word
+        // from the page before.
+        if (from != null && cachedPackage != null && from != cachedPackage &&
+            from != packageName && SettingsStore.allows(from)
+        ) {
+            cachedPlan = emptyList()
+            scrollOnly = false
+            if (::overlay.isInitialized) main.post { overlay.hideNow() }
+        }
         // A scroll says how far the content moved, and the words moved exactly that far, so
         // the transcriptions are carried along in this same frame rather than being taken
         // down and put back. Re-reading the screen then only has to correct the drift.
@@ -643,11 +664,37 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // stand clear of: it costs a look at where the button belongs rather than a read of
         // the screen, and the screen itself has not changed.
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
-            if (BuildConfig.DEBUG) {
-                android.util.Log.d("Phonetix", "WINDOWS changed, keyboard at ${keyboardTop()}")
-            }
             val now = SettingsStore.current
             if (now.enabled && now.lens) main.post { hover.show() }
+            // And whether the app in front is still the one the words belong to. The app's
+            // own events arrive when its window has finished animating in, which is half a
+            // second of another app's transcriptions sitting over it; the windows change at
+            // the start of that.
+            val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "WINDOWS changed, keyboard at ${keyboardTop()}, $front in front",
+                )
+            }
+            // Only where the thing in front is an app whose words would be read at all.
+            // The window with the focus is often none: a system window, a launcher, or this
+            // service's own overlay, and treating those as a change of app threw the plan
+            // away several times a second - a screen that never finished being read and never
+            // drew anything.
+            val elsewhere = front != null && front != packageName && cachedPackage != null &&
+                front != cachedPackage && !bystanders.contains(front) &&
+                SettingsStore.allows(front)
+            if (elsewhere) {
+                cachedPlan = emptyList()
+                scrollOnly = false
+                if (::overlay.isInitialized) main.post { overlay.hideNow() }
+                // Once the new window has finished arriving, not while it is animating in:
+                // a read taken then finds a window that is still on its way, keeps nothing,
+                // and nothing else prompts another - the app is simply there, not changing.
+                main.removeCallbacks(afterASystemWindow)
+                main.postDelayed(afterASystemWindow, AFTER_A_SYSTEM_WINDOW)
+            }
             return
         }
         val windowChanged = event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
@@ -1179,6 +1226,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             chooseWords(fresh, settings, screen.language, budget)
             planned = fresh
             cachedPlan = fresh
+            screenful++
             cachedPackage = pkg
             cachedPainted = seen
             previousTops = before
