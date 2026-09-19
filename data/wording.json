@@ -218,10 +218,6 @@
       "name": "Drawing over apps",
       "about": "Lets it paint the transcription on top of the word."
     },
-    "replace": {
-      "name": "Replace words",
-      "about": "Long press the overlay button to turn this on and off without opening settings."
-    },
     "ipa": {
       "name": "How it sounds",
       "about": "the pronunciation, in the alphabet phoneticians use"
@@ -232,7 +228,7 @@
     },
     "lens": {
       "name": "The overlay button",
-      "about": "a button on the screen you use over the words you are reading"
+      "about": "Hold it to stop replacing words and hold it again to carry on. It wears the accent colour while it is replacing."
     },
     "side": {
       "name": "Which side",

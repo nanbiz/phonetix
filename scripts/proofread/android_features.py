@@ -1085,13 +1085,12 @@ def check_settings_screen(r, dev):
         return
 
     # The rows a reader of either surface finds, under the names both are written out of.
-    for row in ("on", "replace", "ipa", "translate", "density", "theme", "dark", "apps",
-                "advanced"):
+    for row in ("on", "ipa", "translate", "density", "theme", "dark", "apps", "advanced"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
     # Named as they are named on the other surface, because both are written out of
     # data/wording.json.
-    for row in ("replace", "ipa", "translate", "density", "theme"):
+    for row in ("ipa", "translate", "density", "theme"):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
@@ -1112,7 +1111,8 @@ def check_settings_screen(r, dev):
                 )
                 time.sleep(1)
 
-            switch("replace", True)
+            # Something has to be replaced for either of these to mean anything.
+            switch("ipa", True)
             for translating, want in ((True, True), (False, False)):
                 switch("translate", translating)
                 there = view.evaluate(
@@ -1126,14 +1126,17 @@ def check_settings_screen(r, dev):
                 )
                 if translating:
                     into = there
-            # The two under the switch only apply while it is on, and say so by being greyed.
-            switch("replace", False)
-            dimmed = view.evaluate(
-                "Boolean(document.querySelector('[data-row=ipa]')?.className.includes('dim'))")
-            r.check(dimmed, "settings: what the replacing puts there is greyed while it is off",
-                    str(dimmed))
+            # Neither of them on is the replacing off: there is no third switch saying so,
+            # and a replacement of nothing would be nothing.
+            switch("ipa", False)
+            switch("translate", False)
+            off = view.evaluate(
+                "(document.querySelector('[data-row=ipa] input')?.checked === false) &&"
+                " (document.querySelector('[data-row=translate] input')?.checked === false)")
+            r.check(bool(off), "settings: both can be switched off, which is replacing nothing",
+                    str(off))
             # Left as this suite expects to find it.
-            switch("replace", True)
+            switch("ipa", True)
             switch("translate", True)
     except Exception as e:  # noqa: BLE001
         r.check(False, "settings: the language to read into follows the translating", str(e))
