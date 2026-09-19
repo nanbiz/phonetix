@@ -517,7 +517,29 @@
 </Screen>
 
 <Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
-  <!-- Only reachable when it is pinned, so there is always a place being set here. -->
+  <div class="rows">
+    <!-- Which side it comes back to, which is the hand the phone is held in. First, because
+         it is the answer whether or not the button is pinned: unpinned, coming to rest is the
+         shortest way to this side. -->
+    <Row name={ROWS.side.name} row="side">
+      {#snippet wide()}
+        <Segmented
+          choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
+          chosen={settings.side}
+          change={(value) => change('side', value)}
+        />
+      {/snippet}
+    </Row>
+
+    <!-- Pinned, it waits at one height and nowhere else. Unpinned there is no height to set,
+         so the board below has nothing to do and says so by being greyed. -->
+    <Row name={ROWS['rest-pin'].name} row="rest-pin">
+      {#snippet control()}
+        <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
+      {/snippet}
+    </Row>
+  </div>
+
   <Resting
     y={settings.restY}
     side={settings.side}
@@ -653,34 +675,19 @@
         {/snippet}
       </Row>
 
-      <!-- Which side it comes back to, which is the hand the phone is held in. Asked here
-           rather than on the screen below, because it is the answer whether or not the button
-           is pinned: unpinned, coming to rest is the shortest way to this side. -->
+      <!-- Everything about where the button lives is behind one row: which side, whether it
+           stays put, and where it stays. Three rows on this screen for one question read as
+           three questions, and two of them said the same thing. -->
       {#if settings.lens}
-        <Row name={ROWS.side.name} row="side">
-          {#snippet wide()}
-            <Segmented
-              choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
-              chosen={settings.side}
-              change={(value) => change('side', value)}
-            />
-          {/snippet}
-        </Row>
-
-        <!-- Pinned, it waits at one place and nowhere else. Unpinned there is no place to
-             set, so the screen that sets one is greyed until this is on. -->
-        <Row name={ROWS['rest-pin'].name} row="rest-pin">
-          {#snippet control()}
-            <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
-          {/snippet}
-        </Row>
-
-        <!-- No note under it saying which side. That is the row above, and saying it twice
-             reads as two settings for the same thing. -->
         <NavRow
           name={ROWS.rest.name}
           row="rest"
-          disabled={!settings.pin}
+          about={settings.pin
+            ? SAYS['rest-edge'].replace(
+                '%s',
+                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
+              )
+            : labelOf(SIDE_CHOICES, settings.side)}
           open={() => (view = 'rest')}
         />
       {/if}

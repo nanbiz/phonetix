@@ -111,6 +111,9 @@
   }
 
   function grab(event: PointerEvent) {
+    // Nothing to place while the button is not pinned: it comes back to its side at whatever
+    // height it already had, so there is no height here to choose.
+    if (!pinned) return
     // A tap puts it there as well as a drag: a board that answers only a drag is a board a
     // reader taps twice and gives up on.
     holding = true;
@@ -141,6 +144,7 @@
   // board answering a mouse and nothing else, which is a board that does not work on the one
   // device it is for.
   function touched(event: TouchEvent) {
+    if (!pinned) return
     const touch = event.touches[0] ?? event.changedTouches[0];
     if (!touch) return;
     event.preventDefault();
@@ -153,6 +157,7 @@
   }
 
   function typed(event: KeyboardEvent) {
+    if (!pinned) return
     const by = event.shiftKey ? STRIDE : STEP;
     if (event.key === 'ArrowLeft') letGo({ side: 'left', y: at.y });
     else if (event.key === 'ArrowRight') letGo({ side: 'right', y: at.y });
@@ -166,7 +171,7 @@
 <div class="rest" bind:this={holder}>
   <button
     type="button"
-    class="board"
+    class="board{pinned ? '' : ' idle'}"
     style="aspect-ratio: {across} / {down}{wide ? `; width: min(84%, ${wide}px)` : ''}"
     bind:this={board}
     aria-label={SAYS['rest-put']}
@@ -228,6 +233,12 @@
     overflow: hidden;
     touch-action: none;
     cursor: pointer;
+  }
+
+  /* Nothing to set here until the button is pinned. */
+  .board.idle {
+    opacity: 0.45;
+    cursor: default;
   }
 
   .board:focus-visible {
