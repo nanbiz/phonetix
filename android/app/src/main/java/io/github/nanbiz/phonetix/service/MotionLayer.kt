@@ -577,7 +577,15 @@ class MotionLayer(private val context: Context) {
 }
 
 /** Draws the whole set at an offset. One window, one canvas, one translate per frame. */
-private class LayerView(context: Context) : View(context) {
+/**
+ * Every transcription on one canvas.
+ *
+ * One window and one draw for a whole screenful, instead of a window per word. What it cannot
+ * do is take a touch on one word, so it is what the overlay uses while a page moves - and,
+ * where the reader has not asked for the words themselves to be touchable, while it holds
+ * still as well.
+ */
+internal class LayerView(context: Context) : View(context) {
 
     private var boxes: List<WordBox> = emptyList()
     private val painter = ChipPainter()

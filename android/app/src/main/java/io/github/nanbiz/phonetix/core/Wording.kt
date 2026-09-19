@@ -108,6 +108,7 @@ object Wording {
         "master-unready" to "Allow it to read the screen and draw over your apps",
         "master-working" to "The words in your apps are being answered",
         "narrow-mark" to "[ ]",
+        "no-direction" to "No dictionary here for %s, so words cannot be turned into it. The words show how they sound instead.",
         "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
         "nothing-found" to "Nothing by that name",

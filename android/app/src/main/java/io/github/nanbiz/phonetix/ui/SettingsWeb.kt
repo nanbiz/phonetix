@@ -15,6 +15,8 @@ import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Languages
+import io.github.nanbiz.phonetix.service.PhonetixAccessibilityService
 import io.github.nanbiz.phonetix.core.Wording
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -260,6 +262,26 @@ private class Bridge(
         )
     }
 
+    /**
+     * What is not working, in the reader's own terms.
+     *
+     * Both of these look exactly like the product working: every switch on the screen is a
+     * stored value and reads back the same whether anything is listening to it, and a mode
+     * that cannot translate falls back to how a word sounds rather than saying so.
+     */
+    private fun whatIsWrong(reading: Boolean, settings: Settings): List<String> {
+        val wrong = ArrayList<String>(2)
+        if (reading && PhonetixAccessibilityService.running == null) {
+            wrong.add(Wording.says["service-stopped"].orEmpty())
+        }
+        val missing = PhonetixAccessibilityService.cannotTranslate()
+        if (missing != null && settings.into.isNotEmpty()) {
+            val named = missing.split('-').joinToString(" to ") { Languages.english(it) }
+            wrong.add(Wording.says["no-direction"].orEmpty().replace("%s", named))
+        }
+        return wrong
+    }
+
     /** Everything the screen draws itself from, in one answer. */
     private suspend fun state(): JSONObject {
         val settings = SettingsStore.current
@@ -312,18 +334,7 @@ private class Bridge(
             // a settings screen that answers normally and an overlay that does nothing at all -
             // no words, no button, and a press on it that goes nowhere - with nothing anywhere
             // saying why.
-            .put(
-                "trouble",
-                JSONArray(
-                    if (reading &&
-                        io.github.nanbiz.phonetix.service.PhonetixAccessibilityService.running == null
-                    ) {
-                        listOf(Wording.says["service-stopped"].orEmpty())
-                    } else {
-                        emptyList()
-                    },
-                ),
-            )
+            .put("trouble", JSONArray(whatIsWrong(reading, settings)))
     }
 
     /** The reader's choices under the names the view knows them by, which are the browser's. */

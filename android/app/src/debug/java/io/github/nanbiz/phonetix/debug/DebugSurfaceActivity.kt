@@ -336,6 +336,28 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             ))
         }
 
+        if (mode == "sheet") {
+            // Something modal over the lower half of the page, the way an app's own menu or
+            // bottom sheet covers what a reader was reading. In this window rather than one of
+            // its own, which is what makes it hard: every word underneath is still in the
+            // tree, still reporting where it is, so a transcription of one of them is painted
+            // on top of the sheet - which is what the reader photographed.
+            root.addView(
+                TextView(this).apply {
+                    text = "the sheet over it"
+                    setTextColor(Color.WHITE)
+                    setBackgroundColor(Color.rgb(0x2A, 0x2A, 0x33))
+                    setPadding(pad(), pad(), pad(), pad())
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                    tag = SHEET_TAG
+                },
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                ).apply { topMargin = sheetTop() },
+            )
+        }
+
         setContentView(root)
         window.decorView.setBackgroundColor(BACKGROUND)
         handle(intent)
@@ -355,6 +377,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         }
         handle(intent)
     }
+
+    /** Where the sheet's top edge sits, so a check knows which words are under it. */
+    fun sheetTop(): Int = resources.displayMetrics.heightPixels / 2
 
     /** Room around the cards, so what is judged is the card and not the screen edge. */
     /** Room around the cards, and a scroll, because the states are taller than a screen and
@@ -924,6 +949,8 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(2).joinToString(" ")
                 addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "sheet") {
+            for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "bare") {
             // A page with nothing on it to read. What a press of the mark does here is the
             // one thing the reader cannot otherwise tell from the gesture not working at all:
@@ -1058,6 +1085,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         const val EXTRA_ENABLE = "enable"
         const val EXTRA_DENSITY = "density"
         const val EXTRA_SCOPE = "allApps"
+        const val SHEET_TAG = "sheet"
         const val HEADER_TAG = "header"
         // Flat black and white on purpose: what the sampler should have read is then a
         // fact rather than an opinion.

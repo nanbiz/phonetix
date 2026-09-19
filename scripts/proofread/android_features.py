@@ -822,6 +822,18 @@ def check_a_real_app(r, dev):
     if not r.check(bool(boxes), "a real app: its words are transcribed",
                    "nothing at all on a screen full of English"):
         return
+    # Waited for, because the colours arrive after the words now.
+    #
+    # A word used to be withheld until its own colours had been read off a photograph of the
+    # screen, which meant the whole page waited about a second on the camera. It goes up at
+    # once in the fallback palette instead and is repainted when the photograph lands, so what
+    # this asks is that the repaint happens - not that it has already happened by the time the
+    # first reading was taken. It still fails where the colours never arrive at all.
+    for _ in range(8):
+        if all(b["sampled"] for b in boxes.values()):
+            break
+        time.sleep(1.5)
+        boxes = dev.boxes() or boxes
     r.check(
         all(b["sampled"] for b in boxes.values()),
         "a real app: they wear its own colours",

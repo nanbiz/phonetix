@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.WordBox
@@ -50,6 +51,18 @@ class OverlayController(
      * [hideNow] therefore fades them, which is a draw and nothing more, and the windows go
      * down here, after the transition that made the calls expensive is over.
      */
+    /**
+     * The whole screenful on one window, for when the words do not have to be touchable.
+     *
+     * A window per word is what makes a word tappable, and it is also a hard ceiling: only so
+     * many windows can be up at once, so a page with more words than that was transcribed in
+     * part and the rest left bare - ninety-six of a hundred and forty-four on a page a reader
+     * was reading. Every pass also moved and repainted all of them, one call into the window
+     * manager each. Where the reader has not asked to hold a word for its card, none of that
+     * buys anything, so the page is drawn on one canvas instead: no ceiling, one draw.
+     */
+    private var still: StillLayer? = null
+
     private val putAway = Runnable {
         for (c in chips) {
             if (c.visibility == View.GONE) continue
@@ -79,8 +92,15 @@ class OverlayController(
         .put("inMotion", motion.isRunning)
         .put("chips", chips.size)
         // Visible and solid: a window faded by [hideNow] is still up for a moment afterwards,
-        // and what this reports is what a reader can see.
-        .put("chipsShown", chips.count { it.visibility == View.VISIBLE && it.alpha > 0f })
+        // and what this reports is what a reader can see. The layer's words count the same -
+        // a word is on the screen whether it was drawn on a window of its own or with the
+        // rest of the page - and a check that counted only the windows read a page drawn
+        // whole as a page drawn not at all.
+        .put(
+            "chipsShown",
+            chips.count { it.visibility == View.VISIBLE && it.alpha > 0f } +
+                (still?.takeIf { it.visibility == View.VISIBLE }?.drawn() ?: 0),
+        )
         .put("words", lastRendered.size)
         .put("boxes", StateDump.boxes(lastRendered))
 
@@ -109,6 +129,7 @@ class OverlayController(
     fun beginMotion() {
         if (silent || motion.isRunning) return
         main.removeCallbacks(putAway)
+        takeTheLayerDown()
         // Faded rather than taken down, for the reason [putAway] gives: there is a window
         // per word, and changing their visibility is a call into the window manager each.
         // Measured at the start of a scroll, ninety-six of them held the main thread - which
@@ -173,6 +194,7 @@ class OverlayController(
      */
     fun hideNow() {
         motion.stop()
+        takeTheLayerDown()
         var faded = false
         for (c in chips) {
             if (c.visibility == View.GONE || c.alpha == 0f) continue
@@ -209,18 +231,23 @@ class OverlayController(
         // of them, and nothing would be tappable again.
         if (motion.isRunning) motion.stop()
         lastRendered = boxes
-        val wanted = if (boxes.size > MAX_CHIPS) boxes.subList(0, MAX_CHIPS) else boxes
-        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG && boxes.size > wanted.size) {
-            android.util.Log.d(
-                "Phonetix",
-                "RENDER only ${wanted.size} of ${boxes.size}; the rest have no window",
-            )
+        // A word can only take a touch if it has a window of its own, so that is what the
+        // words get while the reader has asked to hold one for its card - and only as many as
+        // a device will give. Everything past that, and everything at all when a hold is not
+        // wanted, goes on the one layer, which has no such limit. Either way the whole page is
+        // drawn.
+        val tappable = SettingsStore.current.touchWords
+        val wanted = when {
+            !tappable -> emptyList()
+            boxes.size > MAX_CHIPS -> boxes.subList(0, MAX_CHIPS)
+            else -> boxes
         }
+        drawAtOnce(if (wanted.isEmpty()) boxes else boxes.subList(wanted.size, boxes.size))
         // How many transcriptions are on screen, as opposed to how many were planned. The
         // two part company whenever something else owns the screen - the replaced page, a
         // card, an app we do not read - and only this says which.
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-            android.util.Log.d("Phonetix", "SHOWING ${wanted.size}")
+            android.util.Log.d("Phonetix", "SHOWING ${boxes.size}")
         }
         while (chips.size < wanted.size) if (!addChip()) break
         for (i in wanted.indices) {
@@ -258,6 +285,37 @@ class OverlayController(
         }
     }
 
+    /**
+     * Put the whole screenful up at once, on the one window.
+     *
+     * The small windows come down with it, because a word drawn twice is a word drawn twice.
+     */
+    private fun drawAtOnce(boxes: List<WordBox>) {
+        if (boxes.isEmpty()) {
+            takeTheLayerDown()
+            return
+        }
+        val view = still ?: StillLayer(context, reveal).also { made ->
+            OverlayMute.apply(made)
+            val lp = params(
+                0, 0,
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            // Never takes a touch. It covers the whole screen, and a full-screen window that
+            // takes touches takes the reader's scrolling with it.
+            lp.flags = lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            if (runCatching { wm.addView(made, lp) }.isFailure) return
+            still = made
+        }
+        view.show(boxes)
+        if (view.visibility != View.VISIBLE) view.visibility = View.VISIBLE
+    }
+
+    private fun takeTheLayerDown() {
+        val view = still ?: return
+        if (view.visibility != View.GONE) view.visibility = View.GONE
+    }
+
     fun clear() = hideNow()
 
     /**
@@ -285,6 +343,8 @@ class OverlayController(
 
     fun destroy() {
         motion.stop()
+        still?.let { v -> runCatching { wm.removeView(v) } }
+        still = null
         for (c in chips) runCatching { wm.removeView(c) }
         chips.clear()
     }

@@ -135,6 +135,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var sameAgain = 0
     /** When the app in front last changed, so the words can come off the screen first. */
     @Volatile private var switchedAt = 0L
+    /** The direction the reader asked for and this phone has no model for, or nothing. */
+    @Volatile private var missingDirection: String? = null
 
     /** Which screenful is being read: a number that changes whenever the plan is built
      *  afresh, so anything that takes a moment can tell whether it still belongs. */
@@ -1000,7 +1002,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * stops putting a blocking call to the app in flight four times a second.
      */
     private fun quietGap(): Long =
-        (FULL_READ_MS shl sameAgain.coerceIn(0, 4)).coerceAtMost(FULL_READ_IDLE_MS)
+        (FULL_READ_MS shl sameAgain.coerceIn(0, 1)).coerceAtMost(FULL_READ_IDLE_MS)
 
     /**
      * Run on the leading edge, not the trailing one.
@@ -2267,17 +2269,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
             )
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
-            // A word with no colours yet is still drawn while the page is moving.
+            // Drawn as soon as it is known, coloured or not.
             //
-            // Withholding it is right on a page standing still: the colours are a moment away
-            // and a word that flickers into a palette of ours and out again is worse than one
-            // that arrives a moment late. But a screen read in the middle of a movement has no
-            // colours to be had - reading them means photographing a still screen - so
-            // withholding meant the read that happens during a drag could paint nothing at
-            // all. Photographed at the display's own resolution: two frames running, some four
-            // hundred milliseconds, with not one transcription on a page full of text, in the
-            // middle of the drag that caused the read.
-            if (c != null || decision.givenUp || onTheMove()) painted.addAll(p.boxes)
+            // A word used to be withheld until its colours had been read off a photograph of
+            // the screen, on the grounds that a word which flickers into a palette of ours and
+            // out again is worse than one that arrives a moment late. The moment is not small:
+            // reading the tree takes twenty to fifty milliseconds and the photograph takes
+            // about a second, and it is retried whenever the screen moves under it, so the
+            // whole page waited on the camera. Measured on a page standing still: the plan was
+            // ready at 1.8s and nothing was on the screen until 2.9s, all of it spent waiting
+            // for colours.
+            //
+            // So the word goes up in the fallback palette and the next pass repaints it in its
+            // own colours once they have been read. Late colour is a word that changes shade;
+            // late text is a page that is not transcribed yet.
+            painted.addAll(p.boxes)
             if (BuildConfig.DEBUG && c == null && decision.givenUp) {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
@@ -2810,6 +2816,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
+    /**
+     * Whether a box covers a word with room to spare above and below it.
+     *
+     * A full line's height of room, so that text sharing a visual line with the word - which
+     * overlaps it by the nature of the flow - is not mistaken for something drawn over it.
+     */
+    private fun encloses(over: android.graphics.Rect, word: android.graphics.Rect): Boolean {
+        val room = word.height()
+        return over.left <= word.left && over.right >= word.right &&
+            word.top - over.top >= room && over.bottom - word.bottom >= room
+    }
+
     private class Painted(
         val enter: Int,
         val rect: android.graphics.Rect,
@@ -3279,8 +3297,26 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (BuildConfig.DEBUG) {
             android.util.Log.d("Phonetix", "OPENING $source->$target")
         }
-        if (target.isEmpty() || source == target) return
-        if (Translator.start(Packs.models(this), source, target)) readAgain()
+        if (target.isEmpty() || source == target) {
+            missingDirection = null
+            return
+        }
+        if (Translator.start(Packs.models(this), source, target)) {
+            missingDirection = null
+            readAgain()
+        } else {
+            // Asked to turn words into a language this phone cannot turn them into.
+            //
+            // The reader chose a language and a mode that translates, and every word then
+            // comes back with no meaning to show - so the chip falls back to how the word
+            // sounds and the screen looks exactly like pronunciation mode. Nothing anywhere
+            // said why. Remembered here and reported on the settings screen, named, because
+            // the reader is the only one who can do anything about it.
+            missingDirection = "$source-$target"
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "NOMODEL $source->$target")
+            }
+        }
     }
 
     /**
@@ -3456,7 +3492,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // What this has to catch is a bar the page scrolls under, and a bar is a
             // container: its text, if it has any, is in a child. So a box that carries text
             // itself is in the flow rather than over it.
-            if (p.holdsText) continue
+            //
+            // Unless it encloses the word outright. An app's own menu or bottom sheet carries
+            // text and is drawn over the page inside the same window, so nothing else here
+            // sees it: the words underneath are still in the tree, still reporting where they
+            // are, and their transcriptions were painted on top of the sheet - which is what
+            // a reader photographed. What tells the two apart is room: a neighbouring run of
+            // text shares one visual line with this word, so its box begins and ends about
+            // where the word does, while a sheet covering the page reaches well past it on
+            // both sides. A line's own height is the measure of "well past".
+            if (p.holdsText && !encloses(p.rect, w)) continue
             if (within != null && within.contains(p.rect)) continue
             if (android.graphics.Rect.intersects(p.rect, w)) {
                 if (BuildConfig.DEBUG && PROBE_TREE) {
@@ -3686,8 +3731,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
          * the new one is read. Long enough for the frame that takes them down to be drawn.
          */
         const val AFTER_A_SWITCH = 350L
-        /** The longest a screen that nothing is happening on goes unread. */
-        const val FULL_READ_IDLE_MS = 7200L
+        /**
+         * The longest a screen that nothing is happening on goes unread.
+         *
+         * Short, because this is also how long a page can take to finish appearing. A screen
+         * read while it is still laying out is read short - thirty-two words of a hundred and
+         * forty-four - and the rest arrive on the next read. Backing off to seven seconds
+         * meant a page that filled in over seven seconds, which is what a reader calls
+         * absurdly slow, and the blocking call this was avoiding is no longer made on the
+         * thread that draws.
+         */
+        const val FULL_READ_IDLE_MS = 1800L
         /** And a moving one this often, to pick up the words scrolling into it. */
         const val FULL_READ_MOVING_MS = 2500L
         /** How much of a plan's words have to survive the following for it to still describe
@@ -3729,6 +3783,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         @Volatile
         @JvmStatic
         var running: PhonetixAccessibilityService? = null
+
+        /** Which direction cannot be translated here, for the settings screen to report. */
+        @JvmStatic
+        fun cannotTranslate(): String? = running?.missingDirection
 
         /**
          * Whether the words are moved by what a view says it has just scrolled.

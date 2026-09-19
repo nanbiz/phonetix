@@ -326,6 +326,7 @@
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
     "rest-edge": "On the %s",
+    "no-direction": "No dictionary here for %s, so words cannot be turned into it. The words show how they sound instead.",
     "service-stopped": "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
     "rest-put": "Drag the button up or down, or across to the other side.",
     "say-into": "Answer in",

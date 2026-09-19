@@ -114,6 +114,7 @@ export const SAYS: Record<string, string> = {
   "master-unready": "Allow it to read the screen and draw over your apps",
   "master-working": "The words in your apps are being answered",
   "narrow-mark": "[ ]",
+  "no-direction": "No dictionary here for %s, so words cannot be turned into it. The words show how they sound instead.",
   "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
   "nothing-found": "Nothing by that name",
