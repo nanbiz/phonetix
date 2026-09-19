@@ -11,6 +11,10 @@ import android.graphics.RectF
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
+import io.github.nanbiz.phonetix.ui.themeNamed
+import io.github.nanbiz.phonetix.ui.Tokens
+import io.github.nanbiz.phonetix.core.SettingsStore
+import android.content.res.Configuration
 
 /**
  * The two things the hover draws that are not the thread: the mark it rests as, and the word
@@ -100,34 +104,35 @@ open class HoverBubbleView(context: Context) : View(context) {
             invalidate()
         }
 
-    private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE
-    }
-
     override fun onDraw(canvas: Canvas) {
         if (masked) return
         val icon = mark ?: return
         icon.setBounds(0, 0, width, height)
-        icon.setTint(if (onLight) DARK else LIGHT)
+        // The mark wears the palette's own accent while the words are being replaced, and the
+        // ink of whatever it is sitting on when they are not. One shape in two colours rather
+        // than a shape with something added to it: the button is small, and a ring around it
+        // is a second thing to look at for an answer the mark itself can give.
+        icon.setTint(
+            if (replacing) {
+                val dark = (resources.configuration.uiMode and
+                    Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+                Tokens.palette(themeNamed(SettingsStore.current.theme), dark).accent.toInt()
+            } else {
+                if (onLight) DARK else LIGHT
+            },
+        )
         // Solid enough to find, faint enough to read through; a touch stronger under the
         // finger so it answers the press. Dark ink on a bright page needs less of it to be
         // seen than pale ink on a dark one.
+        // Solid in the accent, because a colour that says something has to be seen to say it;
+        // quieter in plain ink, where the mark is only a handle over somebody's words.
         icon.alpha = when {
+            replacing -> if (active) 255 else 230
             active -> 210
             onLight -> 150
             else -> 130
         }
         icon.draw(canvas)
-        if (replacing) {
-            ring.color = if (onLight) DARK else LIGHT
-            ring.alpha = if (active) 210 else 150
-            ring.strokeWidth = width * 0.06f
-            val inset = ring.strokeWidth / 2f
-            canvas.drawCircle(
-                width / 2f, height / 2f,
-                (minOf(width, height) / 2f) - inset, ring,
-            )
-        }
     }
 }
 

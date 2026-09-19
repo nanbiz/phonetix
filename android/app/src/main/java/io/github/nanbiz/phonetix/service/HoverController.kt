@@ -210,6 +210,10 @@ class HoverController(
 
     /** Put the circle up, parked at the edge. */
     fun show() {
+        // Whatever it is doing now, every time it is put up or asked to re-park. The setting
+        // can change from the settings screen as easily as from a press held on the button,
+        // and a mark that only heard about the press wore the wrong colour ever after.
+        (mark as? HoverBubbleView)?.replacing = SettingsStore.current.layer != "off"
         mark?.let { up ->
             // Already up, but not necessarily where it now belongs: the side it rests on is
             // the reader's to choose, and a mark that only moves when it is built again
