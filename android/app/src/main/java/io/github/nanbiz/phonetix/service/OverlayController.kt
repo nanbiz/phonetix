@@ -220,7 +220,86 @@ class OverlayController(
      */
     fun known(boxes: List<WordBox>) = keep(boxes)
 
+    /**
+     * Keep the transcriptions off the screen, and keep them off.
+     *
+     * The colours of a line are read off a photograph of the screen taken with our own paint
+     * down, because our paint is the wrong answer to what colour the app's text is. Taking it
+     * down is not enough on its own: a word is drawn the moment it is read now, so an ordinary
+     * read landing while the camera was open painted the page again and the photograph came
+     * back with our own fallback gold in it - which was then read as the app's ink.
+     */
+    /**
+     * Take the transcriptions off the screen so it can be photographed without them.
+     *
+     * Nothing is held back from being drawn: a page that is read has to appear at once, and
+     * whether a photograph taken afterwards is any good is the photograph's problem. What it
+     * needs to know is [paintedAt] - the moment paint of ours last went on the screen - so a
+     * frame taken after that can be thrown away and asked for again.
+     */
+    fun holdDown(on: Boolean) {
+        if (on) {
+            // Only where there is paint of ours to keep out of the photograph. A screen with
+            // nothing on it yet cannot spoil one, and holding the first words of a page back
+            // for the length of a capture is exactly the wait this is all meant to remove.
+            if (!anythingPainted()) return
+            held = true
+            hideNow()
+            // And never for long. A photograph that has not been taken within this has run
+            // into something - a screen that keeps changing, a device that will not be
+            // captured - and no picture is worth a page that has been read and not drawn.
+            main.removeCallbacks(letGo)
+            main.postDelayed(letGo, HOLD_AT_MOST_MS)
+        } else {
+            main.removeCallbacks(letGo)
+            held = false
+            if (lastRendered.isNotEmpty() && !silent) render(lastRendered)
+        }
+    }
+
+    /**
+     * Paint again whatever happens next, whether or not a photograph is being taken.
+     *
+     * Called when the screen has changed under the capture. What was being photographed is not
+     * there any more, so the picture is worthless and holding the new page back for the rest of
+     * it is a page that is read and not drawn.
+     */
+    private val letGo = Runnable {
+        if (!held) return@Runnable
+        held = false
+        if (lastRendered.isNotEmpty() && !silent) render(lastRendered)
+    }
+
+    /** Paint again whatever happens next: what was being photographed has gone. */
+    fun letGo() = letGo.run()
+
+    private var held = false
+
+    private fun anythingPainted(): Boolean =
+        chips.any { it.visibility == View.VISIBLE && it.alpha > 0f } ||
+            (still?.takeIf { it.visibility == View.VISIBLE }?.drawn() ?: 0) > 0
+
+    /** When paint of ours last went onto the screen. */
+    @Volatile
+    var paintedAt: Long = 0L
+        private set
+
     fun render(boxes: List<WordBox>) {
+        // Not while this screen is being photographed for its colours: see [holdDown]. What is
+        // known is kept either way, so the mark can still answer any of it.
+        //
+        // Words this screen did not have before are never held back, though - only repaints of
+        // what is already up. A page that is still filling in, which is most pages for the
+        // first second of their life, would otherwise wait out a photograph of a screen it has
+        // already stopped being.
+        if (held && boxes.size == lastRendered.size) {
+            lastRendered = boxes
+            return
+        }
+        if (held) {
+            main.removeCallbacks(letGo)
+            held = false
+        }
         main.removeCallbacks(putAway)
         if (silent) {
             keep(boxes)
@@ -309,6 +388,7 @@ class OverlayController(
         }
         view.show(boxes)
         if (view.visibility != View.VISIBLE) view.visibility = View.VISIBLE
+        paintedAt = android.os.SystemClock.uptimeMillis()
     }
 
     private fun takeTheLayerDown() {
@@ -407,6 +487,17 @@ class OverlayController(
         /** How long the faded windows are left up for, past the transition that made taking
          *  them down expensive. */
         const val PUT_AWAY_MS = 700L
+        /**
+         * The longest the words stay off the screen for a photograph of it.
+         *
+         * A capture asks for a frame 80ms after the words go down, looks at it 320ms later and
+         * will not trust one taken less than 160ms after the hiding - so anything shorter than
+         * this guarantees the photograph fails, and a failed photograph is tried again, which
+         * is a page that blinks over and over and never gets its colours. A page that is
+         * already up is the only thing ever held: the first words of a screen are never
+         * waiting on this.
+         */
+        const val HOLD_AT_MOST_MS = 620L
         const val MAX_CHIPS = 96
         const val BLEED = 1.5f
     }

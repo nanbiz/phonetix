@@ -403,6 +403,20 @@ def check_colors(r, dev):
     if not r.check(bool(boxes), "colours: there is something to colour", "nothing transcribed"):
         return
 
+    # Waited for, because the colours arrive after the words.
+    #
+    # A word is drawn the moment it is read, in the fallback palette, and repainted in the
+    # line's own colours once a photograph of the screen has been taken - which is a second or
+    # so later and is retried whenever the screen moves. Read before that, every word on the
+    # page is legitimately still wearing the fallback, and this check was reading the gap
+    # rather than the product. It still fails where the repaint never comes.
+    for _ in range(10):
+        if boxes and all(b["sampled"] for b in boxes.values()):
+            break
+        time.sleep(1.5)
+        fresh, log = show(dev, mode="colors", density=3, scrollTo=0, settle=0)
+        boxes = fresh or boxes
+
     # A device that cannot be photographed has no colours to compare against. The overlay
     # asks for a frame with its own paint taken down, and where that frame never arrives the
     # line is given up on and drawn in our own palette - which is the product working as
@@ -1071,46 +1085,58 @@ def check_settings_screen(r, dev):
         return
 
     # The rows a reader of either surface finds, under the names both are written out of.
-    for row in ("on", "layer", "density", "theme", "dark", "apps", "advanced"):
+    for row in ("on", "replace", "ipa", "translate", "density", "theme", "dark", "apps",
+                "advanced"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
     # Named as they are named on the other surface, because both are written out of
     # data/wording.json.
-    for row in ("layer", "density", "theme"):
+    for row in ("replace", "ipa", "translate", "density", "theme"):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
 
-    # What a word is replaced by: nothing, then the three the core answers with. Off leads
-    # because it is the one a reader reaches for to stop the product drawing over what they
-    # are reading, and the strip is read left to right.
-    r.check(screen["modes"] == ["off", "meaning", "sound", "both"],
-            "settings: off leads the modes, and the rest are the core's", str(screen["modes"]))
-    # The language a word is turned into, asked for by the modes that turn it into one and by
-    # nothing else: the mode is already that question's first half. So it is asked for after
-    # choosing one of those, and gone after choosing the one that does not.
+    # What a word is replaced by: one switch, and two under it saying what it puts there.
+    #
+    # The language a word is turned into belongs to the one of those two that turns it into
+    # one, and to nothing else, so it is there after switching that on and gone after
+    # switching it off.
     into = None
     try:
         with View() as view:
-            for mode, want in (("meaning", True), ("sound", False)):
+            def switch(row, on):
                 view.evaluate(
-                    "(document.querySelector('[data-row=layer] [data-choice=%s]')"
-                    " || {}).click?.()" % mode
+                    "(() => { const b = document.querySelector('[data-row=%s] input');"
+                    " if (b && b.checked !== %s) b.click(); })()"
+                    % (row, "true" if on else "false")
                 )
                 time.sleep(1)
+
+            switch("replace", True)
+            for translating, want in ((True, True), (False, False)):
+                switch("translate", translating)
                 there = view.evaluate(
                     "Boolean(document.querySelector('[data-row=target] .select'))")
-                r.check(there == want,
-                        f"settings: the language is {'offered' if want else 'not asked for'}"
-                        f" in {mode}", str(there))
-                if mode == "meaning":
+                r.check(
+                    there == want,
+                    "settings: the language is "
+                    f"{'offered' if want else 'not asked for'} when translating is "
+                    f"{'on' if translating else 'off'}",
+                    str(there),
+                )
+                if translating:
                     into = there
+            # The two under the switch only apply while it is on, and say so by being greyed.
+            switch("replace", False)
+            dimmed = view.evaluate(
+                "Boolean(document.querySelector('[data-row=ipa]')?.className.includes('dim'))")
+            r.check(dimmed, "settings: what the replacing puts there is greyed while it is off",
+                    str(dimmed))
             # Left as this suite expects to find it.
-            view.evaluate(
-                "(document.querySelector('[data-row=layer] [data-choice=meaning]')"
-                " || {}).click?.()")
+            switch("replace", True)
+            switch("translate", True)
     except Exception as e:  # noqa: BLE001
-        r.check(False, "settings: the language to read into follows the mode", str(e))
+        r.check(False, "settings: the language to read into follows the translating", str(e))
     void = into
     # The bar is a bar, and says what it means in words rather than as a ratio.
     r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")

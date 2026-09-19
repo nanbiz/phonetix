@@ -73,12 +73,17 @@ def main():
                 f"nothing on it")
 
         # And drawn as soon as it is read, rather than after something else.
-        first_read = read[0][0]
+        #
+        # Measured from the read that produced these words, not from the first read in the
+        # log: a page that has just been opened is often read once while the screen before it
+        # is still up, and timing from that reads the app launching rather than anything this
+        # service did.
         up = [at for at, n in drawn if n > 0]
         if not up:
             failures.append(f"{mode}: nothing was ever put on the screen")
             continue
-        waited = up[0] - first_read
+        before = [at for at, _ in read if at <= up[0]]
+        waited = up[0] - (before[-1] if before else read[0][0])
         print(f"  {mode}: first words {waited:.2f}s after the first read")
         if waited > DRAWN_WITHIN_S:
             failures.append(

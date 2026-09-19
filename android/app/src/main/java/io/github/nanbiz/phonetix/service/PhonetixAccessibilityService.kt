@@ -50,12 +50,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private lateinit var overlay: OverlayController
     private lateinit var hover: HoverController
-    private lateinit var page: PageController
 
     /** Whether the screen has been replaced by its own translation. Asked from paths that run
      *  before the service has finished building itself - a scroll event arrives as soon as the
      *  service is bound - so it answers for a page that does not exist yet. */
-    private val pageUp: Boolean get() = ::page.isInitialized && page.showing
 
     /** What the screen last turned out to be in, which is one half of the translation
      *  direction. Held because the engine is opened for a direction, not per screen. */
@@ -286,23 +284,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // transcription that can be tapped swallows the swipe that began on it, and on a page
         // of text that is most of the page, so the alternative is one mark the reader drags,
         // with the circle that does the looking riding clear above the hand.
-        // The whole screen in the reader's own language, which is the other question the mark
-        // answers: a drag asks about a word, a press asks about the page.
-        page = PageController(
-            this,
-            translate = { lines -> Translator.lines(lines) },
-            onShown = { up ->
-                // Nothing of ours draws over a page that has been replaced: the words under it
-                // are not the words on screen any more.
-                if (up) overlay.hideNow() else schedule(0L)
-            },
-        )
         hover = HoverController(
             this,
             // Nothing to ask about while the page has been replaced: the words the boxes
             // belong to are covered by the translation, and a card about one of them would be
             // about a word the reader cannot see.
-            wordAt = { x, y -> if (page.showing) null else overlay.wordAt(x, y) },
+            wordAt = { x, y -> overlay.wordAt(x, y) },
             onScreen = { overlay.onScreen() },
             // The last look's answer rather than a fresh one: where the button parks is decided
             // on the main thread, and asking the system for its windows there is a call that
@@ -441,7 +428,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             sampler, main, io,
             screenful = { screenful },
             screenfulAt = { screenfulAt },
-            hideOverlay = { overlay.hideNow() },
+            hideOverlay = { overlay.holdDown(true) },
+            showOverlay = { overlay.holdDown(false) },
+            paintedAt = { if (::overlay.isInitialized) overlay.paintedAt else 0L },
             // Not while a movement is being followed. Scheduling clears the loop that
             // follows it, and this fires whenever a reading of the colours has to be tried
             // again - including from a retry posted before the reader put their finger down.
@@ -589,7 +578,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Taken down here rather than posted for later: an event arrives on the main
             // thread, so this is already the thread that draws, and one frame is all it
             // takes.
-            if (::overlay.isInitialized) overlay.hideNow()
+            if (::overlay.isInitialized) {
+                overlay.letGo()
+                overlay.hideNow()
+            }
             switchedAt = android.os.SystemClock.uptimeMillis()
             if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "SWITCHED to $from")
         }
@@ -699,7 +691,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // the app is a word sitting where its word no longer is. So they come down the
             // instant the page moves and go back the instant it stops: the page is either
             // being read or being scrolled, and only one of those needs them.
-            if (::overlay.isInitialized && !pageUp) main.post { overlay.hideNow() }
+            if (::overlay.isInitialized) main.post { overlay.hideNow() }
             void(carried)
             void(exact)
             void(told)
@@ -866,7 +858,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // page reported as Spanish while its words were being read as English.
                 .put("language", readingSource)
                 .put("target", lastTarget ?: org.json.JSONObject.NULL)
-                .put("pageReplaced", pageUp)
                 .put("lines", cachedPlan.size)
                 .put("walk", lastWalk ?: org.json.JSONObject.NULL)
                 // Where the keyboard's top edge is, or zero: the button waits above it, and
@@ -1312,6 +1303,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (another) {
                 screenful++
                 screenfulAt = android.os.SystemClock.uptimeMillis()
+                // Whatever was being photographed is not on the screen any more, so nothing is
+                // gained by keeping this page off it while that finishes.
+                if (::overlay.isInitialized) main.post { overlay.letGo() }
             }
             cachedPackage = pkg
             // The words on screen are this app's again, so the next arrival at another one
@@ -1850,7 +1844,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // riding on the layer rather than being re-read once a second.
                 if (shifted) {
                     lastMotionAt = android.os.SystemClock.uptimeMillis()
-                    if (!overlay.inMotion && !pageUp) main.post { overlay.beginMotion() }
+                    if (!overlay.inMotion) main.post { overlay.beginMotion() }
                     startFollowing()
                 } else if (onTheMove()) {
                     // A pass that measured nothing is not a page that has stopped, and the
@@ -1899,14 +1893,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     android.util.Log.d("Phonetix", sb.toString())
                 }
                 main.post {
-                    // The replaced page owns the screen, so the follow paints nothing: this is
-                    // the other way a transcription reaches the screen, and guarding only the
-                    // full read left ten of them over a translated page.
-                    if (pageUp) overlay.hideNow()
-                    else if (moving && overlay.inMotion) {
+                    if (moving && overlay.inMotion) {
                         overlay.motionMeasured(moved, readAt, speedY, shifted)
+                    } else {
+                        overlay.endMotion(moved)
                     }
-                    else overlay.endMotion(moved)
                     android.util.Log.d(
                         "Phonetix",
                         "follow=${took}ms (asked ${askedNs / 1_000_000}ms in $asks, " +
@@ -2353,16 +2344,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
         val colourMs = android.os.SystemClock.uptimeMillis() - tb
         val t2 = tb
-        // A replaced page owns the screen: the lines under it are covered, so painting
-        // transcriptions over them would draw on top of the translation. The same read that
-        // would have placed the chips places the lines again instead, which is how the
-        // translation follows the page as it scrolls. Asked for here, on the thread that read
-        // the screen, because whatever has scrolled into view has still to be translated.
-        val replaced = if (pageUp) pageLines().also { page.prepare(it) } else emptyList()
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            if (pageUp) page.draw(replaced)
-            else if (SettingsStore.current.layer == "off") overlay.known(painted)
+            if (SettingsStore.current.layer == "off") overlay.known(painted)
             else overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
@@ -2572,21 +2556,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Past this a reader is sweeping a page rather than a clause, and an engine handed a
         // page answers it as one sentence.
         return if (text.length > PHRASE_LIMIT) text.substring(0, PHRASE_LIMIT) else text
-    }
-
-    private fun pageLines(): List<PageOverlayView.Line> = cachedPlan.mapNotNull { p ->
-        val where = p.measuredAt ?: return@mapNotNull null
-        val text = p.text.trim()
-        if (text.isEmpty()) return@mapNotNull null
-        val decision = colours.decide(p.text, where.top, colorRect(p))
-        val own = decision.colours ?: return@mapNotNull null
-        PageOverlayView.Line(
-            bounds = android.graphics.Rect(where),
-            text = text,
-            background = own.background,
-            ink = own.ink,
-            lineHeight = where.height(),
-        )
     }
 
     private class Planned(

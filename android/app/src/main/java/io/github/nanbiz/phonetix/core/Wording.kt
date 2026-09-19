@@ -115,7 +115,6 @@ object Wording {
         "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
         "nothing-found" to "Nothing by that name",
-        "nothing-here" to "Nothing on this screen to put into your language",
         "nothing-yet" to "nothing yet",
         "open-accessibility" to "Open accessibility",
         "preview" to "Preview",

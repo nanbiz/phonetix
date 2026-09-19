@@ -56,7 +56,14 @@ def main():
         o = (believed().get("overlay") or {})
         return o.get("chipsShown") or 0
 
-    drawn = painted()
+    # Waited for rather than sampled: a service that has just been told to read a page has
+    # not read it yet, and a check that asks once reads the gap.
+    drawn = 0
+    for _ in range(10):
+        drawn = painted()
+        if drawn:
+            break
+        time.sleep(2)
     print(f"  with the replacing on: {drawn} words painted")
     if not drawn:
         print("FAIL - nothing was replaced to begin with")
@@ -81,7 +88,12 @@ def main():
     hold(middle)
     time.sleep(6)
     said = re.findall(r"HELD layer (\S+)", dev.log())
-    back = painted()
+    back = 0
+    for _ in range(10):
+        back = painted()
+        if back:
+            break
+        time.sleep(2)
     print(f"  held again: {said[-1:] or 'nothing'}, {back} words painted")
     if not said or said[-1] == "off":
         failures.append("holding it again did not turn the replacing back on")

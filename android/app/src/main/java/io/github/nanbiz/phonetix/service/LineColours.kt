@@ -34,6 +34,10 @@ class LineColours(
 
     /** Take the overlay down now, on the main thread; returns once it is down. */
     private val hideOverlay: () -> Unit,
+    /** Let the transcriptions be painted again, once the photograph has been taken. */
+    private val showOverlay: () -> Unit,
+    /** When paint of ours last went onto the screen, so a frame taken after it is refused. */
+    private val paintedAt: () -> Long,
     /** Ask for the screen to be read again, because colours have arrived or not. */
     private val readAgain: () -> Unit,
 ) {
@@ -294,13 +298,18 @@ class LineColours(
             io.postDelayed({
                 // Only a frame taken after the overlay went down can be trusted; anything
                 // older still has our transcriptions in it.
-                val down = hiddenAt
-                if (!sampler.hasFrame || down == 0L || sampler.frameAt < down + SETTLE_MS) {
+                // After the overlay went down, and after the last time anything of ours was
+                // painted. A word is drawn the moment it is read now, so an ordinary read
+                // landing while the camera was open paints the page again and the frame comes
+                // back with our own fallback gold in it - which is then read as the app's ink.
+                val down = maxOf(hiddenAt, paintedAt())
+                if (!sampler.hasFrame || hiddenAt == 0L || sampler.frameAt < down + SETTLE_MS) {
                     // The lines were asked for and the answer did not come. That counts:
                     // otherwise an app the platform refuses to capture would leave every one
                     // of them waiting for colours that can never arrive, and unpainted.
                     for ((k, _) in asked) countAttempt(k, sawFrame = false)
                     capturing = false
+                    main.post { showOverlay() }
                     if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
                     readAgain()
                     return@postDelayed
@@ -314,6 +323,7 @@ class LineColours(
                 val older = sampler.frameAt < screenfulAt()
                 if (screenful() != of || older) {
                     capturing = false
+                    main.post { showOverlay() }
                     // A frame thrown away is not a frame read: without this the throttle
                     // counts it, and the lines wait the whole gap again for a colour that
                     // was never taken - which reads as a screen that draws nothing.
@@ -360,6 +370,7 @@ class LineColours(
                 // page's own colour is a better guess than a palette of ours.
                 page = sampler.screenColors() ?: page
                 capturing = false
+                main.post { showOverlay() }
                 if (BuildConfig.DEBUG) {
                     android.util.Log.d(
                         "Phonetix",

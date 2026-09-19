@@ -121,7 +121,6 @@ export const SAYS: Record<string, string> = {
   "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
   "nothing-found": "Nothing by that name",
-  "nothing-here": "Nothing on this screen to put into your language",
   "nothing-yet": "nothing yet",
   "open-accessibility": "Open accessibility",
   "preview": "Preview",
