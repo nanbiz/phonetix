@@ -41,8 +41,8 @@ object Wording {
 
     /** Which side, as an overlay can draw them. */
     val side = listOf(
-        Choice("right", "Right", "for a phone held in the right hand"),
         Choice("left", "Left", "for a phone held in the left hand"),
+        Choice("right", "Right", "for a phone held in the right hand"),
     )
 
     /** Every row of the settings surfaces, by the name it reports itself under. */
@@ -55,8 +55,9 @@ object Wording {
         "delay" to Words("Rest before a card opens", "how long the cursor stays on a word before it answers"),
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
+        "ipa" to Words("How it sounds", "the pronunciation, in the alphabet phoneticians use"),
         "layer" to Words("Replacement mode", ""),
-        "lens" to Words("The button", "a button on the screen you use over the words you are reading"),
+        "lens" to Words("The overlay button", "a button on the screen you use over the words you are reading"),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over, and the page under it still scrolls"),
         "lens-hold" to Words("Hold it", "The whole screen in your own language; hold it again to put the screen back"),
         "lens-sweep" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),
@@ -64,6 +65,7 @@ object Wording {
         "meanings" to Words("To see what a word means", "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
+        "replace" to Words("Replace words", "Long press the overlay button to turn this on and off without opening settings."),
         "rest" to Words("Where the button sits", "which side it waits on, and whether it stays put"),
         "rest-pin" to Words("Pin", ""),
         "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
@@ -79,6 +81,7 @@ object Wording {
         "theme" to Words("Theme", "the colours everything of ours is drawn in"),
         "touch" to Words("Touching a word", ""),
         "touch-words" to Words("Hold a word for its card", ""),
+        "translate" to Words("Translate", "what the word means, in the language below"),
         "where" to Words("Where", ""),
     )
 
@@ -118,6 +121,8 @@ object Wording {
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
         "remove" to "Remove",
+        "replacing-off" to "Words left as they are",
+        "replacing-on" to "Replacing words",
         "rest-edge" to "On the %s",
         "rest-put" to "Drag the button up or down, or across to the other side.",
         "say-into" to "Answer in",

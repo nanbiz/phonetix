@@ -160,6 +160,27 @@
 
 
 
+  /** The replacing, as the reader now sets it: one switch, and two saying what it puts there.
+   *
+   *  Stored as the one mode it always was, so nothing else in the product has to know that
+   *  the screen asks for it in three pieces. Turning both of the two off is the same as
+   *  turning the replacing off, because a replacement of nothing is nothing. */
+  let replacing = $derived(settings.layer !== 'off');
+  let saying = $derived(settings.layer === 'sound' || settings.layer === 'both');
+  let meaning = $derived(settings.layer === 'meaning' || settings.layer === 'both');
+  /** What the reader had before they switched the replacing off, so it comes back as it was. */
+  let lastLayer = $state<Layer>('both');
+  $effect(() => {
+    if (settings.layer !== 'off') lastLayer = settings.layer as Layer;
+  });
+
+  function layerOf(sound: boolean, gloss: boolean): Layer {
+    if (sound && gloss) return 'both';
+    if (sound) return 'sound';
+    if (gloss) return 'meaning';
+    return 'off';
+  }
+
   let here = $derived(site !== '' && !settings.off.includes(site));
   /** What the page is being read as: what the reader chose, or what the page says it is. */
   let reading = $derived(settings.source || pageLang || '');
@@ -292,15 +313,45 @@
   <!-- What this does, which is two things and the one combination of them worth having. Where
        the answer goes is not a choice: it takes the word's place. -->
   <div class="rows">
-    <Row name={ROWS.layer.name} row="layer">
-      {#snippet wide()}
-        <Segmented
-          choices={layers.map((row) => ({ value: row.value, label: row.label }))}
-          chosen={settings.layer}
-          change={(value) => change('layer', value as Layer)}
+    <!-- What a word is replaced by, as one switch and two under it.
+         A single row of four modes made the reader work out what "both" was both of, and it
+         hid the thing they actually reach for - turning the replacing off and on. So the
+         replacing is the switch, and what it puts there is the two beneath it. The four
+         states are the same four as before: neither of the two is the replacing off. -->
+    <Row name={ROWS.replace.name} row="replace" about={ROWS.replace.about}>
+      {#snippet control()}
+        <Toggle
+          on={replacing}
+          label="replacing words"
+          change={(on) => change('layer', on ? lastLayer : 'off')}
         />
       {/snippet}
     </Row>
+
+    <div class="under">
+      <Row name={ROWS.ipa.name} row="ipa" about={ROWS.ipa.about} dim={!replacing}>
+        {#snippet control()}
+          <Toggle
+            on={saying}
+            label="how it sounds"
+            enabled={replacing}
+            change={(on) => change('layer', layerOf(on, meaning))}
+          />
+        {/snippet}
+      </Row>
+
+      <Row name={ROWS.translate.name} row="translate" about={ROWS.translate.about}
+           dim={!replacing}>
+        {#snippet control()}
+          <Toggle
+            on={meaning}
+            label="translating"
+            enabled={replacing}
+            change={(on) => change('layer', layerOf(saying, on))}
+          />
+        {/snippet}
+      </Row>
+    </div>
 
     <!-- The language the words are turned into, asked for only by the modes that turn them
          into one. The mode is already that question's first half, and a switch beside it

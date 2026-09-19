@@ -23,10 +23,13 @@
     control?: Snippet;
     /** A control that needs the whole width, such as a bar. */
     wide?: Snippet;
+    /** Greyed, because what it sets only applies once something above it is on. Shown rather
+     *  than hidden, so the reader can see it is there and what turns it on. */
+    dim?: boolean;
   }
 
-  let { name, row = '', about = '', hint = '', says = '', marks = {}, control, wide }:
-    Props = $props();
+  let { name, row = '', about = '', hint = '', says = '', marks = {}, control, wide,
+    dim = false }: Props = $props();
 
   /** Whether the explanation behind the question mark is showing. A title attribute is a
    *  hover, and a finger cannot hover: on a phone the mark was a decoration that answered
@@ -34,7 +37,7 @@
   let asked = $state(false);
 </script>
 
-<div class="row" data-row={row || undefined} {...marks}>
+<div class="row{dim ? ' dim' : ''}" data-row={row || undefined} {...marks}>
   <!-- A row on a screen named after it says its name once: the screen's own title is the
        name, and repeating it under itself is the title twice. -->
   {#if name}

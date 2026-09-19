@@ -137,6 +137,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var switchedAt = 0L
     /** The direction the reader asked for and this phone has no model for, or nothing. */
     @Volatile private var missingDirection: String? = null
+    /** What the replacing was before it was switched off, so a press puts back what was there
+     *  rather than a mode the reader never chose. */
+    @Volatile private var lastReplacing: String = "both"
 
     /** Which screenful is being read: a number that changes whenever the plan is built
      *  afresh, so anything that takes a moment can tell whether it still belongs. */
@@ -331,35 +334,31 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Held: the whole screen in the reader's own language, and held again to put it
             // back. The heavier of the two questions on the heavier gesture.
             onHold = {
+                // Turns the replacing on and off, and nothing else.
+                //
+                // It used to put the whole screen into the reader's own language, which is a
+                // thing they asked for once and reach for rarely; what they reach for
+                // constantly is having the words back. So the heavier gesture on the button
+                // does the heavier of the two everyday things, and the settings screen says
+                // so under the switch it shares.
                 main.post { tooltip.hide() }
-                val lines = if (page.showing) emptyList() else pageLines()
-                // Off the main thread: translating a screen is a round trip per line through
-                // the engine, and the mark must not freeze under the finger that pressed it.
-                io.post {
-                    page.prepare(lines)
-                    main.post {
-                        // A press that finds nothing says so. Silence here is the fault the
-                        // reader reported as "I long pressed it and literally nothing
-                        // happened": a screen whose words were never read looks exactly like
-                        // a gesture that does not work.
-                        if (lines.isEmpty() && !page.showing) {
-                            val said = Wording.says["nothing-here"].orEmpty()
-                            // Said in the log as well as on the screen. A toast is not in the
-                            // tree and not in a screenshot worth trusting, so this is the only
-                            // way a check can tell the press answered from the press being
-                            // ignored - which is the whole difference this branch exists for.
-                            if (BuildConfig.DEBUG) {
-                                android.util.Log.d("Phonetix", "NOTHINGHERE $said")
-                            }
-                            android.widget.Toast.makeText(
-                                this@PhonetixAccessibilityService,
-                                said,
-                                android.widget.Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                        page.toggle(lines)
-                    }
+                val now = SettingsStore.current
+                val next = if (now.layer == "off") lastReplacing else "off"
+                if (now.layer != "off") lastReplacing = now.layer
+                SettingsStore.setLayer(next)
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d("Phonetix", "HELD layer $next")
                 }
+                hover.saying(next != "off")
+                main.post {
+                    android.widget.Toast.makeText(
+                        this@PhonetixAccessibilityService,
+                        Wording.says[if (next == "off") "replacing-off" else "replacing-on"]
+                            .orEmpty(),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                readAgain()
             },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from

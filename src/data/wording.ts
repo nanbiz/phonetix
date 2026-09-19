@@ -47,8 +47,8 @@ export const LAYER_CHOICES: Choice[] = [
 
 /** Which side, as a browser can draw them. */
 export const SIDE_CHOICES: Choice[] = [
-  { value: "right", label: "Right", about: "for a phone held in the right hand" },
   { value: "left", label: "Left", about: "for a phone held in the left hand" },
+  { value: "right", label: "Right", about: "for a phone held in the right hand" },
 ];
 
 /** Every row of the settings surfaces, by the name it reports itself under. */
@@ -61,8 +61,9 @@ export const ROWS: Record<string, Words> = {
   "delay": { name: "Rest before a card opens", about: "how long the cursor stays on a word before it answers" },
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
+  "ipa": { name: "How it sounds", about: "the pronunciation, in the alphabet phoneticians use" },
   "layer": { name: "Replacement mode", about: "" },
-  "lens": { name: "The button", about: "a button on the screen you use over the words you are reading" },
+  "lens": { name: "The overlay button", about: "a button on the screen you use over the words you are reading" },
   "lens-drag": { name: "Drag it over a word", about: "It says what it passes over, and the page under it still scrolls" },
   "lens-hold": { name: "Hold it", about: "The whole screen in your own language; hold it again to put the screen back" },
   "lens-sweep": { name: "Hold it, then sweep", about: "Every word it passes over joins the run, and the card answers the whole clause" },
@@ -70,6 +71,7 @@ export const ROWS: Record<string, Words> = {
   "meanings": { name: "To see what a word means", about: "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read." },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
+  "replace": { name: "Replace words", about: "Long press the overlay button to turn this on and off without opening settings." },
   "rest": { name: "Where the button sits", about: "which side it waits on, and whether it stays put" },
   "rest-pin": { name: "Pin", about: "" },
   "say": { name: "The word for something", about: "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you." },
@@ -85,6 +87,7 @@ export const ROWS: Record<string, Words> = {
   "theme": { name: "Theme", about: "the colours everything of ours is drawn in" },
   "touch": { name: "Touching a word", about: "" },
   "touch-words": { name: "Hold a word for its card", about: "" },
+  "translate": { name: "Translate", about: "what the word means, in the language below" },
   "where": { name: "Where", about: "" },
 };
 
@@ -124,6 +127,8 @@ export const SAYS: Record<string, string> = {
   "preview": "Preview",
   "preview-about": "the words on a page this would answer",
   "remove": "Remove",
+  "replacing-off": "Words left as they are",
+  "replacing-on": "Replacing words",
   "rest-edge": "On the %s",
   "rest-put": "Drag the button up or down, or across to the other side.",
   "say-into": "Answer in",

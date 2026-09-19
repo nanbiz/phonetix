@@ -130,16 +130,6 @@
       "name": "Which side",
       "options": [
         {
-          "value": "right",
-          "label": "Right",
-          "on": [
-            "phone"
-          ],
-          "about": {
-            "phone": "for a phone held in the right hand"
-          }
-        },
-        {
           "value": "left",
           "label": "Left",
           "on": [
@@ -147,6 +137,16 @@
           ],
           "about": {
             "phone": "for a phone held in the left hand"
+          }
+        },
+        {
+          "value": "right",
+          "label": "Right",
+          "on": [
+            "phone"
+          ],
+          "about": {
+            "phone": "for a phone held in the right hand"
           }
         }
       ],
@@ -218,8 +218,20 @@
       "name": "Drawing over apps",
       "about": "Lets it paint the transcription on top of the word."
     },
+    "replace": {
+      "name": "Replace words",
+      "about": "Long press the overlay button to turn this on and off without opening settings."
+    },
+    "ipa": {
+      "name": "How it sounds",
+      "about": "the pronunciation, in the alphabet phoneticians use"
+    },
+    "translate": {
+      "name": "Translate",
+      "about": "what the word means, in the language below"
+    },
     "lens": {
-      "name": "The button",
+      "name": "The overlay button",
       "about": "a button on the screen you use over the words you are reading"
     },
     "side": {
@@ -325,6 +337,8 @@
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
+    "replacing-off": "Words left as they are",
+    "replacing-on": "Replacing words",
     "rest-edge": "On the %s",
     "no-direction": "No dictionary here for %s, so words cannot be turned into it. The words show how they sound instead.",
     "service-stopped": "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",

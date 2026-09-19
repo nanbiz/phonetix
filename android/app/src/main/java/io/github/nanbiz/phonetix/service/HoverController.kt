@@ -234,6 +234,9 @@ class HoverController(
         markX = waits.x
         markY = waits.y
         val view = HoverBubbleView(context)
+        // What it is doing right now, from the moment it appears: the ring is the only thing
+        // that says whether the words are being replaced.
+        view.replacing = SettingsStore.current.layer != "off"
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
             .onSuccess {
@@ -241,6 +244,16 @@ class HoverController(
                 parked()
             }
             .onFailure { android.util.Log.w("Phonetix", "the circle did not go up", it) }
+    }
+
+    /**
+     * Say whether the words are being replaced, so the button shows which it is.
+     *
+     * The button is what turns the replacing on and off, and a reader who pressed it and saw
+     * nothing change cannot otherwise tell that from a press that did nothing at all.
+     */
+    fun saying(on: Boolean) {
+        main.post { (mark as? HoverBubbleView)?.replacing = on }
     }
 
     /** Where the mark is sitting, for anything that can only read what the service says. */

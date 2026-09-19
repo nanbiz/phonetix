@@ -85,6 +85,25 @@ open class HoverBubbleView(context: Context) : View(context) {
             invalidate()
         }
 
+    /**
+     * Whether the words on the page are being replaced.
+     *
+     * The button is what turns that on and off, so it is also the only thing that can say
+     * which it is: a reader who pressed it and saw the page not change has no way of telling
+     * a gesture that did nothing from a gesture that turned the replacing off. Shown as a
+     * ring around the mark, because the mark itself has a job already.
+     */
+    var replacing: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+    }
+
     override fun onDraw(canvas: Canvas) {
         if (masked) return
         val icon = mark ?: return
@@ -99,6 +118,16 @@ open class HoverBubbleView(context: Context) : View(context) {
             else -> 130
         }
         icon.draw(canvas)
+        if (replacing) {
+            ring.color = if (onLight) DARK else LIGHT
+            ring.alpha = if (active) 210 else 150
+            ring.strokeWidth = width * 0.06f
+            val inset = ring.strokeWidth / 2f
+            canvas.drawCircle(
+                width / 2f, height / 2f,
+                (minOf(width, height) / 2f) - inset, ring,
+            )
+        }
     }
 }
 
