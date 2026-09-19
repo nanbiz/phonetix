@@ -36,8 +36,6 @@ class LineColours(
     private val hideOverlay: () -> Unit,
     /** Let the transcriptions be painted again, once the photograph has been taken. */
     private val showOverlay: () -> Unit,
-    /** When paint of ours last went onto the screen, so a frame taken after it is refused. */
-    private val paintedAt: () -> Long,
     /** Ask for the screen to be read again, because colours have arrived or not. */
     private val readAgain: () -> Unit,
 ) {
@@ -295,14 +293,21 @@ class LineColours(
         io.postDelayed({
             sampler.invalidateFrame()
             sampler.refreshIfStale(force = true)
-            io.postDelayed({
+            // Waited for rather than slept through.
+            //
+            // This used to give the screenshot a flat 320ms whether it arrived in thirty or
+            // not at all, and the words are off the screen for the whole of that: with the
+            // page drawn the moment it is read, every millisecond here is a millisecond of a
+            // page a reader is looking at with nothing on it. Asked every 30ms instead, and
+            // given up on at the same point it would have been before.
+            waitForFrame(0) {
                 // Only a frame taken after the overlay went down can be trusted; anything
                 // older still has our transcriptions in it.
                 // After the overlay went down, and after the last time anything of ours was
                 // painted. A word is drawn the moment it is read now, so an ordinary read
                 // landing while the camera was open paints the page again and the frame comes
                 // back with our own fallback gold in it - which is then read as the app's ink.
-                val down = maxOf(hiddenAt, paintedAt())
+                val down = hiddenAt
                 if (!sampler.hasFrame || hiddenAt == 0L || sampler.frameAt < down + SETTLE_MS) {
                     // The lines were asked for and the answer did not come. That counts:
                     // otherwise an app the platform refuses to capture would leave every one
@@ -312,7 +317,7 @@ class LineColours(
                     main.post { showOverlay() }
                     if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "COLOURS no clean frame")
                     readAgain()
-                    return@postDelayed
+                    return@waitForFrame
                 }
                 // And it is a frame of the screen these lines are on. A page that changed
                 // while the capture was in flight - a check moving to the next fixture, a
@@ -336,7 +341,7 @@ class LineColours(
                         )
                     }
                     readAgain()
-                    return@postDelayed
+                    return@waitForFrame
                 }
                 // The frame now holds the app's own text where our transcriptions were.
                 var read = 0
@@ -379,7 +384,7 @@ class LineColours(
                     )
                 }
                 readAgain()
-            }, 320)
+            }
         }, 80)
     }
 
@@ -390,6 +395,21 @@ class LineColours(
      *   painted in the colour of the whole screen for as long as the screen stayed up. A
      *   device that will not be captured at all is still given up on, after more tries.
      */
+    /**
+     * Run the block once the screenshot has landed, or once it plainly is not going to.
+     *
+     * Polled rather than slept: a frame that arrives in thirty milliseconds should not cost
+     * three hundred, because the transcriptions are off the screen until it does.
+     */
+    private fun waitForFrame(waited: Long, then: () -> Unit) {
+        val arrived = sampler.hasFrame && hiddenAt != 0L && sampler.frameAt >= hiddenAt
+        if (arrived || waited >= FRAME_WAIT_MS) {
+            then()
+            return
+        }
+        io.postDelayed({ waitForFrame(waited + FRAME_POLL_MS, then) }, FRAME_POLL_MS)
+    }
+
     private fun countAttempt(k: String, sawFrame: Boolean) {
         val now = SystemClock.uptimeMillis()
         val tried = tries[k]
@@ -411,6 +431,9 @@ class LineColours(
     private companion object {
         /** How rarely the overlay may step aside to be able to read a colour. */
         const val CLEAN_FRAME_GAP_MS = 1500L
+        /** How often the screenshot is asked for, and how long it is waited for. */
+        const val FRAME_POLL_MS = 30L
+        const val FRAME_WAIT_MS = 320L
         /** How often a line's colours are looked for before the page's own are used. */
         const val COLOR_TRIES = 3
 

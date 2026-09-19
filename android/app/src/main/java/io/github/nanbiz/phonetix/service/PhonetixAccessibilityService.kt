@@ -430,7 +430,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
             screenfulAt = { screenfulAt },
             hideOverlay = { overlay.holdDown(true) },
             showOverlay = { overlay.holdDown(false) },
-            paintedAt = { if (::overlay.isInitialized) overlay.paintedAt else 0L },
             // Not while a movement is being followed. Scheduling clears the loop that
             // follows it, and this fires whenever a reading of the colours has to be tried
             // again - including from a retry posted before the reader put their finger down.
@@ -578,10 +577,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Taken down here rather than posted for later: an event arrives on the main
             // thread, so this is already the thread that draws, and one frame is all it
             // takes.
-            if (::overlay.isInitialized) {
-                overlay.letGo()
-                overlay.hideNow()
-            }
+            if (::overlay.isInitialized) overlay.hideNow()
             switchedAt = android.os.SystemClock.uptimeMillis()
             if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "SWITCHED to $from")
         }
@@ -1303,9 +1299,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (another) {
                 screenful++
                 screenfulAt = android.os.SystemClock.uptimeMillis()
-                // Whatever was being photographed is not on the screen any more, so nothing is
-                // gained by keeping this page off it while that finishes.
-                if (::overlay.isInitialized) main.post { overlay.letGo() }
             }
             cachedPackage = pkg
             // The words on screen are this app's again, so the next arrival at another one
@@ -2259,21 +2252,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
             )
             val c = decision.colours
             if (c != null) p.boxes = p.boxes.map { it.copy(background = c.background, ink = c.ink) }
-            // Drawn as soon as it is known, coloured or not.
+            // A word with no colours yet is still drawn while the page is moving.
             //
-            // A word used to be withheld until its colours had been read off a photograph of
-            // the screen, on the grounds that a word which flickers into a palette of ours and
-            // out again is worse than one that arrives a moment late. The moment is not small:
-            // reading the tree takes twenty to fifty milliseconds and the photograph takes
-            // about a second, and it is retried whenever the screen moves under it, so the
-            // whole page waited on the camera. Measured on a page standing still: the plan was
-            // ready at 1.8s and nothing was on the screen until 2.9s, all of it spent waiting
-            // for colours.
+            // Withholding it is right on a page standing still: the colours are a moment away
+            // and a word that flickers into a palette of ours and out again is worse than one
+            // that arrives a moment late. Drawing first and repainting when the photograph
+            // lands was tried, and the photograph is of a screen with our own paint on it:
+            // the line's colours then come back as our own fallback gold. Holding the page
+            // back for the capture instead cost the very thing the change was for, and the
+            // two chasing each other cost seven "Phonetix isn't responding" in one run.
             //
-            // So the word goes up in the fallback palette and the next pass repaints it in its
-            // own colours once they have been read. Late colour is a word that changes shade;
-            // late text is a page that is not transcribed yet.
-            painted.addAll(p.boxes)
+            // But a screen read in the middle of a movement has no colours to be had - reading
+            // them means photographing a still screen - so withholding there meant the read
+            // that happens during a drag could paint nothing at all.
+            if (c != null || decision.givenUp || onTheMove()) painted.addAll(p.boxes)
             if (BuildConfig.DEBUG && c == null && decision.givenUp) {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
