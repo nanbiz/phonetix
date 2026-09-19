@@ -1299,6 +1299,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
             if (another) {
                 screenful++
                 screenfulAt = android.os.SystemClock.uptimeMillis()
+                // The words up belong to a screen that is not there any more, and this is not
+                // only a question of what a reader sees: the colours of the new screen are
+                // read off a photograph of it, and the old screen's transcriptions are in that
+                // photograph. Every line of the new page then took its ink from a chip of
+                // ours - near-white, on a line the app had drawn in amber. Staying inside one
+                // app is enough for this; the package never changed, so nothing else took
+                // them down.
+                if (::overlay.isInitialized) main.post { overlay.hideNow() }
             }
             cachedPackage = pkg
             // The words on screen are this app's again, so the next arrival at another one
