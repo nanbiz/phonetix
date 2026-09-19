@@ -14,13 +14,16 @@
      *  Shown rather than hidden, so the reader can see the screen exists and what turns it
      *  on. */
     disabled?: boolean;
+    /** A row belonging to the switch above it rather than standing beside it: the same row,
+     *  set in from the edge and in the smaller type the rest of a row's detail is in. */
+    small?: boolean;
     open: () => void;
   }
 
-  let { name, about = '', row = '', disabled = false, open }: Props = $props();
+  let { name, about = '', row = '', disabled = false, small = false, open }: Props = $props();
 </script>
 
-<button class="nav" data-row={row || undefined} {disabled} onclick={open}>
+<button class="nav" class:small data-row={row || undefined} {disabled} onclick={open}>
   <span class="n-name" data-name>{name}</span>
   {#if about}<span class="n-sub" data-about>{about}</span>{/if}
   <span class="chev" aria-hidden="true">›</span>

@@ -839,6 +839,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("learning", settings.learning)
                 .put("recent", org.json.JSONArray(settings.recent))
                 .put("lens", settings.lens)
+                .put("side", settings.side)
+                .put("pin", settings.pin)
+                .put("restY", settings.restY)
                 .put("touchWords", settings.touchWords)
                 .put("narrow", settings.narrow)
                 .put("hideStress", settings.hideStress)
@@ -3045,14 +3048,35 @@ class PhonetixAccessibilityService : AccessibilityService() {
     private var listener: Dictation? = null
 
     /**
+     * When the panel was last taken down.
+     *
+     * A tap on the button while the panel is up is two things at once: the panel watches for
+     * touches outside itself and takes itself down, and the same touch reaches the button
+     * underneath and asks for a panel. Without this the two cancel out and the panel appears
+     * to ignore the tap that was meant to put it away.
+     */
+    private var closedAt = 0L
+
+    /**
      * The other direction, asked over what the reader is looking at.
      *
      * A panel rather than a screen of the app's own: a word that exists only in the reader's
      * head is asked for in the middle of whatever they are reading, and opening an activity
-     * puts that away. It is taken down by the way back, by a touch outside it, or by asking.
+     * puts that away. It is taken down by the way back, by a touch outside it, by asking, or
+     * by the same tap on the button that opened it: the button is where the reader's finger
+     * already is, and a second tap that did nothing left them hunting for a way out.
      */
     private fun openSay() {
-        if (asking != null) return
+        if (asking != null) {
+            closeSay()
+            return
+        }
+        // The other half of that tap: the panel has just taken itself down because the touch
+        // landed outside it, and this is the same touch arriving at the button. Told apart by
+        // when the finger came down rather than by how long ago the panel closed - the tap is
+        // answered when the finger lifts, which can be most of a second later.
+        val down = if (::hover.isInitialized) hover.touchedDownAt else 0L
+        if (closedAt > 0 && down - closedAt in 0..SAME_TOUCH_MS) return
         val settings = SettingsStore.current
         val into = settings.into
         // Which language the answer comes back in: what the reader said in this panel, and
@@ -3240,6 +3264,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         listener = null
         val panel = asking ?: return
         asking = null
+        closedAt = android.os.SystemClock.uptimeMillis()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             back?.let { panel.findOnBackInvokedDispatcher()?.unregisterOnBackInvokedCallback(it) }
         }
@@ -3693,6 +3718,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
          */
         const val FOLLOW_IDLE_MS = 200L
         /** However well the following is going, a settled screen is read in full this often. */
+        /** How far apart the panel closing and a finger landing on the button can be and
+         *  still be the one touch that did both. */
+        const val SAME_TOUCH_MS = 300L
+
         const val FULL_READ_MS = 900L
         /**
          * How long the words are left off the screen after the app in front changes, before

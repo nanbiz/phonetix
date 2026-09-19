@@ -303,6 +303,39 @@
 
   <Trouble {trouble} />
 
+  {#if where === 'phone'}
+    <!-- The button itself, and where it lives, before anything it draws: with the button off
+         there is nothing on the screen to press, so a reader who cannot find it is looking
+         for this row first. A phone has no pointer to rest on a word, so the button is the
+         way a reader asks. -->
+    <div class="rows">
+      <Row name={ROWS.lens.name} row="lens" about={ROWS.lens.about}>
+        {#snippet control()}
+          <Toggle on={settings.lens} label="the sidebutton" change={(on) => change('lens', on)} />
+        {/snippet}
+      </Row>
+
+      <!-- Everything about where the button lives is behind one row: which side, or
+           anywhere at all, whether it stays put, and where it stays. -->
+      {#if settings.lens}
+        <NavRow
+          name={ROWS.rest.name}
+          row="rest"
+          small
+          about={settings.side === 'free'
+            ? SAYS['rest-loose']
+            : settings.pin
+              ? SAYS['rest-edge'].replace(
+                  '%s',
+                  labelOf(SIDE_CHOICES, settings.side).toLowerCase()
+                )
+              : labelOf(SIDE_CHOICES, settings.side)}
+          open={() => (view = 'rest')}
+        />
+      {/if}
+    </div>
+  {/if}
+
   <!-- What this does, which is two things and the one combination of them worth having. Where
        the answer goes is not a choice: it takes the word's place. -->
   <div class="rows">
@@ -494,7 +527,7 @@
   />
 </Screen>
 
-<Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'more')}>
+<Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'main')}>
   <div class="rows">
     <!-- Which side it comes back to, which is the hand the phone is held in. First, because
          it is the answer whether or not the button is pinned: unpinned, coming to rest is the
@@ -510,25 +543,32 @@
     </Row>
 
     <!-- Pinned, it waits at one height and nowhere else. Unpinned there is no height to set,
-         so the board below has nothing to do and says so by being greyed. -->
-    <Row name={ROWS['rest-pin'].name} row="rest-pin">
-      {#snippet control()}
-        <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
-      {/snippet}
-    </Row>
+         so the board below has nothing to do and says so by being greyed. Anywhere has no
+         height either: the button is left wherever it was put down. -->
+    {#if settings.side !== 'free'}
+      <Row name={ROWS['rest-pin'].name} row="rest-pin">
+        {#snippet control()}
+          <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
+        {/snippet}
+      </Row>
+    {/if}
   </div>
 
-  <Resting
-    y={settings.restY}
-    side={settings.side}
-    pinned={settings.pin}
-    across={screenAcross}
-    down={screenDown}
-    put={(edge, y) => {
-      if (settings.side !== edge) change('side', edge);
-      change('restY', Number(y.toFixed(4)));
-    }}
-  />
+  <!-- Where it sits, drawn. Not when it may sit anywhere: there is no one place to show,
+       because the button is wherever the reader last put it down. -->
+  {#if settings.side !== 'free'}
+    <Resting
+      y={settings.restY}
+      side={settings.side}
+      pinned={settings.pin}
+      across={screenAcross}
+      down={screenDown}
+      put={(edge, y) => {
+        if (settings.side !== edge) change('side', edge);
+        change('restY', Number(y.toFixed(4)));
+      }}
+    />
+  {/if}
 </Screen>
 
 <Screen name="say" on={view} title={ROWS.say.name} back={() => (view = 'main')}>
@@ -646,30 +686,6 @@
 
   {#if where === 'phone'}
     <div class="rows">
-      <!-- A phone has no pointer to rest on a word, so the mark is the way a reader asks. -->
-      <Row name={ROWS.lens.name} row="lens" about={ROWS['lens-drag'].about}>
-        {#snippet control()}
-          <Toggle on={settings.lens} label="the mark" change={(on) => change('lens', on)} />
-        {/snippet}
-      </Row>
-
-      <!-- Everything about where the button lives is behind one row: which side, whether it
-           stays put, and where it stays. Three rows on this screen for one question read as
-           three questions, and two of them said the same thing. -->
-      {#if settings.lens}
-        <NavRow
-          name={ROWS.rest.name}
-          row="rest"
-          about={settings.pin
-            ? SAYS['rest-edge'].replace(
-                '%s',
-                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
-              )
-            : labelOf(SIDE_CHOICES, settings.side)}
-          open={() => (view = 'rest')}
-        />
-      {/if}
-
       <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
            scroll would have no way of guessing why. -->
       <Row

@@ -19,13 +19,19 @@
 
   let { curve, density, change }: Props = $props();
 
-  /** Where on the bar this density sits, which is what the slider is set to. */
+  /**
+   * Where on the bar this density sits, which is what the slider is set to.
+   *
+   * The last position that means this density, not the first: the curve ends in a run of
+   * positions that all mean every word, so a bar dragged to its end came back to the start of
+   * that run and stopped short of full under a label already saying "every word".
+   */
   let position = $derived(
     curve.length === 0
       ? 0
       : curve.reduce(
           (best, at, i) =>
-            Math.abs(at - density) < Math.abs(curve[best] - density) ? i : best,
+            Math.abs(at - density) <= Math.abs(curve[best] - density) ? i : best,
           0
         )
   );

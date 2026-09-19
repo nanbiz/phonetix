@@ -34,6 +34,25 @@ def words(cdp, page):
     """) or "{}")
 
 
+def mode(cdp, view, sound, gloss):
+    """Set what a word is replaced by: the two switches, worked one at a time.
+
+    There is no list of modes any more - how it sounds and what it means are a switch each,
+    and nothing between them - so this is what choosing a mode is. One at a time because each
+    switch writes both halves of the setting, and two clicks in the same breath write the
+    second from what the first had not finished saying.
+    """
+    for row, want in (("ipa", sound), ("translate", gloss)):
+        evaluate(cdp, view, f"""
+            (() => {{
+              const box = document.querySelector('[data-row={row}] input');
+              if (box && box.checked !== {str(bool(want)).lower()}) box.click();
+            }})()
+        """)
+        time.sleep(1.5)
+    time.sleep(1.5)
+
+
 def control(cdp, view, expression):
     """Work one control in the settings view and let the page hear about it."""
     evaluate(cdp, view, expression)
@@ -89,11 +108,8 @@ def main():
                 on: panel.querySelector('[data-row="on"] input').checked,
                 often: (panel.querySelector('[data-row="density"] [data-about]') || {})
                   .textContent || '',
-                languages: (() => {
-                  const row = panel.querySelector('[data-row=theme] .select');
-                  return row ? panel.querySelectorAll('[data-row=layer] [data-choice]').length
-                             : 0;
-                })(),
+                switches: ['ipa', 'translate']
+                  .filter(row => panel.querySelector(`[data-row=${row}] input`)).length,
                 surface: getComputedStyle(document.body).backgroundColor,
                 width: Math.round(panel.getBoundingClientRect().width),
               });
@@ -103,7 +119,7 @@ def main():
             print("FAIL - the settings view drew nothing")
             sys.exit(1)
         panel = json.loads(drawn)
-        print(f"  {len(panel['rows'])} settings, {panel['languages']} modes, "
+        print(f"  {len(panel['rows'])} settings, {panel['switches']} switches, "
               f"{panel['width']}px wide on {panel['surface']}")
         if len(panel["rows"]) < 5:
             failures.append(f"the view offers {panel['rows']}")
@@ -176,9 +192,7 @@ def main():
             failures.append(f"the answers are {german['glosses'][:6]}, not German")
 
         # What a word is replaced by: how it is said rather than what it means.
-        control(cdp, view, """
-            (() => document.querySelector('[data-row=layer] [data-choice=sound]').click())()
-        """)
+        mode(cdp, view, sound=True, gloss=False)
         sound = words(cdp, page)
         print(f"  showing the sound: {sound['sounds'][:3]}")
         if sound["glosses"]:
@@ -187,10 +201,7 @@ def main():
             failures.append("nothing is said about how the words sound")
 
         # Both: what it means, and how to say that.
-        control(cdp, view, """
-            (() => document.querySelector('[data-row=layer] [data-choice=both]').click())()
-        """)
-        time.sleep(2)
+        mode(cdp, view, sound=True, gloss=True)
         together = words(cdp, page)
         print(f"  both: {together['glosses'][:3]} said {together['sounds'][:3]}")
         if not together["glosses"]:
@@ -199,19 +210,15 @@ def main():
             failures.append("both showed no pronunciations for the meanings")
 
         # Back to meanings for what follows.
-        control(cdp, view, """
-            (() => document.querySelector('[data-row=layer] [data-choice=meaning]').click())()
-        """)
-        time.sleep(2)
+        mode(cdp, view, sound=False, gloss=True)
 
         # An accent whose difference is a rule changes the transcriptions on the page.
         # Every word again first: the bar was left at its sparse end by the check above, and
         # a page with nothing on it says nothing about accents.
         control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
                            "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        control(cdp, view, """
-            (() => document.querySelector('[data-row=layer] [data-choice=sound]').click())()
-        """)
+        mode(cdp, view, sound=True, gloss=False)
+
         def sound_of(word):
             said = evaluate(cdp, page, """
                 (() => {

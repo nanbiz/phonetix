@@ -116,6 +116,17 @@ class Device:
     def install(self, apk):
         return "Success" in adb("install", "-r", apk, timeout=300)
 
+    def hide_error_dialogs(self):
+        """Stop the system putting an "isn't responding" dialog over the screen.
+
+        An ANR dialog is a window of the system's own, with its own words, and it is what the
+        service then reads: a whole run reports three lines and a handful of words while the
+        page it was meant to measure sits behind it, and the dialog outlives the fixture that
+        follows. The ANR itself still happens and is still worth finding - it is in the log
+        and in /data/anr - but it no longer decides what every later check measures.
+        """
+        shell("settings", "put", "global", "hide_error_dialogs", "1")
+
     def enable_service(self):
         """Grant both permissions. Note an install clears the accessibility one.
 
@@ -125,6 +136,7 @@ class Device:
         nothing, which is a fault in the suite and not in the app.
         """
         shell("appops", "set", PKG, "SYSTEM_ALERT_WINDOW", "allow")
+        self.hide_error_dialogs()
         # Tried more than once: after an install the system will accept the setting, report
         # the service as enabled, and never bind it. What says it is really running is the
         # bound list, so that is what is waited for, and the toggle is done again when it

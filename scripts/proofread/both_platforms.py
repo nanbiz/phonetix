@@ -103,8 +103,15 @@ def on_the_phone(dev, es, de):
               "--es", "lexPack", f"{ON_DEVICE}/es.lexpack",
               "--es", "lexPack2", f"{ON_DEVICE}/de.lexpack",
               "--es", "lexWord", word, "--es", "lexSource", "es", "--es", "lexTarget", "de")
-        time.sleep(2.5)
-        found = re.findall(r"LEXWORD (\{.*\})", dev.log())
+        # Waited for rather than slept past: the app is started afresh for each word, and how
+        # long that takes is the machine's business, not this check's. A flat wait answered
+        # the first word and none of the rest whenever the host was busy.
+        found = []
+        for _ in range(40):
+            time.sleep(0.5)
+            found = re.findall(r"LEXWORD (\{.*\})", dev.log())
+            if found:
+                break
         if found:
             answers[word] = found[-1]
     return answers

@@ -37,7 +37,7 @@ export const DETAIL_CHOICES: Choice[] = [
   { value: "narrow", label: "[ ]", about: "every detail of how it is said, like aspiration and devoicing" },
 ];
 
-/** Replacement mode, as a browser can draw them. */
+/** Overlay, as a browser can draw them. */
 export const LAYER_CHOICES: Choice[] = [
   { value: "off", label: "Off", about: "nothing is replaced; ask about a word yourself" },
   { value: "meaning", label: "Translation", about: "the word replaced by what it means" },
@@ -48,6 +48,7 @@ export const LAYER_CHOICES: Choice[] = [
 /** Which side, as a browser can draw them. */
 export const SIDE_CHOICES: Choice[] = [
   { value: "left", label: "Left", about: "for a phone held in the left hand" },
+  { value: "free", label: "Anywhere", about: "it stays wherever you put it down" },
   { value: "right", label: "Right", about: "for a phone held in the right hand" },
 ];
 
@@ -62,16 +63,16 @@ export const ROWS: Record<string, Words> = {
   "density": { name: "How often", about: "how much of the page is annotated" },
   "dictionaries": { name: "Dictionaries", about: "the words this can answer without asking anyone" },
   "ipa": { name: "How it sounds", about: "the pronunciation, in the alphabet phoneticians use" },
-  "layer": { name: "Replacement mode", about: "" },
-  "lens": { name: "The overlay button", about: "Hold it to stop replacing words and hold it again to carry on. It wears the accent colour while it is replacing." },
+  "layer": { name: "Overlay", about: "" },
+  "lens": { name: "The sidebutton", about: "Hold it to turn the overlay off and hold it again to bring it back. It wears the accent colour while the overlay is on." },
   "lens-drag": { name: "Drag it over a word", about: "It says what it passes over, and the page under it still scrolls" },
-  "lens-hold": { name: "Hold it", about: "The whole screen in your own language; hold it again to put the screen back" },
+  "lens-hold": { name: "Hold it", about: "Turns the overlay off, and on again; the button wears the accent colour while it is on" },
   "lens-sweep": { name: "Hold it, then sweep", about: "Every word it passes over joins the run, and the card answers the whole clause" },
-  "lens-tap": { name: "Tap it", about: "Ask for the word for something, in the middle of what you are reading" },
+  "lens-tap": { name: "Tap it", about: "Ask for the word for something, in the middle of what you are reading; tap it again to put the card away" },
   "meanings": { name: "To see what a word means", about: "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read." },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
-  "rest": { name: "Where the button sits", about: "which side it waits on, and whether it stays put" },
+  "rest": { name: "Where the button sits", about: "which side it waits on, or neither, and whether it stays put" },
   "rest-pin": { name: "Pin", about: "" },
   "say": { name: "The word for something", about: "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you." },
   "setup": { name: "Setup", about: "" },
@@ -125,9 +126,10 @@ export const SAYS: Record<string, string> = {
   "preview": "Preview",
   "preview-about": "the words on a page this would answer",
   "remove": "Remove",
-  "replacing-off": "Words left as they are",
-  "replacing-on": "Replacing words",
+  "replacing-off": "Overlay off",
+  "replacing-on": "Overlay on",
   "rest-edge": "On the %s",
+  "rest-loose": "Wherever you leave it",
   "rest-put": "Drag the button up or down, or across to the other side.",
   "say-into": "Answer in",
   "say-no-language": "Choose a language to read into first.",

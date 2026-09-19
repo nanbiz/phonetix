@@ -31,7 +31,7 @@ object Wording {
         Choice("narrow", "[ ]", "every detail of how it is said, like aspiration and devoicing"),
     )
 
-    /** Replacement mode, as an overlay can draw them. */
+    /** Overlay, as an overlay can draw them. */
     val layer = listOf(
         Choice("off", "Off", "nothing is replaced; the button still answers a word"),
         Choice("meaning", "Translation", "the word replaced by what it means"),
@@ -42,6 +42,7 @@ object Wording {
     /** Which side, as an overlay can draw them. */
     val side = listOf(
         Choice("left", "Left", "for a phone held in the left hand"),
+        Choice("free", "Anywhere", "it stays wherever you put it down"),
         Choice("right", "Right", "for a phone held in the right hand"),
     )
 
@@ -56,16 +57,16 @@ object Wording {
         "density" to Words("How often", "how much of the page is annotated"),
         "dictionaries" to Words("Dictionaries", "the words this can answer without asking anyone"),
         "ipa" to Words("How it sounds", "the pronunciation, in the alphabet phoneticians use"),
-        "layer" to Words("Replacement mode", ""),
-        "lens" to Words("The overlay button", "Hold it to stop replacing words and hold it again to carry on. It wears the accent colour while it is replacing."),
+        "layer" to Words("Overlay", ""),
+        "lens" to Words("The sidebutton", "Hold it to turn the overlay off and hold it again to bring it back. It wears the accent colour while the overlay is on."),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over, and the page under it still scrolls"),
-        "lens-hold" to Words("Hold it", "The whole screen in your own language; hold it again to put the screen back"),
+        "lens-hold" to Words("Hold it", "Turns the overlay off, and on again; the button wears the accent colour while it is on"),
         "lens-sweep" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),
-        "lens-tap" to Words("Tap it", "Ask for the word for something, in the middle of what you are reading"),
+        "lens-tap" to Words("Tap it", "Ask for the word for something, in the middle of what you are reading; tap it again to put the card away"),
         "meanings" to Words("To see what a word means", "How a word is said works already, out of the bundled dictionary. What a word means needs a language to read into and a dictionary for the language you read."),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
-        "rest" to Words("Where the button sits", "which side it waits on, and whether it stays put"),
+        "rest" to Words("Where the button sits", "which side it waits on, or neither, and whether it stays put"),
         "rest-pin" to Words("Pin", ""),
         "say" to Words("The word for something", "Type it in your own language and get the word for it, with its entry, so you can judge what a machine gave you."),
         "setup" to Words("Setup", ""),
@@ -119,9 +120,10 @@ object Wording {
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
         "remove" to "Remove",
-        "replacing-off" to "Words left as they are",
-        "replacing-on" to "Replacing words",
+        "replacing-off" to "Overlay off",
+        "replacing-on" to "Overlay on",
         "rest-edge" to "On the %s",
+        "rest-loose" to "Wherever you leave it",
         "rest-put" to "Drag the button up or down, or across to the other side.",
         "say-into" to "Answer in",
         "say-no-language" to "Choose a language to read into first.",

@@ -2,7 +2,7 @@
   "note": "The words the settings surfaces are made of. Authored here because both platforms say them: a row named one thing in the extension and another on the phone is one product speaking with two voices, and a one-word label is only a choice for somebody who already knows what the other options are. tools/gen_types.py writes them into both.",
   "choices": {
     "layer": {
-      "name": "Replacement mode",
+      "name": "Overlay",
       "options": [
         {
           "value": "off",
@@ -140,6 +140,16 @@
           }
         },
         {
+          "value": "free",
+          "label": "Anywhere",
+          "on": [
+            "phone"
+          ],
+          "about": {
+            "phone": "it stays wherever you put it down"
+          }
+        },
+        {
           "value": "right",
           "label": "Right",
           "on": [
@@ -150,7 +160,7 @@
           }
         }
       ],
-      "note": "The button sits on this side, and the circle it carries is held away from there, so a hand is never over the word it is on."
+      "note": "The button sits on this side, and the circle it carries is held away from there, so a hand is never over the word it is on. On neither side it stays where it is left, between the two."
     }
   },
   "rows": {
@@ -163,7 +173,7 @@
       "about": "the default is what happens on sites you have not decided about"
     },
     "layer": {
-      "name": "Replacement mode",
+      "name": "Overlay",
       "about": ""
     },
     "density": {
@@ -227,8 +237,8 @@
       "about": "what the word means, in the language below"
     },
     "lens": {
-      "name": "The overlay button",
-      "about": "Hold it to stop replacing words and hold it again to carry on. It wears the accent colour while it is replacing."
+      "name": "The sidebutton",
+      "about": "Hold it to turn the overlay off and hold it again to bring it back. It wears the accent colour while the overlay is on."
     },
     "side": {
       "name": "Which side",
@@ -236,7 +246,7 @@
     },
     "rest": {
       "name": "Where the button sits",
-      "about": "which side it waits on, and whether it stays put"
+      "about": "which side it waits on, or neither, and whether it stays put"
     },
     "rest-pin": {
       "name": "Pin",
@@ -252,11 +262,11 @@
     },
     "lens-hold": {
       "name": "Hold it",
-      "about": "The whole screen in your own language; hold it again to put the screen back"
+      "about": "Turns the overlay off, and on again; the button wears the accent colour while it is on"
     },
     "lens-tap": {
       "name": "Tap it",
-      "about": "Ask for the word for something, in the middle of what you are reading"
+      "about": "Ask for the word for something, in the middle of what you are reading; tap it again to put the card away"
     },
     "touch": {
       "name": "Touching a word",
@@ -332,9 +342,10 @@
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
-    "replacing-off": "Words left as they are",
-    "replacing-on": "Replacing words",
+    "replacing-off": "Overlay off",
+    "replacing-on": "Overlay on",
     "rest-edge": "On the %s",
+    "rest-loose": "Wherever you leave it",
     "no-direction": "No dictionary here for %s, so words cannot be turned into it. The words show how they sound instead.",
     "service-stopped": "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
     "rest-put": "Drag the button up or down, or across to the other side.",

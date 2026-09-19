@@ -173,8 +173,22 @@ class HoverController(
             Rect(0, 0, wm.defaultDisplay.width, wm.defaultDisplay.height)
         }
 
+    /**
+     * When a finger last came down on the button.
+     *
+     * Read from outside to tell one touch from two: a tap on the button while a panel of ours
+     * is open is a single touch that both closes the panel, by landing outside it, and
+     * reaches the button, which would open it again.
+     */
+    @Volatile
+    var touchedDownAt = 0L
+        private set
+
     /** Which side the reader keeps the button on, which is the hand they hold the phone in. */
     private fun restsRight(): Boolean = SettingsStore.current.side != "left"
+
+    /** Whether the button may sit anywhere, which is to say it stays where it is put. */
+    private fun loose(): Boolean = SettingsStore.current.side == "free"
 
     /**
      * Where the button waits, as the top left of a button this big.
@@ -194,12 +208,18 @@ class HoverController(
         val settings = SettingsStore.current
         val margin = dp(EDGE_DP).roundToInt()
         val foot = dp(FOOT_DP).roundToInt()
-        val x = if (restsRight()) edges.width() - size - margin else margin
+        // Free to sit anywhere, it does not travel at all: where it was let go is where it
+        // waits, held inside the screen so a button dropped half over an edge is still one.
+        val x = when {
+            loose() && markX >= 0 -> markX.coerceIn(0, (edges.width() - size).coerceAtLeast(0))
+            restsRight() -> edges.width() - size - margin
+            else -> margin
+        }
         // Above whatever the system has put over the bottom of the screen, which is the
         // keyboard when one is open and the gesture strip otherwise.
         val floor = (keyboardTop().takeIf { it > 0 } ?: (edges.height() - foot)) - size - margin
         val y = when {
-            settings.pin -> (settings.restY * edges.height()).roundToInt() - size / 2
+            settings.pin && !loose() -> (settings.restY * edges.height()).roundToInt() - size / 2
             markY >= 0 -> markY
             else -> (HOME_DOWN * edges.height()).roundToInt() - size / 2
         }
@@ -502,6 +522,7 @@ class HoverController(
         override fun onTouch(v: View, event: MotionEvent): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    touchedDownAt = android.os.SystemClock.uptimeMillis()
                     downX = event.rawX
                     downY = event.rawY
                     holding = true

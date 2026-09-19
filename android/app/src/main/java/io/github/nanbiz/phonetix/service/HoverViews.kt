@@ -48,7 +48,9 @@ open class HoverBubbleView(context: Context) : View(context) {
 
     // The handle is the mark in one colour and see-through: parked over a conversation it
     // stays quiet, a shape rather than a full-colour badge sitting on someone's words.
-    private val mark = ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.mipmap.ic_launcher_foreground)
+    // The glyph alone, without the brackets the launcher icon sets it between: at the size of
+    // a fingertip those are two bars with something small in the middle of them.
+    private val mark = ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.mipmap.ic_mark)
 
     /** Whether a finger is on it: parked it stays quieter than the conversation under it. */
     var active: Boolean = false

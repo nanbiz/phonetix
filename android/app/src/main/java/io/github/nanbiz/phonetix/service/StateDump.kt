@@ -73,6 +73,13 @@ object StateDump {
             .put("language", it.language)
             .put("before", it.before)
             .put("rect", rect(it.rect))
+            // The colours it is drawn in, and whether they were read off the screen at all.
+            // The log says this too, in one line naming every word on the page - which a
+            // loaded device drops from its own buffer, leaving a check to conclude that a
+            // page carrying sixty transcriptions carries none.
+            .put("bg", it.background and 0xFFFFFF)
+            .put("ink", it.ink and 0xFFFFFF)
+            .put("sampled", it.background != 0 && it.ink != 0)
     }
 
     fun boxes(list: List<io.github.nanbiz.phonetix.core.WordBox>, limit: Int = 200): JSONArray {

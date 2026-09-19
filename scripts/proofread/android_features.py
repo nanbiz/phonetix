@@ -6,6 +6,10 @@ tapping a word, moving the frequency bar, choosing which apps to see transcripti
 and checks the overlay actually obeys them on a device rather than in a unit test.
 
   PHONETIX_ANDROID_SERIAL=emulator-5600 uv run scripts/proofread/android_features.py
+
+One part at a time, by name, for a fix to one of them:
+
+  ... android_features.py colours language
 """
 # The image library is declared here rather than asked of the caller: a check that needs
 # it fails halfway through otherwise, after the emulator has already been driven.
@@ -68,20 +72,55 @@ def show(dev, settle=2.5, **extras):
     for attempt in range(5):
         dev.clear_log()
         dev.surface(mode=mode, **extras)
-        time.sleep(settle)
-        log = dev.log()
-        # The surface says when it applied the setting. Only a reading taken after that
-        # describes the setting under test; anything earlier describes the previous one.
-        # And this page, not the one before it: the surface says which it is, and a page that
-        # has been asked for does not always come forward at once on a loaded device.
-        applied = [int(m) for m, said in re.findall(r"SETTINGS (\d+) mode=(\S+)", log)
-                   if said == mode]
-        if not applied:
-            continue
-        after = [(t, b) for t, b in dev.box_frames(log) if t >= applied[-1]]
-        if after:
-            return after[-1][1], log
+        # Watched rather than slept through. What a page costs between being asked for and
+        # being read is the machine's business: a cold app on a loaded host takes several
+        # times what a warm one does, and a check that looks once reports a page that draws
+        # nothing while it is still being drawn.
+        until = time.time() + settle * 3
+        while True:
+            time.sleep(min(1.0, settle))
+            log = dev.log()
+            # The surface says when it applied the setting. Only a reading taken after that
+            # describes the setting under test; anything earlier describes the previous one.
+            # And this page, not the one before it: the surface says which it is, and a page
+            # that has been asked for does not always come forward at once on a loaded device.
+            applied = [int(m) for m, said in re.findall(r"SETTINGS (\d+) mode=(\S+)", log)
+                       if said == mode]
+            after = ([(t, b) for t, b in dev.box_frames(log) if t >= applied[-1]]
+                     if applied else [])
+            if after:
+                return after[-1][1], log
+            if time.time() > until:
+                break
+        # Nothing in the log does not mean nothing on the screen. The line naming every word
+        # of a page is thousands of characters long, and a loaded device drops it from its own
+        # buffer; the overlay's own account of what it is showing is asked for instead.
+        drawn = drawn_now()
+        if drawn:
+            return drawn, log
     return {}, log
+
+
+def drawn_now():
+    """What the overlay says is on the screen, in the shape the log gives."""
+    serial = State.device()
+    dumped = State.ask(serial)
+    if not dumped:
+        return {}
+    shown = (State.fetch(serial, dumped).get("overlay") or {}).get("boxes") or []
+    out = {}
+    for i, box in enumerate(shown):
+        rect = box.get("rect") or {}
+        if not rect:
+            continue
+        out[f"{box.get('word', '')}#{i}"] = {
+            "word": box.get("word", ""),
+            "rect": (rect["left"], rect["top"], rect["right"], rect["bottom"]),
+            "bg": box.get("bg", 0),
+            "ink": box.get("ink", 0),
+            "sampled": bool(box.get("sampled")),
+        }
+    return out
 
 
 def reset(dev):
@@ -195,7 +234,14 @@ def check_tooltip(r, dev):
     # The last report only. A card settles more than once - it goes up with a machine's voice
     # and is told about a person's recording a moment later - and pooling every report of a
     # run reads as a card carrying both at once, which is a card that never existed.
+    # Waited for rather than read the once: the card lays itself out in its own composition,
+    # which on a busy machine lands later than the moment after the press this used to read.
     reports = re.findall(r"CARD .*", log)
+    for _ in range(24):
+        if reports:
+            break
+        time.sleep(0.5)
+        reports = re.findall(r"CARD .*", dev.log())
     log = reports[-1] if reports else log
     laid_out = re.findall(r"\[([^@\]]+)@(\d+),(\d+),(\d+),(\d+)\]", log)
     r.check(bool(laid_out), "card: it renders something", "the card reported no laid-out content")
@@ -734,10 +780,23 @@ def check_shade(r, dev):
     try:
         dev.clear_log()
         shell("cmd", "statusbar", "expand-notifications")
-        time.sleep(3.5)
-        under = dev.boxes()
+        # What is on the screen now, asked of the overlay itself and waited for. The last
+        # line in the log is what was drawn when it was written: on a loaded machine the
+        # service can still be hearing about the shade when a check that sleeps once looks,
+        # and a stale line then reads as a screenful of transcriptions over the notifications.
+        under = []
+        waited = 0.0
+        for _ in range(8):
+            time.sleep(0.75)
+            waited += 0.75
+            serial = State.device()
+            dumped = State.ask(serial)
+            shown = (State.fetch(serial, dumped).get("overlay") or {}) if dumped else {}
+            under = shown.get("boxes") or []
+            if not under and shown.get("chipsShown", 0) == 0:
+                break
         r.check(not under, "the shade: nothing is drawn over it",
-                f"{len(under)} transcriptions were still on the screen")
+                f"{len(under)} transcriptions were still on the screen {waited:.0f}s after it opened")
     finally:
         dev.clear_log()
         shell("cmd", "statusbar", "collapse")
@@ -1241,28 +1300,34 @@ def main():
     time.sleep(2)
 
     r = Results()
-    print("the frequency bar")
-    check_density(r, dev)
-    print("the card a tap opens")
-    check_tooltip(r, dev)
-    print("which apps")
-    check_scope(r, dev)
-    print("the master switch")
-    check_switch(r, dev)
-    print("the colours")
-    check_colors(r, dev)
-    check_unreadable_colors(r, dev)
-    print("the language of the page")
-    check_language(r, dev)
-    print("an app nobody wrote for this test")
-    check_a_real_app(r, dev)
-    print("the notification shade")
-    check_shade(r, dev)
-    print("the button that switches it off")
-    check_accessibility_button(r, dev)
-    print("the app's own screen")
-    check_settings_screen(r, dev)
-    check_switch_in_ui(r, dev)
+    # Each part of the product, under the name it is printed by. Named so that one of them
+    # can be run on its own: a whole pass takes half an hour, and a fix to one part should
+    # not cost that to see.
+    parts = (
+        ("bar", "the frequency bar", (check_density,)),
+        ("card", "the card a tap opens", (check_tooltip,)),
+        ("apps", "which apps", (check_scope,)),
+        ("switch", "the master switch", (check_switch,)),
+        ("colours", "the colours", (check_colors, check_unreadable_colors)),
+        ("language", "the language of the page", (check_language,)),
+        ("real", "an app nobody wrote for this test", (check_a_real_app,)),
+        ("shade", "the notification shade", (check_shade,)),
+        ("button", "the button that switches it off", (check_accessibility_button,)),
+        ("screen", "the app's own screen", (check_settings_screen, check_switch_in_ui)),
+    )
+    wanted = [a for a in sys.argv[1:] if not a.startswith("-")]
+    unknown = [a for a in wanted if a not in {name for name, _, _ in parts}]
+    if unknown:
+        raise SystemExit(
+            f"no such part: {', '.join(unknown)}. "
+            f"There is {', '.join(name for name, _, _ in parts)}."
+        )
+    for name, said, checks in parts:
+        if wanted and name not in wanted:
+            continue
+        print(said)
+        for check in checks:
+            check(r, dev)
 
     if os.environ.get("PHONETIX_LIST"):
         for name in r.asked:

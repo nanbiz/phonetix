@@ -39,7 +39,14 @@
 .seg button { flex: 1 1 0; justify-content: center; min-width: max-content; }
 .r-wide .seg { display: flex; width: 100%; }
 .seg button.on { background: var(--color-accent); color: var(--color-accent-ink); }
-.slider { width: 100%; accent-color: var(--color-accent); margin: 0; cursor: pointer; }
+/* The fill is ours, not the browser's: a native range fills to the middle of its handle, so
+   a bar at its maximum reads as not quite full under a label saying it is. */
+.slider { width: 100%; margin: 0; cursor: pointer; appearance: none; -webkit-appearance: none; background: transparent; }
+.slider::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(to right, var(--color-accent) var(--filled, 0%), var(--color-chip-bg) var(--filled, 0%)); }
+.slider::-moz-range-track { height: 6px; border-radius: 999px; background: linear-gradient(to right, var(--color-accent) var(--filled, 0%), var(--color-chip-bg) var(--filled, 0%)); }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -6px; border-radius: 50%; background: var(--color-accent); border: none; }
+.slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--color-accent); border: none; }
+.slider:focus-visible { outline: var(--border-width) solid var(--color-accent); outline-offset: 4px; }
 /* The switch is a checkbox wearing a switch, rather than a div that has to be taught what a
    checkbox already knows: the keyboard, the screen reader and the form all still work. */
 .toggle { appearance: none; -webkit-appearance: none; margin: 0; cursor: pointer; width: var(--toggle-width); height: var(--toggle-height); border-radius: var(--radius-chip); background: var(--color-chip-bg); position: relative; display: inline-block; flex: 0 0 auto; }
@@ -128,6 +135,10 @@
 .nav .n-name { font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); }
 .nav .n-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .nav .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-ink-faint); font-size: var(--font-size-ipa); }
+/* A row that belongs to the one above it: set in, so the eye reads it as part of that switch
+   rather than as the next question. */
+.nav.small { padding-left: var(--space-6); min-height: 0; }
+.nav.small .n-name { font-weight: var(--weight-regular); font-size: var(--font-size-small); }
 /* The way back out of one, which is the first thing on the screen it leads to. */
 .back { display: inline-flex; align-items: center; gap: var(--space-1); font: inherit; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: none; border: none; padding: var(--space-2) var(--space-4); cursor: pointer; }
 .back:hover { color: var(--color-ink); }

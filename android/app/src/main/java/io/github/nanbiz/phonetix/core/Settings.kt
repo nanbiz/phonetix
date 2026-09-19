@@ -68,7 +68,8 @@ data class Settings(
      * only decorates.
      */
     val lens: Boolean = true,
-    /** Which side of the screen the mark rests on: "right" or "left". The hand is taken to
+    /** Which side of the screen the mark rests on: "right", "left", or "free" for neither,
+     *  where it is left wherever it was last put down. The hand is taken to
      *  come onto the screen from that corner, and the circle the mark carries is held away
      *  from it, so the hand is never over the word it is on. */
     val side: String = "right",
@@ -238,7 +239,9 @@ object SettingsStore {
     /** How far down its side the button waits: on the screen whatever is asked for. */
     fun setRestY(y: Float) = update { it.copy(restY = y.coerceIn(0f, 1f)) }
 
-    fun setSide(v: String) = update { it.copy(side = if (v == "left") "left" else "right") }
+    fun setSide(v: String) = update {
+        it.copy(side = if (v == "left" || v == "free") v else "right")
+    }
 
     fun setLens(v: Boolean) = update { it.copy(lens = v) }
     /** Read one language in one accent, leaving the choice made for every other alone. */

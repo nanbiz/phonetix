@@ -38,6 +38,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 
     private fun dp(value: Float) = (value * density).toInt()
 
+    private companion object {
+        /** The square the microphone is given, and the drawing set inside it, in dp. */
+        const val TOUCH_DP = 40f
+        const val ICON_DP = 22f
+    }
+
     /**
      * Which language the answer comes back in.
      *
@@ -91,11 +97,20 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         textSize = 16f
     }
 
-    /** Says the phrase instead of typing it, at the end of the field it fills. */
-    private val mic = TextView(context).apply {
-        text = "🎤"
-        textSize = 18f
-        gravity = Gravity.CENTER
+    /**
+     * Says the phrase instead of typing it. It sits at the end of the field it fills, which
+     * is where a microphone means "speak this" rather than anything about the panel.
+     *
+     * A drawn microphone rather than the emoji for one: an emoji is whatever face the
+     * device's font gives it, at its own weight and in its own colours, beside controls that
+     * are all drawn in the palette.
+     */
+    private val mic = android.widget.ImageView(context).apply {
+        setImageResource(io.github.nanbiz.phonetix.R.drawable.ic_mic)
+        imageTintList = android.content.res.ColorStateList.valueOf(palette.inkMuted.toInt())
+        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        val inset = dp((TOUCH_DP - ICON_DP) / 2f)
+        setPadding(inset, inset, inset, inset)
     }
 
     private val answer = OverlayHost(context)
@@ -117,7 +132,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         }
         setPadding(dp(14f), 0, dp(4f), 0)
         addView(field, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        addView(mic, LayoutParams(dp(40f), dp(40f)))
+        addView(mic, LayoutParams(dp(TOUCH_DP), dp(TOUCH_DP)))
     }
 
     /** Called with what was typed, as it is typed. */
@@ -244,7 +259,9 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 
     /** Whether the phone is listening right now, which the microphone shows. */
     fun listening(on: Boolean) {
-        mic.alpha = if (on) 1f else 0.7f
+        mic.imageTintList = android.content.res.ColorStateList.valueOf(
+            (if (on) palette.accent else palette.inkMuted).toInt()
+        )
     }
 
     /**

@@ -16,11 +16,21 @@
   }
 
   let { value, min = 0, max, step = 1, label, ends, change }: Props = $props();
+
+  /**
+   * How much of the bar is filled, as a share of it.
+   *
+   * Drawn here rather than left to the browser: a native range fills its track up to the
+   * middle of the handle, so a bar dragged all the way to the end is still short of the end
+   * by half a handle - it says "every word" above a bar that is visibly not full.
+   */
+  let filled = $derived(max > min ? ((value - min) / (max - min)) * 100 : 0);
 </script>
 
 <input
   class="slider"
   type="range"
+  style="--filled: {filled}%"
   {min}
   {max}
   {step}
