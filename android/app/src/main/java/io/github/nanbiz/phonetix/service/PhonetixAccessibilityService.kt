@@ -455,12 +455,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (BuildConfig.DEBUG) {
                         android.util.Log.d(
                             "Phonetix",
-                            "LENS enabled=${s.enabled} wanted=${s.lens} up=${hover.showing}",
+                            "LENS enabled=${s.enabled} up=${hover.showing}",
                         )
                     }
                     // Put up where there is something to read with it: the pass that reads
                     // the screen takes it away again over anything this does not annotate.
-                    if (s.enabled && s.lens) hover.show() else hover.hide()
+                    if (s.enabled) hover.show() else hover.hide()
                     overlay.applyTouchability()
                     scrollOnly = false
                     schedule(0L)
@@ -838,7 +838,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("into", settings.into)
                 .put("learning", settings.learning)
                 .put("recent", org.json.JSONArray(settings.recent))
-                .put("lens", settings.lens)
                 .put("side", settings.side)
                 .put("pin", settings.pin)
                 .put("restY", settings.restY)
@@ -1201,7 +1200,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Put up where it is missing, and put back where it belongs where it is not: a
         // keyboard opening over the foot of the screen swallows a button sitting there, and
         // the screen it opened over is read again on this same pass.
-        if (wanted.enabled && wanted.lens) main.post { hover.show() }
+        if (wanted.enabled) main.post { hover.show() }
         val t0 = android.os.SystemClock.uptimeMillis()
 
         // A scroll moved the words it did not change, so the nodes found last time are
@@ -2853,7 +2852,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (top != lastKeyboardTop) {
             lastKeyboardTop = top
             val now = SettingsStore.current
-            if (now.enabled && now.lens) main.post { hover.show() }
+            if (now.enabled) main.post { hover.show() }
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "KEYBOARD at $top")
             }
@@ -3035,6 +3034,16 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     /** The app itself, from the mark on the panel. */
+    /** Open the app on the microphone, which is the only place the phone will ask for it. */
+    private fun askForTheMicrophone() {
+        val intent = android.content.Intent(this, MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(MainActivity.EXTRA_ASK_MICROPHONE, true)
+        runCatching { startActivity(intent) }
+            .onFailure { android.util.Log.w("Phonetix", "the app would not open", it) }
+    }
+
     private fun openApp() {
         val intent = android.content.Intent(this, MainActivity::class.java)
             .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -3124,7 +3133,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Saying it rather than typing it, where the phone can hear: the words go into the
         // field as they arrive and the finished phrase is asked for without being pressed.
         val hearing = Dictation(this)
-        if (hearing.canListen()) {
+        // Offered wherever the phone can hear at all. Permission to use the microphone is
+        // asked for by the app, which is the only thing that can ask: a service has no screen
+        // to put the request on. Hiding the microphone until then meant a reader who had
+        // never opened that screen had no way to find out the phone could listen, which is
+        // exactly what happened - the panel simply had no microphone on it.
+        if (hearing.canHear()) {
             hearing.onPartial = { heard -> main.post { panel.heard(heard) } }
             hearing.onFinal = { phrase ->
                 main.post {
@@ -3134,7 +3148,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
             }
             hearing.onState = { on -> main.post { panel.listening(on) } }
-            panel.onDictate = { hearing.start(into.ifEmpty { Language.OURS }) }
+            panel.onDictate = {
+                if (hearing.hasPermission()) {
+                    hearing.start(into.ifEmpty { Language.OURS })
+                } else {
+                    // The app asks, because a runtime permission needs a screen. The panel
+                    // stays where it is: the reader comes back to what they were typing.
+                    askForTheMicrophone()
+                }
+            }
             listener = hearing
         } else {
             panel.onDictate = null

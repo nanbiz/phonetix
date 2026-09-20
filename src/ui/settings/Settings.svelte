@@ -304,46 +304,30 @@
   <Trouble {trouble} />
 
   {#if where === 'phone'}
-    <!-- The button itself, and where it lives, before anything it draws: with the button off
-         there is nothing on the screen to press, so a reader who cannot find it is looking
-         for this row first. A phone has no pointer to rest on a word, so the button is the
-         way a reader asks. -->
+    <!-- Where the button sits, under the switch that puts it there: the switch above is the
+         button, so this belongs to it rather than standing beside it as a question of its
+         own. -->
     <div class="rows">
-      <Row name={ROWS.lens.name} row="lens" about={ROWS.lens.about}>
-        {#snippet control()}
-          <Toggle on={settings.lens} label="the sidebutton" change={(on) => change('lens', on)} />
-        {/snippet}
-      </Row>
-
-      <!-- Everything about where the button lives is behind one row: which side, or
-           anywhere at all, whether it stays put, and where it stays. -->
-      {#if settings.lens}
-        <NavRow
-          name={ROWS.rest.name}
-          row="rest"
-          small
-          about={settings.side === 'free'
-            ? SAYS['rest-loose']
-            : settings.pin
-              ? SAYS['rest-edge'].replace(
-                  '%s',
-                  labelOf(SIDE_CHOICES, settings.side).toLowerCase()
-                )
-              : labelOf(SIDE_CHOICES, settings.side)}
-          open={() => (view = 'rest')}
-        />
-      {/if}
+      <NavRow
+        name={ROWS.rest.name}
+        row="rest"
+        small
+        about={settings.side === 'free'
+          ? SAYS['rest-loose']
+          : settings.pin
+            ? SAYS['rest-edge'].replace(
+                '%s',
+                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
+              )
+            : labelOf(SIDE_CHOICES, settings.side)}
+        open={() => (view = 'rest')}
+      />
     </div>
   {/if}
 
-  <!-- What this does, which is two things and the one combination of them worth having. Where
-       the answer goes is not a choice: it takes the word's place. -->
+  <!-- What the overlay puts over a word: one switch each, and whether it is on at all is the
+       press held on the button rather than a third switch here. -->
   <div class="rows">
-    <!-- What a word is replaced by: the two things it can be replaced by, and nothing above
-         them saying whether either is on. A row of four modes made the reader work out what
-         "both" was both of; a switch over the two said only what the two already say between
-         them. Neither of these on is the replacing off, which is what the button's own colour
-         and the press held on it are about. -->
     <Row name={ROWS.ipa.name} row="ipa" about={ROWS.ipa.about}>
       {#snippet control()}
         <Toggle

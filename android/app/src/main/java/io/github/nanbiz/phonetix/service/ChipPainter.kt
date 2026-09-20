@@ -72,6 +72,11 @@ class ChipPainter {
         val height = where.height()
         val width = where.width()
         if (height <= 0f || width <= 0f) return
+        // Lifted off the page: nothing is drawn at all, and what shows through is the app's
+        // own word in the app's own type. Painting the word again over its own patch was the
+        // same word twice - ours a shade brighter and a weight heavier than the page it sat
+        // in - where drawing nothing is the page itself.
+        if (revealed) return
 
         // The word's own colours, read off the screen, are what make a replacement look like
         // the text it stands in for. The palette below is only for when they could not be
@@ -82,8 +87,6 @@ class ChipPainter {
             else -> if (dark) Color.rgb(0x1B, 0x14, 0x10) else Color.rgb(0xF7, 0xEF, 0xDD)
         }
         val fg = when {
-            revealed && sampled -> box.ink
-            revealed -> if (dark) Color.rgb(0xF5, 0xED, 0xE0) else Color.rgb(0x2B, 0x21, 0x17)
             sampled -> box.ink
             else -> if (dark) Color.rgb(0xFB, 0xBF, 0x24) else Color.rgb(0xB4, 0x53, 0x09)
         }
@@ -109,7 +112,7 @@ class ChipPainter {
             bg.color = chip
         }
 
-        val label = if (revealed) box.word else box.ipa
+        val label = box.ipa
         if (label.isEmpty()) return
 
         // The width is the space the original word occupied, so the type is what gives:

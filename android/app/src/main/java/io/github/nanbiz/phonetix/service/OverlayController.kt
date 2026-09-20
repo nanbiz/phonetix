@@ -18,17 +18,18 @@ import io.github.nanbiz.phonetix.core.WordBox
 import kotlin.math.roundToInt
 
 /**
- * The transcriptions drawn over the app in front, one small window per word.
+ * The transcriptions drawn over the app in front, and the touches they take.
  *
- * A window per word rather than one sheet over the screen, for two reasons. It can be
- * touched: a full-screen sheet would either swallow every tap meant for the app beneath or,
- * made untouchable, refuse the taps meant for the transcriptions themselves, while a window
- * that covers only a word takes the taps on that word and leaves the rest of the screen
- * alone. And it covers exactly the word: the window is the word's own rectangle, so nothing
- * of the original shows around the edges.
+ * Two different things, and one window each rather than one window per word. The whole
+ * screenful is painted on a single layer: a window per word is a hard ceiling - a page with
+ * more words than the platform will give windows was transcribed in part and the rest left
+ * bare - and every pass moved and repainted each of them, a call into the window manager
+ * apiece. A hundred and thirty of those exhausted the graphics buffers of a device outright.
  *
- * The windows are pooled and moved rather than added and removed, because the words shift
- * on every scroll and window churn is the expensive part.
+ * Touches are taken by an invisible window over each line of text, not each word. A line is
+ * a dozen words, so a screenful is a dozen windows instead of a hundred, and a touch inside
+ * one is matched to the word nearest it - which also means a tap answers a word the bar did
+ * not pick, and answers one while nothing at all is being drawn.
  */
 class OverlayController(
     private val context: Context,
@@ -36,7 +37,7 @@ class OverlayController(
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
-    private val chips = ArrayList<ChipView>(MAX_CHIPS)
+    private val rows = ArrayList<TouchRow>(MAX_ROWS)
     private val motion = MotionLayer(context)
     private var lastRendered: List<WordBox> = emptyList()
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
@@ -64,11 +65,7 @@ class OverlayController(
     private var still: StillLayer? = null
 
     private val putAway = Runnable {
-        for (c in chips) {
-            if (c.visibility == View.GONE) continue
-            c.moveToken++
-            c.visibility = View.GONE
-        }
+        for (c in rows) if (c.visibility != View.GONE) c.visibility = View.GONE
     }
 
     /**
@@ -90,17 +87,11 @@ class OverlayController(
     fun state(): org.json.JSONObject = org.json.JSONObject()
         .put("silent", silent)
         .put("inMotion", motion.isRunning)
-        .put("chips", chips.size)
-        // Visible and solid: a window faded by [hideNow] is still up for a moment afterwards,
-        // and what this reports is what a reader can see. The layer's words count the same -
-        // a word is on the screen whether it was drawn on a window of its own or with the
-        // rest of the page - and a check that counted only the windows read a page drawn
-        // whole as a page drawn not at all.
-        .put(
-            "chipsShown",
-            chips.count { it.visibility == View.VISIBLE && it.alpha > 0f } +
-                (still?.drawn() ?: 0),
-        )
+        .put("chips", rows.size)
+        // What a reader can see, which is not what is up: the windows that take touches
+        // paint nothing at all, and with the overlay off they are all there is.
+        .put("chipsShown", still?.drawn() ?: 0)
+        .put("touchable", rows.count { it.visibility == View.VISIBLE })
         .put("words", lastRendered.size)
         .put("boxes", StateDump.boxes(lastRendered))
 
@@ -121,27 +112,18 @@ class OverlayController(
     }
 
     /**
-     * While the screen is moving the whole set rides on one layer instead of a window each:
-     * carrying a dozen windows would be a dozen calls to the window manager every frame,
-     * and the layer moves by shifting a canvas. The small windows come back when it stops,
-     * because those are what can be tapped.
+     * While the screen is moving the words ride on the motion layer, which follows the page
+     * by shifting a canvas rather than by moving windows.
+     *
+     * The rows that take touches go down with them: they sit where the words were, and a word
+     * that has scrolled away is not the word a touch there would now be about. They come back
+     * when the page settles, a moment later and through [putAway] rather than here, because
+     * a window's visibility is a call into the window manager on the thread that draws.
      */
     fun beginMotion() {
         if (silent || motion.isRunning) return
         main.removeCallbacks(putAway)
         takeTheLayerDown()
-        // Faded rather than taken down, for the reason [putAway] gives: there is a window
-        // per word, and changing their visibility is a call into the window manager each.
-        // Measured at the start of a scroll, ninety-six of them held the main thread - which
-        // is what draws - for 733ms, so the words stood still through the first half second
-        // of the movement they were meant to be riding. Fading is a draw and nothing more:
-        // 274ms for eighty.
-        //
-        // They do go down, a moment later and through [putAway], rather than being left up
-        // and transparent for the length of the scroll: a window nothing can see still has a
-        // surface to composite, and ninety-six of them standing through every scroll is work
-        // for no picture. [render] ends the motion and makes them solid again.
-        for (c in chips) if (c.visibility != View.GONE && c.alpha != 0f) c.alpha = 0f
         main.postDelayed(putAway, PUT_AWAY_MS)
         motion.start(lastRendered)
     }
@@ -195,18 +177,10 @@ class OverlayController(
     fun hideNow() {
         motion.stop()
         takeTheLayerDown()
-        var faded = false
-        for (c in chips) {
-            if (c.visibility == View.GONE || c.alpha == 0f) continue
-            c.moveToken++
-            c.alpha = 0f
-            faded = true
-        }
-        // Off the screen in this frame, and out of the window manager shortly after. See
-        // [putAway] for why the two are not the same thing. Always later, never here: a
-        // second hide arriving during the same transition would otherwise make exactly the
-        // call this exists to keep out of it.
-        if (!faded && chips.none { it.visibility != View.GONE }) return
+        // The rows go down after the moment that made taking them down expensive - an app
+        // coming to the front, most often - rather than in the middle of it. They draw
+        // nothing, so leaving them up for that moment shows the reader nothing at all; what
+        // it would cost is a touch landing on a row belonging to the app before.
         main.removeCallbacks(putAway)
         main.postDelayed(putAway, PUT_AWAY_MS)
     }
@@ -218,7 +192,15 @@ class OverlayController(
      * replaced still has every word to ask about - the page is simply left as its app wrote
      * it.
      */
-    fun known(boxes: List<WordBox>) = keep(boxes)
+    fun known(boxes: List<WordBox>) {
+        if (motion.isRunning) motion.stop()
+        lastRendered = boxes
+        takeTheLayerDown()
+        // Nothing is painted, and a word can still be asked about by touching it: the rows
+        // are invisible either way, so the page is the app's own and a tap on it still
+        // answers.
+        putRows(boxes)
+    }
 
     /**
      * Keep the transcriptions off the screen, and keep them off.
@@ -231,75 +213,94 @@ class OverlayController(
      */
     /** Take the transcriptions off the screen so it can be photographed without them. */
     fun holdDown(on: Boolean) {
-        if (on) hideNow() else if (lastRendered.isNotEmpty() && !silent) render(lastRendered)
+        when {
+            on -> hideNow()
+            lastRendered.isEmpty() -> Unit
+            // Nothing was painted to put back, and the rows that take touches still went
+            // down with everything else: without this a screen read while the overlay was
+            // off ended with no way to ask about any word on it.
+            silent -> known(lastRendered)
+            else -> render(lastRendered)
+        }
     }
 
     fun render(boxes: List<WordBox>) {
         // Not while this screen is being photographed for its colours: see [holdDown]. What is
         // known is kept either way, so the mark can still answer any of it.
-        //
         main.removeCallbacks(putAway)
         if (silent) {
-            keep(boxes)
+            known(boxes)
             return
         }
-        // Painting the small windows means the motion is over, whether it ended by settling
-        // or because the screen changed under it. Leaving the layer up would hide every one
-        // of them, and nothing would be tappable again.
+        // Painting means the motion is over, whether it ended by settling or because the
+        // screen changed under it.
         if (motion.isRunning) motion.stop()
         lastRendered = boxes
-        // A word can only take a touch if it has a window of its own, so that is what the
-        // words get while the reader has asked to hold one for its card - and only as many as
-        // a device will give. Everything past that, and everything at all when a hold is not
-        // wanted, goes on the one layer, which has no such limit. Either way the whole page is
-        // drawn.
-        val tappable = SettingsStore.current.touchWords
-        val wanted = when {
-            !tappable -> emptyList()
-            boxes.size > MAX_CHIPS -> boxes.subList(0, MAX_CHIPS)
-            else -> boxes
-        }
-        drawAtOnce(if (wanted.isEmpty()) boxes else boxes.subList(wanted.size, boxes.size))
+        drawAtOnce(boxes)
         // How many transcriptions are on screen, as opposed to how many were planned. The
         // two part company whenever something else owns the screen - the replaced page, a
         // card, an app we do not read - and only this says which.
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d("Phonetix", "SHOWING ${boxes.size}")
         }
-        while (chips.size < wanted.size) if (!addChip()) break
+        putRows(boxes)
+    }
+
+    /**
+     * Put an invisible window over each line of text, and take the spare ones down.
+     *
+     * A line rather than a word: a screenful of words is more windows than a device will
+     * give, and every one of them is a call into the window manager on every pass, while the
+     * lines of a screen are a dozen. What a touch inside one is about is worked out from
+     * where it landed, so the words need no window of their own to be asked about.
+     */
+    private fun putRows(boxes: List<WordBox>) {
+        // Whatever was going to take the rows down is out of date: these are the rows of the
+        // screen in front now. Without this a read that landed inside the moment [hideNow]
+        // allows for a transition had its rows taken down again by that transition's own
+        // delayed call, and the page ended up with nothing to touch.
+        main.removeCallbacks(putAway)
+        val wanted =
+            if (!SettingsStore.current.touchWords) emptyList()
+            else lines(boxes).take(MAX_ROWS)
+        while (rows.size < wanted.size) if (!addRow()) break
         for (i in wanted.indices) {
-            val chip = chips.getOrNull(i) ?: break
-            val box = wanted[i]
-            val says = chip.bind(box, reveal)
-            // Changing what a window says takes effect on the next draw; moving it has to
-            // go through the window manager and lands a frame later. Do both to a visible
-            // window and it paints the new word at the old word's place for that frame,
-            // which is a transcription flashing somewhere it has no business being. So a
-            // window that has to move is hidden first and shown again only once the move
-            // has actually been applied.
-            //
-            // Only a window that is going to say something different, though. One that is
-            // simply following its word says the same thing at the old place as at the new,
-            // so a frame at the old place is a frame of it being a pixel or two behind
-            // rather than a frame of it being wrong - and hiding it instead is a frame of
-            // nothing at all. Photographed while the page moved with the words back on these
-            // windows, that is most of the screen bare: every word moves every pass, so
-            // every window spent every other frame invisible.
-            if (chip.alpha != 1f) chip.alpha = 1f
-            if (place(chip, box.rect) && says) {
-                chip.visibility = View.INVISIBLE
-                val token = ++chip.moveToken
-                chip.post { if (chip.moveToken == token) chip.visibility = View.VISIBLE }
-            } else if (chip.visibility != View.VISIBLE) {
-                chip.visibility = View.VISIBLE
+            val row = rows.getOrNull(i) ?: break
+            place(row, wanted[i])
+            if (row.visibility != View.VISIBLE) row.visibility = View.VISIBLE
+        }
+        for (i in wanted.size until rows.size) {
+            if (rows[i].visibility != View.GONE) rows[i].visibility = View.GONE
+        }
+    }
+
+    /**
+     * The words grouped into the lines they sit on, as one rectangle each.
+     *
+     * By where they are rather than by what the app called a line: the boxes are what is
+     * actually on the screen, and two of them on the same row of pixels are one line to a
+     * finger whatever the tree they came out of said.
+     */
+    private fun lines(boxes: List<WordBox>): List<RectF> {
+        if (boxes.isEmpty()) return emptyList()
+        val sorted = boxes.sortedWith(compareBy({ it.rect.top }, { it.rect.left }))
+        val out = ArrayList<RectF>(16)
+        var run: RectF? = null
+        var height = 0f
+        for (b in sorted) {
+            val r = b.rect
+            val same = run != null && kotlin.math.abs(r.centerY() - run.centerY()) <
+                maxOf(height, r.height()) * SAME_LINE
+            if (same && run != null) {
+                run.union(r)
+            } else {
+                run?.let { out.add(it) }
+                run = RectF(r)
+                height = r.height()
             }
         }
-        for (i in wanted.size until chips.size) {
-            if (chips[i].visibility != View.GONE) {
-                chips[i].moveToken++
-                chips[i].visibility = View.GONE
-            }
-        }
+        run?.let { out.add(it) }
+        return out
     }
 
     /**
@@ -344,56 +345,47 @@ class OverlayController(
     /**
      * Take touches, or stop taking them, because the reader has said which they want.
      *
-     * The flag is fixed when a window is added, and these are pooled and kept for the life of
-     * the service, so a setting changed while they are up reaches nothing without this.
+     * The rows exist only to take touches, so the answer is whether they are there at all.
      */
     fun applyTouchability() {
-        val take = SettingsStore.current.touchWords
-        val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        for (c in chips) {
-            val lp = c.layoutParams as? WindowManager.LayoutParams ?: continue
-            val next = if (take) lp.flags and flag.inv() else lp.flags or flag
-            if (next == lp.flags) continue
-            lp.flags = next
-            runCatching { wm.updateViewLayout(c, lp) }
-        }
+        putRows(lastRendered)
     }
 
-    /** Repaint every chip, so revealing one word also un-reveals the last one. */
+    /** Draw the page again, which is how a word lifted off it goes back on. */
     private fun refresh() {
-        for (c in chips) if (c.visibility == View.VISIBLE) c.invalidate()
+        still?.invalidate()
     }
 
     fun destroy() {
         motion.stop()
         still?.let { v -> runCatching { wm.removeView(v) } }
         still = null
-        for (c in chips) runCatching { wm.removeView(c) }
-        chips.clear()
+        for (c in rows) runCatching { wm.removeView(c) }
+        rows.clear()
     }
 
-    private fun addChip(): Boolean {
-        val v = ChipView(context, reveal, onWordTapped) { refresh() }
+    private fun addRow(): Boolean {
+        val v = TouchRow(context, reveal, { x, y -> wordAt(x, y) }, onWordTapped) { refresh() }
         OverlayMute.apply(v)
         v.visibility = View.GONE
         val ok = runCatching { wm.addView(v, params(0, 0, 1, 1)) }.isSuccess
         if (!ok) return false
-        chips.add(v)
+        rows.add(v)
         return true
     }
 
     /** Applies the window's geometry; true when it actually had to move. */
-    private fun place(chip: ChipView, rect: RectF): Boolean {
-        // A hair of bleed on each side so an antialiased edge of the original word cannot
-        // peek out from under its replacement, while the width still matches the word.
+    private fun place(row: TouchRow, rect: RectF): Boolean {
+        // A hair of bleed on each side, so a tap that lands on the very edge of a word is
+        // still a tap on the line it belongs to.
         val x = (rect.left - BLEED).roundToInt()
         val y = (rect.top - BLEED).roundToInt()
         val w = (rect.width() + BLEED * 2).roundToInt().coerceAtLeast(1)
         val h = (rect.height() + BLEED * 2).roundToInt().coerceAtLeast(1)
-        val lp = chip.layoutParams as? WindowManager.LayoutParams ?: return false
+        val lp = row.layoutParams as? WindowManager.LayoutParams ?: return false
         if (lp.x == x && lp.y == y && lp.width == w && lp.height == h) return false
         lp.x = x; lp.y = y; lp.width = w; lp.height = h
-        runCatching { wm.updateViewLayout(chip, lp) }
+        runCatching { wm.updateViewLayout(row, lp) }
         return true
     }
 
@@ -427,10 +419,18 @@ class OverlayController(
     ).apply { gravity = Gravity.TOP or Gravity.START }
 
     private companion object {
-        /** How long the faded windows are left up for, past the transition that made taking
-         *  them down expensive. */
+        /** How long the rows are left up for, past the transition that made taking them down
+         *  expensive. */
         const val PUT_AWAY_MS = 700L
-        const val MAX_CHIPS = 96
+
+        /** How many lines of a screen can take touches. A screenful of text is a dozen or
+         *  two; the cap is what keeps a page that reports hundreds of stray boxes from
+         *  asking the platform for hundreds of windows. */
+        const val MAX_ROWS = 32
+
+        /** How far apart two words' middles may be, as a share of a line's height, and still
+         *  be the same line to a finger. */
+        const val SAME_LINE = 0.6f
         const val BLEED = 1.5f
     }
 }
@@ -440,59 +440,59 @@ class OverlayController(
  * a tap puts the original word back for a moment, which is the phone's answer to hovering
  * a word in the browser.
  */
-/** Which word is showing itself rather than its transcription, and until when. */
+/**
+ * Which words are showing themselves rather than their transcriptions, and until when.
+ *
+ * A press held on any word lifts the whole overlay for a moment: what the reader wants then
+ * is the page as it was written, and lifting the one word under a fingertip leaves them
+ * reading around their own hand.
+ */
 class RevealState {
-    var word: String? = null
+    var all: Boolean = false
     var until: Long = 0L
 
-    fun isRevealed(w: String): Boolean =
-        word == w && android.os.SystemClock.uptimeMillis() < until
+    /** Whether the overlay is off the page right now. */
+    fun lifted(): Boolean = all && android.os.SystemClock.uptimeMillis() < until
 
-    fun toggle(w: String, holdMs: Long) {
-        if (isRevealed(w)) { word = null; until = 0L }
-        else { word = w; until = android.os.SystemClock.uptimeMillis() + holdMs }
+    fun isRevealed(w: String): Boolean = lifted()
+
+    /** Lift the overlay off the page, or put it back if it is already off. */
+    fun peek(holdMs: Long) {
+        if (all && android.os.SystemClock.uptimeMillis() < until) { all = false; until = 0L }
+        else { all = true; until = android.os.SystemClock.uptimeMillis() + holdMs }
     }
 }
 
-class ChipView(
+/**
+ * One line of the page, taking the touches that land on it.
+ *
+ * Invisible: the words are painted by the layer, and this is here for the finger. A tap asks
+ * about the word nearest where it landed; a press held takes the whole overlay off the page,
+ * which is what a reader wants when they want to see what was written rather than what we
+ * put there; and a finger that moves is scrolling, so the row steps out of the way and lets
+ * the rest of that gesture reach the app.
+ */
+class TouchRow(
     context: Context,
     private val reveal: RevealState,
+    private val wordAt: (Float, Float) -> WordBox?,
     private val onTapped: (WordBox) -> Unit,
     private val onChanged: () -> Unit,
 ) : View(context) {
 
-    /** Bumped whenever the window is moved or retired, so a pending show for an older
-     *  position does not reveal a window that has since been moved again. */
-    var moveToken = 0
-
-    private var box: WordBox? = null
     private val revert = Runnable { onChanged() }
     private var downX = 0f
     private var downY = 0f
     private var dragging = false
+    private var heldDown = false
     private val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
 
-    private val painter = ChipPainter()
-    private val dest = RectF()
-
-    /** @return whether this window now says something different from what it said */
-    fun bind(next: WordBox, state: RevealState): Boolean {
-        val changed = box?.ipa != next.ipa || box?.word != next.word ||
-            box?.background != next.background || box?.ink != next.ink
-        box = next
-        if (changed) invalidate()
-        return changed
-    }
-
-    /** Opens the card, if the finger stays put long enough to mean it. */
+    /** Lifts the overlay off the page, if the finger stays put long enough to mean it. */
     private val held = Runnable {
-        val b = box ?: return@Runnable
         heldDown = true
         performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-        showTheWord(b)
-        onTapped(b)
+        showThePage()
     }
-    private var heldDown = false
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
@@ -501,9 +501,6 @@ class ChipView(
                 downY = event.rawY
                 dragging = false
                 heldDown = false
-                // The card waits for a press held, so that reading a page never opens one by
-                // accident: these windows cover the words themselves, and every touch that
-                // lands on text lands on one of them.
                 removeCallbacks(held)
                 postDelayed(held, android.view.ViewConfiguration.getLongPressTimeout().toLong())
             }
@@ -512,10 +509,10 @@ class ChipView(
                     (kotlin.math.abs(event.rawX - downX) > slop ||
                         kotlin.math.abs(event.rawY - downY) > slop)
                 ) {
-                    // The finger is scrolling, not tapping. These windows sit on top of the
-                    // app, so holding on to the gesture would stop the app scrolling at all
-                    // wherever a transcription happens to be - which is most of a page of
-                    // text. Step out of the way and let the rest of the gesture reach it.
+                    // The finger is scrolling, not tapping. These windows lie over the text,
+                    // so holding on to the gesture would stop the app scrolling wherever
+                    // there is a line of it - which is most of a page. Step out of the way
+                    // and let the rest of the gesture reach it.
                     dragging = true
                     removeCallbacks(held)
                     passThrough(true)
@@ -524,10 +521,9 @@ class ChipView(
         }
         if (event.actionMasked == MotionEvent.ACTION_UP && !dragging && !heldDown) {
             removeCallbacks(held)
-            val b = box ?: return true
-            // A tap shows the word that is underneath, which is the quick question - what
-            // did that say? - and leaves the card to a press held.
-            showTheWord(b)
+            // The word nearest where the finger landed, which is what the reader meant: the
+            // window is a line, and a line is a dozen words.
+            wordAt(event.rawX, event.rawY)?.let(onTapped)
         }
         if (event.actionMasked == MotionEvent.ACTION_UP ||
             event.actionMasked == MotionEvent.ACTION_CANCEL
@@ -539,9 +535,9 @@ class ChipView(
         return true
     }
 
-    /** Put the original word back for a moment, so the reader sees both. */
-    private fun showTheWord(b: WordBox) {
-        reveal.toggle(b.word, REVEAL_MS)
+    /** Take the overlay off the page for a moment, so the reader sees what was written. */
+    private fun showThePage() {
+        reveal.peek(REVEAL_MS)
         removeCallbacks(revert)
         postDelayed(revert, REVEAL_MS + 50)
         onChanged()
@@ -550,8 +546,6 @@ class ChipView(
     /** Let touches through to the app underneath, or take them again. */
     private fun passThrough(on: Boolean) {
         val lp = layoutParams as? WindowManager.LayoutParams ?: return
-        // Nothing to hand back when they were never taking touches to begin with.
-        if (!SettingsStore.current.touchWords) return
         val flag = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         val next = if (on) lp.flags or flag else lp.flags and flag.inv()
         if (next == lp.flags) return
@@ -561,15 +555,8 @@ class ChipView(
         }
     }
 
-    override fun onDraw(canvas: Canvas) {
-        val b = box ?: return
-        val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES
-        dest.set(0f, 0f, width.toFloat(), height.toFloat())
-        painter.draw(canvas, dest, b, dark, reveal.isRevealed(b.word))
-    }
-
     private companion object {
+        /** How long the page stays as its app wrote it after a press held on it. */
         const val REVEAL_MS = 2500L
     }
 }

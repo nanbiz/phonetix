@@ -74,14 +74,6 @@ export interface Settings {
   /** Sites the reader has switched off, by hostname. Everywhere else is on: a reader who
    *  wants this on the web does not want to name every site it should work on. */
   off: string[];
-  /**
-   * The mark at the edge of the screen, dragged over a word to be told what it means.
-   *
-   * The phone's, because a phone has no pointer to rest on a word. Declared here with the
-   * rest because there is one settings shape for the product and one view drawn from it; a
-   * surface that cannot do a thing does not draw its row.
-   */
-  lens: boolean;
   /** Which side of the screen the mark rests on: "right" or "left". The hand is taken to come
    *  onto the screen from that corner, and the circle is carried away from it. The phone's. */
   side: string;
@@ -117,11 +109,10 @@ export const DEFAULTS: Settings = {
   theme: 'phonetix',
   dark: 'system',
   off: [],
-  lens: true,
   side: 'right',
   pin: false,
   restY: 0.8,
-  touchWords: false,
+  touchWords: true,
   apps: [],
   allApps: true,
 };

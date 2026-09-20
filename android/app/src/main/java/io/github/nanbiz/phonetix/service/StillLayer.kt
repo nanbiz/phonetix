@@ -33,7 +33,9 @@ class StillLayer(context: Context, private val reveal: RevealState) : View(conte
     }
 
     /** What it is drawing, so the overlay can say so without keeping a second copy. */
-    fun drawn(): Int = boxes.size
+    /** How many transcriptions are actually on the screen, which is none while the page has
+     *  been lifted back to the words its own app wrote. */
+    fun drawn(): Int = if (reveal.lifted()) 0 else boxes.size
 
     private val at = IntArray(2)
 

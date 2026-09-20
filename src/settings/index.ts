@@ -26,7 +26,6 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   theme: 'local:theme',
   dark: 'local:dark',
   off: 'local:sitesOff',
-  lens: 'local:lens',
   side: 'local:markSide',
   pin: 'local:markPinned',
   restY: 'local:markRestY',

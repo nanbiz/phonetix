@@ -40,8 +40,10 @@ class Dictation(private val context: Context) {
     var onState: (Boolean) -> Unit = {}
 
     /** Whether there is a recogniser and permission to use it. */
-    fun canListen(): Boolean =
-        SpeechRecognizer.isRecognitionAvailable(context) && hasPermission()
+    fun canListen(): Boolean = canHear() && hasPermission()
+
+    /** Whether the phone has anything to listen with, permission aside. */
+    fun canHear(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
     fun hasPermission(): Boolean =
         context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==

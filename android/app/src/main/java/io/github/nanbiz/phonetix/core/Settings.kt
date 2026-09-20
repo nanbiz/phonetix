@@ -60,14 +60,6 @@ data class Settings(
     val accents: Map<String, String> = emptyMap(),
     /** Where the dictionaries come from. The reader's own, and nowhere in the source. */
     val packHost: String = "",
-    /**
-     * The lens: a small window dragged over a word to be told what it means.
-     *
-     * On by default, because it is the only way to ask about a word without the overlay
-     * taking the screen's touches, and an app whose answers cannot be reached is an app that
-     * only decorates.
-     */
-    val lens: Boolean = true,
     /** Which side of the screen the mark rests on: "right", "left", or "free" for neither,
      *  where it is left wherever it was last put down. The hand is taken to
      *  come onto the screen from that corner, and the circle the mark carries is held away
@@ -123,7 +115,6 @@ object SettingsStore {
     private const val K_RECENT = "recent"
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
-    private const val K_LENS = "lens"
     private const val K_SIDE = "side"
     private const val K_PIN = "pinned"
     private const val K_REST_Y = "rest_y"
@@ -148,7 +139,7 @@ object SettingsStore {
             density = p.getInt(K_DENSITY, 12),
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
-            touchWords = p.getBoolean(K_TOUCH, false),
+            touchWords = p.getBoolean(K_TOUCH, true),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
@@ -156,7 +147,6 @@ object SettingsStore {
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             dark = p.getString(K_DARK, "system") ?: "system",
             packHost = p.getString(K_HOST, "") ?: "",
-            lens = p.getBoolean(K_LENS, true),
             side = p.getString(K_SIDE, "right") ?: "right",
             pin = p.getBoolean(K_PIN, false),
             restY = p.getFloat(K_REST_Y, 0.8f),
@@ -200,7 +190,6 @@ object SettingsStore {
             ?.putString(K_RECENT, next.recent.joinToString(","))
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
-            ?.putBoolean(K_LENS, next.lens)
             ?.putString(K_SIDE, next.side)
             ?.putBoolean(K_PIN, next.pin)
             ?.putFloat(K_REST_Y, next.restY)
@@ -243,7 +232,6 @@ object SettingsStore {
         it.copy(side = if (v == "left" || v == "free") v else "right")
     }
 
-    fun setLens(v: Boolean) = update { it.copy(lens = v) }
     /** Read one language in one accent, leaving the choice made for every other alone. */
     fun setAccent(lang: String, accent: String) = update {
         val next = it.accents.toMutableMap()

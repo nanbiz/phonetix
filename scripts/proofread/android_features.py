@@ -50,13 +50,16 @@ class Results:
 
 
 def press(dev, x, y, ms=700):
-    """A press held on one spot, which is what opens the card.
+    """A press held on one spot, which is what lifts the overlay off the page.
 
-    A swipe that goes nowhere: `input tap` is too brief to be a long press, and the card is
-    deliberately not on a tap - the windows cover the words themselves, so every touch that
-    lands on text lands on one, and opening a card for each would make a page unreadable.
+    A swipe that goes nowhere: `input tap` is too brief to be a long press.
     """
     shell("input", "swipe", str(x), str(y), str(x), str(y), str(ms))
+
+
+def tap(dev, x, y):
+    """A tap, which is what asks about a word."""
+    shell("input", "tap", str(x), str(y))
 
 
 def show(dev, settle=2.5, **extras):
@@ -213,15 +216,15 @@ def check_tooltip(r, dev):
         left, top, right, bottom = fresh[key]["rect"]
         word = fresh[key]["word"]
         dev.clear_log()
-        # Held, not tapped. The card would otherwise open on any touch that landed on text,
-        # and on a page of transcriptions that is most of the page.
-        press(dev, (left + right) // 2, (top + bottom) // 2)
+        # Tapped. A word is asked about the way anything else on a screen is asked about;
+        # what a press held does is lift the overlay, which is a different question.
+        tap(dev, (left + right) // 2, (top + bottom) // 2)
         time.sleep(2.5)
         log = dev.log()
         opened = re.search(r"TOOLTIP open word=(\S+) ipa=(\S+) symbols=(\d+)", log)
         if opened:
             break
-    if not r.check(opened is not None, "card: a press held opens it", f"no card for {word}"):
+    if not r.check(opened is not None, "card: a tap opens it", f"no card for {word}"):
         return
     r.check(opened.group(1) == word, "card: it is about the word that was pressed",
             f"pressed {word}, card says {opened.group(1)}")
@@ -784,7 +787,10 @@ def check_shade(r, dev):
         # line in the log is what was drawn when it was written: on a loaded machine the
         # service can still be hearing about the shade when a check that sleeps once looks,
         # and a stale line then reads as a screenful of transcriptions over the notifications.
-        under = []
+        # What is drawn, not what is known. The words of the page behind stay known while the
+        # shade is over them - that is what lets the button answer one the moment it closes -
+        # and only what is painted can be painted over somebody else's screen.
+        drawn = 0
         waited = 0.0
         for _ in range(8):
             time.sleep(0.75)
@@ -792,11 +798,11 @@ def check_shade(r, dev):
             serial = State.device()
             dumped = State.ask(serial)
             shown = (State.fetch(serial, dumped).get("overlay") or {}) if dumped else {}
-            under = shown.get("boxes") or []
-            if not under and shown.get("chipsShown", 0) == 0:
+            drawn = shown.get("chipsShown") or 0
+            if not drawn:
                 break
-        r.check(not under, "the shade: nothing is drawn over it",
-                f"{len(under)} transcriptions were still on the screen {waited:.0f}s after it opened")
+        r.check(not drawn, "the shade: nothing is drawn over it",
+                f"{drawn} transcriptions were still on the screen {waited:.0f}s after it opened")
     finally:
         dev.clear_log()
         shell("cmd", "statusbar", "collapse")

@@ -46,6 +46,17 @@ class MainActivity : ComponentActivity() {
     /** Whether the synthesiser is up, so the preview can draw the words no dictionary holds. */
     private var voiceReady by mutableStateOf(false)
 
+    /**
+     * The microphone, asked for here because a service cannot ask.
+     *
+     * The panel the button opens offers to hear a phrase rather than have it typed, and that
+     * panel belongs to the accessibility service, which has no screen to put a permission
+     * request on. Tapping its microphone without permission opens this app, which asks.
+     */
+    private val microphone = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -109,6 +120,17 @@ class MainActivity : ComponentActivity() {
     private fun asked(intent: Intent?) {
         val wanted = intent?.getStringExtra("view").orEmpty()
         opening = if (wanted.isEmpty()) "" else "$wanted:${android.os.SystemClock.uptimeMillis()}"
+        if (intent?.getBooleanExtra(EXTRA_ASK_MICROPHONE, false) == true &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            microphone.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    companion object {
+        /** Open the app to ask for the microphone: see [microphone]. */
+        const val EXTRA_ASK_MICROPHONE = "askMicrophone"
     }
 
     override fun onResume() {
