@@ -130,6 +130,7 @@ export const SAYS: Record<string, string> = {
   "rest-edge": "On the %s",
   "rest-loose": "Wherever you leave it",
   "rest-put": "Drag the button up or down, or across to the other side.",
+  "say-fetching": "getting what this pair needs, once",
   "say-into": "Answer in",
   "say-no-language": "Choose a language to read into first.",
   "say-no-model": "No translation model for that direction at your dictionary host.",

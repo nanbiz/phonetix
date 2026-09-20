@@ -138,7 +138,15 @@ def main():
     dev.surface(mode="spanish", packHost=base, target="en", enable=1, density=1)
     time.sleep(6)
     dev.clear_log()
-    shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity")
+    # Home first, the way a reader opens the app. The test page and the app's own screen are
+    # two activities of one app: asked for from the page, the system brings that page's task
+    # forward with the page still on top of it, and the screen this drives is never shown.
+    shell("input", "keyevent", "3")
+    time.sleep(2)
+    # Clearing what is above it: the test page and the app's own screen are two activities of
+    # one app, so asking for the screen brings that task forward with the page still on top.
+    shell("am", "start", "--activity-clear-top",
+          "-n", "io.github.nanbiz.phonetix/.MainActivity")
     time.sleep(4)
 
     # Driven in the screen itself, which is the product's own settings screen drawn in a web

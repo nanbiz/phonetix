@@ -3227,10 +3227,54 @@ class PhonetixAccessibilityService : AccessibilityService() {
         askedAt = System.currentTimeMillis()
         askStage = "identifying the language"
         io.post {
+            val began = android.os.SystemClock.uptimeMillis()
+            // The engine on this phone first, where it holds the pair.
+            //
+            // What the reader types is in the language they read into - their own - and what
+            // they want back is the language they are learning, which is the direction the
+            // packs they have already fetched are for. Answered here it is milliseconds and
+            // needs nothing from anywhere; the machine below is a call into another app,
+            // which fetches a model of its own the first time and left the panel sitting at
+            // "…" for as long as that took.
+            val mine =
+                if (into.isNotEmpty() && into != wanted &&
+                    Translator.ready(Packs.models(this), into, wanted)
+                ) {
+                    askStage = "asking the engine here for $into to $wanted"
+                    runCatching { Reading.say(this, text, wanted, into) }.getOrNull()
+                } else {
+                    null
+                }
+            if (mine != null) {
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "ASKED $text: here=${android.os.SystemClock.uptimeMillis() - began}ms",
+                    )
+                }
+                askStage = "answered here"
+                val word = mine.spelling.ifEmpty { text }
+                answeredTurn = turn
+                main.post {
+                    if (asking === panel && turn == asks) {
+                        panel.show(mine) { speaker.say(word, Accents.voiceOf(wanted, "")) }
+                    }
+                }
+                return@post
+            }
+            // Nothing here holds this pair, so it is the machine's question. That can mean
+            // fetching a model, which is tens of megabytes and happens once: said plainly,
+            // because a panel showing "…" for half a minute looks broken rather than busy.
+            main.postDelayed({
+                if (asking === panel && turn == asks && answeredTurn != turn) {
+                    panel.saying(Wording.says["say-fetching"].orEmpty())
+                }
+            }, SLOW_ASK_MS)
             val held = Packs.held(this).toSet()
             val from = kotlinx.coroutines.runBlocking {
                 Machine.language(text, held + into) ?: into.ifEmpty { Language.OURS }
             }
+            val named = android.os.SystemClock.uptimeMillis()
             askStage = if (from == wanted) "already in $wanted" else "translating $from to $wanted"
             val word = if (from == wanted) {
                 text
@@ -3246,6 +3290,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
                 return@post
             }
+            val translated = android.os.SystemClock.uptimeMillis()
+            // The word itself, the moment it is known. What follows - an entry for it, and how
+            // it is said - is worth waiting for but not worth waiting for in silence: the
+            // answer to "what is the word for this" is the word.
+            answeredTurn = turn
+            main.post {
+                if (asking === panel && turn == asks) {
+                    panel.show(Answer.ofTranscription(word, "", wanted)) {
+                        speaker.say(word, Accents.voiceOf(wanted, ""))
+                    }
+                }
+            }
             askStage = "looking $word up in $wanted"
             // The entry for the word that came back, in the language it is in, read into the
             // one the reader asked in: what it means back is how a machine's answer is judged.
@@ -3260,6 +3316,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 Speech.phonemes(Accents.voiceOf(wanted, ""), listOf(word))[word].orEmpty(),
                 wanted,
             )
+            if (BuildConfig.DEBUG) {
+                val done = android.os.SystemClock.uptimeMillis()
+                android.util.Log.d(
+                    "Phonetix",
+                    "ASKED $text: named=${named - began}ms translated=${translated - named}ms " +
+                        "looked=${done - translated}ms total=${done - began}ms",
+                )
+            }
             askStage = "answered with $word"
             main.post {
                 if (asking !== panel || turn != asks) return@post
@@ -3275,6 +3339,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile private var askedFor: String? = null
     @Volatile private var askedInto: String? = null
     @Volatile private var askedAt = 0L
+
+    /** Which question has had an answer put on the panel, so a note about waiting does not
+     *  land on top of one. */
+    @Volatile private var answeredTurn = 0
     @Volatile private var askStage: String? = null
 
     /** Which question is the current one: everything typed before it is stale. */
@@ -3743,6 +3811,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How far apart the panel closing and a finger landing on the button can be and
          *  still be the one touch that did both. */
         const val SAME_TOUCH_MS = 300L
+
+        /** How long a question may go unanswered before the panel says what it is waiting
+         *  for. */
+        const val SLOW_ASK_MS = 900L
 
         const val FULL_READ_MS = 900L
         /**
