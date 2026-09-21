@@ -47,7 +47,10 @@ def fresh(dev, **extras):
     """
     shell("input", "keyevent", "3")
     time.sleep(2)
-    dev.surface(mode="plain", enable=1, density=1, target="none", touchWords=1, **extras)
+    # Picked up, whatever the run before left behind: put down, the app draws nothing and
+    # takes no touches, which is the thing two of these checks are about proving.
+    dev.surface(mode="plain", enable=1, density=1, target="none", touchWords=1, paused=0,
+                **extras)
     time.sleep(6)
 
 

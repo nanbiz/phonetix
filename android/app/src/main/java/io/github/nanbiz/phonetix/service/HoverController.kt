@@ -111,7 +111,9 @@ class HoverController(
     private val swept = ArrayList<WordBox>()
 
     /** Whether the circle is on screen at all. */
-    val showing: Boolean get() = mark != null
+    /** Whether the circle is on the screen. The window outlives being put away - see [hide] -
+     *  so a window that exists is not the same as a mark a reader can press. */
+    val showing: Boolean get() = mark?.visibility == View.VISIBLE
 
     /** Where the circle last looked, which is not where the finger is: the circle is carried
      *  above the thumb so the word can be seen, and what it reports is its own centre. */

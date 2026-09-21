@@ -2795,12 +2795,23 @@ class PhonetixAccessibilityService : AccessibilityService() {
      *
      * A full line's height of room, so that text sharing a visual line with the word - which
      * overlaps it by the nature of the flow - is not mistaken for something drawn over it.
+     *
+     * Except at the foot of the screen: a sheet that comes up from the bottom has no room
+     * below it to leave, so the last rows of the page behind it failed that test and kept
+     * their transcriptions - painted on top of the sheet, which is the whole fault this
+     * exists to stop.
      */
     private fun encloses(over: android.graphics.Rect, word: android.graphics.Rect): Boolean {
         val room = word.height()
+        val toTheFoot = over.bottom >= screenBottom() - room
         return over.left <= word.left && over.right >= word.right &&
-            word.top - over.top >= room && over.bottom - word.bottom >= room
+            word.top - over.top >= room &&
+            (over.bottom - word.bottom >= room || (toTheFoot && over.bottom >= word.bottom))
     }
+
+    /** How far down the screen goes, for judging a thing that reaches the bottom of it. */
+    private fun screenBottom(): Int =
+        resources.displayMetrics.heightPixels
 
     private class Painted(
         val enter: Int,

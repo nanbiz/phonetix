@@ -619,6 +619,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 )
 
             }
+            // Whether the overlay is put down, which a press held on the button decides and a
+            // check has to be able to put back.
+            if (i.hasExtra("paused")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setPaused(
+                    i.getIntExtra("paused", 0) == 1,
+                )
+            }
             // Which language the reader is learning, which is what the panel answers in.
             if (i.hasExtra("learning")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setLearning(

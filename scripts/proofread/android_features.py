@@ -423,6 +423,18 @@ def check_tooltip(r, dev):
     # second time.
     shell("input", "keyevent", "4")
     time.sleep(1.2)
+    # Where the words are now, and with the rows that take touches back up: the card went
+    # away, the page was read again behind it, and a press aimed at where a word used to be
+    # lands on the app instead.
+    fresh = {}
+    for _ in range(8):
+        time.sleep(1.0)
+        fresh = drawn_now()
+        if fresh:
+            break
+    where = fresh.get(key) or next(iter(fresh.values()), None)
+    if where:
+        left, top, right, bottom = where["rect"]
     dev.clear_log()
     press(dev, (left + right) // 2, (top + bottom) // 2)
     time.sleep(2.0)
@@ -530,6 +542,12 @@ def check_colors(r, dev):
         time.sleep(1.5)
         fresh, log = show(dev, mode="colors", density=3, scrollTo=0, settle=0)
         boxes = fresh or boxes
+    # And once more, a moment later. The first colours a line is given can be its neighbour's:
+    # a capture taken while the page was still settling reads the row above where the line
+    # ended up, and the overlay corrects that on its next capture. What is judged here is the
+    # answer it settles on, not the first one it offers.
+    time.sleep(3.0)
+    boxes = drawn_now() or boxes
 
     # A device that cannot be photographed has no colours to compare against. The overlay
     # asks for a frame with its own paint taken down, and where that frame never arrives the
