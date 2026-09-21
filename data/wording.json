@@ -359,6 +359,6 @@
     "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
     "touch-on": "A swipe that starts on a word will not scroll the page.",
     "use-this": "Use this",
-    "say-fetching": "getting what this pair needs, once"
+    "say-fetching": "getting %s"
   }
 }

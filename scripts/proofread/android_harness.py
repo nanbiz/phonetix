@@ -188,10 +188,13 @@ class Device:
         # in a fresh task destroys the page and builds it anew, which resets where it is
         # scrolled to and leaves the old instance still reporting its own position for a
         # moment - two pages in one log, and a timeline that runs backwards.
-        for _ in range(10):
+        # Given time to come forward: a machine with nothing to spare takes seconds over an
+        # activity that a quiet one shows in a frame, and the harsher way below destroys the
+        # page and builds it anew, which loses where it was scrolled to.
+        for _ in range(20):
             if "DebugSurfaceActivity" in self.top_activity():
                 return self._became(mode)
-            time.sleep(0.3)
+            time.sleep(0.5)
         shell(*(args + ["--activity-clear-task", "--activity-new-task"]))
         for _ in range(10):
             if "DebugSurfaceActivity" in self.top_activity():

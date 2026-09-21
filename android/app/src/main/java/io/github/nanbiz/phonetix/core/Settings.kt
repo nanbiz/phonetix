@@ -19,10 +19,17 @@ data class Settings(
      * and not on the app underneath - and a window that has taken a gesture keeps it, so the
      * swipe that touch began is lost entirely and the page does not move. Most of a page of
      * text is covered in transcriptions. Off, they are a picture: every touch reaches the app
-     * and scrolling is exactly as it was without the overlay. On, a press held on a word
-     * opens its card, at the cost of the swipes that start on one.
+     * and scrolling is exactly as it was without the overlay. On, a tap on a word opens its
+     * card, at the cost of the swipes that start on one - which is what the product is for,
+     * so it is what it does unless the reader says otherwise.
      */
-    val touchWords: Boolean = false,
+    val touchWords: Boolean = true,
+    /**
+     * Whether the reader has put the overlay down for now, with a press held on the button.
+     *
+     * Not the same as having nothing to draw: see [quiet].
+     */
+    val paused: Boolean = false,
     /**
      * The language the reader is reading into.
      *
@@ -93,6 +100,16 @@ data class Settings(
      * asks the same way.
      */
     val into: String get() = if (layer == "meaning" || layer == "both") target else ""
+
+    /**
+     * Whether nothing at all is painted over the page.
+     *
+     * Two ways to arrive there, and they are not the same thing: with both of what the
+     * overlay draws switched off the page is left alone and a word can still be asked about
+     * by touching it, while paused the app is out of the way entirely. What they share is
+     * that nothing is drawn.
+     */
+    val quiet: Boolean get() = paused || layer == "off"
 }
 
 /**
@@ -110,6 +127,7 @@ object SettingsStore {
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
+    private const val K_PAUSED = "paused"
     private const val K_TARGET = "target"
     private const val K_LEARNING = "learning"
     private const val K_RECENT = "recent"
@@ -140,6 +158,7 @@ object SettingsStore {
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, true),
+            paused = p.getBoolean(K_PAUSED, false),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
@@ -185,6 +204,7 @@ object SettingsStore {
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
+            ?.putBoolean(K_PAUSED, next.paused)
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARNING, next.learning)
             ?.putString(K_RECENT, next.recent.joinToString(","))
@@ -205,6 +225,9 @@ object SettingsStore {
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
+
+    /** Put the overlay down, or pick it up again: the press held on the button. */
+    fun setPaused(v: Boolean) = update { it.copy(paused = v) }
     fun setTarget(v: String) = update { it.copy(target = v) }
     /** What they are learning now, and the few they have asked in before it. */
     fun setLearning(v: String) = update {

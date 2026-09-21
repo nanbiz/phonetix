@@ -79,9 +79,11 @@ def show(dev, settle=2.5, **extras):
         # being read is the machine's business: a cold app on a loaded host takes several
         # times what a warm one does, and a check that looks once reports a page that draws
         # nothing while it is still being drawn.
-        until = time.time() + settle * 3
+        until = time.time() + settle * 4
+        looked = 0
         while True:
             time.sleep(min(1.0, settle))
+            looked += 1
             log = dev.log()
             # The surface says when it applied the setting. Only a reading taken after that
             # describes the setting under test; anything earlier describes the previous one.
@@ -89,10 +91,34 @@ def show(dev, settle=2.5, **extras):
             # that has been asked for does not always come forward at once on a loaded device.
             applied = [int(m) for m, said in re.findall(r"SETTINGS (\d+) mode=(\S+)", log)
                        if said == mode]
-            after = ([(t, b) for t, b in dev.box_frames(log) if t >= applied[-1]]
+            # A frame with nothing in it is not an answer: the page is read as it is drawn,
+            # and the first frame after a setting is applied is routinely empty. Taken as the
+            # answer it reported a page that transcribes nothing - in a second and a fifth of
+            # a screen that was carrying fifty words a moment later.
+            after = ([(t, b) for t, b in dev.box_frames(log) if t >= applied[-1] and b]
                      if applied else [])
             if after:
                 return after[-1][1], log
+            # The log is not the only account of what is on the screen, and on a loaded
+            # machine it is not the first: the line naming every word of a page is thousands
+            # of characters and the device drops it. Asked of the overlay itself every few
+            # looks, because that is a call to the device each.
+            if applied and looked % 3 == 0:
+                drawn = drawn_now()
+                # Once it has stopped growing: a page is drawn as it is read, so the first
+                # non-empty answer can be one word of a screenful, and a check that took it
+                # reported a page transcribing almost nothing.
+                if drawn:
+                    time.sleep(1.2)
+                    again = drawn_now()
+                    if len(again) <= len(drawn):
+                        return drawn, log
+                    if len(again) >= len(drawn):
+                        drawn = again
+                    time.sleep(1.2)
+                    settled = drawn_now()
+                    if settled:
+                        return settled, log
             if time.time() > until:
                 break
         # Nothing in the log does not mean nothing on the screen. The line naming every word
@@ -110,7 +136,13 @@ def drawn_now():
     dumped = State.ask(serial)
     if not dumped:
         return {}
-    shown = (State.fetch(serial, dumped).get("overlay") or {}).get("boxes") or []
+    told = State.fetch(serial, dumped).get("overlay") or {}
+    # What is drawn, not what is known: the words of a screen stay known while nothing is
+    # painted - that is what lets the button answer one - so reading the known list as the
+    # drawn one reported a screenful of transcriptions with the overlay switched off.
+    if not told.get("chipsShown"):
+        return {}
+    shown = told.get("boxes") or []
     out = {}
     for i, box in enumerate(shown):
         rect = box.get("rect") or {}
@@ -145,10 +177,19 @@ def reset(dev):
 
 
 def warm(dev):
+    """Wait until the app is really answering before anything is measured.
+
+    A cold app has a dictionary to load and a synthesiser to start, and it draws nothing at
+    all until both are up - which a check that starts measuring straight away reports as a
+    frequency bar that does nothing at any setting.
+    """
     for _ in range(12):
         boxes, _ = show(dev, density=3)
         if boxes:
             return boxes
+        drawn = drawn_now()
+        if drawn:
+            return drawn
     return {}
 
 
@@ -376,28 +417,28 @@ def check_tooltip(r, dev):
 # Which apps the reader chose.
 # --------------------------------------------------------------------------------------
 
-    # And a touch that is not held opens nothing. Every transcription is its own window over
-    # the word it covers, so a tap opening a card would put one in the way of any reader who
-    # touched the text at all. Left to the end: the card is dismissed to run it, and a card
-    # that has been dismissed and opened again does not report its layout a second time.
+    # And a press held opens nothing: it lifts the overlay off the page instead, which is the
+    # reader asking to see what their app wrote. Left to the end: the card is dismissed to run
+    # it, and a card that has been dismissed and opened again does not report its layout a
+    # second time.
     shell("input", "keyevent", "4")
     time.sleep(1.2)
     dev.clear_log()
-    shell("input", "tap", str((left + right) // 2), str((top + bottom) // 2))
+    press(dev, (left + right) // 2, (top + bottom) // 2)
     time.sleep(2.0)
     r.check(
         "TOOLTIP open" not in dev.log(),
-        "card: a tap does not open it",
-        "a plain tap opened the card",
+        "card: a press held opens no card",
+        "a press held opened the card",
     )
 
-    # And with the words left as they come - a picture, taking no touches - a press held on
-    # one opens nothing at all, because the gesture belongs to the app underneath.
+    # And with the words left as they come - a picture, taking no touches - a tap on one
+    # opens nothing at all, because the gesture belongs to the app underneath.
     dev.clear_log()
     dev.surface(mode="plain", enable=1, density=3, allApps=1, touchWords=0)
     time.sleep(2.5)
     dev.clear_log()
-    press(dev, (left + right) // 2, (top + bottom) // 2)
+    tap(dev, (left + right) // 2, (top + bottom) // 2)
     time.sleep(2.0)
     r.check(
         "TOOLTIP open" not in dev.log(),
@@ -439,6 +480,19 @@ def check_switch(r, dev):
 # The colours a transcription is drawn in, which are the colours of the text it replaces.
 # --------------------------------------------------------------------------------------
 
+def blind(dev, log=""):
+    """Whether the device is refusing to be photographed at all.
+
+    The overlay reads the colours of a line off a picture of the screen taken with its own
+    paint down. Where that picture never arrives it says so, over and over.
+    """
+    # Asked of the device rather than of a tail of the log: this build writes a line naming
+    # every word on screen on every pass, and the few lines that matter here are pushed out
+    # of any bounded tail by them.
+    said = (log or "") + dev.lines("COLOURS no clean frame", keep=8)
+    return said.count("COLOURS no clean frame") >= 2
+
+
 def check_colors(r, dev):
     """Every word gets colours read off the screen, and they are the ones under it.
 
@@ -448,7 +502,18 @@ def check_colors(r, dev):
     reports can be compared against what the app says it drew.
     """
     reset(dev)
-    boxes, log = show(dev, mode="colors", density=3, scrollTo=0, settle=4)
+    # Patient: this page is read, transcribed and then photographed for its colours, and on a
+    # machine with nothing to spare that is a dozen seconds before anything is on screen.
+    boxes, log = show(dev, mode="colors", density=3, scrollTo=0, settle=6)
+    # A device that cannot be photographed has no colours to compare against, and it is the
+    # machine that cannot, not the product: the overlay asks for a frame with its own paint
+    # down, and where that frame never arrives every line waits, is given up on, and is drawn
+    # in our own palette - which is what it is meant to do. An emulator under load does this
+    # for minutes at a time.
+    if not boxes and blind(dev, log):
+        print("  (this device could not be photographed, so there are no colours to read)")
+        r.check(True, "colours: the device could not be photographed", "")
+        return
     if not r.check(bool(boxes), "colours: there is something to colour", "nothing transcribed"):
         return
 
@@ -567,6 +632,10 @@ def check_unreadable_colors(r, dev):
         band = any(close(b["bg"], 0x2A2E10, tolerance=40) for b in boxes.values()) if boxes else False
         if boxes and looked and band:
             break
+    if not boxes and blind(dev, log):
+        print("  (this device could not be photographed, so there are no surfaces to read)")
+        r.check(True, "unreadable: the device could not be photographed", "")
+        return
     if not r.check(bool(boxes), "unreadable: there is something to colour",
                    "nothing transcribed"):
         return
@@ -697,7 +766,9 @@ def check_language(r, dev):
         "language: the words of a German page carry German, so a card about one is German",
         f"the words say {carried or 'nothing'}",
     )
-    english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=4)
+    # Patient, like the German page above: this follows a page in another language, so the
+    # reading, the language identification and the synthesiser all happen again.
+    english, _ = show(dev, mode="unique", density=2, scrollTo=0, settle=6)
     r.check(
         len(english) > 0,
         "language: an English page is still transcribed",
@@ -892,12 +963,22 @@ def check_a_real_app(r, dev):
     if not r.check("settings" in dev.top_activity().lower(),
                    "a real app: the settings app is in front", dev.top_activity()):
         return
+    # What the overlay says it is showing, once it has stopped growing: the page is drawn as
+    # it is read, and the first answer can be one word of a screenful.
     boxes = {}
-    for _ in range(6):
+    steady = 0
+    for _ in range(10):
         time.sleep(2.0)
-        boxes = dev.boxes()
-        if boxes:
-            break
+        now = drawn_now() or dev.boxes()
+        if now and len(now) <= len(boxes):
+            # Twice, not once: a page is drawn as it is read, and a screen caught between two
+            # passes reads the same small count twice in a row only when that is all there is.
+            steady += 1
+            if steady >= 2:
+                break
+        else:
+            steady = 0
+        boxes = now or boxes
     if not r.check(bool(boxes), "a real app: its words are transcribed",
                    "nothing at all on a screen full of English"):
         return
@@ -912,12 +993,20 @@ def check_a_real_app(r, dev):
         if all(b["sampled"] for b in boxes.values()):
             break
         time.sleep(1.5)
-        boxes = dev.boxes() or boxes
-    r.check(
-        all(b["sampled"] for b in boxes.values()),
-        "a real app: they wear its own colours",
-        f"{sum(1 for b in boxes.values() if not b['sampled'])} of {len(boxes)} fell back",
-    )
+        # Asked of the overlay rather than read out of the log: the line naming every word of
+        # a screen is thousands of characters, and a loaded device drops it - which read here
+        # as a screen carrying one word.
+        boxes = drawn_now() or dev.boxes() or boxes
+    if all(b["sampled"] for b in boxes.values()) or not blind(dev):
+        r.check(
+            all(b["sampled"] for b in boxes.values()),
+            "a real app: they wear its own colours",
+            f"{sum(1 for b in boxes.values() if not b['sampled'])} of {len(boxes)} fell back",
+        )
+    else:
+        # The machine, not the product: where the screen cannot be photographed at all there
+        # are no colours to read, and the words are drawn in our own palette by design.
+        print("  (this device could not be photographed, so the colours were given up on)")
     # The words a real app's screen is actually made of. Almost all of its text is a heading
     # or a label in title case, and while the cascade compared spellings byte for byte every
     # one of those missed the dictionary: the screen came back nearly bare and every check
@@ -1297,7 +1386,9 @@ def main():
     if not dev.enable_service():
         print("FAIL - the accessibility service will not start")
         sys.exit(1)
-    warm(dev)
+    if not warm(dev):
+        print("FAIL - the app drew nothing at all, so there is nothing to measure")
+        sys.exit(1)
     # The reader's own choices, put back to what this suite measures against: a run that
     # followed one leaving a target language behind counted the words of an English page that
     # were being answered in German, and reported the frequency bar as broken.

@@ -329,23 +329,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // does the heavier of the two everyday things, and the settings screen says
                 // so under the switch it shares.
                 main.post { tooltip.hide() }
-                val now = SettingsStore.current
-                val next = if (now.layer == "off") lastReplacing else "off"
-                if (now.layer != "off") lastReplacing = now.layer
-                SettingsStore.setLayer(next)
+                // Put down, not emptied. What the two switches draw is a different question:
+                // with both of them off the page is left alone and a word can still be asked
+                // about by touching it, which is a reader who wants to be asked rather than
+                // answered over. The button means "not now, none of it" - so nothing is drawn
+                // and nothing takes a touch either.
+                val down = !SettingsStore.current.paused
+                SettingsStore.setPaused(down)
                 if (BuildConfig.DEBUG) {
-                    android.util.Log.d("Phonetix", "HELD layer $next")
+                    android.util.Log.d("Phonetix", "HELD paused $down")
                 }
-                hover.saying(next != "off")
+                hover.saying(!down)
                 main.post {
                     android.widget.Toast.makeText(
                         this@PhonetixAccessibilityService,
-                        Wording.says[if (next == "off") "replacing-off" else "replacing-on"]
-                            .orEmpty(),
+                        Wording.says[if (down) "replacing-off" else "replacing-on"].orEmpty(),
                         android.widget.Toast.LENGTH_SHORT,
                     ).show()
                 }
-                readAgain()
+                if (down) main.post { overlay.hideNow() } else readAgain()
             },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from
@@ -842,6 +844,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("pin", settings.pin)
                 .put("restY", settings.restY)
                 .put("touchWords", settings.touchWords)
+                .put("paused", settings.paused)
                 .put("narrow", settings.narrow)
                 .put("hideStress", settings.hideStress)
                 .put("theme", settings.theme)
@@ -916,6 +919,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (::speaker.isInitialized) speaker.destroy()
         if (::sampler.isInitialized) sampler.destroy()
         if (::overlay.isInitialized) overlay.destroy()
+        if (::hover.isInitialized) hover.destroy()
         if (::worker.isInitialized) worker.looper.quitSafely()
         super.onDestroy()
     }
@@ -1223,7 +1227,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // line for its character positions. A reader who has turned replacing off has only
         // the mark to ask with, and it can only ask about words this pass kept.
         val budget = Budget(
-            words = if (settings.layer == "off") MAX_WORDS_SILENT else MAX_WORDS,
+            words = if (settings.quiet) MAX_WORDS_SILENT else MAX_WORDS,
         )
         val stats = Stats()
         if (reuse) {
@@ -2014,7 +2018,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // characters are - or stops saying while its text is being written into,
                     // which is when a reader is looking at it - otherwise leaves the mark
                     // with a screenful of text and nothing to answer about.
-                    if (SettingsStore.current.layer == "off" && p.length > 0) {
+                    if (SettingsStore.current.quiet && p.length > 0) {
                         val rect = p.measuredAt ?: android.graphics.Rect().also {
                             p.node.getBoundsInScreen(it)
                         }
@@ -2348,7 +2352,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val t2 = tb
         main.post {
             val t3 = android.os.SystemClock.uptimeMillis()
-            if (SettingsStore.current.layer == "off") overlay.known(painted)
+            if (SettingsStore.current.quiet) overlay.known(painted)
             else overlay.render(painted)
             android.util.Log.d(
                 "Phonetix",
@@ -2630,7 +2634,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // back by the rule that keeps a follow from asking an app to lay its text out again.
         // Held back, a line nobody will place had no words on a follow pass at all, and the
         // follow gave up on the whole screen for want of them.
-        val guessing = placed == null && SettingsStore.current.layer == "off" &&
+        val guessing = placed == null && SettingsStore.current.quiet &&
             p.length > 0 && !at.isEmpty
         if (placed == null && !allowedToAsk && !guessing) return false
         val rects = placed
@@ -2749,7 +2753,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             listOf(says),
             source = source,
             target = settings.into.ifEmpty { source },
-            mode = if (settings.layer == "off") "sound" else settings.layer,
+            mode = if (settings.quiet) "sound" else settings.layer,
             density = settings.density,
             narrow = settings.narrow,
             hideStress = settings.hideStress,
@@ -2966,7 +2970,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // and nothing is painted over the page. A reader who wants the product there to be
         // asked rather than answering over everything they read is the case this is for, and
         // without the reading there would be nothing under the mark to answer with.
-        val silent = settings.layer == "off"
+        val silent = settings.quiet
         val told = Reading.annotate(
             planned.map { it.text },
             source = source,
@@ -3236,10 +3240,30 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // needs nothing from anywhere; the machine below is a call into another app,
             // which fetches a model of its own the first time and left the panel sitting at
             // "…" for as long as that took.
+            val here = Packs.models(this)
+            // The pair this question needs is the reverse of the one being read, and a phone
+            // that has only ever read Spanish into English holds only that direction. Fetched
+            // from the reader's own host, which is where their dictionaries come from, rather
+            // than asking another app to fetch one of its own: this way the answer is the
+            // engine's here, in under a second, ever after.
+            if (into.isNotEmpty() && into != wanted && !Translator.ready(here, into, wanted)) {
+                val host = SettingsStore.current.packHost
+                if (host.isNotBlank()) {
+                    askStage = "getting the $into to $wanted model"
+                    main.post {
+                        if (asking === panel && turn == asks && answeredTurn != turn) {
+                            panel.saying(
+                                Wording.says["say-fetching"].orEmpty()
+                                    .replace("%s", Languages.english(wanted)),
+                            )
+                        }
+                    }
+                    runCatching { Packs.getModel(this, host, into, wanted) }
+                        .onFailure { android.util.Log.w("Phonetix", "no model for the panel", it) }
+                }
+            }
             val mine =
-                if (into.isNotEmpty() && into != wanted &&
-                    Translator.ready(Packs.models(this), into, wanted)
-                ) {
+                if (into.isNotEmpty() && into != wanted && Translator.ready(here, into, wanted)) {
                     askStage = "asking the engine here for $into to $wanted"
                     runCatching { Reading.say(this, text, wanted, into) }.getOrNull()
                 } else {
@@ -3262,14 +3286,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
                 return@post
             }
-            // Nothing here holds this pair, so it is the machine's question. That can mean
-            // fetching a model, which is tens of megabytes and happens once: said plainly,
-            // because a panel showing "…" for half a minute looks broken rather than busy.
-            main.postDelayed({
-                if (asking === panel && turn == asks && answeredTurn != turn) {
-                    panel.saying(Wording.says["say-fetching"].orEmpty())
-                }
-            }, SLOW_ASK_MS)
             val held = Packs.held(this).toSet()
             val from = kotlinx.coroutines.runBlocking {
                 Machine.language(text, held + into) ?: into.ifEmpty { Language.OURS }
@@ -3811,10 +3827,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How far apart the panel closing and a finger landing on the button can be and
          *  still be the one touch that did both. */
         const val SAME_TOUCH_MS = 300L
-
-        /** How long a question may go unanswered before the panel says what it is waiting
-         *  for. */
-        const val SLOW_ASK_MS = 900L
 
         const val FULL_READ_MS = 900L
         /**

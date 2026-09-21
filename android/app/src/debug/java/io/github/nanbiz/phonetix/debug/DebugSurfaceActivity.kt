@@ -376,6 +376,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             return
         }
         handle(intent)
+        // And said out loud, so the service reads the page again. Arriving with new settings
+        // on a page that is already in front changes nothing the platform reports - the words
+        // are the same words - so nothing was read, and a check that had just moved the bar
+        // measured the setting before it.
+        window.decorView.postDelayed({
+            window.decorView.sendAccessibilityEvent(
+                android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
+            )
+        }, 250)
     }
 
     /** Where the sheet's top edge sits, so a check knows which words are under it. */

@@ -233,8 +233,12 @@ class HoverController(
         // Whatever it is doing now, every time it is put up or asked to re-park. The setting
         // can change from the settings screen as easily as from a press held on the button,
         // and a mark that only heard about the press wore the wrong colour ever after.
-        (mark as? HoverBubbleView)?.replacing = SettingsStore.current.layer != "off"
+        (mark as? HoverBubbleView)?.replacing = !SettingsStore.current.quiet
         mark?.let { up ->
+            // Back into view where it was put away, and never taken away if it was only
+            // about to be: see [hide].
+            main.removeCallbacks(putTheMarkAway)
+            if (up.visibility != View.VISIBLE) up.visibility = View.VISIBLE
             // Already up, but not necessarily where it now belongs: the side it rests on is
             // the reader's to choose, and a mark that only moves when it is built again
             // stayed on the old edge until something else took it down. Left where it is
@@ -257,10 +261,13 @@ class HoverController(
         val waits = restingAt(size)
         markX = waits.x
         markY = waits.y
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "LENSNEW")
+        }
         val view = HoverBubbleView(context)
         // What it is doing right now, from the moment it appears: the ring is the only thing
         // that says whether the words are being replaced.
-        view.replacing = SettingsStore.current.layer != "off"
+        view.replacing = !SettingsStore.current.quiet
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
             .onSuccess {
@@ -288,12 +295,45 @@ class HoverController(
     }
 
     /** Take it down, and everything it had drawn with it. */
-    fun hide() {
+    /** Take the circle down for good, which is what the service leaving means. */
+    fun destroy() {
         hideLayer()
         mark?.let { runCatching { wm.removeView(it) } }
         mark = null
         hovered = null
+    }
+
+    /**
+     * Take the circle off the screen, keeping the window it is drawn on.
+     *
+     * Put away and built again, it blinked: a screen that is in front for a moment - a
+     * popup, a keyboard, this app's own settings - takes it down and the next read puts it
+     * straight back, and what a reader sees is the mark flashing every time they touch
+     * anything. Hiding a window is one call; building one is a window added, laid out and
+     * drawn.
+     */
+    fun hide() {
+        hideLayer()
+        hovered = null
         onWord(null)
+        // A moment later, not now. What is in front for a frame or two - a popup opening, a
+        // keyboard, a screen on its way somewhere - takes the circle down and the next read
+        // puts it straight back, and what a reader sees is the mark blinking every time they
+        // touch anything. Anything that lasts is still gone a third of a second later.
+        val up = mark ?: return
+        if (up.visibility != View.VISIBLE) return
+        main.removeCallbacks(putTheMarkAway)
+        main.postDelayed(putTheMarkAway, SETTLE_MS)
+    }
+
+    private val putTheMarkAway = Runnable {
+        val up = mark ?: return@Runnable
+        if (up.visibility == View.VISIBLE) {
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "LENSGONE")
+            }
+            up.visibility = View.GONE
+        }
     }
 
     /** Where the circle is looking, in screen coordinates. */
@@ -700,6 +740,9 @@ class HoverController(
     }
 
     private companion object {
+        /** How long a screen has to be in front before the circle is taken down for it. */
+        const val SETTLE_MS = 350L
+
         /** How much of the bottom the system's own gesture strip takes, in dp. */
         const val FOOT_DP = 56f
 

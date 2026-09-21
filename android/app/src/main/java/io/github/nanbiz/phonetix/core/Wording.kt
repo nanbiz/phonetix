@@ -124,7 +124,7 @@ object Wording {
         "rest-edge" to "On the %s",
         "rest-loose" to "Wherever you leave it",
         "rest-put" to "Drag the button up or down, or across to the other side.",
-        "say-fetching" to "getting what this pair needs, once",
+        "say-fetching" to "getting %s",
         "say-into" to "Answer in",
         "say-no-language" to "Choose a language to read into first.",
         "say-no-model" to "No translation model for that direction at your dictionary host.",

@@ -73,13 +73,13 @@ def main():
     dev.clear_log()
     hold(middle)
     time.sleep(5)
-    said = re.findall(r"HELD layer (\S+)", dev.log())
+    said = re.findall(r"HELD paused (\S+)", dev.log())
     after = painted()
     print(f"  held once: the service says {said[-1:] or 'nothing'}, {after} words painted")
     if not said:
         failures.append("holding the button said nothing about the replacing")
-    elif said[-1] != "off":
-        failures.append(f"holding the button with the replacing on left it {said[-1]!r}")
+    elif said[-1] != "true":
+        failures.append(f"holding the button with the overlay on left it {said[-1]!r}")
     if after:
         failures.append(f"the replacing was turned off and {after} words are still replaced")
 
@@ -87,7 +87,7 @@ def main():
     dev.clear_log()
     hold(middle)
     time.sleep(6)
-    said = re.findall(r"HELD layer (\S+)", dev.log())
+    said = re.findall(r"HELD paused (\S+)", dev.log())
     back = 0
     for _ in range(10):
         back = painted()
@@ -95,11 +95,8 @@ def main():
             break
         time.sleep(2)
     print(f"  held again: {said[-1:] or 'nothing'}, {back} words painted")
-    if not said or said[-1] == "off":
-        failures.append("holding it again did not turn the replacing back on")
-    elif said[-1] != "both":
-        failures.append(
-            f"the replacing came back as {said[-1]!r} rather than the {'both'!r} it was")
+    if not said or said[-1] != "false":
+        failures.append("holding it again did not put the overlay back")
     if not back:
         failures.append("the replacing was turned back on and nothing was replaced")
 

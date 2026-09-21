@@ -77,7 +77,7 @@ class OverlayController(
      * a scroll rides on, the end of that scroll, and the reveal - and a guard on one of them
      * left the other three painting.
      */
-    private val silent: Boolean get() = SettingsStore.current.layer == "off"
+    private val silent: Boolean get() = SettingsStore.current.quiet
 
     /** The words this believes are on screen, which is what the mark asks about. */
     fun onScreen(): List<WordBox> = lastRendered
@@ -260,8 +260,11 @@ class OverlayController(
         // allows for a transition had its rows taken down again by that transition's own
         // delayed call, and the page ended up with nothing to touch.
         main.removeCallbacks(putAway)
+        val settings = SettingsStore.current
+        // Paused, nothing takes a touch either: the reader held the button to have the app
+        // out of the way, and a word that answers when it is tapped is not out of the way.
         val wanted =
-            if (!SettingsStore.current.touchWords) emptyList()
+            if (!settings.touchWords || settings.paused) emptyList()
             else lines(boxes).take(MAX_ROWS)
         while (rows.size < wanted.size) if (!addRow()) break
         for (i in wanted.indices) {

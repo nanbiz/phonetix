@@ -121,6 +121,47 @@ def main():
         if not opened:
             failures.append("with the overlay off, tapping a word opened no card")
 
+    # Paused is not the same as having nothing to draw. Held down, the app is out of the way
+    # altogether: nothing is painted and nothing takes a touch, because a word that answers
+    # when it is tapped is not out of the way.
+    fresh(dev, layer="sound")
+    shown, boxes = words()
+    at = middle(boxes[0]) if boxes else None
+    if at:
+        shell("input", "swipe", str(at[0]), str(at[1]), str(at[0]), str(at[1]), "50")
+    mark = ((believed().get("mark") or {}).get("markAt") or {})
+    if not mark:
+        failures.append("the button is not on screen, so the overlay cannot be put down")
+    else:
+        # A press held on the button, which is what puts it down.
+        shell("input", "swipe", str(mark["x"] + 52), str(mark["y"] + 52),
+              str(mark["x"] + 52), str(mark["y"] + 52), "900")
+        time.sleep(4)
+        told = believed()
+        paused = (told.get("settings") or {}).get("paused")
+        after = (told.get("overlay") or {})
+        print(f"  the button was held: paused={paused}, {after.get('chipsShown')} drawn, "
+              f"{after.get('touchable')} lines taking touches")
+        if not paused:
+            failures.append("a press held on the button did not put the overlay down")
+        if after.get("chipsShown"):
+            failures.append(f"{after.get('chipsShown')} transcriptions are still drawn")
+        if after.get("touchable"):
+            failures.append(
+                f"{after.get('touchable')} lines still take touches while it is put down")
+        if boxes:
+            word = boxes[0]
+            dev.clear_log()
+            at = middle(word)
+            shell("input", "tap", str(at[0]), str(at[1]))
+            time.sleep(3)
+            if re.findall(r"TOOLTIP open word=(\S+)", dev.log()):
+                failures.append("the overlay is put down and tapping a word still answered")
+        # And picked up again, so the next run starts where this one found things.
+        shell("input", "swipe", str(mark["x"] + 52), str(mark["y"] + 52),
+              str(mark["x"] + 52), str(mark["y"] + 52), "900")
+        time.sleep(3)
+
     if failures:
         print("\nFAIL")
         for line in failures:

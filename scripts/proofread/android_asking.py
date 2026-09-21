@@ -9,9 +9,12 @@ in this process and answers in milliseconds.
 
   PHONETIX_ANDROID_SERIAL=emulator-5596 uv run python scripts/proofread/android_asking.py
 """
+import http.server
+import json
 import os
 import re
 import sys
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -23,6 +26,54 @@ import state as State
 # already open for the reading direction and has to be turned round, which is the only part
 # of this that costs anything.
 ANSWER_WITHIN_S = 6.0
+
+# Where the models are served from, as the reader's own host.
+MODEL_PORT = int(os.environ.get("PHONETIX_MODEL_PORT", "8937"))
+
+# How long the one-off fetch of the missing direction may take, over a host on this machine.
+FETCH_WITHIN_S = 90.0
+
+
+def serve_models(port):
+    """The reader's own host, with the models on it.
+
+    The panel needs the reverse of the pair being read - a phone that has only ever read
+    Spanish into English holds only that direction - and where it is missing the app fetches
+    it from the host the reader's dictionaries come from. So that host is what this is.
+    """
+    listed = json.dumps([
+        {"from": source, "to": target,
+         "files": {kind: {"name": name} for kind, name in files.items()}}
+        for (source, target), files in Says.PAIRS.items()
+    ]).encode()
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path == "/models.json":
+                body, kind = listed, "application/json"
+            elif self.path.startswith("/models/"):
+                name = os.path.basename(self.path)
+                path = os.path.join(Says.MODELS, name)
+                if not os.path.exists(path):
+                    self.send_error(404)
+                    return
+                body, kind = open(path, "rb").read(), "application/octet-stream"
+            elif self.path == "/packs.json":
+                body, kind = b"[]", "application/json"
+            else:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", kind)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    httpd = http.server.ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
 def believed():
@@ -45,7 +96,19 @@ def main():
     adb("push", os.path.join(Says.WORK, "es.pack"), "/data/local/tmp/lex-es.pack", timeout=180)
     adb("shell", "run-as io.github.nanbiz.phonetix sh -c "
                  "'cat /data/local/tmp/lex-es.pack > files/lex-es.pack'", timeout=180)
-    Says.push_models()
+    # Only the direction a reader of Spanish would have: the one the panel needs is the other
+    # one, and fetching it is what this is about.
+    adb("shell", "run-as io.github.nanbiz.phonetix rm -rf files/models/en-es", timeout=120)
+    for (source, target), files in Says.PAIRS.items():
+        if (source, target) != ("es", "en"):
+            continue
+        into = f"files/models/{source}-{target}"
+        adb("shell", f"run-as io.github.nanbiz.phonetix mkdir -p {into}", timeout=120)
+        for name in files.values():
+            adb("push", os.path.join(Says.MODELS, name), f"/data/local/tmp/{name}", timeout=900)
+            adb("shell", f"run-as io.github.nanbiz.phonetix sh -c "
+                         f"'cat \"/data/local/tmp/{name}\" > \"{into}/{name}\"'", timeout=900)
+    serve_models(MODEL_PORT)
 
     if not dev.enable_service():
         raise SystemExit("the service would not start")
@@ -53,8 +116,8 @@ def main():
     # A reader reading Spanish into English, asking for the Spanish word for an English one.
     shell("input", "keyevent", "3")
     time.sleep(2)
-    dev.surface(mode="spanish", packHost=base, target="en", learning="es",
-                enable=1, density=1, layer="both")
+    dev.surface(mode="spanish", packHost=f"http://10.0.2.2:{MODEL_PORT}", target="en",
+                learning="es", enable=1, density=1, layer="both")
     time.sleep(8)
 
     at = ((believed().get("mark") or {}).get("markAt") or {})
@@ -75,7 +138,7 @@ def main():
     began = time.time()
     shell("input", "keyevent", "66")
     answered = None
-    while time.time() - began < 30:
+    while time.time() - began < FETCH_WITHIN_S:
         told = (believed().get("ask") or {})
         if (told.get("stage") or "").startswith(("answered", "nothing came back")):
             answered = told
@@ -89,10 +152,29 @@ def main():
         failures.append(f"nothing came back within {took:.0f}s")
     elif (answered.get("stage") or "").startswith("nothing"):
         failures.append("the panel could not answer at all")
-    elif took > ANSWER_WITHIN_S:
+    elif took > FETCH_WITHIN_S:
         failures.append(f"the word took {took:.1f}s, which is a wait a reader notices")
+    # And the model it needed is here now, so the next question is answered at once.
+    if "en-es" not in shell("run-as", "io.github.nanbiz.phonetix", "ls", "files/models"):
+        failures.append("the missing direction was never fetched from the reader's own host")
     # And from the engine on this phone, not from the machine in another app: that is what
     # makes it milliseconds rather than a download.
+    # Asked again, with the model now here: this is the wait a reader actually lives with.
+    dev.clear_log()
+    shell("input", "text", "s")
+    time.sleep(0.5)
+    began = time.time()
+    shell("input", "keyevent", "66")
+    while time.time() - began < 30:
+        told = (believed().get("ask") or {})
+        if (told.get("stage") or "").startswith(("answered", "nothing came back")):
+            break
+        time.sleep(0.3)
+    again = time.time() - began
+    said = re.findall(r"ASKED \S+: (.*)", dev.log())
+    print(f"  asked again with the model here: {again:.1f}s {said[-1:] or ''}")
+    if again > ANSWER_WITHIN_S:
+        failures.append(f"a second question took {again:.1f}s")
     if said and "here=" not in said[-1]:
         failures.append(f"the phone holds this pair and the question went elsewhere: {said[-1]}")
 
