@@ -128,6 +128,10 @@ object SettingsStore {
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
     private const val K_PAUSED = "paused"
+    private const val K_SCHEMA = "schema"
+
+    /** Which reading of the stored settings this build makes: see [putDownTheOldWay]. */
+    private const val SCHEMA = 2
     private const val K_TARGET = "target"
     private const val K_LEARNING = "learning"
     private const val K_RECENT = "recent"
@@ -180,6 +184,28 @@ object SettingsStore {
             narrow = p.getBoolean(K_NARROW, false),
             hideStress = p.getBoolean(K_STRESS, true),
         )
+        putDownTheOldWay(p)
+    }
+
+    /**
+     * A phone that put the overlay down before there was a way to say so.
+     *
+     * A press held on the button used to empty what the overlay draws - both switches off -
+     * and that is what such a phone still holds. Put down means something of its own now, and
+     * holding the button only puts it down and picks it up again, so a reader who had held it
+     * on the old build found the button grey, the page bare, and nothing they could hold to
+     * bring either back. Read once, the first time this build sees the phone: the words come
+     * back to what they were, and the overlay is put down the way it is put down now, so the
+     * press that brings it back is the one the reader already knows.
+     */
+    private fun putDownTheOldWay(p: android.content.SharedPreferences) {
+        // Marked by a key of its own, not by whether "paused" is stored: the first build that
+        // knew about pausing wrote that key on the reader's first change of anything, while
+        // still holding what the older one left behind.
+        if (p.getInt(K_SCHEMA, 0) >= SCHEMA) return
+        p.edit().putInt(K_SCHEMA, SCHEMA).apply()
+        if (_state.value.layer != "off") return
+        update { it.copy(layer = if (it.target.isNotEmpty()) "both" else "sound", paused = true) }
     }
 
     /**
