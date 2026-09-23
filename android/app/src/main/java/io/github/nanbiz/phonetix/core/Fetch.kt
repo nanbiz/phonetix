@@ -35,14 +35,11 @@ object Fetch {
     fun inFlight(): List<String> = running.toList().sorted()
 
     /**
-     * A language's dictionary, unless this phone already holds it - or unless it is big
-     * enough that fetching it is a decision.
+     * A language's dictionary, unless this phone already holds it - or unless it is bigger
+     * than the connection allows fetching unasked (see [byItself]).
      *
-     * Most are a few megabytes to a few dozen. English is well over a hundred, because it is
-     * every English word with its English definitions, and a reader of English does not need it
-     * to be told what a word means in their own language: that comes from their language's
-     * dictionary, whose meanings are written in English. So the few that size are fetched when a
-     * reader asks for them, from the list, and never on their behalf.
+     * Most are a few megabytes to a few dozen. English and Finnish are around a hundred, which
+     * on a metered connection waits for one that is not: see [connectionFreed].
      */
     fun pack(context: Context, lang: String, then: (Boolean) -> Unit = {}) {
         if (lang.isBlank() || lang in Packs.held(context)) return
@@ -51,6 +48,15 @@ object Fetch {
             val listed = Packs.offered(host).firstOrNull { it.lang == lang }
             listed != null && listed.bytes <= byItself(context) && Packs.get(context, host, lang)
         }
+    }
+
+    /**
+     * The connection stopped being metered: what was too big to fetch on the old one is asked
+     * for again, now rather than after the pause a failure earns.
+     */
+    fun connectionFreed(context: Context, lang: String, then: (Boolean) -> Unit = {}) {
+        failedAt.keys.removeIf { it.startsWith("pack ") }
+        pack(context, lang, then)
     }
 
     /**

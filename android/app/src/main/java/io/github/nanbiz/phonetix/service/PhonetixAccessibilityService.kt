@@ -61,6 +61,31 @@ class PhonetixAccessibilityService : AccessibilityService() {
     @Volatile
     private var lastScreenLanguage: String? = null
 
+    /** Told when the connection changes, so a dictionary held back on a metered one is
+     *  fetched when the phone reaches one that is not. */
+    private val freed = object : android.net.ConnectivityManager.NetworkCallback() {
+        private var wasFree = false
+
+        override fun onCapabilitiesChanged(
+            network: android.net.Network,
+            caps: android.net.NetworkCapabilities,
+        ) {
+            val free = caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            val became = free && !wasFree
+            wasFree = free
+            val lang = lastScreenLanguage ?: return
+            if (!became || !::io.isInitialized) return
+            io.post {
+                Fetch.connectionFreed(this@PhonetixAccessibilityService, lang) { arrived ->
+                    if (arrived) io.post {
+                        Packs.openHeld(this@PhonetixAccessibilityService)
+                        main.post { readAgain() }
+                    }
+                }
+            }
+        }
+    }
+
     /** What each app's screens were last confidently read as, for a screen too short to say. */
     private val languageIn = HashMap<String, String>()
     /** The language the engine was last opened for reading into, so choosing another opens it
@@ -246,6 +271,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // the loop following the page, which is the lens going blind mid-gesture. The next
         // read after the finger lifts is answered from the lines already here.
         Reading.onLinesArrived = { if (!::hover.isInitialized || !hover.held) readAgain() }
+        // A dictionary too big for a metered connection arrives once the phone is on one that
+        // is not, rather than waiting for the reader to read another language and back.
+        runCatching {
+            getSystemService(android.net.ConnectivityManager::class.java)
+                ?.registerDefaultNetworkCallback(freed)
+        }
         // A way to ask the service what it believes, from a phone in a reader's hand at the
         // moment something is wrong.
         //
@@ -925,6 +956,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         Reading.onLinesArrived = null
+        runCatching {
+            getSystemService(android.net.ConnectivityManager::class.java)
+                ?.unregisterNetworkCallback(freed)
+        }
         if (BuildConfig.DEBUG) {
             runCatching { unregisterReceiver(dumpAsked) }
             runCatching { unregisterReceiver(probeAsked) }
