@@ -8,12 +8,13 @@ export default defineBackground(() => {
   host();
   // The word a reader is looking for, without reaching for the mouse. The panel itself is the
   // page's, because that is where it is drawn; this only carries the keystroke to it.
-  browser.commands?.onCommand.addListener(async (command) => {
+  browser.commands?.onCommand.addListener((command) => {
     if (command !== 'ask-for-a-word') return;
-    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.id) return;
-    await browser.tabs
-      .sendMessage(tab.id, { phonetix: 'askForAWord', data: {} })
-      .catch(() => undefined);
+    // A tab that cannot be asked - a browser page, a store page - simply has no panel.
+    void (async () => {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) return;
+      await browser.tabs.sendMessage(tab.id, { phonetix: 'askForAWord', data: {} });
+    })().catch(() => undefined);
   });
 });

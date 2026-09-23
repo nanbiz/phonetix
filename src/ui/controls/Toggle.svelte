@@ -25,5 +25,5 @@
   aria-label={label}
   checked={on}
   disabled={!enabled}
-  onchange={(event) => change((event.currentTarget as HTMLInputElement).checked)}
+  onchange={(event) => change((event.currentTarget).checked)}
 />

@@ -41,6 +41,7 @@ if [[ "$what" == fast ]]; then
   step "the core's lints" \
     cargo clippy --workspace --all-targets --manifest-path core/Cargo.toml -- -D warnings
   step "the extension typechecks" pnpm check
+  step "the extension's lint" node_modules/.bin/eslint src
 fi
 
 if [[ "$what" == all || "$what" == core ]]; then
@@ -59,6 +60,7 @@ fi
 if [[ "$what" == all || "$what" == browser ]]; then
   step "the core, compiled for the browser" node scripts/build-core-wasm.mjs
   step "the extension typechecks" pnpm check
+  step "the extension's lint" node_modules/.bin/eslint src
   step "the extension builds" pnpm build
   step "the core answers inside the extension" uv run python scripts/proofread/lex_extension.py
   step "every card state draws what it means" uv run python scripts/proofread/card_states.py

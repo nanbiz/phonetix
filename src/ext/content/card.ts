@@ -165,7 +165,8 @@ export function moveTo(at: DOMRect): void {
 /** Take the card down. */
 export function hide(): void {
   if (drawn) {
-    unmount(drawn);
+    // Nothing to wait for: the card has no transition out.
+    void unmount(drawn);
     drawn = null;
   }
   about = null;

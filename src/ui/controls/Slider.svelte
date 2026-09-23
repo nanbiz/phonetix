@@ -36,7 +36,7 @@
   {step}
   {value}
   aria-label={label}
-  oninput={(event) => change(Number((event.currentTarget as HTMLInputElement).value))}
+  oninput={(event) => change(Number((event.currentTarget).value))}
 />
 {#if ends}
   <span class="ticks"><span>{ends[0]}</span><span>{ends[1]}</span></span>

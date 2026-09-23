@@ -68,7 +68,7 @@ export function host(): void {
   // What has stopped answering. Recorded as it happens rather than probed here: asking each
   // engine whether it is alive means waking it and running a word through it, which is how a
   // health check becomes the thing that breaks the health it reports on.
-  onMessage('health', async () => ({ trouble: recent() }));
+  onMessage('health', () => Promise.resolve({ trouble: recent() }));
 
   onMessage('packs', async () => ({
     held: await held(),

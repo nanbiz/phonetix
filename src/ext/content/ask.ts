@@ -21,7 +21,8 @@ let drawn: ReturnType<typeof mount> | null = null;
 
 /** Take the panel down. */
 export function close(): void {
-  if (drawn) unmount(drawn);
+  // Nothing to wait for: the panel has no transition out.
+  if (drawn) void unmount(drawn);
   drawn = null;
   host?.remove();
   host = null;

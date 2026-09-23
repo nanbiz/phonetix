@@ -5,6 +5,12 @@ One pass over about three gigabytes, so every pack is built from its own file af
 rather than from the whole dump once per language.
 
   uv run --with orjson python tools/split_kaikki.py <raw-wiktextract-data.jsonl.gz> <out dir>
+  uv run --with orjson python tools/split_kaikki.py <dump> <out dir> sh kmr     only these
+
+Named codes are for a second pass after the first: the languages the dump files under a code
+of its own - Serbo-Croatian for Croatian, Serbian and Bosnian; Kurmanji for Kurdish. A line
+that does not contain one of them anywhere cannot be an entry in it, so that pass parses only
+the lines that might be and takes a minute rather than twenty.
 
 Routed by the entry's own language, which is the top-level "lang_code" of each line. A line
 carries others too - every translation it lists names its language - so the first one that
@@ -45,6 +51,9 @@ def lines(src):
 
 def main():
     src, out = sys.argv[1], sys.argv[2]
+    wanted = frozenset(sys.argv[3:]) or WANTED
+    # Only when the codes are named: for the whole set nearly every line names one of them.
+    needles = [f'"{code}"'.encode() for code in wanted] if sys.argv[3:] else None
     files = {}
     n = 0
     started = time.time()
@@ -53,11 +62,13 @@ def main():
             n += 1
             if n % 1_000_000 == 0:
                 print(f"{n} lines, {time.time() - started:.0f}s", flush=True)
+            if needles is not None and not any(needle in line for needle in needles):
+                continue
             try:
                 code = orjson.loads(line).get("lang_code")
             except orjson.JSONDecodeError:
                 continue
-            if code not in WANTED:
+            if code not in wanted:
                 continue
             sink = files.get(code)
             if sink is None:

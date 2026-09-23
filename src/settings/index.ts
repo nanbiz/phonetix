@@ -60,7 +60,9 @@ export async function current(): Promise<Settings> {
 /** Watch every setting, told which one changed and what everything is now. */
 export function watch(told: (settings: Settings) => void): () => void {
   const stop = (Object.keys(KEYS) as (keyof Settings)[]).map((name) =>
-    storage.watch(KEYS[name], async () => told(await current()))
+    storage.watch(KEYS[name], () => {
+      current().then(told, (e: unknown) => console.warn('phonetix: settings unreadable', e));
+    })
   );
   return () => stop.forEach((off) => off());
 }

@@ -38,6 +38,16 @@ pub struct Skipped {
 /// Returns nothing when the line holds no entry this pack should carry, and says why through
 /// [Skipped] so a build can report it.
 pub fn read_line(line: &str, lang: &str, skipped: &mut Skipped) -> Option<Read> {
+    read_line_filed_as(line, &[lang], skipped)
+}
+
+/// Read one line of the dump for a language the dump files under other codes.
+///
+/// Wiktionary keeps some languages under one heading that a reader knows as several:
+/// Croatian, Serbian and Bosnian are all "Serbo-Croatian" there, and Norwegian is written as
+/// Bokmål and Nynorsk. A pack for the language the product names is built from the entries
+/// filed under any of these codes.
+pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> Option<Read> {
     let line = line.trim();
     if line.is_empty() {
         return None;
@@ -48,7 +58,7 @@ pub fn read_line(line: &str, lang: &str, skipped: &mut Skipped) -> Option<Read> 
     };
     // The dump's own language tag, which an extract is not guaranteed to be filtered by.
     if let Some(code) = value.get("lang_code").and_then(|v| v.as_str()) {
-        if !code.eq_ignore_ascii_case(lang) {
+        if !codes.iter().any(|wanted| code.eq_ignore_ascii_case(wanted)) {
             skipped.other_language += 1;
             return None;
         }
@@ -252,6 +262,15 @@ mod tests {
     fn a_line_of_another_language_is_left_alone() {
         let mut skipped = Skipped::default();
         assert!(read_line(PERRO, "de", &mut skipped).is_none());
+        assert_eq!(skipped.other_language, 1);
+    }
+
+    #[test]
+    fn a_language_filed_under_another_code_is_taken_from_it() {
+        let mut skipped = Skipped::default();
+        // Wanted under any of the codes the dump files it by, as Croatian is under "sh".
+        assert!(read_line_filed_as(PERRO, &["pt", "es"], &mut skipped).is_some());
+        assert!(read_line_filed_as(PERRO, &["pt", "gl"], &mut skipped).is_none());
         assert_eq!(skipped.other_language, 1);
     }
 

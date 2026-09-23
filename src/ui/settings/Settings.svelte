@@ -16,7 +16,6 @@
   import { SIDES } from '@/ui/palettes';
   import { accentFor, readInto, setAccent, type Settings } from '@/settings/shape';
   import {
-    aboutOf,
     DARK_CHOICES,
     SIDE_CHOICES,
     DETAIL_CHOICES,
@@ -216,7 +215,6 @@
       screenDown = down;
     }
   });
-  let layerName = $derived(labelOf(LAYER_CHOICES, settings.layer));
 
   // The languages a reader can pick between, by the name they know them under.
   const named = Object.entries(LANGUAGES)

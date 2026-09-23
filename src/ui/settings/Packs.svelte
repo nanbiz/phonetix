@@ -1,21 +1,19 @@
 <script lang="ts">
-  // The dictionaries: what is on offer, what each costs, and the one thing to do with it.
+  // The dictionaries: what is here, what else is on offer, and what each costs.
   //
-  // Nothing is fetched because a page happened to be in a language. A dictionary is tens of
-  // megabytes on someone's connection, so it arrives when a reader asks for it by name.
+  // A page's dictionary arrives by itself the first time a page in its language is read; this
+  // is where a reader sees which ones they hold, fetches one ahead of reading it, or gives one
+  // up to have the space back.
   import Download from 'virtual:icons/pixelarticons/download';
   import Close from 'virtual:icons/pixelarticons/close';
   import Loader from 'virtual:icons/line-md/loading-twotone-loop';
 
   import { LANGUAGES } from '@/data/languages';
   import type { Offered } from '@/host/packs';
-  import { ROWS, SAYS } from '@/data/wording';
-  import Field from '@/ui/controls/Field.svelte';
   import Row from './Row.svelte';
 
   interface Props {
-    packs: { held: string[]; open: string[]; offered: Offered[] };
-    /** Where the dictionaries come from, which is the reader's to decide. */
+    packs: { held: string[]; offered: Offered[] };
     /** Which language is being fetched right now, so its row says so rather than looking dead. */
     fetching?: string | null;
     get?: (lang: string) => void;

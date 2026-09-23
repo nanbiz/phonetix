@@ -7,7 +7,7 @@
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import {
-  accentFor, allowed, current, darkSide, DEFAULTS, readInto, watch, type Settings,
+  accentFor, allowed, current, DEFAULTS, readInto, watch, type Settings,
 } from '@/settings';
 import { hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing } from './card';
 import { open as openAsk } from './ask';
@@ -181,7 +181,7 @@ async function draw(): Promise<void> {
     }
     state(`drew ${drew} of ${batch.tokens.length}`);
   } catch (e) {
-    state(`failed: ${e}`);
+    state(`failed: ${String(e)}`);
     throw e;
   } finally {
     // Our own mutations, dropped before anything can act on them. Ordered before the guard
@@ -285,7 +285,7 @@ async function selected(): Promise<void> {
   if (!selection || selection.isCollapsed || text.split(/\s+/).length < 2) return;
   if (text.length > PHRASE_LIMIT) return;
   const at = selection.anchorNode;
-  if (at && inside(at instanceof Element ? at : (at.parentElement as Node))) return;
+  if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
   const source = pageLanguage();
   const target = readInto(settings) || source;
   if (!target || target === source) return;
@@ -531,7 +531,7 @@ export async function session(): Promise<void> {
   answerAsked();
   gestures();
   follow();
-  watch(async (fresh) => {
+  watch((fresh) => {
     const was = settings;
     settings = fresh;
     // Only what changes the page redraws it: a reader dragging the frequency bar changes it
@@ -552,7 +552,7 @@ export async function session(): Promise<void> {
       paintedIn(fresh.theme, fresh.dark);
       cardPaintedIn(fresh.theme, fresh.dark);
       if (!allowed(fresh, location.hostname) && isPainted()) unpaint();
-      else await draw();
+      else redraw();
     }
   });
   // And when a dictionary arrives or is given up, which is not a setting and used to leave
@@ -560,7 +560,16 @@ export async function session(): Promise<void> {
   // looking at and nothing on it changed.
   browser.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local' || !('heldPacks' in changes)) return;
-    void draw();
+    redraw();
   });
   await draw();
+}
+
+/**
+ * Draw the page again, from something that cannot wait for it: a setting changing, a
+ * dictionary arriving. A failure is already written down where the page's state is kept, so
+ * what is left is to keep it from becoming a rejection nobody is listening for.
+ */
+function redraw(): void {
+  draw().catch(() => undefined);
 }

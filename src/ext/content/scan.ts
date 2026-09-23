@@ -86,7 +86,7 @@ function declared(node: Text): string | undefined {
 export function scan(root: ParentNode = document.body, from = 0): ScannedRun[] {
   const runs: ScannedRun[] = [];
   if (!(root instanceof Element) && !(root instanceof Document)) return runs;
-  const walker = document.createTreeWalker(root as Node, NodeFilter.SHOW_TEXT, {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node: Node) {
       const text = node.nodeValue ?? '';
       if (text.trim().length < 2) return NodeFilter.FILTER_REJECT;

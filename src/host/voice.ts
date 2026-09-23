@@ -29,7 +29,7 @@ function offscreen(): Promise<void> {
   if (!ready) {
     ready = (async () => {
       const contexts = await chrome.runtime
-        .getContexts?.({ contextTypes: ['OFFSCREEN_DOCUMENT' as chrome.runtime.ContextType] })
+        .getContexts?.({ contextTypes: ['OFFSCREEN_DOCUMENT'] })
         .catch(() => undefined);
       if (contexts && contexts.length > 0) return;
       try {
@@ -75,10 +75,7 @@ async function ask<T>(
     let answered: { ok: T } | { failed: string } | undefined;
     let reached = true;
     try {
-      answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base })) as
-        | { ok: T }
-        | { failed: string }
-        | undefined;
+      answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base }));
     } catch (e) {
       // What a browser says when nothing is listening: the page is gone, rather than the
       // engine having failed at something. Anything else is the engine's own answer.

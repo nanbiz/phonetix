@@ -41,11 +41,11 @@ if (typeof window !== 'undefined') {
     const asked = waiting.get(id);
     if (!asked) return;
     waiting.delete(id);
-    let value: unknown = null;
+    let value: unknown;
     try {
       value = json ? JSON.parse(json) : null;
     } catch (e) {
-      asked.give(new Error(`the app answered with ${json}: ${e}`));
+      asked.give(new Error(`the app answered with ${json}: ${String(e)}`));
       return;
     }
     if (ok) asked.keep(value);

@@ -102,7 +102,7 @@ export async function sendMessage<K extends Named>(
   const asked: Asked<K> = { phonetix: name, data };
   // Through `browser` rather than `chrome`: on Firefox the chrome namespace is the
   // callback-style one, and awaiting it there is awaiting undefined.
-  const answered = (await browser.runtime.sendMessage(asked)) as Answered<K> | undefined;
+  const answered: Answered<K> | undefined = await browser.runtime.sendMessage(asked);
   if (!answered) throw new Error(`the host did not answer ${name}`);
   if ('failed' in answered) throw new Error(answered.failed);
   return answered.ok;

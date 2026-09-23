@@ -22,9 +22,9 @@
     aria-label={label}
     {placeholder}
     {value}
-    onchange={(event) => change((event.currentTarget as HTMLInputElement).value.trim())}
+    onchange={(event) => change((event.currentTarget).value.trim())}
     onkeydown={(event) => {
-      if (event.key === 'Enter') (event.currentTarget as HTMLInputElement).blur();
+      if (event.key === 'Enter') (event.currentTarget).blur();
     }}
   />
 </label>

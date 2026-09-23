@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   // The word a reader is looking for, over the page they are reading.
   //
   // The other direction, and the same question the phone's mark answers: everything else here
@@ -35,7 +36,8 @@
 
   /** Which language the answer comes back in, as this panel has it: the reader can change it
    *  while the panel is up, and what they pick is remembered by whoever opened it. */
-  let into = $state(learning);
+  // The value it opened with, on purpose: see above.
+  let into = $state(untrack(() => learning));
   let wanted = $state('');
   let said = $state<Answer | null>(null);
   let asking = $state(false);
@@ -45,7 +47,7 @@
   /** What the list offers, and in which order: see [offering]. The order is taken once, from
    *  what was remembered when the panel opened, so picking a language does not reshuffle the
    *  list under the reader who is looking at it. */
-  const first = learning;
+  const first = untrack(() => learning);
   let offered = $derived(
     offering(first, recent, held, Object.keys(LANGUAGES)).map((lang) => ({
       value: lang,
@@ -104,7 +106,7 @@
             placeholder={SAYS['say-placeholder']}
             value={wanted}
             autofocus
-            oninput={(event) => typed((event.currentTarget as HTMLInputElement).value)}
+            oninput={(event) => typed((event.currentTarget).value)}
           />
         </label>
       </span>

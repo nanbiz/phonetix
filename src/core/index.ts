@@ -234,7 +234,7 @@ export function modelReady(): Promise<number> {
   if (!told) {
     told = (async () => {
       const it = await coreReady();
-      const res = await fetch(chrome.runtime.getURL(MODEL as never));
+      const res = await fetch(chrome.runtime.getURL(MODEL));
       if (!res.ok) throw new Error(`${res.status} reading the language model`);
       return it.openModel(new Uint8Array(await res.arrayBuffer()));
     })().catch((e) => {

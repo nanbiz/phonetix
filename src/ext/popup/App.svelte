@@ -75,7 +75,7 @@
     // like rather than describing it.
     if (name === 'theme' || name === 'dark') {
       const device = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const next = { ...(settings as Chosen), [name]: value } as Chosen;
+      const next = { ...(settings as Chosen), [name]: value };
       document.documentElement.className = themeOf(darkSide(next, device), next.theme);
     }
     void set(name, value).then(() => {

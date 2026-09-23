@@ -193,7 +193,7 @@
     <!-- A page under it, so the board reads as a screen rather than as a box: what is being
          placed is a thing that sits over somebody's reading. -->
     <span class="page" aria-hidden="true">
-      {#each Array(12) as _, line}
+      {#each Array.from({ length: 12 }, (_, at) => at) as line (line)}
         <span class="line" style="width: {line % 3 === 2 ? 54 : 88}%"></span>
       {/each}
     </span>

@@ -12,7 +12,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use lexpack::{Builder, Kind};
-use packbuild::{read_line, Skipped};
+use packbuild::{read_line_filed_as, Skipped};
 use sha2::{Digest, Sha256};
 
 fn main() {
@@ -21,12 +21,18 @@ fn main() {
         pronunciations(&args[2], &args[3], &args[4]);
         return;
     }
-    if args.len() != 4 {
-        eprintln!("packbuild <language> <extract.jsonl> <out.lexpack>");
+    // A fifth argument names the codes the dump files the language under, where it is not
+    // the language's own: "sh" for Croatian, "nb,nn,no" for Norwegian.
+    if args.len() != 4 && args.len() != 5 {
+        eprintln!("packbuild <language> <extract.jsonl[.gz]> <out.lexpack> [filed,under,codes]");
         eprintln!("packbuild ipa <language> <words.json.gz> <out.lexpack>");
         std::process::exit(2);
     }
     let (lang, from, to) = (&args[1], &args[2], &args[3]);
+    let filed: Vec<&str> = match args.get(4) {
+        Some(codes) => codes.split(',').filter(|c| !c.is_empty()).collect(),
+        None => vec![lang.as_str()],
+    };
 
     let file = match File::open(from) {
         Ok(file) => file,
@@ -55,7 +61,7 @@ fn main() {
     let mut refused = 0usize;
     for line in BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
-        let Some(read) = read_line(&line, lang, &mut skipped) else {
+        let Some(read) = read_line_filed_as(&line, &filed, &mut skipped) else {
             continue;
         };
         match pack.add(read.entry, &read.forms) {
