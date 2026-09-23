@@ -1434,3 +1434,66 @@ fn a_function_word_filed_as_a_form_still_wins() {
     );
     assert_eq!(drawn(&french, "fr", "de la banque", "la"), "the");
 }
+
+/// A capital at the start of a sentence says nothing; in the middle of a German one it does.
+#[test]
+fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let no_forms: [&str; 0] = [];
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(word("Er", "noun", "eːɐ̯", &["a male"]), &no_forms)
+        .unwrap();
+    german
+        .add(word("er", "pron", "eːɐ̯", &["he"]), &no_forms)
+        .unwrap();
+    german
+        .add(word("Morgen", "noun", "ˈmɔʁɡn̩", &["morning"]), &no_forms)
+        .unwrap();
+    german
+        .add(word("morgen", "adv", "ˈmɔʁɡn̩", &["tomorrow"]), &no_forms)
+        .unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        ..Open::default()
+    };
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "Er kommt. Am Morgen kommt er.".to_string(),
+            lang_hint: None,
+        }],
+        &lang("de"),
+        &lang("en"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Meaning,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+        },
+    );
+    let drawn: Vec<(String, String)> = tokens
+        .iter()
+        .filter(|token| token.inline)
+        .map(|token| {
+            (
+                token.spelling.clone(),
+                token.gloss.clone().unwrap_or_default(),
+            )
+        })
+        .collect();
+    assert!(
+        drawn.contains(&("Er".to_string(), "he".to_string())),
+        "{drawn:?}"
+    );
+    assert!(
+        drawn.contains(&("Morgen".to_string(), "morning".to_string())),
+        "{drawn:?}"
+    );
+}

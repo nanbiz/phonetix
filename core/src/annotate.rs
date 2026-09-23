@@ -65,8 +65,25 @@ pub fn annotate<D: AsRef<[u8]>>(
             // With the word before it, which is what decides a spelling that is several
             // words. The run is the sentence as the page has it, so the neighbour is the one
             // the reader is actually looking at.
+            //
+            // At the start of a sentence a capital says nothing about the word, and the word
+            // in small letters is read instead wherever the dictionary has one: German "Er"
+            // opening a line is "er", "he", and not the noun "Er" the capital would otherwise
+            // reach. A capitalised word in the middle of a sentence keeps its capital, which in
+            // German is what makes it a noun.
+            let reading = match open.source {
+                Some(pack) if starts_sentence(&run.text, word.start) => {
+                    let small = spelling.to_lowercase();
+                    if small != spelling && !pack.lookup(&small).is_empty() {
+                        small
+                    } else {
+                        spelling.clone()
+                    }
+                }
+                _ => spelling.clone(),
+            };
             let answer =
-                crate::resolve::read_in_context(&spelling, before.as_deref(), &lang, target, open);
+                crate::resolve::read_in_context(&reading, before.as_deref(), &lang, target, open);
             before = Some(spelling.clone());
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
@@ -252,6 +269,28 @@ pub fn complete<D: AsRef<[u8]>>(
 ///
 /// Cut mid-word, an annotation reads as a different word; cut at a space, it reads as the
 /// beginning of the right one. The ellipsis says that there is more, which the card has.
+/// Whether the word at this offset starts a sentence: nothing but space before it in the run,
+/// or the end of one - a full stop, a question or exclamation mark, a colon - with an opening
+/// quotation mark or bracket allowed between.
+fn starts_sentence(text: &str, start_utf16: u32) -> bool {
+    let mut offset = 0u32;
+    let mut before: Vec<char> = Vec::new();
+    for c in text.chars() {
+        if offset >= start_utf16 {
+            break;
+        }
+        before.push(c);
+        offset += c.len_utf16() as u32;
+    }
+    let previous = before.iter().rev().find(|c| {
+        !c.is_whitespace() && !matches!(c, '"' | '“' | '„' | '«' | '»' | '(' | '[' | '¿' | '¡')
+    });
+    match previous {
+        None => true,
+        Some(c) => matches!(c, '.' | '!' | '?' | ':' | '…'),
+    }
+}
+
 /// What a word is drawn as over the page, out of what a dictionary says it means.
 ///
 /// A dictionary writes for a card: "dog (the species Canis familiaris, ...)", "masculine
@@ -398,6 +437,7 @@ fn about_grammar(part: &str) -> bool {
         "used before",
         "used after",
         "tense",
+        "forms the",
         "masculine",
         "feminine",
         "neuter",

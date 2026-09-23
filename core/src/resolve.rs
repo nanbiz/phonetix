@@ -217,7 +217,12 @@ fn rank_of(entry: &Entry, spelling: &str) -> u8 {
     // the lowercase word it would also match, "Weg" before "weg". Then the word regardless of
     // case - where a sentence's first word competes with a name spelled the same, which is
     // left to the kind of word to decide. Then what the spelling is an inflection of.
-    let level = if entry.lemma == spelling && entry.pos != "name" && leads_with_meaning {
+    // Only a noun is capitalised for being what it is; any other word written with a capital is
+    // more likely starting a sentence, and the word in small letters is the one meant - German
+    // "Er" at the start of a line is "er", "he", not the old polite "Er", "you".
+    let capital = spelling.chars().next().is_some_and(char::is_uppercase);
+    let as_written = entry.lemma == spelling && entry.pos != "name";
+    let level = if as_written && leads_with_meaning && (!capital || entry.pos == "noun") {
         0
     } else if same_word(&entry.lemma, spelling) && leads_with_meaning {
         1
