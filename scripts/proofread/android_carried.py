@@ -71,10 +71,12 @@ def main():
         if said.get(word) != sound:
             failures.append(f"{word} came back as {said.get(word)!r} rather than {sound!r}")
 
-    # And nothing was fetched to do it: the point of carrying them.
-    host = shell("run-as", "io.github.nanbiz.phonetix", "ls", "files")
-    if "lex-" in host:
-        failures.append(f"a dictionary was fetched from somewhere: {host.split()}")
+    # Built out of what it carries rather than fetched. The dictionary of what Spanish words
+    # mean is fetched from the published packs by itself now, which is the point of that; how
+    # they are said has to be here before anything arrives.
+    held = shell("run-as", "io.github.nanbiz.phonetix", "ls", "files").split()
+    if "ipa-es.pack" not in held:
+        failures.append(f"no pronunciation pack was built from what the app carries: {held}")
 
     if failures:
         print("\nFAIL")

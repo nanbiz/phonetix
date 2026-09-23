@@ -98,19 +98,18 @@ def drawn(dev):
 def on_the_card(dev, word):
     """Open the card for a word and give back every piece of text it laid out.
 
-    A press held, not a tap: the transcriptions cover the words themselves, so a card on
-    every touch would make the page unusable, and `input tap` is too brief to be one. Where
+    A tap: that is what asks about a word, and a press held lifts the overlay instead. Where
     the word is is read again immediately before each try, since a screen that settled once
     more has moved the words under a position read a moment ago.
     """
     for _ in range(3):
-        box = next((b for b in dev.boxes().values() if b["word"] == word), None)
+        box = next((b for b in dev.annotated(seconds=20).values() if b["word"] == word), None)
         if not box:
             return None, "the word was not on the screen to press"
         left, top, right, bottom = box["rect"]
         x, y = (left + right) // 2, (top + bottom) // 2
         dev.clear_log()
-        shell("input", "swipe", str(x), str(y), str(x), str(y), "700")
+        shell("input", "tap", str(x), str(y))
         time.sleep(3)
         cards = re.findall(r"CARD (.*)", dev.log())
         if cards:
