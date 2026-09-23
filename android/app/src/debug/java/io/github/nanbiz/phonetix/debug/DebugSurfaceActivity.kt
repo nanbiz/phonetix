@@ -605,8 +605,11 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 )
             }
             if (i.hasExtra("packHost")) {
+                // "none" for the published one, for the reason "target" takes it: a shell
+                // drops an empty extra.
+                val host = i.getStringExtra("packHost").orEmpty()
                 io.github.nanbiz.phonetix.core.SettingsStore.setPackHost(
-                    i.getStringExtra("packHost").orEmpty(),
+                    if (host == "none") "" else host,
                 )
             }
             if (i.hasExtra("target")) {
