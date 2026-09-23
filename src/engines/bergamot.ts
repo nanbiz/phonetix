@@ -21,12 +21,14 @@ let translator: any = null;
 let starting: Promise<any> | null = null;
 
 /**
- * Where the models come from, which is wherever the reader said their dictionaries live.
+ * Where the models come from: the listing published beside the packs.
  *
- * The engine's own default is a repository on the open internet. That is somebody else's host
- * and nothing here should reach for it on a reader's behalf, so the backing is replaced: the
- * registry and the model files are asked for at the reader's own pack host, beside the packs,
- * and with no host set there is no translation rather than a request to a stranger.
+ * The listing names, for each direction, the files Mozilla publishes for Firefox's own
+ * translations, where Mozilla publishes them and the checksum each has to have - pinned to
+ * the versions this product was checked against, so what arrives does not change when
+ * Mozilla publishes something new. A host of the reader's own may list bare names instead,
+ * and those are looked for beside its listing, which is how a host serving its own models
+ * works.
  */
 function backing(
   TranslatorBacking: new (options?: Record<string, unknown>) => any,
@@ -39,7 +41,7 @@ function backing(
       const listed = (await res.json()) as {
         from: string;
         to: string;
-        files: Record<string, { name: string }>;
+        files: Record<string, { name: string; url?: string; sha256?: string }>;
       }[];
       return listed.map((model) => ({ ...model, model }));
     }
@@ -55,9 +57,18 @@ function backing(
         wanted
           .filter((name) => files[name])
           .map(async (name) => {
-            const res = await fetch(`${base}/models/${files[name].name}`);
-            if (!res.ok) throw new Error(`${res.status} fetching ${files[name].name}`);
-            fetched[name] = await res.arrayBuffer();
+            const file = files[name];
+            const res = await fetch(file.url ?? `${base}/models/${file.name}`);
+            if (!res.ok) throw new Error(`${res.status} fetching ${file.name}`);
+            const bytes = await res.arrayBuffer();
+            // What was checked is what is used: a file that arrived different - cut short, or
+            // an error page served under its name - is refused rather than handed to the
+            // engine as a model.
+            if (file.sha256) {
+              const got = await sha256(bytes);
+              if (got !== file.sha256) throw new Error(`${file.name} arrived as ${got}`);
+            }
+            fetched[name] = bytes;
           })
       );
       // The engine names the shortlist and the vocabularies differently from the registry a
@@ -74,6 +85,12 @@ function backing(
       };
     }
   };
+}
+
+/** A file's checksum, as the listing writes it. */
+async function sha256(bytes: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**

@@ -161,11 +161,14 @@ def in_the_view(cdp, extid):
         }, session=session, timeout=300)
         return got.get("result", {}).get("value")
 
+    # Behind the mark rather than in the list, since it is not a setting: a reader holds the
+    # product's own mark, and the gesture a pointer has for "what else does this do" is the
+    # context menu, which the mark answers the same way.
     opened = evaluate("""
         (() => {
-          const row = document.querySelector('button.nav[data-row=say]');
-          if (!row) return 'no row';
-          row.click();
+          const mark = document.querySelector('[data-does=say]');
+          if (!mark) return 'no mark to hold';
+          mark.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}));
           return 'opened';
         })()
     """)

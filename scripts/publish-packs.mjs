@@ -29,24 +29,41 @@ const packs = fs
     .map((name) => {
         const file = path.join(from, name);
         const bytes = fs.readFileSync(file);
+        const said = besideOf(file);
         return {
+            id: said.id ?? `lex-${name.slice(0, -".pack".length)}`,
             lang: name.slice(0, -".pack".length),
+            built: Number(said.built ?? 0),
             // What the pack says it holds, taken from the manifest packbuild printed beside
             // it where there is one: a count nothing wrote is not invented here.
-            entries: entriesOf(file),
+            entries: Number(said.entries ?? 0),
+            keys: Number(said.keys ?? 0),
+            glosses: Number(said.glosses ?? 0),
             bytes: bytes.length,
+            // Worked out here from the bytes being published, not copied: the checksum is what
+            // a phone refuses a download by, so it has to be of this file.
             sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
         };
-    });
+    })
+    .sort((a, b) => a.lang.localeCompare(b.lang));
 if (!packs.length) throw new Error(`no .pack files in ${from}`);
 
 /** What packbuild wrote beside the pack, where it did. */
-function entriesOf(file) {
+function besideOf(file) {
     const beside = `${file}.json`;
-    if (!fs.existsSync(beside)) return 0;
-    const said = JSON.parse(fs.readFileSync(beside, "utf8"));
-    return Number(said.entries ?? 0);
+    if (!fs.existsSync(beside)) return {};
+    try {
+        return JSON.parse(fs.readFileSync(beside, "utf8"));
+    } catch {
+        return {};
+    }
 }
+
+// Whatever else belongs beside the packs: the listing of translation models, and where the
+// words came from and under what licence, which has to travel with them.
+const alongside = ["models.json", "ATTRIBUTION.md"]
+    .map((name) => path.join(from, name))
+    .filter((file) => fs.existsSync(file));
 
 const listing = path.join(from, "packs.json");
 fs.writeFileSync(listing, JSON.stringify(packs, null, 2) + "\n");
@@ -58,14 +75,17 @@ try {
 } catch {
     execFileSync(
         "gh",
+        // Not the latest release: that is the product, and this is data it downloads.
         ["release", "create", TAG, "--repo", REPO, "--title", "Dictionary packs",
-         "--notes", "The packs the app fetches: packs.json and one file per language."],
+         "--latest=false",
+         "--notes", "The packs the app fetches: packs.json and one file per language. " +
+            "See ATTRIBUTION.md for the source and licence of the data."],
         { stdio: "inherit" },
     );
 }
 execFileSync(
     "gh",
-    ["release", "upload", TAG, "--repo", REPO, "--clobber", listing,
+    ["release", "upload", TAG, "--repo", REPO, "--clobber", listing, ...alongside,
      ...packs.map((p) => path.join(from, `${p.lang}.pack`))],
     { stdio: "inherit" },
 );

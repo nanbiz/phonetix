@@ -73,20 +73,51 @@ async function carriedPack(lang: string): Promise<Uint8Array | undefined> {
 }
 
 /**
- * A language's pack, open in the core, from what this machine already holds.
+ * A language's pack, open in the core, from what this machine already holds - and the
+ * dictionary of what its words mean fetched in the background the first time it is needed.
  *
- * Nothing is fetched here. A dictionary is tens of megabytes and the reader decides which
- * ones they want; a page that quietly pulled one down because it happened to be in that
- * language would be spending their connection on their behalf.
+ * What is opened now is what is here, so a page is answered at once with how its words are
+ * said; the meanings arrive a moment later and the page is told. Making the reader find a list
+ * and fetch each dictionary by hand was a step nobody could work out, and until they did, a
+ * reader who had chosen a language to read into was answered with nothing in it.
  */
 export async function open(lang: string): Promise<string | null> {
-  if ((await openLanguages()).includes(lang)) return lang;
+  if ((await openLanguages()).includes(lang) && !carried.has(lang)) return lang;
   const bytes = await cached(lang);
   if (bytes) {
     carried.delete(lang);
     return openPack(bytes);
   }
+  inBackground(lang);
+  if ((await openLanguages()).includes(lang)) return lang;
   return fromWhatWeCarry(lang);
+}
+
+/** What is being fetched now, and what failed lately, so a language is fetched once at a time
+ *  and a host that is down is not asked again on every page. */
+const fetching = new Set<string>();
+const failedAt = new Map<string, number>();
+const RETRY_AFTER_MS = 5 * 60_000;
+
+function inBackground(lang: string): void {
+  if (!/^[a-z]{2,3}(-[a-z0-9]+)?$/i.test(lang) || fetching.has(lang)) return;
+  const failed = failedAt.get(lang);
+  if (failed !== undefined && Date.now() - failed < RETRY_AFTER_MS) return;
+  fetching.add(lang);
+  void (async () => {
+    try {
+      const listed = await offered();
+      // Only what is published: asking for a pack that does not exist is a request that
+      // can only fail, once per page, for every language nobody built a pack for.
+      if (!listed.some((pack) => pack.lang === lang)) return;
+      await get(lang);
+      failedAt.delete(lang);
+    } catch {
+      failedAt.set(lang, Date.now());
+    } finally {
+      fetching.delete(lang);
+    }
+  })();
 }
 
 /**
@@ -145,6 +176,14 @@ export async function get(lang: string): Promise<string | null> {
   const res = await fetch(`${base}/${lang}.pack`);
   if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
   const bytes = new Uint8Array(await res.arrayBuffer());
+  // Checked against the listing where it says what the file has to be: a pack cut short opens
+  // as a pack that is missing words, which is worse than not having it.
+  const listed = (await offered().catch(() => [])).find((pack) => pack.lang === lang);
+  if (listed?.sha256) {
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    const got = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (got !== listed.sha256) throw new Error(`the ${lang} pack arrived as ${got}`);
+  }
   const opened = await openPack(bytes);
   await keep(opened, bytes.slice().buffer, store);
   carried.delete(opened);
@@ -180,19 +219,23 @@ export interface Offered {
   sha256: string;
 }
 
-/**
- * What the host has to offer.
- *
- * Nothing when the reader has not said where their dictionaries come from: an extension that
- * went looking on its own would be an extension deciding who to talk to.
- */
+/** The listing, asked for once a while rather than once per question. */
+let listing: { base: string; at: number; packs: Offered[] } | null = null;
+const LISTING_FOR_MS = 10 * 60_000;
+
+/** What the published packs are, or what a host of the reader's own offers instead. */
 export async function offered(): Promise<Offered[]> {
   const base = await host();
   if (!base) return [];
+  if (listing && listing.base === base && Date.now() - listing.at < LISTING_FOR_MS) {
+    return listing.packs;
+  }
   const res = await fetch(`${base}/packs.json`);
   if (!res.ok) throw new Error(`${res.status} fetching the list of packs`);
   const listed = (await res.json()) as Offered[] | { packs: Offered[] };
-  return Array.isArray(listed) ? listed : (listed.packs ?? []);
+  const packs = Array.isArray(listed) ? listed : (listed.packs ?? []);
+  listing = { base, at: Date.now(), packs };
+  return packs;
 }
 
 /** Which languages are held on this machine, open or not. */

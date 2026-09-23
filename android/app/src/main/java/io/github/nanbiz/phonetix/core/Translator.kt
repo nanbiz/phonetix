@@ -33,7 +33,25 @@ object Translator {
     fun ready(models: File, from: String, to: String): Boolean {
         val here = File(models, "$from-$to").listFiles().orEmpty()
         return here.any { it.name.startsWith("model") && it.name.endsWith(".bin") } &&
-            here.any { it.name.endsWith(".spm") }
+            vocabularies(here) != null
+    }
+
+    /**
+     * The vocabularies a direction reads, source then target.
+     *
+     * One file for most pairs, used for both sides. A pair whose two languages share no
+     * script - Japanese and English - carries one for each, and handing the engine the same
+     * one twice makes it read the target language's pieces as the source's.
+     */
+    private fun vocabularies(here: Array<out File>): Pair<File, File>? {
+        val source = here.firstOrNull { it.name.startsWith("srcvocab") && it.name.endsWith(".spm") }
+        val target = here.firstOrNull { it.name.startsWith("trgvocab") && it.name.endsWith(".spm") }
+        if (source != null && target != null) return source to target
+        val shared = here.firstOrNull {
+            it.name.endsWith(".spm") && !it.name.startsWith("srcvocab") &&
+                !it.name.startsWith("trgvocab")
+        } ?: return null
+        return shared to shared
     }
 
     /**
@@ -50,18 +68,19 @@ object Translator {
         // are published under, because the engine reads what kind of model it is from them.
         val here = File(models, wanted).listFiles().orEmpty()
         val model = here.firstOrNull { it.name.startsWith("model") && it.name.endsWith(".bin") }
-        val vocab = here.firstOrNull { it.name.endsWith(".spm") }
+        val vocabs = vocabularies(here)
         val shortlist = here.firstOrNull { it.name.startsWith("lex") && it.name.endsWith(".bin") }
-        if (model == null || vocab == null) {
+        if (model == null || vocabs == null) {
             open = ""
             return false
         }
+        val (vocab, targetVocab) = vocabs
         // The configuration marian-decoder takes, naming files rather than carrying bytes: the
         // app has them on disk already and handing seventeen megabytes across the boundary to
         // read it straight back would be a copy for nothing.
         val config = buildString {
             append("models:\n  - ${model.absolutePath}\n")
-            append("vocabs:\n  - ${vocab.absolutePath}\n  - ${vocab.absolutePath}\n")
+            append("vocabs:\n  - ${vocab.absolutePath}\n  - ${targetVocab.absolutePath}\n")
             if (shortlist != null) {
                 append("shortlist:\n  - ${shortlist.absolutePath}\n  - false\n")
             }

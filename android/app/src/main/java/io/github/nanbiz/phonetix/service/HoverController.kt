@@ -359,10 +359,7 @@ class HoverController(
         gravity = Gravity.TOP or Gravity.START
         x = markX
         y = markY
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-        }
+        layoutInDisplayCutoutMode = intoTheCutout()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             fitInsetsTypes = 0
         }
@@ -380,10 +377,7 @@ class HoverController(
         PixelFormat.TRANSLUCENT,
     ).apply {
         gravity = Gravity.TOP or Gravity.START
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-        }
+        layoutInDisplayCutoutMode = intoTheCutout()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             fitInsetsTypes = 0
         }
@@ -740,6 +734,19 @@ class HoverController(
             }
         }
     }
+
+    /**
+     * Into the cutout, so the circle can be carried to the very top of the screen.
+     *
+     * "Always" exists from Android 11; before that the nearest is the short edges, which is
+     * where a phone's cutout is.
+     */
+    private fun intoTheCutout(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else {
+            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
 
     private companion object {
         /** How long a screen has to be in front before the circle is taken down for it. */

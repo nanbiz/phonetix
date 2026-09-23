@@ -275,7 +275,12 @@ private class Bridge(
             wrong.add(Wording.says["service-stopped"].orEmpty())
         }
         val missing = PhonetixAccessibilityService.cannotTranslate()
-        if (missing != null && settings.into.isNotEmpty()) {
+        // While it is on its way that is not something wrong, and it is not worth a line on
+        // the screen: it arrives by itself in a moment. Only a direction that could not be
+        // had is.
+        val arriving = missing != null &&
+            io.github.nanbiz.phonetix.core.Fetch.inFlight().contains("model $missing")
+        if (missing != null && settings.into.isNotEmpty() && !arriving) {
             val named = missing.split('-').joinToString(" to ") { Languages.english(it) }
             wrong.add(Wording.says["no-direction"].orEmpty().replace("%s", named))
         }

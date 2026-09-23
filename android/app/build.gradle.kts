@@ -43,6 +43,13 @@ android {
         buildConfig = true
     }
 
+    // The platform's own classes answer nothing in a unit test. Logging a failure is not what
+    // any test here is about, and a test that dies because the code under it wrote a line to
+    // the log is a test of the log.
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     androidResources {
         // The dictionary is already gzipped; compressing it again in the APK only
         // costs build time and gains nothing.

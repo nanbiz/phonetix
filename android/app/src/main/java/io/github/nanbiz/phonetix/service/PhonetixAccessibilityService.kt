@@ -16,6 +16,7 @@ import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Pick
+import io.github.nanbiz.phonetix.core.Fetch
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
@@ -421,7 +422,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // page that was not scrolling and left the transcriptions standing still on one that
         // was. Reading through to the app every time costs a few milliseconds a line and is
         // the only way to be told the truth.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        // Android 13 is where the platform gave a service this switch; asked for on 12 it is a
+        // method that does not exist.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             runCatching { setCacheEnabled(false) }
                 .onFailure { android.util.Log.w("Phonetix", "could not turn the node cache off", it) }
         }
@@ -845,6 +848,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("restY", settings.restY)
                 .put("touchWords", settings.touchWords)
                 .put("paused", settings.paused)
+                .put("fetching", org.json.JSONArray(Fetch.inFlight()))
                 .put("narrow", settings.narrow)
                 .put("hideStress", settings.hideStress)
                 .put("theme", settings.theme)
@@ -1267,6 +1271,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     // the first time a screen in it is read. Before this, a reader of anything
                     // but English met a screen the app could not answer at all.
                     Dictionary.ensure(this, reading)
+                    // And what its words mean, from the published packs, the first time a
+                    // screen in it is read. A dictionary the reader had to go and fetch was a
+                    // dictionary nobody had: the list it was on was three screens deep.
+                    Fetch.pack(this, reading) { arrived ->
+                        if (arrived) io.post {
+                            Packs.openHeld(this)
+                            main.post { readAgain() }
+                        }
+                    }
                     // What decides which word a spelling is, for the language on screen. The
                     // pack it belongs to may be the one bundled with the app rather than one
                     // the reader fetched, so this does not hang off a pack opening.
@@ -3258,20 +3271,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // than asking another app to fetch one of its own: this way the answer is the
             // engine's here, in under a second, ever after.
             if (into.isNotEmpty() && into != wanted && !Translator.ready(here, into, wanted)) {
-                val host = SettingsStore.current.packHost
-                if (host.isNotBlank()) {
-                    askStage = "getting the $into to $wanted model"
-                    main.post {
-                        if (asking === panel && turn == asks && answeredTurn != turn) {
-                            panel.saying(
-                                Wording.says["say-fetching"].orEmpty()
-                                    .replace("%s", Languages.english(wanted)),
-                            )
-                        }
+                askStage = "getting the $into to $wanted model"
+                main.post {
+                    if (asking === panel && turn == asks && answeredTurn != turn) {
+                        panel.saying(
+                            Wording.says["say-fetching"].orEmpty()
+                                .replace("%s", Languages.english(wanted)),
+                        )
                     }
-                    runCatching { Packs.getModel(this, host, into, wanted) }
-                        .onFailure { android.util.Log.w("Phonetix", "no model for the panel", it) }
                 }
+                Fetch.modelNow(this, into, wanted)
+                // And the dictionary of the language asked in, for the entry under the word.
+                Fetch.pack(this, wanted)
             }
             val mine =
                 if (into.isNotEmpty() && into != wanted && Translator.ready(here, into, wanted)) {
@@ -3397,8 +3408,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /**
      * Open the translation engine for the direction the reader is reading in.
      *
-     * From the model files this phone already has. Nothing is fetched: what the product can
-     * answer is what it carries and what the reader has put there themselves.
+     * From the model files this phone has, and where it has none for this direction they
+     * are fetched and it is opened again once they arrive: the reader chose a language to
+     * read into, and that is the whole of what they should have to do.
      */
     private fun openTranslator() {
         val settings = SettingsStore.current
@@ -3425,6 +3437,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             missingDirection = "$source-$target"
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "NOMODEL $source->$target")
+            }
+            Fetch.model(this, source, target) { arrived ->
+                if (arrived) io.post { openTranslator() }
             }
         }
     }

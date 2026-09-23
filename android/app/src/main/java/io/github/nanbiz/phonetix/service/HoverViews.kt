@@ -35,10 +35,15 @@ open class HoverBubbleView(context: Context) : View(context) {
      */
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            systemGestureExclusionRects = listOf(Rect(0, 0, width, height))
+        // Only when the size changed: a layout pass is every frame the mark moves, and a new
+        // list handed over every one of those is work for the same answer.
+        if (changed && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            claimed.set(0, 0, width, height)
+            systemGestureExclusionRects = listOf(claimed)
         }
     }
+
+    private val claimed = Rect()
 
     private companion object {
         /** The two inks the mark is drawn in, for a dark surface and for a bright one. */
