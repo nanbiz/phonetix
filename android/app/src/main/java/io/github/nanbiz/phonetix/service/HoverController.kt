@@ -504,6 +504,13 @@ class HoverController(
         private var fingerX = 0f
         private var fingerY = 0f
 
+        /** Where the mark waited when the finger came down, as its centre: the point the
+         *  carry is measured from. Taken then rather than asked each move, because a mark
+         *  being dragged is under the finger, and a carry measured from the finger is a carry
+         *  along one axis only - sideways, with the word under the thumb never lifted clear. */
+        private var homeX = 0f
+        private var homeY = 0f
+
         private var lastSwing = 0L
         private var asked = false
 
@@ -552,7 +559,19 @@ class HoverController(
             // size of the distance the ball travels in a frame and reading the screen for one
             // is not free.
             asked = !asked
-            if (asked) hoverAt(ballX.roundToInt(), ballY.roundToInt())
+            if (asked) {
+                // Where the hand is and where it holds the circle, apart from where the circle
+                // has swung to: the carry is decided by the first two, and a check reading the
+                // swinging circle on a slow machine reads the leash's lag instead.
+                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "LENSCARRY finger=${fingerX.roundToInt()},${fingerY.roundToInt()} " +
+                            "want=${wantX.roundToInt()},${wantY.roundToInt()}",
+                    )
+                }
+                hoverAt(ballX.roundToInt(), ballY.roundToInt())
+            }
         }
 
         override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -568,6 +587,16 @@ class HoverController(
                     held = false
                     sweeping = false
                     swept.clear()
+                    val waits = restingAt(view.width)
+                    homeX = waits.x + view.width / 2f
+                    homeY = waits.y + view.width / 2f
+                    if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                        android.util.Log.d(
+                            "Phonetix",
+                            "LENSHOME ${homeX.roundToInt()},${homeY.roundToInt()} " +
+                                "down=${event.rawX.roundToInt()},${event.rawY.roundToInt()}",
+                        )
+                    }
                     view.active = true
                     showLayer()
                     main.postDelayed(hold, HOLD_MS)
@@ -701,9 +730,6 @@ class HoverController(
             // past it, so nothing can be aimed at precisely. Here the aim is one for one
             // outside the growing part and half as much again inside it.
             val edges = screen()
-            val waits = restingAt(size)
-            val homeX = waits.x + size / 2f
-            val homeY = waits.y + size / 2f
             val awayX = event.rawX - homeX
             val awayY = event.rawY - homeY
             val away = kotlin.math.hypot(awayX, awayY)

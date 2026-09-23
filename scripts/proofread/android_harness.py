@@ -415,6 +415,73 @@ class Device:
         return None
 
 
+def finger_for(target, home, dpi, width, height):
+    """Where the finger goes for the circle to settle on [target], by the controller's own
+    arithmetic.
+
+    The circle is carried away from where the mark waits, along the line from there to the
+    finger: by nothing at the mark itself, growing to the full lift a fifth of the screen
+    away. The lift is half what a fingertip covers, plus the mark's radius, plus a clear
+    width more; a motion event driven from here reports no contact patch, so the fallback
+    finger pad of 0.43 inches is what it uses. The weight on the thread lets the circle hang
+    a little below where it is held.
+    """
+    density = dpi / 160.0
+    size = 40 * density
+    lift = 0.43 * dpi / 2 + size / 2 + size * 1.1
+    grows = min(width, height) * 0.2
+    sag = 900 * density / 260
+    tx, ty = target[0], target[1] - sag
+    dx, dy = tx - home[0], ty - home[1]
+    far = (dx * dx + dy * dy) ** 0.5
+    if far == 0:
+        return int(tx), int(ty)
+    # The finger is on the same line, nearer home: past the growing part the carry is the
+    # whole lift, inside it the carry is in proportion to the distance.
+    near = far - lift if far >= grows + lift else far / (1 + lift / grows)
+    return int(home[0] + dx / far * near), int(home[1] + dy / far * near)
+
+
+def drag_and_dwell(start, end, steps=10, dwell=1.5):
+    """Drag from [start] to [end] with real motion events, and stay there before lifting.
+
+    `input swipe` lifts the moment it arrives, and the circle is on a leash: on a machine
+    drawing a few frames a second it is still catching up when the finger goes, and the drag
+    reports the words between. Held at the end, it settles on the word that was aimed at.
+    """
+    shell("input", "motionevent", "DOWN", str(start[0]), str(start[1]))
+    for i in range(1, steps + 1):
+        x = start[0] + (end[0] - start[0]) * i // steps
+        y = start[1] + (end[1] - start[1]) * i // steps
+        shell("input", "motionevent", "MOVE", str(x), str(y))
+    for _ in range(3):
+        time.sleep(dwell / 3)
+        shell("input", "motionevent", "MOVE", str(end[0]), str(end[1]))
+    shell("input", "motionevent", "UP", str(end[0]), str(end[1]))
+
+
+def carried_along(lines, home):
+    """How far the circle is carried beyond the finger, away from where the mark waits.
+
+    Read from what the service says it holds the circle at, against where the finger is,
+    rather than from where the circle has swung to: on a machine drawing a few frames a
+    second the leash lags a finger's width behind, and the sign of that lag is what a check
+    reading the circle measured. The middle of the samples is returned; positive is away
+    from home, which is the side the hand is not on. Samples with the finger still on the
+    mark are left out, since there is nothing yet to be carried away from.
+    """
+    offsets = []
+    for fx, fy, wx, wy in re.findall(
+            r"LENSCARRY finger=(-?\d+),(-?\d+) want=(-?\d+),(-?\d+)", lines):
+        fx, fy, wx, wy = int(fx), int(fy), int(wx), int(wy)
+        dx, dy = fx - home[0], fy - home[1]
+        far = (dx * dx + dy * dy) ** 0.5
+        if far < 40:
+            continue
+        offsets.append(((wx - fx) * dx + (wy - fy) * dy) / far)
+    return int(sorted(offsets)[len(offsets) // 2]) if offsets else 0
+
+
 def rgb(value):
     return ((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF)
 

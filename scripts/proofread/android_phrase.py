@@ -21,7 +21,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
+from android_harness import Device, adb, finger_for, shell
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -103,18 +103,6 @@ def serve():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
-def lift(dpi):
-    """How far above the finger the circle rides, in pixels.
-
-    The controller's own arithmetic: half what a fingertip covers, plus the mark's radius,
-    plus a clear width more. A motion event driven from here reports no contact patch, so the
-    fallback - a finger pad of 0.43 inches - is what it uses.
-    """
-    density = dpi / 160.0
-    size = 40 * density
-    return 0.43 * dpi / 2 + size / 2 + size * 1.1
-
-
 def main():
     fetch_model()
     build_packs()
@@ -155,7 +143,6 @@ def main():
     mark = (x + w // 2, y + h // 2)
 
     dpi = int(re.search(r"(\d+)", shell("wm", "density")).group(1))
-    up = lift(dpi)
 
     # Two words of one line, taken as the page laid them out, so the sweep runs along a line
     # the way a reader would read it.
@@ -180,14 +167,15 @@ def main():
     shell("input", "motionevent", "DOWN", str(mark[0]), str(mark[1]))
     time.sleep(1.0)
     for left, top, right, bottom, word in over:
-        at = ((left + right) // 2, int((top + bottom) / 2 + up))
+        at = finger_for(((left + right) / 2, (top + bottom) / 2), mark, dpi,
+                        dev.width, dev.height)
         # A few steps to each word: the circle is on a leash and has to be given time to
         # arrive, and what it reports is read from where it actually is.
         for _ in range(4):
             shell("input", "motionevent", "MOVE", str(at[0]), str(at[1]))
             time.sleep(0.12)
         time.sleep(0.3)
-    shell("input", "motionevent", "UP", str(over[-1][0]), str(int(over[-1][1] + up)))
+    shell("input", "motionevent", "UP", str(at[0]), str(at[1]))
     # Read at once, while the sweep is still the newest thing in the log: the service keeps
     # writing a line per box per pass, so the sweep's own lines are gone from the tail within
     # seconds. Then wait for the card, which is a pass through the translation model, and read

@@ -17,7 +17,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, shell
+from android_harness import Device, carried_along, drag_and_dwell, finger_for, shell
 import state as State
 
 
@@ -145,11 +145,16 @@ def main():
     word = middle[len(middle) // 2]
     left, top, right, bottom = word["rect"]
     # Where the finger has to end for the circle to be on that word. The circle is carried
-    # clear above the hand so the word can be seen, so a drag that puts the *finger* on the
-    # word leaves the circle a couple of hundred pixels above it, over nothing - which reads
-    # as a lens that passes over no words at all.
-    lift = int(dev.height * 0.09)
-    onto = ((left + right) // 2, (top + bottom) // 2 + lift)
+    # clear of the hand, away from where the mark waits, so a drag that puts the *finger* on
+    # the word leaves the circle a couple of hundred pixels past it, over nothing - which
+    # reads as a lens that passes over no words at all.
+    dpi = int(re.search(r"(\d+)", shell("wm", "density")).group(1))
+
+    def aimed(box, home):
+        l, t, r, b = box
+        return finger_for(((l + r) / 2, (t + b) / 2), home, dpi, dev.width, dev.height)
+
+    onto = aimed(word["rect"], parked)
 
     # What the page was told to do, read before the log is cleared: the surface says it once,
     # when it is launched.
@@ -162,7 +167,7 @@ def main():
     # on every other frame, so on a machine drawing at a tenth of its frame rate a quick drag
     # is over before the circle has caught the finger: two samples in nine hundred
     # milliseconds, both of them between the words.
-    shell("input", "swipe", str(parked[0]), str(parked[1]), str(onto[0]), str(onto[1]), "2500")
+    drag_and_dwell(parked, onto)
     time.sleep(3)
 
     # Asked of the device, line by line: the overlay writes one long line naming every box on
@@ -227,8 +232,8 @@ def main():
         word = middle[len(middle) // 2]
         left, top, right, bottom = word["rect"]
         dev.clear_log()
-        shell("input", "swipe", str(from_here[0]), str(from_here[1]),
-              str((left + right) // 2), str((top + bottom) // 2 + lift), "2500")
+        onto = aimed(word["rect"], from_here)
+        drag_and_dwell(from_here, onto)
         time.sleep(3)
         over = [name for name in re.findall(r"LENSAT [\d.,]+ -> (\S+)", dev.lines("LENSAT "))
                 if name != "nothing"]
@@ -323,19 +328,10 @@ def main():
         time.sleep(2)
         seen = [(int(a), int(b)) for a, b in
                 re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]*", dev.lines("LENSAT "))]
-        # Measured across the whole drag, against where the finger was at the time.
-        #
-        # The last sample alone is taken after the finger has stopped, and a leash that has
-        # caught up is carrying nothing: the same build reported -177px, -36px and +11px on
-        # three runs, and the sign of the last one is what the check was reading. The finger
-        # travels in a straight line at a constant speed, so where it was at each sample is
-        # known, and the middle of those offsets is what the leash is actually doing.
-        started, ended = px + pw // 2, dev.width // 2
-        offsets = []
-        for i, (sx, _) in enumerate(seen):
-            along = i / (len(seen) - 1) if len(seen) > 1 else 1.0
-            offsets.append(sx - (started + (ended - started) * along))
-        carried = int(sorted(offsets)[len(offsets) // 2]) if offsets else 0
+        # Measured along the line from where the mark waits, which is the direction the
+        # circle is carried in, and from where the service holds it rather than where it has
+        # swung to: see [carried_along].
+        carried = carried_along(dev.lines("LENSCARRY"), (px + pw // 2, py + ph // 2))
         print(f"  on the {side}: parked at x={px} of {dev.width}, "
               f"carried {carried:+}px from the finger")
         rested = px < dev.width // 2 if side == "left" else px > dev.width // 2
@@ -343,7 +339,7 @@ def main():
             failures.append(f"asked to rest on the {side}, the mark parked at x={px}")
         if not seen:
             failures.append(f"nothing was reported under the mark on the {side}")
-        elif (carried > 0) != (side == "left"):
+        elif carried <= 0:
             failures.append(
                 f"on the {side} the circle is carried {carried:+}px from the finger, which is "
                 f"towards the hand rather than away from it")
