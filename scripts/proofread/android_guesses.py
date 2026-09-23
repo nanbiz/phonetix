@@ -21,7 +21,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
+from android_harness import Device, adb, shell, drawn_pairs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -118,7 +118,7 @@ def drawn_words(log):
     for line in reversed(log.splitlines()):
         if "DRAWN " not in line:
             continue
-        pairs = dict(p.split("=", 1) for p in line.split("DRAWN ", 1)[1].split() if "=" in p)
+        pairs = dict(drawn_pairs(line))
         if pairs:
             return pairs
     return {}

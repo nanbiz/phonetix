@@ -60,6 +60,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
      *  direction. Held because the engine is opened for a direction, not per screen. */
     @Volatile
     private var lastScreenLanguage: String? = null
+
+    /** What each app's screens were last confidently read as, for a screen too short to say. */
+    private val languageIn = HashMap<String, String>()
     /** The language the engine was last opened for reading into, so choosing another opens it
      *  for the new direction rather than waiting for the screen's own language to change. */
     private var lastTarget: String? = null
@@ -1300,7 +1303,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     main.post { readAgain() }
                 }
             }
-            chooseWords(fresh, settings, screen.language, budget)
+            // A screen too short to say what it is in is read in what this app last said it
+            // was in. A chat's one-line reply, a title, a button row: there the detector has
+            // too few words to judge, and reading them as English put English readings over
+            // French words - "Le" said as the English "le" - where the whole app had been
+            // French a moment before.
+            val app = root?.packageName?.toString()
+            if (screen.language != null && app != null) languageIn[app] = screen.language
+            val readIn = screen.language ?: app?.let { languageIn[it] }
+            chooseWords(fresh, settings, readIn, budget)
             planned = fresh
             // A screen counts as a new one when its lines are not the ones that were there
             // a moment ago. Every read builds a plan afresh, so counting each of those as a
@@ -1911,6 +1922,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                             .append(if (b.background != 0 && b.ink != 0) 1 else 0).append(' ')
                     }
                     android.util.Log.d("Phonetix", sb.toString())
+                    // And what is written over them, as the full pass says it: a page whose
+                    // words are placed by a follow pass is drawn by it too.
+                    val said = StringBuilder("DRAWN ")
+                    for (b in moved) said.append(b.word).append('=').append(b.ipa).append(" | ")
+                    android.util.Log.d("Phonetix", said.toString())
                 }
                 main.post {
                     if (moving && overlay.inMotion) {
@@ -2327,8 +2343,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.util.Log.d("Phonetix", sb.toString())
             // And what is actually written over each of them. The line above is geometry; a
             // check that a reader is being told what a word means has to see the words.
+            // Each word and what is over it, apart by " | ": what is written over a word can
+            // be several words itself.
             val said = StringBuilder("DRAWN ")
-            for (b in painted) said.append(b.word).append('=').append(b.ipa).append(' ')
+            for (b in painted) said.append(b.word).append('=').append(b.ipa).append(" | ")
             android.util.Log.d("Phonetix", said.toString())
         }
 

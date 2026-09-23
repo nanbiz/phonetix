@@ -19,7 +19,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
+from android_harness import Device, adb, shell, drawn_pairs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -116,11 +116,7 @@ def main():
     time.sleep(8)
     # What is written over each word, which is the whole question here.
     drawn = re.findall(r"DRAWN (.*)", dev.log())
-    over = {}
-    for pair in (drawn[-1].split() if drawn else []):
-        if "=" in pair:
-            word, said = pair.split("=", 1)
-            over[word] = said
+    over = dict(drawn_pairs(drawn[-1])) if drawn else {}
     print(f"  {len(over)} words annotated: {list(over.items())[:6]}")
 
     if not over:

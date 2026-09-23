@@ -20,7 +20,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
+from android_harness import Device, adb, shell, drawn_pairs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -92,12 +92,7 @@ def serve():
 def drawn(dev):
     """What is written over each word, from the last pass the service made."""
     lines = re.findall(r"DRAWN (.*)", dev.log())
-    over = {}
-    for pair in (lines[-1].split() if lines else []):
-        if "=" in pair:
-            word, said = pair.split("=", 1)
-            over[word] = said
-    return over
+    return dict(drawn_pairs(lines[-1])) if lines else {}
 
 
 def on_the_card(dev, word):

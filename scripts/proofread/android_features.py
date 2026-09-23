@@ -23,7 +23,7 @@ import re
 import sys
 import time
 
-from android_harness import Device, shell
+from android_harness import Device, shell, drawn_pairs
 import state as State
 from webview import View
 
@@ -747,11 +747,7 @@ def check_language(r, dev):
             for line in reversed(dev.lines("DRAWN ").splitlines()):
                 if "DRAWN " not in line:
                     continue
-                pairs = dict(
-                    pair.split("=", 1)
-                    for pair in line.split("DRAWN ", 1)[1].split()
-                    if "=" in pair
-                )
+                pairs = dict(drawn_pairs(line))
                 if pairs:
                     said = pairs
                     break

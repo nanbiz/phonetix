@@ -17,7 +17,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
+from android_harness import Device, adb, shell, drawn_pairs
 
 # Spanish, because the page the surface draws is Spanish and the app is English: a language
 # nobody told it about, answered out of what it carries.
@@ -52,9 +52,7 @@ def main():
         for line in reversed(dev.lines("DRAWN ").splitlines()):
             if "DRAWN " not in line:
                 continue
-            said = dict(
-                p.split("=", 1) for p in line.split("DRAWN ", 1)[1].split() if "=" in p
-            )
+            said = dict(drawn_pairs(line))
             if said:
                 break
         if said:

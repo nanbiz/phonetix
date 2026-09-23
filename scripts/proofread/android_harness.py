@@ -415,6 +415,21 @@ class Device:
         return None
 
 
+def drawn_pairs(line):
+    """Each word of a DRAWN line and what is written over it, in the order they were drawn.
+
+    Apart by " | ", because what is written over a word can be several words: "to be".
+    """
+    rest = line.split("DRAWN ", 1)[1] if "DRAWN " in line else line
+    pairs = []
+    for piece in rest.split(" | "):
+        piece = piece.strip()
+        if "=" in piece:
+            word, said = piece.split("=", 1)
+            pairs.append((word, said))
+    return pairs
+
+
 def finger_for(target, home, dpi, width, height):
     """Where the finger goes for the circle to settle on [target], by the controller's own
     arithmetic.
