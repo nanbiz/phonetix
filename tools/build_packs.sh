@@ -22,19 +22,48 @@ if [[ ! -s "$dump" ]]; then
 fi
 if [[ ! -f "$split/.done" ]]; then
   uv run --with orjson python tools/split_kaikki.py "$dump" "$split"
+  # The languages Wiktionary files under a code of their own, in a second pass that only
+  # parses lines that could be one of them.
+  uv run --with orjson python tools/split_kaikki.py "$dump" "$split" sh kmr nn
   touch "$split/.done"
 fi
 
+# A language the product names, built from the codes the dump files it under, where those
+# are not its own: Serbo-Croatian is one heading for three languages, Norwegian is written two
+# ways, and Kurdish here is Kurmanji.
+declare -A filed=(
+  [hr]="sh:sh" [sr]="sh:sh" [bs]="sh:sh"
+  [no]="nb,nn,no:nb nn no" [nb]="nb,no:nb no"
+  [ku]="kmr:kmr"
+)
+
 cargo build --release --manifest-path core/Cargo.toml -p packbuild
 build=core/target/release/packbuild
-for extract in "$split"/*.jsonl.gz; do
-  lang="$(basename "$extract" .jsonl.gz)"
-  if "$build" "$lang" "$extract" "$out/$lang.pack" > "$out/$lang.pack.json"; then
+pack() {
+  local lang="$1" extract="$2" codes="$3"
+  if "$build" "$lang" "$extract" "$out/$lang.pack" $codes > "$out/$lang.pack.json"; then
     printf '%s %s\n' "$lang" "$(head -c 200 "$out/$lang.pack.json")"
   else
     echo "$lang: no pack" >&2
     rm -f "$out/$lang.pack" "$out/$lang.pack.json"
   fi
+}
+
+for extract in "$split"/*.jsonl.gz; do
+  lang="$(basename "$extract" .jsonl.gz)"
+  # Built under the product's names below instead.
+  case "$lang" in sh|kmr|nn|nb|no) continue ;; esac
+  pack "$lang" "$extract" ""
+done
+for lang in "${!filed[@]}"; do
+  codes="${filed[$lang]%%:*}"
+  files=""
+  for code in ${filed[$lang]#*:}; do files+=" $split/$code.jsonl.gz"; done
+  # Gzip files joined end to end are one gzip stream to a reader, which is what packbuild
+  # reads an extract as.
+  cat $files > "$work/$lang.filed.jsonl.gz"
+  pack "$lang" "$work/$lang.filed.jsonl.gz" "$codes"
+  rm -f "$work/$lang.filed.jsonl.gz"
 done
 
 uv run python tools/models_manifest.py "$out/models.json"

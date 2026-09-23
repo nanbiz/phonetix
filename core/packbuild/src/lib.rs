@@ -200,7 +200,44 @@ fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
             });
         }
     }
-    out
+    commonest(out)
+}
+
+/// How many spellings one entry may bring with it.
+///
+/// A Finnish noun is listed with over two hundred: every case, in both numbers, with every
+/// possessive ending. Kept whole that is twenty-seven million spellings and a dictionary of
+/// close to three hundred megabytes, which nobody downloads onto a phone to read a page. The
+/// forms a reader actually meets are a few dozen of them.
+const MAX_FORMS: usize = 48;
+
+/// The forms most worth keeping, when an entry has more than [MAX_FORMS].
+///
+/// Fewer tags first, because a form that is one thing - "plural", "genitive" - is met far more
+/// often than one that is five at once. A possessive ending, and the cases a modern text
+/// hardly uses, go before anything else; within a rank the dump's own order stands, since it
+/// lists the paradigm the way a grammar does.
+fn commonest(mut forms: Vec<lexpack::Form>) -> Vec<lexpack::Form> {
+    if forms.len() <= MAX_FORMS {
+        return forms;
+    }
+    const RARE: [&str; 6] = [
+        "possessive",
+        "singular-possessive",
+        "plural-possessive",
+        "abessive",
+        "comitative",
+        "instructive",
+    ];
+    let rank = |form: &lexpack::Form| {
+        let tags: Vec<&str> = form.label.split(' ').filter(|t| !t.is_empty()).collect();
+        let rare = tags.iter().filter(|t| RARE.contains(t)).count();
+        rare * 10 + tags.len()
+    };
+    // Stable, so the dump's order decides between forms of the same rank.
+    forms.sort_by_key(rank);
+    forms.truncate(MAX_FORMS);
+    forms
 }
 
 fn strings(value: Option<&Value>) -> Vec<String> {
@@ -263,6 +300,35 @@ mod tests {
         let mut skipped = Skipped::default();
         assert!(read_line(PERRO, "de", &mut skipped).is_none());
         assert_eq!(skipped.other_language, 1);
+    }
+
+    #[test]
+    fn an_entry_brings_the_forms_a_reader_meets_and_not_every_one() {
+        let mut forms: Vec<serde_json::Value> = Vec::new();
+        for n in 0..200 {
+            forms.push(serde_json::json!({
+                "form": format!("talo{n}ni"),
+                "tags": ["singular", "inessive", "first-person", "singular-possessive"],
+            }));
+        }
+        forms.push(serde_json::json!({"form": "talot", "tags": ["plural", "nominative"]}));
+        forms.push(serde_json::json!({"form": "talossa", "tags": ["singular", "inessive"]}));
+        let line = serde_json::json!({
+            "word": "talo", "pos": "noun", "lang_code": "fi",
+            "senses": [{"glosses": ["house"]}], "forms": forms,
+        })
+        .to_string();
+        let mut skipped = Skipped::default();
+        let read = read_line(&line, "fi", &mut skipped).unwrap();
+        let kept: Vec<&str> = read
+            .entry
+            .forms
+            .iter()
+            .map(|f| f.spelling.as_str())
+            .collect();
+        assert_eq!(kept.len(), MAX_FORMS);
+        assert!(kept.contains(&"talot"), "the plural a reader meets is kept");
+        assert!(kept.contains(&"talossa"), "and the case");
     }
 
     #[test]

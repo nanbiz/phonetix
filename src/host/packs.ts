@@ -96,6 +96,8 @@ export async function open(lang: string): Promise<string | null> {
 /** What is being fetched now, and what failed lately, so a language is fetched once at a time
  *  and a host that is down is not asked again on every page. */
 const fetching = new Set<string>();
+/** The largest dictionary fetched without being asked for. */
+const BY_ITSELF_BYTES = 64 * 1024 * 1024;
 const failedAt = new Map<string, number>();
 const RETRY_AFTER_MS = 5 * 60_000;
 
@@ -106,10 +108,13 @@ function inBackground(lang: string): void {
   fetching.add(lang);
   void (async () => {
     try {
-      const listed = await offered();
+      const listed = (await offered()).find((pack) => pack.lang === lang);
       // Only what is published: asking for a pack that does not exist is a request that
-      // can only fail, once per page, for every language nobody built a pack for.
-      if (!listed.some((pack) => pack.lang === lang)) return;
+      // can only fail, once per page, for every language nobody built a pack for. And only
+      // what is small enough to fetch on a reader's behalf: English is every English word
+      // with its English definitions, well over a hundred megabytes, and a reader of English
+      // is told what a word means by their own language's dictionary, not by it.
+      if (!listed || listed.bytes > BY_ITSELF_BYTES) return;
       await get(lang);
       failedAt.delete(lang);
     } catch {

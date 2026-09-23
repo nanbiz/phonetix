@@ -34,13 +34,27 @@ object Fetch {
     /** What is being fetched right now, for the state dump. */
     fun inFlight(): List<String> = running.toList().sorted()
 
-    /** A language's dictionary, unless this phone already holds it. */
+    /**
+     * A language's dictionary, unless this phone already holds it - or unless it is big
+     * enough that fetching it is a decision.
+     *
+     * Most are a few megabytes to a few dozen. English is well over a hundred, because it is
+     * every English word with its English definitions, and a reader of English does not need it
+     * to be told what a word means in their own language: that comes from their language's
+     * dictionary, whose meanings are written in English. So the few that size are fetched when a
+     * reader asks for them, from the list, and never on their behalf.
+     */
     fun pack(context: Context, lang: String, then: (Boolean) -> Unit = {}) {
         if (lang.isBlank() || lang in Packs.held(context)) return
         start("pack $lang", then) {
-            Packs.get(context, SettingsStore.current.packHost, lang)
+            val host = SettingsStore.current.packHost
+            val listed = Packs.offered(host).firstOrNull { it.lang == lang }
+            listed != null && listed.bytes <= BY_ITSELF_BYTES && Packs.get(context, host, lang)
         }
     }
+
+    /** The largest dictionary fetched without being asked for. */
+    const val BY_ITSELF_BYTES = 64L * 1024 * 1024
 
     /** The model for one direction, unless this phone already holds it. */
     fun model(context: Context, from: String, to: String, then: (Boolean) -> Unit = {}) {

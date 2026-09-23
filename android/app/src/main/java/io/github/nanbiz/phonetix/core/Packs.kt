@@ -102,7 +102,24 @@ object Packs {
 
     /** What there is to be had, listed by the release that holds them. */
     fun offered(base: String): List<Offered> {
-        val text = runCatching { fetchText("${from(base)}/packs.json") }
+        val host = from(base)
+        listing?.let { (at, whose, packs) ->
+            if (whose == host && android.os.SystemClock.elapsedRealtime() - at < LISTING_FOR_MS) {
+                return packs
+            }
+        }
+        return fetchListing(host).also {
+            if (it.isNotEmpty()) listing = Triple(android.os.SystemClock.elapsedRealtime(), host, it)
+        }
+    }
+
+    /** The listing, asked for once a while rather than once per dictionary. */
+    @Volatile
+    private var listing: Triple<Long, String, List<Offered>>? = null
+    private const val LISTING_FOR_MS = 10 * 60_000L
+
+    private fun fetchListing(host: String): List<Offered> {
+        val text = runCatching { fetchText("$host/packs.json") }
             .getOrNull() ?: return emptyList()
         val listed = runCatching { JSONArray(text) }.getOrNull() ?: return emptyList()
         return (0 until listed.length()).mapNotNull { at ->
