@@ -54,7 +54,8 @@ SETTLED = [
     ("fr", "Le chemin est court.", "The path is short.",
      {"est": "to be", "court": "short"}),
     # And a word that is decided but has several senses, drawn in the one the line is about.
-    ("es", "Me siento en el banco del parque.", "I sit on the park bench.", {"banco": "bench"}),
+    ("es", "Me siento en el banco del parque.", "I sit on the park bench.",
+     {"banco": "bench", "siento": "to sit down"}),
     ("es", "El banco cerró mi cuenta.", "The bank closed my account.",
      {"banco": "bank", "mi": "my", "cuenta": "account"}),
     ("de", "Er sitzt auf der Bank.", "He sits on the bench.", {"Bank": "bench"}),

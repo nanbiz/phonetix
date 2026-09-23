@@ -518,6 +518,11 @@ fn raw_terms(gloss: &str) -> Vec<(String, String)> {
         .collect()
 }
 
+/// The words that follow an English verb to make a phrasal verb of it.
+const PARTICLES: &[&str] = &[
+    "down", "up", "out", "off", "on", "in", "over", "away", "back", "around", "through",
+];
+
 /// The words a reading means, each as it could be written in a translated sentence.
 ///
 /// What a reading answers with is what a dictionary writes for a card: for a reader of
@@ -564,6 +569,19 @@ fn meant_words<D: AsRef<[u8]>>(
             word.extend(normalised(&form));
             if !words.contains(&word) {
                 words.push(word);
+            }
+        }
+        // A verb with its particle - "to sit down", "to give up" - is inflected on the verb,
+        // and a translation often leaves the particle out: "me siento en el banco" is "I sit
+        // on the bench". Both are looked for.
+        if target.0 == "en" && verb && pieces.len() == 2 && PARTICLES.contains(&pieces[1].as_str())
+        {
+            for form in crate::gloss::english_forms(&pieces[0], true) {
+                for word in [vec![form.clone(), pieces[1].clone()], vec![form]] {
+                    if !words.contains(&word) {
+                        words.push(word);
+                    }
+                }
             }
         }
     };

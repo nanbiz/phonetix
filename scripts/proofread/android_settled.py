@@ -32,7 +32,7 @@ PACKS = os.environ.get("PHONETIX_PACKS", os.path.join(ROOT, ".cache/release"))
 PAGES = {
     "french": ("fr", {"est": "to be", "court": "to run"}),
     "frenchShort": ("fr", {"est": "to be", "court": "short"}),
-    "bench": ("es", {"banco": "bench"}),
+    "bench": ("es", {"banco": "bench", "siento": "to sit down"}),
 }
 
 # How long the model may take to arrive the first time, from Mozilla's own servers.
@@ -73,6 +73,10 @@ def main():
             sys.exit(1)
 
     for page, (_, wanted) in PAGES.items():
+        # An empty page first: a page already on screen, asked for again, is the same screen,
+        # and the service rightly draws it from the read it already made rather than reading it.
+        dev.surface(mode="bare", enable=1)
+        time.sleep(3)
         dev.clear_log()
         dev.surface(mode=page, packHost="none", target="en", layer="meaning", enable=1, density=1)
         said = {}
