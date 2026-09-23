@@ -17,10 +17,26 @@ interface Ask {
   html?: boolean;
 }
 
+import { PUBLISHED } from '@/host/published';
 import { whole } from '@/host/whole';
 
 let translator: any = null;
 let starting: Promise<any> | null = null;
+
+/** One host's list of translation models, each marked with where it came from. */
+async function listing(from: string): Promise<Listed[]> {
+  const res = await fetch(`${from}/models.json`);
+  if (!res.ok) throw new Error(`${res.status} asking for the translation models`);
+  return ((await res.json()) as Listed[]).map((model) => ({ ...model, at: from }));
+}
+
+interface Listed {
+  from: string;
+  to: string;
+  files: Record<string, { name: string; url?: string; sha256?: string }>;
+  config?: Record<string, unknown>;
+  at?: string;
+}
 
 /**
  * Where the models come from: the listing published beside the packs.
@@ -38,14 +54,17 @@ function backing(
 ) {
   return class OwnHost extends TranslatorBacking {
     async loadModelRegistery() {
-      const res = await fetch(`${base}/models.json`);
-      if (!res.ok) throw new Error(`${res.status} asking for the translation models`);
-      const listed = (await res.json()) as {
-        from: string;
-        to: string;
-        files: Record<string, { name: string; url?: string; sha256?: string }>;
-      }[];
-      return listed.map((model) => ({ ...model, model }));
+      // The reader's own host first, and the published listing for the directions it does
+      // not have (see @/host/published). Each keeps where it came from, since a listing may
+      // name bare files that are served beside it.
+      const theirs = base === PUBLISHED ? [] : await listing(base).catch(() => []);
+      const published = await listing(PUBLISHED).catch(() => []);
+      const all = [
+        ...theirs,
+        ...published.filter((one) => !theirs.some((own) => own.from === one.from && own.to === one.to)),
+      ];
+      if (all.length === 0) throw new Error('no list of translation models could be had');
+      return all.map((model) => ({ ...model, model }));
     }
 
     async loadTranslationModel({ from, to }: { from: string; to: string }) {
@@ -60,7 +79,7 @@ function backing(
           .filter((name) => files[name])
           .map(async (name) => {
             const file = files[name];
-            const res = await fetch(file.url ?? `${base}/models/${file.name}`);
+            const res = await fetch(file.url ?? `${found.model.at ?? base}/models/${file.name}`);
             if (!res.ok) throw new Error(`${res.status} fetching ${file.name}`);
             // Read so that a Firefox background page fetching it is not put to sleep halfway:
             // see [whole].

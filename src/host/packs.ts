@@ -5,6 +5,7 @@
 // needs a dictionary offline is the reader on a train.
 //
 // The host it comes from is a runtime setting and appears nowhere in the source.
+import { PUBLISHED } from './published';
 import { whole } from './whole';
 import { createStore, get as read, set as keep, del, keys } from 'idb-keyval';
 import { buildIpaPack, closePack, openLanguages, openPack } from '@/core';
@@ -23,16 +24,6 @@ const carriedStore = createStore('phonetix-packs', 'carried-pack');
 /** Languages whose open pack is one we carried, so a fetched one may take its place. */
 const carried = new Set<string>();
 
-/**
- * Where the packs are published: a release of this project, which is a static file on a host
- * somebody else keeps running.
- *
- * A pack is built once from a dump of gigabytes and does not change again, which is what a
- * release asset is for - the pronunciations the app carries are fetched the same way at build
- * time. Before this the reader was asked to name a host themselves, and since nobody served
- * them anywhere, a fresh install could fetch nothing at all.
- */
-export const PUBLISHED = 'https://github.com/nanbiz/phonetix/releases/download/packs-v1';
 
 /**
  * Where the packs are fetched from: where they are published, unless something has said
@@ -197,7 +188,19 @@ async function fromWhatWeCarry(lang: string): Promise<string | null> {
  * is opened before it is kept, because a file that cannot be read is worse in the cache than
  * absent from it.
  */
-export async function get(lang: string): Promise<string | null> {
+export function get(lang: string): Promise<string | null> {
+  // One download per language however many ask: the page fetching it by itself and the reader
+  // pressing "get" at the same moment are one question.
+  const running = getting.get(lang);
+  if (running) return running;
+  const started = fetchPack(lang).finally(() => getting.delete(lang));
+  getting.set(lang, started);
+  return started;
+}
+
+const getting = new Map<string, Promise<string | null>>();
+
+async function fetchPack(lang: string): Promise<string | null> {
   const already = await open(lang);
   // Unless what is open is one we carried: that one says how the language's words are said,
   // and what is being fetched says what they mean. The fetched pack takes the place of the
@@ -207,22 +210,46 @@ export async function get(lang: string): Promise<string | null> {
   const base = await host();
   if (!base) return null;
 
-  const res = await fetch(`${base}/${lang}.pack`);
-  if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
-  const bytes = await whole(res);
-  // Checked against the listing where it says what the file has to be: a pack cut short opens
-  // as a pack that is missing words, which is worse than not having it.
-  const listed = (await offered().catch(() => [])).find((pack) => pack.lang === lang);
-  if (listed?.sha256) {
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    const got = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-    if (got !== listed.sha256) throw new Error(`the ${lang} pack arrived as ${got}`);
+  // From the reader's own host first where one is set, even where it lists nothing, and from
+  // the published release where that fails. Each is checked against what its own listing
+  // says the file has to be: a pack cut short opens as a pack that is missing words, which is
+  // worse than not having it.
+  const listing = await offered().catch(() => []);
+  const from = base === PUBLISHED ? [PUBLISHED] : [base, PUBLISHED];
+  let bytes: Uint8Array<ArrayBuffer> | null = null;
+  let failed: unknown = null;
+  for (const at of from) {
+    const listed = listing.find((pack) => pack.lang === lang && (pack.at ?? base) === at);
+    try {
+      bytes = await packFrom(at, lang, listed?.sha256);
+      break;
+    } catch (e) {
+      failed = e;
+    }
   }
+  if (!bytes) throw failed instanceof Error ? failed : new Error(`no ${lang} pack could be had`);
   const opened = await openPack(bytes);
   await keep(opened, bytes.slice().buffer, store);
   carried.delete(opened);
   await told();
   return opened;
+}
+
+/** One pack from one host, whole and matching its checksum where one is given. */
+async function packFrom(
+  at: string,
+  lang: string,
+  sha256: string | undefined,
+): Promise<Uint8Array<ArrayBuffer>> {
+  const res = await fetch(`${at}/${lang}.pack`);
+  if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
+  const bytes = await whole(res);
+  if (sha256) {
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    const got = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+    if (got !== sha256) throw new Error(`the ${lang} pack arrived as ${got}`);
+  }
+  return bytes;
 }
 
 /**
@@ -251,24 +278,54 @@ export interface Offered {
   glosses: number;
   bytes: number;
   sha256: string;
+  /** Where it is served from: the reader's own host, or the published release. */
+  at?: string;
 }
 
-/** The listing, asked for once a while rather than once per question. */
-let listing: { base: string; at: number; packs: Offered[] } | null = null;
+/** Each host's list, asked for once a while rather than once per question. */
+const listings = new Map<string, { at: number; packs: Offered[] }>();
 const LISTING_FOR_MS = 10 * 60_000;
 
 /** What the published packs are, or what a host of the reader's own offers instead. */
 export async function offered(): Promise<Offered[]> {
   const base = await host();
   if (!base) return [];
-  if (listing && listing.base === base && Date.now() - listing.at < LISTING_FOR_MS) {
-    return listing.packs;
+  // The reader's own host first, where one is set, and the published packs for what it does
+  // not have (see ./published).
+  let theirs: Offered[] = [];
+  ownHostDown = false;
+  if (base !== PUBLISHED) {
+    theirs = await listed(base).catch(() => {
+      ownHostDown = true;
+      return [];
+    });
   }
+  let published: Offered[] = [];
+  try {
+    published = await listed(PUBLISHED);
+  } catch (e) {
+    // Nothing from either is a failure; the reader's own host answering is not.
+    if (theirs.length === 0) throw e;
+  }
+  return [...theirs, ...published.filter((pack) => !theirs.some((own) => own.lang === pack.lang))];
+}
+
+/** Whether the host the reader set answered the last time its list was asked for. The
+ *  published packs stand in for it, and the reader who set it is still owed knowing. */
+let ownHostDown = false;
+export function ownHostAnswered(): boolean {
+  return !ownHostDown;
+}
+
+/** One host's list of packs, each marked with where it is served from. */
+async function listed(base: string): Promise<Offered[]> {
+  const had = listings.get(base);
+  if (had && Date.now() - had.at < LISTING_FOR_MS) return had.packs;
   const res = await fetch(`${base}/packs.json`);
   if (!res.ok) throw new Error(`${res.status} fetching the list of packs`);
-  const listed = (await res.json()) as Offered[] | { packs: Offered[] };
-  const packs = Array.isArray(listed) ? listed : (listed.packs ?? []);
-  listing = { base, at: Date.now(), packs };
+  const got = (await res.json()) as Offered[] | { packs: Offered[] };
+  const packs = (Array.isArray(got) ? got : (got.packs ?? [])).map((pack) => ({ ...pack, at: base }));
+  listings.set(base, { at: Date.now(), packs });
   return packs;
 }
 

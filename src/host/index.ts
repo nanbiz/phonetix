@@ -12,7 +12,7 @@ import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
-import { forget, get, held, offered, open, openReadInto } from './packs';
+import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
@@ -77,7 +77,10 @@ export function host(): void {
     // dictionaries come from means it from that moment.
     offered: await offered().then(
       (list) => {
-        answered('the dictionary host');
+        // Answered by the published packs where the reader's own host is not answering, and
+        // the reader who set that host is still told.
+        if (ownHostAnswered()) answered('the dictionary host');
+        else noted('the dictionary host', 'cannot be reached');
         return list;
       },
       (e) => {

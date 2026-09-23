@@ -143,9 +143,10 @@ def main():
         for _ in range(4):
             got = evaluate(cdp, view, """
                 (() => {
+                  // The host's own, not the published ones listed after them.
                   const row = [...document.querySelectorAll('[data-row="pack"]')].find(
-                    r => (r.querySelector('[data-does]') || {}).textContent
-                          ?.trim() === 'get');
+                    r => ['es', 'de'].includes(r.dataset.lang)
+                      && (r.querySelector('[data-does]') || {}).textContent?.trim() === 'get');
                   if (!row) return 'none left';
                   row.querySelector('[data-does]').click();
                   return row.querySelector('[data-name]').textContent.trim();
@@ -301,8 +302,10 @@ def main():
         """, lambda v: v is not None)
         listed = json.loads(offered or "[]")
         print(f"  dictionaries offered: {[(d['name'], d['action']) for d in listed]}")
-        if len(listed) != 2:
-            failures.append(f"the view offers {listed}")
+        # The host's own two first, as it describes them, and the published ones after.
+        own = [(d["name"], d["about"].split(" ")[0]) for d in listed[:2]]
+        if own != [("Spanish", "12"), ("German", "12")]:
+            failures.append(f"the view does not lead with the host's own dictionaries: {listed[:3]}")
         elif not all(
             "words" in row["about"] and any(u in row["about"] for u in (" B", "KB", "MB"))
             for row in listed
@@ -327,7 +330,7 @@ def main():
 
         # Where the dictionaries come from is not a setting any more - the reader does not run
         # a host and has nothing to type - but it is still a value, and what the view offers
-        # still comes from whatever it points at. Changed where it actually lives, which is
+        # comes from whatever it points at first, and from the published release after it. Changed where it actually lives, which is
         # storage, and the view opened again after it, because that is what the reader does.
         def pointed_at(where):
             control(cdp, view, "chrome.storage.local.set({packBaseUrl: %r})" % where)
@@ -344,8 +347,10 @@ def main():
         """, lambda v: v)
         print(f"  from a host with nothing on it: {without} dictionaries; "
               f"from one that has them: {back}")
-        if without:
-            failures.append(f"a host with nothing on it still offered {without} dictionaries")
+        # The published dictionaries stand in for a host that has nothing, so the reader is
+        # still offered them.
+        if not without:
+            failures.append("a host with nothing on it left the reader with no dictionaries")
 
         # And when something really stops answering, the view says so. A dictionary host that
         # is set and answers nothing is the case a reader cannot otherwise see: what it would

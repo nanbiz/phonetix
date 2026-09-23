@@ -12,6 +12,9 @@ data class Offered(
     val bytes: Long,
     /** What the file has to hash to, where the listing says. */
     val sha256: String = "",
+    /** Where it is served from: the reader's own host, or the published release for what that
+     *  host does not have. */
+    val at: String = "",
 )
 
 /**
@@ -100,22 +103,31 @@ object Packs {
     private fun from(base: String): String =
         base.ifBlank { PUBLISHED }.trimEnd('/')
 
-    /** What there is to be had, listed by the release that holds them. */
+    /**
+     * What there is to be had, and where each comes from.
+     *
+     * A host of the reader's own is asked first, and whatever it does not have comes from the
+     * published release. A host set up before the packs were published serves an older set -
+     * or has gone - and a phone that asked it alone went on with neither the dictionaries it
+     * lacked nor any saying so.
+     */
     fun offered(base: String): List<Offered> {
-        val host = from(base)
-        listing?.let { (at, whose, packs) ->
-            if (whose == host && android.os.SystemClock.elapsedRealtime() - at < LISTING_FOR_MS) {
-                return packs
-            }
+        val theirs = if (base.isBlank()) emptyList() else listed(from(base))
+        val published = listed(PUBLISHED)
+        return theirs + published.filter { mine -> theirs.none { it.lang == mine.lang } }
+    }
+
+    private fun listed(host: String): List<Offered> {
+        listings[host]?.let { (at, packs) ->
+            if (android.os.SystemClock.elapsedRealtime() - at < LISTING_FOR_MS) return packs
         }
         return fetchListing(host).also {
-            if (it.isNotEmpty()) listing = Triple(android.os.SystemClock.elapsedRealtime(), host, it)
+            if (it.isNotEmpty()) listings[host] = android.os.SystemClock.elapsedRealtime() to it
         }
     }
 
-    /** The listing, asked for once a while rather than once per dictionary. */
-    @Volatile
-    private var listing: Triple<Long, String, List<Offered>>? = null
+    /** Each host's listing, asked for once a while rather than once per dictionary. */
+    private val listings = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Offered>>>()
     private const val LISTING_FOR_MS = 10 * 60_000L
 
     private fun fetchListing(host: String): List<Offered> {
@@ -130,6 +142,7 @@ object Packs {
                 } else {
                     Offered(
                         lang, row.optInt("entries"), row.optLong("bytes"), row.optString("sha256"),
+                        host,
                     )
                 }
             }
@@ -150,7 +163,9 @@ object Packs {
         val listed = offered(base).firstOrNull { it.lang == lang } ?: return false
         val into = file(context, lang)
         val arriving = File(into.parentFile, "${into.name}.new")
-        if (!download("${from(base)}/$lang.pack", arriving, listed.sha256)) return false
+        if (!download("${listed.at.ifEmpty { from(base) }}/$lang.pack", arriving, listed.sha256)) {
+            return false
+        }
         return runCatching {
             val opened = Lex.openPack(Reading.core, arriving.path)
             require(opened.isNotEmpty()) { "not a pack" }
@@ -177,8 +192,12 @@ object Packs {
      * them somewhere else. A host of the reader's own may list bare names instead, which are
      * then looked for beside the listing.
      */
-    fun getModel(context: Context, base: String, from: String, to: String): Boolean {
-        val host = from(base)
+    fun getModel(context: Context, base: String, from: String, to: String): Boolean =
+        modelFrom(context, from(base), from, to) ||
+            (base.isNotBlank() && modelFrom(context, PUBLISHED, from, to))
+
+    /** The model for one direction from one host, where that host lists it. */
+    private fun modelFrom(context: Context, host: String, from: String, to: String): Boolean {
         val listed = runCatching { JSONArray(fetchText("$host/models.json")) }
             .onFailure { android.util.Log.w("Phonetix", "no model listing at the host", it) }
             .getOrNull() ?: return false

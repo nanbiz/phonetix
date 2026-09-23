@@ -277,8 +277,9 @@ def main():
 
         # And a direction the reader's host publishes no model for says so, rather than
         # telling them their word does not exist.
+        # A language nothing is published for, since the published release has most pairs.
         none = ask(cdp, session, {
-            "phonetix": "say", "data": {"text": "bench", "source": "fr", "target": "en"},
+            "phonetix": "say", "data": {"text": "bench", "source": "xx", "target": "en"},
         })
         print(f"  a direction with no model: {none.get('ok')}")
         if not (none.get("ok") or {}).get("missing"):

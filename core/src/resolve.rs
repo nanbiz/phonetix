@@ -278,10 +278,13 @@ fn same_word(one: &str, other: &str) -> bool {
 /// language uses most are the ones its dictionary says most about.
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct Rank {
-    shared: std::cmp::Reverse<usize>,
-    asked: usize,
+    // A word of the wrong kind, or one a dictionary marks as not the ordinary word, loses to
+    // any plain one, however well its gloss matches: "can" is glossed "dog, hound" exactly and
+    // is the formal word, "perro" only "dog" and is the word.
     wrong_part: bool,
     marked: bool,
+    shared: std::cmp::Reverse<usize>,
+    asked: usize,
     /// Whether what was typed is a later sense of the word rather than its first: "caja" is a
     /// box first and a bank somewhere down its list, "banco" a bank first.
     later: bool,
@@ -306,6 +309,7 @@ const UNUSUAL: &[&str] = &[
     "slang",
     "colloquial",
     "informal",
+    "formal",
     "vulgar",
     "derogatory",
     "rare",
