@@ -317,6 +317,7 @@ const UNUSUAL: &[&str] = &[
     "obsolete",
     "dated",
     "dialectal",
+    "neologism",
     "regional",
     "poetic",
     "literary",
@@ -371,22 +372,90 @@ pub fn word_for<D: AsRef<[u8]>>(
     };
     // Typed in English without "to", it is not a verb: "house" is a house, not "to house".
     let typed_verb = typed_in.0 == "en" && text.to_lowercase().starts_with("to ");
+    glossed_as(
+        &glosses,
+        (typed_in.0 == "en").then_some(typed_verb),
+        wanted,
+        3,
+    )
+}
+
+/// The words of [wanted] whose senses are glossed as [glosses], best first.
+///
+/// [verb] says whether what is looked for is a verb, where only that is known: an English word
+/// with no part of speech, where a gloss that is a verb is written with "to".
+fn glossed_as<D: AsRef<[u8]>>(
+    glosses: &[(String, Option<String>)],
+    verb: Option<bool>,
+    wanted: &Pack<D>,
+    most: usize,
+) -> Vec<String> {
+    // The same question comes back all the time: a page says "the" and "a" dozens of times
+    // and is read again whenever it moves, and a common English word reaches hundreds of
+    // senses in the other pack, each one unpacked to be weighed. Answered once per pack.
+    let key = format!(
+        "{}\u{1}{}\u{1}{}\u{1}{:?}\u{1}{most}\u{1}{glosses:?}",
+        wanted.lang(),
+        wanted.built(),
+        wanted.len(),
+        verb
+    );
+    if let Some(had) = GLOSSED.with(|memo| memo.borrow().get(&key).cloned()) {
+        return had;
+    }
+    let words = weighed(glosses, verb, wanted, most);
+    GLOSSED.with(|memo| {
+        let mut memo = memo.borrow_mut();
+        if memo.len() >= GLOSSED_KEPT {
+            memo.clear();
+        }
+        memo.insert(key, words.clone());
+    });
+    words
+}
+
+thread_local! {
+    /// What [glossed_as] answered, by question. Cleared whole when it fills rather than kept
+    /// in order: what a reader reads again is the page in front of them, which refills it.
+    static GLOSSED: std::cell::RefCell<std::collections::HashMap<String, Vec<String>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+const GLOSSED_KEPT: usize = 8192;
+
+/// How many of the senses a gloss term reaches are unpacked to be weighed. The best of them
+/// share the most terms with it and are early senses of their word, and a term like "a"
+/// reaches thousands.
+const WEIGHED_AT_MOST: usize = 160;
+
+fn weighed<D: AsRef<[u8]>>(
+    glosses: &[(String, Option<String>)],
+    verb: Option<bool>,
+    wanted: &Pack<D>,
+    most: usize,
+) -> Vec<String> {
     let mut scored: Vec<(Rank, String)> = Vec::new();
     for (asked, (gloss, pos)) in glosses.iter().enumerate() {
-        for ((which, sense), shared) in wanted.senses_matching(gloss) {
+        let mut hits = wanted.senses_matching(gloss);
+        hits.sort_by_key(|((which, sense), shared)| (std::cmp::Reverse(*shared), *sense, *which));
+        hits.truncate(WEIGHED_AT_MOST);
+        for ((which, sense), shared) in hits {
             let Some(entry) = wanted.entry(which) else {
                 continue;
             };
             if let Some(pos) = pos {
-                if !pos.is_empty() && !entry.pos.is_empty() && entry.pos != *pos {
+                if !pos.is_empty() && !entry.pos.is_empty() && !same_part(&entry.pos, pos) {
                     continue;
                 }
             }
             let kind = by_kind(&entry.pos);
-            let pointer = entry
-                .senses
-                .iter()
-                .all(|sense| crate::annotate::about_grammar(&sense.gloss));
+            // An entry that only points at another word is not the word - except a function
+            // word, which a dictionary describes by its grammar: "el" is "masculine singular
+            // definite article; the".
+            let pointer = kind != 0
+                && entry
+                    .senses
+                    .iter()
+                    .all(|sense| crate::annotate::about_grammar(&sense.gloss));
             if kind == 3 || pointer {
                 continue;
             }
@@ -396,13 +465,13 @@ pub fn word_for<D: AsRef<[u8]>>(
                     .iter()
                     .any(|mark| UNUSUAL.contains(&mark.as_str()))
             });
-            let wrong_part = typed_in.0 == "en" && (entry.pos == "verb") != typed_verb;
+            let wrong_part = verb.is_some_and(|verb| (entry.pos == "verb") != verb);
             scored.push((
                 Rank {
-                    shared: std::cmp::Reverse(shared),
-                    asked,
                     wrong_part,
                     marked,
+                    shared: std::cmp::Reverse(shared),
+                    asked,
                     later: sense > 0,
                     met: std::cmp::Reverse(how_often(&entry).unwrap_or(0)),
                     sense,
@@ -419,11 +488,46 @@ pub fn word_for<D: AsRef<[u8]>>(
         if !words.contains(&lemma) {
             words.push(lemma);
         }
-        if words.len() == 3 {
+        if words.len() == most {
             break;
         }
     }
     words
+}
+
+/// Whether two parts of speech are the same kind of word, as two dictionaries file them: one
+/// calls "the" a determiner and another calls "el" an article.
+fn same_part(one: &str, other: &str) -> bool {
+    fn kind(pos: &str) -> &str {
+        match pos {
+            "article" | "det" => "det",
+            other => other,
+        }
+    }
+    kind(one) == kind(other)
+}
+
+/// Whether an entry is a reading nobody means in ordinary text: a letter or a symbol, only a
+/// pointer to how another word is spelled, or a word every sense of which the dictionary marks
+/// as dialectal, obsolete, slang and the like.
+fn is_minor(entry: &Entry) -> bool {
+    if by_kind(&entry.pos) == 3 && entry.pos != "name" && entry.pos != "intj" {
+        return true;
+    }
+    if entry.senses.is_empty() {
+        return false;
+    }
+    let spelled_elsewhere = entry.senses.iter().all(|sense| {
+        let gloss = sense.gloss.to_lowercase();
+        crate::annotate::about_grammar(&gloss) && gloss.contains("spelling of")
+    });
+    let unusual = entry.senses.iter().all(|sense| {
+        sense
+            .marks
+            .iter()
+            .any(|mark| UNUSUAL.contains(&mark.as_str()))
+    });
+    spelled_elsewhere || unusual
 }
 
 /// Look one word up.
@@ -478,6 +582,16 @@ pub fn read_in_context<D: AsRef<[u8]>>(
             .map(|entry| sense_in_line(entry, said, spelling, source, target, pack, open))
             .collect(),
         None => found,
+    };
+    // Only the ordinary words, where there is one. A spelling the dictionary also files as a
+    // letter, a braille cell, another alphabet's spelling of it, or a word nobody uses any more
+    // is not a second word a reader could have meant: English "and" is a conjunction, and the
+    // dialectal "breath", the obsolete "envy" and the Shavian spelling beside it made every
+    // "and" a question and filled its card.
+    let found: Vec<Entry> = if found.iter().any(|entry| !is_minor(entry)) {
+        found.into_iter().filter(|entry| !is_minor(entry)).collect()
+    } else {
+        found
     };
     let mut answers: Vec<Answer> = found
         .iter()
@@ -543,7 +657,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .collect();
     let decided = chosen_by_translation(&meant, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
-        .or_else(|| chosen_by_neighbour(&all, before, pack));
+        .or_else(|| chosen_by_neighbour(&all, before, pack))
+        // With nothing else to go on, a word that is a word of grammar is that word: "the" is
+        // the article, not the adverb of "the more the merrier".
+        .or_else(|| {
+            all.first()
+                .and_then(|first| first.pos.as_deref())
+                .is_some_and(|pos| by_kind(pos) == 0)
+                .then_some(0)
+        });
     if let Some(at) = decided {
         all.swap(0, at);
     }
@@ -999,6 +1121,29 @@ fn resolve_one<D: AsRef<[u8]>>(
             target,
         );
     };
+
+    // An English word is its own gloss. The English dictionary defines its words rather than
+    // translating them - "and" is "used simply to connect two noun phrases" - and no other
+    // language glosses a word that way, so the word itself is what is looked for in the
+    // reader's pack: "and" is where Spanish "y" is glossed.
+    if source.0 == "en" {
+        let found = glossed_as(
+            &[(entry.lemma.clone(), Some(entry.pos.clone()))],
+            None,
+            other,
+            1,
+        );
+        if !found.is_empty() {
+            let state = if inflected {
+                AnswerState::Form
+            } else {
+                AnswerState::Entry
+            };
+            return finish(
+                state, spelling, entry, found, glosses, example, pack, source, target,
+            );
+        }
+    }
 
     // The join: this sense's English gloss, looked up in the reader's own pack. Every sense is
     // tried, best first within each, because the first sense of a word is not always the one a

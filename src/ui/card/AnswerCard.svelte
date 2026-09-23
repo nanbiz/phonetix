@@ -76,8 +76,30 @@
   let symbols = $derived(answer.symbols);
   // Each sense with what it is marked as, so a reader is told a sense is archaic or regional
   // rather than meeting it as though it were the ordinary one.
+  // The rest of the entry only where a language is read in itself. A word translated is
+  // answered by its translation, and a card under the pointer is not the place for the
+  // dictionary's every sense of it: "and" read into Spanish is "y", and its ten English
+  // definitions covered the page it was read on.
+  let translated = $derived(
+    answer.says.length > 0 && !!answer.source && answer.source !== answer.target
+  );
+  // Three at most, and one row per meaning: two readings that say the same word are one row
+  // to a reader choosing between them.
+  let shownReadings = $derived(
+    answer.readings
+      .filter(
+        (reading, at, all) =>
+          all.findIndex(
+            (other) =>
+              (other.says[0] ?? other.glosses[0]) === (reading.says[0] ?? reading.glosses[0]) &&
+              other.pos === reading.pos
+          ) === at
+      )
+      .slice(0, 3)
+  );
+  let example = $derived(translated || chooses ? null : answer.example);
   let rest = $derived(
-    chooses
+    chooses || translated
       ? []
       : answer.glosses.slice(1).map((gloss, at) => ({
           gloss,
@@ -242,13 +264,13 @@
     {/if}
   </header>
 
-  {#if !nothing && (chooses || answer.example || rest.length > 0)}
+  {#if !nothing && (chooses || example || rest.length > 0)}
     <div class="card-body">
       {#if chooses}
         <!-- A reader chooses by meaning, so each reading leads with what it means and
              carries its part of speech at the end of its own row. -->
         <div class="others">
-          {#each answer.readings as reading, i (i)}
+          {#each shownReadings as reading, i (i)}
             <div class="gram">
               <span class="lemma">{reading.says[0] ?? reading.glosses[0] ?? answer.spelling}</span>
               {#if reading.pos}<span class="chip">{reading.pos}</span>{/if}
@@ -256,10 +278,10 @@
           {/each}
         </div>
       {/if}
-      {#if answer.example}
+      {#if example}
         <!-- One line and only where the dump had one: an invented sentence would settle
              which sense applies, wrongly. -->
-        <p class="ex"><q>{answer.example}</q></p>
+        <p class="ex"><q>{example}</q></p>
       {/if}
       {#if rest.length > 0}
         <!-- The senses that did not apply, two of them: the full list made a card into a

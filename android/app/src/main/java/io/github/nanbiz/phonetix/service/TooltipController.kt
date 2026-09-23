@@ -366,11 +366,27 @@ class TooltipController(
         val handInTheWay = hand > 0 && below + height > hand - dp(24)
         // The lowest the card can start and still be whole on the screen.
         val lowest = (metrics.heightPixels - height - margin).coerceAtLeast(margin)
-        // Beside the word, always: under it, over it where the hand or the screen's edge is
-        // in the way, and pushed back onto the screen where neither side has room for the
-        // whole card. The last case used to drop it at the foot of the screen, which for a
-        // word near the top meant an answer a long way from what it was about - and behind
-        // the keyboard, where a word is asked about while something is being typed.
+        // Beside the word, always: under it, or over it where the hand or the screen's edge is
+        // in the way. Where neither side has room for the whole card, it is cut to the larger
+        // of the two and scrolls: pushed back onto the screen whole, it lay over the very word
+        // it was about, and over the circle pointing at it.
+        val roomBelow = if (handInTheWay) 0 else metrics.heightPixels - margin - below
+        val roomAbove = (box.rect.top - dp(10)).roundToInt() - margin
+        val fits = (!handInTheWay && below <= lowest) || above >= margin
+        if (!fits && lp.height == WindowManager.LayoutParams.WRAP_CONTENT) {
+            lp.height = maxOf(roomBelow, roomAbove).coerceAtLeast(dp(120).roundToInt())
+            lp.y = if (roomBelow >= roomAbove) below else margin
+            runCatching { wm.updateViewLayout(card, lp) }
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "CARDAT ${box.word} y=${lp.y} (cut to ${lp.height}) from height=$height " +
+                        "word=${box.rect.top.toInt()}..${box.rect.bottom.toInt()} hand=$hand",
+                )
+            }
+            pointsDown?.value = lp.y + lp.height <= box.rect.top
+            return
+        }
         val y = when {
             !handInTheWay && below <= lowest -> below
             above >= margin -> above
@@ -511,6 +527,7 @@ class TooltipController(
                 pointsAt = androidx.compose.ui.unit.Dp((box.rect.centerX() - cardLeft()) / density()),
                 pointsDown = pointsDown?.value ?: false,
                 report = if (BuildConfig.DEBUG) laidOut else null,
+                scrolls = true,
                 onOpen = { open(it) },
                 // A second tap on the same symbol puts the line back to where it started: it
                 // is a detail about the word on screen, not a place to end up in.

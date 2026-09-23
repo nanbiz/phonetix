@@ -68,9 +68,10 @@ pub struct Pack<D: AsRef<[u8]>> {
     /// Where each block sits in the file, and where each entry sits inside its block.
     blocks: Vec<(u64, u64)>,
     starts: Vec<u32>,
-    /// The block last decompressed, kept because the next word asked about is usually a
-    /// neighbour of the last one.
-    warm: RefCell<Option<(usize, Vec<u8>)>>,
+    /// The blocks last decompressed, most recent first. One word is several entries in
+    /// several blocks, and a page asks about the same words over and over: with only the last
+    /// block kept, every lookup decompressed most of what it read again.
+    warm: RefCell<Vec<(usize, std::sync::Arc<[u8]>)>>,
 }
 
 impl<D: AsRef<[u8]>> Pack<D> {
@@ -138,7 +139,7 @@ impl<D: AsRef<[u8]>> Pack<D> {
             glosses,
             blocks,
             starts,
-            warm: RefCell::new(None),
+            warm: RefCell::new(Vec::with_capacity(WARM_BLOCKS)),
         })
     }
 
@@ -266,21 +267,31 @@ impl<D: AsRef<[u8]>> Pack<D> {
     }
 
     /// One block, decompressed, kept warm for the next word.
-    fn block(&self, which: usize) -> Option<Vec<u8>> {
-        if let Some((warm, bytes)) = self.warm.borrow().as_ref() {
-            if *warm == which {
-                return Some(bytes.clone());
+    fn block(&self, which: usize) -> Option<std::sync::Arc<[u8]>> {
+        {
+            let mut warm = self.warm.borrow_mut();
+            if let Some(at) = warm.iter().position(|(block, _)| *block == which) {
+                let hit = warm.remove(at);
+                let bytes = hit.1.clone();
+                warm.insert(0, hit);
+                return Some(bytes);
             }
         }
         let (offset, length) = *self.blocks.get(which)?;
         let (base, _) = self.header.at(Section::Blocks);
         let from = (base + offset) as usize;
         let raw = self.bytes.as_ref().get(from..from + length as usize)?;
-        let plain = unpack(raw)?;
-        *self.warm.borrow_mut() = Some((which, plain.clone()));
+        let plain: std::sync::Arc<[u8]> = unpack(raw)?.into();
+        let mut warm = self.warm.borrow_mut();
+        warm.insert(0, (which, plain.clone()));
+        warm.truncate(WARM_BLOCKS);
         Some(plain)
     }
 }
+
+/// How many decompressed blocks a pack keeps: a few hundred kilobytes, and a screenful of
+/// words many times over.
+const WARM_BLOCKS: usize = 64;
 
 fn slice(bytes: &[u8], (offset, length): (u64, u64)) -> &[u8] {
     &bytes[offset as usize..(offset + length) as usize]

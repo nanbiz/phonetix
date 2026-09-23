@@ -486,7 +486,9 @@ pub(crate) fn about_grammar(part: &str) -> bool {
         "spelling",
         "singular",
         "plural",
-        "person",
+        "first-person",
+        "second-person",
+        "third-person",
         "participle",
         "indicative",
         "subjunctive",
@@ -507,7 +509,9 @@ pub(crate) fn about_grammar(part: &str) -> bool {
         "short for",
         "apocop",
     ];
-    let lowered = part.to_lowercase();
+    // What a parenthesis says qualifies the meaning and is not a note about grammar: "kid;
+    // child (young person)" is a meaning.
+    let lowered = drop_parentheses(part).to_lowercase();
     if lowered.contains("letter") && lowered.contains("name of the") {
         return true;
     }

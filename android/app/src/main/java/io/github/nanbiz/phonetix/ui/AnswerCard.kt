@@ -2,6 +2,7 @@ package io.github.nanbiz.phonetix.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -88,6 +89,8 @@ fun AnswerCard(
      *  The bounds come from the layout rather than from what was intended, which is the whole
      *  point of asking. */
     report: Reporter? = null,
+    /** Whether the card scrolls within whatever height it is given. */
+    scrolls: Boolean = false,
 ) {
     Box(modifier.fillMaxWidth()) {
         // The arrow, outside the card's own rounded box so the card can keep clipping its
@@ -110,6 +113,17 @@ fun AnswerCard(
                 )
                 .clip(RoundedCornerShape(Tokens.Scale.radiusCard.dp))
                 .background(Color(palette.surface))
+                // Scrolls where the window holding it is shorter than it is: a card is cut
+                // to the room beside its word rather than laid over the word. Only where it
+                // is asked for - inside a page that scrolls itself, a second scroll is one
+                // measured with no height at all.
+                .then(
+                    if (scrolls) {
+                        Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())
+                    } else {
+                        Modifier
+                    },
+                )
                 .padding(Tokens.Scale.space4.dp),
             verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
         ) {
@@ -150,12 +164,25 @@ fun AnswerCard(
             // making exactly the choice it is here to avoid.
             Readings(answer, palette, report)
             Grammar(answer, palette, report)
-            Example(answer, palette, report)
-            OtherSenses(answer, palette, report)
+            // The rest of the entry only where a language is read in itself. A word translated
+            // is answered by its translation, and the card under a finger is not the place for
+            // the dictionary's every sense of it: "and" read into Spanish is "y", and its ten
+            // English definitions covered the page it was read on.
+            if (!translated(answer) && answer.readings.size < 2) {
+                Example(answer, palette, report)
+                OtherSenses(answer, palette, report)
+            }
             Foot(answer, palette, report, onOpen)
         }
     }
 }
+
+/** Whether the card answers with a word in another language, which is what it leads with. */
+private fun translated(answer: Answer): Boolean =
+    answer.says.isNotEmpty() && answer.source.isNotEmpty() && answer.source != answer.target
+
+/** How many readings a card lists for a reader to choose between. */
+private const val READINGS_SHOWN = 3
 
 /** How far the arrow reaches out of the card, which is also the room made for it. */
 private val ARROW = 8.dp
@@ -487,7 +514,10 @@ private fun OtherSenses(answer: Answer, palette: Tokens.Palette, report: Reporte
 @Composable
 private fun Readings(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     if (answer.readings.size < 2) return
-    for (reading in answer.readings) {
+    // Three at most, and one row per meaning: two readings that say the same word are one
+    // row to a reader choosing between them.
+    val shown = answer.readings.distinctBy { it.headline to it.pos }.take(READINGS_SHOWN)
+    for (reading in shown) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             androidx.compose.material3.Text(
                 text = reading.headline.orEmpty(),
