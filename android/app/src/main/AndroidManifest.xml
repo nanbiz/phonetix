@@ -7,6 +7,9 @@
     <!-- The recordings and the sagittal diagrams behind a symbol come from Wikimedia, the
          same files the extension links to. Nothing is sent, only fetched. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether the connection is metered, which decides how large a dictionary is fetched
+         without being asked for. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Dictation in the panel the mark opens: the word is spoken instead of typed, over
          whatever is being read, because a keyboard there covers half the conversation. -->

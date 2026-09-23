@@ -67,6 +67,8 @@ pub struct Builder {
     keys: BTreeMap<String, Vec<u32>>,
     /// Gloss term to the senses that carry it, likewise.
     glosses: BTreeMap<String, Vec<(u32, u32)>>,
+    /// Whether the gloss index is built at all. See [Builder::without_joins].
+    joins: bool,
 }
 
 impl Builder {
@@ -78,7 +80,19 @@ impl Builder {
             entries: Vec::new(),
             keys: BTreeMap::new(),
             glosses: BTreeMap::new(),
+            joins: true,
         }
+    }
+
+    /// A pack nothing is ever joined into, so it carries no gloss index.
+    ///
+    /// The index is how a word in another language reaches this one: Spanish "perro" glosses
+    /// "dog", and "dog" in the index is how German "Hund" is found. English is never the far
+    /// side of that - a reader of English is handed the gloss itself - and in the English
+    /// dictionary the index is fifty megabytes of its hundred and fifty.
+    pub fn without_joins(mut self) -> Builder {
+        self.joins = false;
+        self
     }
 
     /// Add one word, under its lemma and under every form that resolves to it.
@@ -100,7 +114,7 @@ impl Builder {
                 reached.push(which);
             }
         }
-        for (number, sense) in entry.senses.iter().enumerate() {
+        for (number, sense) in entry.senses.iter().enumerate().filter(|_| self.joins) {
             for term in crate::gloss_terms(&sense.gloss) {
                 self.glosses
                     .entry(term)

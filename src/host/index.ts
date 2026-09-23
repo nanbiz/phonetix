@@ -12,7 +12,7 @@ import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
-import { forget, get, held, offered, open } from './packs';
+import { forget, get, held, offered, open, openReadInto } from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
 
 /** Start answering. Called once, by the background entry point. */
@@ -43,7 +43,7 @@ export function host(): void {
     // each word reached and a host with no tokens could not tell that from a blank page.
     await Promise.all([
       open(data.source).catch(() => null),
-      data.target === data.source ? null : open(data.target).catch(() => null),
+      data.target === data.source ? null : openReadInto(data.target).catch(() => null),
       data.options.accent ? open(data.options.accent).catch(() => null) : null,
       // The classifier for what is being read, where the language has one. It decides which
       // word a spelling is, above the rule about the word before it.
@@ -177,7 +177,7 @@ export function host(): void {
     // said, what it means back in the reader's language, which sounds are in it.
     await Promise.all([
       open(data.source),
-      data.target === data.source ? null : open(data.target),
+      data.target === data.source ? null : openReadInto(data.target),
       openHomographs(data.source).catch(() => 0),
     ]);
     // One word is looked up as one word; a machine that answered with a phrase is answered
@@ -193,7 +193,7 @@ export function host(): void {
     // travels back as one rather than as a card claiming the word does not exist.
     await Promise.all([
       open(data.source),
-      data.target === data.source ? null : open(data.target),
+      data.target === data.source ? null : openReadInto(data.target),
       // The accent's own words, where that accent is one that has them.
       data.accent ? open(data.accent).catch(() => null) : null,
       openHomographs(data.source).catch(() => 0),

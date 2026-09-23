@@ -102,6 +102,23 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
 ///
 /// Only the transcriptions, and only in the notation this reads. A sound entry can be a
 /// recording, a rhyme or a respelling instead, and each of those is somebody else's field.
+/// Whether an entry does nothing but say which other word it is a form of, with no sound of
+/// its own: "dogs, plural of dog".
+///
+/// Such an entry is the dump's way of filing an inflection under its own heading. The lemma
+/// lists the same spelling among its forms, and the pack reaches the lemma from it through
+/// that, with the form's name. Kept, it is a second answer to the same question - and in the
+/// published English dictionary a third of all entries. One with a pronunciation of its own is
+/// kept: "est" is said [ɛ], and "être", which it is a form of, is not.
+pub fn is_bare_form(entry: &Entry) -> bool {
+    !entry.senses.is_empty()
+        && entry.ipa.is_empty()
+        && entry
+            .senses
+            .iter()
+            .all(|sense| sense.marks.iter().any(|mark| mark == "form-of"))
+}
+
 fn pronunciations(value: &Value) -> Vec<String> {
     let mut out = Vec::new();
     for sound in value
@@ -123,9 +140,13 @@ fn pronunciations(value: &Value) -> Vec<String> {
     out
 }
 
+/// How many of an entry's senses keep their example: as many as a translated line picks a
+/// sense out of, since any of those can end up leading the card.
+const EXAMPLES_KEPT: usize = 6;
+
 /// What the word means, in English, which is what joins two packs into a pair.
 fn senses(value: &Value) -> Vec<Sense> {
-    let mut out = Vec::new();
+    let mut out: Vec<Sense> = Vec::new();
     for sense in value
         .get("senses")
         .and_then(|v| v.as_array())
@@ -148,8 +169,12 @@ fn senses(value: &Value) -> Vec<Sense> {
         out.push(Sense {
             gloss: gloss.trim().to_string(),
             marks: strings(sense.get("tags")),
-            example: sense
-                .get("examples")
+            // Only for the first senses, which are the ones a card can lead with: the first,
+            // or one a translated line picked out of the first few. The rest were a third of the
+            // English dictionary and never shown.
+            example: (out.len() < EXAMPLES_KEPT)
+                .then(|| sense.get("examples"))
+                .flatten()
                 .and_then(|v| v.as_array())
                 .and_then(|list| list.first())
                 .and_then(|first| first.get("text"))
@@ -285,6 +310,29 @@ mod tests {
       "forms":[{"form":"perros","tags":["plural"]},{"form":"perro"},
                {"form":"inflection-table","tags":["table-tags"]}],
       "tags":["masculine"]}"#;
+
+    /// An entry that only names what it is a form of, with no sound of its own, is a bare
+    /// form; one with a pronunciation, or a meaning of its own, is not.
+    #[test]
+    fn a_bare_form_is_one_that_only_points_and_has_no_sound() {
+        let mut skipped = Skipped::default();
+        let bare = r#"{"word":"absinthiated","pos":"verb","lang_code":"en",
+          "senses":[{"glosses":["past participle of absinthiate"],"tags":["form-of","past"]}]}"#;
+        let sounded = r#"{"word":"est","pos":"verb","lang_code":"fr","sounds":[{"ipa":"/ɛ/"}],
+          "senses":[{"glosses":["third-person singular present indicative of être"],
+                     "tags":["form-of"]}]}"#;
+        let meaning = r#"{"word":"dog","pos":"noun","lang_code":"en",
+          "senses":[{"glosses":["a mammal"]}]}"#;
+        assert!(is_bare_form(
+            &read_line(bare, "en", &mut skipped).unwrap().entry
+        ));
+        assert!(!is_bare_form(
+            &read_line(sounded, "fr", &mut skipped).unwrap().entry
+        ));
+        assert!(!is_bare_form(
+            &read_line(meaning, "en", &mut skipped).unwrap().entry
+        ));
+    }
 
     #[test]
     fn a_word_comes_out_of_its_line() {

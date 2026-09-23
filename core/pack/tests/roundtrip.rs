@@ -260,3 +260,20 @@ fn a_pack_written_without_the_compressor_reads_the_same() {
         "a word it does not hold is absent"
     );
 }
+
+/// A pack nothing is joined into answers every word it holds and joins nothing.
+#[test]
+fn a_pack_without_joins_still_answers_its_words() {
+    let mut pack = Builder::new("en", Kind::Lex, 1_757_000_000).without_joins();
+    pack.add(
+        word("dog", "noun", "dɒɡ", &["a mammal, Canis familiaris"]),
+        &["dogs"],
+    )
+    .unwrap();
+    let bytes = pack.finish().unwrap();
+    let en = Pack::open(&bytes).unwrap();
+    let found = en.lookup("dogs");
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].lemma, "dog");
+    assert!(en.senses_matching("mammal").is_empty());
+}

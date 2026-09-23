@@ -94,11 +94,41 @@ export async function open(lang: string): Promise<string | null> {
   return fromWhatWeCarry(lang);
 }
 
+/**
+ * Open the reader's own language, the one a page is read into.
+ *
+ * Its meanings are what another language's words are joined to, so they are fetched like any
+ * other - except English, which is never joined to: a reader of English is given the gloss
+ * itself, and a hundred megabytes of English definitions would arrive to answer nothing. What
+ * it does need, how an English word is said, is in what the app carries.
+ */
+export async function openReadInto(lang: string): Promise<string | null> {
+  if (lang !== 'en') return open(lang);
+  if ((await openLanguages()).includes(lang)) return lang;
+  const bytes = await cached(lang);
+  if (bytes) {
+    carried.delete(lang);
+    return openPack(bytes);
+  }
+  return fromWhatWeCarry(lang);
+}
+
 /** What is being fetched now, and what failed lately, so a language is fetched once at a time
  *  and a host that is down is not asked again on every page. */
 const fetching = new Set<string>();
-/** The largest dictionary fetched without being asked for. */
-const BY_ITSELF_BYTES = 64 * 1024 * 1024;
+/**
+ * The largest dictionary fetched without being asked for, which depends on what the
+ * connection costs: up to a size nobody notices where the reader has asked the browser to save
+ * data or the line is slow, and otherwise the English dictionary too, a hundred megabytes.
+ */
+function byItself(): number {
+  const connection = (
+    navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }
+  ).connection;
+  const saving =
+    connection?.saveData === true || /(^|-)2g$/.test(connection?.effectiveType ?? '');
+  return (saving ? 64 : 160) * 1024 * 1024;
+}
 const failedAt = new Map<string, number>();
 const RETRY_AFTER_MS = 5 * 60_000;
 
@@ -112,10 +142,8 @@ function inBackground(lang: string): void {
       const listed = (await offered()).find((pack) => pack.lang === lang);
       // Only what is published: asking for a pack that does not exist is a request that
       // can only fail, once per page, for every language nobody built a pack for. And only
-      // what is small enough to fetch on a reader's behalf: English is every English word
-      // with its English definitions, well over a hundred megabytes, and a reader of English
-      // is told what a word means by their own language's dictionary, not by it.
-      if (!listed || listed.bytes > BY_ITSELF_BYTES) return;
+      // what is small enough to fetch on a reader's behalf over the connection they are on.
+      if (!listed || listed.bytes > byItself()) return;
       await get(lang);
       failedAt.delete(lang);
     } catch {

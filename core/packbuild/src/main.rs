@@ -34,36 +34,55 @@ fn main() {
         None => vec![lang.as_str()],
     };
 
-    let file = match File::open(from) {
-        Ok(file) => file,
-        Err(e) => {
-            eprintln!("cannot read {from}: {e}");
-            std::process::exit(1);
+    // Read twice: once for every spelling a lemma lists among its forms, then to build. An
+    // entry that only says it is a form of another word, where the other word already lists
+    // it, is the same answer twice and is left out (see [packbuild::is_bare_form]).
+    let mut listed: std::collections::HashSet<String> = std::collections::HashSet::new();
+    {
+        let mut ignored = Skipped::default();
+        for line in BufReader::new(extract(from)).lines() {
+            let Ok(line) = line else { continue };
+            let Some(read) = read_line_filed_as(&line, &filed, &mut ignored) else {
+                continue;
+            };
+            if !packbuild::is_bare_form(&read.entry) {
+                listed.extend(
+                    read.entry
+                        .forms
+                        .iter()
+                        .map(|form| form.spelling.to_lowercase()),
+                );
+                listed.extend(read.forms.iter().map(|form| form.to_lowercase()));
+            }
         }
-    };
-    // Gzipped as it is published, or already unpacked. An extract of one language unpacks to
-    // gigabytes, and unpacking it to disk first only to read it once is space for nothing.
-    let file: Box<dyn std::io::Read> = if from.ends_with(".gz") {
-        Box::new(flate2::read::MultiGzDecoder::new(file))
-    } else {
-        Box::new(file)
-    };
+    }
+    let file = extract(from);
     let built = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
     let mut pack = Builder::new(lang, Kind::Lex, built);
+    // English is never joined into: a reader of English is given the gloss itself.
+    if lang == "en" {
+        pack = pack.without_joins();
+    }
     let mut skipped = Skipped::default();
     // A spelling that is two words - "book" as a noun and as a verb - is two entries under one
     // key, and the pack holds both. The order is the dump's, which lists the commoner part of
     // speech first, so a reader who does not choose still meets the likely one first.
     let mut taken = 0usize;
     let mut refused = 0usize;
+    let mut repeated = 0usize;
     for line in BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
         let Some(read) = read_line_filed_as(&line, &filed, &mut skipped) else {
             continue;
         };
+        if packbuild::is_bare_form(&read.entry) && listed.contains(&read.entry.lemma.to_lowercase())
+        {
+            repeated += 1;
+            continue;
+        }
         match pack.add(read.entry, &read.forms) {
             Ok(_) => taken += 1,
             Err(_) => refused += 1,
@@ -96,8 +115,8 @@ fn main() {
     );
     eprintln!(
         "{taken} entries, {} spellings, {} gloss terms, {} bytes. \
-Left out: {refused} the pack would not take, {} of another language, {} with nothing to \
-show, {} without a word, {} unreadable.",
+Left out: {refused} the pack would not take, {repeated} forms their lemma lists, {} of \
+another language, {} with nothing to show, {} without a word, {} unreadable.",
         counts.keys,
         counts.glosses,
         bytes.len(),
@@ -106,6 +125,25 @@ show, {} without a word, {} unreadable.",
         skipped.nameless,
         skipped.unreadable,
     );
+}
+
+/// An extract, opened for reading from the start.
+///
+/// Gzipped as it is published, or already unpacked. An extract of one language unpacks to
+/// gigabytes, and unpacking it to disk first only to read it once is space for nothing.
+fn extract(from: &str) -> Box<dyn std::io::Read> {
+    let file = match File::open(from) {
+        Ok(file) => file,
+        Err(e) => {
+            eprintln!("cannot read {from}: {e}");
+            std::process::exit(1);
+        }
+    };
+    if from.ends_with(".gz") {
+        Box::new(flate2::read::MultiGzDecoder::new(file))
+    } else {
+        Box::new(file)
+    }
 }
 
 /// Build a pack of how a language's words are said.

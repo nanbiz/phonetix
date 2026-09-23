@@ -49,12 +49,23 @@ object Fetch {
         start("pack $lang", then) {
             val host = SettingsStore.current.packHost
             val listed = Packs.offered(host).firstOrNull { it.lang == lang }
-            listed != null && listed.bytes <= BY_ITSELF_BYTES && Packs.get(context, host, lang)
+            listed != null && listed.bytes <= byItself(context) && Packs.get(context, host, lang)
         }
     }
 
-    /** The largest dictionary fetched without being asked for. */
-    const val BY_ITSELF_BYTES = 64L * 1024 * 1024
+    /**
+     * The largest dictionary fetched without being asked for, which depends on what the
+     * connection costs. On a metered one, what a page needs up to a size nobody notices; on
+     * one that is not, the English dictionary too, which is a hundred megabytes.
+     */
+    fun byItself(context: Context): Long {
+        val net = context.getSystemService(android.net.ConnectivityManager::class.java)
+        val metered = runCatching { net?.isActiveNetworkMetered ?: true }.getOrDefault(true)
+        return if (metered) BY_ITSELF_METERED else BY_ITSELF_FREE
+    }
+
+    const val BY_ITSELF_METERED = 64L * 1024 * 1024
+    const val BY_ITSELF_FREE = 160L * 1024 * 1024
 
     /** The model for one direction, unless this phone already holds it. */
     fun model(context: Context, from: String, to: String, then: (Boolean) -> Unit = {}) {
