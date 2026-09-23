@@ -1289,8 +1289,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     main.post { readAgain() }
                 }
             }
-            // The reader chose another language to read into. The engine holds one direction
-            // open, and it was opened for the old one: without this the phone translates
+            // The reader chose another language to read into. The screen is read in one
+            // direction, and it was opened for the old one: without this the phone translates
             // nothing until the screen's own language happens to change, which on a reader's
             // own page is never.
             if (settings.into != lastTarget) {
@@ -2876,15 +2876,34 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // What the rest of this is for is the keyboard, so nothing is done unless it has
         // actually come or gone. Windows change constantly - every dialog, every system
         // window, every one of ours - and the button is only in the way of one of them.
+        if (keyboardMoved()) settleTheKeyboard(KEYBOARD_SETTLES)
+    }
+
+    /** Where the keyboard is now, told to the button if that changed. */
+    private fun keyboardMoved(): Boolean {
         val top = keyboardTop()
-        if (top != lastKeyboardTop) {
-            lastKeyboardTop = top
-            val now = SettingsStore.current
-            if (now.enabled) main.post { hover.show() }
-            if (BuildConfig.DEBUG) {
-                android.util.Log.d("Phonetix", "KEYBOARD at $top")
-            }
+        if (top == lastKeyboardTop) return false
+        lastKeyboardTop = top
+        if (SettingsStore.current.enabled) main.post { hover.show() }
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "KEYBOARD at $top")
         }
+        return true
+    }
+
+    /**
+     * Asked again a moment later, until the keyboard stops moving.
+     *
+     * A keyboard slides in, and the window change that says it is there arrives while it is
+     * still on its way: its edge was read at 1892 on a keyboard that came to rest at 1517,
+     * with no further change to say so. The button stood clear of where the keyboard had
+     * been, behind the keys where it ended.
+     */
+    private fun settleTheKeyboard(left: Int) {
+        if (left <= 0 || !::watcher.isInitialized) return
+        watcher.postDelayed({
+            if (keyboardMoved()) settleTheKeyboard(KEYBOARD_SETTLES) else settleTheKeyboard(left - 1)
+        }, KEYBOARD_SETTLE_MS)
     }
 
     /**
@@ -3982,6 +4001,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
 
         /** How many lines are asked where they are before the rest are carried with them. */
+        /** How often, and how far apart, the keyboard's edge is read again after it moves:
+         *  long enough together to outlast the slide it comes in on. */
+        const val KEYBOARD_SETTLES = 3
+        const val KEYBOARD_SETTLE_MS = 250L
+
         /** How many lines are asked where they are each pass. Settable so a test can sweep
          *  it: each anchor is a round trip into an app that is busy scrolling, so the count
          *  decides how often the words can be measured at all. */
