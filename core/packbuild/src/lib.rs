@@ -134,8 +134,12 @@ fn senses(value: &Value) -> Vec<Sense> {
     {
         // A sense with no gloss is a cross reference or a form-of stub: it carries no meaning
         // of its own and nothing can be joined to it.
+        // The last of them. A sense nested under another is written from the general to the
+        // particular - ["As a copulative verb:", "to be"] - and what it means is the last
+        // one; the first is the heading it sits under. Taking the first left German "sein"
+        // without "to be" anywhere in it.
         let glosses = strings(sense.get("glosses"));
-        let Some(gloss) = glosses.first() else {
+        let Some(gloss) = glosses.iter().rev().find(|g| !g.trim().is_empty()) else {
             continue;
         };
         if gloss.trim().is_empty() {
@@ -177,12 +181,19 @@ fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
         if spelling.is_empty() || spelling == word || spelling == "-" {
             continue;
         }
+        let tags = strings(form.get("tags"));
         // A table header the extractor kept as a form, which is a label rather than a word.
-        if form.get("tags").is_some_and(|tags| {
-            strings(Some(tags))
-                .iter()
-                .any(|t| t == "table-tags" || t == "inflection-template")
-        }) {
+        if tags
+            .iter()
+            .any(|t| t == "table-tags" || t == "inflection-template")
+        {
+            continue;
+        }
+        // The headword as the dictionary prints it is kept - "amō" for "amo" - unless what the
+        // extractor kept is a fragment of it: a German name is printed with its article, "der
+        // Kosovo", and the row that reached the dump was "der" alone. Filed as a form of the
+        // name, every "der" on a page led to Kosovo and every "die" to the CIA.
+        if tags.iter().any(|t| t == "canonical") && !starts_alike(spelling, word) {
             continue;
         }
         if !out.iter().any(|had| had.spelling == spelling) {
@@ -238,6 +249,16 @@ fn commonest(mut forms: Vec<lexpack::Form>) -> Vec<lexpack::Form> {
     forms.sort_by_key(rank);
     forms.truncate(MAX_FORMS);
     forms
+}
+
+/// Whether two spellings begin with the same letter, whatever the case.
+fn starts_alike(one: &str, other: &str) -> bool {
+    let first = |text: &str| {
+        text.chars()
+            .next()
+            .map(|c| c.to_lowercase().collect::<String>())
+    };
+    first(one) == first(other)
 }
 
 fn strings(value: Option<&Value>) -> Vec<String> {
@@ -329,6 +350,52 @@ mod tests {
         assert_eq!(kept.len(), MAX_FORMS);
         assert!(kept.contains(&"talot"), "the plural a reader meets is kept");
         assert!(kept.contains(&"talossa"), "and the case");
+    }
+
+    #[test]
+    fn a_nested_sense_means_its_own_gloss_not_its_heading() {
+        let line = serde_json::json!({
+            "word": "sein", "pos": "verb", "lang_code": "de",
+            "senses": [{"glosses": ["As a copulative verb:", "to be"]}],
+        })
+        .to_string();
+        let read = read_line(&line, "de", &mut Skipped::default()).unwrap();
+        assert_eq!(read.entry.senses[0].gloss, "to be");
+    }
+
+    #[test]
+    fn a_name_is_not_reached_through_its_article() {
+        let line = serde_json::json!({
+            "word": "Kosovo", "pos": "name", "lang_code": "de",
+            "senses": [{"glosses": ["Kosovo"]}],
+            "forms": [
+                {"form": "der", "tags": ["canonical", "masculine", "neuter"]},
+                {"form": "Kosovos", "tags": ["genitive"]},
+            ],
+        })
+        .to_string();
+        let read = read_line(&line, "de", &mut Skipped::default()).unwrap();
+        let kept: Vec<&str> = read
+            .entry
+            .forms
+            .iter()
+            .map(|f| f.spelling.as_str())
+            .collect();
+        assert_eq!(
+            kept,
+            vec!["Kosovos"],
+            "the article alone is not a form of the name"
+        );
+
+        // The headword printed with its marks is kept, since that is the same word.
+        let latin = serde_json::json!({
+            "word": "amo", "pos": "verb", "lang_code": "la",
+            "senses": [{"glosses": ["to love"]}],
+            "forms": [{"form": "amō", "tags": ["canonical"]}],
+        })
+        .to_string();
+        let read = read_line(&latin, "la", &mut Skipped::default()).unwrap();
+        assert_eq!(read.entry.forms.len(), 1);
     }
 
     #[test]

@@ -70,11 +70,9 @@ pub fn annotate<D: AsRef<[u8]>>(
             before = Some(spelling.clone());
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
-            let gloss = answer
-                .says
-                .first()
-                .or_else(|| answer.glosses.first())
-                .map(|text| cut(text, GLOSS_LIMIT));
+            let gloss = inline_of(&answer.says)
+                .or_else(|| inline_of(&answer.glosses))
+                .map(|text| cut(&text, GLOSS_LIMIT));
             // Carrying as much of the detail as the reader asked for; the card always has the
             // full form. The accent is already in what the cascade answered, and applying it
             // again here would shift a word its accent's own pack had already spelled out.
@@ -256,6 +254,137 @@ pub fn complete<D: AsRef<[u8]>>(
 ///
 /// Cut mid-word, an annotation reads as a different word; cut at a space, it reads as the
 /// beginning of the right one. The ellipsis says that there is more, which the card has.
+/// What a word is drawn as over the page, out of what a dictionary says it means.
+///
+/// A dictionary writes for a card: "dog (the species Canis familiaris, ...)", "masculine
+/// singular definite article; the", "first-person singular present indicative of caminar".
+/// Over the page there is room for the word and nothing else, so what is drawn is the word:
+/// the first sense that is a meaning rather than a note about grammar, without what its
+/// parentheses explain, and of its alternatives the first one that is not itself such a note.
+/// The card still shows every sense as the dictionary wrote it.
+fn inline_of(senses: &[String]) -> Option<String> {
+    senses
+        .iter()
+        .filter_map(|sense| plain(sense))
+        .next()
+        .or_else(|| senses.first().map(|sense| sense.trim().to_string()))
+        .filter(|text| !text.is_empty())
+}
+
+/// A sense as a word, or nothing when all it says is grammar.
+fn plain(sense: &str) -> Option<String> {
+    // A note pointing at another word often carries that word's meaning in quotation marks -
+    // "masculine plural of el (“the”)" - and that is the meaning.
+    if about_grammar(sense) {
+        if let Some(quoted) = quoted(sense) {
+            return Some(quoted);
+        }
+    }
+    let without = drop_parentheses(sense);
+    let parts: Vec<&str> = without.split(';').map(str::trim).collect();
+    if let Some(part) = parts
+        .iter()
+        .find(|part| !part.is_empty() && !about_grammar(part))
+    {
+        return Some(tidy(part));
+    }
+    // Every part a note about grammar. Such a note usually ends with the meaning, after a
+    // colon - "dative singular of der: the" - or a comma - "definite article, the".
+    let note = parts.first()?;
+    if let Some((_, after)) = note.split_once(':') {
+        let after = after.trim();
+        if !after.is_empty() && !about_grammar(after) {
+            return Some(tidy(after));
+        }
+    }
+    note.split(',')
+        .map(str::trim)
+        .skip(1)
+        .find(|piece| !piece.is_empty() && !about_grammar(piece))
+        .map(tidy)
+}
+
+/// What a sense quotes as the meaning, between curly quotation marks.
+fn quoted(sense: &str) -> Option<String> {
+    let start = sense.find('“')? + '“'.len_utf8();
+    let end = start + sense[start..].find('”')?;
+    let inside = drop_parentheses(sense[start..end].trim());
+    (!inside.is_empty()).then(|| tidy(&inside))
+}
+
+/// One space between words, and no space or stray punctuation left where a parenthesis was.
+fn tidy(text: &str) -> String {
+    let joined = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut out = joined
+        .replace(" ,", ",")
+        .replace(" .", ".")
+        .replace(" ;", ";")
+        .replace(" :", ":");
+    while out.ends_with(['.', ',', ';', ':']) {
+        out.pop();
+    }
+    out.trim().to_string()
+}
+
+/// Whether this part of a sense describes the word's grammar rather than what it means.
+///
+/// Two shapes: a note pointing at another word - "plural of perro", "inflection of correr" -
+/// and a description of what kind of word it is - "masculine singular definite article". A
+/// short meaning that merely contains one of these words, "person", is neither.
+fn about_grammar(part: &str) -> bool {
+    const GRAMMAR: &[&str] = &[
+        "article",
+        "inflection",
+        "nominative",
+        "accusative",
+        "dative",
+        "genitive",
+        "ablative",
+        "vocative",
+        "locative",
+        "instrumental",
+        "contraction",
+        "abbreviation",
+        "alternative form",
+        "spelling",
+        "singular",
+        "plural",
+        "person",
+        "participle",
+        "indicative",
+        "subjunctive",
+        "imperative",
+        "infinitive",
+        "gerund",
+        "used before",
+        "used after",
+        "tense",
+    ];
+    let lowered = part.to_lowercase();
+    if lowered.contains("letter") && lowered.contains("name of the") {
+        return true;
+    }
+    let grammatical = GRAMMAR.iter().any(|word| lowered.contains(word));
+    let points_elsewhere = lowered.contains(" of ");
+    let words = lowered.split_whitespace().count();
+    grammatical && (points_elsewhere || words > 2)
+}
+
+/// The sense without what its parentheses and quotation marks add.
+fn drop_parentheses(sense: &str) -> String {
+    let mut out = String::with_capacity(sense.len());
+    let mut depth = 0usize;
+    for c in sense.chars() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => out.push(c),
+            _ => {}
+        }
+    }
+    out.trim().trim_end_matches([',', ':']).trim().to_string()
+}
+
 fn cut(text: &str, limit: usize) -> String {
     let units: Vec<char> = text.chars().collect();
     if units.len() <= limit {

@@ -163,14 +163,61 @@ pub fn phrase(text: &str, said: &str, source: &Lang, target: &Lang) -> Answer {
 /// noun, so "Bank" and "bank" are two different words and the pack holds both.
 fn lookup_either_case<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Vec<Entry> {
     let found = pack.lookup(spelling);
-    if !found.is_empty() {
-        return found;
-    }
     let lowered = spelling.to_lowercase();
     if lowered == spelling {
-        return Vec::new();
+        return found;
     }
-    pack.lookup(&lowered)
+    // Capitalised, so possibly only because it starts a sentence. The word written in small
+    // letters is looked up as well and comes before a name that happens to be spelled the
+    // same: "Le" at the start of a French sentence is the article, not the surname. A word
+    // that is only ever capitalised - a German noun - has no small-letter entry to compete.
+    let small = pack.lookup(&lowered);
+    if small.is_empty() {
+        return found;
+    }
+    let (names, words): (Vec<Entry>, Vec<Entry>) =
+        found.into_iter().partition(|entry| entry.pos == "name");
+    words.into_iter().chain(small).chain(names).collect()
+}
+
+/// Where an entry stands among the ones a spelling reaches: the word itself, then what it is
+/// an inflection of, then entries that are only notes pointing elsewhere.
+fn rank_of(entry: &Entry, spelling: &str) -> u8 {
+    let pointing = |sense: &lexpack::Sense| sense.marks.iter().any(|mark| mark == "form-of");
+    // A letter of the alphabet is an entry under every one-letter spelling and under its
+    // plural - "es" is the plural of "e" - and it is never the word a reader was reading.
+    if !entry.senses.is_empty()
+        && entry
+            .senses
+            .iter()
+            .all(|sense| names_a_letter(&sense.gloss))
+    {
+        return 8;
+    }
+    if !entry.senses.is_empty() && entry.senses.iter().all(pointing) {
+        return 6;
+    }
+    // The word itself, unless what it leads with is a note that it is a form of another:
+    // "los" the pronoun opens with "accusative of ellos", and "los" the article - "the" - is
+    // the one a reader meets.
+    let leads_with_meaning = entry.senses.first().is_some_and(|sense| !pointing(sense));
+    let rank = if same_word(&entry.lemma, spelling) && leads_with_meaning {
+        0
+    } else {
+        1
+    };
+    // Twice that, and one more for a pronoun: where an article and a pronoun share a spelling
+    // - "la", "das" - the article is the word met on nearly every line, and the pronoun the one
+    // met now and then. The dump lists the pronoun first as often as not.
+    rank * 2 + u8::from(entry.pos == "pron")
+}
+
+/// Whether a sense is a letter of the alphabet naming itself.
+fn names_a_letter(gloss: &str) -> bool {
+    let lowered = gloss.to_lowercase();
+    lowered.contains("letter")
+        && (lowered.contains("name of the")
+            || lowered.contains("of the") && lowered.contains("alphabet"))
 }
 
 /// Whether two spellings are the same word, which case alone does not decide.
@@ -213,12 +260,17 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         };
         return Answer::nothing(state, spelling, source, target);
     };
-    let found = lookup_either_case(pack, spelling);
+    let mut found = lookup_either_case(pack, spelling);
     if found.is_empty() {
         // The pack is open and does not hold the word. That is a miss for the engines, not a
         // missing pack, and the card says so differently.
         return Answer::nothing(AnswerState::None, spelling, source, target);
     }
+    // The entry that is this word before one it is only a form of, and a stub that does
+    // nothing but point at another entry last. The pack lists hits in the order the entries
+    // were built, which is the dump's alphabetical order, so "caminar" - whose forms include
+    // "camino" - came before "camino" itself, and "camino" was read as "to walk".
+    found.sort_by_key(|entry| rank_of(entry, spelling));
 
     let mut answers: Vec<Answer> = found
         .iter()

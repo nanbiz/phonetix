@@ -1049,3 +1049,292 @@ fn a_gloss_with_its_article_is_said_as_the_word() {
     assert_eq!(calle.gloss.as_deref(), Some("a street"));
     assert_eq!(calle.gloss_ipa.as_deref(), Some("stɹiːt"));
 }
+
+/// What a word is drawn as over the page, from dictionaries as Wiktionary writes them.
+///
+/// The small packs the rest of these tests build hold one tidy sense per word, and every one of
+/// them passed while a real dictionary drew the Spanish article as "masculine…", a dog as "dog
+/// (the species Canis familiaris…" and "camino" as "to walk": the entry that is the word lost to
+/// one that only reaches it as an inflection, and a definition written for a card was put over
+/// the page as it stood.
+#[test]
+fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let mut from = Builder::new("es", Kind::Lex, 0);
+    // In the order the dump lists them, which is the order that went wrong: "caminar" comes
+    // before "camino", and "camino" is one of its forms.
+    from.add(
+        word("caminar", "verb", "kamiˈnaɾ", &["to walk"]),
+        &["camino"],
+    )
+    .unwrap();
+    from.add(
+        word("camino", "noun", "kaˈmino", &["way, route", "road"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "el",
+            "article",
+            "el",
+            &["masculine singular definite article; the"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "perro",
+            "noun",
+            "ˈpero",
+            &["dog (the species Canis familiaris, domesticated for thousands of years)"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "banco",
+            "noun",
+            "ˈbanko",
+            &["bank (financial institution)", "bench"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "del",
+            "contraction",
+            "del",
+            &["of the, from the (+ a masculine noun in singular)."],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    // "es" is the plural of the letter "e" and a form of "ser"; "y" is a letter and "and".
+    from.add(
+        word(
+            "e",
+            "noun",
+            "e",
+            &["The name of the Latin script letter E/e."],
+        ),
+        &["es"],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "ser",
+            "verb",
+            "ˈseɾ",
+            &["to be (essentially or identified as)"],
+        ),
+        &["es"],
+    )
+    .unwrap();
+    from.add(
+        word(
+            "y",
+            "character",
+            "ʝ",
+            &["The twenty-sixth letter of the Spanish alphabet, called ye or i griega."],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    from.add(word("y", "conj", "i", &["and"]), &[] as &[&str])
+        .unwrap();
+    // The article reaches "los" as a form; the pronoun is "los" and opens with a note.
+    from.add(
+        word(
+            "el",
+            "article",
+            "el",
+            &["masculine singular definite article; the"],
+        ),
+        &["los"],
+    )
+    .unwrap();
+    let mut pronoun = word("los", "pron", "los", &["accusative of ellos; them"]);
+    pronoun.senses[0].marks = vec!["accusative".to_string(), "form-of".to_string()];
+    from.add(pronoun, &[] as &[&str]).unwrap();
+    let source = Pack::open(from.finish().unwrap()).expect("the pack opens");
+    let open = Open {
+        source: Some(&source),
+        ..Open::default()
+    };
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "el perro en el camino del banco es y los".to_string(),
+            lang_hint: None,
+        }],
+        &lang("es"),
+        &lang("en"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Meaning,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+        },
+    );
+    let drawn = |spelling: &str| {
+        tokens
+            .iter()
+            .find(|token| token.spelling == spelling)
+            .and_then(|token| token.gloss.clone())
+            .unwrap_or_default()
+    };
+    assert_eq!(
+        drawn("el"),
+        "the",
+        "the word, not the grammar note about it"
+    );
+    assert_eq!(
+        drawn("perro"),
+        "dog",
+        "the word, not the parenthesis explaining it"
+    );
+    assert_eq!(drawn("banco"), "bank");
+    assert_eq!(drawn("camino"), "way, route");
+    assert_eq!(
+        drawn("del"),
+        "of the, from the",
+        "and no stray point where a parenthesis was"
+    );
+    assert_eq!(
+        drawn("es"),
+        "to be",
+        "the verb, not the letter it is also the plural of"
+    );
+    assert_eq!(drawn("y"), "and", "the conjunction, not the letter");
+    assert_eq!(
+        drawn("los"),
+        "the",
+        "the article, which the pronoun's note does not outrank"
+    );
+
+    // And with nothing before it to decide between them, which is where a word met as the
+    // form of another had been winning: the entry that is the word comes first.
+    let (alone, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "camino".to_string(),
+            lang_hint: None,
+        }],
+        &lang("es"),
+        &lang("en"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Meaning,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+        },
+    );
+    assert_eq!(
+        alone[0].gloss.as_deref(),
+        Some("way, route"),
+        "the entry that is the word, before one it is a form of"
+    );
+}
+
+/// A note about grammar that ends with the meaning, and a sentence that starts with a capital.
+#[test]
+fn the_meaning_after_a_grammar_note_and_a_word_that_starts_a_sentence() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(
+            word(
+                "der",
+                "article",
+                "deːr",
+                &["nominative masculine singular definite article, the"],
+            ),
+            &[] as &[&str],
+        )
+        .unwrap();
+    german
+        .add(
+            word(
+                "dem",
+                "article",
+                "deːm",
+                &["dative masculine/neuter singular of der: the"],
+            ),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    french
+        .add(
+            word("Le", "name", "lə", &["a surname from Vietnamese"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+    french
+        .add(
+            word("le", "article", "lə", &["the (definite article)"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+
+    let drawn = |pack: &Pack<Vec<u8>>, lang_code: &str, text: &str, spelling: &str| {
+        let open = Open {
+            source: Some(pack),
+            ..Open::default()
+        };
+        let (tokens, _) = annotate(
+            &[TextRun {
+                id: 1,
+                text: text.to_string(),
+                lang_hint: None,
+            }],
+            &lang(lang_code),
+            &lang("en"),
+            &open,
+            &AnnotateOptions {
+                mode: InlineMode::Meaning,
+                density: 1,
+                narrow: false,
+                hide_stress: false,
+                accent: None,
+                seen: Vec::new(),
+            },
+        );
+        tokens
+            .iter()
+            .find(|token| token.spelling == spelling)
+            .and_then(|token| token.gloss.clone())
+            .unwrap_or_default()
+    };
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    assert_eq!(
+        drawn(&german, "de", "Der Hund", "Der"),
+        "the",
+        "after the comma"
+    );
+    assert_eq!(
+        drawn(&german, "de", "mit dem Hund", "dem"),
+        "the",
+        "after the colon"
+    );
+    assert_eq!(
+        drawn(&french, "fr", "Le chien", "Le"),
+        "the",
+        "the article that starts the sentence, not the surname spelled the same"
+    );
+}
