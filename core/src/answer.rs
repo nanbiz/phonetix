@@ -134,6 +134,11 @@ pub enum Need {
     /// it - but for which of the words it could be: the engine reads the whole sentence, and
     /// that is the one thing no table here has.
     Sentence,
+    /// The same, for a word that is decided but whose senses say different things: "banco" is
+    /// a bank and a bench, and the dictionary lists the bank first. What is drawn until the
+    /// line arrives is the first sense, and the line translated picks the one it is about.
+    /// A host answers either kind without holding up the page.
+    Sense,
 }
 
 /// A word the core could not answer, and what would answer it.

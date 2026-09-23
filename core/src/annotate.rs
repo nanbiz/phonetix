@@ -126,6 +126,11 @@ pub fn annotate<D: AsRef<[u8]>>(
                     token_index: index,
                     need: Need::Sentence,
                 });
+            } else if inline && target != &lang && gloss.is_some() && several_meanings(&answer) {
+                misses.push(Miss {
+                    token_index: index,
+                    need: Need::Sense,
+                });
             }
             tokens.push(Token {
                 run_id: run.id,
@@ -208,7 +213,31 @@ pub fn complete<D: AsRef<[u8]>>(
         // what it means, how it is said and which entry the card is about - all of which the
         // cascade decides in one place rather than patching one of them here.
         if let Some(sentence) = &result.sentence {
-            if token.state == AnswerState::Homograph {
+            if token.state != AnswerState::Homograph {
+                // Decided already, and asked about which of its senses the line means. Only the
+                // drawn word changes: the reading, its state and where it came from stay, and a
+                // line that says nothing about it leaves the first sense standing.
+                let with_sentence = Open {
+                    said: Some(sentence.as_str()),
+                    ..*open
+                };
+                let spelling = token.spelling.clone();
+                let lang = token.lang.clone();
+                let answer =
+                    crate::resolve::read_in_context(&spelling, None, &lang, target, &with_sentence);
+                if answer.state == token.state {
+                    if let Some(gloss) = drawn_as(&answer, &lang, target, &with_sentence)
+                        .map(|text| cut(&text, GLOSS_LIMIT))
+                    {
+                        if token.gloss_ipa.is_some() && token.gloss.as_deref() != Some(&gloss) {
+                            token.gloss_ipa = said_in(&gloss, target, &with_sentence).map(|ipa| {
+                                crate::symbols::display(&ipa, options.narrow, options.hide_stress)
+                            });
+                        }
+                        token.gloss = Some(gloss);
+                    }
+                }
+            } else {
                 let with_sentence = Open {
                     said: Some(sentence.as_str()),
                     ..*open
@@ -295,6 +324,31 @@ fn starts_sentence(text: &str, start_utf16: u32) -> bool {
         Some(c) => matches!(c, '.' | '!' | '?' | ':' | '…'),
     }
 }
+
+/// Whether the senses a word is drawn from would draw different words.
+///
+/// "banco" is "bank" and "bench", "parque" is "park" and "parking lot": drawn from the first
+/// sense alone, a line about a bench says "bank". Only the first few senses count, since they
+/// are the ones a dictionary puts the common meanings in, and senses that are notes about
+/// grammar are not meanings to choose between.
+fn several_meanings(answer: &crate::resolve::Answer) -> bool {
+    let mut first: Option<String> = None;
+    for sense in answer.glosses.iter().take(SENSES_CONSIDERED) {
+        let Some(drawn) = plain(sense) else { continue };
+        let Some(term) = crate::gloss::terms(&drawn).into_iter().next() else {
+            continue;
+        };
+        match &first {
+            None => first = Some(term),
+            Some(had) if *had != term => return true,
+            Some(_) => {}
+        }
+    }
+    false
+}
+
+/// How many of a word's senses are weighed against its translated line.
+pub(crate) const SENSES_CONSIDERED: usize = 6;
 
 /// What a word is drawn as over the page, out of what a dictionary says it means.
 ///
@@ -446,6 +500,12 @@ pub(crate) fn about_grammar(part: &str) -> bool {
         "masculine",
         "feminine",
         "neuter",
+        // A note that only says which word this is a shape of: "apocopic form of mío, my",
+        // "clipping of bicicleta", "short for Señor".
+        "form of",
+        "clipping of",
+        "short for",
+        "apocop",
     ];
     let lowered = part.to_lowercase();
     if lowered.contains("letter") && lowered.contains("name of the") {

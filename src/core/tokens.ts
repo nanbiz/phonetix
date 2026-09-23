@@ -49,7 +49,7 @@ export interface Token {
  */
 export interface Miss {
   token: number;
-  need: 'Gloss' | 'Ipa' | 'Both' | 'Sentence';
+  need: 'Gloss' | 'Ipa' | 'Both' | 'Sentence' | 'Sense';
 }
 
 /** One pass over a batch of runs. */

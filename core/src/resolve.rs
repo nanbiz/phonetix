@@ -314,6 +314,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // "camino" - came before "camino" itself, and "camino" was read as "to walk".
     found.sort_by_key(|entry| rank_of(entry, spelling));
 
+    // With the line translated, each entry leads with the sense the line is about: "banco" on
+    // a line about a bench is the bench, though the dictionary lists the bank first.
+    let found: Vec<Entry> = match open.said {
+        Some(said) => found
+            .into_iter()
+            .map(|entry| sense_in_line(entry, said, spelling, source, target, pack, open))
+            .collect(),
+        None => found,
+    };
     let mut answers: Vec<Answer> = found
         .iter()
         .map(|entry| resolve_one(spelling, entry, source, target, pack, open.target))
@@ -445,6 +454,56 @@ fn chosen_by_translation(meant: &[Vec<Vec<String>>], said: Option<&str>) -> Opti
         }
     }
     found.map(|(at, _)| at)
+}
+
+/// An entry with the sense its translated line is about put first.
+///
+/// Each of the first senses is looked for in the line the way a reading is (see
+/// [meant_words]): for a reader of English by the sense's own terms, for a reader of another
+/// language by what that one sense joins to in their pack. It moves only when the line holds
+/// exactly one sense's words; a line with the words of two senses, or of none, leaves the
+/// dictionary's order as it was.
+fn sense_in_line<D: AsRef<[u8]>>(
+    entry: Entry,
+    said: &str,
+    spelling: &str,
+    source: &Lang,
+    target: &Lang,
+    pack: &Pack<D>,
+    open: &Open<D>,
+) -> Entry {
+    if entry.senses.len() < 2 {
+        return entry;
+    }
+    let meant: Vec<Vec<Vec<String>>> = entry
+        .senses
+        .iter()
+        .take(crate::annotate::SENSES_CONSIDERED)
+        .map(|sense| {
+            if crate::annotate::about_grammar(&sense.gloss) {
+                return Vec::new();
+            }
+            let says = if target.0 == "en" {
+                vec![sense.gloss.clone()]
+            } else {
+                let alone = Entry {
+                    senses: vec![sense.clone()],
+                    ..entry.clone()
+                };
+                resolve_one(spelling, &alone, source, target, pack, open.target).says
+            };
+            meant_words(&says, Some(entry.pos.as_str()), target, pack, open)
+        })
+        .collect();
+    match chosen_by_translation(&meant, Some(said)) {
+        Some(at) if at > 0 => {
+            let mut entry = entry;
+            let sense = entry.senses.remove(at);
+            entry.senses.insert(0, sense);
+            entry
+        }
+        _ => entry,
+    }
 }
 
 /// A gloss's terms, each beside the part of the gloss it came from, so what the

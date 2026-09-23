@@ -45,13 +45,20 @@ CASES = {
 # it, which is what both hosts do: each reading's meaning is looked for in the translation, as
 # the translation writes it - "est" is "third-person singular present indicative of être" in the
 # dictionary and "is" in the sentence, "court" a form of "courir", "to run", which the sentence
-# writes "runs".
+# writes "runs". A word already decided can still have several senses, and the line picks
+# which is drawn: "banco" is a bank and a bench.
 SETTLED = [
     ("fr", "La maison est grande et le chat court dans le parc.",
      "The house is big and the cat runs in the park.",
      {"est": "to be", "court": "to run", "chat": "cat", "le": "the", "dans": "in, inside"}),
     ("fr", "Le chemin est court.", "The path is short.",
      {"est": "to be", "court": "short"}),
+    # And a word that is decided but has several senses, drawn in the one the line is about.
+    ("es", "Me siento en el banco del parque.", "I sit on the park bench.", {"banco": "bench"}),
+    ("es", "El banco cerró mi cuenta.", "The bank closed my account.",
+     {"banco": "bank", "mi": "my", "cuenta": "account"}),
+    ("de", "Er sitzt auf der Bank.", "He sits on the bench.", {"Bank": "bench"}),
+    ("de", "Die Bank ist geschlossen.", "The bank is closed.", {"Bank": "bank"}),
 ]
 
 

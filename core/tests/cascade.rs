@@ -973,6 +973,74 @@ fn a_form_is_found_in_the_sentence_as_what_its_word_means() {
     assert_ne!(short.state, AnswerState::Homograph);
 }
 
+/// One word with several senses, drawn as the one its translated line is about.
+///
+/// "banco" is decided - it is the noun - but the noun is a bank and a bench, and the
+/// dictionary lists the bank first. Drawn from the first sense alone, a line about a bench
+/// says "bank". The page asks for the line; with it in hand the bench is drawn, and a line
+/// that holds neither leaves the dictionary's order alone.
+#[test]
+fn a_word_is_drawn_in_the_sense_its_line_is_about() {
+    use lexcore::annotate::{annotate, complete};
+    use lexcore::answer::{AnnotateOptions, EngineResult, InlineMode, Need, TextRun};
+    let mut source = Builder::new("es", Kind::Lex, 0);
+    source
+        .add(
+            word(
+                "banco",
+                "noun",
+                "ˈbaŋ.ko",
+                &["bank (financial institution)", "bench", "pew"],
+            ),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let es = source.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        ..Open::default()
+    };
+    let options = AnnotateOptions {
+        mode: InlineMode::Meaning,
+        density: 1,
+        narrow: false,
+        hide_stress: false,
+        accent: None,
+        seen: Vec::new(),
+    };
+    let drawn = |said: &str| {
+        let runs = [TextRun {
+            id: 1,
+            text: "banco".to_string(),
+            lang_hint: None,
+        }];
+        let (mut tokens, misses) = annotate(&runs, &lang("es"), &lang("en"), &open, &options);
+        assert_eq!(tokens[0].gloss.as_deref(), Some("bank"));
+        assert!(
+            misses.iter().any(|miss| miss.need == Need::Sense),
+            "a word whose senses draw different words asks for its line"
+        );
+        let results = [EngineResult {
+            token_index: 0,
+            gloss: None,
+            ipa: None,
+            sentence: Some(said.to_string()),
+            engine: "test".to_string(),
+        }];
+        complete(&mut tokens, &results, &options, &lang("en"), &open);
+        (tokens[0].gloss.clone(), tokens[0].provenance.clone())
+    };
+    let (bench, from) = drawn("I sat on the park bench.");
+    assert_eq!(bench.as_deref(), Some("bench"));
+    assert!(matches!(from, Some(Provenance::Dictionary { .. })));
+    assert_eq!(
+        drawn("The bank closed my account.").0.as_deref(),
+        Some("bank")
+    );
+    assert_eq!(drawn("It was raining.").0.as_deref(), Some("bank"));
+}
+
 /// A dictionary as it ships, turned into a pack where the product runs.
 ///
 /// The maps a reader gets are `{word: how it is said}`, gzipped, and the cascade reads packs.

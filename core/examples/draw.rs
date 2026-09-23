@@ -1,8 +1,9 @@
 //! What a line is drawn as with a real pack:
 //! `cargo run --example draw -- <pack> <lang> <text> [<the line as the engine translated it>]`
 //!
-//! With the translated line, every word left undecided between readings is read again with it
-//! in hand, the way the host does once the engine has answered.
+//! With the translated line, every word that asked for it - undecided between readings, or
+//! between senses - is read again with it in hand, the way a host does once the engine has
+//! answered.
 use lexcore::annotate::annotate;
 use lexcore::answer::{AnnotateOptions, InlineMode, Lang, TextRun};
 use lexcore::resolve::Open;
@@ -31,7 +32,7 @@ fn main() {
         seen: Vec::new(),
     };
     let target = Lang("en".to_string());
-    let (mut tokens, _) = annotate(
+    let (mut tokens, misses) = annotate(
         &[TextRun {
             id: 1,
             text: args[3].clone(),
@@ -43,12 +44,12 @@ fn main() {
         &options,
     );
     if let Some(said) = args.get(4) {
-        let results: Vec<lexcore::answer::EngineResult> = tokens
+        use lexcore::answer::Need;
+        let results: Vec<lexcore::answer::EngineResult> = misses
             .iter()
-            .enumerate()
-            .filter(|(_, token)| token.state == lexcore::answer::AnswerState::Homograph)
-            .map(|(at, _)| lexcore::answer::EngineResult {
-                token_index: at as u32,
+            .filter(|miss| matches!(miss.need, Need::Sentence | Need::Sense))
+            .map(|miss| lexcore::answer::EngineResult {
+                token_index: miss.token_index,
                 gloss: None,
                 ipa: None,
                 sentence: Some(said.clone()),
