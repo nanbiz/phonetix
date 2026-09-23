@@ -80,7 +80,14 @@ def main():
         # translated behind the screen, a moment after the screen was first drawn.
         until = time.time() + 60
         settled = []
+        nudged = False
         while time.time() < until:
+            # A page already in front, asked for again, is not always read again at once;
+            # asked once more it is.
+            if not nudged and time.time() > until - 30 and not settled:
+                nudged = True
+                dev.surface(mode=page, packHost="none", target="en", layer="meaning",
+                            enable=1, density=1)
             for line in reversed(dev.lines("DRAWN ").splitlines()):
                 pairs = dict(drawn_pairs(line))
                 if all(word in pairs for word in wanted):

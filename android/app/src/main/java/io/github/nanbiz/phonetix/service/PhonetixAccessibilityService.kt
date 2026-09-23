@@ -241,7 +241,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         SettingsStore.init(this)
         // Lines translated behind a screen come back after it was drawn; reading it again is
         // what draws the sense each line turned out to be about.
-        Reading.onLinesArrived = { readAgain() }
+        //
+        // Not while a finger is on the button: a read cancels the reads a drag is making and
+        // the loop following the page, which is the lens going blind mid-gesture. The next
+        // read after the finger lifts is answered from the lines already here.
+        Reading.onLinesArrived = { if (!::hover.isInitialized || !hover.held) readAgain() }
         // A way to ask the service what it believes, from a phone in a reader's hand at the
         // moment something is wrong.
         //

@@ -96,6 +96,9 @@ class HoverController(
     /** Whether a finger is on the mark, so that nothing moves it out from under one. */
     @Volatile private var holding = false
 
+    /** Whether a finger is on the button now, so what can wait does not interrupt it. */
+    val held: Boolean get() = holding
+
     private var hovered: WordBox? = null
 
     /** When the thumb was last told it had taken a word, so it cannot be told without pause. */
