@@ -284,7 +284,9 @@ async function settled(batch: Batch, runs: TextRun[], languages: Languages): Pro
  * one place that decides what a reader is told.
  */
 async function said(batch: Batch, lang: string, languages: Languages): Promise<Batch> {
-  const wanted = batch.misses.filter((miss) => miss.need !== 'Gloss');
+  // Only what asked for a sound. A word waiting on its sentence has the dictionary's sound
+  // already, and a voice's guess over it would replace a transcription a person wrote.
+  const wanted = batch.misses.filter((miss) => miss.need === 'Ipa' || miss.need === 'Both');
   // The voice fills a transcription; what a word means is the other engine's, below.
   if (wanted.length === 0) return batch;
   // By the language of the word rather than of the page. A page is not always in one: an
@@ -339,7 +341,10 @@ async function meant(
   languages: Languages
 ): Promise<Batch> {
   if (!target || target === source) return batch;
-  const wanted = batch.misses.filter((miss) => miss.need !== 'Ipa');
+  // Only what asked for a meaning. A word waiting on its sentence has the dictionary's
+  // readings, and translating it alone would answer it with a guess made without the context
+  // it was waiting for.
+  const wanted = batch.misses.filter((miss) => miss.need === 'Gloss' || miss.need === 'Both');
   if (wanted.length === 0) return batch;
   // By the language of the word rather than of the page, for the same reason the voice is:
   // an English line on a Spanish page is translated out of English or not at all.

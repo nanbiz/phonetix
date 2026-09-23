@@ -1000,6 +1000,16 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             )) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "french" || mode == "frenchShort") {
+            // Words the page alone leaves undecided: "est" is "east" or "is", "court" is
+            // "short" or "runs". Which of them each is only the line translated can say, and
+            // the two pages ask the same two words the two different ways.
+            val text = if (mode == "french") {
+                "La maison est grande et le chat court dans le parc."
+            } else {
+                "Le chemin est court."
+            }
+            addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "german") {
             // A page in a language the dictionary is not for. Nothing on it should be
             // transcribed: an English pronunciation put on a German word is not a

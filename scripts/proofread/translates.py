@@ -67,10 +67,29 @@ def fetch_model():
                 f"Put it in {MODELS} or set PHONETIX_MODELS.")
 
 
+# A spelling that is two words, which nothing on the page decides between: the line the engine
+# translates does. With the host treating that request as a word to translate alone, "banco"
+# came back as the machine's "bank", marked a guess, over a line about a bench.
+HOMOGRAPH = [
+    {"word": "banco", "pos": "noun", "lang_code": "es", "senses": [{"glosses": ["bench"]}],
+     "sounds": [{"ipa": "/ˈbaŋ.ko/"}]},
+    {"word": "banco", "pos": "noun", "lang_code": "es",
+     "senses": [{"glosses": ["bank (financial institution)"]}], "sounds": [{"ipa": "/ˈbaŋ.ko/"}]},
+]
+BENCH = "Me senté en el banco del parque."
+
+
 def build_packs():
     os.makedirs(WORK, exist_ok=True)
     for lang in ("es", "de"):
         source = os.path.join(CORE, "packbuild", "fixtures", f"{lang}.jsonl")
+        if lang == "es":
+            joined = os.path.join(WORK, "es-with-homograph.jsonl")
+            with open(joined, "w") as out:
+                out.write(open(source).read().rstrip("\n") + "\n")
+                for entry in HOMOGRAPH:
+                    out.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            source = joined
         got = run(["cargo", "run", "-q", "-p", "packbuild", "--", lang, source,
                    os.path.join(WORK, f"{lang}.pack")], cwd=CORE)
         if got.returncode != 0:
@@ -216,6 +235,28 @@ def main():
                     f"a machine's answer is marked {kind!r}, not as a guess")
             if got.get("state") != "Guess":
                 failures.append(f"the token's state is {got.get('state')!r}, not Guess")
+
+        # A word the dictionary has twice over, decided by the line translated rather than
+        # translated on its own.
+        batch = ask(cdp, session, {
+            "phonetix": "annotate",
+            "data": {
+                "runs": [{"id": 2, "text": BENCH}],
+                "source": "es", "target": "en",
+                "options": {"mode": "meaning", "density": 1},
+            },
+        }, tries=4, gap=10)
+        bench = next((t for t in (batch.get("ok") or {}).get("tokens") or []
+                      if t["spelling"] == "banco"), None)
+        kind = ((bench or {}).get("provenance") or {}).get("kind")
+        print(f"  banco in {BENCH!r}: {(bench or {}).get('gloss')!r} "
+              f"({(bench or {}).get('state')}, from {kind})")
+        if not bench or bench.get("gloss") != "bench":
+            failures.append(f"banco on a line about a bench is drawn {(bench or {}).get('gloss')!r}")
+        if kind != "dictionary":
+            failures.append(f"banco, which the dictionary holds, is answered by {kind!r}")
+        if bench and bench.get("state") == "Homograph":
+            failures.append("the translated line decided nothing about banco")
 
         # Several words at once, which is a gesture of its own and only an engine can answer.
         # Asked of the host the way the page asks it after a drag.

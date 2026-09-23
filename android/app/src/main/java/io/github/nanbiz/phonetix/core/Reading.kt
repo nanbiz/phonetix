@@ -69,6 +69,10 @@ object Reading {
         // missing and only that is asked for, so a word a dictionary answered keeps the
         // pronunciation the dictionary recorded and what a machine produced is marked as a
         // machine's - in the core, which is the one place that decides what a reader is told.
+        // Which word a spelling is, where its line translated says: first, so that what the
+        // other two engines are asked about is what the reader will see.
+        batch = settled(batch, texts, source, target)
+        batch.put("misses", asked)
         batch = filled(batch, source, target, accent)
         batch.put("misses", asked)
         // And what no dictionary could translate, translated. The engine answers only where a
@@ -98,6 +102,74 @@ object Reading {
         }
     }
 
+    /** What a miss asks for that a voice can answer, and what a translator can. */
+    private val SOUND = setOf("Ipa", "Both")
+    private val MEANING = setOf("Gloss", "Both")
+
+    /**
+     * Which word a spelling is, where the line it is on can say.
+     *
+     * A spelling that is several words - French "est", "east" or "is" - with nothing on the
+     * page deciding which is a question the core asks back: the line, translated. The engine
+     * reads the whole line, and the core compares what each reading means with what it wrote.
+     * One translation per line, however many words on it asked, because a line is what the
+     * engine reads.
+     */
+    private fun settled(
+        batch: JSONObject,
+        texts: List<String>,
+        source: String,
+        target: String,
+    ): JSONObject {
+        if (!Translator.usable || target.isEmpty() || target == source) return batch
+        val misses = batch.optJSONArray("misses") ?: return batch
+        val tokens = batch.optJSONArray("tokens") ?: return batch
+        val wanted = ArrayList<Int>()
+        val runs = LinkedHashSet<Int>()
+        for (at in 0 until misses.length()) {
+            val row = misses.optJSONObject(at) ?: continue
+            if (row.optString("need") != "Sentence") continue
+            val which = row.optInt("token")
+            val token = tokens.optJSONObject(which) ?: continue
+            // Only a line in the language the engine is open for: one it cannot translate out
+            // of is a line it says nothing about.
+            val lang = token.optString("lang")
+            if (lang.isNotEmpty() && lang != "null" && lang != source) continue
+            val run = token.optInt("run", -1)
+            if (texts.getOrNull(run).isNullOrBlank()) continue
+            wanted.add(which)
+            runs.add(run)
+        }
+        if (wanted.isEmpty()) return batch
+        val order = runs.toList()
+        val said = Translator.lines(order.map { texts[it] })
+        if (said.isEmpty()) return batch
+        val line = order.indices.associate { order[it] to said.getOrNull(it).orEmpty() }
+        val kept = wanted.filter { !line[tokens.optJSONObject(it).optInt("run")].isNullOrEmpty() }
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            android.util.Log.d(
+                "Phonetix",
+                "SETTLED ${kept.size} words over ${order.size} lines, first=${line.values.firstOrNull()}",
+            )
+        }
+        if (kept.isEmpty()) return batch
+        val written = runCatching {
+            Lex.complete(
+                core,
+                batch.optLong("batch"),
+                kept.toIntArray(),
+                Array(kept.size) { "" },
+                Array(kept.size) { "" },
+                Array(kept.size) { line[tokens.optJSONObject(kept[it]).optInt("run")].orEmpty() },
+                source,
+                target,
+                "",
+                "bergamot",
+            )
+        }.getOrNull() ?: return batch
+        return runCatching { JSONObject(written) }.getOrDefault(batch)
+    }
+
     /**
      * Fill in how the words no pack could say are said.
      *
@@ -117,7 +189,9 @@ object Reading {
         val words = ArrayList<String>(misses.length())
         for (at in 0 until misses.length()) {
             val row = misses.optJSONObject(at) ?: continue
-            if (row.optString("need") == "Gloss") continue
+            // Only what asked for a sound: a word waiting on its sentence has the dictionary's
+            // sound already, and a voice's guess over it would replace what a person wrote.
+            if (row.optString("need") !in SOUND) continue
             val which = row.optInt("token")
             val token = tokens.optJSONObject(which) ?: continue
             wanted.add(which)
@@ -166,7 +240,10 @@ object Reading {
         val words = ArrayList<String>(misses.length())
         for (at in 0 until misses.length()) {
             val row = misses.optJSONObject(at) ?: continue
-            if (row.optString("need") == "Ipa") continue
+            // Only what asked for a meaning: a word waiting on its sentence has the
+            // dictionary's readings, and translated alone it would be answered with a guess
+            // made without the context it was waiting for.
+            if (row.optString("need") !in MEANING) continue
             val which = row.optInt("token")
             val token = tokens.optJSONObject(which) ?: continue
             wanted.add(which)
