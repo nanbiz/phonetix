@@ -57,6 +57,14 @@ if [[ "$what" == all || "$what" == core ]]; then
     cargo build -p lexcore --target aarch64-linux-android --manifest-path core/Cargo.toml
 fi
 
+if [[ "$what" == all || "$what" == core ]]; then
+  # Only where the packs have been built here: they are gigabytes of dump away otherwise.
+  if [[ -f .cache/release/es.pack ]]; then
+    step "the published dictionaries draw what their words mean" \
+      uv run python scripts/proofread/meanings.py
+  fi
+fi
+
 if [[ "$what" == all || "$what" == browser ]]; then
   step "the core, compiled for the browser" node scripts/build-core-wasm.mjs
   step "the extension typechecks" pnpm check
