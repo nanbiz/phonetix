@@ -982,7 +982,11 @@ fn both_says_how_the_translation_is_said() {
         .find(|token| token.spelling == "perro")
         .expect("the word is a token");
     assert_eq!(perro.gloss.as_deref(), Some("dog"));
-    assert_eq!(perro.gloss_ipa.as_deref(), Some("dɒɡ"), "how to say the answer");
+    assert_eq!(
+        perro.gloss_ipa.as_deref(),
+        Some("dɒɡ"),
+        "how to say the answer"
+    );
     let camino = tokens
         .iter()
         .find(|token| token.spelling == "camino")
@@ -990,4 +994,58 @@ fn both_says_how_the_translation_is_said() {
     // A gloss is a headword and sometimes a phrase around it; the sound is of the head.
     assert_eq!(camino.gloss.as_deref(), Some("way, route"));
     assert_eq!(camino.gloss_ipa.as_deref(), Some("weɪ"));
+}
+
+/// A gloss written with its article is said as the word it is.
+///
+/// Dictionaries write a verb as "to bank" and a noun as "a road". The entry for how to say it
+/// is under "bank" and "road", so a gloss looked up whole found nothing and the card showed
+/// the meaning with no way to say it.
+#[test]
+fn a_gloss_with_its_article_is_said_as_the_word() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let mut from = Builder::new("es", Kind::Lex, 0);
+    from.add(
+        word("calle", "noun", "ˈka.ʝe", &["a street"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let source = Pack::open(from.finish().unwrap()).expect("the Spanish pack opens");
+    let mut into = Builder::new("en", Kind::Ipa, 0);
+    let no_forms: [&str; 0] = [];
+    into.add(word("street", "", "stɹiːt", &[]), &no_forms)
+        .unwrap();
+    let target = Pack::open(into.finish().unwrap()).expect("the English pack opens");
+
+    let open = Open {
+        source: Some(&source),
+        target: Some(&target),
+        ..Open::default()
+    };
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "la calle".to_string(),
+            lang_hint: None,
+        }],
+        &lang("es"),
+        &lang("en"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Both,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+        },
+    );
+    let calle = tokens
+        .iter()
+        .find(|token| token.spelling == "calle")
+        .expect("the word is a token");
+    assert_eq!(calle.gloss.as_deref(), Some("a street"));
+    assert_eq!(calle.gloss_ipa.as_deref(), Some("stɹiːt"));
 }

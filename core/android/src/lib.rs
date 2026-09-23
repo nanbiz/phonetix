@@ -88,19 +88,33 @@ struct Core {
     next_batch: u64,
 }
 
+/// The core a pointer names, locked for as long as the guard is held.
+///
+/// Every call below runs on whichever thread Kotlin makes it from, and they are not the same
+/// thread: the screen is read and annotated on one, dictionaries arrive and are opened on
+/// another. A pack inserted into the map while another call is walking it is undefined
+/// behaviour - a crash when it is lucky - so the core is one thing at a time, and a caller that
+/// panicked while holding it does not leave it unusable for every one after.
+fn lock_core(core: jlong) -> std::sync::MutexGuard<'static, Core> {
+    // Safety: the pointer came from `open` below, Kotlin passes it back unchanged, and it is
+    // not used after `close`.
+    let lock = unsafe { &*(core as *const std::sync::Mutex<Core>) };
+    lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// Make one. The pointer it returns is what every call below is given back.
 #[no_mangle]
 pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_open(
     _env: JNIEnv,
     _class: JClass,
 ) -> jlong {
-    let core = Box::new(Core {
+    let core = Box::new(std::sync::Mutex::new(Core {
         packs: std::collections::HashMap::new(),
         model: None,
         classifiers: std::collections::HashMap::new(),
         batches: std::collections::HashMap::new(),
         next_batch: 1,
-    });
+    }));
     Box::into_raw(core) as jlong
 }
 
@@ -115,7 +129,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_close(
         return;
     }
     // Safety: the pointer came from open above and Kotlin passes it back unchanged.
-    unsafe { drop(Box::from_raw(core as *mut Core)) };
+    unsafe { drop(Box::from_raw(core as *mut std::sync::Mutex<Core>)) };
 }
 
 /// Read a pack off the disk. Returns the language it is for, or an empty string when the file
@@ -148,7 +162,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openPack<'a>(
     };
     let lang = pack.lang().to_string();
     // Safety: as above.
-    let core = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let core = &mut *guard;
     core.packs.insert(lang.clone(), pack);
     env.new_string(&lang).unwrap_or(empty)
 }
@@ -190,7 +205,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         .map(|it| it.into())
         .unwrap_or_default();
     // Safety: as above.
-    let core = unsafe { &*(core as *const Core) };
+    let guard = lock_core(core);
+    let core = &*guard;
     let open = lexcore::resolve::Open {
         source: core.packs.get(&source),
         target: core.packs.get(&target),
@@ -421,7 +437,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
             lang_hint: None,
         });
     }
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     let accent_pack = env
         .get_string(&accent)
         .ok()
@@ -457,8 +474,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         &open,
         &options,
     );
-    // Safety: as above. Kept so the overlay can hand back what its engines answered.
-    let held = unsafe { &mut *(core as *mut Core) };
+    // Kept so the overlay can hand back what its engines answered, under the lock already
+    // held: taking it a second time here is this thread waiting on itself for ever.
     let id = held.next_batch;
     held.next_batch += 1;
     // One batch at a time is what a screen is; anything older is a screen that has gone.
@@ -542,7 +559,8 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
     let sounds = strings(&ipas, &mut env);
     let lines = strings(&sentences, &mut env);
     // Safety: as above.
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     let Some((drawn, options)) = held.batches.get_mut(&(batch as u64)) else {
         return empty;
     };
@@ -598,7 +616,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openModel(
     let Ok(model) = lexcore::detect::Model::open(&bytes) else {
         return 0;
     };
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     let languages = model.languages().len() as jint;
     held.model = Some(model);
     languages
@@ -622,7 +641,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_detect<'a>(
         return empty;
     };
     let text: String = text.into();
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     let written = match &held.model {
         Some(model) => lexcore::json::guess(&model.detect(&text)),
         None => nothing,
@@ -648,7 +668,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_readScreen<'a>(
         return empty;
     };
     let text: String = text.into();
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     let read = lexcore::detect::read_screen(held.model.as_ref(), &text);
     env.new_string(lexcore::json::screen(&read))
         .unwrap_or(empty)
@@ -666,7 +687,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_closePack(
         return;
     };
     let lang: String = lang.into();
-    let held = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let held = &mut *guard;
     held.packs.remove(&lang);
 }
 
@@ -813,7 +835,30 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openHomographs(
     };
     let known = it.len() as jint;
     // Safety: the pointer came from open above and Kotlin passes it back unchanged.
-    let core = unsafe { &mut *(core as *mut Core) };
+    let mut guard = lock_core(core);
+    let core = &mut *guard;
     core.classifiers.insert(lang, it);
     known
+}
+
+#[cfg(test)]
+mod tests {
+    /// No call takes the core's lock twice.
+    ///
+    /// The lock is not re-entrant: a call that takes it and then asks for it again waits on
+    /// itself for ever, and the overlay stops reading the screen with nothing anywhere saying
+    /// why. Every call here takes it once and does all its work under that one guard.
+    #[test]
+    fn no_call_takes_the_core_twice() {
+        let whole = include_str!("lib.rs");
+        // The calls only, not this test, whose own text names the lock.
+        let source = whole.split("#[cfg(test)]").next().unwrap_or(whole);
+        let calls = source.split("extern \"system\" fn ").skip(1);
+        for call in calls {
+            let name = call.split('(').next().unwrap_or("?");
+            let body = call.split("\nextern \"system\" fn ").next().unwrap_or(call);
+            let taken = body.matches("lock_core(core)").count();
+            assert!(taken <= 1, "{name} takes the core's lock {taken} times");
+        }
+    }
 }

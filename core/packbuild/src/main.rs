@@ -35,6 +35,13 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // Gzipped as it is published, or already unpacked. An extract of one language unpacks to
+    // gigabytes, and unpacking it to disk first only to read it once is space for nothing.
+    let file: Box<dyn std::io::Read> = if from.ends_with(".gz") {
+        Box::new(flate2::read::MultiGzDecoder::new(file))
+    } else {
+        Box::new(file)
+    };
     let built = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())

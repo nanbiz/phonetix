@@ -138,10 +138,7 @@ pub fn annotate<D: AsRef<[u8]>>(
 /// it - "way, route" is answered by looking up "way" - and nothing at all where the reader
 /// has no dictionary for that language.
 fn said_in<D: AsRef<[u8]>>(gloss: &str, target: &Lang, open: &Open<D>) -> Option<String> {
-    let head = gloss
-        .split(|c: char| c == ',' || c == ';' || c == '(')
-        .next()?
-        .trim();
+    let head = gloss.split([',', ';', '(']).next()?.trim();
     if head.is_empty() {
         return None;
     }
@@ -149,13 +146,20 @@ fn said_in<D: AsRef<[u8]>>(gloss: &str, target: &Lang, open: &Open<D>) -> Option
     if pack.lang() != target.0 {
         return None;
     }
-    let found = pack.lookup(head);
-    let entry = found.first().or_else(|| {
-        // A gloss carries the article a dictionary writes with it - "to bank", "a road" - and
-        // the entry is under the word itself.
-        None
-    })?;
-    entry.ipa.first().cloned()
+    if let Some(said) = pack.lookup(head).first().and_then(|e| e.ipa.first()) {
+        return Some(said.clone());
+    }
+    // A gloss carries the article a dictionary writes with it - "to bank", "a road", "der
+    // Weg" - and the entry is under the word itself, which is the last word of the head in
+    // every language a gloss is written in here.
+    let word = head.split_whitespace().last()?;
+    if word == head {
+        return None;
+    }
+    pack.lookup(word)
+        .first()
+        .and_then(|e| e.ipa.first())
+        .cloned()
 }
 
 /// What is still missing for what the reader asked to see, or nothing when the tokens have it.
