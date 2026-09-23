@@ -1338,3 +1338,99 @@ fn the_meaning_after_a_grammar_note_and_a_word_that_starts_a_sentence() {
         "the article that starts the sentence, not the surname spelled the same"
     );
 }
+
+/// The words that hold a sentence together win over what shares their spelling.
+#[test]
+fn a_function_word_filed_as_a_form_still_wins() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    fn pointer(lemma: &str, pos: &str, gloss: &str) -> Entry {
+        let mut entry = word(lemma, pos, "", &[gloss]);
+        entry.senses[0].marks = vec!["form-of".to_string()];
+        entry
+    }
+    let no_forms: [&str; 0] = [];
+
+    let mut portuguese = Builder::new("pt", Kind::Lex, 0);
+    portuguese
+        .add(
+            word("o", "article", "u", &["the (definite article)"]),
+            &no_forms,
+        )
+        .unwrap();
+    portuguese
+        .add(pointer("as", "article", "feminine plural of o"), &no_forms)
+        .unwrap();
+    portuguese
+        .add(
+            word("as", "pron", "as", &["them (as a direct object)"]),
+            &no_forms,
+        )
+        .unwrap();
+    portuguese
+        .add(word("ser", "verb", "ˈseɾ", &["to be"]), &["é"])
+        .unwrap();
+    portuguese
+        .add(
+            word("é", "intj", "ɛ", &["Indicates agreement; yes"]),
+            &no_forms,
+        )
+        .unwrap();
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    french
+        .add(pointer("la", "article", "feminine of le: the"), &no_forms)
+        .unwrap();
+    french
+        .add(
+            word("la", "pron", "la", &["her, it (direct object)"]),
+            &no_forms,
+        )
+        .unwrap();
+    french
+        .add(word("la", "noun", "la", &["la, the note 'A'"]), &no_forms)
+        .unwrap();
+
+    let drawn = |pack: &Pack<Vec<u8>>, code: &str, text: &str, spelling: &str| {
+        let open = Open {
+            source: Some(pack),
+            ..Open::default()
+        };
+        let (tokens, _) = annotate(
+            &[TextRun {
+                id: 1,
+                text: text.to_string(),
+                lang_hint: None,
+            }],
+            &lang(code),
+            &lang("en"),
+            &open,
+            &AnnotateOptions {
+                mode: InlineMode::Meaning,
+                density: 1,
+                narrow: false,
+                hide_stress: false,
+                accent: None,
+                seen: Vec::new(),
+            },
+        );
+        tokens
+            .iter()
+            .find(|token| token.spelling == spelling)
+            .and_then(|token| token.gloss.clone())
+            .unwrap_or_default()
+    };
+    let portuguese = Pack::open(portuguese.finish().unwrap()).unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    assert_eq!(
+        drawn(&portuguese, "pt", "As crianças", "As"),
+        "the",
+        "the article, said through the word it is a form of, not the pronoun"
+    );
+    assert_eq!(
+        drawn(&portuguese, "pt", "a casa é grande", "é"),
+        "to be",
+        "the verb, not the interjection written the same"
+    );
+    assert_eq!(drawn(&french, "fr", "de la banque", "la"), "the");
+}

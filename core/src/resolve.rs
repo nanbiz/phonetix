@@ -183,33 +183,70 @@ fn lookup_either_case<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Vec<Ent
 /// Where an entry stands among the ones a spelling reaches: the word itself, then what it is
 /// an inflection of, then entries that are only notes pointing elsewhere.
 fn rank_of(entry: &Entry, spelling: &str) -> u8 {
-    let pointing = |sense: &lexpack::Sense| sense.marks.iter().any(|mark| mark == "form-of");
-    // A letter of the alphabet is an entry under every one-letter spelling and under its
-    // plural - "es" is the plural of "e" - and it is never the word a reader was reading.
-    if !entry.senses.is_empty()
-        && entry
-            .senses
+    // "form-of" for an inflection, "alt-of" for a spelling of another word: either way the
+    // sense is a pointer, not a meaning.
+    let pointing = |sense: &lexpack::Sense| {
+        sense
+            .marks
             .iter()
-            .all(|sense| names_a_letter(&sense.gloss))
-    {
-        return 8;
-    }
-    if !entry.senses.is_empty() && entry.senses.iter().all(pointing) {
-        return 6;
-    }
-    // The word itself, unless what it leads with is a note that it is a form of another:
-    // "los" the pronoun opens with "accusative of ellos", and "los" the article - "the" - is
-    // the one a reader meets.
-    let leads_with_meaning = entry.senses.first().is_some_and(|sense| !pointing(sense));
-    let rank = if same_word(&entry.lemma, spelling) && leads_with_meaning {
-        0
-    } else {
-        1
+            .any(|mark| mark == "form-of" || mark == "alt-of")
     };
-    // Twice that, and one more for a pronoun: where an article and a pronoun share a spelling
-    // - "la", "das" - the article is the word met on nearly every line, and the pronoun the one
-    // met now and then. The dump lists the pronoun first as often as not.
-    rank * 2 + u8::from(entry.pos == "pron")
+    let kind = by_kind(&entry.pos);
+    // A letter of the alphabet is an entry under every one-letter spelling and under its
+    // plural - "es" is the plural of "e" - and a mark like "è" has an entry explaining the
+    // accent. Neither is ever the word a reader was reading.
+    let about_itself = matches!(entry.pos.as_str(), "character" | "letter" | "symbol")
+        || (!entry.senses.is_empty()
+            && entry
+                .senses
+                .iter()
+                .all(|sense| names_a_letter(&sense.gloss)));
+    if about_itself {
+        return 40;
+    }
+    // An entry that only points at another word says less than the word it points at - except
+    // for the words that hold a sentence together, which the dictionary files as forms of each
+    // other: German "das" is "neuter singular of der: the", Portuguese "pelo" is "por + o". Those
+    // are still the words a reader meets on every line.
+    if kind != 0 && !entry.senses.is_empty() && entry.senses.iter().all(pointing) {
+        return 32 + kind;
+    }
+    let leads_with_meaning =
+        entry.senses.first().is_some_and(|sense| !pointing(sense)) || kind == 0;
+    // The word itself, written exactly as it is on the page: a capitalised German noun before
+    // the lowercase word it would also match, "Weg" before "weg". Then the word regardless of
+    // case - where a sentence's first word competes with a name spelled the same, which is
+    // left to the kind of word to decide. Then what the spelling is an inflection of.
+    let level = if entry.lemma == spelling && entry.pos != "name" && leads_with_meaning {
+        0
+    } else if same_word(&entry.lemma, spelling) && leads_with_meaning {
+        1
+    } else {
+        2
+    };
+    // And within that, the kind of word it is. A word that holds a sentence together - an
+    // article, a preposition, a contraction of the two - is met on nearly every line, and a
+    // word that happens to share its spelling almost never is: "la" the musical note, "sulla"
+    // the plant, "verso" the line of verse. A pronoun sharing an article's spelling is met more
+    // often than those and less often than the article. The dump lists them in whatever order
+    // its pages happen to be in.
+    // A rare kind of word is never the likelier reading on the strength of its spelling
+    // alone: Portuguese "é" is "is" far more often than it is "é!", "yes", though only the
+    // interjection is written exactly so.
+    let level = if kind == 3 { level.max(2) } else { level };
+    level * 4 + kind
+}
+
+/// How often a kind of word is the reading meant, among readings that are otherwise equal.
+fn by_kind(pos: &str) -> u8 {
+    match pos {
+        "article" | "det" | "contraction" | "prep" | "postp" | "conj" | "particle" => 0,
+        "pron" => 1,
+        // An interjection spelled like a verb form - Portuguese "é", "is", and "é!", "yes" - is
+        // the rarer of the two in anything written.
+        "name" | "character" | "letter" | "symbol" | "intj" => 3,
+        _ => 2,
+    }
 }
 
 /// Whether a sense is a letter of the alphabet naming itself.

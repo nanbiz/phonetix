@@ -70,9 +70,7 @@ pub fn annotate<D: AsRef<[u8]>>(
             before = Some(spelling.clone());
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
-            let gloss = inline_of(&answer.says)
-                .or_else(|| inline_of(&answer.glosses))
-                .map(|text| cut(&text, GLOSS_LIMIT));
+            let gloss = drawn_as(&answer, &lang, target, open).map(|text| cut(&text, GLOSS_LIMIT));
             // Carrying as much of the detail as the reader asked for; the card always has the
             // full form. The accent is already in what the cascade answered, and applying it
             // again here would shift a word its accent's own pack had already spelled out.
@@ -263,12 +261,53 @@ pub fn complete<D: AsRef<[u8]>>(
 /// parentheses explain, and of its alternatives the first one that is not itself such a note.
 /// The card still shows every sense as the dictionary wrote it.
 fn inline_of(senses: &[String]) -> Option<String> {
-    senses
-        .iter()
-        .filter_map(|sense| plain(sense))
-        .next()
-        .or_else(|| senses.first().map(|sense| sense.trim().to_string()))
+    senses.iter().find_map(|sense| plain(sense))
+}
+
+/// What a word is drawn as, looking as far as it takes to find a meaning.
+///
+/// Its own senses first; then the other words the same spelling is, which the card offers
+/// anyway; then, where all it says is that it is a form of another word - "third-person
+/// singular present indicative of correre" - that word's meaning. Only when none of that
+/// finds a meaning is the first sense drawn as the dictionary wrote it.
+fn drawn_as<D: AsRef<[u8]>>(
+    answer: &crate::resolve::Answer,
+    lang: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Option<String> {
+    if let Some(found) = inline_of(&answer.says).or_else(|| inline_of(&answer.glosses)) {
+        return Some(found);
+    }
+    // The word this one is a form of, before any other reading: that is still this reading,
+    // said through the entry it points at - Portuguese "as" is the plural of "o", "the", and
+    // the pronoun "as" beside it is a different word.
+    let first = answer.glosses.first().or_else(|| answer.says.first());
+    if let Some(pointed) = first.and_then(|gloss| points_at(gloss.as_str())) {
+        let there = crate::resolve::read_in_context(&pointed, None, lang, target, open);
+        if let Some(found) = inline_of(&there.says).or_else(|| inline_of(&there.glosses)) {
+            return Some(found);
+        }
+    }
+    for reading in answer.readings.iter().skip(1) {
+        if let Some(found) = inline_of(&reading.says).or_else(|| inline_of(&reading.glosses)) {
+            return Some(found);
+        }
+    }
+    first
+        .map(|sense| sense.trim().to_string())
         .filter(|text| !text.is_empty())
+}
+
+/// The word a note points at: what follows its last "of".
+fn points_at(gloss: &str) -> Option<String> {
+    let lowered = gloss.to_lowercase();
+    let at = lowered.rfind(" of ")? + " of ".len();
+    let word = gloss[at..]
+        .split(|c: char| c.is_whitespace() || matches!(c, ',' | ';' | ':' | '(' | '.'))
+        .next()?
+        .trim();
+    (!word.is_empty()).then(|| word.to_string())
 }
 
 /// A sense as a word, or nothing when all it says is grammar.
@@ -359,6 +398,9 @@ fn about_grammar(part: &str) -> bool {
         "used before",
         "used after",
         "tense",
+        "masculine",
+        "feminine",
+        "neuter",
     ];
     let lowered = part.to_lowercase();
     if lowered.contains("letter") && lowered.contains("name of the") {
