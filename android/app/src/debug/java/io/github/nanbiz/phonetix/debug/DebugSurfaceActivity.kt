@@ -1004,6 +1004,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             )) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "bench") {
+            // A word that is decided - "banco" is the noun - with senses that are different
+            // words: the dictionary lists the bank first, and this line is about a bench.
+            // And a second line, so the page is enough Spanish to be read as Spanish.
+            addView(line("Me siento en el banco del parque.", Color.WHITE, BACKGROUND))
+            addView(line("Hace sol y los niños juegan cerca del agua.", Color.WHITE, BACKGROUND))
         } else if (mode == "french" || mode == "frenchShort") {
             // Words the page alone leaves undecided: "est" is "east" or "is", "court" is
             // "short" or "runs". Which of them each is only the line translated can say, and

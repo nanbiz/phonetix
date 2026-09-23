@@ -68,15 +68,29 @@ def fetch_model():
 
 
 # A spelling that is two words, which nothing on the page decides between: the line the engine
-# translates does. With the host treating that request as a word to translate alone, "banco"
-# came back as the machine's "bank", marked a guess, over a line about a bench.
+# translates does. With the host treating that request as a word to translate alone, such a
+# word came back as the machine's reading of it, marked a guess, over the dictionary's answer.
+# "llama" is an animal and a flame, the animal listed first. "banco" is one word whose senses
+# are a bank and a bench, the bank first, as the published dictionary lists it.
 HOMOGRAPH = [
-    {"word": "banco", "pos": "noun", "lang_code": "es", "senses": [{"glosses": ["bench"]}],
-     "sounds": [{"ipa": "/ˈbaŋ.ko/"}]},
+    {"word": "llama", "pos": "noun", "lang_code": "es", "senses": [{"glosses": ["llama"]}],
+     "sounds": [{"ipa": "/ˈʝa.ma/"}]},
+    {"word": "llama", "pos": "noun", "lang_code": "es", "senses": [{"glosses": ["flame"]}],
+     "sounds": [{"ipa": "/ˈʝa.ma/"}]},
     {"word": "banco", "pos": "noun", "lang_code": "es",
-     "senses": [{"glosses": ["bank (financial institution)"]}], "sounds": [{"ipa": "/ˈbaŋ.ko/"}]},
+     "senses": [{"glosses": ["bank (financial institution)"]}, {"glosses": ["bench"]}],
+     "sounds": [{"ipa": "/ˈbaŋ.ko/"}]},
 ]
 BENCH = "Me senté en el banco del parque."
+FLAME = "La llama del fuego es alta."
+# Two more such lines as a page a reader is on, which draws first and is drawn again when the
+# lines come back translated. Lines of their own: the ones above are already translated by the
+# time the page opens, and would be answered without the page ever having to be drawn again.
+PAGE = (
+    "<!doctype html><html lang='es'><meta charset='utf-8'><body><main>"
+    "<p>Nos sentamos en el banco del parque.</p>"
+    "<p>La llama de la vela es pequeña.</p></main></body></html>"
+).encode()
 
 
 def build_packs():
@@ -121,6 +135,8 @@ def serve():
                     self.send_error(404)
                     return
                 body, kind = open(path, "rb").read(), "application/octet-stream"
+            elif self.path == "/lines.html":
+                body, kind = PAGE, "text/html; charset=utf-8"
             elif self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
                 if not os.path.exists(path):
@@ -236,27 +252,67 @@ def main():
             if got.get("state") != "Guess":
                 failures.append(f"the token's state is {got.get('state')!r}, not Guess")
 
-        # A word the dictionary has twice over, decided by the line translated rather than
-        # translated on its own.
-        batch = ask(cdp, session, {
-            "phonetix": "annotate",
-            "data": {
-                "runs": [{"id": 2, "text": BENCH}],
-                "source": "es", "target": "en",
-                "options": {"mode": "meaning", "density": 1},
-            },
-        }, tries=4, gap=10)
-        bench = next((t for t in (batch.get("ok") or {}).get("tokens") or []
-                      if t["spelling"] == "banco"), None)
-        kind = ((bench or {}).get("provenance") or {}).get("kind")
-        print(f"  banco in {BENCH!r}: {(bench or {}).get('gloss')!r} "
-              f"({(bench or {}).get('state')}, from {kind})")
-        if not bench or bench.get("gloss") != "bench":
-            failures.append(f"banco on a line about a bench is drawn {(bench or {}).get('gloss')!r}")
-        if kind != "dictionary":
-            failures.append(f"banco, which the dictionary holds, is answered by {kind!r}")
-        if bench and bench.get("state") == "Homograph":
-            failures.append("the translated line decided nothing about banco")
+        # A word the dictionary has twice over, and a word with two senses, each decided by its
+        # line translated rather than by the word translated on its own. The page is drawn
+        # before the lines come back, with the dictionary's first; asked again once they have,
+        # it is drawn with what each line is about.
+        def drawn_on(run_id, line, word):
+            batch = ask(cdp, session, {
+                "phonetix": "annotate",
+                "data": {
+                    "runs": [{"id": run_id, "text": line}],
+                    "source": "es", "target": "en",
+                    "options": {"mode": "meaning", "density": 1},
+                },
+            }, tries=4, gap=10)
+            return next((t for t in (batch.get("ok") or {}).get("tokens") or []
+                         if t["spelling"] == word), None) or {}
+
+        for run_id, line, word, meant in ((2, BENCH, "banco", "bench"),
+                                          (3, FLAME, "llama", "flame")):
+            first = drawn_on(run_id, line, word)
+            got = first
+            for _ in range(15):
+                if got.get("gloss") == meant and got.get("state") != "Homograph":
+                    break
+                time.sleep(2)
+                got = drawn_on(run_id, line, word)
+            kind = (got.get("provenance") or {}).get("kind")
+            print(f"  {word} in {line!r}: first {first.get('gloss')!r}, then {got.get('gloss')!r} "
+                  f"({got.get('state')}, from {kind})")
+            if got.get("gloss") != meant:
+                failures.append(f"{word} on {line!r} is drawn {got.get('gloss')!r}, not {meant!r}")
+            if kind != "dictionary":
+                failures.append(f"{word}, which the dictionary holds, is answered by {kind!r}")
+            if got.get("state") == "Homograph":
+                failures.append(f"the translated line decided nothing about {word}")
+
+        # And on a page: what the reader sees changes once the lines are back, without their
+        # touching anything.
+        cdp.send("Runtime.evaluate", {
+            "expression": "chrome.storage.local.set({on:true,layer:'meaning',density:1})",
+            "awaitPromise": True, "returnByValue": True,
+        }, session=session)
+        tab = cdp.send("Target.createTarget", {"url": f"{base}/lines.html"})
+        page = cdp.send(
+            "Target.attachToTarget", {"targetId": tab["targetId"], "flatten": True},
+        )["sessionId"]
+        cdp.send("Runtime.enable", session=page)
+        over = {}
+        for _ in range(40):
+            got = cdp.send("Runtime.evaluate", {
+                "expression": """JSON.stringify([...document.querySelectorAll('.px-w')].map(w =>
+                    [((w.querySelector('.px-was') || w.lastChild) || {}).textContent || '',
+                     (w.querySelector('.px-gl') || {}).textContent || '']))""",
+                "returnByValue": True,
+            }, session=page).get("result", {}).get("value")
+            over = dict(json.loads(got or "[]"))
+            if over.get("banco") == "bench" and over.get("llama") == "flame":
+                break
+            time.sleep(1)
+        print(f"  on the page: banco {over.get('banco')!r}, llama {over.get('llama')!r}")
+        if over.get("banco") != "bench" or over.get("llama") != "flame":
+            failures.append(f"the page never drew what its lines are about: {over}")
 
         # Several words at once, which is a gesture of its own and only an engine can answer.
         # Asked of the host the way the page asks it after a drag.

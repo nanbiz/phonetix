@@ -223,54 +223,109 @@ function carrying(asked: Batch, answered: Batch): Batch {
 }
 
 /**
- * Which word a spelling is, where the sentence it sits in can say.
+ * Lines as the engine translated them, by direction and text, the most recently used last. A
+ * page is annotated again whenever it changes or is drawn again, with the same lines each time.
+ */
+const translatedLines = new Map<string, string>();
+const LINES_KEPT = 512;
+/** Lines waiting for the engine, in the order they were asked about. */
+const waitingLines = new Map<string, { from: string; target: string; text: string }>();
+let translatingLines = false;
+
+function lineKey(from: string, target: string, text: string): string {
+  return `${from}>${target}\n${text}`;
+}
+
+function translatedLine(key: string): string | undefined {
+  const line = translatedLines.get(key);
+  if (line === undefined) return undefined;
+  // Used again, so kept longest.
+  translatedLines.delete(key);
+  translatedLines.set(key, line);
+  return line;
+}
+
+/**
+ * Translate what is waiting, a few lines at a time, and tell the page when there is more
+ * to draw with. The page redraws when told, and its lines are then answered from here.
+ */
+async function translateWaiting(): Promise<void> {
+  if (translatingLines) return;
+  translatingLines = true;
+  let arrived = 0;
+  try {
+    while (waitingLines.size > 0) {
+      const [first] = waitingLines.values();
+      const some = [...waitingLines.entries()]
+        .filter(([, line]) => line.from === first.from && line.target === first.target)
+        .slice(0, 8);
+      try {
+        const answers = await guessed(first.from, first.target, some.map(([, line]) => line.text));
+        answered('the translator');
+        some.forEach(([key], at) => {
+          const said = answers[at];
+          if (said) {
+            translatedLines.set(key, said);
+            arrived += 1;
+          }
+        });
+      } catch (e) {
+        console.warn(`[Phonetix] Nothing translated the line out of ${first.from}:`, e);
+        noted('the translator', 'is not answering');
+      }
+      for (const [key] of some) waitingLines.delete(key);
+      while (translatedLines.size > LINES_KEPT) {
+        const [oldest] = translatedLines.keys();
+        translatedLines.delete(oldest);
+      }
+    }
+  } finally {
+    translatingLines = false;
+  }
+  if (arrived > 0) {
+    await browser.storage.local.set({ linesTranslated: Date.now() }).catch(() => undefined);
+  }
+}
+
+/**
+ * Which word a spelling is, and which of its senses, where the line it is on can say.
  *
- * A spelling that is several words with nothing deciding which is a card asking the reader a
- * question. Where the reader is being given a translation anyway, the engine has already read
- * the whole sentence, and what it made of it decides: the core compares each reading's own
- * answer against the translated line. One translation per line rather than per word, because
- * a line is what the engine reads and what the core is asking about.
+ * A spelling that is several words with nothing on the page deciding which, and a word that
+ * is decided but whose senses are different words - "banco" is a bank and a bench - are both
+ * questions the core asks back: the line, translated. The engine reads the whole line, and the
+ * core compares what each reading and each sense means with what it wrote. One translation per
+ * line rather than per word, because a line is what the engine reads.
+ *
+ * Neither holds the page up. With the published dictionaries nearly every line has a word
+ * of one kind or the other, so what the dictionary ranks first is drawn now, the lines go to
+ * the engine behind the page, and the page is drawn again when they are back.
  */
 async function settled(batch: Batch, runs: TextRun[], languages: Languages): Promise<Batch> {
   const { source, target } = languages;
   if (!target || target === source) return batch;
-  const wanted = batch.misses.filter((miss) => miss.need === 'Sentence');
+  const wanted = batch.misses.filter((miss) => miss.need === 'Sentence' || miss.need === 'Sense');
   if (wanted.length === 0) return batch;
   const text = new Map<number, string>(runs.map((run) => [run.id, run.text]));
-  // One request per line, by the language that line is in: a line the engine cannot translate
-  // out of is a line it says nothing about.
-  const lines = new Map<string, Set<number>>();
+  const results: { token: number; sentence: string }[] = [];
+  let asked = false;
   for (const miss of wanted) {
     const token = batch.tokens[miss.token];
     if (!token) continue;
+    // By the language that line is in: a line the engine cannot translate out of is a line it
+    // says nothing about.
     const from = token.lang || source;
-    if (from === target || !text.get(token.run)) continue;
-    const held = lines.get(from) ?? new Set<number>();
-    held.add(token.run);
-    lines.set(from, held);
-  }
-  const translated = new Map<number, string>();
-  for (const [from, ids] of lines) {
-    const wantedRuns = [...ids];
-    try {
-      const answers = await guessed(from, target, wantedRuns.map((id) => text.get(id) ?? ''));
-      answered('the translator');
-      wantedRuns.forEach((id, at) => {
-        const line = answers[at];
-        if (line) translated.set(id, line);
-      });
-    } catch (e) {
-      console.warn(`[Phonetix] Nothing translated the line out of ${from}:`, e);
-      noted('the translator', 'is not answering');
+    const line = text.get(token.run);
+    if (from === target || !line) continue;
+    const key = lineKey(from, target, line);
+    const sentence = translatedLine(key);
+    if (sentence) {
+      results.push({ token: miss.token, sentence });
+    } else if (!waitingLines.has(key)) {
+      waitingLines.set(key, { from, target, text: line });
+      asked = true;
     }
   }
-  const results = wanted
-    .map((miss) => {
-      const token = batch.tokens[miss.token];
-      const sentence = token ? translated.get(token.run) : undefined;
-      return { token: miss.token, sentence };
-    })
-    .filter((result): result is { token: number; sentence: string } => Boolean(result.sentence));
+  if (asked) void translateWaiting();
   if (results.length === 0) return batch;
   return carrying(batch, await complete(batch.batch, results, 'bergamot', languages));
 }

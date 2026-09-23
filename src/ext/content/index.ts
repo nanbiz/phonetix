@@ -32,6 +32,7 @@ let settings: Settings = DEFAULTS;
 const asked: string[] = [];
 let opening: ReturnType<typeof setTimeout> | null = null;
 let painting = false;
+let drawAgain = false;
 
 /**
  * What watches the page for text arriving after it loaded.
@@ -133,7 +134,13 @@ function styles(): void {
  * would count each one from zero and annotate the same word every time it appeared.
  */
 async function draw(): Promise<void> {
-  if (painting) return;
+  // Asked for again while a draw is under way - a dictionary arrived, the lines came back
+  // translated - and drawn again once it is done. Dropped, as it was, the page kept what the
+  // first draw had before either of those, and nothing asked again.
+  if (painting) {
+    drawAgain = true;
+    return;
+  }
   painting = true;
   try {
     unpaint();
@@ -188,6 +195,10 @@ async function draw(): Promise<void> {
     // comes down, since a record delivered after it is a record that starts this again.
     watcher?.takeRecords();
     painting = false;
+    if (drawAgain) {
+      drawAgain = false;
+      redraw();
+    }
   }
 }
 
@@ -558,8 +569,10 @@ export async function session(): Promise<void> {
   // And when a dictionary arrives or is given up, which is not a setting and used to leave
   // the page exactly as it was: a reader fetched the dictionary for the page they were
   // looking at and nothing on it changed.
+  // And when lines of it have come back translated, which decides which word or which sense
+  // some of its words are: what was drawn before was the dictionary's first.
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !('heldPacks' in changes)) return;
+    if (area !== 'local' || !('heldPacks' in changes || 'linesTranslated' in changes)) return;
     redraw();
   });
   await draw();

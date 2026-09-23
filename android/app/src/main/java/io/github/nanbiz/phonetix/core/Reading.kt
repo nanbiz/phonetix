@@ -107,13 +107,41 @@ object Reading {
     private val MEANING = setOf("Gloss", "Both")
 
     /**
-     * Which word a spelling is, where the line it is on can say.
+     * Lines as the engine translated them, keyed by direction and text, most recently used
+     * last. A screen is read again many times a second while it moves, and the same lines come
+     * back each time: translated once, they are answered from here after that.
+     */
+    private val translated = object : LinkedHashMap<String, String>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) =
+            size > LINES_KEPT
+    }
+    private val translating = HashSet<String>()
+    private const val LINES_KEPT = 512
+
+    /** Where lines asked about a word's senses are translated, away from the read. */
+    private val lineWorker = java.util.concurrent.Executors.newSingleThreadExecutor { job ->
+        Thread(job, "phonetix-lines").apply { isDaemon = true }
+    }
+
+    /** Told when lines translated in the background have arrived, so the screen is read again
+     *  and drawn with them. */
+    @Volatile
+    var onLinesArrived: (() -> Unit)? = null
+
+    /**
+     * Which word a spelling is, and which of its senses, where the line it is on can say.
      *
-     * A spelling that is several words - French "est", "east" or "is" - with nothing on the
-     * page deciding which is a question the core asks back: the line, translated. The engine
-     * reads the whole line, and the core compares what each reading means with what it wrote.
-     * One translation per line, however many words on it asked, because a line is what the
-     * engine reads.
+     * French "est" is "east" or "is", with nothing on the page deciding which, and the core
+     * asks for the line translated before it will say. "banco" is decided - the noun - but is a
+     * bank and a bench, and the core asks for the line too, to draw the one it is about. The
+     * engine reads the whole line, and the core compares what each reading and each sense
+     * means with what it wrote. One translation per line, however many words on it asked.
+     *
+     * Neither holds the screen up. With the published dictionaries nearly every line has a
+     * word of one kind or the other, and translating a new screen's lines before drawing it
+     * was a second and a half on the emulator for seventeen lines: what the dictionary ranks
+     * first is drawn at once, the lines go to the engine on a thread of their own, and the
+     * screen is read again once they are back.
      */
     private fun settled(
         batch: JSONObject,
@@ -122,34 +150,66 @@ object Reading {
         target: String,
     ): JSONObject {
         if (!Translator.usable || target.isEmpty() || target == source) return batch
+        // Only a direction the engine is open for: a line it cannot translate out of is a line
+        // it says nothing about.
+        if (Translator.direction != "$source-$target") return batch
         val misses = batch.optJSONArray("misses") ?: return batch
         val tokens = batch.optJSONArray("tokens") ?: return batch
         val wanted = ArrayList<Int>()
-        val runs = LinkedHashSet<Int>()
+        val later = LinkedHashSet<Int>()
         for (at in 0 until misses.length()) {
             val row = misses.optJSONObject(at) ?: continue
-            if (row.optString("need") != "Sentence") continue
+            val need = row.optString("need")
+            if (need != "Sentence" && need != "Sense") continue
             val which = row.optInt("token")
             val token = tokens.optJSONObject(which) ?: continue
-            // Only a line in the language the engine is open for: one it cannot translate out
-            // of is a line it says nothing about.
             val lang = token.optString("lang")
             if (lang.isNotEmpty() && lang != "null" && lang != source) continue
             val run = token.optInt("run", -1)
             if (texts.getOrNull(run).isNullOrBlank()) continue
             wanted.add(which)
-            runs.add(run)
+            later.add(run)
         }
         if (wanted.isEmpty()) return batch
-        val order = runs.toList()
-        val said = Translator.lines(order.map { texts[it] })
-        if (said.isEmpty()) return batch
-        val line = order.indices.associate { order[it] to said.getOrNull(it).orEmpty() }
-        val kept = wanted.filter { !line[tokens.optJSONObject(it).optInt("run")].isNullOrEmpty() }
+        val key = { run: Int -> "$source>$target\n${texts[run]}" }
+        // Sent off to be translated where nobody has yet.
+        val waiting = synchronized(translated) {
+            later.filter { translated[key(it)] == null && translating.add(key(it)) }
+        }
+        if (waiting.isNotEmpty()) {
+            val asked = waiting.map { texts[it] }
+            val keys = waiting.map(key)
+            lineWorker.execute {
+                // A line at a time, so the engine is free between them for the words a read
+                // is waiting on: asked as one batch, it held the engine for the whole of it.
+                val said = asked.map { text ->
+                    runCatching { Translator.lines(listOf(text)).firstOrNull() }.getOrNull()
+                        .orEmpty()
+                }
+                synchronized(translated) {
+                    keys.forEachIndexed { at, k ->
+                        translating.remove(k)
+                        said.getOrNull(at)?.takeIf { it.isNotEmpty() }?.let { translated[k] = it }
+                    }
+                }
+                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                    android.util.Log.d("Phonetix", "LINES ${said.size} of ${asked.size} arrived")
+                    asked.forEachIndexed { at, text ->
+                        android.util.Log.d("Phonetix", "LINE $text => ${said.getOrNull(at)}")
+                    }
+                }
+                if (said.any { it.isNotEmpty() }) onLinesArrived?.invoke()
+            }
+        }
+        val line = synchronized(translated) {
+            wanted.associateWith { translated[key(tokens.optJSONObject(it).optInt("run"))] }
+        }
+        val kept = wanted.filter { !line[it].isNullOrEmpty() }
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
-                "SETTLED ${kept.size} words over ${order.size} lines, first=${line.values.firstOrNull()}",
+                "SETTLED ${kept.size} words over ${later.size} lines, " +
+                    "${waiting.size} sent off, first=${line.values.firstOrNull { it != null }}",
             )
         }
         if (kept.isEmpty()) return batch
@@ -160,7 +220,7 @@ object Reading {
                 kept.toIntArray(),
                 Array(kept.size) { "" },
                 Array(kept.size) { "" },
-                Array(kept.size) { line[tokens.optJSONObject(kept[it]).optInt("run")].orEmpty() },
+                Array(kept.size) { line[kept[it]].orEmpty() },
                 source,
                 target,
                 "",

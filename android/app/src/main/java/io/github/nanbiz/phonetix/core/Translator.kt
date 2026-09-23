@@ -20,6 +20,9 @@ object Translator {
     @Volatile
     private var open: String = ""
 
+    /** The direction a screen is read in, as "from-to", or empty with none open. */
+    val direction: String get() = open
+
     /** Where that direction's files are, so it can be read again if the engine let it go. */
     @Volatile
     private var openFrom: File? = null

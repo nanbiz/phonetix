@@ -239,6 +239,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // app reaches the service otherwise: it is started by the system, not by us.
         running = this
         SettingsStore.init(this)
+        // Lines translated behind a screen come back after it was drawn; reading it again is
+        // what draws the sense each line turned out to be about.
+        Reading.onLinesArrived = { readAgain() }
         // A way to ask the service what it believes, from a phone in a reader's hand at the
         // moment something is wrong.
         //
@@ -917,6 +920,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        Reading.onLinesArrived = null
         if (BuildConfig.DEBUG) {
             runCatching { unregisterReceiver(dumpAsked) }
             runCatching { unregisterReceiver(probeAsked) }
