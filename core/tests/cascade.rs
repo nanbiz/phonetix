@@ -904,9 +904,73 @@ fn the_sentences_own_translation_says_which_word_it_is() {
     assert_eq!(neither.state, AnswerState::Homograph);
 
     // And a word of a reading inside a longer word decides nothing: "bench" is not in
-    // "benchmark", and matching half a word would be a signal that decides by accident.
-    let unrelated = read(Some("They published a benchmark of the banking system."));
+    // "benchmark" nor "bank" in "bankrupt", and matching half a word would be a signal that
+    // decides by accident. An inflection is not half a word: that is below.
+    let unrelated = read(Some("They published a benchmark of the bankrupt system."));
     assert_eq!(unrelated.state, AnswerState::Homograph);
+}
+
+/// What a reading means, looked for the way a translated sentence writes it.
+///
+/// A reader of English is handed the dictionary's own glosses, and a sentence holds none of
+/// them as they stand: French "est" is "third-person singular present indicative of être",
+/// and the sentence says "is". The form means what the word it points at means, and that
+/// word's "to be" is written "is" in the sentence. "court" is "short" and a form of "courir",
+/// "to run", which a sentence writes "runs". And "estre", an old spelling of "être", also
+/// comes back as "is": two readings reaching the sentence through the same word agree, which
+/// is not the sentence failing to choose.
+#[test]
+fn a_form_is_found_in_the_sentence_as_what_its_word_means() {
+    let mut source = Builder::new("fr", Kind::Lex, 0);
+    for entry in [
+        word("est", "adj", "ɛst", &["east"]),
+        word("est", "noun", "ɛst", &["east"]),
+        word(
+            "est",
+            "verb",
+            "ɛ",
+            &["third-person singular present indicative of être"],
+        ),
+        word("estre", "verb", "ɛtʁ", &["archaic spelling of être"]),
+        word("être", "verb", "ɛtʁ", &["to be"]),
+        word("court", "adj", "kuʁ", &["short"]),
+        word(
+            "court",
+            "verb",
+            "kuʁ",
+            &["third-person singular present indicative of courir"],
+        ),
+        word("courir", "verb", "ku.ʁiʁ", &["to run", "to hurry; to rush"]),
+    ] {
+        let forms: &[&str] = if entry.lemma == "estre" {
+            &["est"]
+        } else {
+            &[]
+        };
+        source.add(entry, forms).unwrap();
+    }
+    let fr = source.finish().unwrap();
+    let fr = Pack::open(&fr).unwrap();
+    let read = |spelling: &str, said: &str| {
+        let open = Open {
+            source: Some(&fr),
+            said: Some(said),
+            ..Open::default()
+        };
+        look_up(spelling, &lang("fr"), &lang("en"), &open)
+    };
+
+    let is = read("est", "The house is big.");
+    assert_ne!(is.state, AnswerState::Homograph, "{is:?}");
+    assert_eq!(is.pos.as_deref(), Some("verb"));
+    let east = read("est", "He lives in the east of the city.");
+    assert_ne!(east.pos.as_deref(), Some("verb"), "{east:?}");
+
+    let runs = read("court", "The cat runs in the park.");
+    assert_eq!(runs.pos.as_deref(), Some("verb"), "{runs:?}");
+    let short = read("court", "The path is short.");
+    assert_eq!(short.pos.as_deref(), Some("adj"), "{short:?}");
+    assert_ne!(short.state, AnswerState::Homograph);
 }
 
 /// A dictionary as it ships, turned into a pack where the product runs.

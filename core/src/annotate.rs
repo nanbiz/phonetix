@@ -220,12 +220,17 @@ pub fn complete<D: AsRef<[u8]>>(
                 if answer.state != AnswerState::Homograph {
                     token.state = answer.state;
                     token.provenance = answer.provenance.clone();
-                    if let Some(gloss) = answer
-                        .says
-                        .first()
-                        .or_else(|| answer.glosses.first())
-                        .map(|text| cut(text, GLOSS_LIMIT))
+                    // Drawn the way the first pass drew it: a dictionary's sense over the page
+                    // is "the (definite article)" or "third-person singular ... of courir",
+                    // and what the reader is owed is the word it means.
+                    if let Some(gloss) = drawn_as(&answer, &lang, target, &with_sentence)
+                        .map(|text| cut(&text, GLOSS_LIMIT))
                     {
+                        if token.gloss_ipa.is_some() {
+                            token.gloss_ipa = said_in(&gloss, target, &with_sentence).map(|ipa| {
+                                crate::symbols::display(&ipa, options.narrow, options.hide_stress)
+                            });
+                        }
                         token.gloss = Some(gloss);
                     }
                     if let Some(ipa) = answer.ipa.first() {
@@ -339,7 +344,7 @@ fn drawn_as<D: AsRef<[u8]>>(
 }
 
 /// The word a note points at: what follows its last "of".
-fn points_at(gloss: &str) -> Option<String> {
+pub(crate) fn points_at(gloss: &str) -> Option<String> {
     let lowered = gloss.to_lowercase();
     let at = lowered.rfind(" of ")? + " of ".len();
     let word = gloss[at..]
@@ -383,7 +388,7 @@ fn plain(sense: &str) -> Option<String> {
 }
 
 /// What a sense quotes as the meaning, between curly quotation marks.
-fn quoted(sense: &str) -> Option<String> {
+pub(crate) fn quoted(sense: &str) -> Option<String> {
     let start = sense.find('“')? + '“'.len_utf8();
     let end = start + sense[start..].find('”')?;
     let inside = drop_parentheses(sense[start..end].trim());
@@ -409,7 +414,7 @@ fn tidy(text: &str) -> String {
 /// Two shapes: a note pointing at another word - "plural of perro", "inflection of correr" -
 /// and a description of what kind of word it is - "masculine singular definite article". A
 /// short meaning that merely contains one of these words, "person", is neither.
-fn about_grammar(part: &str) -> bool {
+pub(crate) fn about_grammar(part: &str) -> bool {
     const GRAMMAR: &[&str] = &[
         "article",
         "inflection",

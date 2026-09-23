@@ -78,6 +78,169 @@ pub fn best_of(source: &str, candidates: &[&str], margin: usize) -> Option<usize
     }
 }
 
+/// The ways an English word can be written in running text, the word itself first.
+///
+/// A gloss gives a verb in the infinitive and a noun in the singular, and a translated
+/// sentence has them inflected: "to run" comes back as "runs", "to be" as "is". Regular
+/// endings are made by rule, with the spelling changes the rules have (a final "e", a "y"
+/// after a consonant, a doubled consonant), and the verbs common enough to be irregular are
+/// listed. What this makes is a set to look for, not a claim that each is a word: a form that
+/// does not exist is never in a sentence to be found.
+///
+/// Only a verb is given a verb's endings. A noun takes its plural and nothing else: "bank" the
+/// noun is not in "banking", and every extra form of a word is one more way for a sentence to
+/// seem to say it when it said something else.
+pub fn english_forms(word: &str, verb: bool) -> Vec<String> {
+    let word = word.to_lowercase();
+    let mut forms = vec![word.clone()];
+    if word.is_empty() || !word.chars().all(|c| c.is_ascii_alphabetic()) {
+        return forms;
+    }
+    if let Some((_, irregular)) = IRREGULAR.iter().find(|(verb, _)| *verb == word) {
+        forms.extend(irregular.iter().map(|form| form.to_string()));
+    }
+    let vowel = |c: char| matches!(c, 'a' | 'e' | 'i' | 'o' | 'u');
+    let chars: Vec<char> = word.chars().collect();
+    let last = chars[chars.len() - 1];
+    let before = chars.len().checked_sub(2).map(|at| chars[at]);
+    if word.ends_with(['s', 'x', 'z']) || word.ends_with("ch") || word.ends_with("sh") {
+        forms.push(format!("{word}es"));
+    } else if last == 'y' && before.is_some_and(|c| !vowel(c)) {
+        forms.push(format!("{}ies", &word[..word.len() - 1]));
+    } else {
+        forms.push(format!("{word}s"));
+    }
+    if !verb {
+        return forms;
+    }
+    if last == 'e' {
+        forms.push(format!("{word}d"));
+        forms.push(format!("{}ing", &word[..word.len() - 1]));
+    } else if last == 'y' && before.is_some_and(|c| !vowel(c)) {
+        forms.push(format!("{}ied", &word[..word.len() - 1]));
+        forms.push(format!("{word}ing"));
+    } else {
+        forms.push(format!("{word}ed"));
+        forms.push(format!("{word}ing"));
+        // One short syllable ending consonant-vowel-consonant doubles its last letter: "run",
+        // "running"; "stop", "stopped".
+        let third = chars.len().checked_sub(3).map(|at| chars[at]);
+        if chars.len() <= 4
+            && !vowel(last)
+            && !matches!(last, 'w' | 'x' | 'y')
+            && before.is_some_and(vowel)
+            && third.is_some_and(|c| !vowel(c))
+        {
+            forms.push(format!("{word}{last}ed"));
+            forms.push(format!("{word}{last}ing"));
+        }
+    }
+    forms
+}
+
+/// The irregular verbs a translated sentence is most likely to hold, with every form that is
+/// not made by rule.
+const IRREGULAR: &[(&str, &[&str])] = &[
+    (
+        "be",
+        &[
+            "is", "are", "am", "was", "were", "been", "being", "isn't", "aren't",
+        ],
+    ),
+    ("have", &["has", "had", "having"]),
+    ("do", &["does", "did", "done", "doing"]),
+    ("go", &["goes", "went", "gone", "going"]),
+    ("say", &["says", "said"]),
+    ("make", &["made"]),
+    ("get", &["got", "gotten", "getting"]),
+    ("know", &["knew", "known"]),
+    ("see", &["saw", "seen", "sees"]),
+    ("come", &["came"]),
+    ("take", &["took", "taken"]),
+    ("give", &["gave", "given"]),
+    ("run", &["ran"]),
+    ("think", &["thought"]),
+    ("find", &["found"]),
+    ("tell", &["told"]),
+    ("become", &["became"]),
+    ("leave", &["left"]),
+    ("feel", &["felt"]),
+    ("bring", &["brought"]),
+    ("begin", &["began", "begun", "beginning"]),
+    ("keep", &["kept"]),
+    ("hold", &["held"]),
+    ("write", &["wrote", "written"]),
+    ("stand", &["stood"]),
+    ("hear", &["heard"]),
+    ("mean", &["meant"]),
+    ("meet", &["met"]),
+    ("pay", &["paid"]),
+    ("sit", &["sat", "sitting"]),
+    ("speak", &["spoke", "spoken"]),
+    ("lead", &["led"]),
+    ("grow", &["grew", "grown"]),
+    ("lose", &["lost"]),
+    ("fall", &["fell", "fallen"]),
+    ("send", &["sent"]),
+    ("build", &["built"]),
+    ("understand", &["understood"]),
+    ("break", &["broke", "broken"]),
+    ("spend", &["spent"]),
+    ("drive", &["drove", "driven"]),
+    ("buy", &["bought"]),
+    ("wear", &["wore", "worn"]),
+    ("choose", &["chose", "chosen"]),
+    ("eat", &["ate", "eaten"]),
+    ("drink", &["drank", "drunk"]),
+    ("sleep", &["slept"]),
+    ("fly", &["flew", "flown", "flies"]),
+    ("sing", &["sang", "sung"]),
+    ("swim", &["swam", "swum", "swimming"]),
+    ("put", &["putting"]),
+    ("let", &["letting"]),
+    ("set", &["setting"]),
+    ("cut", &["cutting"]),
+    ("read", &[]),
+    ("lie", &["lay", "lain", "lying"]),
+    ("die", &["dying"]),
+    ("can", &["could"]),
+    ("will", &["would"]),
+    ("shall", &["should"]),
+    ("may", &["might"]),
+    ("must", &[]),
+    ("want", &[]),
+    ("win", &["won", "winning"]),
+    ("sell", &["sold"]),
+    ("teach", &["taught"]),
+    ("catch", &["caught"]),
+    ("fight", &["fought"]),
+    ("seek", &["sought"]),
+    ("throw", &["threw", "thrown"]),
+    ("show", &["shown"]),
+    ("forget", &["forgot", "forgotten"]),
+    ("hide", &["hid", "hidden"]),
+    ("ride", &["rode", "ridden"]),
+    ("rise", &["rose", "risen"]),
+    ("shake", &["shook", "shaken"]),
+    ("steal", &["stole", "stolen"]),
+    ("wake", &["woke", "woken"]),
+    ("draw", &["drew", "drawn"]),
+    ("blow", &["blew", "blown"]),
+    ("light", &["lit"]),
+    ("feed", &["fed"]),
+    ("lend", &["lent"]),
+    ("bite", &["bit", "bitten"]),
+    ("man", &["men"]),
+    ("woman", &["women"]),
+    ("child", &["children"]),
+    ("person", &["people"]),
+    ("foot", &["feet"]),
+    ("tooth", &["teeth"]),
+    ("mouse", &["mice"]),
+    ("good", &["better", "best"]),
+    ("bad", &["worse", "worst"]),
+];
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +315,20 @@ mod tests {
     fn an_article_is_not_part_of_the_term() {
         assert_eq!(terms("a chair"), ["chair"]);
         assert_eq!(terms("the truth"), ["truth"]);
+    }
+
+    /// A verb as a gloss gives it and as a translated sentence has it.
+    #[test]
+    fn english_is_written_in_its_inflections() {
+        assert!(english_forms("be", true).contains(&"is".to_string()));
+        assert!(english_forms("run", true).contains(&"runs".to_string()));
+        assert!(english_forms("run", true).contains(&"running".to_string()));
+        assert!(english_forms("carry", true).contains(&"carries".to_string()));
+        assert!(english_forms("carry", true).contains(&"carried".to_string()));
+        assert!(english_forms("make", true).contains(&"making".to_string()));
+        assert!(english_forms("watch", true).contains(&"watches".to_string()));
+        assert_eq!(english_forms("dog", false)[0], "dog");
+        assert!(english_forms("dog", false).contains(&"dogs".to_string()));
+        assert!(!english_forms("bank", false).contains(&"banking".to_string()));
     }
 }

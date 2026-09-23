@@ -372,7 +372,11 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // outranks a rule about parts of speech; where it says nothing, the rule still has its say.
     // Strongest first. What the translator made of the whole sentence outranks both tables:
     // it read the sentence, and they read a word and its neighbour.
-    let decided = chosen_by_translation(&all, open.said)
+    let meant: Vec<Vec<Vec<String>>> = all
+        .iter()
+        .map(|answer| meant_words(&answer.says, answer.pos.as_deref(), target, pack, open))
+        .collect();
+    let decided = chosen_by_translation(&meant, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         .or_else(|| chosen_by_neighbour(&all, before, pack));
     if let Some(at) = decided {
@@ -390,10 +394,7 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
     // than asking. Undecided, so it asks.
-    let told = chosen_by_translation(&first.readings, open.said).is_some()
-        || chosen_by_training(&first.readings, spelling, before, open).is_some()
-        || chosen_by_neighbour(&first.readings, before, pack).is_some();
-    if !told {
+    if decided.is_none() {
         first.state = AnswerState::Homograph;
     }
     first
@@ -406,7 +407,7 @@ pub fn read_in_context<D: AsRef<[u8]>>(
 /// back as "modern" is the adjective. That is context no table here has, which is why it
 /// outranks both of them.
 ///
-/// What is compared is each reading's own answer in the reader's language against the words of
+/// What is compared is the words each reading means - see [meant_words] - against the words of
 /// the translated sentence, whole words only. It decides only when exactly one reading is in
 /// there: two readings both present is the sentence saying nothing about which of them this
 /// word was, and none present is the engine having chosen words neither reading lists.
@@ -416,28 +417,132 @@ pub fn read_in_context<D: AsRef<[u8]>>(
 /// (there is no alignment accessor in its bindings), so which target span this source word
 /// became cannot be asked for. Matching the sentence is weaker where a reading's word appears
 /// for some other reason, which is why it has to be the only one present to decide anything.
-fn chosen_by_translation<R: HasAnswers>(readings: &[R], said: Option<&str>) -> Option<usize> {
+fn chosen_by_translation(meant: &[Vec<Vec<String>>], said: Option<&str>) -> Option<usize> {
     let said = said?;
     if said.trim().is_empty() {
         return None;
     }
     let sentence = normalised(said);
-    let mut found: Option<usize> = None;
-    for (at, reading) in readings.iter().enumerate() {
-        let inside = reading
-            .answers_with()
-            .iter()
-            .any(|answer| holds(&sentence, &normalised(answer)));
-        if !inside {
+    let mut found: Option<(usize, Vec<&Vec<String>>)> = None;
+    for (at, words) in meant.iter().enumerate() {
+        let mut matched: Vec<&Vec<String>> =
+            words.iter().filter(|word| holds(&sentence, word)).collect();
+        if matched.is_empty() {
             continue;
         }
-        if found.is_some() {
-            // Two of them are in the sentence, so it says nothing about which this word was.
-            return None;
+        matched.sort();
+        matched.dedup();
+        match &found {
+            // Two readings found through the same words of the sentence mean the same thing
+            // there - "est" as a form of "être" and as an old spelling of it both come back
+            // as "is" - so the sentence has not been asked to choose between them, and the
+            // one ranked first stands.
+            Some((_, first)) if *first == matched => {}
+            // Two of them are in the sentence through different words, so it says nothing
+            // about which this word was.
+            Some(_) => return None,
+            None => found = Some((at, matched)),
         }
-        found = Some(at);
     }
-    found
+    found.map(|(at, _)| at)
+}
+
+/// A gloss's terms, each beside the part of the gloss it came from, so what the
+/// normalising took away - the "to" of an infinitive - can still be read.
+fn raw_terms(gloss: &str) -> Vec<(String, String)> {
+    let head = gloss.split('(').next().unwrap_or(gloss);
+    head.split([',', ';'])
+        .filter_map(|part| {
+            let term = crate::gloss::terms(part).into_iter().next()?;
+            Some((part.to_string(), term))
+        })
+        .collect()
+}
+
+/// The words a reading means, each as it could be written in a translated sentence.
+///
+/// What a reading answers with is what a dictionary writes for a card: for a reader of
+/// English, the gloss itself - "east", "short, brief", "third-person singular present
+/// indicative of être". A translated sentence has none of those as they stand. It has the
+/// terms of a gloss, one at a time, and a verb inflected: "court" is "runs" there, not "to
+/// run". And a reading that only points at another word means what that word means, so the
+/// form of "être" is looked for as "is", which is what the engine wrote.
+///
+/// For a reader of another language the reading already answers with words in it, and those
+/// are looked for in every form the reader's own pack lists for them.
+fn meant_words<D: AsRef<[u8]>>(
+    says: &[String],
+    pos: Option<&str>,
+    target: &Lang,
+    pack: &Pack<D>,
+    open: &Open<D>,
+) -> Vec<Vec<String>> {
+    let mut words: Vec<Vec<String>> = Vec::new();
+    // A verb by what the dictionary filed it as, or by the "to" a gloss gives an infinitive.
+    let add = |term: &str, verb: bool, words: &mut Vec<Vec<String>>| {
+        let mut pieces = normalised(term);
+        if pieces.is_empty() || pieces.len() > 4 {
+            return;
+        }
+        let forms = if target.0 == "en" {
+            crate::gloss::english_forms(pieces.last().map(String::as_str).unwrap_or_default(), verb)
+        } else {
+            let lemma = pieces.join(" ");
+            let mut forms = vec![lemma.clone()];
+            if let Some(theirs) = open.target {
+                for entry in theirs.lookup(&lemma) {
+                    if same_word(&entry.lemma, &lemma) {
+                        forms.extend(entry.forms.iter().map(|form| form.spelling.to_lowercase()));
+                    }
+                }
+            }
+            pieces.clear();
+            forms
+        };
+        let head = pieces.len().saturating_sub(1);
+        for form in forms {
+            let mut word: Vec<String> = pieces[..head].to_vec();
+            word.extend(normalised(&form));
+            if !words.contains(&word) {
+                words.push(word);
+            }
+        }
+    };
+    let verb_of = |pos: Option<&str>, raw: &str| {
+        pos == Some("verb") || raw.trim_start().to_lowercase().starts_with("to ")
+    };
+    for said in says {
+        if target.0 != "en" {
+            add(said, false, &mut words);
+            continue;
+        }
+        for (raw, term) in raw_terms(said) {
+            if !crate::annotate::about_grammar(&term) {
+                add(&term, verb_of(pos, &raw), &mut words);
+            }
+        }
+        // A note about grammar means the word it points at, or the meaning it quotes.
+        if crate::annotate::about_grammar(said) {
+            if let Some(quoted) = crate::annotate::quoted(said) {
+                for (raw, term) in raw_terms(&quoted) {
+                    add(&term, verb_of(pos, &raw), &mut words);
+                }
+            } else if let Some(pointed) = crate::annotate::points_at(said) {
+                for entry in lookup_either_case(pack, &pointed) {
+                    let filed = Some(entry.pos.as_str());
+                    for sense in &entry.senses {
+                        if crate::annotate::about_grammar(&sense.gloss) {
+                            continue;
+                        }
+                        for (raw, term) in raw_terms(&sense.gloss) {
+                            add(&term, verb_of(filed, &raw), &mut words);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    words
 }
 
 /// The words of a text, lowercased, with everything that is not a letter or a digit dropped.
