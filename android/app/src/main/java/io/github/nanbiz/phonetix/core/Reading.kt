@@ -116,6 +116,13 @@ object Reading {
             size > LINES_KEPT
     }
     private val translating = HashSet<String>()
+
+    /** The lines the last read asked about. A line that has gone from the screen by the time
+     *  its turn comes is not translated: a backlog of lines from pages already left kept
+     *  reading the screen again long after, and each of those reads cleared whatever else was
+     *  waiting on the reading thread - a card's lookup among it. */
+    @Volatile
+    private var onScreen: Set<String> = emptySet()
     private const val LINES_KEPT = 512
 
     /** Where lines asked about a word's senses are translated, away from the read. */
@@ -149,6 +156,8 @@ object Reading {
         source: String,
         target: String,
     ): JSONObject {
+        // Nothing on this screen is waiting, until it says otherwise below.
+        onScreen = emptySet()
         if (!Translator.usable || target.isEmpty() || target == source) return batch
         // Only a direction the engine is open for: a line it cannot translate out of is a line
         // it says nothing about.
@@ -172,6 +181,7 @@ object Reading {
         }
         if (wanted.isEmpty()) return batch
         val key = { run: Int -> "$source>$target\n${texts[run]}" }
+        onScreen = later.mapTo(HashSet(), key)
         // Sent off to be translated where nobody has yet.
         val waiting = synchronized(translated) {
             later.filter { translated[key(it)] == null && translating.add(key(it)) }
@@ -182,7 +192,8 @@ object Reading {
             lineWorker.execute {
                 // A line at a time, so the engine is free between them for the words a read
                 // is waiting on: asked as one batch, it held the engine for the whole of it.
-                val said = asked.map { text ->
+                val said = asked.mapIndexed { at, text ->
+                    if (keys[at] !in onScreen) return@mapIndexed ""
                     runCatching { Translator.lines(listOf(text)).firstOrNull() }.getOrNull()
                         .orEmpty()
                 }
@@ -198,7 +209,11 @@ object Reading {
                         android.util.Log.d("Phonetix", "LINE $text => ${said.getOrNull(at)}")
                     }
                 }
-                if (said.any { it.isNotEmpty() }) onLinesArrived?.invoke()
+                // Read again only for what is still there to be drawn with.
+                val still = onScreen
+                if (keys.indices.any { said[it].isNotEmpty() && keys[it] in still }) {
+                    onLinesArrived?.invoke()
+                }
             }
         }
         val line = synchronized(translated) {
