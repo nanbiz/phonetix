@@ -17,6 +17,8 @@ interface Ask {
   html?: boolean;
 }
 
+import { whole } from '@/host/whole';
+
 let translator: any = null;
 let starting: Promise<any> | null = null;
 
@@ -60,7 +62,10 @@ function backing(
             const file = files[name];
             const res = await fetch(file.url ?? `${base}/models/${file.name}`);
             if (!res.ok) throw new Error(`${res.status} fetching ${file.name}`);
-            const bytes = await res.arrayBuffer();
+            // Read so that a Firefox background page fetching it is not put to sleep halfway:
+            // see [whole].
+            const got = await whole(res);
+            const bytes = got.buffer.slice(got.byteOffset, got.byteOffset + got.byteLength);
             // What was checked is what is used: a file that arrived different - cut short, or
             // an error page served under its name - is refused rather than handed to the
             // engine as a model.

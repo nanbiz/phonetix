@@ -5,6 +5,7 @@
 // needs a dictionary offline is the reader on a train.
 //
 // The host it comes from is a runtime setting and appears nowhere in the source.
+import { whole } from './whole';
 import { createStore, get as read, set as keep, del, keys } from 'idb-keyval';
 import { buildIpaPack, closePack, openLanguages, openPack } from '@/core';
 
@@ -180,7 +181,7 @@ export async function get(lang: string): Promise<string | null> {
 
   const res = await fetch(`${base}/${lang}.pack`);
   if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
+  const bytes = await whole(res);
   // Checked against the listing where it says what the file has to be: a pack cut short opens
   // as a pack that is missing words, which is worse than not having it.
   const listed = (await offered().catch(() => [])).find((pack) => pack.lang === lang);

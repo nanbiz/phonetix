@@ -35,6 +35,7 @@
     "test:popup": "uv run scripts/proofread/popup_view.py",
     "test:phone-guesses": "uv run scripts/proofread/android_guesses.py",
     "test:translates": "uv run scripts/proofread/translates.py",
+    "test:slow-pack": "uv run scripts/proofread/slow_pack.py",
     "bundle:dict": "node scripts/bundle-dictionaries.mjs",
     "build:phone": "vite build -c vite.phone.config.ts",
     "publish:packs": "node scripts/publish-packs.mjs",
