@@ -27,7 +27,9 @@ WANT = {
     "homograph": {"headline": "banco is more than one word", "readings": ["Bank", "buchen"]},
     "guess": {"headline": "Regenschauer", "badges": ["guess"], "symbols": 10},
     "anchored": {"headline": "way, route", "badges": ["in English"]},
-    "senses": {"headline": "Punkt", "others": ["dot", "stitch"], "more": "1 more sense"},
+    # A word translated is answered by its translation: the dictionary's other senses of it
+    # are not listed under a card that has already said which word it is.
+    "senses": {"headline": "Punkt", "others": [], "more": ""},
     # Nothing leads a card that knows only how the word is said. The word is on the row above
     # and its transcription is under it, so a headline here is the same word three times.
     "ipa-only": {"headline": "", "foot": "", "symbols": 6},

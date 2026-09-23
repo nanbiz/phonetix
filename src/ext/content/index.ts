@@ -245,6 +245,8 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
     // What the inline layer already knew: a spelling that is several words is decided by the
     // one before it, and the card must not ask a question the page has answered.
     before,
+    // And what it drew, where it had decided which word this is.
+    drawn: token.state !== 'Homograph' ? (token.gloss ?? '') : '',
   });
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.

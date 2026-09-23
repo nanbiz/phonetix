@@ -164,13 +164,15 @@ fun AnswerCard(
             // making exactly the choice it is here to avoid.
             Readings(answer, palette, report)
             Grammar(answer, palette, report)
-            // The rest of the entry only where a language is read in itself. A word translated
-            // is answered by its translation, and the card under a finger is not the place for
+            // The other senses only where a language is read in itself. A word translated is
+            // answered by its translation, and the card under a finger is not the place for
             // the dictionary's every sense of it: "and" read into Spanish is "y", and its ten
             // English definitions covered the page it was read on.
-            if (!translated(answer) && answer.readings.size < 2) {
+            // One line of the word in use is not another meaning, and is kept for a word that
+            // is translated; a card still asking which word this is shows neither.
+            if (answer.readings.size < 2) {
                 Example(answer, palette, report)
-                OtherSenses(answer, palette, report)
+                if (!translated(answer)) OtherSenses(answer, palette, report)
             }
             Foot(answer, palette, report, onOpen)
         }

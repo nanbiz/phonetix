@@ -81,6 +81,9 @@ object Lex {
         accent: String,
         /** The word before it on the screen, which decides a spelling that is several words. */
         before: String,
+        /** What the screen drew over the word, where it had decided which word it is: the
+         *  card opens on that reading. Empty, and the card asks. */
+        drawn: String,
     ): String
 
     /** Several words asked as one, as JSON. No dictionary holds a phrase, so what answers it

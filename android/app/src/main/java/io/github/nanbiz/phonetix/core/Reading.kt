@@ -19,6 +19,9 @@ data class Annotated(
     val glossIpa: String,
     /** Whether this occurrence is one the inline layer draws. */
     val inline: Boolean,
+    /** Whether the core decided which word this spelling is, rather than leaving the reader a
+     *  question: a card opens on what was drawn only where it was decided. */
+    val decided: Boolean = true,
 )
 
 /**
@@ -97,6 +100,7 @@ object Reading {
                     gloss = row.optString("gloss").takeIf { it != "null" }.orEmpty(),
                     glossIpa = row.optString("glossIpa").takeIf { it != "null" }.orEmpty(),
                     inline = row.optBoolean("inline"),
+                    decided = row.optString("state") != "Homograph",
                 )
             }
         }
@@ -369,9 +373,11 @@ object Reading {
         accent: String = "",
         /** The word before it on the screen, which decides a spelling that is several words. */
         before: String = "",
+        /** What the screen drew over the word, where it had decided which word it is. */
+        drawn: String = "",
     ): Answer? {
         if (core == 0L || word.isBlank()) return null
-        val written = runCatching { Lex.lookUp(core, word, source, target, accent, before) }
+        val written = runCatching { Lex.lookUp(core, word, source, target, accent, before, drawn) }
             .getOrNull()
             ?: return null
         return Answer.parse(written)

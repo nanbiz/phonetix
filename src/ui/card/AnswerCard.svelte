@@ -97,7 +97,9 @@
       )
       .slice(0, 3)
   );
-  let example = $derived(translated || chooses ? null : answer.example);
+  // One line of the word in use, which is not another meaning: kept for a word that is
+  // translated, and left off a card still asking which word this is.
+  let example = $derived(chooses ? null : answer.example);
   let rest = $derived(
     chooses || translated
       ? []

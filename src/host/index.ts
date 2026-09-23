@@ -205,7 +205,9 @@ export function host(): void {
       data.accent ? open(data.accent).catch(() => null) : null,
       openHomographs(data.source).catch(() => 0),
     ]);
-    return lookUp(data.word, data.source, data.target, data.accent ?? '', data.before ?? '');
+    return lookUp(
+      data.word, data.source, data.target, data.accent ?? '', data.before ?? '', data.drawn ?? ''
+    );
   });
 }
 

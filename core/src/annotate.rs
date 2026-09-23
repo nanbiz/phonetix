@@ -87,7 +87,18 @@ pub fn annotate<D: AsRef<[u8]>>(
             before = Some(spelling.clone());
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
-            let gloss = drawn_as(&answer, &lang, target, open).map(|text| cut(&text, GLOSS_LIMIT));
+            // An English definition is not a translation. Read into another language, an
+            // English word the reader's pack has no word for is left for the engine, rather
+            // than drawn as "An unfamiliar…" over a page being read in Spanish.
+            let defined_only = lang.0 == "en"
+                && target.0 != "en"
+                && answer.says.is_empty()
+                && matches!(answer.state, AnswerState::ViaEn | AnswerState::IpaOnly);
+            let gloss = if defined_only {
+                None
+            } else {
+                drawn_as(&answer, &lang, target, open).map(|text| cut(&text, GLOSS_LIMIT))
+            };
             // Carrying as much of the detail as the reader asked for; the card always has the
             // full form. The accent is already in what the cascade answered, and applying it
             // again here would shift a word its accent's own pack had already spelled out.

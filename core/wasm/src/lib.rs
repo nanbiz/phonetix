@@ -225,6 +225,9 @@ impl Core {
         // The word before it on the page, which decides a spelling that is several words.
         // Empty where the host does not know it, and then the card asks instead.
         before: &str,
+        // What the page drew over the word where it had decided which word it was, so the
+        // card opens on that reading. Empty where it had not, and then the card asks.
+        drawn: &str,
     ) -> String {
         let open = Open {
             source: self.packs.get(source),
@@ -232,7 +235,7 @@ impl Core {
             ipa_only: false,
             accent,
             accent_pack: self.packs.get(accent),
-            said: None,
+            said: Some(drawn).filter(|it| !it.is_empty()),
             classifier: self.classifiers.get(source),
         };
         lexcore::json::of(&lexcore::resolve::read_in_context(

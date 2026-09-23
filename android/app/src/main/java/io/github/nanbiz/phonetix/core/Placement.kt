@@ -35,6 +35,9 @@ data class WordBox(
      *  somewhere without a line behind it. */
     val at: Int = -1,
     val to: Int = -1,
+    /** What was drawn over the word where the core had decided which word it is, and empty
+     *  where it had not: the card opens on the reading the line showed. */
+    val decided: String = "",
 )
 
 /** One token of a line of text: the word, and its transcription when it was picked. */
@@ -48,6 +51,8 @@ data class Pick(
     val ipa: String,
     /** The word before this one on its line, which decides a spelling that is several words. */
     val before: String = "",
+    /** What was drawn, where the core decided which word it is. See [WordBox.decided]. */
+    val decided: String = "",
 )
 
 /**
@@ -251,6 +256,7 @@ object Placement {
                         language,
                         at = p.start,
                         to = p.end,
+                        decided = p.decided,
                     ),
                 )
             }

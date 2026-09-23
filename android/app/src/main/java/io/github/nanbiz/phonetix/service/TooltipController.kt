@@ -491,7 +491,7 @@ class TooltipController(
         val answer = given
             ?: Reading.lookUp(
                 box.word, source, settings.into.ifEmpty { source },
-                settings.accentFor(source), box.before,
+                settings.accentFor(source), box.before, box.decided,
             )
                 ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)

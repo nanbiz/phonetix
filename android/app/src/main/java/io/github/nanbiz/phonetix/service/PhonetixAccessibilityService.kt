@@ -3120,6 +3120,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
                         // so a tap asks the same question the line answered.
                         before = told.getOrNull(at - 1)
                             ?.takeIf { it.run == token.run }?.spelling.orEmpty(),
+                        // And what it was drawn as, where the core decided which word it
+                        // is, so the card leads with the reading the line showed.
+                        decided = if (token.decided) token.gloss else "",
                     ),
                 )
         }

@@ -26,6 +26,9 @@ export interface HostProtocol {
       accent?: string;
       /** The word before it on the page, which decides a spelling that is several words. */
       before?: string;
+      /** What the page drew over it, where it had decided which word it is: the card opens on
+       *  that reading rather than asking what the page already answered. */
+      drawn?: string;
     };
     reply: Answer;
   };
