@@ -9,6 +9,8 @@
 
 #include <jni.h>
 
+#include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -29,7 +31,35 @@ using marian::bergamot::TranslationModel;
 
 std::mutex lock;
 std::shared_ptr<BlockingService> service;
-std::shared_ptr<TranslationModel> model;
+
+/// The directions open, keyed as "from-to". Two at most: the one a screen is read in and the
+/// one a reader asks the other way round. Keeping both is what lets a question in the panel be
+/// answered without closing the reading direction and opening it again afterwards, which was
+/// two model loads per question.
+constexpr size_t HELD = 2;
+std::map<std::string, std::shared_ptr<TranslationModel>> models;
+/// The same keys, least recently opened or used first, so the one to let go is at the front.
+std::deque<std::string> order;
+
+void touch(const std::string &key) {
+  for (auto at = order.begin(); at != order.end(); ++at) {
+    if (*at == key) {
+      order.erase(at);
+      break;
+    }
+  }
+  order.push_back(key);
+}
+
+void forget(const std::string &key) {
+  models.erase(key);
+  for (auto at = order.begin(); at != order.end(); ++at) {
+    if (*at == key) {
+      order.erase(at);
+      break;
+    }
+  }
+}
 
 std::string text_of(JNIEnv *env, jstring value) {
   if (value == nullptr) return {};
@@ -43,11 +73,18 @@ std::string text_of(JNIEnv *env, jstring value) {
 
 extern "C" {
 
-/// Open a direction. The configuration names files this app has already fetched, so the model
-/// is read from the filesystem rather than handed across as bytes.
+/// Open a direction under its key. The configuration names files this app has already
+/// fetched, so the model is read from the filesystem rather than handed across as bytes. A
+/// direction already open is kept as it is.
 JNIEXPORT jint JNICALL
-Java_io_github_nanbiz_phonetix_core_Lex_translateOpen(JNIEnv *env, jclass, jstring config) {
+Java_io_github_nanbiz_phonetix_core_Lex_translateOpen(JNIEnv *env, jclass, jstring direction,
+                                                    jstring config) {
   std::lock_guard<std::mutex> held(lock);
+  const std::string key = text_of(env, direction);
+  if (models.count(key) != 0) {
+    touch(key);
+    return 1;
+  }
   const std::string yaml = text_of(env, config);
   try {
     if (!service) {
@@ -57,22 +94,26 @@ Java_io_github_nanbiz_phonetix_core_Lex_translateOpen(JNIEnv *env, jclass, jstri
       settings.cacheSize = 0;
       service = std::make_shared<BlockingService>(settings);
     }
+    // The oldest goes first, before the new one is read: two models and a third being
+    // loaded is a third of a phone's memory more than this needs.
+    while (models.size() >= HELD && !order.empty()) forget(order.front());
     marian::bergamot::MemoryBundle memory;
-    model = std::make_shared<TranslationModel>(yaml, std::move(memory), /*replicas=*/1);
+    models[key] = std::make_shared<TranslationModel>(yaml, std::move(memory), /*replicas=*/1);
+    touch(key);
     return 1;
   } catch (...) {
     // A model that will not open is a direction this reader cannot translate, which is an
     // ordinary answer and not a crash: the words stay as the dictionary left them.
-    model.reset();
+    forget(key);
     return 0;
   }
 }
 
 /// Whether a direction is open, so nothing offers what it cannot do.
 JNIEXPORT jint JNICALL
-Java_io_github_nanbiz_phonetix_core_Lex_translateReady(JNIEnv *, jclass) {
+Java_io_github_nanbiz_phonetix_core_Lex_translateReady(JNIEnv *env, jclass, jstring direction) {
   std::lock_guard<std::mutex> held(lock);
-  return (service && model) ? 1 : 0;
+  return (service && models.count(text_of(env, direction)) != 0) ? 1 : 0;
 }
 
 /// Translate a batch, in the order it was given.
@@ -81,12 +122,17 @@ Java_io_github_nanbiz_phonetix_core_Lex_translateReady(JNIEnv *, jclass) {
 /// words the core is waiting to fill, and a joined text comes back as a sentence nobody can
 /// cut apart again at the boundaries it went in on.
 JNIEXPORT jobjectArray JNICALL
-Java_io_github_nanbiz_phonetix_core_Lex_translateSay(JNIEnv *env, jclass, jobjectArray texts) {
+Java_io_github_nanbiz_phonetix_core_Lex_translateSay(JNIEnv *env, jclass, jstring direction,
+                                                   jobjectArray texts) {
   jclass string_class = env->FindClass("java/lang/String");
   const jsize count = texts == nullptr ? 0 : env->GetArrayLength(texts);
   jobjectArray out = env->NewObjectArray(count, string_class, env->NewStringUTF(""));
   std::lock_guard<std::mutex> held(lock);
-  if (!service || !model || count == 0) return out;
+  const std::string key = text_of(env, direction);
+  auto found = models.find(key);
+  if (!service || found == models.end() || count == 0) return out;
+  const std::shared_ptr<TranslationModel> model = found->second;
+  touch(key);
 
   std::vector<std::string> asked;
   asked.reserve(static_cast<size_t>(count));

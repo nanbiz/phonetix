@@ -232,11 +232,11 @@ object Reading {
      * has, and what comes back is the word in the one they are learning, with that word's own
      * entry under it so a machine's answer can be judged rather than taken.
      *
-     * The engine holds one direction open at a time, so this opens the reverse pair, asks, and
-     * puts the reading direction back. It costs seconds and is paid while the reader is in
-     * this app rather than reading a screen, which is the only place the question is asked
-     * from. Nothing comes back where the reverse model was never fetched: the reader is told
-     * that, rather than handed their own words back.
+     * The reverse pair is opened beside the reading direction rather than in its place, so
+     * the first question costs a model load and the ones after it cost nothing, and the
+     * screen being read keeps answering in its own direction. Nothing comes back where the
+     * reverse model was never fetched: the reader is told that, rather than handed their own
+     * words back.
      */
     fun say(context: android.content.Context, text: String, source: String, target: String): Answer? {
         val asked = text.trim()
@@ -248,18 +248,18 @@ object Reading {
         Dictionary.ensureLoaded(context)
         Packs.openHeld(context)
         val models = Packs.models(context)
-        // The engine is turned round and turned back under one lock: a screen read while the
-        // reverse pair was open would be answered backwards.
-        val word = Translator.reversed(models, target, source, listOf(asked))
+        val word = Translator.between(models, target, source, listOf(asked))
             .firstOrNull().orEmpty().trim()
         if (word.isEmpty() || word.equals(asked, ignoreCase = true)) return null
         // A machine that answered with several words is answered as a phrase: no dictionary
         // holds one, and a card claiming an entry for it would be claiming one that is not
         // there.
+        // Read back in its own direction rather than the screen's: the panel asks in whatever
+        // language the reader picks, which need not be the one the screen is in.
         return if (word.split(Regex("\\s+")).size > 1) {
-            phrase(word, source, target)
+            phrase(word, source, target, models)
         } else {
-            lookUp(word, source, target)?.takeIf { it.found } ?: phrase(word, source, target)
+            lookUp(word, source, target)?.takeIf { it.found } ?: phrase(word, source, target, models)
         }
     }
 
@@ -271,10 +271,15 @@ object Reading {
      * model for the pair, because a phrase card with the phrase itself on it tells the reader
      * nothing they were not already looking at.
      */
-    fun phrase(text: String, source: String, target: String): Answer? {
+    fun phrase(text: String, source: String, target: String, models: java.io.File? = null): Answer? {
         val asked = text.trim()
         if (asked.isEmpty() || source == target) return null
-        val said = Translator.lines(listOf(asked)).firstOrNull().orEmpty()
+        val lines = if (models != null) {
+            Translator.between(models, source, target, listOf(asked))
+        } else {
+            Translator.lines(listOf(asked))
+        }
+        val said = lines.firstOrNull().orEmpty()
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",

@@ -186,22 +186,24 @@ object Lex {
     external fun speechSay(voice: String, word: String): ByteArray
 
     /**
-     * Open a translation direction, from a configuration naming files already on disk.
+     * Open a translation direction, keyed "from-to", from a configuration naming files
+     * already on disk.
      *
      * Returns whether it can answer. A direction with no model is one this reader cannot
-     * translate, which is an ordinary answer: the words stay as the dictionary left them.
+     * translate, which is an ordinary answer: the words stay as the dictionary left them. Two
+     * directions stay open at once; opening a third lets the least recently used one go.
      */
-    external fun translateOpen(config: String): Int
+    external fun translateOpen(direction: String, config: String): Int
 
     /** Whether a direction is open, so nothing offers what it cannot do. */
-    external fun translateReady(): Int
+    external fun translateReady(direction: String): Int
 
     /**
      * Translate a batch, in the order it was given.
      *
      * A batch because a screen is a batch, and the same reason the synthesiser takes one.
      */
-    external fun translateSay(texts: Array<String>): Array<String>
+    external fun translateSay(direction: String, texts: Array<String>): Array<String>
 
     /**
      * Read a language's homograph classifier off the disk. Returns how many spellings it knows.

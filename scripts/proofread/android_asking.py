@@ -22,14 +22,12 @@ import android_says as Says
 from android_harness import Device, adb, shell, SERIAL
 import state as State
 
-# How long the reader may wait for the word, when this phone holds the pair. The engine is
-# already open for the reading direction and has to be turned round, which is the only part
-# of this that costs anything.
+# How long the reader may wait for the word, when this phone holds the pair.
 ANSWER_WITHIN_S = 6.0
 
-# How long the engine here may take over a question once its model is on the phone: turning
-# the engine round to the other direction and back is the only part that costs anything.
-ENGINE_WITHIN_MS = 3000
+# How long the engine here may take over a second question. Both directions are open by then,
+# beside each other, so this is translating one word and nothing else.
+ENGINE_WITHIN_MS = 1500
 
 # Where the models are served from, as the reader's own host.
 MODEL_PORT = int(os.environ.get("PHONETIX_MODEL_PORT", "8937"))
@@ -189,6 +187,12 @@ def main():
         failures.append(f"a second question took {again:.1f}s end to end")
     if said and "here=" not in said[-1]:
         failures.append(f"the phone holds this pair and the question went elsewhere: {said[-1]}")
+    # Nothing opened for it: the reverse direction stayed open beside the reading one, and the
+    # reading one was never closed to make room.
+    opened = re.findall(r"TRANSLATOR (\S+) open=", dev.log())
+    print(f"  directions opened for the second question: {opened or 'none'}")
+    if opened:
+        failures.append(f"a second question opened {opened}, which is a model load per question")
 
     if failures:
         print("\nFAIL")

@@ -10,19 +10,36 @@ import java.io.File
  * the card, because a machine's answer wearing a dictionary's authority is what the whole
  * cascade is shaped to avoid.
  *
- * The same engine the browser runs, built native. Where the models come from is the reader's
- * own host, the same one the packs come from: nothing here reaches for a stranger's server on
- * their behalf, and with no host set there is no translation rather than a request.
+ * The same engine the browser runs, built native, reading the same models: Firefox's own
+ * translation models, fetched by [Fetch] into [Packs.models] from the addresses the pack
+ * listing names.
  */
 object Translator {
 
-    /** The direction that is open, so a change of language is noticed. */
+    /** The direction a screen is read in, so a change of language is noticed. */
     @Volatile
     private var open: String = ""
 
-    /** Whether a direction is open and can answer. */
-    val usable: Boolean get() = open.isNotEmpty() && runCatching { Lex.translateReady() != 0 }
-        .getOrDefault(false)
+    /** Where that direction's files are, so it can be read again if the engine let it go. */
+    @Volatile
+    private var openFrom: File? = null
+
+    /**
+     * Whether the reading direction is open and can answer.
+     *
+     * The engine keeps two directions and lets the least recently used one go when a third is
+     * opened, so a reader asking the other way round in two languages in a row can cost the
+     * reading direction its place. It is read back here rather than reported as gone.
+     */
+    val usable: Boolean get() = reading()
+
+    @Synchronized
+    private fun reading(): Boolean {
+        if (open.isEmpty()) return false
+        if (runCatching { Lex.translateReady(open) != 0 }.getOrDefault(false)) return true
+        val from = openFrom ?: return false
+        return load(from, open)
+    }
 
     /**
      * Whether a direction could be opened at all: the files for it are here.
@@ -63,17 +80,26 @@ object Translator {
     @Synchronized
     fun start(models: File, from: String, to: String): Boolean {
         val wanted = "$from-$to"
-        if (open == wanted) return true
+        if (open == wanted && reading()) return true
+        val ok = load(models, wanted)
+        open = if (ok) wanted else ""
+        openFrom = if (ok) models else null
+        return ok
+    }
+
+    /**
+     * Open [direction] in the engine from the files in [models], leaving whatever the reader's
+     * screen is read in as it is.
+     */
+    private fun load(models: File, direction: String): Boolean {
+        if (runCatching { Lex.translateReady(direction) != 0 }.getOrDefault(false)) return true
         // Found by what they are rather than by a name of ours: the files keep the names they
         // are published under, because the engine reads what kind of model it is from them.
-        val here = File(models, wanted).listFiles().orEmpty()
+        val here = File(models, direction).listFiles().orEmpty()
         val model = here.firstOrNull { it.name.startsWith("model") && it.name.endsWith(".bin") }
         val vocabs = vocabularies(here)
         val shortlist = here.firstOrNull { it.name.startsWith("lex") && it.name.endsWith(".bin") }
-        if (model == null || vocabs == null) {
-            open = ""
-            return false
-        }
+        if (model == null || vocabs == null) return false
         val (vocab, targetVocab) = vocabs
         // The configuration marian-decoder takes, naming files rather than carrying bytes: the
         // app has them on disk already and handing seventeen megabytes across the boundary to
@@ -105,36 +131,26 @@ object Translator {
                 append("log-level: info\n")
             }
         }
-        val ok = runCatching { Lex.translateOpen(config) != 0 }
+        val ok = runCatching { Lex.translateOpen(direction, config) != 0 }
             .onFailure { android.util.Log.w("Phonetix", "the translator did not open", it) }
             .getOrDefault(false)
-        open = if (ok) wanted else ""
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-            android.util.Log.d("Phonetix", "TRANSLATOR $wanted open=$ok")
+            android.util.Log.d("Phonetix", "TRANSLATOR $direction open=$ok")
         }
         return ok
     }
 
     /**
-     * What these lines say the other way round, with the reading direction put back after.
+     * What these lines say from [from] into [to], whichever direction the screen is read in.
      *
-     * The engine holds one direction at a time, so asking the reverse question means opening
-     * the reverse pair - and a screen being read while that pair was open would be answered
-     * backwards. Opening, asking and restoring happen under the one lock that guards opening,
-     * so no other caller can see the engine pointing the wrong way.
+     * The engine holds two directions, so the screen being read keeps its own while the reader
+     * asks the other way round, and the next screen does not wait for it to be reopened.
      */
     @Synchronized
-    fun reversed(models: File, from: String, to: String, texts: List<String>): List<String> {
-        val back = open
-        if (!start(models, from, to)) return emptyList()
-        return try {
-            lines(texts)
-        } finally {
-            val (was, wants) = back.split("-").let {
-                if (it.size == 2) it[0] to it[1] else "" to ""
-            }
-            if (was.isNotEmpty()) start(models, was, wants)
-        }
+    fun between(models: File, from: String, to: String, texts: List<String>): List<String> {
+        val direction = "$from-$to"
+        if (texts.isEmpty() || !load(models, direction)) return emptyList()
+        return say(direction, texts)
     }
 
     /**
@@ -145,12 +161,16 @@ object Translator {
      * answers itself is the engine having nothing to say.
      *
      * Under the same lock as opening a direction, so nothing can be asked of an engine that is
-     * in the middle of being turned round.
+     * in the middle of being opened.
      */
     @Synchronized
     fun lines(texts: List<String>): List<String> {
-        if (!usable || texts.isEmpty()) return emptyList()
-        val said = runCatching { Lex.translateSay(texts.toTypedArray()) }
+        if (texts.isEmpty() || !reading()) return emptyList()
+        return say(open, texts)
+    }
+
+    private fun say(direction: String, texts: List<String>): List<String> {
+        val said = runCatching { Lex.translateSay(direction, texts.toTypedArray()) }
             .onFailure { android.util.Log.w("Phonetix", "the translator refused a page", it) }
             .getOrNull()
             ?: return emptyList()
@@ -165,9 +185,9 @@ object Translator {
      */
     @Synchronized
     fun meanings(words: List<String>): Map<String, String> {
-        if (!usable || words.isEmpty()) return emptyMap()
+        if (words.isEmpty() || !reading()) return emptyMap()
         val asked = words.distinct()
-        val said = runCatching { Lex.translateSay(asked.toTypedArray()) }
+        val said = runCatching { Lex.translateSay(open, asked.toTypedArray()) }
             .onFailure { android.util.Log.w("Phonetix", "the translator refused", it) }
             .getOrNull()
             ?: return emptyMap()
