@@ -199,6 +199,21 @@ impl Core {
         out
     }
 
+    /// The words for something a reader typed in their own language, in the one they are
+    /// learning, out of the dictionaries alone, best first. See [lexcore::resolve::word_for].
+    #[wasm_bindgen(js_name = wordFor)]
+    pub fn word_for(&self, text: &str, typed_in: &str, wanted_in: &str) -> Vec<String> {
+        match self.packs.get(wanted_in) {
+            Some(wanted) => lexcore::resolve::word_for(
+                text,
+                &Lang(typed_in.into()),
+                wanted,
+                self.packs.get(typed_in),
+            ),
+            None => Vec::new(),
+        }
+    }
+
     /// One word, as JSON, because an Answer is a tree and the boundary carries text.
     #[wasm_bindgen(js_name = lookUp)]
     pub fn look_up(

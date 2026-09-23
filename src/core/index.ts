@@ -109,6 +109,16 @@ export async function lookUp(
 }
 
 /**
+ * The words for something a reader typed in their own language, in the one they are
+ * learning, out of the dictionaries alone and best first: what the panel answers with where no
+ * translation model can.
+ */
+export async function wordFor(text: string, typedIn: string, wantedIn: string): Promise<string[]> {
+  const it = await coreReady();
+  return it.wordFor(text, typedIn, wantedIn);
+}
+
+/**
  * What a batch of runs gets drawn on it.
  *
  * The runs cross as parallel arrays because that is how the host holds them already, and

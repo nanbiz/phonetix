@@ -9,5 +9,9 @@ License. The packs are a derived work and are distributed under CC BY-SA 4.0.
 
 Wiktionary: https://en.wiktionary.org/ · wiktextract: https://github.com/tatuylonen/wiktextract
 
+How often each word is met comes from FrequencyWords by Hermit Dave
+(https://github.com/hermitdave/FrequencyWords), built from OpenSubtitles 2018 and available
+under CC BY-SA 4.0.
+
 `models.json` lists translation models published by Mozilla for Firefox Translations; the
 files are downloaded from Mozilla, not redistributed here.

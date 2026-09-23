@@ -3364,8 +3364,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // And the dictionary of the language asked in, for the entry under the word.
                 Fetch.pack(this, wanted)
             }
+            // Asked here whether or not the model arrived: without one, the dictionaries on
+            // this phone answer a single word by themselves.
             val mine =
-                if (into.isNotEmpty() && into != wanted && Translator.ready(here, into, wanted)) {
+                if (into.isNotEmpty() && into != wanted) {
                     askStage = "asking the engine here for $into to $wanted"
                     runCatching { Reading.say(this, text, wanted, into) }.getOrNull()
                 } else {

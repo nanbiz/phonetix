@@ -5,7 +5,7 @@
 // once and run on both platforms.
 import {
   annotate, complete, curve, detect, lookUp, openHomographs, openLanguages, phrase, readRuns,
-  readScreen, readWiktionary, symbolsOf, type Said,
+  readScreen, readWiktionary, symbolsOf, wordFor, type Said,
 } from '@/core';
 import type { Batch, TextRun } from '@/core/tokens';
 import { afresh, answered, noted, recent } from './health';
@@ -161,25 +161,29 @@ export function host(): void {
   });
 
   onMessage('say', async ({ data }) => {
-    // Whether the pair can be translated at all, so a reader whose host publishes no model
-    // for the direction is told that rather than that their word does not exist.
-    const missing = !(await translatable().catch(() => []))
-      .some((pair) => pair.from === data.target && pair.to === data.source);
-    if (missing) return { answer: null, missing };
     // The reading direction, reversed: what is typed is in the language the reader already
-    // has, and the word wanted is in the one they are learning.
-    const [word] = await guessed(data.target, data.source, [data.text]).catch(() => []);
-    const wanted = (word ?? '').trim();
-    if (!wanted || wanted.toLowerCase() === data.text.trim().toLowerCase()) {
-      return { answer: null, missing: false };
-    }
-    // And then the word's own entry, so what a machine handed over can be judged: how it is
-    // said, what it means back in the reader's language, which sounds are in it.
+    // has, and the word wanted is in the one they are learning. The engine first, where it
+    // has a model for the pair: it reads a phrase whole.
+    const modelled = (await translatable().catch(() => []))
+      .some((pair) => pair.from === data.target && pair.to === data.source);
+    const [word] = modelled
+      ? await guessed(data.target, data.source, [data.text]).catch(() => [])
+      : [];
+    const machine = (word ?? '').trim();
+    // And then the word's own entry, so what came back can be judged: how it is said, what it
+    // means back in the reader's language, which sounds are in it.
     await Promise.all([
       open(data.source),
       data.target === data.source ? null : openReadInto(data.target),
       openHomographs(data.source).catch(() => 0),
     ]);
+    const wanted =
+      machine && machine.toLowerCase() !== data.text.trim().toLowerCase()
+        ? machine
+        : // Where no model answers, the dictionaries still do: what was typed, found through
+          // the English glosses both are written in.
+          await fromTheDictionaries(data.text, data.target, data.source);
+    if (!wanted) return { answer: null, missing: !modelled };
     // One word is looked up as one word; a machine that answered with a phrase is answered
     // as a phrase, because no dictionary holds one.
     const answer = await (wanted.split(/\s+/).length > 1
@@ -220,6 +224,15 @@ interface Languages {
  */
 function carrying(asked: Batch, answered: Batch): Batch {
   return { ...answered, misses: asked.misses };
+}
+
+/** The first word the dictionaries give for what was typed that has an entry of its own. */
+async function fromTheDictionaries(text: string, typedIn: string, wantedIn: string): Promise<string> {
+  for (const word of await wordFor(text, typedIn, wantedIn).catch(() => [])) {
+    const entry = await lookUp(word, wantedIn, typedIn, '', '').catch(() => null);
+    if (entry && entry.state !== 'None' && entry.state !== 'NoPack') return word;
+  }
+  return '';
 }
 
 /**

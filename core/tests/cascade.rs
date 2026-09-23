@@ -1041,6 +1041,50 @@ fn a_word_is_drawn_in_the_sense_its_line_is_about() {
     assert_eq!(drawn("It was raining.").0.as_deref(), Some("bank"));
 }
 
+/// The word for something, out of the dictionaries alone.
+///
+/// "dog" typed by a reader of English reaches the Spanish words glossed "dog", and the one a
+/// Spanish speaker says comes first: the plain word before the poetic one, a word whose first
+/// sense it is before one where it is a later sense, and the commoner of two by how often
+/// each is met. "Hund" typed by a reader of German goes through German first.
+#[test]
+fn the_dictionaries_give_the_word_for_something() {
+    use lexcore::resolve::word_for;
+    let mut source = Builder::new("es", Kind::Lex, 0);
+    let mut perro = word(
+        "perro",
+        "noun",
+        "ˈpe.ro",
+        &["dog (the species (Canis familiaris))"],
+    );
+    perro.tags.push("count:90000".to_string());
+    let mut can = word("can", "noun", "kan", &["dog"]);
+    can.senses[0].marks.push("poetic".to_string());
+    let mut caja = word("caja", "noun", "ˈka.xa", &["box", "bank"]);
+    caja.tags.push("count:500000".to_string());
+    let mut banco = word("banco", "noun", "ˈbaŋ.ko", &["bank", "bench"]);
+    banco.tags.push("count:40000".to_string());
+    for entry in [can, perro, caja, banco] {
+        source.add(entry, &[] as &[&str]).unwrap();
+    }
+    let es = source.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(
+            word("Hund", "noun", "hʊnt", &["dog, hound"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let de = german.finish().unwrap();
+    let de = Pack::open(&de).unwrap();
+
+    assert_eq!(word_for("dog", &lang("en"), &es, None)[0], "perro");
+    assert_eq!(word_for("bank", &lang("en"), &es, None)[0], "banco");
+    assert_eq!(word_for("Hund", &lang("de"), &es, Some(&de))[0], "perro");
+    assert!(word_for("Hund", &lang("de"), &es, None).is_empty());
+}
+
 /// A dictionary as it ships, turned into a pack where the product runs.
 ///
 /// The maps a reader gets are `{word: how it is said}`, gzipped, and the cascade reads packs.

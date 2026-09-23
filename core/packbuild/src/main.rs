@@ -16,7 +16,18 @@ use packbuild::{read_line_filed_as, Skipped};
 use sha2::{Digest, Sha256};
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let mut args: Vec<String> = std::env::args().collect();
+    // How often each word is met, where a list is given: `--frequencies=<words and counts>`.
+    let counts: std::collections::HashMap<String, u64> = match args
+        .iter()
+        .position(|arg| arg.starts_with("--frequencies="))
+    {
+        Some(at) => {
+            let path = args.remove(at)["--frequencies=".len()..].to_string();
+            frequencies(&path)
+        }
+        None => std::collections::HashMap::new(),
+    };
     if args.len() == 5 && args[1] == "ipa" {
         pronunciations(&args[2], &args[3], &args[4]);
         return;
@@ -24,7 +35,10 @@ fn main() {
     // A fifth argument names the codes the dump files the language under, where it is not
     // the language's own: "sh" for Croatian, "nb,nn,no" for Norwegian.
     if args.len() != 4 && args.len() != 5 {
-        eprintln!("packbuild <language> <extract.jsonl[.gz]> <out.lexpack> [filed,under,codes]");
+        eprintln!(
+            "packbuild <language> <extract.jsonl[.gz]> <out.lexpack> [filed,under,codes] \
+[--frequencies=<list>]"
+        );
         eprintln!("packbuild ipa <language> <words.json.gz> <out.lexpack>");
         std::process::exit(2);
     }
@@ -83,7 +97,11 @@ fn main() {
             repeated += 1;
             continue;
         }
-        match pack.add(read.entry, &read.forms) {
+        let mut entry = read.entry;
+        if let Some(count) = packbuild::how_often(&entry, &counts) {
+            entry.tags.push(format!("count:{count}"));
+        }
+        match pack.add(entry, &read.forms) {
             Ok(_) => taken += 1,
             Err(_) => refused += 1,
         }
@@ -125,6 +143,28 @@ another language, {} with nothing to show, {} without a word, {} unreadable.",
         skipped.nameless,
         skipped.unreadable,
     );
+}
+
+/// A frequency list, a word and how many times it was met on each line, lowercased.
+fn frequencies(path: &str) -> std::collections::HashMap<String, u64> {
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(e) => {
+            eprintln!("cannot read {path}: {e}");
+            std::process::exit(1);
+        }
+    };
+    let mut counts = std::collections::HashMap::new();
+    for line in text.lines() {
+        let mut parts = line.split_whitespace();
+        let (Some(word), Some(count)) = (parts.next(), parts.next()) else {
+            continue;
+        };
+        if let Ok(count) = count.parse::<u64>() {
+            *counts.entry(word.to_lowercase()).or_insert(0) += count;
+        }
+    }
+    counts
 }
 
 /// An extract, opened for reading from the start.

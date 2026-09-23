@@ -39,9 +39,26 @@ declare -A filed=(
 
 cargo build --release --manifest-path core/Cargo.toml -p packbuild
 build=core/target/release/packbuild
+
+# How often each word is met, from subtitles (FrequencyWords, OpenSubtitles 2018, CC BY-SA
+# 4.0): what ranks "perro" above the poetic "can" when a reader asks for the word for "dog".
+# Fetched once; a language the lists do not cover is built without one.
+counts="$work/frequencies"
+mkdir -p "$counts"
+counted() {
+  local lang="$1" code="$1"
+  case "$lang" in nb) code=no ;; zh) code=zh_cn ;; esac
+  if [[ ! -s "$counts/$lang.txt" ]]; then
+    curl -fsSL -o "$counts/$lang.txt" \
+      "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/$code/${code}_50k.txt" \
+      || rm -f "$counts/$lang.txt"
+  fi
+  [[ -s "$counts/$lang.txt" ]] && printf -- '--frequencies=%s' "$counts/$lang.txt"
+}
+
 pack() {
   local lang="$1" extract="$2" codes="$3"
-  if "$build" "$lang" "$extract" "$out/$lang.pack" $codes > "$out/$lang.pack.json"; then
+  if "$build" "$lang" "$extract" "$out/$lang.pack" $codes $(counted "$lang") > "$out/$lang.pack.json"; then
     printf '%s %s\n' "$lang" "$(head -c 200 "$out/$lang.pack.json")"
   else
     echo "$lang: no pack" >&2

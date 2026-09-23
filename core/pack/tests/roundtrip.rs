@@ -277,3 +277,19 @@ fn a_pack_without_joins_still_answers_its_words() {
     assert_eq!(found[0].lemma, "dog");
     assert!(en.senses_matching("mammal").is_empty());
 }
+
+/// A gloss whose parenthesis holds another is indexed under the word before it.
+#[test]
+fn a_nested_parenthesis_is_not_part_of_the_term() {
+    assert_eq!(
+        lexpack::gloss_head(
+            "dog (the species Canis familiaris (sometimes designated Canis lupus familiaris))"
+        ),
+        "dog"
+    );
+    assert_eq!(lexpack::gloss_head("bank (financial institution)"), "bank");
+    assert_eq!(
+        lexpack::gloss_head("(of a person) tall"),
+        "(of a person) tall"
+    );
+}

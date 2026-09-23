@@ -186,6 +186,13 @@ object Lex {
     external fun speechSay(voice: String, word: String): ByteArray
 
     /**
+     * The words for something a reader typed in their own language [typedIn], in the one they
+     * are learning [wantedIn], out of the dictionaries alone and best first. What the panel
+     * answers with where no translation model can.
+     */
+    external fun wordFor(core: Long, text: String, typedIn: String, wantedIn: String): Array<String>
+
+    /**
      * Open a translation direction, keyed "from-to", from a configuration naming files
      * already on disk.
      *

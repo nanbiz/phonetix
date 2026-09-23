@@ -80,6 +80,29 @@ impl Kind {
     }
 }
 
+/// Where the parenthesis a gloss ends with opens, counting nested ones, where something comes
+/// before it.
+fn trailing_parenthesis(text: &str) -> Option<usize> {
+    let text = text.trim_end();
+    if !text.ends_with(')') {
+        return None;
+    }
+    let mut depth = 0i32;
+    for (at, c) in text.char_indices().rev() {
+        match c {
+            ')' => depth += 1,
+            '(' => {
+                depth -= 1;
+                if depth == 0 {
+                    return (at > 0).then_some(at);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// The head phrase of an English gloss, as both sides of a join have to spell it.
 ///
 /// Two packs are joined on glosses written by the same community in the same register, so what
@@ -91,11 +114,10 @@ impl Kind {
 pub fn gloss_head(gloss: &str) -> String {
     let mut text = gloss.trim();
     // Only a trailing parenthesis, and only when something precedes it: a gloss that is all
-    // parenthesis is naming the thing in it.
-    if let Some(open) = text.rfind('(') {
-        if text.trim_end().ends_with(')') && open > 0 {
-            text = text[..open].trim_end();
-        }
+    // parenthesis is naming the thing in it. The whole of it, nested ones included:
+    // "dog (the species Canis familiaris (sometimes ...))" is "dog".
+    if let Some(open) = trailing_parenthesis(text) {
+        text = text[..open].trim_end();
     }
     // The first term of a list is the head; the rest narrow it and are indexed separately by
     // the caller.
@@ -126,9 +148,9 @@ pub fn gloss_terms(gloss: &str) -> Vec<String> {
         out.push(head);
     }
     let body = gloss.trim();
-    let body = match body.rfind('(') {
-        Some(open) if body.ends_with(')') && open > 0 => body[..open].trim_end(),
-        _ => body,
+    let body = match trailing_parenthesis(body) {
+        Some(open) => body[..open].trim_end(),
+        None => body,
     };
     for part in body.split([',', ';']).skip(1) {
         let term = gloss_head(part);

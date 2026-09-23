@@ -168,6 +168,66 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openPack<'a>(
     env.new_string(&lang).unwrap_or(empty)
 }
 
+/// The words for something a reader typed in their own language, in the one they are learning,
+/// out of the dictionaries alone, best first; empty where they say nothing. See
+/// [lexcore::resolve::word_for].
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_wordFor<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass,
+    core: jlong,
+    text: JString,
+    typed_in: JString,
+    wanted_in: JString,
+) -> jni::objects::JObjectArray<'a> {
+    let empty = |env: &mut JNIEnv<'a>| {
+        env.new_object_array(0, "java/lang/String", jni::objects::JObject::null())
+            .unwrap_or_else(|_| {
+                jni::objects::JObjectArray::from(unsafe {
+                    jni::objects::JObject::from_raw(std::ptr::null_mut())
+                })
+            })
+    };
+    if core == 0 {
+        return empty(&mut env);
+    }
+    let (Ok(text), Ok(typed_in), Ok(wanted_in)) = (
+        env.get_string(&text),
+        env.get_string(&typed_in),
+        env.get_string(&wanted_in),
+    ) else {
+        return empty(&mut env);
+    };
+    let (text, typed_in, wanted_in): (String, String, String) =
+        (text.into(), typed_in.into(), wanted_in.into());
+    let words = {
+        let guard = lock_core(core);
+        let core = &*guard;
+        match core.packs.get(&wanted_in) {
+            Some(wanted) => lexcore::resolve::word_for(
+                &text,
+                &lexcore::answer::Lang(typed_in.clone()),
+                wanted,
+                core.packs.get(&typed_in),
+            ),
+            None => Vec::new(),
+        }
+    };
+    let Ok(out) = env.new_object_array(
+        words.len() as i32,
+        "java/lang/String",
+        jni::objects::JObject::null(),
+    ) else {
+        return empty(&mut env);
+    };
+    for (at, word) in words.iter().enumerate() {
+        if let Ok(value) = env.new_string(word) {
+            let _ = env.set_object_array_element(&out, at as i32, value);
+        }
+    }
+    out
+}
+
 /// One word, as JSON, because an Answer is a tree and the boundary carries text.
 #[no_mangle]
 pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(

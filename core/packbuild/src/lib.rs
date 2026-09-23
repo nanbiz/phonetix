@@ -102,6 +102,28 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
 ///
 /// Only the transcriptions, and only in the notation this reads. A sound entry can be a
 /// recording, a rhyme or a respelling instead, and each of those is somebody else's field.
+/// How often a word is met, as the frequency list counts it: the lemma and every form of it
+/// together, since "perros" is the word "perro" met in the plural. Nothing where the list does
+/// not have it at all.
+pub fn how_often(entry: &Entry, counts: &std::collections::HashMap<String, u64>) -> Option<u64> {
+    if counts.is_empty() {
+        return None;
+    }
+    let mut seen: Vec<String> = Vec::new();
+    let mut total = 0u64;
+    for spelling in std::iter::once(entry.lemma.as_str())
+        .chain(entry.forms.iter().map(|form| form.spelling.as_str()))
+    {
+        let lowered = spelling.to_lowercase();
+        if seen.contains(&lowered) {
+            continue;
+        }
+        total += counts.get(&lowered).copied().unwrap_or(0);
+        seen.push(lowered);
+    }
+    (total > 0).then_some(total)
+}
+
 /// Whether an entry does nothing but say which other word it is a form of, with no sound of
 /// its own: "dogs, plural of dog".
 ///

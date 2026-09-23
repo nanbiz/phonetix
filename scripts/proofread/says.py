@@ -77,7 +77,7 @@ def fetch_models():
 
 def build_packs():
     os.makedirs(WORK, exist_ok=True)
-    for lang in ("es",):
+    for lang in ("es", "de"):
         source = os.path.join(CORE, "packbuild", "fixtures", f"{lang}.jsonl")
         got = run(["cargo", "run", "-q", "-p", "packbuild", "--", lang, source,
                    os.path.join(WORK, f"{lang}.pack")], cwd=CORE)
@@ -287,6 +287,21 @@ def main():
         # And the surface a reader actually has: the row in the settings view, the field
         # behind it, and the card it answers with. A handler nobody can reach answers nobody.
         failures += in_the_view(cdp, extid)
+
+        # Last, since fetching German changes which language the view above offers first.
+        # And a direction with no model, between two languages the reader holds dictionaries
+        # for: the dictionaries answer it themselves, "Hund" through its gloss "dog" to
+        # "perro", rather than the reader being told nothing can be had.
+        ask(cdp, session, {"phonetix": "getPack", "data": {"lang": "de"}}, tries=3)
+        by_hand = ask(cdp, session, {
+            "phonetix": "say", "data": {"text": "Hund", "source": "es", "target": "de"},
+        }, tries=3, gap=5)
+        found = ((by_hand.get("ok") or {}).get("answer") or {})
+        print(f"  'Hund' in Spanish, with no German to Spanish model: "
+              f"{found.get('spelling')!r} ({found.get('state')})")
+        if found.get("spelling") != "perro":
+            failures.append(f"the dictionaries did not answer 'Hund' in Spanish: {by_hand}")
+
     finally:
         cdp.close()
 

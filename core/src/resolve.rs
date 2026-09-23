@@ -270,6 +270,158 @@ fn same_word(one: &str, other: &str) -> bool {
     one == other || one.to_lowercase() == other.to_lowercase()
 }
 
+/// How good a word is as the answer to what was typed, best first when sorted.
+///
+/// How often the word is met decides among the ones that answer equally well: "perro" and the
+/// poetic "can" are both "dog", and one of them is the word a Spanish speaker says. Where the
+/// pack was built without a frequency list, the number of senses stands in, since the words a
+/// language uses most are the ones its dictionary says most about.
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+struct Rank {
+    shared: std::cmp::Reverse<usize>,
+    asked: usize,
+    wrong_part: bool,
+    marked: bool,
+    /// Whether what was typed is a later sense of the word rather than its first: "caja" is a
+    /// box first and a bank somewhere down its list, "banco" a bank first.
+    later: bool,
+    met: std::cmp::Reverse<u64>,
+    sense: u32,
+    common: std::cmp::Reverse<usize>,
+    kind: u8,
+}
+
+/// How often a word is met in running text, as its pack recorded it, or nothing where the
+/// pack was built without a frequency list or the list does not have the word.
+pub fn how_often(entry: &Entry) -> Option<u64> {
+    entry
+        .tags
+        .iter()
+        .find_map(|tag| tag.strip_prefix("count:"))
+        .and_then(|count| count.parse().ok())
+}
+
+/// Senses a dictionary marks as not the ordinary word for something.
+const UNUSUAL: &[&str] = &[
+    "slang",
+    "colloquial",
+    "informal",
+    "vulgar",
+    "derogatory",
+    "rare",
+    "archaic",
+    "obsolete",
+    "dated",
+    "dialectal",
+    "regional",
+    "poetic",
+    "literary",
+    "nonstandard",
+    "humorous",
+    "euphemistic",
+    "figuratively",
+    "Internet",
+];
+
+/// The word for something a reader wants to say, out of the dictionaries alone.
+///
+/// The panel asks the translation engine first, which reads a whole phrase and knows which
+/// word is commonest. Where there is no model for the direction - not every pair of languages
+/// has one, and one has to be fetched - the dictionaries still know: every sense in every pack
+/// is glossed in English, so "dog" typed by a reader of English is found through the gloss
+/// index of the language they are learning, and "Hund" typed by a reader of German is looked
+/// up in German first and found through its English gloss.
+///
+/// Best first: the words whose senses share the most with what was typed, then those where it
+/// is an earlier sense, since a dictionary lists a word's commonest meanings first. Nothing
+/// that is only a pointer to another word, a name or a letter.
+pub fn word_for<D: AsRef<[u8]>>(
+    text: &str,
+    typed_in: &Lang,
+    wanted: &Pack<D>,
+    typed: Option<&Pack<D>>,
+) -> Vec<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Vec::new();
+    }
+    // What was typed, as English glosses to look for, each with the part of speech it had.
+    let glosses: Vec<(String, Option<String>)> = if typed_in.0 == "en" {
+        vec![(text.to_string(), None)]
+    } else {
+        let Some(pack) = typed else {
+            return Vec::new();
+        };
+        let mut found = lookup_either_case(pack, text);
+        found.sort_by_key(|entry| rank_of(entry, text));
+        let Some(entry) = found.into_iter().next() else {
+            return Vec::new();
+        };
+        entry
+            .senses
+            .iter()
+            .filter(|sense| !crate::annotate::about_grammar(&sense.gloss))
+            .take(3)
+            .map(|sense| (sense.gloss.clone(), Some(entry.pos.clone())))
+            .collect()
+    };
+    // Typed in English without "to", it is not a verb: "house" is a house, not "to house".
+    let typed_verb = typed_in.0 == "en" && text.to_lowercase().starts_with("to ");
+    let mut scored: Vec<(Rank, String)> = Vec::new();
+    for (asked, (gloss, pos)) in glosses.iter().enumerate() {
+        for ((which, sense), shared) in wanted.senses_matching(gloss) {
+            let Some(entry) = wanted.entry(which) else {
+                continue;
+            };
+            if let Some(pos) = pos {
+                if !pos.is_empty() && !entry.pos.is_empty() && entry.pos != *pos {
+                    continue;
+                }
+            }
+            let kind = by_kind(&entry.pos);
+            let pointer = entry
+                .senses
+                .iter()
+                .all(|sense| crate::annotate::about_grammar(&sense.gloss));
+            if kind == 3 || pointer {
+                continue;
+            }
+            let marked = entry.senses.get(sense as usize).is_some_and(|sense| {
+                sense
+                    .marks
+                    .iter()
+                    .any(|mark| UNUSUAL.contains(&mark.as_str()))
+            });
+            let wrong_part = typed_in.0 == "en" && (entry.pos == "verb") != typed_verb;
+            scored.push((
+                Rank {
+                    shared: std::cmp::Reverse(shared),
+                    asked,
+                    wrong_part,
+                    marked,
+                    later: sense > 0,
+                    met: std::cmp::Reverse(how_often(&entry).unwrap_or(0)),
+                    sense,
+                    common: std::cmp::Reverse(entry.senses.len()),
+                    kind,
+                },
+                entry.lemma,
+            ));
+        }
+    }
+    scored.sort();
+    let mut words: Vec<String> = Vec::new();
+    for (_, lemma) in scored {
+        if !words.contains(&lemma) {
+            words.push(lemma);
+        }
+        if words.len() == 3 {
+            break;
+        }
+    }
+    words
+}
+
 /// Look one word up.
 pub fn look_up<D: AsRef<[u8]>>(
     spelling: &str,

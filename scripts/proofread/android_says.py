@@ -52,6 +52,11 @@ PAIRS = {
 WANTED = "bench"
 EXPECTED = "banco"
 
+# With no translation model anywhere - none on the phone, none at the host - the dictionaries
+# answer by themselves: "bench" is found through the gloss "bench" of the Spanish "banco".
+#   PHONETIX_NO_MODELS=1 ... android_says.py
+NO_MODELS = os.environ.get("PHONETIX_NO_MODELS") == "1"
+
 
 def run(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=1800, **kw)
@@ -129,7 +134,10 @@ def main():
     adb("push", os.path.join(WORK, "es.pack"), "/data/local/tmp/lex-es.pack", timeout=180)
     adb("shell", "run-as io.github.nanbiz.phonetix sh -c "
                  "'cat /data/local/tmp/lex-es.pack > files/lex-es.pack'", timeout=180)
-    push_models()
+    if NO_MODELS:
+        adb("shell", "run-as io.github.nanbiz.phonetix rm -rf files/models", timeout=120)
+    else:
+        push_models()
 
     if not dev.enable_service():
         raise SystemExit("the service would not start")

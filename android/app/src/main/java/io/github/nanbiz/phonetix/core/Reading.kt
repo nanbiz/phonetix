@@ -400,9 +400,18 @@ object Reading {
         Dictionary.ensureLoaded(context)
         Packs.openHeld(context)
         val models = Packs.models(context)
-        val word = Translator.between(models, target, source, listOf(asked))
+        val machine = Translator.between(models, target, source, listOf(asked))
             .firstOrNull().orEmpty().trim()
-        if (word.isEmpty() || word.equals(asked, ignoreCase = true)) return null
+            .takeUnless { it.equals(asked, ignoreCase = true) }
+            .orEmpty()
+        // Where no model answers - none for the pair, or not here yet - the dictionaries
+        // still do: what was typed, found through the English glosses both are written in.
+        val word = machine.ifEmpty {
+            if (core == 0L) return null
+            runCatching { Lex.wordFor(core, asked, target, source) }.getOrNull()
+                ?.firstOrNull { lookUp(it, source, target)?.found == true }
+                ?: return null
+        }
         // A machine that answered with several words is answered as a phrase: no dictionary
         // holds one, and a card claiming an entry for it would be claiming one that is not
         // there.
