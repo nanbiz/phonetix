@@ -228,8 +228,11 @@ function carrying(asked: Batch, answered: Batch): Batch {
  */
 const translatedLines = new Map<string, string>();
 const LINES_KEPT = 512;
-/** Lines waiting for the engine, in the order they were asked about. */
+/** Lines waiting for the engine, in the order they were asked about. Only the latest are
+ *  kept: lines of a page the reader has already left would otherwise hold up the one they
+ *  are on, one translation at a time. */
 const waitingLines = new Map<string, { from: string; target: string; text: string }>();
+const LINES_WAITING = 64;
 let translatingLines = false;
 
 function lineKey(from: string, target: string, text: string): string {
@@ -322,6 +325,10 @@ async function settled(batch: Batch, runs: TextRun[], languages: Languages): Pro
       results.push({ token: miss.token, sentence });
     } else if (!waitingLines.has(key)) {
       waitingLines.set(key, { from, target, text: line });
+      while (waitingLines.size > LINES_WAITING) {
+        const [oldest] = waitingLines.keys();
+        waitingLines.delete(oldest);
+      }
       asked = true;
     }
   }
