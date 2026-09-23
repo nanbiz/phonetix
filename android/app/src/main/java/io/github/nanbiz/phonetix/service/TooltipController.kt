@@ -517,7 +517,12 @@ class TooltipController(
             }
             // The sound being read about: the first of the word until the reader picks another,
             // so the line under the transcription teaches what it is for rather than saying it.
+            // A sound, not the stress mark most transcriptions start with: "primary stress"
+            // opened nearly every card and told the reader nothing about the word.
             val sound = opened.value?.let { IpaSymbols.describe(it) }
+                ?: answer.symbols.firstOrNull {
+                    it.name.isNotBlank() && (it.kind == "vowel" || it.kind == "consonant")
+                }
                 ?: answer.symbols.firstOrNull { it.name.isNotBlank() }
             AnswerCard(
                 answer = answer,

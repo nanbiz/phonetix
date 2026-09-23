@@ -70,7 +70,10 @@
   const entry = (it: Answer) => wiktionary(it.lemma ?? it.spelling, named(it.source));
 
   let lead = $derived(headlineOf(answer));
-  let chooses = $derived(answer.readings.length >= 2);
+  // Asking which word this is only where nothing decided it: a decided answer keeps its other
+  // readings, and read off them alone, "because" - decided, a conjunction - was a card saying
+  // it was more than one word.
+  let chooses = $derived(answer.state === 'Homograph' && answer.readings.length >= 2);
   // The core split the transcription and said what each sound is; a card that split it
   // again would be a second opinion about where one sound ends.
   let symbols = $derived(answer.symbols);
@@ -163,7 +166,9 @@
     <!-- The word the reader is on, whatever else the card could or could not find out. -->
     <div class="card-top">
       <span class="word">{answer.spelling}</span>
-      {#if !phrase}
+      {#if !phrase && answer.source}
+        <!-- Only where there is a language to name: an empty pill beside the word is a pill
+             saying only that a pill was drawn. -->
         <span class="pill" title={readAs.name
           ? `Read as ${named(answer.source)}, ${readAs.name} accent`
           : `Read as ${named(answer.source)}`}>{readAs.label}</span>
@@ -274,7 +279,10 @@
         <div class="others">
           {#each shownReadings as reading, i (i)}
             <div class="gram">
-              <span class="lemma">{reading.says[0] ?? reading.glosses[0] ?? answer.spelling}</span>
+              <!-- One line each: a reading the reader's language has no word for leads with
+                   its English definition, and one of those ran to four lines. -->
+              <span class="lemma one-line"
+                >{reading.says[0] ?? reading.glosses[0] ?? answer.spelling}</span>
               {#if reading.pos}<span class="chip">{reading.pos}</span>{/if}
             </div>
           {/each}

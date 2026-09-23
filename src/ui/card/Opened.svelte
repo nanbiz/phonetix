@@ -42,10 +42,18 @@
 
   let opened = $state<string | null>(null);
   // The first sound of the word until the reader picks another: the line is there either way,
-  // and a described sound teaches what the line is for where a prompt only says it.
+  // and a described sound teaches what the line is for where a prompt only says it. A sound,
+  // not the stress mark most transcriptions start with: "primary stress" opened nearly every
+  // card and told the reader nothing about the word.
   let sound = $derived(
     answer.symbols.find((symbol) => symbol.token === opened) ??
-      (opened === null ? (answer.symbols.find((symbol) => symbol.name !== '') ?? null) : null)
+      (opened === null
+        ? (answer.symbols.find(
+            (symbol) => symbol.name !== '' && (symbol.kind === 'vowel' || symbol.kind === 'consonant')
+          ) ??
+          answer.symbols.find((symbol) => symbol.name !== '') ??
+          null)
+        : null)
   );
   let picture = $state<string | null>(null);
 

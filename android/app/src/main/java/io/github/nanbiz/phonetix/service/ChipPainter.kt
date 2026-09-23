@@ -29,37 +29,57 @@ class ChipPainter {
     private val faces = listOf(
         Typeface.SANS_SERIF,
         Typeface.SERIF,
-        Typeface.MONOSPACE,
         Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD),
         Typeface.create(Typeface.SERIF, Typeface.BOLD),
     )
-    private val matched = HashMap<String, Typeface>(64)
+    private val matched = HashMap<String, Pair<Typeface, Float>>(64)
 
     /**
-     * Which face the app drew this word in, worked out from how wide it drew it.
+     * Which face the app drew this word in, and at what size.
      *
-     * Accessibility carries no typeface, but it does carry the exact rectangle the word
-     * occupies, and the word itself. Setting each candidate at the line's own size and
-     * measuring the same word in it gives a width to compare against the real one: the face
-     * that comes closest is the face on screen, or near enough that the replacement stops
-     * looking pasted on. Serif against sans is a difference of several percent in a word of
-     * any length, and bold against regular more, so the comparison is not delicate.
+     * Accessibility carries neither, but it carries the exact rectangle the word occupies and
+     * the word itself, and those give two readings of the size for every candidate face: how
+     * large that face must be to make the word this wide, and how large it must be to make a
+     * line this tall. In the face that is on screen the two agree. In a face that is not, they
+     * do not - which is what tells serif from sans - and where no face agrees clearly better
+     * than the ordinary one, the ordinary one it is: taken at whichever face came closest, a
+     * page in one typeface came back as sans, serif and monospace side by side.
      */
-    private fun faceFor(word: String, size: Float, width: Float): Typeface {
-        if (word.isEmpty() || width <= 0f) return Typeface.SANS_SERIF
-        val key = word + "|" + size.toInt() + "|" + width.toInt()
+    private fun faceFor(word: String, width: Float, height: Float): Pair<Typeface, Float> {
+        val plain = Typeface.SANS_SERIF to height * 0.8f
+        if (word.isBlank() || width <= 0f || height <= 0f) return plain
+        val key = word + "|" + height.toInt() + "|" + width.toInt()
         matched[key]?.let { return it }
-        ruler.textSize = size
-        var best = Typeface.SANS_SERIF
+        ruler.textSize = UNIT
+        var best = plain
         var bestErr = Float.MAX_VALUE
+        var plainErr = Float.MAX_VALUE
         for (face in faces) {
             ruler.typeface = face
-            val err = abs(ruler.measureText(word) - width)
-            if (err < bestErr) { bestErr = err; best = face }
+            val wide = ruler.measureText(word)
+            val fm = ruler.fontMetrics
+            val tall = fm.descent - fm.ascent
+            if (wide <= 0f || tall <= 0f) continue
+            val byWidth = width / wide * UNIT
+            val byHeight = height / tall * UNIT
+            val err = abs(byWidth - byHeight) / byHeight
+            if (face == Typeface.SANS_SERIF) plainErr = err
+            if (err < bestErr) {
+                bestErr = err
+                best = face to byWidth
+            }
         }
+        val chosen = if (plainErr - bestErr < CLEARLY) {
+            ruler.typeface = Typeface.SANS_SERIF
+            Typeface.SANS_SERIF to width / ruler.measureText(word) * UNIT
+        } else {
+            best
+        }
+        // Never larger than the line: a word the app letter-spaced reads as a bigger face.
+        val sized = chosen.first to minOf(chosen.second, height * 0.95f)
         if (matched.size > 512) matched.clear()
-        matched[key] = best
-        return best
+        matched[key] = sized
+        return sized
     }
 
     fun draw(
@@ -115,23 +135,45 @@ class ChipPainter {
         val label = box.ipa
         if (label.isEmpty()) return
 
-        // The width is the space the original word occupied, so the type is what gives:
-        // sized to the line, then shrunk until it fits, so a replacement never pushes into
-        // the words on either side.
-        var size = height * 0.80f
-        // In the face the app itself used, deduced from the width it gave the word.
-        ink.typeface = faceFor(box.word, size, width)
-        ink.textSize = size
-        val room = width - height * 0.12f
+        // In the face and at the size the app drew the word in, and fitted to it: first into
+        // the word's own space, then a quarter of a space out on either side - a neighbour
+        // doing the same leaves half of it between them - then smaller, but never below what can
+        // still be read, and past that cut short with an ellipsis rather than spilling under
+        // the next word. Shrunk to the word alone, "a" read into Spanish was an "un" too small
+        // to see.
+        val (face, full) = faceFor(box.word, width, height)
+        ink.typeface = face
+        ink.textSize = full
         val measured = ink.measureText(label)
-        if (measured > room && measured > 0f) {
-            size *= room / measured
-            ink.textSize = size
+        var patch = where
+        var text: CharSequence = label
+        if (measured > width && measured > 0f) {
+            val grow = minOf(measured - width, ink.measureText(" ") * 0.5f)
+            patch = RectF(where.left - grow / 2f, where.top, where.right + grow / 2f, where.bottom)
+            canvas.drawRoundRect(patch, r, r, bg)
+            val room = patch.width()
+            if (measured > room) {
+                // A little under the exact fit, because type measured at a smaller size does
+                // not shrink exactly in proportion, and cut only where even the smallest size
+                // is too wide: decided from the proportion rather than measured again, which
+                // cut a word that fitted by a pixel.
+                val fits = room / measured
+                ink.textSize = full * maxOf(fits * 0.97f, SMALLEST)
+                if (fits * 0.97f < SMALLEST) {
+                    text = android.text.TextUtils.ellipsize(
+                        label, android.text.TextPaint(ink), room,
+                        android.text.TextUtils.TruncateAt.END,
+                    )
+                }
+            }
         }
 
         ink.color = fg
         val fm = ink.fontMetrics
-        canvas.drawText(label, where.centerX(), where.centerY() - (fm.ascent + fm.descent) / 2f, ink)
+        canvas.drawText(
+            text, 0, text.length,
+            patch.centerX(), patch.centerY() - (fm.ascent + fm.descent) / 2f, ink,
+        )
         // Last, so the chip's own background does not cover it.
         markLine(canvas, where, box)
     }
@@ -154,6 +196,17 @@ class ChipPainter {
     }
 
     private val mark = android.graphics.Paint()
+
+    private companion object {
+        /** How much better another face has to explain a word's size before it is used. */
+        const val CLEARLY = 0.06f
+
+        /** The size words are measured at, to be scaled from. */
+        const val UNIT = 100f
+
+        /** The smallest a replacement is drawn, as a share of the word's own size. */
+        const val SMALLEST = 0.6f
+    }
 }
 
 /** How a line's number is written into a colour, and read back out of one. */

@@ -284,7 +284,8 @@ pub fn complete<D: AsRef<[u8]>>(
             }
         }
         if let Some(gloss) = &result.gloss {
-            token.gloss = Some(cut(gloss, GLOSS_LIMIT));
+            let gloss = cased_like(gloss, &token.spelling, target);
+            token.gloss = Some(cut(&gloss, GLOSS_LIMIT));
             token.state = AnswerState::Guess;
             token.provenance = Some(Provenance::Guess {
                 engine: result.engine.clone(),
@@ -307,6 +308,28 @@ pub fn complete<D: AsRef<[u8]>>(
                 token.provenance = Some(Provenance::Synthesised);
             }
         }
+    }
+}
+
+/// An engine's answer written the way the word it answers is: a lowercase word in the middle
+/// of a line comes back from the engine as though it were a sentence, "Desconocido" for
+/// "unfamiliar", and drawn over the line it reads as a name. An answer that is capitalised
+/// through - an abbreviation - is left as it is, and so is any answer in a language that
+/// writes its nouns with a capital: "perro" is "Hund".
+fn cased_like(answer: &str, word: &str, into: &Lang) -> String {
+    if matches!(into.0.as_str(), "de" | "lb") {
+        return answer.to_string();
+    }
+    let starts_small = word.chars().next().is_some_and(char::is_lowercase);
+    let mut letters = answer.chars();
+    let (Some(first), second) = (letters.next(), letters.next()) else {
+        return answer.to_string();
+    };
+    let shouting = second.is_some_and(char::is_uppercase);
+    if starts_small && first.is_uppercase() && !shouting {
+        first.to_lowercase().chain(answer.chars().skip(1)).collect()
+    } else {
+        answer.to_string()
     }
 }
 
@@ -561,6 +584,22 @@ fn cut(text: &str, limit: usize) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// A lowercase word's answer is lowercase too; an abbreviation keeps its capitals, and so
+    /// does a German noun.
+    #[test]
+    fn an_answer_is_cased_like_its_word() {
+        let es = Lang("es".into());
+        assert_eq!(cased_like("Desconocido", "unfamiliar", &es), "desconocido");
+        assert_eq!(
+            cased_like("De inmediato", "immediately", &es),
+            "de inmediato"
+        );
+        assert_eq!(cased_like("EE. UU.", "us", &es), "EE. UU.");
+        assert_eq!(cased_like("Berlín", "Berlin", &es), "Berlín");
+        assert_eq!(cased_like("Hund", "perro", &Lang("de".into())), "Hund");
+    }
+
     use super::*;
     use crate::answer::InlineMode;
 

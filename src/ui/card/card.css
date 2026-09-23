@@ -89,6 +89,9 @@
 .anchor-en .anchor-label { font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-accent); }
 .anchor-en .anchor-gl { font-weight: var(--weight-medium); }
 .gram { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; font-size: var(--font-size-small); color: var(--color-ink-muted); }
+/* A reading the reader's language has no word for leads with its English definition, and one
+   of those ran to four lines of a card listing three readings: one line each. */
+.gram .one-line { min-width: 0; flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .gram .lemma { color: var(--color-ink); font-weight: var(--weight-medium); }
 .gram .lemma.prominent { font-size: var(--font-size-lemma); color: var(--color-accent); }
 .gram .g-sub { flex: 1 1 100%; }

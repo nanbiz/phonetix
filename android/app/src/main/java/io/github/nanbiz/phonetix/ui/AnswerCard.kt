@@ -133,7 +133,7 @@ fun AnswerCard(
                 Nothing(answer, palette, report)
                 return@Column
             }
-            if (answer.readings.size < 2) {
+            if (!chooses(answer)) {
                 if (!answer.headline.isNullOrBlank()) Headline(answer, palette, report)
             } else {
                 // Nothing leads: the reader is choosing between the readings below, and a headline
@@ -170,7 +170,7 @@ fun AnswerCard(
             // English definitions covered the page it was read on.
             // One line of the word in use is not another meaning, and is kept for a word that
             // is translated; a card still asking which word this is shows neither.
-            if (answer.readings.size < 2) {
+            if (!chooses(answer)) {
                 Example(answer, palette, report)
                 if (!translated(answer)) OtherSenses(answer, palette, report)
             }
@@ -178,6 +178,14 @@ fun AnswerCard(
         }
     }
 }
+
+/**
+ * Whether the card is asking which word this is. Only where nothing decided it: a decided
+ * answer keeps its other readings, and read off them alone, "because" - decided, a
+ * conjunction - was a card saying it was more than one word.
+ */
+private fun chooses(answer: Answer): Boolean =
+    answer.state == Answer.State.Homograph && answer.readings.size >= 2
 
 /** Whether the card answers with a word in another language, which is what it leads with. */
 private fun translated(answer: Answer): Boolean =
@@ -257,13 +265,17 @@ private fun TopRow(
             Box(Modifier.width(Tokens.Scale.space2.dp))
             // What it is being read as, and in which accent where the reader chose one: the two
             // are one fact, so they share one neutral pill.
-            val named = Accents.of(answer.source).firstOrNull { it.id == accent }?.name
-            Badge(
-                text = if (named != null) "${answer.source.uppercase()} · $named"
-                else answer.source.uppercase(),
-                ink = Color(palette.chipInk),
-                background = Color(palette.chipBg),
-            )
+            // Only where there is a language to name: an empty pill beside the word is a pill
+            // saying only that a pill was drawn.
+            if (answer.source.isNotBlank()) {
+                val named = Accents.of(answer.source).firstOrNull { it.id == accent }?.name
+                Badge(
+                    text = if (named != null) "${answer.source.uppercase()} · $named"
+                    else answer.source.uppercase(),
+                    ink = Color(palette.chipInk),
+                    background = Color(palette.chipBg),
+                )
+            }
             val from = answer.provenance
             if (from != null) {
                 Box(Modifier.width(Tokens.Scale.space2.dp))
@@ -436,7 +448,7 @@ private fun Pronunciation(
 private fun Grammar(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     // Each reading carries its own part of speech at the end of its row, so repeating the
     // first one under them says nothing and reads as if it belonged to the last.
-    if (answer.readings.size >= 2) return
+    if (chooses(answer)) return
     // The part of speech is beside the answer, not here: this line is about which word the
     // spelling belongs to.
     val parts = buildList {
@@ -515,16 +527,20 @@ private fun OtherSenses(answer: Answer, palette: Tokens.Palette, report: Reporte
  */
 @Composable
 private fun Readings(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
-    if (answer.readings.size < 2) return
+    if (!chooses(answer)) return
     // Three at most, and one row per meaning: two readings that say the same word are one
     // row to a reader choosing between them.
     val shown = answer.readings.distinctBy { it.headline to it.pos }.take(READINGS_SHOWN)
     for (reading in shown) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // One line each: a reading the reader's language has no word for leads with its
+            // English definition, and one of those ran to four lines.
             androidx.compose.material3.Text(
                 text = reading.headline.orEmpty(),
                 color = Color(palette.ink),
                 fontSize = Tokens.Scale.fontSizeLemma.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
             reading.pos?.let {

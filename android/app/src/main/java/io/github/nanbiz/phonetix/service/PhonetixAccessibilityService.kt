@@ -1142,6 +1142,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         kotlin.math.abs(speedY) > SETTLING_PX_PER_MS ||
             android.os.SystemClock.uptimeMillis() - lastMotionAt < STILL_MS
 
+    /** How many times in a row the window in front had no tree to read, and was looked at again. */
+    private var rootlessLooks = 0
+
+    /** The tree of the application window that is active, from the window list. */
+    private fun activeAppRoot(): android.view.accessibility.AccessibilityNodeInfo? = runCatching {
+        val apps = windows.filter {
+            it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION
+        }
+        (apps.firstOrNull { it.isActive } ?: apps.firstOrNull { it.isFocused })?.root
+    }.getOrNull()
+
     private fun scan() {
         val settings = SettingsStore.current
         val sinceFull = android.os.SystemClock.uptimeMillis() - lastFullReadAt
@@ -1166,11 +1177,20 @@ class PhonetixAccessibilityService : AccessibilityService() {
             Dictionary.ready
         var root = if (followOnly) null else {
             val askedRoot = android.os.SystemClock.uptimeMillis()
-            val fetched = rootInActiveWindow ?: run {
+            // The active window's own tree, or the active application window's from the window
+            // list where that is not to be had yet - just after the service connects, which is
+            // also just after the app was updated, it is null for the page in front, and nothing
+            // else asks again until that page changes: the screen stayed bare.
+            val fetched = rootInActiveWindow ?: activeAppRoot() ?: run {
                 if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "NOROOT")
                 main.post { overlay.hideNow() }
+                if (SettingsStore.current.enabled && rootlessLooks < LOOK_AGAIN_TIMES) {
+                    rootlessLooks++
+                    main.postDelayed({ scrollOnly = false; schedule(0L) }, LOOK_AGAIN_MS)
+                }
                 return
             }
+            rootlessLooks = 0
             val rootMs = android.os.SystemClock.uptimeMillis() - askedRoot
             if (BuildConfig.DEBUG && rootMs > 30) {
                 android.util.Log.d("Phonetix", "ROOT took ${rootMs}ms")
@@ -3507,6 +3527,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         if (target.isEmpty() || source == target) {
             missingDirection = null
             return
+        }
+        // And the dictionary of the language read into, which is what another language's
+        // words are joined to: without it an English page read into Spanish was drawn with
+        // English definitions and bare sounds, and only the page's own language was ever
+        // fetched by itself. Not English, which nothing is joined into.
+        if (target != "en") {
+            Fetch.pack(this, target) { arrived ->
+                if (arrived) io.post {
+                    Packs.openHeld(this)
+                    main.post { readAgain() }
+                }
+            }
         }
         if (Translator.start(Packs.models(this), source, target)) {
             missingDirection = null
