@@ -50,6 +50,21 @@ object Fetch {
         }
     }
 
+    /** The same thing, waited for: the panel is answering from it. */
+    fun packNow(context: Context, lang: String): Boolean {
+        if (lang.isBlank() || lang in Packs.held(context)) return true
+        val key = "pack $lang"
+        if (!mayTry(key) || !running.add(key)) return false
+        return try {
+            val host = SettingsStore.current.packHost
+            val listed = Packs.offered(host).firstOrNull { it.lang == lang }
+            (listed != null && listed.bytes <= byItself(context) && Packs.get(context, host, lang))
+                .also { ok -> if (ok) failedAt.remove(key) else failedAt[key] = now() }
+        } finally {
+            running.remove(key)
+        }
+    }
+
     /**
      * The connection stopped being metered: what was too big to fetch on the old one is asked
      * for again, now rather than after the pause a failure earns.

@@ -16,21 +16,22 @@ import android.widget.TextView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Languages
 import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.ui.Tokens
 
 /**
- * The word a reader is looking for, asked over whatever they are reading.
+ * A word or a phrase translated between the reader's language and the one they are learning,
+ * asked over whatever they are reading.
  *
- * Everything else here answers a word somebody else wrote; this one answers a word that
- * exists only in the reader's head. It is a panel over the screen rather than a screen of the
- * app's own: asking for a word in the middle of a conversation should not put the conversation
- * away, which is what opening an activity does. Taplex asked this way and this is that panel.
+ * A panel over the screen rather than a screen of the app's own: asking in the middle of a
+ * conversation should not put the conversation away, which is what opening an activity does.
  *
- * What is typed is asked for when the keyboard's search key is pressed; the answer appears
- * under the field, in the card the rest of the product answers with.
+ * The two languages head it, with an arrow between them for the way the question is being
+ * answered: it is worked out from what is typed, so a word in either language comes back in
+ * the other, and the arrow turns it round where it was worked out wrong. Each language opens
+ * a list to choose another. A word is answered with everything it can mean, the commonest
+ * first; a phrase with its translation.
  */
 class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLayout(context) {
 
@@ -52,7 +53,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
      * one of them. The list is searchable, and the ones they have asked in lately are at the
      * top of it.
      */
-    private val picked = TextView(context).apply {
+    private fun chip() = TextView(context).apply {
         textSize = 14f
         setTextColor(palette.ink.toInt())
         setPadding(dp(12f), dp(8f), dp(12f), dp(8f))
@@ -61,6 +62,17 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
             setColor(palette.chipBg.toInt())
             setStroke(dp(Tokens.Scale.borderWidth), palette.border.toInt())
         }
+    }
+
+    /** The reader's own language, and the one they are learning. */
+    private val mineChip = chip()
+    private val learningChip = chip()
+
+    /** Which way the question is answered, and the way to turn it round. */
+    private val arrow = TextView(context).apply {
+        textSize = 18f
+        setTextColor(palette.inkMuted.toInt())
+        gravity = Gravity.CENTER
     }
 
     /** The list itself, over the panel, filtered by what is typed into it. */
@@ -168,7 +180,9 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     private val header = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(picked, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(mineChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(arrow, LayoutParams(dp(40f), dp(40f)))
+        addView(learningChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         addView(android.view.View(context), LayoutParams(0, 0, 1f))
         addView(mark, LayoutParams(dp(40f), dp(40f)))
     }
@@ -265,27 +279,47 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     }
 
     /**
-     * The languages a word can be asked for in, in the order they are worth offering: the
-     * ones this reader has asked in lately first, then the rest by name.
+     * The two languages, which way the question is being answered, and what choosing another
+     * language or turning the arrow does. [languages] is every language, in the order worth
+     * offering.
      */
-    fun setLanguages(languages: List<String>, chosen: String, onPick: (String) -> Unit) {
-        picked.text = if (chosen.isBlank()) {
+    fun setPair(
+        languages: List<String>,
+        mine: String,
+        learning: String,
+        forward: Boolean,
+        onPick: (mine: Boolean, code: String) -> Unit,
+        onTurn: () -> Unit,
+    ) {
+        mineChip.text = Languages.english(mine)
+        learningChip.text = if (learning.isBlank()) {
             Wording.says["choose-language"].orEmpty()
         } else {
-            Languages.english(chosen)
+            Languages.english(learning)
         }
-        picked.setOnClickListener {
-            if (chooser.visibility == VISIBLE) {
-                closeChooser()
-            } else {
-                chooser.visibility = VISIBLE
-                search.setText("")
-                fill(languages, chosen, onPick, "")
-                search.requestFocus()
+        arrow.text = if (forward) "→" else "←"
+        arrow.setOnClickListener { onTurn() }
+        fun opens(chip: TextView, isMine: Boolean, chosen: String) {
+            chip.setOnClickListener {
+                if (chooser.visibility == VISIBLE) {
+                    closeChooser()
+                } else {
+                    chooser.visibility = VISIBLE
+                    search.setText("")
+                    val pick = { code: String -> onPick(isMine, code) }
+                    searching = { typed -> fill(languages, chosen, pick, typed) }
+                    fill(languages, chosen, pick, "")
+                    search.requestFocus()
+                }
             }
         }
-        searching = { typed -> fill(languages, chosen, onPick, typed) }
-        fill(languages, chosen, onPick, "")
+        opens(mineChip, true, mine)
+        opens(learningChip, false, learning)
+    }
+
+    /** Which way the question is being answered, once it has been worked out. */
+    fun direction(forward: Boolean) {
+        arrow.text = if (forward) "→" else "←"
     }
 
     /** What the filter does, kept so a keystroke reaches the list that is open. */
@@ -347,27 +381,19 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         if (text.isNotEmpty()) answer.view.setContent {}
     }
 
-    /** The word that came back, in the card the rest of the product answers with. */
-    fun show(said: Answer, onPlay: () -> Unit) {
+    /** Everything a word can mean in the other language. */
+    fun showMeanings(meanings: List<io.github.nanbiz.phonetix.ui.Meant>, sound: Boolean) {
         note.visibility = GONE
         answer.view.setContent {
-            // The same card the word under a finger opens: on the first sound of the word, and
-            // a tap on a symbol says what that one is.
-            val opened = androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf<String?>(null)
-            }
-            val sound = opened.value?.let { io.github.nanbiz.phonetix.core.IpaSymbols.describe(it) }
-                ?: said.symbols.firstOrNull {
-                    it.name.isNotBlank() && (it.kind == "vowel" || it.kind == "consonant")
-                }
-                ?: said.symbols.firstOrNull { it.name.isNotBlank() }
-            io.github.nanbiz.phonetix.ui.AnswerCard(
-                answer = said,
-                palette = palette,
-                onPlay = onPlay,
-                opened = sound,
-                onSymbol = { symbol -> opened.value = if (opened.value == symbol) null else symbol },
-            )
+            io.github.nanbiz.phonetix.ui.MeaningsList(meanings, palette, sound)
+        }
+    }
+
+    /** A phrase translated, and how it is said where that is asked for. */
+    fun showLine(text: String, ipa: String?) {
+        note.visibility = GONE
+        answer.view.setContent {
+            io.github.nanbiz.phonetix.ui.TranslatedLine(text, ipa, palette)
         }
     }
 

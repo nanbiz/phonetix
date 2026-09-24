@@ -523,3 +523,67 @@ def near(a, b, tol):
 
 def overlaps(a, b):
     return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
+
+
+def card_while_held(dev, word, dwell=6.0):
+    """What the card says while the side button is held on [word], and whether it is gone
+    once the button is let go.
+
+    The card is display only and goes with the finger, so it is read while the drag is still
+    under way: the drag is played in the background and the card's own report of what it laid
+    out is waited for. Returns (texts on the card, whether it closed after release); texts is
+    empty where no card came up for the word.
+    """
+    import state as State
+    box = mark = None
+    for _ in range(30):
+        try:
+            seen = State.fetch(SERIAL, State.ask(SERIAL))
+        except Exception:
+            seen = {}
+        boxes = (seen.get("overlay") or {}).get("boxes") or []
+        box = next((b for b in boxes if b.get("word") == word), None)
+        mark = (seen.get("mark") or {}).get("markAt") or {}
+        if box and mark.get("x") is not None:
+            break
+        time.sleep(2)
+    if not box or mark.get("x") is None:
+        return [], False
+    r = box["rect"]
+    home = (mark["x"] + 52, mark["y"] + 52)
+    dpi = int(re.search(r"(\d+)", shell("wm", "density")).group(1))
+    aim = finger_for(((r["left"] + r["right"]) / 2, (r["top"] + r["bottom"]) / 2),
+                     home, dpi, dev.width, dev.height)
+    lines = ["type= raw events", "count= 1", "speed= 1.0", "start data >>",
+             f"DispatchPointer(0,0,0,{home[0]},{home[1]},1,1,0,1,1,0,0)"]
+    for i in range(1, 13):
+        x = home[0] + (aim[0] - home[0]) * i / 12
+        y = home[1] + (aim[1] - home[1]) * i / 12
+        lines += ["UserWait(30)", f"DispatchPointer(0,0,2,{int(x)},{int(y)},1,1,0,1,1,0,0)"]
+    for _ in range(int(dwell * 2)):
+        lines += ["UserWait(500)", f"DispatchPointer(0,0,2,{int(aim[0])},{int(aim[1])},1,1,0,1,1,0,0)"]
+    lines.append(f"DispatchPointer(0,0,1,{int(aim[0])},{int(aim[1])},1,1,0,1,1,0,0)")
+    local = os.path.join(tempfile.gettempdir(), "phonetix-hold.monkey")
+    with open(local, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    adb("push", local, "/data/local/tmp/phonetix-hold.monkey")
+    dev.clear_log()
+    player = subprocess.Popen(
+        ["adb", "-s", SERIAL, "shell", "monkey", "-f", "/data/local/tmp/phonetix-hold.monkey", "1"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    texts = []
+    started = time.time()
+    while time.time() - started < dwell + 20 and player.poll() is None:
+        cards = re.findall(r"CARD card@\S+ (?:scrollable=\d+ )?(.*)", dev.lines("CARD card@"))
+        for card in reversed(cards):
+            found = [t.split("@")[0].replace("·", " ") for t in re.findall(r"\[([^\]]+)\]", card)]
+            if word in found:
+                texts = found
+                break
+        if texts:
+            break
+        time.sleep(0.5)
+    player.wait(timeout=dwell + 30)
+    time.sleep(1.5)
+    closed = "TOOLTIP closed" in dev.lines("TOOLTIP closed")
+    return texts, closed

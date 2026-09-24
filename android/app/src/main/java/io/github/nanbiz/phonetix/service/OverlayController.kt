@@ -260,12 +260,9 @@ class OverlayController(
         // allows for a transition had its rows taken down again by that transition's own
         // delayed call, and the page ended up with nothing to touch.
         main.removeCallbacks(putAway)
-        val settings = SettingsStore.current
-        // Paused, nothing takes a touch either: the reader held the button to have the app
-        // out of the way, and a word that answers when it is tapped is not out of the way.
-        val wanted =
-            if (!settings.touchWords || settings.paused) emptyList()
-            else lines(boxes).take(MAX_ROWS)
+        // None: a word is asked about with the side button, and the page underneath keeps
+        // every touch.
+        val wanted = emptyList<RectF>()
         while (rows.size < wanted.size) if (!addRow()) break
         for (i in wanted.indices) {
             val row = rows.getOrNull(i) ?: break
@@ -407,17 +404,12 @@ class OverlayController(
         // Never focusable: the app underneath keeps the keyboard and every touch outside
         // these small windows.
         //
-        // And by default not touchable either, which is what lets a reader scroll. These
-        // windows lie over the words themselves, so a finger that comes down on one comes
-        // down on it and not on the app - and a window that has taken a gesture keeps it,
-        // whatever it does with its flags afterwards, so that whole swipe is lost and the
-        // page stands still. On a page of text most swipes start on a word. A reader who
-        // wants to open cards by pressing a word turns them touchable and takes that back.
+        // And not touchable either, which is what lets a reader scroll: these windows lie over
+        // the words themselves, and a window that has taken a gesture keeps it.
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-            (if (SettingsStore.current.touchWords) 0
-            else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE),
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
         PixelFormat.TRANSLUCENT,
     ).apply {
         gravity = Gravity.TOP or Gravity.START

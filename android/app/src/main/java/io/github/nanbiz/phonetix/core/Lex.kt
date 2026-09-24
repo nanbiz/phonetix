@@ -196,6 +196,15 @@ object Lex {
     external fun wordFor(core: Long, text: String, typedIn: String, wantedIn: String): Array<String>
 
     /**
+     * Everything a typed word can mean in [wantedIn], commonest first, as JSON: an array of
+     * `{"word","pos","hint","ipa"}`. What the panel lists for a single word.
+     */
+    external fun meanings(core: Long, text: String, typedIn: String, wantedIn: String): String
+
+    /** How often [word] is met in running text in [lang], as its pack counts it, or 0. */
+    external fun met(core: Long, word: String, lang: String): Long
+
+    /**
      * Open a translation direction, keyed "from-to", from a configuration naming files
      * already on disk.
      *

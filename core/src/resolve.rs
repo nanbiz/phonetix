@@ -494,7 +494,25 @@ fn weighed<D: AsRef<[u8]>>(
     wanted: &Pack<D>,
     most: usize,
 ) -> Vec<String> {
-    let mut scored: Vec<(Rank, String)> = Vec::new();
+    let mut words: Vec<String> = Vec::new();
+    for (_, entry, _) in ranked_senses(glosses, verb, wanted) {
+        if !words.contains(&entry.lemma) {
+            words.push(entry.lemma);
+        }
+        if words.len() == most {
+            break;
+        }
+    }
+    words
+}
+
+/// The senses of [wanted] glossed as [glosses], each with its entry, best first.
+fn ranked_senses<D: AsRef<[u8]>>(
+    glosses: &[(String, Option<String>)],
+    verb: Option<bool>,
+    wanted: &Pack<D>,
+) -> Vec<(Rank, Entry, u32)> {
+    let mut scored: Vec<(Rank, Entry, u32)> = Vec::new();
     for (asked, (gloss, pos)) in glosses.iter().enumerate() {
         let mut hits = wanted.senses_matching(gloss);
         hits.sort_by_key(|((which, sense), shared)| (std::cmp::Reverse(*shared), *sense, *which));
@@ -560,22 +578,205 @@ fn weighed<D: AsRef<[u8]>>(
                     common: std::cmp::Reverse(entry.senses.len()),
                     kind,
                 },
-                entry.lemma,
+                entry,
+                sense,
             ));
         }
     }
-    scored.sort();
-    let mut words: Vec<String> = Vec::new();
-    for (_, lemma) in scored {
-        if !words.contains(&lemma) {
-            words.push(lemma);
+    scored.sort_by(|a, b| a.0.cmp(&b.0));
+    scored
+}
+
+/// One thing a word can mean, in the language it is wanted in.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Meaning {
+    /// The word for it.
+    pub word: String,
+    /// What kind of word that is.
+    pub pos: String,
+    /// Which meaning this is, in a few words: "financial institution", "of a river".
+    pub hint: String,
+    /// How the word is said, where its pack records it.
+    pub ipa: Option<String>,
+}
+
+/// How many meanings a word is answered with.
+const MEANINGS: usize = 8;
+
+/// Everything a typed word can mean in [wanted]'s language, the commonest first, each with the
+/// few words that say which meaning it is.
+///
+/// Typed in English, the words of [wanted] glossed as it, ranked the way a single answer is,
+/// and told apart by what their own gloss qualifies them with: "banco" is "bank (financial
+/// institution)" and "orilla" is "bank (of a river)". Typed in another language, each sense of
+/// the word in the order its dictionary lists them, answered in [wanted] and told apart by the
+/// sense itself.
+pub fn meanings<D: AsRef<[u8]>>(
+    text: &str,
+    typed_in: &Lang,
+    wanted: &Pack<D>,
+    typed: Option<&Pack<D>>,
+) -> Vec<Meaning> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Vec::new();
+    }
+    let mut out: Vec<Meaning> = Vec::new();
+    let add = |word: String, pos: String, hint: String, out: &mut Vec<Meaning>| {
+        // A word or a short phrase, never a definition: a sense that takes a sentence to say
+        // is not a word to hand a reader.
+        if word.is_empty()
+            || word.split_whitespace().count() > ANSWER_WORDS
+            || out.iter().any(|m| m.word == word)
+        {
+            return;
         }
-        if words.len() == most {
-            break;
+        let ipa = wanted
+            .lookup(&word)
+            .into_iter()
+            .find(|entry| entry.lemma == word && !entry.ipa.is_empty())
+            .and_then(|entry| entry.ipa.first().cloned());
+        out.push(Meaning {
+            word,
+            pos,
+            hint,
+            ipa,
+        });
+    };
+    if typed_in.0 == "en" {
+        let asked = vec![(text.to_string(), None)];
+        for (_, entry, sense) in ranked_senses(&asked, None, wanted) {
+            let gloss = entry
+                .senses
+                .get(sense as usize)
+                .map(|sense| sense.gloss.clone())
+                .unwrap_or_default();
+            add(
+                entry.lemma.clone(),
+                entry.pos.clone(),
+                qualifier(&gloss, text),
+                &mut out,
+            );
+            if out.len() == MEANINGS {
+                break;
+            }
+        }
+        return out;
+    }
+    let Some(pack) = typed else {
+        return out;
+    };
+    let mut entries = lookup_either_case(pack, text);
+    entries.sort_by_key(|entry| rank_of(entry, text));
+    let entries: Vec<Entry> = if entries.iter().any(|entry| !is_minor(entry)) {
+        entries
+            .into_iter()
+            .filter(|entry| !is_minor(entry))
+            .collect()
+    } else {
+        entries
+    };
+    // The word as it was typed, where the dictionary has it: "banco" is its own entry, and
+    // the verb "bancar" it is also a form of means something else. Written exactly so before
+    // regardless of case, since German "Reifen" is tyres and "reifen" is to ripen.
+    let exactly: Vec<Entry> = entries
+        .iter()
+        .filter(|e| e.lemma == text)
+        .cloned()
+        .collect();
+    let entries = if !exactly.is_empty() {
+        exactly
+    } else {
+        let itself: Vec<Entry> = entries
+            .iter()
+            .filter(|e| same_word(&e.lemma, text))
+            .cloned()
+            .collect();
+        if itself.is_empty() {
+            entries
+        } else {
+            itself
+        }
+    };
+    for entry in entries {
+        for sense in entry.senses.iter().take(SENSES_ASKED) {
+            if sense.marks.iter().any(|mark| GONE.contains(&mark.as_str())) {
+                continue;
+            }
+            let Some(meant) = meaning_of(&sense.gloss) else {
+                continue;
+            };
+            // Into English the sense is the answer already: every dictionary glosses in it.
+            if wanted.lang() == "en" {
+                // "doggy or doggish" is two answers, of which the first is the word.
+                let head = crate::gloss::terms(&meant)
+                    .into_iter()
+                    .next()
+                    .unwrap_or_default()
+                    .split(" or ")
+                    .next()
+                    .unwrap_or_default()
+                    .to_string();
+                let hint = qualifier(&sense.gloss, &head);
+                add(head, entry.pos.clone(), hint, &mut out);
+                if out.len() == MEANINGS {
+                    return out;
+                }
+                continue;
+            }
+            let asked = [(meant.clone(), Some(entry.pos.clone()))];
+            if let Some((_, found, _)) = ranked_senses(&asked, None, wanted).into_iter().next() {
+                add(found.lemma, entry.pos.clone(), short_hint(&meant), &mut out);
+            }
+            if out.len() == MEANINGS {
+                return out;
+            }
         }
     }
-    words
+    out
 }
+
+/// The most words an answer in the list runs to.
+const ANSWER_WORDS: usize = 3;
+
+/// How many senses of each entry of a typed word are answered.
+const SENSES_ASKED: usize = 6;
+
+/// What a gloss says about which meaning it is, beside the word it was found by: what its
+/// parentheses qualify it with, or its other terms.
+fn qualifier(gloss: &str, found_by: &str) -> String {
+    if let (Some(open), Some(close)) = (gloss.find('('), gloss.rfind(')')) {
+        if open < close {
+            return short_hint(&gloss[open + 1..close]);
+        }
+    }
+    let by = found_by.trim().to_lowercase();
+    let others: Vec<String> = crate::gloss::terms(gloss)
+        .into_iter()
+        .filter(|term| *term != by)
+        .take(2)
+        .collect();
+    others.join(", ")
+}
+
+/// A meaning cut to the few words that tell it from the others.
+fn short_hint(text: &str) -> String {
+    let words: Vec<&str> = text
+        .split([';', '('])
+        .next()
+        .unwrap_or(text)
+        .split_whitespace()
+        .collect();
+    let cut: Vec<&str> = words.iter().take(HINT_WORDS).copied().collect();
+    let mut hint = cut.join(" ").trim_end_matches(['.', ',', ':']).to_string();
+    if words.len() > HINT_WORDS {
+        hint.push('…');
+    }
+    hint
+}
+
+/// How many words a meaning's hint runs to.
+const HINT_WORDS: usize = 5;
 
 /// How many of an English word's translations are looked for in its translated line.
 const LOOKED_FOR_IN_LINE: usize = 12;

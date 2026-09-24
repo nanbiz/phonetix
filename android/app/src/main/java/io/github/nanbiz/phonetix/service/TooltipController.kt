@@ -27,7 +27,8 @@ import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
-import io.github.nanbiz.phonetix.ui.AnswerCard
+import io.github.nanbiz.phonetix.ui.GlanceCard
+import io.github.nanbiz.phonetix.ui.glanceHasSomething
 import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.ui.themeNamed
 import io.github.nanbiz.phonetix.core.SymbolInfo
@@ -167,18 +168,16 @@ class TooltipController(
     }
 
     /**
-     * Where the hand is, so the answer opens clear of it.
-     *
-     * While the circle is being dragged the word is under the circle and the hand is below
-     * that, so everything from the word downwards is either what is being asked about or the
-     * hand asking: the card goes above. Zero while nothing is being dragged, and then the
-     * card sits below the word as it always has.
+     * Where the finger is, and with it the side button under it, so the card opens clear of
+     * both. Zero while nothing is being dragged.
      */
-    fun clearOf(handY: Int) {
+    fun clearOf(handX: Int, handY: Int) {
+        handAtX = handX
         hand = handY
     }
 
     private var hand = 0
+    private var handAtX = 0
 
     fun show(box: WordBox) {
         // The same word again, where its box has only moved: the screen under the card is
@@ -261,7 +260,7 @@ class TooltipController(
         where = null
         placed.clear()
 
-        val card = build(box)
+        val card = build(box) ?: return
         card.accessibilityDelegate = mute
         val metrics = context.resources.displayMetrics
         val lp = WindowManager.LayoutParams(
@@ -276,18 +275,19 @@ class TooltipController(
             // This type belongs to the service that is already reading the screen, is exempt
             // from that hiding, and needs no permission of its own.
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            // Not focusable, so the app underneath keeps its keyboard and its state; the
-            // outside touch only tells the card to close.
+            // Takes nothing: the card is read while the finger is on the side button and is
+            // gone when it lifts, so every touch belongs to the app underneath.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            width = (metrics.widthPixels * 0.88f).roundToInt()
+            width = WindowManager.LayoutParams.WRAP_CONTENT
             height = WindowManager.LayoutParams.WRAP_CONTENT
-            x = ((metrics.widthPixels - width) / 2f).roundToInt()
+            x = (box.rect.centerX() - metrics.widthPixels * 0.3f).roundToInt()
+                .coerceAtLeast(dp(8).roundToInt())
             // Where it will stay, as nearly as can be known before it has been measured.
             //
             // How tall it is depends on how many symbols the word has, and that is only known
@@ -297,11 +297,7 @@ class TooltipController(
             // circle; held invisible until placed, they saw nothing at all while the circle
             // was moving, because each card was torn down for the next word before the frame
             // that would have shown it, and one finally appeared as the finger lifted.
-            y = wouldBeAt(box, lastHeight)
-        }
-        card.setOnTouchListener { _, e ->
-            if (e.actionMasked == MotionEvent.ACTION_OUTSIDE) hide()
-            false
+            y = spotFor(box, lastWidth, lastHeight).y
         }
         runCatching { wm.addView(card, lp) }
             .onSuccess {
@@ -336,79 +332,86 @@ class TooltipController(
 
     private fun density(): Float = context.resources.displayMetrics.density
 
-    /** How tall the last card was, as the guess for where the next one goes. */
+    /** How big the last card was, as the guess for where the next one goes. */
     private var lastHeight = 0
+    private var lastWidth = 0
 
-    /** Where a card of this height belongs, which is the rule [place] settles by. */
-    private fun wouldBeAt(box: WordBox, height: Int): Int {
+    /**
+     * Where a card this big goes beside [box]: clear of the word and the circle on it, and
+     * clear of the side button under the finger.
+     *
+     * On the side of the word away from the hand first, then the other side, then beside the
+     * word; where none of those is clear, whichever covers least of the button. Put below the
+     * word whatever the hand was doing, the card covered the button the reader was holding.
+     */
+    private fun spotFor(box: WordBox, width: Int, height: Int): android.graphics.Point {
         val metrics = context.resources.displayMetrics
         val margin = dp(8).roundToInt()
-        val below = (box.rect.bottom + dp(10)).roundToInt()
-        if (height <= 0) return below
-        val above = (box.rect.top - dp(10)).roundToInt() - height
-        val handInTheWay = hand > 0 && below + height > hand - dp(24)
-        val lowest = (metrics.heightPixels - height - margin).coerceAtLeast(margin)
-        return when {
-            !handInTheWay && below <= lowest -> below
-            above >= margin -> above
-            else -> below.coerceIn(margin, lowest)
+        val gap = dp(12).roundToInt()
+        val w = if (width > 0) width else dp(200).roundToInt()
+        val h = if (height > 0) height else dp(100).roundToInt()
+        // The word with the circle drawn round it, which is a little wider than the word.
+        val ring = dp(30).roundToInt()
+        val word = android.graphics.Rect(
+            (box.rect.centerX() - maxOf(box.rect.width() / 2f, ring.toFloat())).roundToInt(),
+            (box.rect.centerY() - maxOf(box.rect.height() / 2f, ring.toFloat())).roundToInt(),
+            (box.rect.centerX() + maxOf(box.rect.width() / 2f, ring.toFloat())).roundToInt(),
+            (box.rect.centerY() + maxOf(box.rect.height() / 2f, ring.toFloat())).roundToInt(),
+        )
+        val button = dp(36).roundToInt()
+        val hand = if (hand > 0) android.graphics.Rect(
+            handAtX - button, this.hand - button, handAtX + button, this.hand + button,
+        ) else null
+        val centredX = (word.centerX() - w / 2).coerceIn(margin, (metrics.widthPixels - w - margin).coerceAtLeast(margin))
+        val midY = word.centerY() - h / 2
+        val above = android.graphics.Point(centredX, word.top - gap - h)
+        val below = android.graphics.Point(centredX, word.bottom + gap)
+        val left = android.graphics.Point(word.left - gap - w, midY.coerceAtLeast(margin))
+        val right = android.graphics.Point(word.right + gap, midY.coerceAtLeast(margin))
+        val handBelow = hand != null && hand.centerY() > word.centerY()
+        val order = if (handBelow || hand == null && word.top > metrics.heightPixels / 2) {
+            listOf(above, below, left, right)
+        } else {
+            listOf(below, above, left, right)
         }
+        fun rectOf(p: android.graphics.Point) = android.graphics.Rect(p.x, p.y, p.x + w, p.y + h)
+        fun onScreen(r: android.graphics.Rect) = r.left >= margin && r.top >= margin &&
+            r.right <= metrics.widthPixels - margin && r.bottom <= metrics.heightPixels - margin
+        fun covers(r: android.graphics.Rect, other: android.graphics.Rect?): Int {
+            if (other == null) return 0
+            val cut = android.graphics.Rect()
+            return if (cut.setIntersect(r, other)) cut.width() * cut.height() else 0
+        }
+        order.firstOrNull { p ->
+            val r = rectOf(p)
+            onScreen(r) && covers(r, word) == 0 && covers(r, hand) == 0
+        }?.let { return it }
+        // Nothing is clear: kept on the screen and off the word, covering as little of the
+        // button as can be had.
+        return order
+            .map { p ->
+                android.graphics.Point(
+                    p.x.coerceIn(margin, (metrics.widthPixels - w - margin).coerceAtLeast(margin)),
+                    p.y.coerceIn(margin, (metrics.heightPixels - h - margin).coerceAtLeast(margin)),
+                )
+            }
+            .minBy { p -> covers(rectOf(p), word) * 4 + covers(rectOf(p), hand) }
     }
 
     private fun place(card: View, lp: WindowManager.LayoutParams, box: WordBox) {
-        val metrics = context.resources.displayMetrics
-        val margin = dp(8).roundToInt()
-        val height = card.height
-        if (height > 0) lastHeight = height
-        val below = (box.rect.bottom + dp(10)).roundToInt()
-        val above = (box.rect.top - dp(10)).roundToInt() - height
-        // A hand on the screen is a hand over everything under the word it is pointing at.
-        val handInTheWay = hand > 0 && below + height > hand - dp(24)
-        // The lowest the card can start and still be whole on the screen.
-        val lowest = (metrics.heightPixels - height - margin).coerceAtLeast(margin)
-        // Beside the word, always: under it, or over it where the hand or the screen's edge is
-        // in the way. Where neither side has room for the whole card, it is cut to the larger
-        // of the two and scrolls: pushed back onto the screen whole, it lay over the very word
-        // it was about, and over the circle pointing at it.
-        val roomBelow = if (handInTheWay) 0 else metrics.heightPixels - margin - below
-        val roomAbove = (box.rect.top - dp(10)).roundToInt() - margin
-        val fits = (!handInTheWay && below <= lowest) || above >= margin
-        if (!fits && lp.height == WindowManager.LayoutParams.WRAP_CONTENT) {
-            lp.height = maxOf(roomBelow, roomAbove).coerceAtLeast(dp(120).roundToInt())
-            lp.y = if (roomBelow >= roomAbove) below else margin
-            runCatching { wm.updateViewLayout(card, lp) }
-            if (BuildConfig.DEBUG) {
-                android.util.Log.d(
-                    "Phonetix",
-                    "CARDAT ${box.word} y=${lp.y} (cut to ${lp.height}) from height=$height " +
-                        "word=${box.rect.top.toInt()}..${box.rect.bottom.toInt()} hand=$hand",
-                )
-            }
-            pointsDown?.value = lp.y + lp.height <= box.rect.top
-            return
-        }
-        val y = when {
-            !handInTheWay && below <= lowest -> below
-            above >= margin -> above
-            else -> below.coerceIn(margin, lowest)
-        }
-        // Above the word means the arrow is on the card's underside, pointing down at it.
-        pointsDown?.value = y + height <= box.rect.top
-        val why = when {
-            y == below -> "below"
-            y == above -> "above"
-            else -> "pushed back on screen"
-        }
+        if (card.width > 0) lastWidth = card.width
+        if (card.height > 0) lastHeight = card.height
+        val spot = spotFor(box, card.width, card.height)
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
-                "CARDAT ${box.word} y=$y ($why) from=${lp.y} height=$height " +
-                    "word=${box.rect.top.toInt()}..${box.rect.bottom.toInt()} hand=$hand " +
-                    "shown=${card.visibility == View.VISIBLE}",
+                "CARDAT ${box.word} at=${spot.x},${spot.y} size=${card.width}x${card.height} " +
+                    "word=${box.rect.left.toInt()},${box.rect.top.toInt()} hand=$handAtX,$hand",
             )
         }
-        if (y == lp.y) return
-        lp.y = y
+        if (spot.x == lp.x && spot.y == lp.y) return
+        lp.x = spot.x
+        lp.y = spot.y
         runCatching { wm.updateViewLayout(card, lp) }
     }
 
@@ -477,7 +480,7 @@ class TooltipController(
      * symbol says what that sound is on the card's own line for it, so the word stays in sight
      * and the card does not change height under the finger.
      */
-    private fun build(box: WordBox): View {
+    private fun build(box: WordBox): View? {
         // Light or dark by the app it is drawn over rather than by the system setting: a card
         // is read against the screen it lands on. Which palette is the product's own, so the
         // card and the app that switches it on are one set of colours.
@@ -495,61 +498,19 @@ class TooltipController(
             )
                 ?.takeIf { it.found }
             ?: Answer.ofTranscription(box.word, box.full, source)
-        // What a person recorded, where Wiktionary has one: a recording is what a reader
-        // trusts, and a machine reading a transcription is not the same thing. Asked for off
-        // the main thread, and the card is told once it has an answer.
-        val recorded = androidx.compose.runtime.mutableStateOf<String?>(null)
-        // Nothing has recorded a clause somebody swept off a screen, so a phrase card does not
-        // go looking for one.
-        if (given == null) io.execute {
-            val said = Wiktionary.about(box.word, source)
-            val file = said?.audio?.firstOrNull()
-            if (file != null) main.post { recorded.value = file }
-        }
+        val layer = settings.layer
+        val sound = layer == "sound" || layer == "both"
+        val meaning = layer == "meaning" || layer == "both"
+        if (!glanceHasSomething(answer, sound, meaning)) return null
         val fresh = OverlayHost(context)
         host = fresh
-        // Which side of the word the card ends up on is settled once it has been measured, so
-        // the arrow follows that rather than the guess made before it was drawn.
-        pointsDown = androidx.compose.runtime.mutableStateOf(false)
         fresh.view.setContent {
-            val opened = androidx.compose.runtime.remember {
-                androidx.compose.runtime.mutableStateOf<String?>(null)
-            }
-            // The sound being read about: the first of the word until the reader picks another,
-            // so the line under the transcription teaches what it is for rather than saying it.
-            // A sound, not the stress mark most transcriptions start with: "primary stress"
-            // opened nearly every card and told the reader nothing about the word.
-            val sound = opened.value?.let { IpaSymbols.describe(it) }
-                ?: answer.symbols.firstOrNull {
-                    it.name.isNotBlank() && (it.kind == "vowel" || it.kind == "consonant")
-                }
-                ?: answer.symbols.firstOrNull { it.name.isNotBlank() }
-            AnswerCard(
+            GlanceCard(
                 answer = answer,
                 palette = palette,
-                // Where the word sits along the card's own width: the card is centred and the
-                // word can be anywhere on the line, so the middle would point at nothing.
-                pointsAt = androidx.compose.ui.unit.Dp((box.rect.centerX() - cardLeft()) / density()),
-                pointsDown = pointsDown?.value ?: false,
+                sound = sound,
+                meaning = meaning,
                 report = if (BuildConfig.DEBUG) laidOut else null,
-                scrolls = true,
-                onOpen = { open(it) },
-                // A second tap on the same symbol puts the line back to where it started: it
-                // is a detail about the word on screen, not a place to end up in.
-                onSymbol = { symbol ->
-                    opened.value = if (opened.value == symbol) null else symbol
-                },
-                accent = settings.accentFor(source),
-                opened = sound,
-                recorded = recorded.value != null,
-                onPlay = {
-                    val file = recorded.value
-                    if (file != null) speaker.play(wikimediaFileUrl(file))
-                    // In the voice the reader chose, which is the accent's where it has one of
-                    // its own and the language's otherwise.
-                    else speaker.say(box.word, Accents.voiceOf(source, settings.accentFor(source)))
-                },
-                onPlaySymbol = { sound?.audio?.let { speaker.play(wikimediaFileUrl(it)) } },
             )
         }
         return fresh.view

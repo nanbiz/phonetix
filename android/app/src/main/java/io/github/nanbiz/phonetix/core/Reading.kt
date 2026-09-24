@@ -510,6 +510,37 @@ object Reading {
      * reverse model was never fetched: the reader is told that, rather than handed their own
      * words back.
      */
+    /** Everything a typed word can mean in [wanted], commonest first: see the core's
+     *  `meanings`. Empty where either dictionary is missing or nothing is known. */
+    fun meanings(text: String, typedIn: String, wanted: String): List<io.github.nanbiz.phonetix.ui.Meant> {
+        if (core == 0L) return emptyList()
+        val written = runCatching { Lex.meanings(core, text, typedIn, wanted) }.getOrNull()
+            ?: return emptyList()
+        val rows = runCatching { JSONArray(written) }.getOrNull() ?: return emptyList()
+        return (0 until rows.length()).mapNotNull { at ->
+            rows.optJSONObject(at)?.let { row ->
+                io.github.nanbiz.phonetix.ui.Meant(
+                    word = row.optString("word"),
+                    pos = row.optString("pos"),
+                    hint = row.optString("hint"),
+                    ipa = row.optString("ipa").takeIf { it.isNotEmpty() && it != "null" },
+                )
+            }
+        }
+    }
+
+    /** How often [word] is met in running text in [lang], by its pack's count. */
+    fun met(word: String, lang: String): Long =
+        if (core == 0L) 0L else runCatching { Lex.met(core, word, lang) }.getOrDefault(0L)
+
+    /** Whether [word] is a word of [lang] in the dictionary held for it. */
+    fun knows(word: String, lang: String): Boolean {
+        if (core == 0L || lang.isEmpty()) return false
+        return lookUp(word, lang, lang)?.let {
+            it.state != Answer.State.None && it.state != Answer.State.NoPack && it.found
+        } ?: false
+    }
+
     fun say(context: android.content.Context, text: String, source: String, target: String): Answer? {
         val asked = text.trim()
         if (asked.isEmpty() || source.isEmpty() || target.isEmpty() || source == target) {

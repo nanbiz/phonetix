@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""The phone showing what a word means, which is what the merge was for.
+"""The phone telling a reader what a word means and how it is said, through the side button.
 
-The app read a screen and drew pronunciations over it. The whole point of putting the two
-products together was that it should draw what a word means, in the reader's own language,
-with the pronunciation beside it. That is only true if a real dictionary reaches a real
-screen, so this serves the fixture packs the way the release host would, tells the app where
-they are and which language the reader reads into, and looks at what ends up over the words.
+This serves the fixture packs the way the release host would, tells the app where they are and
+which language the reader reads into, holds the side button on a word and reads the card it
+shows while held: the translation with the translation switch on, the pronunciation with the
+pronunciation switch on, both with both. The card has to be gone once the button is let go.
 
   PHONETIX_ANDROID_SERIAL=emulator-5554 uv run python scripts/proofread/android_translates.py
 """
@@ -19,7 +18,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell, drawn_pairs
+from android_harness import Device, adb, shell, card_while_held
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -111,36 +110,37 @@ def main():
     # Through the harness, which insists the page is really in front: the app's own screen is
     # an activity of the same app, and with it on top a bare `am start` delivers the intent to
     # the task behind it and reports success.
-    dev.surface(mode="spanish", packHost=base, target="de", layer="both",
-                enable=1, density=1)
-    # What is written over each word, which is the whole question here. Waited for rather than
-    # slept on: on a machine this busy the first drawing can be most of a minute away.
-    over = {}
-    for _ in range(30):
-        time.sleep(2)
-        drawn = [line for line in re.findall(r"DRAWN (.*)", dev.log()) if line.strip()]
-        over = dict(drawn_pairs(drawn[-1])) if drawn else {}
-        if over.get("perro") and over.get("camino"):
-            break
-    print(f"  {len(over)} words annotated: {list(over.items())[:6]}")
-
-    if not over:
-        failures.append("nothing was drawn on a Spanish screen")
-    else:
-        # What a reader is owed: the meaning, in their language, over the word it belongs to.
-        # With both asked for, the word is replaced by how its translation is said: "perro"
-        # is "Hund", said [hʊnt].
-        if over.get("perro") != "hʊnt":
-            failures.append(f"perro carries {over.get('perro')!r} rather than how Hund is said")
-        if over.get("camino") != "veːk":
-            failures.append(f"camino carries {over.get('camino')!r} rather than how Weg is said")
+    # What each setting of the two switches puts on the card for "perro", read into German.
+    wanted = {
+        "meaning": (["Hund"], ["ˈpe"]),
+        "sound": (["pe"], ["Hund"]),
+        "both": (["Hund", "pe"], []),
+    }
+    for layer, (has, lacks) in wanted.items():
+        dev.surface(mode="spanish", packHost=base, target="de", layer=layer,
+                    enable=1, density=1)
+        time.sleep(4)
+        texts, closed = card_while_held(dev, "perro")
+        print(f"  {layer}: the card for perro says {texts}, closed after release: {closed}")
+        if not texts:
+            failures.append(f"with {layer}, no card came up for perro")
+            continue
+        joined = " ".join(texts)
+        for part in has:
+            if part not in joined:
+                failures.append(f"with {layer}, the card for perro lacks {part!r}: {texts}")
+        for part in lacks:
+            if part in joined:
+                failures.append(f"with {layer}, the card for perro shows {part!r}: {texts}")
+        if not closed:
+            failures.append(f"with {layer}, the card stayed up after the button was let go")
 
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - the phone shows what a word means, not only how it sounds")
+    print("\nPASS - the side button's card follows the switches and goes with the finger")
 
 
 if __name__ == "__main__":

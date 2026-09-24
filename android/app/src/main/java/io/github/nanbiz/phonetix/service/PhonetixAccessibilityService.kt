@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.MainActivity
+import io.github.nanbiz.phonetix.core.Lex
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
@@ -340,8 +341,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // keyboard comes or goes.
             keyboardTop = { lastKeyboardTop },
             onWord = { box -> main.post { if (box != null) tooltip.show(box) else tooltip.hide() } },
-            onHand = { y ->
-                tooltip.clearOf(y)
+            onHand = { x, y ->
+                tooltip.clearOf(x, y)
                 // While the mark is being dragged, the words under it must be where the app
                 // has them now. A screen that moves without scrolling - a message being
                 // written into a conversation, a list growing - announces nothing this service
@@ -359,43 +360,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // says nothing at all.
                 readWhileDragging()
             },
-            // Held and let go where it started: the word the reader is looking for, rather
-            // than one somebody else wrote. The app opens on the screen that asks for it.
-            // Held: the whole screen in the reader's own language, and held again to put it
-            // back. The heavier of the two questions on the heavier gesture.
             // Let go on the target at the foot of the screen: Phonetix put away, the way the
             // switch in the app, the tile and the accessibility button all put it away, and
             // brought back by any of them.
             onPutAway = { SettingsStore.setEnabled(false) },
-            onHold = {
-                // Turns the replacing on and off, and nothing else.
-                //
-                // It used to put the whole screen into the reader's own language, which is a
-                // thing they asked for once and reach for rarely; what they reach for
-                // constantly is having the words back. So the heavier gesture on the button
-                // does the heavier of the two everyday things, and the settings screen says
-                // so under the switch it shares.
-                main.post { tooltip.hide() }
-                // Put down, not emptied. What the two switches draw is a different question:
-                // with both of them off the page is left alone and a word can still be asked
-                // about by touching it, which is a reader who wants to be asked rather than
-                // answered over. The button means "not now, none of it" - so nothing is drawn
-                // and nothing takes a touch either.
-                val down = !SettingsStore.current.paused
-                SettingsStore.setPaused(down)
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d("Phonetix", "HELD paused $down")
-                }
-                hover.saying(!down)
-                main.post {
-                    android.widget.Toast.makeText(
-                        this@PhonetixAccessibilityService,
-                        Wording.says[if (down) "replacing-off" else "replacing-on"].orEmpty(),
-                        android.widget.Toast.LENGTH_SHORT,
-                    ).show()
-                }
-                if (down) main.post { overlay.hideNow() } else readAgain()
-            },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from
             // whatever anyone manages to catch live. Debug builds only, and at most one every
@@ -437,6 +405,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
                                 "Phonetix", "PHRASE unanswered $source->$target: $text")
                             return@post
                         }
+                        // Only while the button is still held: the card goes with the finger.
+                        if (!hover.held) return@post
                         tooltip.showPhrase(
                             first.copy(rect = across, word = text, ipa = "", full = ""),
                             answer,
@@ -1238,13 +1208,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             )
         }
         if (root != null && (!SettingsStore.allows(inFront) || bystanders.contains(inFront) || !Dictionary.ready)) {
-            main.post {
-                overlay.hideNow()
-                // And the circle with it. It belongs to the app being read: parked over a
-                // launcher, a keyboard or this app's own screen it is a mark sitting on
-                // somebody's home screen with nothing behind it to ask about.
-                hover.hide()
-            }
+            // The icon stays: it is what the translate panel is opened with, which answers
+            // anywhere, and a button that comes and goes with the screen is one a reader
+            // cannot find when they reach for it.
+            main.post { overlay.hideNow() }
             // And look again in a moment. What is in front is usually on its way somewhere -
             // the notification shade closing, the recents screen going away - and while it
             // animates it is still the thing in front. The app underneath sends nothing more
@@ -3225,21 +3192,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
         val down = if (::hover.isInitialized) hover.touchedDownAt else 0L
         if (closedAt > 0 && down - closedAt in 0..SAME_TOUCH_MS) return
         val settings = SettingsStore.current
-        val into = settings.into
-        // Which language the answer comes back in: what the reader said in this panel, and
-        // until they say, the screen in front of them or a language they keep a dictionary
-        // for. Every language is on offer, not only the ones a dictionary is held for - a
-        // reader asking for the word for something usually has no dictionary for it, which is
-        // why they are asking.
+        // The two languages: the reader's own, and the one they are learning - what they
+        // chose in this panel, and until they choose, the screen in front of them or a
+        // language they keep a dictionary for.
         val held = Packs.held(this)
-        val learning = settings.learning.ifEmpty {
-            lastScreenLanguage?.takeIf { it != into } ?: held.firstOrNull { it != into }.orEmpty()
+        var mine = settings.target.ifEmpty { Language.OURS }
+        var learning = settings.learning.ifEmpty {
+            lastScreenLanguage?.takeIf { it != mine } ?: held.firstOrNull { it != mine }.orEmpty()
         }
-        // In the order worth offering: the one being asked in, then the ones asked in lately,
-        // then the ones a dictionary is held for, and the rest of them by name behind those.
-        val offered = (listOfNotNull(learning.takeIf { it.isNotEmpty() }) + settings.recent +
-            held + Languages.all().sortedBy { Languages.english(it) })
-            .distinct().filter { it.isNotBlank() && it != into }
+        // Every language, in the order worth offering: the two in use, the ones asked in
+        // lately, the ones a dictionary is held for, and the rest by name.
+        val offered = (listOf(mine, learning) + settings.recent + held +
+            Languages.all().sortedBy { Languages.english(it) })
+            .distinct().filter { it.isNotBlank() }
         // The side of the palette the reader reads in: their own answer where they gave one,
         // and the device's where they left it to the device.
         val dark = when (settings.dark) {
@@ -3250,19 +3215,37 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
         val panel = AskPanel(this, Tokens.palette(themeNamed(settings.theme), dark))
-        // What the reader picks here is what they are learning, and it is remembered: this is
-        // the one place they are thinking about it.
-        var answering = learning
-        fun offer(chosen: String) {
-            panel.setLanguages(offered, chosen) { picked ->
-                answering = picked
-                SettingsStore.setLearning(picked)
-                offer(picked)
-                said(panel, picked, into, panel.field.text.toString())
-            }
+        // Which way the question is answered, where the reader turned the arrow: otherwise it
+        // is worked out from what is typed.
+        var turned: Boolean? = null
+        fun ask() = said(panel, panel.field.text.toString(), mine, learning, turned)
+        fun offer() {
+            panel.setPair(
+                offered, mine, learning, forward = turned ?: true,
+                onPick = { isMine, code ->
+                    if (isMine) {
+                        mine = code
+                        SettingsStore.setTarget(code)
+                    } else {
+                        learning = code
+                        SettingsStore.setLearning(code)
+                    }
+                    offer()
+                    ask()
+                },
+                onTurn = {
+                    turned = !(turned ?: panelForward)
+                    panel.direction(turned == true)
+                    ask()
+                },
+            )
         }
-        offer(learning)
-        panel.onSubmit = { asked -> said(panel, answering, into, asked) }
+        offer()
+        panel.onSubmit = { asked ->
+            // Something new typed is worked out afresh.
+            turned = null
+            said(panel, asked, mine, learning, null)
+        }
         panel.onOpenApp = {
             closeSay()
             openApp()
@@ -3282,13 +3265,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 main.post {
                     panel.heard(phrase)
                     panel.listening(false)
-                    said(panel, learning, into, phrase)
+                    said(panel, phrase, mine, learning, turned)
                 }
             }
             hearing.onState = { on -> main.post { panel.listening(on) } }
             panel.onDictate = {
                 if (hearing.hasPermission()) {
-                    hearing.start(into.ifEmpty { Language.OURS })
+                    hearing.start(if (turned == false) learning else mine)
                 } else {
                     // The app asks, because a runtime permission needs a screen. The panel
                     // stays where it is: the reader comes back to what they were typing.
@@ -3307,9 +3290,12 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // underneath, and one outside it closes the panel.
             android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                android.view.WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                // The app behind is dimmed, so the panel is plainly the thing in front.
+                android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND,
             android.graphics.PixelFormat.TRANSLUCENT,
         ).apply {
+            dimAmount = 0.45f
             gravity = android.view.Gravity.TOP or android.view.Gravity.START
             y = (72 * resources.displayMetrics.density).toInt()
             softInputMode =
@@ -3337,101 +3323,94 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private var back: android.window.OnBackInvokedCallback? = null
 
+    /** Which way the last question was answered: from the reader's language when true. */
+    @Volatile private var panelForward = true
+
     /**
      * What the panel answers with, off the thread it is typed on.
      *
-     * Which language it was typed in is worked out rather than assumed: a reader asks for the
-     * word for something in whatever language it came to them in, which is not always the one
-     * this app was set up with. The machine on the phone turns it into the language they are
-     * learning and fetches what that pair needs itself; the dictionary is then asked about the
-     * word that came back, so the answer carries its entry and how it is said. Where there is
-     * no entry - most of a vocabulary - the translation is still the answer, said by the
-     * synthesiser, because a reader who asked for a word wants the word.
+     * Which of the two languages it was typed in is worked out rather than assumed, so a
+     * word in either comes back in the other: a word one dictionary holds and the other does
+     * not is in that one, and otherwise the detector says, and otherwise it is the reader's
+     * own. A word is answered with everything it can mean; a phrase is translated, here where
+     * the phone holds the models, and by the system's engine where it does not.
      */
-    private fun said(panel: AskPanel, learning: String, into: String, asked: String) {
+    private fun said(panel: AskPanel, asked: String, mine: String, learning: String, turned: Boolean?) {
         val text = asked.trim()
         if (text.isEmpty()) return
-        val wanted = learning.ifEmpty { lastScreenLanguage.orEmpty() }
-        if (wanted.isEmpty()) {
+        if (learning.isEmpty() || learning == mine) {
             panel.saying(Wording.says["say-no-language"].orEmpty())
             return
         }
-        panel.saying("…")
         val turn = ++asks
-        // What this question is doing, for the state dump: a panel showing "…" says only that
-        // something has not come back, and which step it is waiting in is the whole answer.
         askedFor = text
-        askedInto = wanted
         askedAt = System.currentTimeMillis()
-        askStage = "identifying the language"
+        askStage = "working out the language"
+        val sound = SettingsStore.current.layer.let { it == "sound" || it == "both" }
         io.post {
             val began = android.os.SystemClock.uptimeMillis()
-            // The engine on this phone first, where it holds the pair.
-            //
-            // What the reader types is in the language they read into - their own - and what
-            // they want back is the language they are learning, which is the direction the
-            // packs they have already fetched are for. Answered here it is milliseconds and
-            // needs nothing from anywhere; the machine below is a call into another app,
-            // which fetches a model of its own the first time and left the panel sitting at
-            // "…" for as long as that took.
+            val single = !text.contains(' ')
+            // Open, so which of them knows the word can be asked.
+            Packs.openHeld(this)
+            val inLearning = single && Reading.knows(text, learning)
+            val inMine = single && Reading.knows(text, mine)
+            val forward = turned ?: when {
+                inLearning && !inMine -> false
+                inMine && !inLearning -> true
+                // Both hold it - English has "banco" too, from the card table - and it is the
+                // language that says it more that it was typed in.
+                inMine && inLearning -> Reading.met(text, mine) >= Reading.met(text, learning)
+                else -> Eld.readScreen(text).language?.let { it != learning } ?: true
+            }
+            panelForward = forward
+            val from = if (forward) mine else learning
+            val to = if (forward) learning else mine
+            askedInto = to
+            main.post { if (asking === panel && turn == asks) panel.direction(forward) }
+            // The dictionaries of both, which a word is answered from.
+            for (lang in listOf(from, to)) {
+                if (lang != "en" && lang !in Packs.held(this)) {
+                    askStage = "getting the $lang dictionary"
+                    Fetch.packNow(this, lang)
+                }
+            }
+            Packs.openHeld(this)
+            if (single) {
+                askStage = "looking $text up"
+                val meanings = Reading.meanings(text, from, to)
+                if (meanings.isNotEmpty()) {
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d(
+                            "Phonetix",
+                            "ASKED $text $from->$to: ${meanings.size} meanings in " +
+                                "${android.os.SystemClock.uptimeMillis() - began}ms: " +
+                                meanings.joinToString { it.word },
+                        )
+                    }
+                    askStage = "answered with ${meanings.size} meanings"
+                    main.post {
+                        if (asking === panel && turn == asks) panel.showMeanings(meanings, sound)
+                    }
+                    return@post
+                }
+            }
+            askStage = "translating $from to $to"
             val here = Packs.models(this)
-            // The pair this question needs is the reverse of the one being read, and a phone
-            // that has only ever read Spanish into English holds only that direction. Fetched
-            // from the reader's own host, which is where their dictionaries come from, rather
-            // than asking another app to fetch one of its own: this way the answer is the
-            // engine's here, in under a second, ever after.
-            if (into.isNotEmpty() && into != wanted && !Translator.ready(here, into, wanted)) {
-                askStage = "getting the $into to $wanted model"
+            if (!Translator.ready(here, from, to)) {
                 main.post {
-                    if (asking === panel && turn == asks && answeredTurn != turn) {
+                    if (asking === panel && turn == asks) {
                         panel.saying(
                             Wording.says["say-fetching"].orEmpty()
-                                .replace("%s", Languages.english(wanted)),
+                                .replace("%s", Languages.english(to)),
                         )
                     }
                 }
-                Fetch.modelNow(this, into, wanted)
-                // And the dictionary of the language asked in, for the entry under the word.
-                Fetch.pack(this, wanted)
+                Fetch.modelNow(this, from, to)
             }
-            // Asked here whether or not the model arrived: without one, the dictionaries on
-            // this phone answer a single word by themselves.
-            val mine =
-                if (into.isNotEmpty() && into != wanted) {
-                    askStage = "asking the engine here for $into to $wanted"
-                    runCatching { Reading.say(this, text, wanted, into) }.getOrNull()
-                } else {
-                    null
-                }
-            if (mine != null) {
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d(
-                        "Phonetix",
-                        "ASKED $text: here=${android.os.SystemClock.uptimeMillis() - began}ms",
-                    )
-                }
-                askStage = "answered here"
-                val word = mine.spelling.ifEmpty { text }
-                answeredTurn = turn
-                main.post {
-                    if (asking === panel && turn == asks) {
-                        panel.show(mine) { speaker.say(word, Accents.voiceOf(wanted, "")) }
-                    }
-                }
-                return@post
-            }
-            val held = Packs.held(this).toSet()
-            val from = kotlinx.coroutines.runBlocking {
-                Machine.language(text, held + into) ?: into.ifEmpty { Language.OURS }
-            }
-            val named = android.os.SystemClock.uptimeMillis()
-            askStage = if (from == wanted) "already in $wanted" else "translating $from to $wanted"
-            val word = if (from == wanted) {
-                text
-            } else {
-                kotlinx.coroutines.runBlocking { Machine.said(text, from, wanted) }
-            }
-            if (word.isNullOrBlank()) {
+            val line = Translator.between(here, from, to, listOf(text)).firstOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?: kotlinx.coroutines.runBlocking { Machine.said(text, from, to) }
+            if (line.isNullOrBlank()) {
                 askStage = "nothing came back"
                 main.post {
                     if (asking === panel && turn == asks) {
@@ -3440,45 +3419,28 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 }
                 return@post
             }
-            val translated = android.os.SystemClock.uptimeMillis()
-            // The word itself, the moment it is known. What follows - an entry for it, and how
-            // it is said - is worth waiting for but not worth waiting for in silence: the
-            // answer to "what is the word for this" is the word.
-            answeredTurn = turn
-            main.post {
-                if (asking === panel && turn == asks) {
-                    panel.show(Answer.ofTranscription(word, "", wanted)) {
-                        speaker.say(word, Accents.voiceOf(wanted, ""))
-                    }
-                }
+            val ipa = if (sound) {
+                val words = line.split(Regex("\\s+"))
+                    .map { it.trim { c -> !c.isLetterOrDigit() } }
+                    .filter { it.isNotBlank() }
+                val said = Speech.phonemes(Accents.voiceOf(to, ""), words)
+                // Written the way every other transcription here is, stress marks and all.
+                words.mapNotNull { said[it] }
+                    .map { runCatching { Lex.display(it, false, false) }.getOrDefault(it) }
+                    .joinToString(" ")
+                    .takeIf { it.isNotEmpty() }
+            } else {
+                null
             }
-            askStage = "looking $word up in $wanted"
-            // The entry for the word that came back, in the language it is in, read into the
-            // one the reader asked in: what it means back is how a machine's answer is judged.
-            Dictionary.ensure(this, wanted)
-            Packs.openHeld(this)
-            val entry = Reading.lookUp(word, wanted, from)?.takeIf { it.found }
-            // No entry is the ordinary case - a dictionary holds a few thousand words - and
-            // the word is still the answer. How it is said comes from the synthesiser, which
-            // is what the overlay falls back to for every word no pack holds.
-            val answer = entry ?: Answer.ofTranscription(
-                word,
-                Speech.phonemes(Accents.voiceOf(wanted, ""), listOf(word))[word].orEmpty(),
-                wanted,
-            )
             if (BuildConfig.DEBUG) {
-                val done = android.os.SystemClock.uptimeMillis()
                 android.util.Log.d(
                     "Phonetix",
-                    "ASKED $text: named=${named - began}ms translated=${translated - named}ms " +
-                        "looked=${done - translated}ms total=${done - began}ms",
+                    "ASKED $text $from->$to: '$line' in " +
+                        "${android.os.SystemClock.uptimeMillis() - began}ms",
                 )
             }
-            askStage = "answered with $word"
-            main.post {
-                if (asking !== panel || turn != asks) return@post
-                panel.show(answer) { speaker.say(word, Accents.voiceOf(wanted, "")) }
-            }
+            askStage = "answered with a line"
+            main.post { if (asking === panel && turn == asks) panel.showLine(line, ipa) }
         }
     }
 

@@ -96,49 +96,16 @@ open class HoverBubbleView(context: Context) : View(context) {
             invalidate()
         }
 
-    /**
-     * Whether the words on the page are being replaced.
-     *
-     * The button is what turns that on and off, so it is also the only thing that can say
-     * which it is: a reader who pressed it and saw the page not change has no way of telling
-     * a gesture that did nothing from a gesture that turned the replacing off. Shown as a
-     * ring around the mark, because the mark itself has a job already.
-     */
-    var replacing: Boolean = true
-        set(value) {
-            if (field == value) return
-            field = value
-            invalidate()
-        }
-
     override fun onDraw(canvas: Canvas) {
         if (masked) return
         val icon = mark ?: return
         icon.setBounds(0, 0, width, height)
-        // The mark wears the palette's own accent while the words are being replaced, and the
-        // ink of whatever it is sitting on when they are not. One shape in two colours rather
-        // than a shape with something added to it: the button is small, and a ring around it
-        // is a second thing to look at for an answer the mark itself can give.
-        icon.setTint(
-            if (replacing) {
-                val dark = (resources.configuration.uiMode and
-                    Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                Tokens.palette(themeNamed(SettingsStore.current.theme), dark).accent.toInt()
-            } else {
-                if (onLight) DARK else LIGHT
-            },
-        )
-        // Solid enough to find, faint enough to read through; a touch stronger under the
-        // finger so it answers the press. Dark ink on a bright page needs less of it to be
-        // seen than pale ink on a dark one.
-        // Solid in the accent, because a colour that says something has to be seen to say it;
-        // quieter in plain ink, where the mark is only a handle over somebody's words.
-        icon.alpha = when {
-            replacing -> if (active) 255 else 230
-            active -> 210
-            onLight -> 150
-            else -> 130
-        }
+        // In the palette's own accent, solid enough to find over any page and a touch more so
+        // under the finger, so it answers the press.
+        val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        icon.setTint(Tokens.palette(themeNamed(SettingsStore.current.theme), dark).accent.toInt())
+        icon.alpha = if (active) 255 else 230
         icon.draw(canvas)
     }
 }

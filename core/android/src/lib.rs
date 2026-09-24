@@ -168,6 +168,78 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openPack<'a>(
     env.new_string(&lang).unwrap_or(empty)
 }
 
+/// How often [word] is met in running text in [lang], as the pack counts it: 0 where the pack
+/// is not open, does not hold the word, or was built without counts.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_met(
+    mut env: JNIEnv,
+    _class: JClass,
+    core: jlong,
+    word: JString,
+    lang: JString,
+) -> jlong {
+    if core == 0 {
+        return 0;
+    }
+    let (Ok(word), Ok(lang)) = (env.get_string(&word), env.get_string(&lang)) else {
+        return 0;
+    };
+    let (word, lang): (String, String) = (word.into(), lang.into());
+    let guard = lock_core(core);
+    let Some(pack) = guard.packs.get(&lang) else {
+        return 0;
+    };
+    let lowered = word.to_lowercase();
+    pack.lookup(&word)
+        .into_iter()
+        .chain(pack.lookup(&lowered))
+        .filter(|entry| entry.lemma.to_lowercase() == lowered)
+        .filter_map(|entry| lexcore::resolve::how_often(&entry))
+        .max()
+        .unwrap_or(0) as jlong
+}
+
+/// Everything a typed word can mean in the language it is wanted in, as JSON: an array of
+/// `{"word","pos","hint","ipa"}`, commonest first. What the panel lists for a single word.
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_meanings<'a>(
+    mut env: JNIEnv<'a>,
+    _class: JClass,
+    core: jlong,
+    text: JString,
+    typed_in: JString,
+    wanted_in: JString,
+) -> jni::objects::JString<'a> {
+    let empty = env.new_string("[]").expect("a string the vm can hold");
+    if core == 0 {
+        return empty;
+    }
+    let (Ok(text), Ok(typed_in), Ok(wanted_in)) = (
+        env.get_string(&text),
+        env.get_string(&typed_in),
+        env.get_string(&wanted_in),
+    ) else {
+        return empty;
+    };
+    let (text, typed_in, wanted_in): (String, String, String) =
+        (text.into(), typed_in.into(), wanted_in.into());
+    let found = {
+        let guard = lock_core(core);
+        let core = &*guard;
+        match core.packs.get(&wanted_in) {
+            Some(wanted) => lexcore::resolve::meanings(
+                &text,
+                &lexcore::answer::Lang(typed_in.clone()),
+                wanted,
+                core.packs.get(&typed_in),
+            ),
+            None => Vec::new(),
+        }
+    };
+    env.new_string(lexcore::json::meanings(&found))
+        .unwrap_or(empty)
+}
+
 /// The words for something a reader typed in their own language, in the one they are learning,
 /// out of the dictionaries alone, best first; empty where they say nothing. See
 /// [lexcore::resolve::word_for].

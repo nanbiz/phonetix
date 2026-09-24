@@ -177,6 +177,23 @@ fn marks(items: &[Vec<String>]) -> String {
     format!("[{}]", inner.join(","))
 }
 
+/// What a typed word can mean, as the panel reads it.
+pub fn meanings(found: &[crate::resolve::Meaning]) -> String {
+    let rows: Vec<String> = found
+        .iter()
+        .map(|m| {
+            format!(
+                "{{\"word\":{},\"pos\":{},\"hint\":{},\"ipa\":{}}}",
+                quoted(&m.word),
+                quoted(&m.pos),
+                quoted(&m.hint),
+                maybe(&m.ipa)
+            )
+        })
+        .collect();
+    format!("[{}]", rows.join(","))
+}
+
 fn strings(items: &[String]) -> String {
     let inner: Vec<String> = items.iter().map(|s| quoted(s)).collect();
     format!("[{}]", inner.join(","))

@@ -102,14 +102,12 @@ data class Settings(
     val into: String get() = if (layer == "meaning" || layer == "both") target else ""
 
     /**
-     * Whether nothing at all is painted over the page.
-     *
-     * Two ways to arrive there, and they are not the same thing: with both of what the
-     * overlay draws switched off the page is left alone and a word can still be asked about
-     * by touching it, while paused the app is out of the way entirely. What they share is
-     * that nothing is drawn.
+     * Whether nothing is painted over the page, which on the phone is always: the words are
+     * read so the side button can answer about the one it is dragged over, and the page itself
+     * is left as its app drew it. Words drawn over an app's own were words nobody could tell
+     * the meaning of, over text the reader was trying to read.
      */
-    val quiet: Boolean get() = paused || layer == "off"
+    val quiet: Boolean get() = true
 }
 
 /**

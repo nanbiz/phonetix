@@ -48,7 +48,7 @@ class HoverController(
     /** The word the circle is over, as it moves, and nothing when it is over none. */
     private val onWord: (WordBox?) -> Unit,
     /** Where the hand is, so the answer can open clear of it. */
-    private val onHand: (Int) -> Unit = {},
+    private val onHand: (Int, Int) -> Unit = { _, _ -> },
     /** The top of the keyboard while one is open, and zero while none is: the button waits
      *  above it, since a button under a keyboard cannot be picked up. */
     private val keyboardTop: () -> Int = { 0 },
@@ -121,6 +121,10 @@ class HoverController(
      *  about each word in turn. */
     private var sweeping = false
     private val swept = ArrayList<WordBox>()
+
+    private val askTheRun = Runnable {
+        if (holding && sweeping && swept.size > 1) onPhrase(ArrayList(swept))
+    }
 
     /** Whether the circle is on screen at all. */
     /** Whether the circle is on the screen. The window outlives being put away - see [hide] -
@@ -244,10 +248,6 @@ class HoverController(
 
     /** Put the circle up, parked at the edge. */
     fun show() {
-        // Whatever it is doing now, every time it is put up or asked to re-park. The setting
-        // can change from the settings screen as easily as from a press held on the button,
-        // and a mark that only heard about the press wore the wrong colour ever after.
-        (mark as? HoverBubbleView)?.replacing = !SettingsStore.current.quiet
         mark?.let { up ->
             // Back into view where it was put away, and never taken away if it was only
             // about to be: see [hide].
@@ -279,9 +279,6 @@ class HoverController(
             android.util.Log.d("Phonetix", "LENSNEW")
         }
         val view = HoverBubbleView(context)
-        // What it is doing right now, from the moment it appears: the ring is the only thing
-        // that says whether the words are being replaced.
-        view.replacing = !SettingsStore.current.quiet
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
             .onSuccess {
@@ -289,16 +286,6 @@ class HoverController(
                 parked()
             }
             .onFailure { android.util.Log.w("Phonetix", "the circle did not go up", it) }
-    }
-
-    /**
-     * Say whether the words are being replaced, so the button shows which it is.
-     *
-     * The button is what turns the replacing on and off, and a reader who pressed it and saw
-     * nothing change cannot otherwise tell that from a press that did nothing at all.
-     */
-    fun saying(on: Boolean) {
-        main.post { (mark as? HoverBubbleView)?.replacing = on }
     }
 
     /** Where the mark is sitting, for anything that can only read what the service says. */
@@ -521,6 +508,13 @@ class HoverController(
                     Rect(it.rect.left.toInt(), it.rect.top.toInt(),
                         it.rect.right.toInt(), it.rect.bottom.toInt())
                 })
+                // Answered while the finger is still down, a moment after the run stops
+                // growing: the card goes when the button is let go, so a run asked about only
+                // once it was finished would never be seen.
+                if (swept.size > 1) {
+                    main.removeCallbacks(askTheRun)
+                    main.postDelayed(askTheRun, RUN_SETTLES_MS)
+                }
             }
         }
         // A sweep is one question, asked when it ends. Opening a card for each word along the
@@ -712,23 +706,15 @@ class HoverController(
                     highlight?.mark(null)
                     highlight?.gather(emptyList())
                     hovered = null
-                    // The run, asked as one thing, now that it is finished. One word is not a
-                    // phrase: a sweep that took in a single word is the question the drag
-                    // already answers, and it is answered that way rather than as a clause.
-                    val run = if (sweeping) ArrayList(swept) else emptyList()
+                    // The card goes with the finger: it is read while the button is held, and
+                    // nothing on it is there to be touched afterwards.
+                    main.removeCallbacks(askTheRun)
                     sweeping = false
                     swept.clear()
-                    if (run.size > 1) {
-                        onWord(null)
-                        onPhrase(run)
-                    } else if (run.size == 1) {
-                        onWord(run[0])
-                    } else {
-                        onWord(null)
-                    }
+                    onWord(null)
                     // No hand on the screen any more: a card opened by a press after this
                     // would otherwise still be dodging a finger that had gone.
-                    onHand(0)
+                    onHand(0, 0)
                     // A drag that passed over nothing is the fault a reader reports as "it
                     // does nothing", and what would explain it - which words this believed
                     // were on screen, and where - is gone by the time anyone can be asked. So
@@ -802,7 +788,7 @@ class HoverController(
             hovered = null
             tookAnything = false
             onWord(null)
-            onHand(0)
+            onHand(0, 0)
             hideLayer()
             hideDrop()
             val size = view.width
@@ -951,11 +937,11 @@ class HoverController(
             fingerX = event.rawX
             fingerY = event.rawY
             nearTheFoot(event, size)
-            onHand(event.rawY.roundToInt())
+            onHand(event.rawX.roundToInt(), event.rawY.roundToInt())
             if (!formed) {
                 formed = true
-
-                view.masked = true
+                // The icon stays in sight under the finger for the whole drag, and the thread
+                // is drawn out of it.
                 // It appears where it is wanted, above the finger, rather than at the finger
                 // and springing up: that spring was one frame of the circle low by the hand
                 // before it climbed.
@@ -1050,6 +1036,9 @@ class HoverController(
          *  how far it has to go again to be let go, in dp. */
         const val TAKE_DP = 64f
         const val LEAVE_DP = 88f
+
+        /** How long a swept run has to stop growing before it is asked about. */
+        const val RUN_SETTLES_MS = 250L
 
         /** How long the mark takes to travel back to the edge. */
         const val PARK_MS = 260L

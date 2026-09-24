@@ -295,11 +295,19 @@ class MistView(context: Context) : View(context) {
         } else {
             fromX = fingerX; fromY = fingerY
         }
-        val (px, py) = perpendicular(fromX, fromY, ringX, ringY)
-        val span = hypot(ringX - fromX, ringY - fromY).coerceAtLeast(1f)
+        // Out of the icon's edge rather than its middle: the icon stays in sight under the
+        // finger, and the light is drawn coming out of it.
+        val reachX = ringX - fromX
+        val reachY = ringY - fromY
+        val far = hypot(reachX, reachY).coerceAtLeast(1f)
+        val out = if (phase == Phase.DISSOLVING) 0f else ringRadius * ICON_EDGE
+        val startX = fromX + reachX / far * out
+        val startY = fromY + reachY / far * out
+        val (px, py) = perpendicular(startX, startY, ringX, ringY)
+        val span = hypot(ringX - startX, ringY - startY).coerceAtLeast(1f)
 
         for (i in 0 until STRANDS) {
-            drawStrand(canvas, i, fromX, fromY, px, py, span)
+            drawStrand(canvas, i, startX, startY, px, py, span)
         }
 
         drawRing(canvas)
@@ -322,7 +330,11 @@ class MistView(context: Context) : View(context) {
         py: Float,
         span: Float,
     ) {
-        val a = ends[i]
+        // Landing on the side of the ring that faces the icon, wherever the ring is carried:
+        // fixed to its underside, the strands crossed the circle whenever it rode below the
+        // hand and ran past its sides when it rode beside it.
+        val facing = kotlin.math.atan2(fromY - ringY, fromX - ringX)
+        val a = facing + (ends[i] - HALF_PI)
         val toX = ringX + cos(a) * ringRadius
         val toY = ringY + sin(a) * ringRadius
         // A wave the size of the journey. The same swing that reads as a slow drift across
@@ -419,8 +431,10 @@ class MistView(context: Context) : View(context) {
             // Spread around the ring rather than scattered at random: strands that share a
             // landing point read as one thick line, and the ring should be held from
             // several sides.
-            ends[i] = HALF_PI + (i - (STRANDS - 1) / 2f) * (TAU / (STRANDS * 2.2f)) +
-                (random.nextFloat() - 0.5f) * 0.25f
+            // Within the middle of the arc that faces the icon, so a strand bowed to one side
+            // still meets the ring from outside it.
+            ends[i] = HALF_PI + (i - (STRANDS - 1) / 2f) * (TAU / (STRANDS * 4f)) +
+                (random.nextFloat() - 0.5f) * 0.12f
             sway[i] = SWAY_MIN + random.nextFloat() * (SWAY_MAX - SWAY_MIN)
             // Under one full wave along the thread: more than that and a strand doubles
             // back on itself, and several of them together read as a tangle.
@@ -486,6 +500,9 @@ class MistView(context: Context) : View(context) {
 
         /** How many filaments the thread is made of. Few enough to read as lines. */
         const val STRANDS = 7
+
+        /** How far out of the icon's middle the strands start, as a share of its radius. */
+        const val ICON_EDGE = 0.9f
         /** How finely each is sampled along its length. */
         const val SAMPLES = 26
         /** How far a strand's wave carries it off its path, dp, over a full-length reach. */
