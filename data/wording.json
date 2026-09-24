@@ -299,6 +299,30 @@
     "dark": {
       "name": "Light or dark",
       "about": ""
+    },
+    "mine": {
+      "name": "My language",
+      "about": ""
+    },
+    "learning": {
+      "name": "Learning",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Side button",
+      "about": ""
+    },
+    "group-shows": {
+      "name": "Shows",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Languages",
+      "about": ""
+    },
+    "position": {
+      "name": "Position",
+      "about": ""
     }
   },
   "ends": {

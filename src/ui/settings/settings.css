@@ -10,6 +10,8 @@
 .row .r-name { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .panel h4 { margin: 0; padding: var(--space-3) var(--space-4); font-size: var(--font-size-body); font-weight: var(--weight-bold); border-bottom: var(--border-width) solid var(--color-border); }
 .rows { display: flex; flex-direction: column; }
+/* A group ends in a row with no line under it, so what follows it draws the line. */
+.rows + .head, .rows + .rows { border-top: var(--border-width) solid var(--color-border); }
 .row { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: var(--border-width) solid var(--color-border); min-height: var(--touch-target); }
 .row:last-child { border-bottom: none; }
 .row .r-name { font-weight: var(--weight-medium); }

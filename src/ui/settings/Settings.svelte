@@ -221,9 +221,22 @@
     .map(([code, row]) => ({ code, english: row.english, native: row.native }))
     .sort((a, b) => a.english.localeCompare(b.english));
 
+  /** A language by its English name and its own, once where the two are the same. */
+  function bothNames(it: { english: string; native: string }): string {
+    return it.native && it.native !== it.english ? `${it.english} · ${it.native}` : it.english;
+  }
+
+  /** The languages to learn: every one but the reader's own. */
+  let learningChoices = $derived([
+    ...(settings.learning ? [] : [{ value: '', label: SAYS['choose-language'] }]),
+    ...named
+      .filter((it) => it.code !== settings.target)
+      .map((it) => ({ value: it.code, label: bothNames(it) })),
+  ]);
+
   let languages = $derived([
     ...(settings.target ? [] : [{ value: '', label: SAYS['choose-language'] }]),
-    ...named.map((it) => ({ value: it.code, label: `${it.english} · ${it.native}` })),
+    ...named.map((it) => ({ value: it.code, label: bothNames(it) })),
   ]);
   /** Which side of a palette is being drawn: what the reader asked for, or what the device
    *  is set to where they left it to the device. */
@@ -305,9 +318,10 @@
     <!-- Where the button sits, under the switch that puts it there: the switch above is the
          button, so this belongs to it rather than standing beside it as a question of its
          own. -->
+    <h4 class="head">{ROWS['group-button'].name}</h4>
     <div class="rows">
       <NavRow
-        name={ROWS.rest.name}
+        name={ROWS.position.name}
         row="rest"
         small
         about={settings.side === 'free'
@@ -324,7 +338,9 @@
   {/if}
 
   <!-- What the overlay puts over a word: one switch each, and whether it is on at all is the
-       press held on the button rather than a third switch here. -->
+       press held on the button rather than a third switch here. On the phone, what the card
+       and the panel show. -->
+  {#if where === 'phone'}<h4 class="head">{ROWS['group-shows'].name}</h4>{/if}
   <div class="rows">
     <Row name={ROWS.ipa.name} row="ipa" about={ROWS.ipa.about}>
       {#snippet control()}
@@ -349,7 +365,7 @@
     <!-- The language the words are turned into, asked for only by the modes that turn them
          into one. The mode is already that question's first half, and a switch beside it
          saying the same thing again was a second way to say no. -->
-    {#if settings.layer === 'meaning' || settings.layer === 'both'}
+    {#if where === 'browser' && (settings.layer === 'meaning' || settings.layer === 'both')}
       <Row
         name={ROWS.target.name}
         row="target"
@@ -369,31 +385,49 @@
     {/if}
   </div>
 
+  {#if where === 'phone'}
+    <h4 class="head">{ROWS['group-languages'].name}</h4>
+    <div class="rows">
+      <!-- The two languages the side button works between: what a word is translated into,
+           and what the panel translates to and from. Always here, because the panel uses
+           both whatever the switches say. -->
+      <Row name={ROWS.mine.name} row="mine">
+        {#snippet control()}
+          <Picker
+            options={languages}
+            chosen={settings.target}
+            label={ROWS.mine.name}
+            change={(value) => change('target', value)}
+          />
+        {/snippet}
+      </Row>
+      <Row name={ROWS.learning.name} row="learning">
+        {#snippet control()}
+          <Picker
+            options={learningChoices}
+            chosen={settings.learning}
+            label={ROWS.learning.name}
+            change={(value) => change('learning', value)}
+          />
+        {/snippet}
+      </Row>
+    </div>
+  {/if}
+
   <!-- The bar a reader comes back to, on a row of its own - and only where it decides
        anything: with nothing being replaced there is no how often for it to be. -->
-  {#if settings.layer !== 'off'}
+  {#if where === 'browser' && settings.layer !== 'off'}
     <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
   {/if}
 
-  {#if where === 'phone'}
-    <!-- Which apps are read. The list itself is the system's, with its own icons, so it is
-         the one screen the phone draws for itself. -->
+  <div class="rows">
     <NavRow
-      name={ROWS.apps.name}
-      row="apps"
-      about={settings.allApps
-        ? SAYS['every-app']
-        : `${settings.apps.length} app${settings.apps.length === 1 ? '' : 's'} chosen`}
-      open={() => onOpenApps?.()}
+      name={ROWS.advanced.name}
+      row="advanced"
+      about={ROWS.advanced.about}
+      open={() => (view = 'more')}
     />
-  {/if}
-
-  <NavRow
-    name={ROWS.advanced.name}
-    row="advanced"
-    about={ROWS.advanced.about}
-    open={() => (view = 'more')}
-  />
+  </div>
 
   <p class="made">
     Made with <span class="heart"><Heart class="r-icon" /></span>
@@ -667,23 +701,16 @@
   />
 
   {#if where === 'phone'}
-    <div class="rows">
-      <!-- The trade this costs, said plainly: a reader who turns it on and then cannot
-           scroll would have no way of guessing why. -->
-      <Row
-        name={ROWS['touch-words'].name}
-        row="touch-words"
-        about={SAYS[settings.touchWords ? 'touch-on' : 'touch-off']}
-      >
-        {#snippet control()}
-          <Toggle
-            on={settings.touchWords}
-            label="touching a word"
-            change={(on) => change('touchWords', on)}
-          />
-        {/snippet}
-      </Row>
-    </div>
+    <!-- Which apps the side button answers in. The list itself is the system's, with its own
+         icons, so it is the one screen the phone draws for itself. -->
+    <NavRow
+      name={ROWS.apps.name}
+      row="apps"
+      about={settings.allApps
+        ? SAYS['every-app']
+        : `${settings.apps.length} app${settings.apps.length === 1 ? '' : 's'} chosen`}
+      open={() => onOpenApps?.()}
+    />
   {/if}
 
   <div class="rows">
@@ -743,7 +770,8 @@
 
   <!-- What actually answers a word, in the order it is asked. A reader deciding whether to
        trust what a card says is deciding it on this, and the card's own pill names which of
-       these answered each time. -->
+       these answered each time. The browser's: the phone's card carries no pill to explain. -->
+  {#if where === 'browser'}
   <div class="rows">
     <Row name="What answers a word" row="how">
       {#snippet wide()}
@@ -764,4 +792,5 @@
       {/snippet}
     </Row>
   </div>
+  {/if}
 </Screen>
