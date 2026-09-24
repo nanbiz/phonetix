@@ -157,6 +157,14 @@ function instead(token: Token, layer: Layer): HTMLElement | null {
     said.appendChild(span('px-ph', token.ipa));
     return said;
   }
+  // With both, how the translation is said, which is what replaces the word: the word is
+  // always replaced by one thing, and drawn beside the translation the transcription was the
+  // part a reader who asked for pronunciation could not find.
+  if (layer === 'both' && token.glossIpa) {
+    const said = span('px-rep');
+    said.appendChild(span('px-ph', token.glossIpa));
+    return said;
+  }
   if (!token.gloss) return null;
   const swapped = span('px-rep');
   // Marked for what each piece is: a meaning and a pronunciation are drawn differently and
@@ -166,10 +174,6 @@ function instead(token: Token, layer: Layer): HTMLElement | null {
   // A machine's answer is marked as one, in the page as much as on the card.
   if (token.provenance?.kind === 'guess') meaning.classList.add('px-guess');
   swapped.appendChild(meaning);
-  if (layer === 'both' && token.glossIpa) {
-    // How to say the word they have just been handed, which is the one they will try to say.
-    swapped.appendChild(span('px-ph', token.glossIpa));
-  }
   return swapped;
 }
 

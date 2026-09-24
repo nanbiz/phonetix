@@ -394,7 +394,10 @@ class MotionLayer(private val context: Context) {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT,
-            ).apply { gravity = Gravity.TOP or Gravity.START; x = 0; y = 0 }
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START; x = 0; y = 0
+                overScreen(this)
+            }
             runCatching { wm.addView(v, lp) }.onSuccess { view = v }
         }
         view?.set(boxes)
@@ -602,6 +605,7 @@ internal class LayerView(context: Context) : View(context) {
         val dark = (resources.configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
+        painter.plan(boxes)
         for (b in boxes) {
             painter.draw(canvas, b.rect, b, dark, revealed = false)
         }

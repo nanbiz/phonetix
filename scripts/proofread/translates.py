@@ -214,17 +214,26 @@ def main():
             failures.append(
                 f"{WORD} is answered by a pack ({state}), so this proves nothing about the engine")
 
-        # The page, annotated. The engine is loaded and the model fetched on the first ask, so
-        # this is given room to do it.
-        batch = ask(cdp, session, {
-            "phonetix": "annotate",
-            "data": {
-                "runs": [{"id": 1, "text": SENTENCE}],
-                "source": "es", "target": "en",
-                "options": {"mode": "meaning", "density": 1},
-            },
-        }, tries=4, gap=10)
-        tokens = (batch.get("ok") or {}).get("tokens") or []
+        # The page, annotated. The first ask is answered with what the dictionaries hold, and
+        # the engine is loaded, its model fetched and the word translated behind it: asked
+        # again, the page is answered with the engine's word as well.
+        def annotated():
+            batch = ask(cdp, session, {
+                "phonetix": "annotate",
+                "data": {
+                    "runs": [{"id": 1, "text": SENTENCE}],
+                    "source": "es", "target": "en",
+                    "options": {"mode": "meaning", "density": 1},
+                },
+            }, tries=4, gap=10)
+            return (batch.get("ok") or {}).get("tokens") or [], batch
+
+        tokens, batch = annotated()
+        for _ in range(30):
+            if any(t["spelling"] == WORD and t.get("gloss") for t in tokens):
+                break
+            time.sleep(2)
+            tokens, batch = annotated()
         if not tokens:
             print(f"FAIL - nothing was annotated ({batch})")
             sys.exit(1)

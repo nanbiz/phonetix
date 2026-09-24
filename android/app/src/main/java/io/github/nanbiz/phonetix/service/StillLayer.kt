@@ -55,6 +55,7 @@ class StillLayer(context: Context, private val reveal: RevealState) : View(conte
             canvas.save()
             canvas.translate(-at[0].toFloat(), -at[1].toFloat())
         }
+        painter.plan(boxes)
         for (b in boxes) {
             painter.draw(canvas, b.rect, b, dark, reveal.isRevealed(b.word))
         }

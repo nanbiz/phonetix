@@ -419,7 +419,10 @@ class OverlayController(
             (if (SettingsStore.current.touchWords) 0
             else WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE),
         PixelFormat.TRANSLUCENT,
-    ).apply { gravity = Gravity.TOP or Gravity.START }
+    ).apply {
+        gravity = Gravity.TOP or Gravity.START
+        overScreen(this)
+    }
 
     private companion object {
         /** How long the rows are left up for, past the transition that made taking them down

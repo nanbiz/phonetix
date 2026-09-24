@@ -402,6 +402,62 @@ async function said(batch: Batch, lang: string, languages: Languages): Promise<B
   return carrying(batch, await complete(batch.batch, results, 'espeak', languages));
 }
 
+/** Words as the engine translated them, by direction and word, the most recently used last. */
+const translatedWords = new Map<string, string>();
+const WORDS_KEPT = 4096;
+/** Words waiting for the engine. Only the latest are kept, for the page the reader is on. */
+const waitingWords = new Map<string, { from: string; target: string; word: string }>();
+const WORDS_WAITING = 256;
+let translatingWords = false;
+
+function translatedWord(key: string): string | undefined {
+  const word = translatedWords.get(key);
+  if (word === undefined) return undefined;
+  translatedWords.delete(key);
+  translatedWords.set(key, word);
+  return word;
+}
+
+/**
+ * Translate the words that are waiting, one direction at a time, and tell the page when there
+ * is more to draw with, the way lines are (see [translateWaiting]).
+ */
+async function translateWordsWaiting(): Promise<void> {
+  if (translatingWords) return;
+  translatingWords = true;
+  let arrived = 0;
+  try {
+    while (waitingWords.size > 0) {
+      const [first] = waitingWords.values();
+      const some = [...waitingWords.entries()]
+        .filter(([, one]) => one.from === first.from && one.target === first.target)
+        .slice(0, 32);
+      try {
+        const answers = await guessed(first.from, first.target, some.map(([, one]) => one.word));
+        answered('the translator');
+        some.forEach(([key], at) => {
+          // Answered, even with nothing: a word the engine has no answer for is not asked again.
+          translatedWords.set(key, answers[at] ?? '');
+          if (answers[at]) arrived += 1;
+        });
+      } catch (e) {
+        console.warn(`[Phonetix] Nothing translated ${first.from} to ${first.target}:`, e);
+        noted('the translator', 'is not answering');
+      }
+      for (const [key] of some) waitingWords.delete(key);
+      while (translatedWords.size > WORDS_KEPT) {
+        const [oldest] = translatedWords.keys();
+        translatedWords.delete(oldest);
+      }
+    }
+  } finally {
+    translatingWords = false;
+  }
+  if (arrived > 0) {
+    await browser.storage.local.set({ linesTranslated: Date.now() }).catch(() => undefined);
+  }
+}
+
 /**
  * Fill in what the words no pack could translate mean.
  *
@@ -409,6 +465,11 @@ async function said(batch: Batch, lang: string, languages: Languages): Promise<B
  * covers. What comes back is a machine's guess and is marked as one all the way to the card,
  * because a guess wearing a dictionary's authority is what the whole cascade is shaped to
  * avoid - the reader is told which of the two answered, every time.
+ *
+ * The page does not wait for it. The first translation in a direction can mean fetching its
+ * models, tens of megabytes, and a page held for that was a page with nothing on it: what the
+ * dictionaries answered is drawn at once, the rest goes to the engine behind the page, and the
+ * page is drawn again once the answers are back.
  *
  * A reader who has chosen no language to read into is not translating, and a word already
  * answered by a pack never reaches this: the core says what it is missing and only that is
@@ -426,37 +487,29 @@ async function meant(
   // it was waiting for.
   const wanted = batch.misses.filter((miss) => miss.need === 'Gloss' || miss.need === 'Both');
   if (wanted.length === 0) return batch;
-  // By the language of the word rather than of the page, for the same reason the voice is:
-  // an English line on a Spanish page is translated out of English or not at all.
-  const byLang = new Map<string, string[]>();
+  const results: { token: number; gloss: string }[] = [];
+  let asked = false;
   for (const miss of wanted) {
     const token = batch.tokens[miss.token];
     if (!token) continue;
+    // By the language of the word rather than of the page, for the same reason the voice is:
+    // an English line on a Spanish page is translated out of English or not at all.
     const from = token.lang || source;
     if (from === target) continue;
-    const words = byLang.get(from) ?? [];
-    if (!words.includes(token.spelling)) words.push(token.spelling);
-    byLang.set(from, words);
-  }
-  const guesses = new Map<string, Record<string, string>>();
-  for (const [from, words] of byLang) {
-    try {
-      const answers = await guessed(from, target, words);
-      guesses.set(from, Object.fromEntries(words.map((word, at) => [word, answers[at] ?? ''])));
-      answered('the translator');
-    } catch (e) {
-      console.warn(`[Phonetix] Nothing translated ${from} to ${target}:`, e);
-      noted('the translator', 'is not answering');
+    const key = lineKey(from, target, token.spelling);
+    const gloss = translatedWord(key);
+    if (gloss !== undefined) {
+      if (gloss) results.push({ token: miss.token, gloss });
+    } else if (!waitingWords.has(key)) {
+      waitingWords.set(key, { from, target, word: token.spelling });
+      while (waitingWords.size > WORDS_WAITING) {
+        const [oldest] = waitingWords.keys();
+        waitingWords.delete(oldest);
+      }
+      asked = true;
     }
   }
-  const results = wanted
-    .map((miss) => {
-      const token = batch.tokens[miss.token];
-      const gloss = token ? guesses.get(token.lang || source)?.[token.spelling] : undefined;
-      return { token: miss.token, gloss };
-    })
-    .filter((result): result is { token: number; gloss: string } =>
-      Boolean(result.gloss) && result.gloss !== '');
+  if (asked) void translateWordsWaiting();
   if (results.length === 0) return batch;
   return carrying(batch, await complete(batch.batch, results, 'bergamot', languages));
 }

@@ -283,6 +283,9 @@ struct Rank {
     // is the formal word, "perro" only "dog" and is the word.
     wrong_part: bool,
     marked: bool,
+    /// Whether the answer is a phrase rather than a word: "from" is "de" before it is
+    /// "a partir de", and drawn over a page a phrase for every word read like a sentence.
+    phrase: bool,
     shared: std::cmp::Reverse<usize>,
     asked: usize,
     /// Whether what was typed is a later sense of the word rather than its first: "caja" is a
@@ -470,6 +473,7 @@ fn weighed<D: AsRef<[u8]>>(
                 Rank {
                     wrong_part,
                     marked,
+                    phrase: entry.lemma.contains(' '),
                     shared: std::cmp::Reverse(shared),
                     asked,
                     later: sense > 0,
@@ -495,6 +499,33 @@ fn weighed<D: AsRef<[u8]>>(
     words
 }
 
+/// How many of an English word's translations are looked for in its translated line.
+const LOOKED_FOR_IN_LINE: usize = 12;
+
+/// Which of the words [glosses] could be in [wanted]'s language the translated line uses, in
+/// any form the pack lists for it, the likeliest first where the line holds several.
+fn in_line<D: AsRef<[u8]>>(
+    glosses: &[(String, Option<String>)],
+    wanted: &Pack<D>,
+    said: &str,
+) -> Option<String> {
+    let sentence = normalised(said);
+    if sentence.is_empty() {
+        return None;
+    }
+    glossed_as(glosses, None, wanted, LOOKED_FOR_IN_LINE)
+        .into_iter()
+        .find(|word| {
+            let mut forms = vec![word.to_lowercase()];
+            for entry in wanted.lookup(word) {
+                if same_word(&entry.lemma, word) {
+                    forms.extend(entry.forms.iter().map(|form| form.spelling.to_lowercase()));
+                }
+            }
+            forms.iter().any(|form| holds(&sentence, &normalised(form)))
+        })
+}
+
 /// Whether two parts of speech are the same kind of word, as two dictionaries file them: one
 /// calls "the" a determiner and another calls "el" an article.
 fn same_part(one: &str, other: &str) -> bool {
@@ -508,7 +539,7 @@ fn same_part(one: &str, other: &str) -> bool {
 }
 
 /// Whether an entry is a reading nobody means in ordinary text: a letter or a symbol, only a
-/// pointer to how another word is spelled, or a word every sense of which the dictionary marks
+/// pointer to how another word is or once was spelled, or a word every sense of which the dictionary marks
 /// as dialectal, obsolete, slang and the like.
 fn is_minor(entry: &Entry) -> bool {
     if by_kind(&entry.pos) == 3 && entry.pos != "name" && entry.pos != "intj" {
@@ -519,7 +550,10 @@ fn is_minor(entry: &Entry) -> bool {
     }
     let spelled_elsewhere = entry.senses.iter().all(|sense| {
         let gloss = sense.gloss.to_lowercase();
-        crate::annotate::about_grammar(&gloss) && gloss.contains("spelling of")
+        crate::annotate::about_grammar(&gloss)
+            && ["spelling of", "obsolete form of", "archaic form of"]
+                .iter()
+                .any(|note| gloss.contains(note))
     });
     let unusual = entry.senses.iter().all(|sense| {
         sense
@@ -595,7 +629,17 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     };
     let mut answers: Vec<Answer> = found
         .iter()
-        .map(|entry| resolve_one(spelling, entry, source, target, pack, open.target))
+        .map(|entry| {
+            resolve_one(
+                spelling,
+                entry,
+                source,
+                target,
+                pack,
+                open.target,
+                open.said,
+            )
+        })
         .collect();
     // How this reader's accent says it, decided here so that the inline layer, the card, the
     // lens and the audio cannot show four different transcriptions of the same word.
@@ -768,7 +812,7 @@ fn sense_in_line<D: AsRef<[u8]>>(
                     senses: vec![sense.clone()],
                     ..entry.clone()
                 };
-                resolve_one(spelling, &alone, source, target, pack, open.target).says
+                resolve_one(spelling, &alone, source, target, pack, open.target, None).says
             };
             meant_words(&says, Some(entry.pos.as_str()), target, pack, open)
         })
@@ -1075,6 +1119,7 @@ fn resolve_one<D: AsRef<[u8]>>(
     target: &Lang,
     pack: &Pack<D>,
     other: Option<&Pack<D>>,
+    said: Option<&str>,
 ) -> Answer {
     // A spelling that is not the lemma got here through the forms index, and the reader is
     // owed the connection: they tapped "perros" and the answer is about "perro".
@@ -1127,12 +1172,14 @@ fn resolve_one<D: AsRef<[u8]>>(
     // language glosses a word that way, so the word itself is what is looked for in the
     // reader's pack: "and" is where Spanish "y" is glossed.
     if source.0 == "en" {
-        let found = glossed_as(
-            &[(entry.lemma.clone(), Some(entry.pos.clone()))],
-            None,
-            other,
-            1,
-        );
+        let asked = [(entry.lemma.clone(), Some(entry.pos.clone()))];
+        // With the line translated, the word the engine wrote for it, where it is one this
+        // word can be: "reviews" of products are "reseñas" there, though "review" alone ranks
+        // "repaso" first, and "accurate" is "exacto" rather than the verb "acertar".
+        let found = said
+            .and_then(|said| in_line(&asked, other, said))
+            .map(|word| vec![word])
+            .unwrap_or_else(|| glossed_as(&asked, None, other, 1));
         if !found.is_empty() {
             let state = if inflected {
                 AnswerState::Form

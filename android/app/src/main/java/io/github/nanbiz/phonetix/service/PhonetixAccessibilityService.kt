@@ -3121,11 +3121,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // whatever they point at, not about the handful a bar would have drawn. So every
             // word the core read is kept, and none of them is painted.
             if (!silent && !token.inline) continue
+            // The word is replaced, always, by one thing: how it is said, what it means, or - with
+            // both - how what it means is said, which is the transcription of the translation.
+            // Drawn beside the translation, the transcription was cut away wherever the two did
+            // not fit, and a reader who asked for pronunciation saw none.
             val shown = when (settings.layer) {
                 "sound" -> token.ipa
-                "both" -> listOf(token.gloss, token.glossIpa).filter { it.isNotEmpty() }
-                    .joinToString(" ")
-                    .ifEmpty { token.ipa }
+                "both" -> token.glossIpa.ifEmpty { token.gloss }.ifEmpty { token.ipa }
                 else -> token.gloss.ifEmpty { token.ipa }
             }
             if (shown.isEmpty()) continue

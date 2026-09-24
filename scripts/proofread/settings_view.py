@@ -201,14 +201,15 @@ def main():
         if not sound["sounds"]:
             failures.append("nothing is said about how the words sound")
 
-        # Both: what it means, and how to say that.
+        # Both: the word is replaced by how its translation is said, and by nothing else -
+        # "perro" read into German is "hʊnt", not "Hund" and not how "perro" sounds.
         mode(cdp, view, sound=True, gloss=True)
         together = words(cdp, page)
         print(f"  both: {together['glosses'][:3]} said {together['sounds'][:3]}")
-        if not together["glosses"]:
-            failures.append("both showed no meanings")
-        if not together["sounds"]:
-            failures.append("both showed no pronunciations for the meanings")
+        if together["glosses"]:
+            failures.append(f"both drew the meanings as written: {together['glosses'][:4]}")
+        if "hʊnt" not in together["sounds"]:
+            failures.append(f"both did not say the translation: {together['sounds'][:4]}")
 
         # Back to meanings for what follows.
         mode(cdp, view, sound=False, gloss=True)

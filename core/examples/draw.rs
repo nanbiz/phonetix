@@ -4,6 +4,9 @@
 //! With the translated line, every word that asked for it - undecided between readings, or
 //! between senses - is read again with it in hand, the way a host does once the engine has
 //! answered.
+//!
+//! Read into another language than English with `INTO=<lang> INTO_PACK=<pack>`, drawn the way
+//! the "both" layer draws it: each word's translation and how that is said.
 use lexcore::annotate::annotate;
 use lexcore::answer::{AnnotateOptions, InlineMode, Lang, TextRun};
 use lexcore::resolve::Open;
@@ -18,20 +21,29 @@ fn main() {
     ))
     .ok()
     .and_then(|bytes| lexcore::homographs::Classifier::open(&bytes).ok());
+    let into = std::env::var("INTO").unwrap_or_else(|_| "en".to_string());
+    let into_pack = std::env::var("INTO_PACK")
+        .ok()
+        .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let open = Open {
         source: Some(&pack),
+        target: into_pack.as_ref(),
         classifier: classifier.as_ref(),
         ..Open::default()
     };
     let options = AnnotateOptions {
-        mode: InlineMode::Meaning,
+        mode: if into == "en" {
+            InlineMode::Meaning
+        } else {
+            InlineMode::Both
+        },
         density: 1,
         narrow: false,
         hide_stress: false,
         accent: None,
         seen: Vec::new(),
     };
-    let target = Lang("en".to_string());
+    let target = Lang(into);
     let (mut tokens, misses) = annotate(
         &[TextRun {
             id: 1,
@@ -60,9 +72,10 @@ fn main() {
     }
     for token in tokens.iter().filter(|t| t.inline) {
         println!(
-            "{:>14}  {:<30} {:?}",
+            "{:>14}  {:<24} {:<18} {:?}",
             token.spelling,
             token.gloss.clone().unwrap_or_default(),
+            token.gloss_ipa.clone().unwrap_or_default(),
             token.state
         );
     }

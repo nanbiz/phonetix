@@ -1005,6 +1005,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             )) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
+        } else if (mode == "prose") {
+            // A chat app's answer, as one really reads: long English paragraphs set in a serif,
+            // names, contractions and punctuation in them, rather than a list of chosen words.
+            for (text in PROSE) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "bench") {
             // A word that is decided - "banco" is the noun - with senses that are different
             // words: the dictionary lists the bank first, and this line is about a bench.
@@ -1069,6 +1073,9 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         setTextColor(ink)
         setBackgroundColor(bg)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        // The page in a serif, as a reading app sets its prose: what the overlay draws over it
+        // has to be set in a serif as well, which it can only tell from how wide the words are.
+        if (mode == "serif" || mode == "prose") typeface = android.graphics.Typeface.SERIF
         // A gutter down the left, which is where a line puts the bar that says where it is.
         // Without it the bar sits exactly where the line's first word starts, so the
         // transcription of that word covers it and the line reports itself as absent.
@@ -1147,6 +1154,21 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         /** The colour of the part of a page that is not the rest of it: what a title sits on
          *  above a dark body, which no single colour for the whole screen can stand for. */
         val BAND = Color.rgb(0x2A, 0x2E, 0x10)
+        /** A page of ordinary English prose, as a chat app answers in it. */
+        val PROSE = listOf(
+            "The editorial side has incentives too. \"Best of\" lists and product reviews are " +
+                "separate from the Seal, but like most review sites today they earn affiliate " +
+                "commissions when readers buy through their links.",
+            "So it's more accurate to call it a real testing operation inside a company that " +
+                "makes money from the brands it evaluates. That's a conflict of interest, not " +
+                "fraud. For more independent reviews, Consumer Reports is the usual comparison, " +
+                "since it buys its test products anonymously and doesn't take advertising.",
+            "One caution: the comment from someone claiming five years at Hearst, who says the " +
+                "lab usually has only one or two people, is an unverified YouTube anecdote. It's " +
+                "also a reminder that the video is a comedy segment, so the lab was likely staged " +
+                "to look busy for the cameras.",
+        )
+
         const val PARAGRAPH =
             "Reading a paragraph teaches pronunciation quietly because every unfamiliar " +
                 "word arrives already spoken and the dictionary answers immediately."

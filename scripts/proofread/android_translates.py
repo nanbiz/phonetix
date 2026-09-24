@@ -123,12 +123,12 @@ def main():
         failures.append("nothing was drawn on a Spanish screen")
     else:
         # What a reader is owed: the meaning, in their language, over the word it belongs to.
-        # With both layers on, the meaning comes first and how it is said after it.
-        meaning = {word: said.split(" ")[0] for word, said in over.items()}
-        if meaning.get("perro") != "Hund":
-            failures.append(f"perro carries {over.get('perro')!r} rather than its meaning")
-        if meaning.get("camino") != "Weg":
-            failures.append(f"camino carries {over.get('camino')!r} rather than its meaning")
+        # With both asked for, the word is replaced by how its translation is said: "perro"
+        # is "Hund", said [hʊnt].
+        if over.get("perro") != "hʊnt":
+            failures.append(f"perro carries {over.get('perro')!r} rather than how Hund is said")
+        if over.get("camino") != "veːk":
+            failures.append(f"camino carries {over.get('camino')!r} rather than how Weg is said")
 
     if failures:
         print("\nFAIL")

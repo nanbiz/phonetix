@@ -26,11 +26,12 @@ class ChipPainter {
 
     /** A scratch paint for asking how wide a word would be in a given face. */
     private val ruler = Paint(Paint.ANTI_ALIAS_FLAG)
+    // Regular weights only: a bold face is a regular one drawn wider, which the widths of a
+    // line cannot tell from a larger size, and let in, a page with no bold on it came back
+    // with whole lines in bold.
     private val faces = listOf(
         Typeface.SANS_SERIF,
         Typeface.SERIF,
-        Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD),
-        Typeface.create(Typeface.SERIF, Typeface.BOLD),
     )
     private val matched = HashMap<String, Pair<Typeface, Float>>(64)
 
@@ -81,6 +82,89 @@ class ChipPainter {
         matched[key] = sized
         return sized
     }
+
+    /** The face and size each line of the page is set in, as [plan] worked them out. */
+    private var lines: Map<Long, Pair<Typeface, Float>> = emptyMap()
+    private var plannedFor: List<WordBox>? = null
+
+    /**
+     * Work out which face the app set its words in, and at what size each line is set.
+     *
+     * Every word of a line is the same size in the face that is on screen, so of the faces
+     * tried, the right one is the one in which the sizes the words' widths imply agree with
+     * each other. One word alone says little - a short one is a few pixels either way in any
+     * face - and a line of them says a great deal, and a page more still: decided line by line,
+     * a line holding one translated word guessed on its own and came out in sans in the middle
+     * of a page set in a serif. So the face is the page's, weighed over all its lines, and each
+     * line takes its size from its own words, or where it has too few, from how large the page
+     * sets its type for a line of that height.
+     */
+    fun plan(boxes: List<WordBox>) {
+        if (boxes === plannedFor) return
+        plannedFor = boxes
+        val byLine = boxes.groupBy(::lineOf)
+        val measurable = byLine.mapValues { (_, words) ->
+            words.filter { it.word.count(Char::isLetter) >= 3 && it.rect.width() > 0 }
+        }
+        // How unevenly each face explains the sizes within each line, over the whole page.
+        fun sizes(face: Typeface, words: List<WordBox>): List<Float> {
+            ruler.typeface = face
+            ruler.textSize = UNIT
+            return words.mapNotNull { box ->
+                val wide = ruler.measureText(box.word)
+                if (wide > 0f) box.rect.width() / wide * UNIT else null
+            }.sorted()
+        }
+        fun spread(face: Typeface): Float? {
+            val each = measurable.values.filter { it.size >= 2 }.map { words ->
+                val implied = sizes(face, words)
+                val mean = implied.average().toFloat()
+                kotlin.math.sqrt(implied.map { (it - mean) * (it - mean) }.average()).toFloat() / mean
+            }
+            return if (each.isEmpty()) null else each.average().toFloat()
+        }
+        val spreads = faces.associateWith(::spread)
+        val plain = spreads[Typeface.SANS_SERIF]
+        val bestFace = spreads.entries.filter { it.value != null }.minByOrNull { it.value!! }
+        val face = when {
+            plain == null || bestFace == null -> null
+            // Only a clear difference moves a page off the ordinary face.
+            plain - bestFace.value!! < LINE_CLEARLY -> Typeface.SANS_SERIF
+            else -> bestFace.key
+        }
+        val out = HashMap<Long, Pair<Typeface, Float>>()
+        if (face == null) {
+            lines = out
+            return
+        }
+        // How large the type is against the height of its line, wherever a line says.
+        val sized = HashMap<Long, Float>()
+        val ratios = ArrayList<Float>()
+        for ((line, words) in measurable) {
+            val implied = sizes(face, words)
+            if (implied.size < 2) continue
+            val size = implied[implied.size / 2]
+            sized[line] = size
+            ratios.add(size / words.first().rect.height())
+        }
+        ratios.sort()
+        val ratio = ratios.getOrNull(ratios.size / 2)
+        for ((line, words) in byLine) {
+            val height = words.first().rect.height().toFloat()
+            val size = sized[line] ?: ratio?.let { it * height } ?: continue
+            out[line] = face to minOf(size, height * 0.95f)
+        }
+        lines = out
+    }
+
+    /** Which line of the page a word is on, by where its middle is and how tall it is. */
+    private fun lineOf(box: WordBox): Long =
+        ((box.rect.centerY() / 6f).toLong() shl 20) or (box.rect.height() / 6f).toLong()
+
+    /** The face and size a word is drawn in: its line's, or its own where the line said
+     *  nothing. */
+    private fun setFor(box: WordBox, width: Float, height: Float): Pair<Typeface, Float> =
+        lines[lineOf(box)] ?: faceFor(box.word, width, height)
 
     fun draw(
         canvas: Canvas,
@@ -141,9 +225,10 @@ class ChipPainter {
         // still be read, and past that cut short with an ellipsis rather than spilling under
         // the next word. Shrunk to the word alone, "a" read into Spanish was an "un" too small
         // to see.
-        val (face, full) = faceFor(box.word, width, height)
+        val (face, full) = setFor(box, width, height)
         ink.typeface = face
         ink.textSize = full
+        ink.textScaleX = 1f
         val measured = ink.measureText(label)
         var patch = where
         var text: CharSequence = label
@@ -153,13 +238,16 @@ class ChipPainter {
             canvas.drawRoundRect(patch, r, r, bg)
             val room = patch.width()
             if (measured > room) {
-                // A little under the exact fit, because type measured at a smaller size does
-                // not shrink exactly in proportion, and cut only where even the smallest size
-                // is too wide: decided from the proportion rather than measured again, which
-                // cut a word that fitted by a pixel.
-                val fits = room / measured
-                ink.textSize = full * maxOf(fits * 0.97f, SMALLEST)
-                if (fits * 0.97f < SMALLEST) {
+                // Narrowed first, which keeps the word as tall as the line around it, and only
+                // then made smaller: a little under the exact fit, because type measured at one
+                // size does not scale exactly in proportion, and cut only where even the
+                // smallest size is too wide, decided from the proportion rather than measured
+                // again, which cut a word that fitted by a pixel.
+                val fits = room / measured * 0.97f
+                ink.textScaleX = maxOf(fits, NARROWEST)
+                val left = fits / ink.textScaleX
+                ink.textSize = full * maxOf(minOf(left, 1f), SMALLEST)
+                if (left < SMALLEST) {
                     text = android.text.TextUtils.ellipsize(
                         label, android.text.TextPaint(ink), room,
                         android.text.TextUtils.TruncateAt.END,
@@ -204,8 +292,15 @@ class ChipPainter {
         /** The size words are measured at, to be scaled from. */
         const val UNIT = 100f
 
+        /** How much more evenly another face has to explain a line's word sizes, as spread over
+         *  the mean, before the line is drawn in it. */
+        const val LINE_CLEARLY = 0.01f
+
         /** The smallest a replacement is drawn, as a share of the word's own size. */
         const val SMALLEST = 0.6f
+
+        /** The narrowest a replacement is drawn, as a share of its face's own width. */
+        const val NARROWEST = 0.8f
     }
 }
 

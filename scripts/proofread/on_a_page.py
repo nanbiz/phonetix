@@ -193,7 +193,8 @@ def main():
               const words = [...document.querySelectorAll('.px-w')];
               return JSON.stringify({
                 count: words.length,
-                glosses: words.map(w => (w.querySelector('.px-gl') || {}).textContent || ''),
+                // What replaces each word: with both asked for, how its translation is said.
+                glosses: words.map(w => (w.querySelector('.px-rep') || {}).textContent || ''),
                 // The word the page wrote, which the box keeps beside the answer for the
                 // reveal to show.
                 spellings: words.map(
@@ -219,19 +220,19 @@ def main():
 
         if painted["count"] < 5:
             failures.append(f"only {painted['count']} words were annotated")
-        # The annotation over a word has to be about that word.
+        # The annotation over a word has to be about that word. With both asked for, what
+        # replaces it is how its translation is said: "perro" is "Hund", said [hʊnt].
         pairs = dict(zip(painted["spellings"], painted["glosses"]))
-        if pairs.get("perro") != "Hund":
-            failures.append(f"perro carries {pairs.get('perro')!r}, not its answer")
-        if pairs.get("camino") != "Weg":
-            failures.append(f"camino carries {pairs.get('camino')!r}, not its answer")
+        said = {"perro": "hʊnt", "camino": "veːk"}
+        for word, answer in said.items():
+            if pairs.get(word) != answer:
+                failures.append(f"{word} carries {pairs.get(word)!r}, not {answer!r}")
         # The heading. A page capitalises its headings whatever the language does, and while
         # the cascade compared spellings byte for byte every one of them went unanswered - on
         # a real page that is most of what a reader looks at first.
-        if pairs.get("Perro") != "Hund":
-            failures.append(f"the heading's Perro carries {pairs.get('Perro')!r}, not its answer")
-        if pairs.get("Camino") != "Weg":
-            failures.append(f"the heading's Camino carries {pairs.get('Camino')!r}, not its answer")
+        for word, answer in (("Perro", "hʊnt"), ("Camino", "veːk")):
+            if pairs.get(word) != answer:
+                failures.append(f"the heading's {word} carries {pairs.get(word)!r}, not {answer!r}")
         # A word the packs cannot answer is left plain rather than given an empty annotation.
         if pairs.get("calle"):
             failures.append(f"calle was given {pairs['calle']!r} from nowhere")
@@ -243,7 +244,7 @@ def main():
         # answered words swapped and everything else exactly as the page wrote it. The word
         # itself is still in the page, beside the answer, for the reveal to show.
         reading = painted["words"]
-        for word, answer in (("perro", "Hund"), ("camino", "Weg")):
+        for word, answer in said.items():
             if answer not in reading:
                 failures.append(f"{word} was not replaced by {answer}: {reading!r}")
         for kept in ("corre", "descansa", "calle"):

@@ -44,7 +44,14 @@ pub fn annotate<D: AsRef<[u8]>>(
         // The word before this one, within the run. A run is a line the page drew, so the
         // first word of one has no neighbour rather than borrowing the last word of another.
         let mut before: Option<String> = None;
-        for word in words(&run.text) {
+        let found = words(&run.text);
+        // A heading capitalises every word, which says nothing about any of them.
+        let capitalised = found
+            .iter()
+            .filter(|word| word.text.chars().next().is_some_and(char::is_uppercase))
+            .count();
+        let heading = capitalised * 2 >= found.len();
+        for word in found {
             let spelling = word.text;
             let key = spelling.to_lowercase();
             let occurrence = {
@@ -57,8 +64,16 @@ pub fn annotate<D: AsRef<[u8]>>(
             // A word the reader has already opened a card for is always annotated: they asked
             // about it once, so it is theirs to keep seeing.
             let asked_about = options.seen.iter().any(|word| word.to_lowercase() == key);
+            // A name is not translated: "Hearst", "YouTube" and "Consumer Reports" are what a
+            // Spanish page calls them too, and a dictionary reading them as words turns them
+            // into "Giay" and "consumidor referir".
+            let named = matches!(options.mode, InlineMode::Meaning | InlineMode::Both)
+                && target != &lang
+                && !heading
+                && a_name(&run.text, word.start, &spelling, &lang);
             let inline = match options.mode {
                 InlineMode::Off => false,
+                _ if named => false,
                 _ => asked_about || picks(&key, occurrence, options.density),
             };
 
@@ -88,17 +103,10 @@ pub fn annotate<D: AsRef<[u8]>>(
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
             // An English definition is not a translation. Read into another language, an
-            // English word the reader's pack has no word for is left for the engine, rather
-            // than drawn as "An unfamiliar…" over a page being read in Spanish.
-            let defined_only = lang.0 == "en"
-                && target.0 != "en"
-                && answer.says.is_empty()
-                && matches!(answer.state, AnswerState::ViaEn | AnswerState::IpaOnly);
-            let gloss = if defined_only {
-                None
-            } else {
-                drawn_as(&answer, &lang, target, open).map(|text| cut(&text, GLOSS_LIMIT))
-            };
+            // English word is drawn as a word in that language - its own, or another reading's -
+            // or not at all, and left for the engine: never as "An unfamiliar…" or "The act
+            // of…" over a page being read in Spanish.
+            let gloss = drawn_as(&answer, &lang, target, open).map(|text| cut(&text, GLOSS_LIMIT));
             // Carrying as much of the detail as the reader asked for; the card always has the
             // full form. The accent is already in what the cascade answered, and applying it
             // again here would shift a word its accent's own pack had already spelled out.
@@ -137,7 +145,11 @@ pub fn annotate<D: AsRef<[u8]>>(
                     token_index: index,
                     need: Need::Sentence,
                 });
-            } else if inline && target != &lang && gloss.is_some() && several_meanings(&answer) {
+            } else if inline
+                && target != &lang
+                && gloss.is_some()
+                && (lang.0 == "en" || several_meanings(&answer))
+            {
                 misses.push(Miss {
                     token_index: index,
                     need: Need::Sense,
@@ -175,19 +187,47 @@ fn said_in<D: AsRef<[u8]>>(gloss: &str, target: &Lang, open: &Open<D>) -> Option
     if pack.lang() != target.0 {
         return None;
     }
-    if let Some(said) = pack.lookup(head).first().and_then(|e| e.ipa.first()) {
-        return Some(said.clone());
+    if let Some(said) = said_as_itself(pack, head) {
+        return Some(said);
+    }
+    // A phrase with no entry of its own, "por lo que", is said a word at a time.
+    let words: Vec<&str> = head.split_whitespace().collect();
+    if words.len() < 2 {
+        return None;
+    }
+    let each: Option<Vec<String>> = words
+        .iter()
+        .map(|word| said_as_itself(pack, word))
+        .collect();
+    if let Some(each) = each {
+        return Some(each.join(" "));
     }
     // A gloss carries the article a dictionary writes with it - "to bank", "a road", "der
     // Weg" - and the entry is under the word itself, which is the last word of the head in
     // every language a gloss is written in here.
-    let word = head.split_whitespace().last()?;
-    if word == head {
-        return None;
-    }
-    pack.lookup(word)
-        .first()
-        .and_then(|e| e.ipa.first())
+    said_as_itself(pack, words.last()?)
+}
+
+/// How a word is said, from its own entry before any it is only a form of.
+///
+/// A lookup reaches every entry listing the spelling among its forms, in the order the pack
+/// was built, so "como" reaches "comer" and "incentivo" reaches "incentivar" as well as the
+/// words themselves: the entry whose lemma is the word is the one it is said by.
+fn said_as_itself<D: AsRef<[u8]>>(pack: &lexpack::Pack<D>, word: &str) -> Option<String> {
+    let found = pack.lookup(word);
+    let lowered = word.to_lowercase();
+    found
+        .iter()
+        .filter(|entry| !entry.ipa.is_empty())
+        .find(|entry| entry.lemma == word)
+        .or_else(|| {
+            found
+                .iter()
+                .filter(|entry| !entry.ipa.is_empty())
+                .find(|entry| entry.lemma.to_lowercase() == lowered)
+        })
+        .or_else(|| found.iter().find(|entry| !entry.ipa.is_empty()))
+        .and_then(|entry| entry.ipa.first())
         .cloned()
 }
 
@@ -215,10 +255,32 @@ pub fn complete<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) {
+    // Where each word sits in its line, as a share of the words there, so its translation is
+    // looked for where the translated line has it.
+    let placed: Vec<f32> = tokens
+        .iter()
+        .enumerate()
+        .map(|(at, token)| {
+            let line: Vec<usize> = (0..tokens.len())
+                .filter(|other| tokens[*other].run_id == token.run_id)
+                .collect();
+            let ordinal = line.iter().position(|other| *other == at).unwrap_or(0);
+            (ordinal as f32 + 0.5) / line.len().max(1) as f32
+        })
+        .collect();
     for result in results {
+        let at = placed.get(result.token_index as usize).copied();
         let Some(token) = tokens.get_mut(result.token_index as usize) else {
             continue;
         };
+        // The part of the translated line this word became, as near as order tells: a line
+        // holds "reseñas" for "reviews" and "revisión" for "review sites" further on, and read
+        // whole it says both words are there for both.
+        let around = result
+            .sentence
+            .as_deref()
+            .zip(at)
+            .map(|(sentence, at)| around(sentence, at));
         // The sentence, where the host had it translated for a spelling that is several
         // words. The word is read again with it in hand, because which word it is can change
         // what it means, how it is said and which entry the card is about - all of which the
@@ -228,18 +290,35 @@ pub fn complete<D: AsRef<[u8]>>(
                 // Decided already, and asked about which of its senses the line means. Only the
                 // drawn word changes: the reading, its state and where it came from stay, and a
                 // line that says nothing about it leaves the first sense standing.
+                let spelling = token.spelling.clone();
+                let lang = token.lang.clone();
+                let read = |said: &str| {
+                    let with_sentence = Open {
+                        said: Some(said),
+                        ..*open
+                    };
+                    let answer = crate::resolve::read_in_context(
+                        &spelling,
+                        None,
+                        &lang,
+                        target,
+                        &with_sentence,
+                    );
+                    let gloss = drawn_as(&answer, &lang, target, &with_sentence);
+                    (answer, gloss)
+                };
+                // Near where the word is first; the whole line where that says nothing new, for
+                // a language that puts its words somewhere else - a German verb at the end.
+                let (mut answer, mut drawn) = read(around.as_deref().unwrap_or(sentence));
+                if drawn.as_deref().map(|text| cut(text, GLOSS_LIMIT)) == token.gloss {
+                    (answer, drawn) = read(sentence);
+                }
                 let with_sentence = Open {
                     said: Some(sentence.as_str()),
                     ..*open
                 };
-                let spelling = token.spelling.clone();
-                let lang = token.lang.clone();
-                let answer =
-                    crate::resolve::read_in_context(&spelling, None, &lang, target, &with_sentence);
                 if answer.state == token.state {
-                    if let Some(gloss) = drawn_as(&answer, &lang, target, &with_sentence)
-                        .map(|text| cut(&text, GLOSS_LIMIT))
-                    {
+                    if let Some(gloss) = drawn.map(|text| cut(&text, GLOSS_LIMIT)) {
                         if token.gloss_ipa.is_some() && token.gloss.as_deref() != Some(&gloss) {
                             token.gloss_ipa = said_in(&gloss, target, &with_sentence).map(|ipa| {
                                 crate::symbols::display(&ipa, options.narrow, options.hide_stress)
@@ -249,14 +328,23 @@ pub fn complete<D: AsRef<[u8]>>(
                     }
                 }
             } else {
+                let spelling = token.spelling.clone();
+                let lang = token.lang.clone();
+                let read = |said: &str| {
+                    let with_sentence = Open {
+                        said: Some(said),
+                        ..*open
+                    };
+                    crate::resolve::read_in_context(&spelling, None, &lang, target, &with_sentence)
+                };
+                let mut answer = read(around.as_deref().unwrap_or(sentence));
+                if answer.state == AnswerState::Homograph {
+                    answer = read(sentence);
+                }
                 let with_sentence = Open {
                     said: Some(sentence.as_str()),
                     ..*open
                 };
-                let spelling = token.spelling.clone();
-                let lang = token.lang.clone();
-                let answer =
-                    crate::resolve::read_in_context(&spelling, None, &lang, target, &with_sentence);
                 if answer.state != AnswerState::Homograph {
                     token.state = answer.state;
                     token.provenance = answer.provenance.clone();
@@ -311,6 +399,17 @@ pub fn complete<D: AsRef<[u8]>>(
     }
 }
 
+/// The words of a translated line around where a word [at] this share of its own line would
+/// be, a sixth of the line either side and never fewer than five words.
+fn around(sentence: &str, at: f32) -> String {
+    let words: Vec<&str> = sentence.split_whitespace().collect();
+    let centre = (at * words.len() as f32).floor() as usize;
+    let reach = (words.len() / 6).max(5);
+    let from = centre.saturating_sub(reach);
+    let to = (centre + reach + 1).min(words.len());
+    words[from.min(to)..to].join(" ")
+}
+
 /// An engine's answer written the way the word it answers is: a lowercase word in the middle
 /// of a line comes back from the engine as though it were a sentence, "Desconocido" for
 /// "unfamiliar", and drawn over the line it reads as a name. An answer that is capitalised
@@ -337,6 +436,14 @@ fn cased_like(answer: &str, word: &str, into: &Lang) -> String {
 ///
 /// Cut mid-word, an annotation reads as a different word; cut at a space, it reads as the
 /// beginning of the right one. The ellipsis says that there is more, which the card has.
+/// Whether a word is a name, by its capital: in the middle of a sentence, in a language that
+/// capitalises nothing else there.
+fn a_name(text: &str, start_utf16: u32, spelling: &str, lang: &Lang) -> bool {
+    !matches!(lang.0.as_str(), "de" | "lb")
+        && spelling.chars().next().is_some_and(char::is_uppercase)
+        && !starts_sentence(text, start_utf16)
+}
+
 /// Whether the word at this offset starts a sentence: nothing but space before it in the run,
 /// or the end of one - a full stop, a question or exclamation mark, a colon - with an opening
 /// quotation mark or bracket allowed between.
@@ -357,6 +464,12 @@ fn starts_sentence(text: &str, start_utf16: u32) -> bool {
         None => true,
         Some(c) => matches!(c, '.' | '!' | '?' | ':' | '…'),
     }
+}
+
+/// Whether every sense is a note about grammar: "Obsolete form of its", "Misspelling of its".
+/// Such a reading is another word's spelling, and what it says is that word's meaning.
+fn only_grammar(glosses: &[String]) -> bool {
+    !glosses.is_empty() && glosses.iter().all(|gloss| about_grammar(gloss))
 }
 
 /// Whether the senses a word is drawn from would draw different words.
@@ -408,6 +521,24 @@ fn drawn_as<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) -> Option<String> {
+    // An English word read into another language is drawn as a word in that language or not
+    // at all: its own glosses are English definitions, "As above, with the verb implied".
+    // A contraction with no word of its own is the words it contracts, which the engine says:
+    // the other readings its spelling reaches are "its" misspelled.
+    if lang.0 == "en" && target.0 != "en" {
+        let contracted = answer.pos.as_deref() == Some("contraction");
+        return answer
+            .says
+            .first()
+            .or_else(|| {
+                answer
+                    .readings
+                    .iter()
+                    .filter(|reading| !contracted && !only_grammar(&reading.glosses))
+                    .find_map(|reading| reading.says.first())
+            })
+            .cloned();
+    }
     if let Some(found) = inline_of(&answer.says).or_else(|| inline_of(&answer.glosses)) {
         return Some(found);
     }
@@ -756,5 +887,31 @@ mod tests {
         );
         assert!(tokens.is_empty());
         assert!(misses.is_empty());
+    }
+
+    #[test]
+    fn a_word_is_looked_for_where_its_translation_would_be() {
+        let line = "Las listas y las reseñas de productos están separadas del Seal, pero como \
+                    la mayoría de los sitios de revisión hoy en día ganan comisiones de \
+                    afiliados cuando los lectores compran a través de sus enlaces.";
+        let early = around(line, 0.2);
+        assert!(early.contains("reseñas") && !early.contains("revisión"));
+        let later = around(line, 0.55);
+        assert!(later.contains("revisión") && !later.contains("reseñas"));
+    }
+
+    #[test]
+    fn a_capital_in_the_middle_of_a_sentence_is_a_name() {
+        let text = "most review sites, like Consumer Reports, buy anonymously.";
+        let english = Lang("en".into());
+        assert!(a_name(text, 24, "Consumer", &english));
+        assert!(!a_name(text, 5, "review", &english));
+        assert!(!a_name("Reviews are separate.", 0, "Reviews", &english));
+        assert!(!a_name(
+            "ein Hund bellt, der Hund",
+            4,
+            "Hund",
+            &Lang("de".into())
+        ));
     }
 }
