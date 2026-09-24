@@ -18,7 +18,6 @@
     "fetch:dict": "node scripts/fetch-dictionaries.mjs",
     "postinstall": "pnpm run install:browsers && node scripts/copy-espeak.mjs && node scripts/copy-bergamot.mjs && wxt prepare",
     "test:names": "uv run --with ipapy python scripts/proofread/symbol_names.py",
-    "test:overlay": "cd android && ./gradlew assembleDebug -q && cd .. && uv run python scripts/proofread/android_overlay.py",
     "test:features": "uv run scripts/proofread/android_features.py",
     "test:lex": "uv run python scripts/proofread/lex_extension.py",
     "test:cards": "uv run python scripts/proofread/card_states.py",
@@ -39,7 +38,6 @@
     "bundle:dict": "node scripts/bundle-dictionaries.mjs",
     "build:phone": "vite build -c vite.phone.config.ts",
     "publish:packs": "node scripts/publish-packs.mjs",
-    "test:switch": "uv run python scripts/proofread/android_switch.py",
     "test:written": "uv run python scripts/proofread/android_written.py"
   },
   "devDependencies": {
