@@ -608,6 +608,22 @@ fn in_line<D: AsRef<[u8]>>(
         })
 }
 
+/// An English sense that is a word or two rather than a definition - "An error.", "To
+/// preserve." - as that word.
+fn synonym(gloss: &str) -> Option<String> {
+    if crate::annotate::about_grammar(gloss) {
+        return None;
+    }
+    let head = gloss.split('(').next()?.trim().trim_end_matches('.').trim();
+    let words: Vec<&str> = head.split_whitespace().collect();
+    let words: Vec<&str> = match words.first().map(|w| w.to_lowercase()) {
+        Some(first) if ["a", "an", "the", "to"].contains(&first.as_str()) => words[1..].to_vec(),
+        _ => words,
+    };
+    (!words.is_empty() && words.len() <= 2 && !head.contains([',', ';']))
+        .then(|| words.join(" ").to_lowercase())
+}
+
 /// What a sense means, where it can be looked for in another language: the sense itself, or
 /// where it is a note about grammar, the meaning it ends with - "nominative masculine singular
 /// definite article, the", "dative masculine/neuter singular of der: the". A German article is
@@ -1309,7 +1325,18 @@ fn resolve_one<D: AsRef<[u8]>>(
     // language glosses a word that way, so the word itself is what is looked for in the
     // reader's pack: "and" is where Spanish "y" is glossed.
     if source.0 == "en" {
-        let asked = [(entry.lemma.clone(), Some(entry.pos.clone()))];
+        // The word itself first, then what its first senses say it is where that is a word or
+        // two: "mistake" is "An error.", and Spanish glosses "error" as "error" alone.
+        let asked: Vec<(String, Option<String>)> = std::iter::once(entry.lemma.clone())
+            .chain(
+                entry
+                    .senses
+                    .iter()
+                    .take(3)
+                    .filter_map(|sense| synonym(&sense.gloss)),
+            )
+            .map(|gloss| (gloss, Some(entry.pos.clone())))
+            .collect();
         // With the line translated, the word the engine wrote for it, where it is one this
         // word can be: "reviews" of products are "reseñas" there, though "review" alone ranks
         // "repaso" first, and "accurate" is "exacto" rather than the verb "acertar".

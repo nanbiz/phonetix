@@ -609,7 +609,9 @@ fn drawn_as<D: AsRef<[u8]>>(
         if let Some(word) = answer.says.first() {
             return Some(word.clone());
         }
-        let first = answer.glosses.first();
+        // Only a note about grammar points at another word: "To be able to" is a definition,
+        // and the "of" in one led "can" to "a" and drew it as "un".
+        let first = answer.glosses.first().filter(|gloss| about_grammar(gloss));
         if let Some(pointed) = first.and_then(|gloss| points_at(gloss.as_str())) {
             let there = crate::resolve::read_in_context(&pointed, None, lang, target, open);
             if let Some(word) = there.says.first() {
