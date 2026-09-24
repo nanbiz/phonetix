@@ -282,6 +282,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         accent_pack: core.packs.get(&accent),
         said: Some(drawn.as_str()).filter(|it| !it.is_empty()),
         classifier: None,
+        others: None,
     };
     let answer = lexcore::resolve::read_in_context(
         &spelling,
@@ -506,6 +507,25 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
     }
     let mut guard = lock_core(core);
     let held = &mut *guard;
+    // What each line that says enough is in, judged on its own, as the browser judges each
+    // run: a screen is not always in one language, and the Claude app's English title and
+    // notices over a German answer made the whole screen English.
+    for run in runs.iter_mut() {
+        if run.text.chars().count() < LINE_SAYS_ENOUGH {
+            continue;
+        }
+        // By what the detector calls reliable for this line alone: a screen's rule wants eight
+        // words, and the lines an app writes around an answer - a title, a notice - have
+        // fewer.
+        let Some(model) = held.model.as_ref() else {
+            break;
+        };
+        let said = model.detect(&run.text);
+        run.lang_hint = said
+            .language
+            .filter(|lang| said.reliable && *lang != source)
+            .map(lexcore::answer::Lang);
+    }
     let accent_pack = env
         .get_string(&accent)
         .ok()
@@ -520,6 +540,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         accent_pack: accent_pack.as_ref().and_then(|it| held.packs.get(it)),
         said: None,
         classifier: held.classifiers.get(&source),
+        others: Some(&held.packs),
     };
     let options = lexcore::answer::AnnotateOptions {
         mode: match mode.as_str() {
@@ -652,6 +673,7 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
         accent_pack: held.packs.get(&accent),
         said: None,
         classifier: held.classifiers.get(&source),
+        others: Some(&held.packs),
     };
     lexcore::annotate::complete(
         drawn,
@@ -663,6 +685,9 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
     let written = lexcore::json::batch(batch as u64, drawn, &[]);
     env.new_string(written).unwrap_or(empty)
 }
+
+/// How long a line has to be to be judged on its own, as the browser's host judges a run.
+const LINE_SAYS_ENOUGH: usize = 24;
 
 /// Read the language model off the disk into a core. Returns how many languages it knows,
 /// or 0 when the file is not a model.

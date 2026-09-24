@@ -147,6 +147,10 @@ object Reading {
         Thread(job, "phonetix-lines").apply { isDaemon = true }
     }
 
+    /** Where the translation models are, for a line in another language than the screen's. */
+    @Volatile
+    var models: java.io.File? = null
+
     /** Told when lines translated in the background have arrived, so the screen is read again
      *  and drawn with them. */
     @Volatile
@@ -189,15 +193,21 @@ object Reading {
             if (need != "Sentence" && need != "Sense") continue
             val which = row.optInt("token")
             val token = tokens.optJSONObject(which) ?: continue
-            val lang = token.optString("lang")
-            if (lang.isNotEmpty() && lang != "null" && lang != source) continue
             val run = token.optInt("run", -1)
             if (texts.getOrNull(run).isNullOrBlank()) continue
             wanted.add(which)
             later.add(run)
         }
         if (wanted.isEmpty()) return batch
-        val key = { run: Int -> "$source>$target\n${texts[run]}" }
+        // Each line out of its own language: an English notice on a German screen is
+        // translated out of English, by the half of German-to-Spanish that goes through it.
+        val from = HashMap<Int, String>()
+        for (which in wanted) {
+            val token = tokens.optJSONObject(which) ?: continue
+            val lang = token.optString("lang").takeIf { it.isNotEmpty() && it != "null" }
+            from[token.optInt("run")] = lang ?: source
+        }
+        val key = { run: Int -> "${from[run] ?: source}>$target\n${texts[run]}" }
         onScreen = later.mapTo(HashSet(), key)
         // Sent off to be translated where nobody has yet.
         val waiting = synchronized(translated) {
@@ -205,14 +215,22 @@ object Reading {
         }
         if (waiting.isNotEmpty()) {
             val asked = waiting.map { texts[it] }
+            val askedFrom = waiting.map { from[it] ?: source }
             val keys = waiting.map(key)
             lineWorker.execute {
                 // A line at a time, so the engine is free between them for the words a read
                 // is waiting on: asked as one batch, it held the engine for the whole of it.
                 val said = asked.mapIndexed { at, text ->
                     if (keys[at] !in onScreen) return@mapIndexed ""
-                    runCatching { Translator.lines(listOf(text)).firstOrNull() }.getOrNull()
-                        .orEmpty()
+                    val lang = askedFrom[at]
+                    runCatching {
+                        if (lang == source) {
+                            Translator.lines(listOf(text)).firstOrNull()
+                        } else {
+                            models?.let { Translator.between(it, lang, target, listOf(text)) }
+                                ?.firstOrNull()
+                        }
+                    }.getOrNull().orEmpty()
                 }
                 synchronized(translated) {
                     keys.forEachIndexed { at, k ->
@@ -279,6 +297,7 @@ object Reading {
         val tokens = batch.optJSONArray("tokens") ?: return batch
         val wanted = ArrayList<Int>(misses.length())
         val words = ArrayList<String>(misses.length())
+        val spoken = ArrayList<String>(misses.length())
         for (at in 0 until misses.length()) {
             val row = misses.optJSONObject(at) ?: continue
             // Only what asked for a sound: a word waiting on its sentence has the dictionary's
@@ -288,14 +307,19 @@ object Reading {
             val token = tokens.optJSONObject(which) ?: continue
             wanted.add(which)
             words.add(token.optString("spelling"))
+            spoken.add(token.optString("lang").takeIf { it.isNotEmpty() && it != "null" } ?: source)
         }
         if (wanted.isEmpty()) return batch
-        val said = Speech.phonemes(Accents.voiceOf(source, accent), words)
-        if (said.isEmpty()) return batch
+        // In the voice of the line each word is on: an English notice on a German screen said
+        // with the German voice is a pronunciation of a word nobody was reading.
+        val said = spoken.distinct().associateWith { lang ->
+            val voice = Accents.voiceOf(lang, if (lang == source) accent else "")
+            Speech.phonemes(voice, words.filterIndexed { at, _ -> spoken[at] == lang })
+        }
         val kept = ArrayList<Int>(wanted.size)
         val sounds = ArrayList<String>(wanted.size)
         for (at in wanted.indices) {
-            val ipa = said[words[at]] ?: continue
+            val ipa = said[spoken[at]]?.get(words[at]) ?: continue
             kept.add(wanted[at])
             sounds.add(ipa)
         }
@@ -379,6 +403,10 @@ object Reading {
             if (row.optString("need") !in MEANING) continue
             val which = row.optInt("token")
             val token = tokens.optJSONObject(which) ?: continue
+            // Only the screen's own language: the engine is open for that direction, and a
+            // word of another line's language asked of it comes back as nonsense.
+            val lang = token.optString("lang")
+            if (lang.isNotEmpty() && lang != "null" && lang != source) continue
             wanted.add(which)
             words.add(token.optString("spelling"))
         }

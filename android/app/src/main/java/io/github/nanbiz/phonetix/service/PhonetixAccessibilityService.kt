@@ -270,6 +270,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Not while a finger is on the button: a read cancels the reads a drag is making and
         // the loop following the page, which is the lens going blind mid-gesture. The next
         // read after the finger lifts is answered from the lines already here.
+        Reading.models = Packs.models(this)
         Reading.onLinesArrived = { if (!::hover.isInitialized || !hover.held) readAgain() }
         // A dictionary too big for a metered connection arrives once the phone is on one that
         // is not, rather than waiting for the reader to read another language and back.

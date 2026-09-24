@@ -41,6 +41,11 @@ pub fn annotate<D: AsRef<[u8]>>(
 
     for run in runs {
         let lang = run.lang_hint.clone().unwrap_or_else(|| source.clone());
+        // A line in another language is read with that language's pack, where the host has
+        // one: an English notice on a German screen read with the German pack drew "auf" as
+        // the English misspelling "oaf".
+        let reading_open = open.reading(&lang.0, &source.0);
+        let open = &reading_open;
         // The word before this one, within the run. A run is a line the page drew, so the
         // first word of one has no neighbour rather than borrowing the last word of another.
         let mut before: Option<String> = None;
@@ -273,11 +278,17 @@ pub fn complete<D: AsRef<[u8]>>(
             (ordinal as f32 + 0.5) / line.len().max(1) as f32
         })
         .collect();
+    let read_as = open
+        .source
+        .map(|pack| pack.lang().to_string())
+        .unwrap_or_default();
     for result in results {
         let at = placed.get(result.token_index as usize).copied();
         let Some(token) = tokens.get_mut(result.token_index as usize) else {
             continue;
         };
+        let token_open = open.reading(&token.lang.0, &read_as);
+        let open = &token_open;
         // The part of the translated line this word became, as near as order tells: a line
         // holds "reseñas" for "reviews" and "revisión" for "review sites" further on, and read
         // whole it says both words are there for both.

@@ -87,6 +87,7 @@ fn a_lemma_that_joins_is_an_entry() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -120,6 +121,7 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Form);
@@ -144,6 +146,7 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
     assert_eq!(
@@ -176,6 +179,7 @@ fn two_words_reached_equally_well_are_answered_with_one_of_them() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -204,6 +208,7 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(got.state, AnswerState::Mono);
@@ -228,6 +233,7 @@ fn a_reader_of_english_needs_no_join_at_all() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -247,6 +253,7 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::None);
@@ -264,6 +271,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
@@ -277,6 +285,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
@@ -307,6 +316,7 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
     // The entry is here and the reader's own pack is open; what is missing is a join between
@@ -348,6 +358,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.example.as_deref(), Some("El perro ladra."));
@@ -365,6 +376,7 @@ fn a_sense_with_no_example_invents_none() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("en"), &open).example,
@@ -397,6 +409,7 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Homograph);
@@ -419,6 +432,7 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         accent_pack: None,
         said: None,
         classifier: None,
+        others: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert!(got.readings.is_empty(), "nothing to choose between");
@@ -482,6 +496,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             accent_pack: None,
             said: None,
             classifier: None,
+            others: None,
         },
     );
     assert_eq!(standard.ipa, ["ˈʃɛdjuːl"]);
@@ -498,6 +513,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             accent_pack: Some(&american),
             said: None,
             classifier: None,
+            others: None,
         },
     );
     assert_eq!(said.ipa, ["ˈskɛdʒuːl"]);
@@ -517,6 +533,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             accent_pack: Some(&american),
             said: None,
             classifier: None,
+            others: None,
         },
     );
     assert_eq!(cut.ipa, ["kɐt"]);
@@ -563,6 +580,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             accent_pack: Some(&empty),
             said: None,
             classifier: None,
+            others: None,
         },
     );
     assert_eq!(said.ipa, ["ˈwɔːtɚ"]);
@@ -882,6 +900,7 @@ fn the_sentences_own_translation_says_which_word_it_is() {
             accent_pack: None,
             said,
             classifier: None,
+            others: None,
         };
         look_up("banco", &lang("es"), &lang("en"), &open)
     };

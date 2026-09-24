@@ -115,6 +115,26 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// and the rule is a generalisation about parts of speech. Where it says nothing, the rule
     /// still has its say.
     pub classifier: Option<&'a crate::homographs::Classifier>,
+    /// Every pack the host holds, by language, for a line in another language than the one
+    /// the screen is read in: an English notice on a German page is looked up in English.
+    pub others: Option<&'a std::collections::HashMap<String, Pack<D>>>,
+}
+
+impl<'a, D: AsRef<[u8]>> Open<'a, D> {
+    /// The same packs, read as [lang] where it is not the language they were opened for and
+    /// the host holds a pack for it.
+    pub fn reading(&self, lang: &str, source: &str) -> Open<'a, D> {
+        match self.others.and_then(|all| all.get(lang)) {
+            Some(pack) if lang != source => Open {
+                source: Some(pack),
+                accent: "",
+                accent_pack: None,
+                classifier: None,
+                ..*self
+            },
+            _ => Open { ..*self },
+        }
+    }
 }
 
 impl<D: AsRef<[u8]>> Default for Open<'_, D> {
@@ -127,6 +147,7 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
             accent_pack: None,
             said: None,
             classifier: None,
+            others: None,
         }
     }
 }

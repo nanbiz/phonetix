@@ -1011,6 +1011,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             for (text in PROSE) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "prose-de") {
             for (text in PROSE_DE) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "mixed") {
+            // A chat app's screen: its own English around an answer in German.
+            addView(line("Finding the right tire pressure for a caravan.", Color.WHITE, BACKGROUND))
+            for (text in PROSE_DE) addView(line(text, Color.WHITE, BACKGROUND))
+            addView(line("Opus draws down usage 1.5x faster than Sonnet 5", Color.WHITE, BACKGROUND))
+            addView(line("Claude is AI and can make mistakes. Please double-check responses.", Color.WHITE, BACKGROUND))
         } else if (mode == "bench") {
             // A word that is decided - "banco" is the noun - with senses that are different
             // words: the dictionary lists the bank first, and this line is about a bench.
@@ -1077,7 +1083,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         // The page in a serif, as a reading app sets its prose: what the overlay draws over it
         // has to be set in a serif as well, which it can only tell from how wide the words are.
-        if (mode == "serif" || mode == "prose" || mode == "prose-de") typeface = android.graphics.Typeface.SERIF
+        if (mode == "serif" || mode == "prose" || mode == "prose-de" || mode == "mixed") typeface = android.graphics.Typeface.SERIF
         // A gutter down the left, which is where a line puts the bar that says where it is.
         // Without it the bar sits exactly where the line's first word starts, so the
         // transcription of that word covers it and the line reports itself as absent.

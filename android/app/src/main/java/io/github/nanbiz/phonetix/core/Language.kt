@@ -36,7 +36,18 @@ object Language {
     class Screen {
         private val text = StringBuilder(ENOUGH_TEXT)
 
+        /** How much of the screen's text each language that a line was found in holds. */
+        private val held = HashMap<String, Int>()
+        private var judged = 0
+
         fun add(line: CharSequence) {
+            // Each line that says enough is judged on its own and counts for as much text as
+            // it has. The first thousand characters alone were the chat's English title and
+            // the app's notices, and a screen holding a German answer was read as English.
+            if (line.length >= LINE_SAYS_ENOUGH && judged < LINES_JUDGED) {
+                judged += 1
+                Eld.readScreen(line).language?.let { held[it] = (held[it] ?: 0) + line.length }
+            }
             if (text.length >= ENOUGH_TEXT) return
             if (text.isNotEmpty()) text.append(' ')
             text.append(line, 0, minOf(line.length, ENOUGH_TEXT - text.length))
@@ -45,12 +56,21 @@ object Language {
         /** What the screen is in, or nothing when it did not say.
          *
          *  The rule is the core's, thresholds included: a phone that wanted eight words and
-         *  a browser that wanted three would treat the same screen differently. */
+         *  a browser that wanted three would treat the same screen differently. Where lines
+         *  were judged, the language most of the text is in; otherwise the screen as a
+         *  whole. */
         fun read(): Reading {
             val read = Eld.readScreen(text)
-            return Reading(read.language, read.words)
+            val most = held.maxByOrNull { it.value }?.key
+            return Reading(most ?: read.language, read.words)
         }
     }
+
+    /** How long a line has to be to be judged on its own, as the core judges a line. */
+    const val LINE_SAYS_ENOUGH = 24
+
+    /** How many lines of a screen are judged, which is as many as a screen holds. */
+    const val LINES_JUDGED = 60
 
     /** Whether a screen that reads like this is worth transcribing. */
     fun ours(screen: Reading): Boolean = screen.silent || screen.language == OURS
