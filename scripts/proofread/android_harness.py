@@ -14,6 +14,7 @@ exist so at least one oracle owes nothing to our own bookkeeping.
 import os
 import re
 import subprocess
+import tempfile
 import time
 
 PKG = "io.github.nanbiz.phonetix"
@@ -463,16 +464,31 @@ def drag_and_dwell(start, end, steps=10, dwell=1.5):
     `input swipe` lifts the moment it arrives, and the circle is on a leash: on a machine
     drawing a few frames a second it is still catching up when the finger goes, and the drag
     reports the words between. Held at the end, it settles on the word that was aimed at.
+
+    Played as one monkey script rather than an `input motionevent` per point: each of those
+    starts a process, which on an emulator busy drawing the drag is most of a second, and a
+    first move that late is a finger held still past the long press. That arms a sweep, and a
+    sweep answers nothing until it is let go.
     """
-    shell("input", "motionevent", "DOWN", str(start[0]), str(start[1]))
+    lines = ["type= raw events", "count= 1", "speed= 1.0", "start data >>"]
+
+    def pointer(action, x, y):
+        lines.append(f"DispatchPointer(0,0,{action},{int(x)},{int(y)},1,1,0,1,1,0,0)")
+
+    pointer(0, *start)
     for i in range(1, steps + 1):
-        x = start[0] + (end[0] - start[0]) * i // steps
-        y = start[1] + (end[1] - start[1]) * i // steps
-        shell("input", "motionevent", "MOVE", str(x), str(y))
+        lines.append("UserWait(30)")
+        pointer(2, start[0] + (end[0] - start[0]) * i // steps,
+                start[1] + (end[1] - start[1]) * i // steps)
     for _ in range(3):
-        time.sleep(dwell / 3)
-        shell("input", "motionevent", "MOVE", str(end[0]), str(end[1]))
-    shell("input", "motionevent", "UP", str(end[0]), str(end[1]))
+        lines.append(f"UserWait({int(dwell * 1000 / 3)})")
+        pointer(2, *end)
+    pointer(1, *end)
+    local = os.path.join(tempfile.gettempdir(), "phonetix-drag.monkey")
+    with open(local, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    adb("push", local, "/data/local/tmp/phonetix-drag.monkey")
+    shell("monkey", "-f", "/data/local/tmp/phonetix-drag.monkey", "1")
 
 
 def carried_along(lines, home):

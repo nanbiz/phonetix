@@ -288,3 +288,194 @@ class HoverHighlightView(context: Context) : View(context) {
     }
 }
 
+
+/**
+ * Where the mark is put away: a round target at the foot of the screen, in the middle, that
+ * rises while the mark is dragged near the bottom and takes it when it is let go there.
+ *
+ * Drawn on a window of its own that takes no touch, the full width of the screen and as tall
+ * as the shade behind the target: the shade is what makes a pale target readable over a pale
+ * page and a dark one over a dark page alike.
+ */
+class DropTargetView(context: Context) : View(context) {
+
+    private val density = context.resources.displayMetrics.density
+
+    private fun dp(value: Float): Float = value * density
+
+    private val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+        Configuration.UI_MODE_NIGHT_YES
+    private val palette = Tokens.palette(themeNamed(SettingsStore.current.theme), dark)
+
+    private val shade = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val disc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1.5f)
+    }
+    private val cross = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeWidth = dp(2.5f)
+    }
+    private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.argb(70, 0, 0, 0)
+        maskFilter = android.graphics.BlurMaskFilter(dp(10f), android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+
+    init {
+        // The shadow is blurred, which only a software layer draws.
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+    }
+
+    /** How far up it has come, from nothing to all the way. */
+    private var presence = 0f
+
+    /** How far it has taken the mark in, from nothing to holding it. */
+    private var pull = 0f
+
+    /** What it is doing once the mark has been let go on it: shrinking away with it. */
+    private var swallowed = 0f
+
+    private var rising: ValueAnimator? = null
+    private var pulling: ValueAnimator? = null
+
+    /** Whether it is up, or on its way up. */
+    var present = false
+        private set
+
+    /** Whether the mark is over it, so that letting go puts the mark away. */
+    var holding = false
+        private set
+
+    /** How far up the system's own bar at the foot of the screen reaches, in pixels. */
+    var lifted = 0f
+
+    /** Where its middle is, in this view's own coordinates, when it is all the way up. */
+    fun centreY(): Float = height - lifted - dp(BOTTOM_DP) - dp(RADIUS_DP)
+
+    /** Come up, or go back down. */
+    fun present(up: Boolean) {
+        if (present == up) return
+        present = up
+        if (!up) take(false)
+        rising?.cancel()
+        rising = ValueAnimator.ofFloat(presence, if (up) 1f else 0f).apply {
+            duration = if (up) RISE_MS else FALL_MS
+            // Up with a little overshoot, so it arrives rather than stops; down quickening,
+            // the way a thing falls away.
+            interpolator = if (up) android.view.animation.OvershootInterpolator(1.6f)
+            else android.view.animation.AccelerateInterpolator(1.4f)
+            addUpdateListener {
+                presence = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    /** Take the mark, or let it go again. */
+    fun take(over: Boolean) {
+        if (holding == over) return
+        holding = over
+        pulling?.cancel()
+        pulling = ValueAnimator.ofFloat(pull, if (over) 1f else 0f).apply {
+            duration = PULL_MS
+            interpolator = if (over) android.view.animation.OvershootInterpolator(2.2f)
+            else DecelerateInterpolator()
+            addUpdateListener {
+                pull = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    /** The mark has been let go on it: the two go together, and then [done]. */
+    fun swallow(done: () -> Unit) {
+        rising?.cancel()
+        pulling?.cancel()
+        ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = SWALLOW_MS
+            interpolator = android.view.animation.AnticipateInterpolator(1.2f)
+            addUpdateListener {
+                swallowed = it.animatedValue as Float
+                invalidate()
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) = done()
+            })
+            start()
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        val shown = presence.coerceIn(0f, 1f)
+        if (shown <= 0f && swallowed <= 0f) return
+        val fade = (1f - swallowed).coerceIn(0f, 1f)
+
+        // The shade: darkening towards the foot, stronger while the target holds the mark.
+        val depth = ((0.28f + 0.14f * pull) * shown * fade * 255).toInt()
+        shade.shader = android.graphics.LinearGradient(
+            0f, 0f, 0f, height.toFloat(),
+            Color.argb(0, 0, 0, 0), Color.argb(depth, 0, 0, 0),
+            android.graphics.Shader.TileMode.CLAMP,
+        )
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), shade)
+
+        val radius = dp(RADIUS_DP) * (1f + GROWS * pull) * (1f - swallowed * 0.9f)
+        if (radius <= 0f) return
+        val cx = width / 2f
+        // Risen from below the screen's edge, so it comes up into view rather than appearing.
+        val below = (lifted + dp(BOTTOM_DP) + dp(RADIUS_DP) * 2f) * (1f - presence)
+        val cy = centreY() + below
+        val alpha = (shown * fade * 255).toInt().coerceIn(0, 255)
+
+        shadow.alpha = (alpha * 0.4f).toInt()
+        canvas.drawCircle(cx, cy + dp(3f), radius, shadow)
+
+        val quiet = (palette.surfaceRaised and 0xFFFFFF).toInt()
+        val loud = (palette.danger and 0xFFFFFF).toInt()
+        disc.color = blend(quiet, loud, pull) or (alpha shl 24)
+        canvas.drawCircle(cx, cy, radius, disc)
+        rim.color = ((palette.border and 0xFFFFFF).toInt()) or (((1f - pull) * alpha).toInt() shl 24)
+        canvas.drawCircle(cx, cy, radius, rim)
+
+        val inkQuiet = (palette.ink and 0xFFFFFF).toInt()
+        cross.color = blend(inkQuiet, 0xFFFFFF, pull) or (alpha shl 24)
+        val arm = radius * 0.34f
+        canvas.drawLine(cx - arm, cy - arm, cx + arm, cy + arm, cross)
+        canvas.drawLine(cx + arm, cy - arm, cx - arm, cy + arm, cross)
+    }
+
+    /** Two colours mixed, [by] of the way from the first to the second. */
+    private fun blend(from: Int, to: Int, by: Float): Int {
+        val t = by.coerceIn(0f, 1f)
+        fun channel(shift: Int): Int {
+            val a = (from shr shift) and 0xFF
+            val b = (to shr shift) and 0xFF
+            return ((a + (b - a) * t).toInt() and 0xFF) shl shift
+        }
+        return channel(16) or channel(8) or channel(0)
+    }
+
+    companion object {
+        /** The target's radius, in dp. */
+        const val RADIUS_DP = 28f
+
+        /** How far above the foot of the screen it sits, clear of the gesture strip. */
+        const val BOTTOM_DP = 36f
+
+        /** How tall the shade behind it is, which is the height of its window. */
+        const val SHADE_DP = 200f
+
+        /** How much larger it grows while it holds the mark. */
+        const val GROWS = 0.22f
+
+        const val RISE_MS = 280L
+        const val FALL_MS = 180L
+        const val PULL_MS = 200L
+        const val SWALLOW_MS = 260L
+    }
+}

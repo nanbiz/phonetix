@@ -78,6 +78,11 @@ class HoverController(
      * at all.
      */
     private val onHold: () -> Unit = {},
+    /**
+     * The mark dragged onto the target at the foot of the screen and let go there: the
+     * reader putting Phonetix away until they turn it on again.
+     */
+    private val onPutAway: () -> Unit = {},
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -88,6 +93,10 @@ class HoverController(
     private var layer: FrameLayout? = null
     private var highlight: HoverHighlightView? = null
     private var mist: MistView? = null
+
+    /** The target the mark is put away on, up only while a drag is near the foot of the
+     *  screen. */
+    private var drop: DropTargetView? = null
 
     /** Where the mark sits, and where it returns to when a drag ends. */
     private var markX = -1
@@ -303,6 +312,7 @@ class HoverController(
     /** Take the circle down for good, which is what the service leaving means. */
     fun destroy() {
         hideLayer()
+        hideDrop()
         mark?.let { runCatching { wm.removeView(it) } }
         mark = null
         hovered = null
@@ -319,6 +329,7 @@ class HoverController(
      */
     fun hide() {
         hideLayer()
+        hideDrop()
         hovered = null
         onWord(null)
         // A moment later, not now. What is in front for a frame or two - a popup opening, a
@@ -408,6 +419,66 @@ class HoverController(
         highlight = null
         mist = null
     }
+
+    /** The target's window: the full width of the screen and as tall as its shade, at the
+     *  foot, taking no touch. */
+    private fun dropParams() = WindowManager.LayoutParams(
+        WindowManager.LayoutParams.MATCH_PARENT,
+        dp(DropTargetView.SHADE_DP).roundToInt(),
+        WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        PixelFormat.TRANSLUCENT,
+    ).apply {
+        gravity = Gravity.BOTTOM or Gravity.START
+        layoutInDisplayCutoutMode = intoTheCutout()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            fitInsetsTypes = 0
+        }
+    }
+
+    private fun showDrop(): DropTargetView? {
+        drop?.let { return it }
+        val view = DropTargetView(context).apply { lifted = footBar().toFloat() }
+        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+            val centre = dropCentre()
+            android.util.Log.d(
+                "Phonetix",
+                "LENSTARGET ${centre.x.roundToInt()},${centre.y.roundToInt()}",
+            )
+        }
+        return runCatching { wm.addView(view, dropParams()) }
+            .map { view.also { drop = it } }
+            .onFailure { android.util.Log.w("Phonetix", "the target did not go up", it) }
+            .getOrNull()
+    }
+
+    private fun hideDrop() {
+        drop?.let { runCatching { wm.removeView(it) } }
+        drop = null
+    }
+
+    /** Where the target's middle is on the screen when it is all the way up. */
+    private fun dropCentre(): android.graphics.PointF {
+        val edges = screen()
+        return android.graphics.PointF(
+            edges.width() / 2f,
+            edges.height() - footBar() - dp(DropTargetView.BOTTOM_DP) -
+                dp(DropTargetView.RADIUS_DP),
+        )
+    }
+
+    /** How much of the foot of the screen the system's own bar takes: three buttons, or the
+     *  gesture strip. */
+    private fun footBar(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            wm.currentWindowMetrics.windowInsets
+                .getInsets(android.view.WindowInsets.Type.navigationBars()).bottom
+        } else {
+            dp(FOOT_DP).roundToInt()
+        }
 
     /** What the circle is over now, told once per word rather than once per frame. */
     private fun hoverAt(x: Int, y: Int) {
@@ -573,7 +644,9 @@ class HoverController(
                             "want=${wantX.roundToInt()},${wantY.roundToInt()}",
                     )
                 }
-                hoverAt(ballX.roundToInt(), ballY.roundToInt())
+                // Nothing is asked about while the target holds the mark: the reader is
+                // putting it away, and a card opening over the foot of the page is in the way.
+                if (drop?.holding != true) hoverAt(ballX.roundToInt(), ballY.roundToInt())
             }
         }
 
@@ -601,6 +674,10 @@ class HoverController(
                         )
                     }
                     view.active = true
+                    // The target first, so that the circle and its thread, put up after it,
+                    // are drawn over it rather than under it. It stays down until the finger
+                    // nears the foot of the screen.
+                    showDrop()
                     showLayer()
                     main.postDelayed(hold, HOLD_MS)
                     return true
@@ -647,8 +724,21 @@ class HoverController(
                     // does nothing", and what would explain it - which words this believed
                     // were on screen, and where - is gone by the time anyone can be asked. So
                     // it is written down as it happens.
-                    if (dragging && !tookAnything) onFoundNothing?.invoke()
+                    if (dragging && !tookAnything && drop?.holding != true) {
+                        onFoundNothing?.invoke()
+                    }
                     tookAnything = false
+                    val target = drop
+                    if (dragging && target != null && target.holding) {
+                        putAway(target)
+                        return true
+                    }
+                    if (target?.present == true) {
+                        target.present(false)
+                        main.postDelayed({ if (!holding) hideDrop() }, DropTargetView.FALL_MS + 40)
+                    } else {
+                        hideDrop()
+                    }
                     if (dragging) {
                         // The thread falls back into the mark where the mark comes to rest,
                         // and the mark reappears only once it has: no disc slides home.
@@ -679,6 +769,38 @@ class HoverController(
         }
 
         /**
+         * Let go on the target: the thread falls into it, the two shrink away together, and
+         * Phonetix is put away. The mark keeps the place it waited in before the drag, which
+         * is where it is when the reader turns Phonetix on again.
+         */
+        private fun putAway(target: DropTargetView) {
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            val size = view.width
+            val waited = Point((homeX - size / 2f).roundToInt(), (homeY - size / 2f).roundToInt())
+            val centre = dropCentre()
+            mist?.onDissolved = { main.post { hideLayer() } }
+            mist?.dissolve(centre.x, centre.y)
+            ballVx = 0f
+            ballVy = 0f
+            target.swallow {
+                main.post {
+                    hideDrop()
+                    // Out of sight before it is unmasked, so it does not fade back in where it
+                    // was let go; it is put back where it waited, for the next time it is up.
+                    view.visibility = View.GONE
+                    view.masked = false
+                    markX = waited.x
+                    markY = waited.y
+                    runCatching { wm.updateViewLayout(view, markParams(size)) }
+                    if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                        android.util.Log.d("Phonetix", "LENSPUTAWAY")
+                    }
+                    onPutAway()
+                }
+            }
+        }
+
+        /**
          * Where the circle goes when the finger leaves: back to the edge it lives on, so what
          * was being read is not left with a disc sitting in the middle of it.
          */
@@ -702,6 +824,41 @@ class HoverController(
                 start()
             }
             return Point(target + size / 2, restY + size / 2)
+        }
+
+        /**
+         * The target at the foot of the screen: up while the finger is in the bottom of the
+         * screen, holding the mark while the finger is on it. Held, the mark and the circle
+         * are drawn into it, so what letting go will do is in sight before it is done.
+         */
+        private fun nearTheFoot(event: MotionEvent, size: Int) {
+            val edges = screen()
+            val low = event.rawY > edges.height() * (1f - FOOT_ZONE)
+            val target = drop ?: return
+            val centre = dropCentre()
+            val off = hypot(event.rawX - centre.x, event.rawY - centre.y)
+            // Taken nearer than it is let go, so a finger resting at the edge of it does not
+            // make it snatch and drop the mark over and over.
+            val over = if (target.holding) off < dp(LEAVE_DP) else off < dp(TAKE_DP)
+            target.present(low || over)
+            if (over != target.holding) {
+                target.take(over)
+                view.performHapticFeedback(
+                    if (over) HapticFeedbackConstants.VIRTUAL_KEY else HapticFeedbackConstants.CLOCK_TICK,
+                )
+                if (over) {
+                    hovered = null
+                    highlight?.mark(null)
+                    onWord(null)
+                }
+            }
+            if (over) {
+                markX = (centre.x - size / 2f).roundToInt()
+                markY = (centre.y - size / 2f).roundToInt()
+                runCatching { wm.updateViewLayout(view, markParams(size)) }
+                wantX = centre.x
+                wantY = centre.y
+            }
         }
 
         private fun follow(event: MotionEvent) {
@@ -744,6 +901,7 @@ class HoverController(
             wantY = wantY.coerceIn(0f, edges.height().toFloat())
             fingerX = event.rawX
             fingerY = event.rawY
+            nearTheFoot(event, size)
             onHand(event.rawY.roundToInt())
             if (!formed) {
                 formed = true
@@ -827,6 +985,15 @@ class HoverController(
 
         /** How far behind the ball may fall before the thread is simply taut, in dp. */
         const val LEASH_DP = 120f
+
+        /** How much of the screen, from the foot, brings up the target the mark is put away
+         *  on. */
+        const val FOOT_ZONE = 0.15f
+
+        /** How near the target's middle the finger has to come for it to take the mark, and
+         *  how far it has to go again to be let go, in dp. */
+        const val TAKE_DP = 64f
+        const val LEAVE_DP = 88f
 
         /** How long the mark takes to travel back to the edge. */
         const val PARK_MS = 260L

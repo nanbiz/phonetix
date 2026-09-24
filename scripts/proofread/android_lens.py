@@ -275,8 +275,11 @@ def main():
         # Slowly, and to the lowest a finger goes: the circle is on a leash and a synthetic
         # swipe lifts the moment it arrives, so a quick drag is measured while the circle is
         # still catching up - a hundred and fifty pixels short of where it settles.
+        # A quarter of the way across rather than in the middle: the middle of the foot is
+        # where the target the mark is put away on sits, and a drag let go there puts
+        # Phonetix away.
         shell("input", "swipe", str(rests[0]), str(rests[1]),
-              str(dev.width // 2), str(dev.height - 20), "5000")
+              str(dev.width // 4), str(dev.height - 20), "5000")
         time.sleep(3)
         samples = [(int(x), int(y), name) for x, y, name in
                    re.findall(r"LENSAT (\d+)[.\d]*,(\d+)[.\d]* -> (\S+)", dev.lines("LENSAT "))]

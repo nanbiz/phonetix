@@ -362,6 +362,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // than one somebody else wrote. The app opens on the screen that asks for it.
             // Held: the whole screen in the reader's own language, and held again to put it
             // back. The heavier of the two questions on the heavier gesture.
+            // Let go on the target at the foot of the screen: Phonetix put away, the way the
+            // switch in the app, the tile and the accessibility button all put it away, and
+            // brought back by any of them.
+            onPutAway = { SettingsStore.setEnabled(false) },
             onHold = {
                 // Turns the replacing on and off, and nothing else.
                 //
