@@ -171,10 +171,20 @@ impl Core {
     /// caller, which knows what the page as a whole turned out to be.
     #[wasm_bindgen(js_name = readRuns)]
     pub fn read_runs(&self, texts: Vec<String>) -> String {
+        // By what the detector calls reliable for the run alone, as the phone judges a line:
+        // a screen's rule wants eight words, and the lines a page writes around its text - a
+        // title, a notice - have fewer.
         let each: Vec<String> = texts
             .iter()
             .map(|text| {
-                lexcore::json::screen(&lexcore::detect::read_screen(self.model.as_ref(), text))
+                let words = text.split_whitespace().count();
+                let said = self.model.as_ref().map(|model| model.detect(text));
+                let language = said.and_then(|said| said.language.filter(|_| said.reliable));
+                lexcore::json::screen(&lexcore::detect::Screen {
+                    language,
+                    words,
+                    enough: true,
+                })
             })
             .collect();
         format!("[{}]", each.join(","))

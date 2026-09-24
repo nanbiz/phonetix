@@ -45,6 +45,11 @@ export function host(): void {
       open(data.source).catch(() => null),
       data.target === data.source ? null : openReadInto(data.target).catch(() => null),
       data.options.accent ? open(data.options.accent).catch(() => null) : null,
+      // And each language a line of the page turned out to be in, so an English notice on a
+      // German page is read with the English pack rather than the German one.
+      ...[...new Set(data.runs.map((run) => run.lang).filter((lang): lang is string =>
+        Boolean(lang) && lang !== data.source && lang !== data.target))]
+        .map((lang) => open(lang).catch(() => null)),
       // The classifier for what is being read, where the language has one. It decides which
       // word a spelling is, above the rule about the word before it.
       openHomographs(data.source).catch(() => 0),
