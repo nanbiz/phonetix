@@ -59,7 +59,9 @@ export function recent(): string[] {
       seen.delete(name);
       continue;
     }
-    out.push(`${trouble.what} ${trouble.said}`);
+    // A sentence of its own, with what it costs, as the phone writes its own.
+    const named = trouble.what.charAt(0).toUpperCase() + trouble.what.slice(1);
+    out.push(`${named} ${trouble.said}. Words it would have answered are missing until it does.`);
   }
   return out;
 }

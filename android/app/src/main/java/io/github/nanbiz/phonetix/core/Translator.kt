@@ -39,9 +39,19 @@ object Translator {
     @Synchronized
     private fun reading(): Boolean {
         if (open.isEmpty()) return false
-        if (runCatching { Lex.translateReady(open) != 0 }.getOrDefault(false)) return true
         val from = openFrom ?: return false
-        return load(from, open)
+        return opened(from, open)
+    }
+
+    /**
+     * Open [direction] from the files in [models], on its own model or through English:
+     * whichever the files here make possible.
+     */
+    private fun opened(models: File, direction: String): Boolean {
+        val (from, to) = direction.split("-", limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+        if (direct(models, from, to)) return load(models, direction)
+        val steps = through(from, to)
+        return steps.isNotEmpty() && steps.all { (a, b) -> load(models, "$a-$b") }
     }
 
     /**
@@ -50,11 +60,29 @@ object Translator {
      * Asked before opening, because opening is seconds of work and because "no model for that
      * direction" is a different thing to tell a reader than "no word for that".
      */
-    fun ready(models: File, from: String, to: String): Boolean {
+    fun ready(models: File, from: String, to: String): Boolean =
+        direct(models, from, to) ||
+            through(from, to).let { steps ->
+                steps.isNotEmpty() && steps.all { (a, b) -> direct(models, a, b) }
+            }
+
+    /** Whether the files for exactly this direction are here. */
+    private fun direct(models: File, from: String, to: String): Boolean {
         val here = File(models, "$from-$to").listFiles().orEmpty()
         return here.any { it.name.startsWith("model") && it.name.endsWith(".bin") } &&
             vocabularies(here) != null
     }
+
+    /**
+     * The two directions a pair is translated through where it has no model of its own.
+     *
+     * The published models go into English and out of it, and nothing else: German to
+     * Spanish is German to English and English to Spanish. Empty for a pair with English on
+     * either side, which either has a model or has none at all.
+     */
+    fun through(from: String, to: String): List<Pair<String, String>> =
+        if (from == "en" || to == "en" || from == to) emptyList()
+        else listOf(from to "en", "en" to to)
 
     /**
      * The vocabularies a direction reads, source then target.
@@ -84,7 +112,7 @@ object Translator {
     fun start(models: File, from: String, to: String): Boolean {
         val wanted = "$from-$to"
         if (open == wanted && reading()) return true
-        val ok = load(models, wanted)
+        val ok = opened(models, wanted)
         open = if (ok) wanted else ""
         openFrom = if (ok) models else null
         return ok
@@ -152,7 +180,7 @@ object Translator {
     @Synchronized
     fun between(models: File, from: String, to: String, texts: List<String>): List<String> {
         val direction = "$from-$to"
-        if (texts.isEmpty() || !load(models, direction)) return emptyList()
+        if (texts.isEmpty() || !opened(models, direction)) return emptyList()
         return say(direction, texts)
     }
 
@@ -173,6 +201,23 @@ object Translator {
     }
 
     private fun say(direction: String, texts: List<String>): List<String> {
+        // Through English where the pair has no model of its own: the first half's answers
+        // are what the second half is asked.
+        val (from, to) = direction.split("-", limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+        val models = openFrom
+        val steps = through(from, to)
+        if (steps.isNotEmpty() && (models == null || !direct(models, from, to))) {
+            var said = texts
+            for ((a, b) in steps) {
+                said = sayOnce("$a-$b", said)
+                if (said.isEmpty()) return emptyList()
+            }
+            return said
+        }
+        return sayOnce(direction, texts)
+    }
+
+    private fun sayOnce(direction: String, texts: List<String>): List<String> {
         val said = runCatching { Lex.translateSay(direction, texts.toTypedArray()) }
             .onFailure { android.util.Log.w("Phonetix", "the translator refused a page", it) }
             .getOrNull()
@@ -190,10 +235,8 @@ object Translator {
     fun meanings(words: List<String>): Map<String, String> {
         if (words.isEmpty() || !reading()) return emptyMap()
         val asked = words.distinct()
-        val said = runCatching { Lex.translateSay(open, asked.toTypedArray()) }
-            .onFailure { android.util.Log.w("Phonetix", "the translator refused", it) }
-            .getOrNull()
-            ?: return emptyMap()
+        val said = say(open, asked)
+        if (said.isEmpty()) return emptyMap()
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",

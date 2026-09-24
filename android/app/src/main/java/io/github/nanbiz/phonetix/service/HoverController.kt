@@ -695,6 +695,15 @@ class HoverController(
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // Taken away by the system rather than let go - a screenshot, a call, the
+                    // shade pulled over it - nothing is being asked and nothing is put away:
+                    // the mark is simply back where it waits, in sight. Left to the thread's
+                    // dissolve, it stayed masked when the dissolve never came, a mark that took
+                    // touches and could not be seen.
+                    if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                        cancelled()
+                        return true
+                    }
                     holding = false
                     active = false
                     view.active = false
@@ -750,7 +759,21 @@ class HoverController(
                             // callback is still running takes the renderer with it.
                             main.post { hideLayer() }
                         }
-                        mist?.dissolve(home.x.toFloat(), home.y.toFloat())
+                        val thread = mist
+                        if (thread == null) {
+                            view.masked = false
+                            hideLayer()
+                        } else {
+                            thread.dissolve(home.x.toFloat(), home.y.toFloat())
+                            // And back in any case, should the dissolve never finish: its
+                            // frames stop when its window is taken away under it.
+                            main.postDelayed({
+                                if (!holding && view.masked) {
+                                    view.masked = false
+                                    hideLayer()
+                                }
+                            }, UNMASK_AT_LATEST_MS)
+                        }
                         ballVx = 0f
                         ballVy = 0f
                     } else {
@@ -766,6 +789,28 @@ class HoverController(
                 }
             }
             return false
+        }
+
+        private fun cancelled() {
+            holding = false
+            active = false
+            view.active = false
+            main.removeCallbacks(hold)
+            Choreographer.getInstance().removeFrameCallback(swing)
+            sweeping = false
+            swept.clear()
+            hovered = null
+            tookAnything = false
+            onWord(null)
+            onHand(0)
+            hideLayer()
+            hideDrop()
+            val size = view.width
+            val waits = restingAt(size)
+            markX = waits.x
+            markY = waits.y
+            runCatching { wm.updateViewLayout(view, markParams(size)) }
+            view.masked = false
         }
 
         /**
@@ -833,7 +878,11 @@ class HoverController(
          */
         private fun nearTheFoot(event: MotionEvent, size: Int) {
             val edges = screen()
-            val low = event.rawY > edges.height() * (1f - FOOT_ZONE)
+            // Low on the screen, or lower than where the mark waited: the mark usually waits
+            // low on the side already, and heading down from there is heading for the target,
+            // which has to be in sight before the finger is on it.
+            val low = event.rawY > edges.height() * (1f - FOOT_ZONE) ||
+                event.rawY > homeY + dp(HEADING_DOWN_DP)
             val target = drop ?: return
             val centre = dropCentre()
             val off = hypot(event.rawX - centre.x, event.rawY - centre.y)
@@ -988,7 +1037,14 @@ class HoverController(
 
         /** How much of the screen, from the foot, brings up the target the mark is put away
          *  on. */
-        const val FOOT_ZONE = 0.15f
+        const val FOOT_ZONE = 0.3f
+
+        /** How far below where the mark waited the finger has to go for the target to rise,
+         *  in dp. */
+        const val HEADING_DOWN_DP = 48f
+
+        /** The longest the mark stays hidden behind its thread once it is let go. */
+        const val UNMASK_AT_LATEST_MS = 1500L
 
         /** How near the target's middle the finger has to come for it to take the mark, and
          *  how far it has to go again to be let go, in dp. */

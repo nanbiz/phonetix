@@ -1009,6 +1009,8 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             // A chat app's answer, as one really reads: long English paragraphs set in a serif,
             // names, contractions and punctuation in them, rather than a list of chosen words.
             for (text in PROSE) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "prose-de") {
+            for (text in PROSE_DE) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "bench") {
             // A word that is decided - "banco" is the noun - with senses that are different
             // words: the dictionary lists the bank first, and this line is about a bench.
@@ -1075,7 +1077,7 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         // The page in a serif, as a reading app sets its prose: what the overlay draws over it
         // has to be set in a serif as well, which it can only tell from how wide the words are.
-        if (mode == "serif" || mode == "prose") typeface = android.graphics.Typeface.SERIF
+        if (mode == "serif" || mode == "prose" || mode == "prose-de") typeface = android.graphics.Typeface.SERIF
         // A gutter down the left, which is where a line puts the bar that says where it is.
         // Without it the bar sits exactly where the line's first word starts, so the
         // transcription of that word covers it and the line reports itself as absent.
@@ -1167,6 +1169,19 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 "lab usually has only one or two people, is an unverified YouTube anecdote. It's " +
                 "also a reminder that the video is a comedy segment, so the lab was likely staged " +
                 "to look busy for the cameras.",
+        )
+
+        /** The same, in German. */
+        val PROSE_DE = listOf(
+            "Für deine Reifen (205/65 R15 99H) sind etwa 3,0 bar üblich, gemessen im kalten " +
+                "Zustand. Die Lastindex 99 zeigt, dass es verstärkte Reifen (XL/Reinforced) " +
+                "sind. Die erreichen ihre volle Tragfähigkeit von 775 kg pro Reifen erst bei " +
+                "etwa 2,9-3,0 bar.",
+            "Bei Wohnwagen fährt man sie deshalb nahe an diesem Wert, weil die Reifen ständig " +
+                "hoch belastet sind und keine Motorlast wie beim Auto ausgeglichen wird.",
+            "Den exakten Herstellerwert findest du meist auf einem Aufkleber im " +
+                "Gasflaschenkasten, an der Deichsel oder innen am Eingang, oder in der " +
+                "Fendt-Bedienungsanleitung. Falls dort etwas anderes steht, gilt dieser Wert.",
         )
 
         const val PARAGRAPH =

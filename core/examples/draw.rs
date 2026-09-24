@@ -32,18 +32,21 @@ fn main() {
         ..Open::default()
     };
     let options = AnnotateOptions {
-        mode: if into == "en" {
+        mode: if into == "en" || std::env::var("MODE").as_deref() == Ok("meaning") {
             InlineMode::Meaning
         } else {
             InlineMode::Both
         },
-        density: 1,
+        density: std::env::var("DENSITY")
+            .ok()
+            .and_then(|it| it.parse().ok())
+            .unwrap_or(1),
         narrow: false,
         hide_stress: false,
         accent: None,
         seen: Vec::new(),
     };
-    let target = Lang(into);
+    let target = Lang(into.clone());
     let (mut tokens, misses) = annotate(
         &[TextRun {
             id: 1,
@@ -69,6 +72,26 @@ fn main() {
             })
             .collect();
         lexcore::annotate::complete(&mut tokens, &results, &options, &target, &open);
+    }
+    // With RENDER set, the line as a reader sees it, each replaced word in brackets.
+    if std::env::var("RENDER").is_ok() {
+        let text: Vec<u16> = args[3].encode_utf16().collect();
+        let mut out = String::new();
+        let mut at = 0usize;
+        for token in tokens.iter().filter(|t| t.inline) {
+            let shown = if into == "en" || std::env::var("MODE").as_deref() == Ok("meaning") {
+                token.gloss.clone()
+            } else {
+                token.gloss_ipa.clone().or_else(|| token.gloss.clone())
+            };
+            let Some(shown) = shown else { continue };
+            out.push_str(&String::from_utf16_lossy(&text[at..token.start as usize]));
+            out.push_str(&format!("[{shown}]"));
+            at = token.end as usize;
+        }
+        out.push_str(&String::from_utf16_lossy(&text[at..]));
+        println!("{out}");
+        return;
     }
     for token in tokens.iter().filter(|t| t.inline) {
         println!(

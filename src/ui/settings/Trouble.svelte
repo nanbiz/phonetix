@@ -7,7 +7,8 @@
   // the language they are reading.
 
   interface Props {
-    /** What went wrong, in the host's own words. Empty is the ordinary state. */
+    /** What went wrong, in the host's own words, each a sentence of its own. Empty is the
+     *  ordinary state. */
     trouble?: string[];
   }
 
@@ -20,7 +21,7 @@
          about an engine depends on which one it was, and guessing at it in one sentence for
          all of them is advice that is wrong more often than it is right. -->
     <span data-name>
-      {trouble.join('; ')}. Words it would have answered are missing until it does.
+      {trouble.join(' ')}
     </span>
   </div>
 {/if}

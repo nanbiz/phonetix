@@ -160,11 +160,11 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
 }
 
 #[test]
-fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
-    // Bank and Sitzbank are both glossed "bench" and nothing in the data separates them.
-    // Offering both would be the confident wrong answer this join is shaped to avoid, twice
-    // over, so the dictionary says nothing and the English gloss stands as the anchor above
-    // whatever the host's engine guesses.
+fn two_words_reached_equally_well_are_answered_with_one_of_them() {
+    // Bank and Sitzbank are both glossed "bench" and the join alone does not separate them.
+    // Left unanswered, the page drew the English gloss over a text being read in German, so
+    // the tie goes to the ranking a word typed into the panel gets, and the reader is handed
+    // one German word - the same one every time.
     let es = spanish();
     let de = german();
     let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
@@ -178,13 +178,16 @@ fn two_words_reached_equally_well_are_no_dictionary_answer_at_all() {
         classifier: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
-    // The pack holds the word and the reader's own pack is open; what is missing is a join.
-    assert_eq!(got.state, AnswerState::ViaEn);
-    assert!(got.says.is_empty(), "reached {:?}", got.says);
+    assert_eq!(got.state, AnswerState::Entry);
+    assert_eq!(got.says.len(), 1, "reached {:?}", got.says);
+    assert!(
+        ["Bank", "Sitzbank"].contains(&got.says[0].as_str()),
+        "reached {:?}",
+        got.says
+    );
     assert_eq!(
-        got.glosses,
-        vec!["bench"],
-        "the anchor a reader is left with"
+        got.says,
+        look_up("banco", &lang("es"), &lang("de"), &open).says
     );
     assert_eq!(got.ipa, vec!["ˈbaŋ.ko"]);
 }

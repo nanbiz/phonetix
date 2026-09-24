@@ -254,6 +254,36 @@ fn by_kind(pos: &str) -> u8 {
     }
 }
 
+/// Whether a word is one that holds a sentence together rather than one a reader learns: an
+/// article, a preposition, a conjunction, a pronoun, a contraction of those, or one of the
+/// verbs English builds its tenses and moods with.
+///
+/// Such a word is on every line, so any share of its occurrences is still a replacement on
+/// every line; replaced, it does not agree with the words around it, which are left as the
+/// page wrote them - "el comment", "un comedy" - and it has nothing to teach.
+pub fn holds_together(answer: &Answer, spelling: &str, lang: &Lang) -> bool {
+    let Some(pos) = answer.pos.as_deref() else {
+        return false;
+    };
+    if by_kind(pos) <= 1 {
+        return true;
+    }
+    if lang.0 != "en" || pos != "verb" {
+        return false;
+    }
+    let lemma = answer
+        .lemma
+        .clone()
+        .unwrap_or_else(|| spelling.to_string())
+        .to_lowercase();
+    AUXILIARIES.contains(&lemma.as_str())
+}
+
+/// The verbs English makes its tenses, questions and moods with.
+const AUXILIARIES: &[&str] = &[
+    "be", "have", "do", "will", "would", "shall", "should", "can", "could", "may", "might", "must",
+];
+
 /// Whether a sense is a letter of the alphabet naming itself.
 fn names_a_letter(gloss: &str) -> bool {
     let lowered = gloss.to_lowercase();
@@ -502,8 +532,9 @@ fn weighed<D: AsRef<[u8]>>(
 /// How many of an English word's translations are looked for in its translated line.
 const LOOKED_FOR_IN_LINE: usize = 12;
 
-/// Which of the words [glosses] could be in [wanted]'s language the translated line uses, in
-/// any form the pack lists for it, the likeliest first where the line holds several.
+/// Which of the words [glosses] could be in [wanted]'s language the translated line uses, the
+/// likeliest first where the line holds several, in the form the line has it: "the beans are
+/// roasted" is "tostados" there, and the infinitive over it read as "the beans are to roast".
 fn in_line<D: AsRef<[u8]>>(
     glosses: &[(String, Option<String>)],
     wanted: &Pack<D>,
@@ -515,14 +546,17 @@ fn in_line<D: AsRef<[u8]>>(
     }
     glossed_as(glosses, None, wanted, LOOKED_FOR_IN_LINE)
         .into_iter()
-        .find(|word| {
-            let mut forms = vec![word.to_lowercase()];
-            for entry in wanted.lookup(word) {
-                if same_word(&entry.lemma, word) {
-                    forms.extend(entry.forms.iter().map(|form| form.spelling.to_lowercase()));
+        .find_map(|word| {
+            // As the pack spells them, since the case is the word's own: a German noun.
+            let mut forms = vec![word.clone()];
+            for entry in wanted.lookup(&word) {
+                if same_word(&entry.lemma, &word) {
+                    forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
                 }
             }
-            forms.iter().any(|form| holds(&sentence, &normalised(form)))
+            forms
+                .into_iter()
+                .find(|form| holds(&sentence, &normalised(form)))
         })
 }
 
@@ -1237,8 +1271,21 @@ fn resolve_one<D: AsRef<[u8]>>(
     // an answer is the confident wrong answer this whole join is shaped to avoid, only twice
     // over. The word falls to the host's engine and the English gloss stands as the anchor
     // above whatever that guesses.
-    if tied {
-        says.clear();
+    // What the line translated uses, where it is one of the words this could be; otherwise,
+    // where the join above tied or reached nothing, the likeliest of the words its first
+    // senses are glossed as, ranked the way a word typed into the panel is: "für" is glossed
+    // "for", which Spanish glosses "para" and "por" alike, and leaving it unanswered drew the
+    // English gloss over a page being read in Spanish.
+    let asked: Vec<(String, Option<String>)> = glosses
+        .iter()
+        .filter(|gloss| !crate::annotate::about_grammar(gloss))
+        .take(3)
+        .map(|gloss| (gloss.clone(), Some(entry.pos.clone())))
+        .collect();
+    if let Some(word) = said.and_then(|said| in_line(&asked, other, said)) {
+        says = vec![word];
+    } else if tied || says.is_empty() {
+        says = glossed_as(&asked, None, other, 1);
     }
     let state = match (says.len(), inflected) {
         // The entry is here and the reader's pack is open; what is missing is a join between

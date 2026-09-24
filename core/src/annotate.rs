@@ -100,6 +100,11 @@ pub fn annotate<D: AsRef<[u8]>>(
             let answer =
                 crate::resolve::read_in_context(&reading, before.as_deref(), &lang, target, open);
             before = Some(spelling.clone());
+            // Only the words worth learning, short of every word: see [holds_together].
+            let inline = inline
+                && (asked_about
+                    || options.density <= crate::sprinkle::DENSITY_MIN
+                    || !crate::resolve::holds_together(&answer, &reading, &lang));
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.
             // An English definition is not a translation. Read into another language, an
@@ -212,7 +217,8 @@ fn said_in<D: AsRef<[u8]>>(gloss: &str, target: &Lang, open: &Open<D>) -> Option
 ///
 /// A lookup reaches every entry listing the spelling among its forms, in the order the pack
 /// was built, so "como" reaches "comer" and "incentivo" reaches "incentivar" as well as the
-/// words themselves: the entry whose lemma is the word is the one it is said by.
+/// words themselves: the entry whose lemma is the word is the one it is said by. A form with
+/// no entry of its own - "tostados" - has no transcription here, and is left for the voice.
 fn said_as_itself<D: AsRef<[u8]>>(pack: &lexpack::Pack<D>, word: &str) -> Option<String> {
     let found = pack.lookup(word);
     let lowered = word.to_lowercase();
@@ -226,7 +232,6 @@ fn said_as_itself<D: AsRef<[u8]>>(pack: &lexpack::Pack<D>, word: &str) -> Option
                 .filter(|entry| !entry.ipa.is_empty())
                 .find(|entry| entry.lemma.to_lowercase() == lowered)
         })
-        .or_else(|| found.iter().find(|entry| !entry.ipa.is_empty()))
         .and_then(|entry| entry.ipa.first())
         .cloned()
 }
@@ -473,9 +478,42 @@ fn starts_sentence(text: &str, start_utf16: u32) -> bool {
     });
     match previous {
         None => true,
-        Some(c) => matches!(c, '.' | '!' | '?' | ':' | '…'),
+        Some('.') => !abbreviated(&before),
+        Some(c) => matches!(c, '!' | '?' | ':' | '…'),
     }
 }
+
+/// Whether the full stop that text ends with closes an abbreviation rather than a sentence:
+/// "Mr. Bennet", "U.S. District Judge", "Timothy J. Kelly". Read as a sentence's end, the
+/// name after it was read as an ordinary word, and "Bennet" was drawn as a herb.
+fn abbreviated(before: &[char]) -> bool {
+    let end = before
+        .iter()
+        .rposition(|c| *c == '.')
+        .unwrap_or(before.len());
+    let start = before[..end]
+        .iter()
+        .rposition(|c| c.is_whitespace() || matches!(c, '"' | '“' | '(' | '['))
+        .map_or(0, |at| at + 1);
+    let word: String = before[start..end].iter().collect();
+    if word.is_empty() {
+        return false;
+    }
+    // An initial, or a run of them: "J.", "U.S.".
+    if word
+        .split('.')
+        .all(|part| part.chars().count() == 1 && part.chars().all(char::is_uppercase))
+    {
+        return true;
+    }
+    TITLES.contains(&word.to_lowercase().as_str())
+}
+
+/// Abbreviations a full stop closes in the middle of a sentence, in the languages read here.
+const TITLES: &[&str] = &[
+    "mr", "mrs", "ms", "dr", "prof", "st", "sr", "jr", "mt", "vs", "etc", "e.g", "i.e", "no",
+    "vol", "fig", "sra", "srta", "dra", "hr", "fr", "frau", "mme", "mlle", "sig",
+];
 
 /// Whether every sense is a note about grammar: "Obsolete form of its", "Misspelling of its".
 /// Such a reading is another word's spelling, and what it says is that word's meaning.
@@ -532,22 +570,29 @@ fn drawn_as<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) -> Option<String> {
-    // An English word read into another language is drawn as a word in that language or not
-    // at all: its own glosses are English definitions, "As above, with the verb implied".
-    // A contraction with no word of its own is the words it contracts, which the engine says:
-    // the other readings its spelling reaches are "its" misspelled.
-    if lang.0 == "en" && target.0 != "en" {
+    // Read into a language other than English, a word is drawn as a word in that language or
+    // not at all, and left for the engine. What a dictionary glosses it with is English -
+    // "for", "tire", "As above, with the verb implied" - and English over a page being read
+    // in Spanish is neither the page nor the reader's language. A contraction with no word of
+    // its own is the words it contracts, which the engine says: the other readings its
+    // spelling reaches are "its" misspelled.
+    if target.0 != "en" {
+        if let Some(word) = answer.says.first() {
+            return Some(word.clone());
+        }
+        let first = answer.glosses.first();
+        if let Some(pointed) = first.and_then(|gloss| points_at(gloss.as_str())) {
+            let there = crate::resolve::read_in_context(&pointed, None, lang, target, open);
+            if let Some(word) = there.says.first() {
+                return Some(word.clone());
+            }
+        }
         let contracted = answer.pos.as_deref() == Some("contraction");
         return answer
-            .says
-            .first()
-            .or_else(|| {
-                answer
-                    .readings
-                    .iter()
-                    .filter(|reading| !contracted && !only_grammar(&reading.glosses))
-                    .find_map(|reading| reading.says.first())
-            })
+            .readings
+            .iter()
+            .filter(|reading| !contracted && !only_grammar(&reading.glosses))
+            .find_map(|reading| reading.says.first())
             .cloned();
     }
     if let Some(found) = inline_of(&answer.says).or_else(|| inline_of(&answer.glosses)) {

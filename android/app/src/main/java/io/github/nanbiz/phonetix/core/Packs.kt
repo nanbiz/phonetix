@@ -193,6 +193,16 @@ object Packs {
      * then looked for beside the listing.
      */
     fun getModel(context: Context, base: String, from: String, to: String): Boolean =
+        oneModel(context, base, from, to) ||
+            Translator.through(from, to).let { steps ->
+                // Through English where the pair has no model of its own; see
+                // [Translator.through].
+                steps.isNotEmpty() && steps.all { (a, b) ->
+                    Translator.ready(models(context), a, b) || oneModel(context, base, a, b)
+                }
+            }
+
+    private fun oneModel(context: Context, base: String, from: String, to: String): Boolean =
         modelFrom(context, from(base), from, to) ||
             (base.isNotBlank() && modelFrom(context, PUBLISHED, from, to))
 
