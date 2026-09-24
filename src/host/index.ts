@@ -60,7 +60,13 @@ export function host(): void {
     // which of them answered and neither is mistaken for the dictionary.
     const decided = await settled(batch, data.runs, languages);
     const spoken = await said(decided, data.source, languages);
-    return meant(spoken, data.source, data.target, languages);
+    const translated = await meant(spoken, data.source, data.target, languages);
+    // With both, what replaces a word is how its translation is said: a translation whose
+    // entry has no transcription, or one the engine wrote, is said by the voice for the
+    // language read into rather than drawn as the written word.
+    return data.options.mode === 'both'
+      ? translationSaid(translated, data.target, languages)
+      : translated;
   });
 
   onMessage('curve', async () => curve());
@@ -456,6 +462,30 @@ async function translateWordsWaiting(): Promise<void> {
   if (arrived > 0) {
     await browser.storage.local.set({ linesTranslated: Date.now() }).catch(() => undefined);
   }
+}
+
+/** How each drawn translation with no transcription is said, in the language read into. */
+async function translationSaid(batch: Batch, target: string, languages: Languages): Promise<Batch> {
+  if (!target || target === languages.source) return batch;
+  const wanted = batch.tokens
+    .map((token, at) => ({ token, at }))
+    .filter(({ token }) => token.inline && token.gloss && !token.glossIpa);
+  if (wanted.length === 0) return batch;
+  const words = [...new Set(wanted.map(({ token }) => token.gloss as string))];
+  let spoken: Record<string, string> = {};
+  try {
+    spoken = await ipa(target, words);
+    answered('the synthesiser');
+  } catch (e) {
+    console.warn(`[Phonetix] The ${target} voice did not answer:`, e);
+    noted('the synthesiser', 'is not answering');
+    return batch;
+  }
+  const results = wanted
+    .map(({ token, at }) => ({ token: at, ipa: spoken[token.gloss as string] }))
+    .filter((result): result is { token: number; ipa: string } => Boolean(result.ipa));
+  if (results.length === 0) return batch;
+  return carrying(batch, await complete(batch.batch, results, 'espeak', languages));
 }
 
 /**

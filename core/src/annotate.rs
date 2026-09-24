@@ -380,6 +380,17 @@ pub fn complete<D: AsRef<[u8]>>(
             });
         }
         if let Some(ipa) = &result.ipa {
+            // With both, the only transcription drawn is the translation's, so a voice's
+            // answer for a word read that way is how its translation is said: the host asked
+            // for the translation the dictionary had no transcription of.
+            if options.mode == InlineMode::Both && token.gloss.is_some() {
+                token.gloss_ipa = Some(crate::symbols::display(
+                    ipa,
+                    options.narrow,
+                    options.hide_stress,
+                ));
+                continue;
+            }
             // Shown the way a pack's own transcription would be: in the reader's accent, at
             // the detail they asked for. An engine's answer that skipped this came out in a
             // different notation from the word beside it.

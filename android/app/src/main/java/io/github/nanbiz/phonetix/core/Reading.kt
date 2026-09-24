@@ -81,6 +81,10 @@ object Reading {
         // And what no dictionary could translate, translated. The engine answers only where a
         // reader has chosen a language to read into and the model for that direction is here.
         batch = meant(batch, source, target)
+        // With both, what replaces a word is how its translation is said, and a translation
+        // whose dictionary entry has no transcription - or one the engine wrote - is said by
+        // the voice for the language read into, rather than drawn as the written word.
+        if (mode == "both") batch = translationSaid(batch, source, target)
         val tokens = batch.optJSONArray("tokens") ?: JSONArray()
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
             android.util.Log.d(
@@ -311,6 +315,47 @@ object Reading {
      * pack covers. What comes back is a machine's guess and is marked as one by the core, so
      * a reader is told which of the two answered.
      */
+    private fun translationSaid(batch: JSONObject, source: String, target: String): JSONObject {
+        if (!Speech.usable || target.isEmpty() || target == source) return batch
+        val tokens = batch.optJSONArray("tokens") ?: return batch
+        val wanted = ArrayList<Int>()
+        val words = ArrayList<String>()
+        for (at in 0 until tokens.length()) {
+            val token = tokens.optJSONObject(at) ?: continue
+            if (!token.optBoolean("inline")) continue
+            val gloss = token.optString("gloss").takeIf { it != "null" }.orEmpty()
+            val said = token.optString("glossIpa").takeIf { it != "null" }.orEmpty()
+            if (gloss.isEmpty() || said.isNotEmpty()) continue
+            wanted.add(at)
+            words.add(gloss)
+        }
+        if (wanted.isEmpty()) return batch
+        val said = Speech.phonemes(Accents.voiceOf(target, ""), words.distinct())
+        val kept = ArrayList<Int>(wanted.size)
+        val sounds = ArrayList<String>(wanted.size)
+        for (at in wanted.indices) {
+            val ipa = said[words[at]] ?: continue
+            kept.add(wanted[at])
+            sounds.add(ipa)
+        }
+        if (kept.isEmpty()) return batch
+        val written = runCatching {
+            Lex.complete(
+                core,
+                batch.optLong("batch"),
+                kept.toIntArray(),
+                Array(kept.size) { "" },
+                sounds.toTypedArray(),
+                Array(kept.size) { "" },
+                source,
+                target,
+                "",
+                "espeak",
+            )
+        }.getOrNull() ?: return batch
+        return runCatching { JSONObject(written) }.getOrDefault(batch)
+    }
+
     private fun meant(batch: JSONObject, source: String, target: String): JSONObject {
         if (!Translator.usable || target.isEmpty() || target == source) return batch
         val misses = batch.optJSONArray("misses") ?: return batch
