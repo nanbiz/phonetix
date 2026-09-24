@@ -351,10 +351,22 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     fun show(said: Answer, onPlay: () -> Unit) {
         note.visibility = GONE
         answer.view.setContent {
+            // The same card the word under a finger opens: on the first sound of the word, and
+            // a tap on a symbol says what that one is.
+            val opened = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<String?>(null)
+            }
+            val sound = opened.value?.let { io.github.nanbiz.phonetix.core.IpaSymbols.describe(it) }
+                ?: said.symbols.firstOrNull {
+                    it.name.isNotBlank() && (it.kind == "vowel" || it.kind == "consonant")
+                }
+                ?: said.symbols.firstOrNull { it.name.isNotBlank() }
             io.github.nanbiz.phonetix.ui.AnswerCard(
                 answer = said,
                 palette = palette,
                 onPlay = onPlay,
+                opened = sound,
+                onSymbol = { symbol -> opened.value = if (opened.value == symbol) null else symbol },
             )
         }
     }

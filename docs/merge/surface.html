@@ -600,6 +600,9 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .row .r-name { font-weight: var(--weight-medium); }
 .row .r-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .row .r-act { grid-column: 2; grid-row: 1 / span 2; }
+/* A row with nothing under its name is one line: spanning a second, empty line left the name
+   at the top of the row and the switch beside it in the middle. */
+.row.single .r-act { grid-row: 1; }
 .row .r-wide { grid-column: 1 / -1; }
 .progress { height: var(--progress-height); border-radius: var(--radius-bar); background: var(--color-skeleton); overflow: hidden; }
 .progress i { display: block; height: 100%; width: 30%; background: var(--color-accent); border-radius: var(--radius-bar); }

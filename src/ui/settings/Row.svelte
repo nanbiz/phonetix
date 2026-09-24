@@ -37,7 +37,11 @@
   let asked = $state(false);
 </script>
 
-<div class="row{dim ? ' dim' : ''}" data-row={row || undefined} {...marks}>
+<div
+  class="row{dim ? ' dim' : ''}{about || (hint && asked) ? '' : ' single'}"
+  data-row={row || undefined}
+  {...marks}
+>
   <!-- A row on a screen named after it says its name once: the screen's own title is the
        name, and repeating it under itself is the title twice. -->
   {#if name}

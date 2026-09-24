@@ -568,13 +568,15 @@ private fun Foot(
     report: Reporter?,
     onOpen: (String) -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         // The way onward is the mark on the top row, where a reader who wants the whole entry
         // looks; a second Wiktionary link down here was the same link twice.
         Pair(answer, palette)
         val pack = (answer.provenance as? Answer.Provenance.Dictionary)?.pack
         if (pack != null) {
-            Box(Modifier.width(Tokens.Scale.space3.dp))
+            // At the far end, as the browser's card has it: after a fixed gap it was set in from
+            // the edge by that gap wherever there were no languages to name before it.
+            Box(Modifier.padding(start = Tokens.Scale.space3.dp).weight(1f))
             androidx.compose.material3.Text(
                 text = pack,
                 color = Color(palette.inkFaint),

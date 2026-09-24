@@ -3,6 +3,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// The product's version, which is the extension's: one product, released under one number, which
+// the release script writes into package.json before it builds either half, so the phone and the
+// extension report the same one. The code is that number read as digits, so each release
+// installs over the one before.
+val productVersion: String = Regex("\"version\"\\s*:\\s*\"([0-9]+\\.[0-9]+\\.[0-9]+)\"")
+    .find(rootProject.file("../package.json").readText())
+    ?.groupValues?.get(1)
+    ?: error("no version in package.json")
+val productCode: Int = productVersion.split(".").map { it.toInt() }
+    .let { (major, minor, patch) -> major * 1_000_000 + minor * 1_000 + patch }
+
 android {
     namespace = "io.github.nanbiz.phonetix"
     compileSdk = 36
@@ -20,8 +31,8 @@ android {
         // cannot translate is not the product this is.
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = productCode
+        versionName = productVersion
         // The core is a native library, so the only honest place to test it is a device:
         // a JVM unit test would load the host build and prove nothing about the phone.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
