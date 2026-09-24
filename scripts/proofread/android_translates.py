@@ -113,10 +113,15 @@ def main():
     # the task behind it and reports success.
     dev.surface(mode="spanish", packHost=base, target="de", layer="both",
                 enable=1, density=1)
-    time.sleep(8)
-    # What is written over each word, which is the whole question here.
-    drawn = re.findall(r"DRAWN (.*)", dev.log())
-    over = dict(drawn_pairs(drawn[-1])) if drawn else {}
+    # What is written over each word, which is the whole question here. Waited for rather than
+    # slept on: on a machine this busy the first drawing can be most of a minute away.
+    over = {}
+    for _ in range(30):
+        time.sleep(2)
+        drawn = [line for line in re.findall(r"DRAWN (.*)", dev.log()) if line.strip()]
+        over = dict(drawn_pairs(drawn[-1])) if drawn else {}
+        if over.get("perro") and over.get("camino"):
+            break
     print(f"  {len(over)} words annotated: {list(over.items())[:6]}")
 
     if not over:

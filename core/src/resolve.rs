@@ -316,6 +316,10 @@ struct Rank {
     /// Whether the answer is a phrase rather than a word: "from" is "de" before it is
     /// "a partir de", and drawn over a page a phrase for every word read like a sentence.
     phrase: bool,
+    /// Whether the word is missing from the list of words met in running text, where the pack
+    /// has one: "enel" is glossed "in the" exactly and nobody writes it, "Uds" is "you", and
+    /// "en el" and "tú" are what a speaker says.
+    unheard: bool,
     shared: std::cmp::Reverse<usize>,
     asked: usize,
     /// Whether what was typed is a later sense of the word rather than its first: "caja" is a
@@ -336,6 +340,9 @@ pub fn how_often(entry: &Entry) -> Option<u64> {
         .find_map(|tag| tag.strip_prefix("count:"))
         .and_then(|count| count.parse().ok())
 }
+
+/// Senses a dictionary marks as no longer in use.
+const GONE: &[&str] = &["obsolete", "archaic"];
 
 /// Senses a dictionary marks as not the ordinary word for something.
 const UNUSUAL: &[&str] = &[
@@ -484,19 +491,38 @@ fn weighed<D: AsRef<[u8]>>(
             // An entry that only points at another word is not the word - except a function
             // word, which a dictionary describes by its grammar: "el" is "masculine singular
             // definite article; the".
+            // One whose notes end in a meaning is the word for it: "tú" is "second person
+            // pronoun in singular tense; you".
             let pointer = kind != 0
                 && entry
                     .senses
                     .iter()
-                    .all(|sense| crate::annotate::about_grammar(&sense.gloss));
+                    .all(|sense| meaning_of(&sense.gloss).is_none());
             if kind == 3 || pointer {
                 continue;
             }
-            let marked = entry.senses.get(sense as usize).is_some_and(|sense| {
-                sense
-                    .marks
-                    .iter()
-                    .any(|mark| UNUSUAL.contains(&mark.as_str()))
+            let marks: &[String] = entry
+                .senses
+                .get(sense as usize)
+                .map(|sense| sense.marks.as_slice())
+                .unwrap_or(&[]);
+            // A sense nobody uses any more is not handed to a reader at all, even where it is
+            // the only one that answers: "enel" is "in the" and has not been written for
+            // centuries.
+            if marks.iter().any(|mark| GONE.contains(&mark.as_str())) {
+                continue;
+            }
+            // Nor a sense that is another word's form: "la" as the accusative of "ella" is
+            // "her", and the count it carries is the article's.
+            if marks.iter().any(|mark| mark == "form-of") {
+                continue;
+            }
+            // How formal a pronoun is, is which pronoun it is rather than a register it is in:
+            // "tú" is marked informal and is the ordinary word for "you".
+            let pronoun = entry.pos == "pron";
+            let marked = marks.iter().any(|mark| {
+                UNUSUAL.contains(&mark.as_str())
+                    && !(pronoun && matches!(mark.as_str(), "formal" | "informal"))
             });
             let wrong_part = verb.is_some_and(|verb| (entry.pos == "verb") != verb);
             scored.push((
@@ -504,6 +530,7 @@ fn weighed<D: AsRef<[u8]>>(
                     wrong_part,
                     marked,
                     phrase: entry.lemma.contains(' '),
+                    unheard: how_often(&entry).is_none(),
                     shared: std::cmp::Reverse(shared),
                     asked,
                     later: sense > 0,
@@ -558,6 +585,22 @@ fn in_line<D: AsRef<[u8]>>(
                 .into_iter()
                 .find(|form| holds(&sentence, &normalised(form)))
         })
+}
+
+/// What a sense means, where it can be looked for in another language: the sense itself, or
+/// where it is a note about grammar, the meaning it ends with - "nominative masculine singular
+/// definite article, the", "dative masculine/neuter singular of der: the". A German article is
+/// filed that way, and skipped as grammar it reached no Spanish word at all.
+fn meaning_of(gloss: &str) -> Option<String> {
+    if !crate::annotate::about_grammar(gloss) {
+        return Some(gloss.to_string());
+    }
+    let at = gloss.rfind([':', ',', ';'])?;
+    let tail = gloss[at + 1..].trim();
+    (!tail.is_empty()
+        && tail.split_whitespace().count() <= 3
+        && !crate::annotate::about_grammar(tail))
+    .then(|| tail.to_string())
 }
 
 /// Whether two parts of speech are the same kind of word, as two dictionaries file them: one
@@ -735,6 +778,10 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .collect();
     let decided = chosen_by_translation(&meant, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
+        // One reading's answer met far more often than any other's outweighs the word before
+        // it: "from someone" is a preposition before a pronoun, and read as one before a noun
+        // it was "a person of importance".
+        .or_else(|| commonest_answer(&all, open))
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
         // the article, not the adverb of "the more the merrier".
@@ -764,6 +811,41 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     }
     first
 }
+
+/// The reading whose answer in the reader's language is met most often in running text, where
+/// the pack read into counts its words and one answer is met far more than the rest.
+fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<usize> {
+    let pack = open.target?;
+    let counts: Vec<u64> = all
+        .iter()
+        .map(|answer| {
+            answer
+                .says
+                .first()
+                .map(|word| {
+                    pack.lookup(word)
+                        .iter()
+                        .filter(|entry| same_word(&entry.lemma, word))
+                        .filter_map(how_often)
+                        .max()
+                        .unwrap_or(0)
+                })
+                .unwrap_or(0)
+        })
+        .collect();
+    let (best, most) = counts.iter().enumerate().max_by_key(|(_, count)| **count)?;
+    let second = counts
+        .iter()
+        .enumerate()
+        .filter(|(at, _)| *at != best)
+        .map(|(_, count)| *count)
+        .max()
+        .unwrap_or(0);
+    (*most > 0 && *most >= second.saturating_mul(COMMONER_BY)).then_some(best)
+}
+
+/// How many times as often one reading's answer has to be met as any other's to be drawn first.
+const COMMONER_BY: u64 = 4;
 
 /// Which reading the sentence's own translation says this is.
 ///
@@ -1278,14 +1360,21 @@ fn resolve_one<D: AsRef<[u8]>>(
     // English gloss over a page being read in Spanish.
     let asked: Vec<(String, Option<String>)> = glosses
         .iter()
-        .filter(|gloss| !crate::annotate::about_grammar(gloss))
+        .filter_map(|gloss| meaning_of(gloss))
         .take(3)
-        .map(|gloss| (gloss.clone(), Some(entry.pos.clone())))
+        .map(|gloss| (gloss, Some(entry.pos.clone())))
         .collect();
     if let Some(word) = said.and_then(|said| in_line(&asked, other, said)) {
         says = vec![word];
-    } else if tied || says.is_empty() {
-        says = glossed_as(&asked, None, other, 1);
+    } else {
+        let ranked = glossed_as(&asked, None, other, 1);
+        if !ranked.is_empty() {
+            says = ranked;
+        } else if tied || !asked.is_empty() {
+            // What the ranking turned down - a word nobody has used for centuries - is not
+            // brought back by the plainer join above.
+            says.clear();
+        }
     }
     let state = match (says.len(), inflected) {
         // The entry is here and the reader's pack is open; what is missing is a join between

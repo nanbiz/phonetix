@@ -577,6 +577,24 @@ fn drawn_as<D: AsRef<[u8]>>(
     // its own is the words it contracts, which the engine says: the other readings its
     // spelling reaches are "its" misspelled.
     if target.0 != "en" {
+        // A contraction is the words it contracts: German "im" is "in" and "dem", "en el".
+        // Asked as a whole, it reached the one Spanish word glossed "in the", which nobody
+        // has written for centuries. English contractions are left to the engine, whose parts
+        // - "it" and "is" - are not what the reader would write for them.
+        if answer.pos.as_deref() == Some("contraction") && lang.0 != "en" {
+            if let Some(parts) = answer.glosses.first().and_then(|gloss| contracted(gloss)) {
+                let said: Option<Vec<String>> = parts
+                    .iter()
+                    .map(|part| {
+                        let there = crate::resolve::read_in_context(part, None, lang, target, open);
+                        drawn_as(&there, lang, target, open)
+                    })
+                    .collect();
+                if let Some(said) = said {
+                    return Some(said.join(" "));
+                }
+            }
+        }
         if let Some(word) = answer.says.first() {
             return Some(word.clone());
         }
@@ -616,6 +634,19 @@ fn drawn_as<D: AsRef<[u8]>>(
     first
         .map(|sense| sense.trim().to_string())
         .filter(|text| !text.is_empty())
+}
+
+/// The words a contraction is made of, as its note spells them: "contraction of in + dem".
+fn contracted(gloss: &str) -> Option<Vec<String>> {
+    let lowered = gloss.to_lowercase();
+    let at = lowered.find("contraction of ")? + "contraction of ".len();
+    let rest = gloss[at..].split([';', ',', ':', '(']).next()?;
+    let parts: Vec<String> = rest
+        .split('+')
+        .map(|part| part.trim().to_string())
+        .filter(|part| !part.is_empty() && !part.contains(' '))
+        .collect();
+    (parts.len() >= 2).then_some(parts)
 }
 
 /// The word a note points at: what follows its last "of".

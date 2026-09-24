@@ -125,6 +125,15 @@ object Reading {
     }
     private val translating = HashSet<String>()
 
+    /** Words as the engine translated them, keyed by direction and word, and those on their
+     *  way to it. */
+    private val meantWords = object : LinkedHashMap<String, String>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) =
+            size > WORDS_KEPT
+    }
+    private val meaning = HashSet<String>()
+    private const val WORDS_KEPT = 4096
+
     /** The lines the last read asked about. A line that has gone from the screen by the time
      *  its turn comes is not translated: a backlog of lines from pages already left kept
      *  reading the screen again long after, and each of those reads cleared whatever else was
@@ -374,9 +383,41 @@ object Reading {
             words.add(token.optString("spelling"))
         }
         if (wanted.isEmpty()) return batch
-        val said = Translator.meanings(words)
+        // Answered from what has been translated already; the rest goes to the engine on the
+        // thread lines are translated on, and the screen is read again once it is back. The
+        // first word in a direction can mean opening its models - two of them, through
+        // English - and a read that waited for that drew nothing for seven seconds.
+        val key = { word: String -> "$source>$target\n$word" }
+        val said = HashMap<String, String>()
+        val waiting = ArrayList<String>()
+        synchronized(meantWords) {
+            for (word in words.distinct()) {
+                val had = meantWords[key(word)]
+                when {
+                    had != null -> if (had.isNotEmpty()) said[word] = had
+                    meaning.add(key(word)) -> waiting.add(word)
+                }
+            }
+        }
+        if (waiting.isNotEmpty()) {
+            lineWorker.execute {
+                val answers = runCatching { Translator.meanings(waiting) }.getOrDefault(emptyMap())
+                synchronized(meantWords) {
+                    for (word in waiting) {
+                        meaning.remove(key(word))
+                        // Kept even when empty: a word the engine has nothing for is not asked
+                        // about again on every read.
+                        meantWords[key(word)] = answers[word].orEmpty()
+                    }
+                }
+                if (answers.isNotEmpty()) onLinesArrived?.invoke()
+            }
+        }
         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-            android.util.Log.d("Phonetix", "MEANT ${words.size} asked, ${said.size} answered")
+            android.util.Log.d(
+                "Phonetix",
+                "MEANT ${words.size} asked, ${said.size} answered, ${waiting.size} sent off",
+            )
         }
         if (said.isEmpty()) return batch
         val kept = ArrayList<Int>(wanted.size)
