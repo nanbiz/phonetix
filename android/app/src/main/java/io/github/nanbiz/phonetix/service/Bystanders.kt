@@ -71,12 +71,12 @@ class Bystanders(private val context: Context) {
             }
         }.getOrNull()?.let { found.add(it) }
         val keyboards = HashSet<String>(4)
+        // The keyboards are kept apart rather than among the rest: a keyboard's package can be an
+        // app as well - Google voice typing ships inside the Google app, which is where Gemini
+        // runs - and counted by package, the whole of that app was never read.
         runCatching {
             val imm = context.getSystemService(InputMethodManager::class.java)
-            imm?.enabledInputMethodList?.forEach {
-                found.add(it.packageName)
-                keyboards.add(it.packageName)
-            }
+            imm?.enabledInputMethodList?.forEach { keyboards.add(it.packageName) }
         }
         typing = keyboards
         packages = found

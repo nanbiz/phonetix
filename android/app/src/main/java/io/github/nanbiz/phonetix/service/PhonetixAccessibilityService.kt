@@ -523,6 +523,17 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
     }
 
+    /** Whether [event] came from a keyboard's own window, rather than from another window of
+     *  the app the keyboard ships in. */
+    private fun fromAKeyboard(event: AccessibilityEvent?): Boolean {
+        val id = event?.windowId ?: return true
+        if (id < 0) return true
+        return runCatching {
+            windows.firstOrNull { it.id == id }?.type ==
+                android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+        }.getOrDefault(true)
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         // The home screen and the keyboard announce every flicker of themselves. Nothing of
         // theirs is ever transcribed, so there is no reason to fetch their window to find
@@ -532,7 +543,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // be a flicker a minute. Whether the app in front is one of these is settled by the
         // read itself, from the window that is actually there.
         val from = event?.packageName?.toString()
-        if (::bystanders.isInitialized && bystanders.contains(from)) {
+        if (::bystanders.isInitialized &&
+            (bystanders.contains(from) || bystanders.isKeyboard(from) && fromAKeyboard(event))
+        ) {
             // A window of theirs opening or closing is still worth looking at, even though
             // nothing of theirs is ever transcribed: the notification shade is one of these,
             // and it comes down over the app being read. Its events were dropped, so nothing

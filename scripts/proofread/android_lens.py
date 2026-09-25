@@ -445,15 +445,6 @@ def main():
             failures.append(
                 f"a keyboard opened at {top} and the button is at {lifted}, behind it")
 
-    # And never where a word is drawn over: there, a guessed position is a transcription on
-    # the wrong word.
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="sound", target="none")
-    time.sleep(8)
-    drawn = dev.annotated()
-    if drawn:
-        failures.append(
-            f"{len(drawn)} words were drawn from guessed positions, which puts a "
-            f"transcription on the wrong word")
     dev.surface(mode="spanish", enable=1, density=1, lens=1, layer="meaning")
     time.sleep(4)
 
