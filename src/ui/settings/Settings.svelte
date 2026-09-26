@@ -416,7 +416,7 @@
 
   <!-- The bar a reader comes back to, on a row of its own - and only where it decides
        anything: with nothing being replaced there is no how often for it to be. -->
-  {#if where === 'browser' && settings.layer !== 'off'}
+  {#if settings.layer !== 'off'}
     <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
   {/if}
 

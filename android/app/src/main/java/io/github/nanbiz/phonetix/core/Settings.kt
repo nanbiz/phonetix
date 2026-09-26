@@ -29,7 +29,7 @@ data class Settings(
      *
      * Not the same as having nothing to draw: see [quiet].
      */
-    val paused: Boolean = false,
+    val paused: Boolean = true,
     /**
      * The language the reader is reading into.
      *
@@ -102,12 +102,13 @@ data class Settings(
     val into: String get() = if (layer == "meaning" || layer == "both") target else ""
 
     /**
-     * Whether nothing is painted over the page, which on the phone is always: the words are
-     * read so the side button can answer about the one it is dragged over, and the page itself
-     * is left as its app drew it. Words drawn over an app's own were words nobody could tell
-     * the meaning of, over text the reader was trying to read.
+     * Whether nothing is painted over the page.
+     *
+     * Two ways to arrive there: paused with a press held on the button, which is how the
+     * page words are switched on and off, or with both switches off. Either way the words are
+     * still read, so the side button answers about the one it is dragged over.
      */
-    val quiet: Boolean get() = true
+    val quiet: Boolean get() = paused || layer == "off"
 }
 
 /**
@@ -125,7 +126,9 @@ object SettingsStore {
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
-    private const val K_PAUSED = "paused"
+    /** Stored under a key of its own since the page words start off: held on the button
+     *  they come on, and a phone that last had them on under the old key starts without. */
+    private const val K_PAUSED = "pagePaused"
     private const val K_SCHEMA = "schema"
 
     /** Which reading of the stored settings this build makes: see [putDownTheOldWay]. */
@@ -160,7 +163,7 @@ object SettingsStore {
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, true),
-            paused = p.getBoolean(K_PAUSED, false),
+            paused = p.getBoolean(K_PAUSED, true),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },

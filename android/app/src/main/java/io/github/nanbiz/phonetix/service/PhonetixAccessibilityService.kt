@@ -364,6 +364,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // switch in the app, the tile and the accessibility button all put it away, and
             // brought back by any of them.
             onPutAway = { SettingsStore.setEnabled(false) },
+            onHold = {
+                // The page words, on and off: held once they replace the words on the page as
+                // the two switches say, held again they are gone. The button's colour says
+                // which, so nothing else has to.
+                main.post { tooltip.hide() }
+                val down = !SettingsStore.current.paused
+                SettingsStore.setPaused(down)
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.d("Phonetix", "HELD paused $down")
+                }
+                hover.saying(!down)
+                if (down) main.post { overlay.hideNow() } else readAgain()
+            },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from
             // whatever anyone manages to catch live. Debug builds only, and at most one every

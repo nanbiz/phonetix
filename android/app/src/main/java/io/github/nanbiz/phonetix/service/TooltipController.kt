@@ -22,7 +22,9 @@ import android.widget.TextView
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Language
+import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
+import io.github.nanbiz.phonetix.core.Speech
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wiktionary
@@ -497,7 +499,8 @@ class TooltipController(
                 settings.accentFor(source), box.before, box.decided,
             )
                 ?.takeIf { it.found }
-            ?: Answer.ofTranscription(box.word, box.full, source)
+            ?: elsewhere(box.word, source, settings.into)
+            ?: Answer.ofTranscription(box.word, box.full.ifBlank { voiced(box.word, source) }, source)
         val layer = settings.layer
         val sound = layer == "sound" || layer == "both"
         val meaning = layer == "meaning" || layer == "both"
@@ -515,6 +518,26 @@ class TooltipController(
         }
         return fresh.view
     }
+
+    /**
+     * The word in another dictionary this phone holds, where the screen's own has nothing:
+     * "feat" in a song title on a German screen is English, and a card that opened on nothing
+     * was no card at all.
+     */
+    private fun elsewhere(word: String, source: String, into: String): Answer? =
+        (listOf(Language.OURS) + Packs.held(context))
+            .distinct()
+            .filter { it != source }
+            .firstNotNullOfOrNull { lang ->
+                Reading.lookUp(word, lang, into.ifEmpty { lang })?.takeIf {
+                    it.found && it.state != Answer.State.None && it.state != Answer.State.NoPack
+                }
+            }
+
+    /** How the voice for [lang] says [word], where no dictionary does. */
+    private fun voiced(word: String, lang: String): String =
+        Speech
+            .phonemes(Accents.voiceOf(lang, ""), listOf(word))[word].orEmpty()
 
     /** Sagittal sections are SVGs, so Wikimedia is asked to raster one at the right width. */
     private fun loadDiagram(file: String, into: ImageView) {

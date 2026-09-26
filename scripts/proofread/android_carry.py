@@ -1,0 +1,131 @@
+"""How much of a real app's movement the layer actually followed.
+
+The failure is rare per run and total when it happens, so counting bad runs needs dozens of
+them. What the fix changes is continuous and can be measured every fling: the settings app
+reports how far it really scrolled, in pixels, and the layer reports how far it carried the
+words. The ratio between them is what a reader sees.
+"""
+import os
+import re
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from android_harness import SERIAL, Device, shell, wait_until_quiet
+
+# Load first, because on an idle emulator the overlay always keeps up and this always reads
+# 100 percent. Six runs, because the outcome measure is bimodal - a run is either starved or
+# it is not - while this one is continuous and a handful of runs settles it.
+load = int(sys.argv[1]) if len(sys.argv) > 1 else 4
+runs = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+# Any load left behind by a run that was cut short. Each of these is a core of the emulator
+# gone, they outlive the run that started them when it does not reach its own cleanup, and a
+# device carrying several rounds of them is not the device the question is about: the same
+# build read 0%, 67%, 71%, 89% and 124% as they piled up.
+subprocess.run(["adb", "-s", SERIAL, "shell", "pkill -f 'while true'"], capture_output=True)
+# And the load a previous run left decays over minutes, so a run started straight after
+# another measures a busier device than one started after a pause.
+if not wait_until_quiet():
+    print("the device is still busy; measuring anyway")
+busy = [subprocess.Popen(["adb", "-s", SERIAL, "shell", "while true; do echo -n; done"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(load)]
+dev = Device()
+# Installing a build clears the accessibility grant, so without this the first runs measure a
+# device with no overlay on it at all and read as nought per cent followed.
+if not dev.enable_service():
+    print("the service will not start")
+    sys.exit(1)
+# Which page is flung. The settings app reports how far it scrolled and is measured against
+# that; a Compose list reports nothing at all - a scroll event there carries -1 whatever it
+# did - so it is measured against the position the page itself logs. That is the case a reader
+# in a Compose app is in, and it is not the case the reported-scroll work touches.
+compose = os.environ.get("PHONETIX_COMPOSE") is not None
+got = []
+try:
+    for n in range(runs):
+        if compose:
+            # Started once, then flung repeatedly, which is what a reader does. Restarting the
+            # app for every fling measured a first fling every time, and a first fling is the
+            # one case a lazy list cannot be followed through: its scroll events are the only
+            # news of where it has got to, the first of them arrives 471 pixels into the
+            # movement, and until one has arrived there is nothing to hold the next against.
+            # Measured across four flings of one session: 27% of the first followed, then
+            # 100%, then 109%.
+            if n == 0:
+                shell("am", "force-stop", "io.github.nanbiz.phonetix")
+                time.sleep(1.5)
+                shell("am", "start", "-n",
+                      "io.github.nanbiz.phonetix/.debug.DebugSurfaceActivity",
+                      "--es", "mode", "chat", "--ei", "enable", "1", "--ei", "density", "3",
+                      "--ei", "allApps", "1",
+                      "--ei", "measureMovingMax",
+                      os.environ.get("PHONETIX_MEASURE_MOVING", "0"))
+                time.sleep(2)
+                dev.enable_service()
+                # A Compose page has to compose itself and then be read once before there is a
+                # plan to carry, and the overlay is not running until there is. Measured at
+                # three seconds, most runs reported no layer at all while the same swipe by
+                # hand carried the words a third of the way.
+                time.sleep(5)
+            # Back to the top first, so every measured fling is the same fling and the list
+            # never simply runs out. Not measured itself: it is movement like any other and
+            # leaves the page reporting where it is, which is the state a reader's second
+            # fling starts from.
+            if n > 0:
+                for _ in range(3):
+                    shell("input", "swipe", "540", "600", "540", "1600", "150")
+                time.sleep(1.5)
+            shell("logcat", "-c")
+            shell("input", "swipe", "540", "1500", "540", "600", "250")
+            time.sleep(2.5)
+            log = dev.log()
+            where = [int(m) for m in re.findall(r"SCROLLY \d+ (-?\d+)", log)]
+            moved = (max(where) - min(where)) if where else 0
+            carried = [float(m) for m in re.findall(r"LAYER \d+ (-?[\d.]+) ", log)]
+            if not carried:
+                print(f"  run {n + 1}: the layer was not drawing at all, skipped")
+                continue
+            swing = max(carried) - min(carried)
+            if abs(moved) < 50:
+                print(f"  run {n + 1}: the page barely moved ({moved}px), skipped")
+                continue
+            got.append(swing / abs(moved))
+            print(f"  run {n + 1}: page moved {abs(moved):5}px, layer carried {swing:7.1f}px"
+                  f"  ({100 * swing / abs(moved):5.1f}%)")
+            time.sleep(2)
+            continue
+        # Started fresh every run, because a swipe leaves the list where it stopped and an
+        # am start against an activity that is already top-most only reaches onNewIntent: the
+        # second run then flings a list that is already at the bottom, the page does not move,
+        # and nothing is measured. Five of six runs read as "the layer was not drawing at all"
+        # that way, and the one number that survived was taken for the answer.
+        shell("am", "force-stop", "com.android.settings")
+        time.sleep(1)
+        shell("am", "start", "-n", "com.android.settings/.Settings")
+        time.sleep(3)
+        shell("logcat", "-c")
+        shell("input", "swipe", "540", "1500", "540", "600", "250")
+        time.sleep(1.4)
+        log = dev.log()
+        moved = sum(int(m) for m in re.findall(r"SAIDSCROLL \d+ dy=(-?\d+)", log)
+                    if abs(int(m)) > 1)
+        carried = [float(m) for m in re.findall(r"LAYER \d+ (-?[\d.]+) ", log)]
+        if not carried:
+            print(f"  run {n + 1}: the layer was not drawing at all, skipped")
+            continue
+        swing = max(carried) - min(carried)
+        if abs(moved) < 50:
+            print(f"  run {n + 1}: the page barely moved ({moved}px), skipped")
+            continue
+        got.append(swing / abs(moved))
+        print(f"  run {n + 1}: page moved {abs(moved):5}px, layer carried {swing:7.1f}px"
+              f"  ({100 * swing / abs(moved):5.1f}%)")
+        time.sleep(2)
+finally:
+    for p in busy:
+        p.kill()
+if got:
+    got.sort()
+    print(f"\nfollowed {100 * got[len(got) // 2]:.0f}% of the movement (middle of {len(got)})")
