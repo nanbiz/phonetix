@@ -234,8 +234,12 @@ class HoverController(
             else -> margin
         }
         // Above whatever the system has put over the bottom of the screen, which is the
-        // keyboard when one is open and the gesture strip otherwise.
-        val floor = (keyboardTop().takeIf { it > 0 } ?: (edges.height() - foot)) - size - margin
+        // keyboard when one is open and the gesture strip otherwise. Over a keyboard, above the
+        // row an app puts right on top of it too: that is where a chat's field and its send
+        // button are, and a button parked there took the tap meant for sending.
+        val keys = keyboardTop()
+        val floor = (if (keys > 0) keys - dp(INPUT_ROW_DP).roundToInt() else edges.height() - foot) -
+            size - margin
         val y = when {
             settings.pin && !loose() -> (settings.restY * edges.height()).roundToInt() - size / 2
             markY >= 0 -> markY
@@ -987,6 +991,10 @@ class HoverController(
     private companion object {
         /** How long a screen has to be in front before the circle is taken down for it. */
         const val SETTLE_MS = 350L
+
+        /** How tall the row an app puts on top of a keyboard is, in dp: a chat's field and
+         *  its send button. */
+        const val INPUT_ROW_DP = 72f
 
         /** How much of the bottom the system's own gesture strip takes, in dp. */
         const val FOOT_DP = 56f
