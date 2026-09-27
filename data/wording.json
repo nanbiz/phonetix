@@ -258,7 +258,7 @@
     },
     "lens-hold": {
       "name": "Hold it",
-      "about": "Turns the overlay off, and on again; the button wears the accent colour while the overlay is on"
+      "about": "Opens the settings"
     },
     "lens-tap": {
       "name": "Tap it",
@@ -362,8 +362,6 @@
     "preview": "Preview",
     "preview-about": "the words on a page this would answer",
     "remove": "Remove",
-    "replacing-off": "Overlay off",
-    "replacing-on": "Overlay on",
     "rest-edge": "On the %s",
     "rest-loose": "Wherever you leave it",
     "no-direction": "No translation from %s could be had. The words show how they sound instead.",

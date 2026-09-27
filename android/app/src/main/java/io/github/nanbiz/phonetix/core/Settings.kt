@@ -25,12 +25,6 @@ data class Settings(
      */
     val touchWords: Boolean = true,
     /**
-     * Whether the reader has put the overlay down for now, with a press held on the button.
-     *
-     * Not the same as having nothing to draw: see [quiet].
-     */
-    val paused: Boolean = true,
-    /**
      * The language the reader is reading into.
      *
      * Empty until they choose one, and with nothing chosen a word answers with how it is
@@ -102,13 +96,11 @@ data class Settings(
     val into: String get() = if (layer == "meaning" || layer == "both") target else ""
 
     /**
-     * Whether nothing is painted over the page.
-     *
-     * Two ways to arrive there: paused with a press held on the button, which is how the
-     * page words are switched on and off, or with both switches off. Either way the words are
-     * still read, so the side button answers about the one it is dragged over.
+     * Whether nothing is painted over the page, which is always: the words of a screen are
+     * read so the side button can answer about the one it is dragged over, and the page itself
+     * is left as its app drew it.
      */
-    val quiet: Boolean get() = paused || layer == "off"
+    val quiet: Boolean get() = true
 }
 
 /**
@@ -126,13 +118,6 @@ object SettingsStore {
     private const val K_APPS = "apps"
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
-    /** Stored under a key of its own since the page words start off: held on the button
-     *  they come on, and a phone that last had them on under the old key starts without. */
-    private const val K_PAUSED = "pagePaused"
-    private const val K_SCHEMA = "schema"
-
-    /** Which reading of the stored settings this build makes: see [putDownTheOldWay]. */
-    private const val SCHEMA = 2
     private const val K_TARGET = "target"
     private const val K_LEARNING = "learning"
     private const val K_RECENT = "recent"
@@ -163,7 +148,6 @@ object SettingsStore {
             apps = p.getStringSet(K_APPS, emptySet())?.toSet() ?: emptySet(),
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, true),
-            paused = p.getBoolean(K_PAUSED, true),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
@@ -185,28 +169,6 @@ object SettingsStore {
             narrow = p.getBoolean(K_NARROW, false),
             hideStress = p.getBoolean(K_STRESS, true),
         )
-        putDownTheOldWay(p)
-    }
-
-    /**
-     * A phone that put the overlay down before there was a way to say so.
-     *
-     * A press held on the button used to empty what the overlay draws - both switches off -
-     * and that is what such a phone still holds. Put down means something of its own now, and
-     * holding the button only puts it down and picks it up again, so a reader who had held it
-     * on the old build found the button grey, the page bare, and nothing they could hold to
-     * bring either back. Read once, the first time this build sees the phone: the words come
-     * back to what they were, and the overlay is put down the way it is put down now, so the
-     * press that brings it back is the one the reader already knows.
-     */
-    private fun putDownTheOldWay(p: android.content.SharedPreferences) {
-        // Marked by a key of its own, not by whether "paused" is stored: the first build that
-        // knew about pausing wrote that key on the reader's first change of anything, while
-        // still holding what the older one left behind.
-        if (p.getInt(K_SCHEMA, 0) >= SCHEMA) return
-        p.edit().putInt(K_SCHEMA, SCHEMA).apply()
-        if (_state.value.layer != "off") return
-        update { it.copy(layer = if (it.target.isNotEmpty()) "both" else "sound", paused = true) }
     }
 
     /**
@@ -231,7 +193,6 @@ object SettingsStore {
             ?.putStringSet(K_APPS, next.apps)
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
-            ?.putBoolean(K_PAUSED, next.paused)
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARNING, next.learning)
             ?.putString(K_RECENT, next.recent.joinToString(","))
@@ -254,7 +215,6 @@ object SettingsStore {
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
 
     /** Put the overlay down, or pick it up again: the press held on the button. */
-    fun setPaused(v: Boolean) = update { it.copy(paused = v) }
     fun setTarget(v: String) = update { it.copy(target = v) }
     /** What they are learning now, and the few they have asked in before it. */
     fun setLearning(v: String) = update {

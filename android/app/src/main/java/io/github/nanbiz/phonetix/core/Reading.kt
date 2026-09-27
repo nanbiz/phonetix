@@ -147,6 +147,25 @@ object Reading {
         Thread(job, "phonetix-lines").apply { isDaemon = true }
     }
 
+    /**
+     * What a line says in [target], for the card about a word on it: the card asks which of a
+     * word's meanings the line is about, and the line translated is what knows. Answered from
+     * the lines already translated where it is one of them, otherwise translated here, on the
+     * caller's thread, where the files for the direction are on the phone. Null where they are
+     * not.
+     */
+    fun lineSaid(text: String, source: String, target: String): String? {
+        if (text.isBlank() || target.isEmpty() || target == source) return null
+        val key = "$source>$target\n$text"
+        synchronized(translated) { translated[key] }?.let { return it }
+        val here = models ?: return null
+        if (!Translator.ready(here, source, target)) return null
+        val said = runCatching { Translator.between(here, source, target, listOf(text)) }
+            .getOrNull()?.firstOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        synchronized(translated) { translated[key] = said }
+        return said
+    }
+
     /** Where the translation models are, for a line in another language than the screen's. */
     @Volatile
     var models: java.io.File? = null

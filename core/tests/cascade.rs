@@ -1695,3 +1695,46 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
         "{drawn:?}"
     );
 }
+
+#[test]
+fn a_word_reached_only_through_a_dialect_spelling_is_not_a_reading() {
+    // English "of" as the dump files it: the preposition, and an eye-dialect spelling of
+    // "have and 've" that brings "'ve" up under "of" as well.
+    let mut en = Builder::new("en", Kind::Lex, 0);
+    en.add(
+        word("of", "prep", "ɒv", &["Since, from (a given time, earlier state etc.)."]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let mut spelled = word("of", "verb", "", &[]);
+    spelled.senses = vec![Sense {
+        gloss: "Eye dialect spelling of have and 've, chiefly in depictions of colloquial speech."
+            .to_string(),
+        marks: vec!["alt-of".to_string(), "pronunciation-spelling".to_string()],
+        example: None,
+    }];
+    en.add(spelled, &[] as &[&str]).unwrap();
+    en.add(
+        word("'ve", "verb", "v", &["Have (in its sense marking the perfect or retrospective aspect)."]),
+        &["of"],
+    )
+    .unwrap();
+    let en = Pack::open(en.finish().unwrap()).unwrap();
+    let mut de = Builder::new("de", Kind::Lex, 0);
+    de.add(word("haben", "verb", "ˈhaːbn̩", &["to have"]), &[] as &[&str])
+        .unwrap();
+    de.add(word("von", "prep", "fɔn", &["from; of"]), &[] as &[&str])
+        .unwrap();
+    let de = Pack::open(de.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&en),
+        target: Some(&de),
+        ..Open::default()
+    };
+
+    let answer = read_in_context("of", None, &lang("en"), &lang("de"), &open);
+
+    assert_eq!(answer.pos.as_deref(), Some("prep"));
+    assert!(!answer.says.contains(&"haben".to_string()), "{:?}", answer.says);
+    assert!(answer.readings.iter().all(|r| r.pos.as_deref() != Some("verb")));
+}

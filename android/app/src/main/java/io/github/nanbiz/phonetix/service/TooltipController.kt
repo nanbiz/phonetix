@@ -187,7 +187,10 @@ class TooltipController(
         // box. Rebuilding the card for it tore the window down and put another up over and
         // over - a card that flickered, a tick under the thumb for each one, and on a screen
         // whose own content keeps changing, that without end. It is moved instead.
-        val again = view != null && given == null && shown?.word == box.word
+        val again = given == null && shown?.word == box.word && (view != null || pending == box.word)
+        if (BuildConfig.DEBUG && !again) {
+            android.util.Log.d("Phonetix", "TOOLTIP show ${box.word} shown=${shown?.word} pending=$pending up=${view != null}")
+        }
         if (BuildConfig.DEBUG && !again) {
             android.util.Log.d(
                 "Phonetix",
@@ -197,12 +200,59 @@ class TooltipController(
         }
         shown = box
         if (again) {
-            moveTo(box)
+            // Still being answered: the card goes where this box is once it is.
+            if (view != null) moveTo(box)
             return
         }
         expanded = null
         given = null
-        render(box)
+        // The card for the word before is about the word before: down now, and the new one up
+        // once its answer is in. The answer is worked out off the thread that draws, because a
+        // dictionary lookup waits for the core, and the core can be busy - a lookup made here
+        // once held the drawing thread long enough for the phone to call the app not
+        // responding, with the circle on the word and no card.
+        if (view != null) takeDown()
+        val asked = box
+        pending = asked.word
+        asker.execute {
+            val first = runCatching { answerFor(asked, null) }
+                .onFailure { android.util.Log.w("Phonetix", "no answer for ${asked.word}", it) }
+                .getOrNull()
+            main.post {
+                if (pending == asked.word) pending = null
+                if (first != null && stillOn(asked)) render(shown!!, first)
+            }
+            // Then which of its meanings the line is about, where the line can be translated:
+            // "land" in "the largest land animals" is Land, though the dictionary's first
+            // reading of it is the verb. The card is redrawn only if that changes the answer.
+            val settings = SettingsStore.current
+            val source = asked.language.ifEmpty { Language.OURS }
+            if (first == null || settings.into.isEmpty() || asked.sentence.isBlank()) return@execute
+            val said = Reading.lineSaid(asked.sentence, source, settings.into)
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "TOOLTIP line ${asked.sentence.take(60)} => $said")
+            }
+            if (said == null) return@execute
+            val better = runCatching { answerFor(asked, said) }.getOrNull() ?: return@execute
+            if (better.says == first.says && better.pos == first.pos) return@execute
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("Phonetix", "TOOLTIP line says ${better.says} for ${asked.word}")
+            }
+            main.post { if (stillOn(asked) && view != null) render(shown!!, better) }
+        }
+    }
+
+    /** Whether the finger is still on [asked]'s word, with no other answer handed in. */
+    private fun stillOn(asked: WordBox): Boolean =
+        shown?.word == asked.word && given == null
+
+    /** The word whose answer is being worked out, while it is. */
+    private var pending: String? = null
+
+    /** Where a word's answer is worked out: one at a time and in order, so the answer for
+     *  the word the finger is on now is never overtaken by one for a word it has left. */
+    private val asker = java.util.concurrent.Executors.newSingleThreadExecutor { job ->
+        Thread(job, "phonetix-card").apply { isDaemon = true }
     }
 
     /** Where the card that is up was put, so the same card can be moved rather than rebuilt. */
@@ -229,7 +279,7 @@ class TooltipController(
         expanded = null
         shown = box
         given = answer
-        render(box)
+        render(box, answer)
     }
 
     /** An answer somebody else worked out, for the card that cannot work it out itself. */
@@ -250,19 +300,24 @@ class TooltipController(
         list = null
         scroller = null
         shown = null
+        pending = null
         expanded = null
         given = null
     }
 
-    private fun render(box: WordBox) {
+    /** The card's window down, leaving what it was asked about as it is. */
+    private fun takeDown() {
         host?.hidden()
         host = null
         view?.let { v -> runCatching { wm.removeView(v) } }
         view = null
         where = null
         placed.clear()
+    }
 
-        val card = build(box) ?: return
+    private fun render(box: WordBox, answer: Answer) {
+        takeDown()
+        val card = build(box, answer) ?: return
         card.accessibilityDelegate = mute
         val metrics = context.resources.displayMetrics
         val lp = WindowManager.LayoutParams(
@@ -482,33 +537,31 @@ class TooltipController(
      * symbol says what that sound is on the card's own line for it, so the word stays in sight
      * and the card does not change height under the finger.
      */
-    private fun build(box: WordBox): View? {
+    /**
+     * What the card says about [box]'s word, asked of the cascade in the languages the reader
+     * is reading between. Where no pack answers, another dictionary this phone holds is asked,
+     * and failing that the voice says how the word sounds. [said] is the word's line in the
+     * reader's language, where it has been translated. Called off the thread that draws.
+     */
+    private fun answerFor(box: WordBox, said: String?): Answer {
+        val settings = SettingsStore.current
+        val source = box.language.ifEmpty { Language.OURS }
+        return Reading.lookUp(
+            box.word, source, settings.into.ifEmpty { source },
+            settings.accentFor(source), box.before, said ?: box.decided,
+        )
+            ?.takeIf { it.found }
+            ?: elsewhere(box.word, source, settings.into)
+            ?: Answer.ofTranscription(box.word, voiced(box.word, source), source)
+    }
+
+    private fun build(box: WordBox, answer: Answer): View? {
         // Light or dark by the app it is drawn over rather than by the system setting: a card
         // is read against the screen it lands on. Which palette is the product's own, so the
         // card and the app that switches it on are one set of colours.
         val dark = box.background == 0 || isDark(box.background)
         val palette = Tokens.palette(themeNamed(SettingsStore.current.theme), dark)
-        // What the word means, asked of the cascade in the languages the reader is reading
-        // between. Where no pack answers, what comes back is the transcription the overlay
-        // already had, which is what the card then shows.
-        val settings = SettingsStore.current
-        val source = box.language.ifEmpty { Language.OURS }
-        val answer = given
-            ?: Reading.lookUp(
-                box.word, source, settings.into.ifEmpty { source },
-                settings.accentFor(source), box.before, box.decided,
-            )
-                ?.takeIf { it.found }
-            ?: elsewhere(box.word, source, settings.into)
-            // What was drawn over the word is its pronunciation only where the page words are
-            // set to pronunciation; otherwise it is a translation, and the voice says the word.
-            ?: Answer.ofTranscription(
-                box.word,
-                box.full.takeIf { settings.layer == "sound" && it.isNotBlank() }
-                    ?: voiced(box.word, source),
-                source,
-            )
-        val layer = settings.layer
+        val layer = SettingsStore.current.layer
         val sound = layer == "sound" || layer == "both"
         val meaning = layer == "meaning" || layer == "both"
         if (!glanceHasSomething(answer, sound, meaning)) return null

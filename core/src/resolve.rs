@@ -879,6 +879,24 @@ fn is_minor(entry: &Entry) -> bool {
     spelled_elsewhere || unusual
 }
 
+/// The words a gloss says its entry is a spelling of: "Eye dialect spelling of have and 've,
+/// chiefly in depictions of colloquial speech." is "have" and "'ve".
+fn spelled_as(gloss: &str) -> Vec<String> {
+    let lower = gloss.to_lowercase();
+    let Some(at) = lower.find("spelling of ") else {
+        return Vec::new();
+    };
+    let named = &gloss[at + "spelling of ".len()..];
+    let named = named.split([',', ';', ':', '(']).next().unwrap_or("");
+    named
+        .trim_end_matches('.')
+        .split(" and ")
+        .flat_map(|part| part.split(" or "))
+        .map(|word| word.trim().to_string())
+        .filter(|word| !word.is_empty() && !word.contains(' '))
+        .collect()
+}
+
 /// Look one word up.
 pub fn look_up<D: AsRef<[u8]>>(
     spelling: &str,
@@ -937,6 +955,21 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // is not a second word a reader could have meant: English "and" is a conjunction, and the
     // dialectal "breath", the obsolete "envy" and the Shavian spelling beside it made every
     // "and" a question and filled its card.
+    // Nor is the word such a spelling points at, where it comes up only through that pointer:
+    // English "of" is also filed as an eye-dialect spelling of "have and 've", and "'ve" itself
+    // came back under "of" beside the preposition - "of" was drawn as "haben".
+    let pointed: Vec<String> = found
+        .iter()
+        .filter(|entry| same_word(&entry.lemma, spelling) && is_minor(entry))
+        .flat_map(|entry| entry.senses.iter().flat_map(|sense| spelled_as(&sense.gloss)))
+        .collect();
+    let found: Vec<Entry> = found
+        .into_iter()
+        .filter(|entry| {
+            same_word(&entry.lemma, spelling)
+                || !pointed.iter().any(|word| same_word(word, &entry.lemma))
+        })
+        .collect();
     let found: Vec<Entry> = if found.iter().any(|entry| !is_minor(entry)) {
         found.into_iter().filter(|entry| !is_minor(entry)).collect()
     } else {
@@ -1022,8 +1055,11 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
         // it: "from someone" is a preposition before a pronoun, and read as one before a noun
-        // it was "a person of importance".
-        .or_else(|| commonest_answer(&all, open))
+        // it was "a person of importance". Not for an English word, whose readings are told
+        // apart by the dictionary's own join rather than a word of the reader's: how often
+        // German says "anzünden" says nothing about whether "light" is the verb, and ranked
+        // that way "can" was "einmachen" and "rock" was "wiegen".
+        .or_else(|| (source.0 != "en").then(|| commonest_answer(&all, open)).flatten())
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
         // the article, not the adverb of "the more the merrier".

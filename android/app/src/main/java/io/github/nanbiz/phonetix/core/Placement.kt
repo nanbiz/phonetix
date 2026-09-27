@@ -38,6 +38,8 @@ data class WordBox(
     /** What was drawn over the word where the core had decided which word it is, and empty
      *  where it had not: the card opens on the reading the line showed. */
     val decided: String = "",
+    /** The whole line the word is on, which is what says which of its meanings it has. */
+    val sentence: String = "",
 )
 
 /** One token of a line of text: the word, and its transcription when it was picked. */
@@ -226,6 +228,7 @@ object Placement {
         offset: Int,
         into: MutableList<WordBox>,
         language: String = "",
+        sentence: String = "",
     ) {
         for (p in picks) {
             var l = Float.MAX_VALUE; var t = Float.MAX_VALUE
@@ -257,6 +260,7 @@ object Placement {
                         at = p.start,
                         to = p.end,
                         decided = p.decided,
+                        sentence = sentence,
                     ),
                 )
             }

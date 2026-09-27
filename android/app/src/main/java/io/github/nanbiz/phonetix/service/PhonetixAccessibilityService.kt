@@ -364,18 +364,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // switch in the app, the tile and the accessibility button all put it away, and
             // brought back by any of them.
             onPutAway = { SettingsStore.setEnabled(false) },
+            // Held without moving: the app's own settings.
             onHold = {
-                // The page words, on and off: held once they replace the words on the page as
-                // the two switches say, held again they are gone. The button's colour says
-                // which, so nothing else has to.
                 main.post { tooltip.hide() }
-                val down = !SettingsStore.current.paused
-                SettingsStore.setPaused(down)
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d("Phonetix", "HELD paused $down")
-                }
-                hover.saying(!down)
-                if (down) main.post { overlay.hideNow() } else readAgain()
+                if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "HELD settings")
+                openApp()
             },
             // A drag that passed over nothing writes down what this believed at that moment,
             // so "it does nothing" can be answered from the phone afterwards rather than from
@@ -444,19 +437,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // has chosen no language to read into is not translating, and one whose host has no
         // model for their pair is not either.
         io.post { openTranslator() }
-        // Positions are the whole product here, and a cached position is a wrong one. The
-        // platform keeps a copy of the node tree for a service to read cheaply, and while a
-        // page is moving that copy is a picture of where the words used to be: lines came
-        // back reporting they had not moved at all, or half of them did, which read as a
-        // page that was not scrolling and left the transcriptions standing still on one that
-        // was. Reading through to the app every time costs a few milliseconds a line and is
-        // the only way to be told the truth.
-        // Android 13 is where the platform gave a service this switch; asked for on 12 it is a
-        // method that does not exist.
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            runCatching { setCacheEnabled(false) }
-                .onFailure { android.util.Log.w("Phonetix", "could not turn the node cache off", it) }
-        }
+        // The platform's copy of the node tree is kept: each node read through to the app is a
+        // call answered on that app's main thread, and nothing is painted over a moving page
+        // any more, which is what a cached position used to put in the wrong place. See
+        // [rootPrefetched].
         sampler = ScreenSampler(this) { r -> io.post(r) }
         colours = LineColours(
             sampler, main, io,
@@ -889,7 +873,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("pin", settings.pin)
                 .put("restY", settings.restY)
                 .put("touchWords", settings.touchWords)
-                .put("paused", settings.paused)
                 .put("fetching", org.json.JSONArray(Fetch.inFlight()))
                 .put("narrow", settings.narrow)
                 .put("hideStress", settings.hideStress)
@@ -1146,6 +1129,22 @@ class PhonetixAccessibilityService : AccessibilityService() {
     /** How many times in a row the window in front had no tree to read, and was looked at again. */
     private var rootlessLooks = 0
 
+    /**
+     * The active window's tree, with as much of it as the platform will bring in one call.
+     *
+     * Every node asked for is a call into the app being read, answered on that app's main
+     * thread - and an app playing a video answers each one late: YouTube Music took 7.6
+     * seconds over 105 of them for one screen, and the side button had nothing to answer with
+     * until it was done. From Android 13 a node is fetched with its descendants, so the walk
+     * below is served from what came back.
+     */
+    private fun rootPrefetched(): android.view.accessibility.AccessibilityNodeInfo? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            runCatching { getRootInActiveWindow(PREFETCH) }.getOrNull() ?: rootInActiveWindow
+        } else {
+            rootInActiveWindow
+        }
+
     /** The tree of the application window that is active, from the window list. */
     private fun activeAppRoot(): android.view.accessibility.AccessibilityNodeInfo? = runCatching {
         val apps = windows.filter {
@@ -1182,7 +1181,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // list where that is not to be had yet - just after the service connects, which is
             // also just after the app was updated, it is null for the page in front, and nothing
             // else asks again until that page changes: the screen stayed bare.
-            val fetched = rootInActiveWindow ?: activeAppRoot() ?: run {
+            val fetched = rootPrefetched() ?: activeAppRoot() ?: run {
                 if (BuildConfig.DEBUG) android.util.Log.d("Phonetix", "NOROOT")
                 main.post { overlay.hideNow() }
                 if (SettingsStore.current.enabled && rootlessLooks < LOOK_AGAIN_TIMES) {
@@ -2132,7 +2131,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // now. If it has moved on, the picks describe a screen that is gone.
             if (reuse && p.node.text?.toString() != p.text) { stale = true; break }
             val before = boxes.size
-            Placement.boxes(p.picks, rects, p.from, boxes, readingSource)
+            Placement.boxes(p.picks, rects, p.from, boxes, readingSource, p.text)
             // Remember where this line was when its characters were measured, so a scroll
             // can carry its words rather than measuring them again.
             if (remembered != null) p.node.getBoundsInScreen(at)
@@ -2215,7 +2214,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 )
                 if (guessed.isEmpty()) continue
                 val from = boxes.size
-                Placement.boxes(line.picks, guessed, line.from, boxes, readingSource)
+                Placement.boxes(line.picks, guessed, line.from, boxes, readingSource, line.text)
                 // The line keeps its own words, as every measured line does: boxes appended
                 // here and left unowned belong to no line, and everything downstream works
                 // from the line.
@@ -2757,7 +2756,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             ?: return false
         val made = ArrayList<WordBox>(p.picks.size)
-        Placement.boxes(p.picks, rects, p.from, made, readingSource)
+        Placement.boxes(p.picks, rects, p.from, made, readingSource, p.text)
         // Where the line is now, with its words brought along.
         //
         // A line placed from what it said last time has its words worked out against the
@@ -2834,34 +2833,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
 
     private fun rewriteRow(p: Planned, says: String, into: MutableList<WordBox>) {
         if (says.isBlank() || says.length > MAX_TEXT) return
-        if (rewrittenThisPass >= MEASURE_MOVING_MAX || !Dictionary.ready) return
-        // In the language the screen was read in and the mode the reader asked for, which is
-        // what every other line of it gets. Read as English and always as a transcription, a
-        // row recycled into view on a German list carried an English reading of a German
-        // word, between rows that had been read in German.
-        val settings = SettingsStore.current
-        val source = readingSource
-        val picks = Reading.annotate(
-            listOf(says),
-            source = source,
-            target = settings.into.ifEmpty { source },
-            mode = if (settings.quiet) "sound" else settings.layer,
-            density = settings.density,
-            narrow = settings.narrow,
-            hideStress = settings.hideStress,
-            accent = settings.accentFor(source),
-        ).filter { it.inline }
-            .mapNotNull { token ->
-                val shown = when (settings.layer) {
-                    "sound" -> token.ipa
-                    "both" -> listOf(token.gloss, token.glossIpa).filter { it.isNotEmpty() }
-                        .joinToString(" ")
-                        .ifEmpty { token.ipa }
-                    else -> token.gloss.ifEmpty { token.ipa }
-                }
-                if (shown.isEmpty()) null
-                else Pick(token.start, token.end - 1, token.spelling, shown)
-            }
+        if (rewrittenThisPass >= MEASURE_MOVING_MAX) return
+        val picks = wordsOf(says)
         if (picks.isEmpty()) return
         rewrittenThisPass++
         val now = Planned(
@@ -3058,11 +3031,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
     )
 
     /**
-     * Which words of a planned screen are drawn, and where they sit in their line.
+     * The words of a planned screen, and where each sits in its line.
      *
-     * One call for the whole screen: how often a word has already appeared is what decides
-     * whether this occurrence is drawn, and a call per line would count each line from zero.
-     * Lines the core found nothing in are dropped, so nothing later pays to measure them.
+     * Every word, found here rather than asked of the core: nothing is painted over the page,
+     * so what a screen's words mean is asked one word at a time, when the side button is over
+     * it. Annotating a whole screen held the core for seconds on a long answer in a chat, and
+     * the card for the word under the button waited behind it - the circle on "theory" and
+     * no card, or the app not responding at all.
      */
     private fun chooseWords(
         planned: MutableList<Planned>,
@@ -3071,84 +3046,21 @@ class PhonetixAccessibilityService : AccessibilityService() {
         budget: Budget,
     ) {
         if (planned.isEmpty()) return
-        // What the screen is in, what the reader reads into, and what they asked to see over
-        // a word. All three were hardcoded to English and a transcription once, which is how
-        // an app whose whole point is translation showed nothing but pronunciations.
-        val source = screenLanguage ?: Language.OURS
         // Kept for the words themselves, so that what the card asks about a word is asked in
         // the language the word was read in. A follow pass places words without reading the
         // screen again, and takes the source from here.
-        readingSource = source
+        readingSource = screenLanguage ?: Language.OURS
         if (BuildConfig.DEBUG) {
             android.util.Log.d(
                 "Phonetix",
-                "READING source=$source target=${settings.into} layer=${settings.layer} " +
+                "READING source=$readingSource target=${settings.into} layer=${settings.layer} " +
                     "lines=${planned.size} first=${planned.firstOrNull()?.text?.take(40)}",
             )
         }
-        // Nothing is replaced, and the mark still answers a word.
-        //
-        // The words are read and their answers kept - that is what the mark is dragged over -
-        // and nothing is painted over the page. A reader who wants the product there to be
-        // asked rather than answering over everything they read is the case this is for, and
-        // without the reading there would be nothing under the mark to answer with.
-        val silent = settings.quiet
-        val told = Reading.annotate(
-            planned.map { it.text },
-            source = source,
-            target = settings.into.ifEmpty { source },
-            mode = if (silent) "sound" else settings.layer,
-            density = settings.density,
-            narrow = settings.narrow,
-            hideStress = settings.hideStress,
-            accent = settings.accentFor(source),
-        )
-        val byRun = HashMap<Int, ArrayList<Pick>>(planned.size)
-        for ((at, token) in told.withIndex()) {
-            // What is drawn is what the reader asked for, in the same three modes the browser
-            // offers. The chip is painted over the word and has the width of the word it
-            // covers, so "both" is one line: what it means, then how to say that. Where the
-            // language read into has no dictionary here there is no sound to give for the
-            // meaning, and the chip carries the meaning alone.
-            // Which words are kept.
-            //
-            // Ordinarily the ones the core says are worth replacing: the bar decides how many
-            // and the mode decides which, and a word that is not replaced is not there to be
-            // asked about either. With nothing being replaced that rule has nothing left to
-            // stand on - the mark is the only way to ask, and the reader means to ask about
-            // whatever they point at, not about the handful a bar would have drawn. So every
-            // word the core read is kept, and none of them is painted.
-            if (!silent && !token.inline) continue
-            // The word is replaced, always, by one thing: how it is said, what it means, or - with
-            // both - how what it means is said, which is the transcription of the translation.
-            // Drawn beside the translation, the transcription was cut away wherever the two did
-            // not fit, and a reader who asked for pronunciation saw none.
-            val shown = when (settings.layer) {
-                "sound" -> token.ipa
-                "both" -> token.glossIpa.ifEmpty { token.gloss }.ifEmpty { token.ipa }
-                else -> token.gloss.ifEmpty { token.ipa }
-            }
-            if (shown.isEmpty()) continue
-            byRun.getOrPut(token.run) { ArrayList(4) }
-                .add(
-                    Pick(
-                        token.start,
-                        token.end - 1,
-                        token.spelling,
-                        shown,
-                        // What the core already used to decide this word, carried to the card
-                        // so a tap asks the same question the line answered.
-                        before = told.getOrNull(at - 1)
-                            ?.takeIf { it.run == token.run }?.spelling.orEmpty(),
-                        // And what it was drawn as, where the core decided which word it
-                        // is, so the card leads with the reading the line showed.
-                        decided = if (token.decided) token.gloss else "",
-                    ),
-                )
-        }
-        val kept = ArrayList<Planned>(byRun.size)
-        for ((at, line) in planned.withIndex()) {
-            val picks = byRun[at] ?: continue
+        val kept = ArrayList<Planned>(planned.size)
+        for (line in planned) {
+            if (budget.words <= 0) break
+            val picks = wordsOf(line.text)
             if (picks.isEmpty()) continue
             val from = picks.first().start
             val to = picks.last().end
@@ -3162,6 +3074,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         planned.clear()
         planned.addAll(kept)
+    }
+
+    /** The words of a line, each with the word before it on the same line. */
+    private fun wordsOf(text: String): List<Pick> {
+        val out = ArrayList<Pick>(16)
+        var before = ""
+        Placement.scanWords(text) { start, end ->
+            val word = text.substring(start, end)
+            out.add(Pick(start, end - 1, word, "", before = before))
+            before = word
+        }
+        return out
     }
 
     /** The app itself, from the mark on the panel. */
@@ -3658,7 +3582,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         for (i in 0 until n) {
             mark = System.nanoTime()
-            val child = node.getChild(i)
+            val child = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                node.getChild(i, PREFETCH)
+            } else {
+                node.getChild(i)
+            }
             stats.ipcNs += System.nanoTime() - mark
             stats.calls++
             plan(child, out, budget, stats, clip, painted)
@@ -4202,6 +4130,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         const val MAX_NODES = 120
         const val MAX_VISITS = 400
         const val MAX_WORDS = 60
+
+        /** A node's descendants, fetched with it: see [rootPrefetched]. */
+        private const val PREFETCH =
+            android.view.accessibility.AccessibilityNodeInfo.FLAG_PREFETCH_DESCENDANTS_HYBRID or
+                android.view.accessibility.AccessibilityNodeInfo.FLAG_PREFETCH_UNINTERRUPTIBLE
 
         /** And with nothing drawn, where every word is one the mark may be asked about. */
         const val MAX_WORDS_SILENT = 240

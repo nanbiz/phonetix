@@ -337,9 +337,8 @@
     </div>
   {/if}
 
-  <!-- What the overlay puts over a word: one switch each, and whether it is on at all is the
-       press held on the button rather than a third switch here. On the phone, what the card
-       and the panel show. -->
+  <!-- What the overlay puts over a word: one switch each. On the phone, what the card and
+       the panel show. -->
   {#if where === 'phone'}<h4 class="head">{ROWS['group-shows'].name}</h4>{/if}
   <div class="rows">
     <Row name={ROWS.ipa.name} row="ipa" about={ROWS.ipa.about}>
@@ -415,8 +414,9 @@
   {/if}
 
   <!-- The bar a reader comes back to, on a row of its own - and only where it decides
-       anything: with nothing being replaced there is no how often for it to be. -->
-  {#if settings.layer !== 'off'}
+       anything: with nothing being replaced there is no how often for it to be, and the phone
+       replaces nothing on the page. -->
+  {#if where === 'browser' && settings.layer !== 'off'}
     <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
   {/if}
 

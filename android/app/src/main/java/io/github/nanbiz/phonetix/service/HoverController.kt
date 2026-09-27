@@ -252,9 +252,6 @@ class HoverController(
 
     /** Put the circle up, parked at the edge. */
     fun show() {
-        // What it is doing now, every time it is put up: the page words can be switched from
-        // the settings screen as easily as from a press held on the button.
-        (mark as? HoverBubbleView)?.replacing = !SettingsStore.current.quiet
         mark?.let { up ->
             // Back into view where it was put away, and never taken away if it was only
             // about to be: see [hide].
@@ -286,9 +283,6 @@ class HoverController(
             android.util.Log.d("Phonetix", "LENSNEW")
         }
         val view = HoverBubbleView(context)
-        // What it is doing from the moment it appears: its colour says whether the page words
-        // are on.
-        view.replacing = !SettingsStore.current.quiet
         view.setOnTouchListener(Hand(view))
         runCatching { wm.addView(view, markParams(size)) }
             .onSuccess {
@@ -296,14 +290,6 @@ class HoverController(
                 parked()
             }
             .onFailure { android.util.Log.w("Phonetix", "the circle did not go up", it) }
-    }
-
-    /**
-     * Say whether the page words are on, so the button shows which it is: a reader who held
-     * it and saw nothing change otherwise cannot tell that from a press that did nothing.
-     */
-    fun saying(on: Boolean) {
-        main.post { (mark as? HoverBubbleView)?.replacing = on }
     }
 
     /** Where the mark is sitting, for anything that can only read what the service says. */

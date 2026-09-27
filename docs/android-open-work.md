@@ -5,8 +5,11 @@ Ticked items are done and verified by a suite; the rest are not.
 
 ## The side button
 
-- [x] **Holding the icon switches the page words on and off**, yellow while they are on; they
-  start off.
+- [x] **Nothing is painted over a page.** Holding the icon opens the app's settings. The
+  sections below about transcriptions on their words and following a scroll describe the page
+  overlay, which is gone; they stay as the record of what was measured.
+- [x] **The card is never kept waiting.** It is answered off the thread that draws, the screen
+  read no longer annotates the whole screen under the core's lock, and the node cache is on.
 - [x] **The card is display only and goes with the finger.** What it shows follows the two
   switches (translation, pronunciation, both, neither); `android_translates.py` holds each.
 - [x] **The thread comes out of the icon** and lands on the side of the circle that faces it,
