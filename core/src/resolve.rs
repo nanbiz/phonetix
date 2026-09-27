@@ -1014,7 +1014,11 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         .iter()
         .map(|answer| meant_words(&answer.says, answer.pos.as_deref(), target, pack, open))
         .collect();
-    let decided = chosen_by_translation(&meant, open.said)
+    let verbs: Vec<bool> = all
+        .iter()
+        .map(|answer| answer.pos.as_deref() == Some("verb"))
+        .collect();
+    let decided = chosen_by_translation(&meant, &verbs, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
         // it: "from someone" is a preposition before a pronoun, and read as one before a noun
@@ -1054,32 +1058,50 @@ pub fn read_in_context<D: AsRef<[u8]>>(
 /// the pack read into counts its words and one answer is met far more than the rest.
 fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<usize> {
     let pack = open.target?;
-    let counts: Vec<u64> = all
+    // Each reading by the word it answers with: the first term of its answer, which for a
+    // reader of English is a gloss - "note, memo" is "note", "to note" is "note" too.
+    let words: Vec<Option<String>> = all
         .iter()
         .map(|answer| {
-            answer
-                .says
-                .first()
-                .map(|word| {
-                    pack.lookup(word)
-                        .iter()
-                        .filter(|entry| same_word(&entry.lemma, word))
-                        .filter_map(how_often)
-                        .max()
-                        .unwrap_or(0)
-                })
-                .unwrap_or(0)
+            let said = answer.says.first()?;
+            let term = crate::gloss::terms(said).into_iter().next()?;
+            (!term.is_empty()).then_some(term)
         })
         .collect();
+    let met = |word: &str| -> u64 {
+        pack.lookup(word)
+            .iter()
+            .filter(|entry| same_word(&entry.lemma, word))
+            .filter_map(how_often)
+            .max()
+            .unwrap_or(0)
+    };
+    let counts: Vec<u64> = words
+        .iter()
+        .map(|word| word.as_deref().map(met).unwrap_or(0))
+        .collect();
     let (best, most) = counts.iter().enumerate().max_by_key(|(_, count)| **count)?;
+    // Against the readings that answer with another word: two readings that both come out as
+    // "note" are not competing with each other.
     let second = counts
         .iter()
         .enumerate()
-        .filter(|(at, _)| *at != best)
+        .filter(|(at, _)| words[*at] != words[best])
         .map(|(_, count)| *count)
         .max()
         .unwrap_or(0);
-    (*most > 0 && *most >= second.saturating_mul(COMMONER_BY)).then_some(best)
+    // Of the readings that come out as that word, the one that is not a verb where there is
+    // one: "notas" under a line about notes is the plural of "nota", and drawn as "to note"
+    // it read as the verb.
+    let with_it: Vec<usize> = (0..words.len())
+        .filter(|at| words[*at] == words[best])
+        .collect();
+    let first_with_it = with_it
+        .iter()
+        .copied()
+        .find(|at| all[*at].pos.as_deref() != Some("verb"))
+        .or_else(|| with_it.first().copied())?;
+    (*most > 0 && *most >= second.saturating_mul(COMMONER_BY)).then_some(first_with_it)
 }
 
 /// How many times as often one reading's answer has to be met as any other's to be drawn first.
@@ -1102,7 +1124,11 @@ const COMMONER_BY: u64 = 4;
 /// (there is no alignment accessor in its bindings), so which target span this source word
 /// became cannot be asked for. Matching the sentence is weaker where a reading's word appears
 /// for some other reason, which is why it has to be the only one present to decide anything.
-fn chosen_by_translation(meant: &[Vec<Vec<String>>], said: Option<&str>) -> Option<usize> {
+fn chosen_by_translation(
+    meant: &[Vec<Vec<String>>],
+    verbs: &[bool],
+    said: Option<&str>,
+) -> Option<usize> {
     let said = said?;
     if said.trim().is_empty() {
         return None;
@@ -1121,8 +1147,15 @@ fn chosen_by_translation(meant: &[Vec<Vec<String>>], said: Option<&str>) -> Opti
             // Two readings found through the same words of the sentence mean the same thing
             // there - "est" as a form of "être" and as an old spelling of it both come back
             // as "is" - so the sentence has not been asked to choose between them, and the
-            // one ranked first stands.
-            Some((_, first)) if *first == matched => {}
+            // one ranked first stands; except that a verb gives way to a word that is not
+            // one, since an English form like "notes" or "scale" is a noun as readily as a
+            // verb, and read as the verb "notas" under a line about notes was "to note".
+            Some((first_at, first)) if *first == matched => {
+                let verb = |at: usize| verbs.get(at).copied().unwrap_or(false);
+                if verb(*first_at) && !verb(at) {
+                    found = Some((at, matched));
+                }
+            }
             // Two of them are in the sentence through different words, so it says nothing
             // about which this word was.
             Some(_) => return None,
@@ -1171,7 +1204,7 @@ fn sense_in_line<D: AsRef<[u8]>>(
             meant_words(&says, Some(entry.pos.as_str()), target, pack, open)
         })
         .collect();
-    match chosen_by_translation(&meant, Some(said)) {
+    match chosen_by_translation(&meant, &[], Some(said)) {
         Some(at) if at > 0 => {
             let mut entry = entry;
             let sense = entry.senses.remove(at);

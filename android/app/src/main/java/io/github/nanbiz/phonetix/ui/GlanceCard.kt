@@ -109,8 +109,10 @@ fun GlanceCard(
                         modifier = Modifier.reported(kind.joinToString(" · "), report),
                     )
                 }
+                // One example, where it is short enough to read at a glance: a dictionary's
+                // examples run to whole paragraphs about something else entirely.
                 if (!sound) {
-                    answer.example?.takeIf { it.isNotBlank() }?.let { example ->
+                    answer.example?.takeIf { it.isNotBlank() && it.length <= EXAMPLE_AT_MOST }?.let { example ->
                         Text(
                             text = example,
                             color = Color(palette.inkMuted),
@@ -174,6 +176,9 @@ fun plainly(sense: String): String {
     }
     return out.split(';').first().trim().trimEnd('.', ',', ':').trim()
 }
+
+/** The longest example the card shows, in characters. */
+private const val EXAMPLE_AT_MOST = 70
 
 /** How many other meanings the card names beside the kind of word. */
 private const val ALSO = 2

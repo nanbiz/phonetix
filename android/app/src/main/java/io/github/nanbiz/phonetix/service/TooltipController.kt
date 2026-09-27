@@ -500,7 +500,14 @@ class TooltipController(
             )
                 ?.takeIf { it.found }
             ?: elsewhere(box.word, source, settings.into)
-            ?: Answer.ofTranscription(box.word, box.full.ifBlank { voiced(box.word, source) }, source)
+            // What was drawn over the word is its pronunciation only where the page words are
+            // set to pronunciation; otherwise it is a translation, and the voice says the word.
+            ?: Answer.ofTranscription(
+                box.word,
+                box.full.takeIf { settings.layer == "sound" && it.isNotBlank() }
+                    ?: voiced(box.word, source),
+                source,
+            )
         val layer = settings.layer
         val sound = layer == "sound" || layer == "both"
         val meaning = layer == "meaning" || layer == "both"
