@@ -117,28 +117,6 @@
 {/each}
 
 <div class:resting={ready && !settings.on}>
-  <!-- Only translation works between two languages; pronunciation is read off the word. -->
-  {#if meaning}
-    <Group name={ROWS['group-languages'].name}>
-      <div class="pair">
-        <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
-          <span class="language-role" data-name>{ROWS.mine.name}</span>
-          <span class="language-name" class:empty={!settings.target} data-about>
-            {settings.target ? named(settings.target) : SAYS['choose-language']}
-          </span>
-        </button>
-        <span class="pair-between" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99zM21 9l-3.99-4v3H10v2h7.01v3z" fill="currentColor" /></svg>
-      </span>
-        <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
-          <span class="language-role" data-name>{ROWS.learning.name}</span>
-          <span class="language-name" class:empty={!learning} data-about>
-            {learning ? named(learning) : SAYS['choose-language']}
-          </span>
-        </button>
-      </div>
-    </Group>
-  {/if}
 
   <Group name={ROWS['group-shows'].name}>
     <div class="shows">
@@ -180,6 +158,27 @@
           />
         {/snippet}
       </Item>
+    {/if}
+    <!-- What translation works between, under the switch it belongs to, the way the
+         transcription's rows are under theirs. -->
+    {#if meaning}
+    <div class="pair">
+      <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
+        <span class="language-role" data-name>{ROWS.mine.name}</span>
+        <span class="language-name" class:empty={!settings.target} data-about>
+          {settings.target ? named(settings.target) : SAYS['choose-language']}
+        </span>
+      </button>
+      <span class="pair-between" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99zM21 9l-3.99-4v3H10v2h7.01v3z" fill="currentColor" /></svg>
+    </span>
+      <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
+        <span class="language-role" data-name>{ROWS.learning.name}</span>
+        <span class="language-name" class:empty={!learning} data-about>
+          {learning ? named(learning) : SAYS['choose-language']}
+        </span>
+      </button>
+    </div>
     {/if}
   </Group>
 
