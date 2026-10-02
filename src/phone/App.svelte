@@ -1,55 +1,59 @@
 <script lang="ts">
-  // The phone's settings screen, which is the product's settings screen.
-  //
-  // The same component the extension's popup draws, filled from the app instead of from a
-  // browser: what the reader has chosen, what the app has been allowed to do, and which
-  // dictionaries are here. Nothing about the layout of this screen is decided twice.
-  import Settings from '@/ui/settings/Settings.svelte';
-  import { darkSide, DEFAULTS, type Settings as Chosen } from '@/settings/shape';
+  // The phone app's own screen: the settings, drawn from what the app says and changed through
+  // it. One screen at a time, with the phone's way back leading out of each.
+  import { darkSide, DEFAULTS, type Settings } from '@/settings/shape';
   import { themeOf } from '@/ui/theme';
+  import { ROWS, SAYS } from '@/data/wording';
   import type { Offered } from '@/host/packs';
-  import { ask, whenChanged } from './bridge';
   import { covered, uncover } from '@/ui/controls/sheets.svelte';
+  import Back from 'virtual:icons/pixelarticons/chevron-left';
+  import { ask, whenChanged } from './bridge';
+  import Home from './screens/Home.svelte';
+  import Apps from './screens/Apps.svelte';
+  import Packs from './screens/Packs.svelte';
+  import Accents from './screens/Accents.svelte';
+  import Appearance from './screens/Appearance.svelte';
 
-  let settings = $state<Chosen | null>(null);
-  /** Which screen the reader is on, told to the app so the device's own way back leaves that
-   *  screen rather than the app, and taken from it when they use it. */
+  let settings = $state<Settings | null>(null);
   let view = $state('main');
-  let curve = $state<number[]>([]);
-  let packs = $state<{ held: string[]; open: string[]; offered: Offered[] }>({
-    held: [],
-    open: [],
-    offered: [],
-  });
+  let packs = $state<{ held: string[]; offered: Offered[] }>({ held: [], offered: [] });
   let fetching = $state<string | null>(null);
   let permissions = $state({ reading: false, overlay: false });
-  /** Whether this device is set to dark, which the app says: a web view answers
-   *  prefers-color-scheme as light whatever the phone is set to, unless the app has opted
-   *  into being darkened - which would darken the page itself rather than let it choose. */
+  /** Whether the device is set to dark, which only the app can say: the web view answers
+   *  prefers-color-scheme as light whatever the phone is set to. */
   let device = $state(false);
   let version = $state('');
   let trouble = $state<string[]>([]);
+  let apps = $state<{ pkg: string; label: string }[]>([]);
 
-  /** The palette on the document itself, and which side of it: the tokens are declared per
-   *  theme and mode, so an element naming no theme has no colours at all. Which side is the
-   *  reader's own answer where they gave one, and the device's where they did not. */
-  function paint(chosen: Chosen) {
+  const TITLES: Record<string, string> = {
+    apps: ROWS.apps.name,
+    packs: ROWS.dictionaries.name,
+    accents: ROWS.accents.name,
+    appearance: ROWS.appearance.name,
+  };
+
+  /** The palette on the document itself: the tokens are declared per palette and side. */
+  function paint(chosen: Settings) {
     document.documentElement.className = themeOf(darkSide(chosen, device), chosen.theme);
   }
 
+  /** How many changes this screen has sent, so an answer to a question asked before the last
+   *  of them does not put back what the reader has just changed. */
+  let edits = 0;
+
   async function load() {
+    const before = edits;
     const told = await ask<{
-      settings: Partial<Chosen>;
-      curve: number[];
-      packs: { held: string[]; open: string[]; offered: Offered[] };
+      settings: Partial<Settings>;
+      packs: { held: string[]; offered: Offered[] };
       permissions: { reading: boolean; overlay: boolean };
       device: boolean;
       version: string;
       trouble: string[];
     }>('state');
-    settings = { ...DEFAULTS, ...told.settings };
-    curve = told.curve ?? [];
-    packs = told.packs ?? { held: [], open: [], offered: [] };
+    if (edits === before || !settings) settings = { ...DEFAULTS, ...told.settings };
+    packs = told.packs ?? { held: [], offered: [] };
     permissions = told.permissions ?? { reading: false, overlay: false };
     device = told.device ?? false;
     version = told.version ?? '';
@@ -57,15 +61,22 @@
     paint(settings);
   }
 
-  function change<K extends keyof Chosen>(name: K, value: Chosen[K]) {
-    if (settings) settings = { ...settings, [name]: value };
-    // Drawn in what is being chosen, so choosing shows what it looks like.
-    if (settings && (name === 'theme' || name === 'dark')) paint(settings);
-    void ask('set', { name, value }).then(() => {
-      // Where the dictionaries come from decides what is on offer, so the list is asked for
-      // again the moment a reader says where that is.
-      if (name === 'host') return load();
-    });
+  function change<K extends keyof Settings>(name: K, value: Settings[K]) {
+    if (!settings) return;
+    edits++;
+    settings = { ...settings, [name]: value };
+    if (name === 'theme' || name === 'dark') paint(settings);
+    void ask('set', { name, value });
+  }
+
+  function toggleApp(pkg: string) {
+    if (!settings) return;
+    const apps = settings.apps.includes(pkg)
+      ? settings.apps.filter((it) => it !== pkg)
+      : [...settings.apps, pkg];
+    edits++;
+    settings = { ...settings, apps };
+    void ask('toggleApp', { pkg });
   }
 
   async function get(lang: string) {
@@ -80,59 +91,73 @@
     await load();
   }
 
-  // The app tells this view when something it did not do has changed: a permission granted in
-  // the system's own settings, an app chosen on the app's own screen.
+  function open(next: string) {
+    view = next;
+    window.scrollTo(0, 0);
+    if (next === 'apps' && apps.length === 0) {
+      void ask<{ apps: { pkg: string; label: string }[] }>('apps').then((told) => {
+        apps = told.apps ?? [];
+      });
+    }
+  }
+
+  // Something changed that this screen did not change: a permission granted in the system's
+  // settings.
   whenChanged(() => void load());
-  // A screen the app was asked to open on: the reader held the mark over whatever they were
-  // reading, which asks for the word they are looking for rather than one on the screen.
   window.phonetixOpen = (wanted: string) => {
     if (!settings) return false;
-    view = wanted;
+    open(TITLES[wanted] ? wanted : 'main');
     return true;
   };
-  // The app's own back gesture: it hands it to this view, which leaves one screen.
+  // The phone's own way back: whatever stands over the screen first, then the screen.
   window.phonetixBack = () => {
-    // Whatever is open over the screen goes first: a list opened over the settings is not a
-    // screen the system knows about, and going back from one used to close the app.
     if (uncover()) return true;
     if (view === 'main') return false;
-    view = 'main';
+    open('main');
     return true;
   };
   $effect(() => {
-    // The app takes the way back while there is anything to leave, which is a screen behind
-    // the first one or a list standing over it.
     void ask('view', { view: covered() ? 'sheet' : view });
   });
   void load();
 </script>
 
-<main class="panel">
+<main class="screen" data-view={view}>
   {#if settings}
-    <Settings
-      where="phone"
-      bind:view
-      {device}
-      icon="./96.png"
-      {settings}
-      {curve}
-      {packs}
-      {change}
-      {get}
-      {forget}
-      {fetching}
-      {permissions}
-      {version}
-      {trouble}
-      say={(text, source) =>
-        ask<{ answer: null; missing: boolean }>('say', {
-          text,
-          source,
-          target: settings?.target ?? '',
-        }).catch(() => null)}
-      onOpenReading={() => void ask('openReading')}
-      onOpenOverlay={() => void ask('openOverlay')}
-      onOpenApps={() => void ask('openApps')}
-    />
+    {#if view === 'main'}
+      <Home
+        {settings}
+        {change}
+        {permissions}
+        {trouble}
+        {version}
+        held={packs.held.length}
+        offered={packs.offered.length}
+        {open}
+        onOpenReading={() => void ask('openReading')}
+        onOpenOverlay={() => void ask('openOverlay')}
+      />
+    {:else}
+      <header class="top">
+        <button class="icon-button" aria-label={SAYS['back']} onclick={() => open('main')}>
+          <Back />
+        </button>
+        <h1 class="title">{TITLES[view]}</h1>
+      </header>
+      {#if view === 'apps'}
+        <Apps
+          {settings}
+          {apps}
+          allApps={(on) => change('allApps', on)}
+          toggle={toggleApp}
+        />
+      {:else if view === 'packs'}
+        <Packs held={packs.held} offered={packs.offered} {fetching} {get} {forget} />
+      {:else if view === 'accents'}
+        <Accents {settings} {change} />
+      {:else if view === 'appearance'}
+        <Appearance {settings} {device} {change} />
+      {/if}
+    {/if}
   {/if}
 </main>

@@ -245,7 +245,7 @@
       "about": ""
     },
     "rest-pin": {
-      "name": "Pin",
+      "name": "Fixed height",
       "about": ""
     },
     "lens-drag": {
@@ -313,7 +313,7 @@
       "about": ""
     },
     "group-shows": {
-      "name": "Shows",
+      "name": "The card shows",
       "about": ""
     },
     "group-languages": {
@@ -322,6 +322,14 @@
     },
     "position": {
       "name": "Position",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Appearance",
+      "about": ""
+    },
+    "accents": {
+      "name": "Accents",
       "about": ""
     }
   },
@@ -376,6 +384,14 @@
     "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
     "touch-on": "A swipe that starts on a word will not scroll the page.",
     "use-this": "Use this",
-    "say-fetching": "getting %s"
+    "say-fetching": "getting %s",
+    "back": "Back",
+    "apps-chosen": "%s chosen",
+    "packs-held": "%s downloaded",
+    "accent-rule": "derived from pronunciation rules",
+    "other-languages": "Other languages",
+    "words-count": "%s words",
+    "packs-here": "On this phone",
+    "packs-more": "Available"
   }
 }

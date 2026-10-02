@@ -1231,12 +1231,6 @@ def check_settings_screen(r, dev):
                           .map(r => r.getAttribute('data-row')),
                         names: [...panel.querySelectorAll('[data-row] [data-name]')]
                           .map(r => r.textContent.trim()),
-                        modes: [...panel.querySelectorAll('[data-row=layer] [data-choice]')]
-                          .map(c => c.getAttribute('data-choice')),
-                        often: (panel.querySelector('[data-row=density] [data-about]') || {})
-                          .textContent || '',
-                        bar: Boolean(panel.querySelector('[data-row=density] input[type=range]')),
-                        palettes: Boolean(panel.querySelector('[data-row=theme] .select')),
                         on: Boolean(panel.querySelector('[data-row=on] input')),
                         ground: getComputedStyle(document.body).backgroundColor,
                       });
@@ -1252,23 +1246,17 @@ def check_settings_screen(r, dev):
         r.check(False, "settings: the screen draws itself", str(e))
         return
 
-    # The rows a reader of either surface finds, under the names both are written out of.
-    for row in ("on", "ipa", "translate", "density", "theme", "dark", "apps", "advanced"):
+    # The rows the first screen carries, under the names data/wording.json gives them.
+    for row in ("on", "mine", "learning", "ipa", "translate", "side", "apps", "accent", "theme"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
-    # Named as they are named on the other surface, because both are written out of
-    # data/wording.json.
-    for row in ("ipa", "translate", "density", "theme"):
+    for row in ("mine", "learning", "ipa", "translate"):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
 
-    # What a word is replaced by: one switch, and two under it saying what it puts there.
-    #
-    # The language a word is turned into belongs to the one of those two that turns it into
-    # one, and to nothing else, so it is there after switching that on and gone after
-    # switching it off.
-    into = None
+    # What the card shows: two switches, either, both or neither. The transcription's own
+    # rows belong to the pronunciation and are there only while it is shown.
     try:
         with View() as view:
             def switch(row, on):
@@ -1279,67 +1267,48 @@ def check_settings_screen(r, dev):
                 )
                 time.sleep(1)
 
-            # Something has to be replaced for either of these to mean anything.
-            switch("ipa", True)
-            for translating, want in ((True, True), (False, False)):
-                switch("translate", translating)
+            for sound in (True, False):
+                switch("ipa", sound)
                 there = view.evaluate(
-                    "Boolean(document.querySelector('[data-row=target] .select'))")
+                    "Boolean(document.querySelector('[data-row=narrow]'))"
+                    " && Boolean(document.querySelector('[data-row=stress]'))")
                 r.check(
-                    there == want,
-                    "settings: the language is "
-                    f"{'offered' if want else 'not asked for'} when translating is "
-                    f"{'on' if translating else 'off'}",
+                    there == sound,
+                    "settings: the transcription rows are "
+                    f"{'there' if sound else 'gone'} with the pronunciation "
+                    f"{'on' if sound else 'off'}",
                     str(there),
                 )
-                if translating:
-                    into = there
-            # Neither of them on is the replacing off: there is no third switch saying so,
-            # and a replacement of nothing would be nothing.
-            switch("ipa", False)
             switch("translate", False)
             off = view.evaluate(
                 "(document.querySelector('[data-row=ipa] input')?.checked === false) &&"
                 " (document.querySelector('[data-row=translate] input')?.checked === false)")
-            r.check(bool(off), "settings: both can be switched off, which is replacing nothing",
-                    str(off))
+            r.check(bool(off), "settings: both can be switched off", str(off))
             # Left as this suite expects to find it.
             switch("ipa", True)
             switch("translate", True)
     except Exception as e:  # noqa: BLE001
-        r.check(False, "settings: the language to read into follows the translating", str(e))
-    void = into
-    # The bar is a bar, and says what it means in words rather than as a ratio.
-    r.check(screen["bar"], "settings: the frequency bar is a real control", "no bar in the view")
-    r.check("word" in screen["often"].lower(),
-            "settings: the frequency is stated in words", repr(screen["often"]))
-    # The palettes, which the phone offered none of until it drew this screen. Opened the way
-    # a reader opens them: this product draws its own list, because a native menu is the
-    # platform's - on a phone a white dialog of radio buttons over a surface in the reader's
-    # own colours, and no way to search fifty-four languages.
-    r.check(screen["palettes"], "settings: the palettes can be opened", "no theme row")
-    themes = 0
-    if screen["palettes"]:
-        try:
-            with View() as view:
-                view.evaluate("document.querySelector('[data-row=theme] .select').click()")
-                time.sleep(1)
-                themes = view.evaluate(
-                    "document.querySelectorAll('[data-sheet] [data-choice]').length") or 0
-                view.evaluate(
-                    "(document.querySelector('[data-sheet] .btn-text') || {}).click?.()")
-        except Exception as e:  # noqa: BLE001
-            themes = f"the list did not open ({e})"
+        r.check(False, "settings: the card's switches", str(e))
+
     # The palettes that have the side in force, which is never none and never all eight: four
     # of them carry one side only, and offering a light one to a reader reading in the dark is
     # offering a choice that cannot be honoured.
-    r.check(4 <= themes <= 7, "settings: the palettes for this side are in the list", str(themes))
-    # And the tokens reached it: a screen with no surface colour is a screen drawn in
-    # nothing, which is what a missing stylesheet looks like.
+    themes = 0
+    try:
+        with View() as view:
+            view.evaluate("document.querySelector('[data-row=theme]').click()")
+            time.sleep(1)
+            themes = view.evaluate(
+                "document.querySelectorAll('[data-row=palettes] [data-choice]').length") or 0
+            view.evaluate("window.phonetixBack()")
+    except Exception as e:  # noqa: BLE001
+        themes = f"the appearance screen did not open ({e})"
+    r.check(4 <= themes <= 7, "settings: the palettes for this side are offered", str(themes))
+    # And the tokens reached it: a screen with no ground colour is a screen drawn in nothing,
+    # which is what a missing stylesheet looks like.
     r.check("rgba(0, 0, 0, 0)" not in screen["ground"],
             "settings: the screen is painted in the product's own colours",
             screen["ground"])
-
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))

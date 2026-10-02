@@ -55,8 +55,10 @@ export const SIDE_CHOICES: Choice[] = [
 /** Every row of the settings surfaces, by the name it reports itself under. */
 export const ROWS: Record<string, Words> = {
   "accent": { name: "Accent", about: "" },
+  "accents": { name: "Accents", about: "" },
   "advanced": { name: "Advanced", about: "" },
   "animations": { name: "Animations", about: "" },
+  "appearance": { name: "Appearance", about: "" },
   "apps": { name: "Apps", about: "" },
   "dark": { name: "Light or dark", about: "" },
   "delay": { name: "Rest before a card opens", about: "" },
@@ -64,7 +66,7 @@ export const ROWS: Record<string, Words> = {
   "dictionaries": { name: "Dictionaries", about: "" },
   "group-button": { name: "Side button", about: "" },
   "group-languages": { name: "Languages", about: "" },
-  "group-shows": { name: "Shows", about: "" },
+  "group-shows": { name: "The card shows", about: "" },
   "ipa": { name: "Pronunciation", about: "" },
   "layer": { name: "Overlay", about: "" },
   "learning": { name: "Learning", about: "" },
@@ -78,7 +80,7 @@ export const ROWS: Record<string, Words> = {
   "on": { name: "Annotate what I read", about: "" },
   "position": { name: "Position", about: "" },
   "rest": { name: "Where the button sits", about: "" },
-  "rest-pin": { name: "Pin", about: "" },
+  "rest-pin": { name: "Fixed height", about: "" },
   "say": { name: "The word for something", about: "" },
   "setup": { name: "Setup", about: "" },
   "setup-overlay": { name: "Drawing over apps", about: "" },
@@ -104,9 +106,12 @@ export const ENDS: Record<string, [string, string]> = {
 
 /** Phrases both surfaces use, so neither invents its own wording. */
 export const SAYS: Record<string, string> = {
+  "accent-rule": "derived from pronunciation rules",
   "allow": "Allow",
   "allow-overlay": "Allow overlay",
   "already-in": "This page is already in %s",
+  "apps-chosen": "%s chosen",
+  "back": "Back",
   "broad-mark": "/ /",
   "change": "Change",
   "choose-language": "Choose a language",
@@ -128,6 +133,10 @@ export const SAYS: Record<string, string> = {
   "nothing-found": "Nothing by that name",
   "nothing-yet": "nothing yet",
   "open-accessibility": "Open accessibility",
+  "other-languages": "Other languages",
+  "packs-held": "%s downloaded",
+  "packs-here": "On this phone",
+  "packs-more": "Available",
   "preview": "Preview",
   "preview-about": "the words on a page this would answer",
   "remove": "Remove",
@@ -145,6 +154,7 @@ export const SAYS: Record<string, string> = {
   "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
   "touch-on": "A swipe that starts on a word will not scroll the page.",
   "use-this": "Use this",
+  "words-count": "%s words",
 };
 
 /** What one of them is called, for a row that says what it is set to. */

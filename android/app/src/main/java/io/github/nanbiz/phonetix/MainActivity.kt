@@ -8,7 +8,6 @@ import android.provider.Settings as AndroidSettings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -16,7 +15,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,12 +25,8 @@ import androidx.compose.ui.graphics.toArgb
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.service.PhonetixAccessibilityService
-import io.github.nanbiz.phonetix.ui.AppEntry
-import io.github.nanbiz.phonetix.ui.AppsScreen
 import io.github.nanbiz.phonetix.ui.SettingsWeb
 import io.github.nanbiz.phonetix.ui.PhonetixTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
@@ -150,10 +144,6 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun Root(modifier: Modifier, resumeTick: Int, dictReady: Boolean) {
-        val settings by SettingsStore.state.collectAsState()
-        var showApps by remember { mutableStateOf(false) }
-        var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
-
         // Re-read on every return from Settings; the key makes the read happen again.
         val accessibilityOn = remember(resumeTick) { accessibilityEnabled() }
         val overlayOn = remember(resumeTick) { AndroidSettings.canDrawOverlays(this) }
@@ -189,34 +179,16 @@ class MainActivity : ComponentActivity() {
             if (!reading) openAccessibilitySettings() else openOverlaySettings()
         }
 
-        LaunchedEffect(showApps) {
-            if (showApps && apps.isEmpty()) apps = withContext(Dispatchers.IO) { launcherApps() }
-        }
-
-        Box(modifier) {
-            if (showApps) {
-                AppsScreen(
-                    settings = settings,
-                    apps = apps,
-                    onBack = { showApps = false },
-                    onAllApps = SettingsStore::setAllApps,
-                    onToggle = SettingsStore::toggleApp,
-                )
-            } else {
-                // The product's own settings screen, which is the extension's: one view, built
-                // from src/ui/settings and drawn here. What it cannot do for itself - the two
-                // permissions, the dictionaries, the app list - is behind the bridge.
-                SettingsWeb(
-                    permissions = { accessibilityOn to overlayOn },
-                    dictionaryReady = dictReady,
-                    open = opening,
-                    onOpenReading = { openAccessibilitySettings() },
-                    onOpenOverlay = { openOverlaySettings() },
-                    onOpenApps = { showApps = true },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
+        // The app's screen, drawn from src/phone in a web view. What it cannot do for itself -
+        // the two permissions, the dictionaries, the app list - is behind its bridge.
+        SettingsWeb(
+            permissions = { accessibilityOn to overlayOn },
+            dictionaryReady = dictReady,
+            open = opening,
+            onOpenReading = { openAccessibilitySettings() },
+            onOpenOverlay = { openOverlaySettings() },
+            modifier = modifier.fillMaxSize(),
+        )
     }
 
     /**
@@ -262,19 +234,5 @@ class MainActivity : ComponentActivity() {
                 )
             )
         }
-    }
-
-    /** Everything with a launcher entry, which is what a reader thinks of as "an app". */
-    private fun launcherApps(): List<AppEntry> {
-        val pm = packageManager
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        return pm.queryIntentActivities(intent, 0)
-            .mapNotNull { ri ->
-                val pkg = ri.activityInfo?.packageName ?: return@mapNotNull null
-                if (pkg == packageName) return@mapNotNull null
-                AppEntry(pkg, ri.loadLabel(pm)?.toString() ?: pkg)
-            }
-            .distinctBy { it.pkg }
-            .sortedBy { it.label.lowercase() }
     }
 }

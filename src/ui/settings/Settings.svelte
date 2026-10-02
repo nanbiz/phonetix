@@ -17,10 +17,8 @@
   import { accentFor, readInto, setAccent, type Settings } from '@/settings/shape';
   import {
     DARK_CHOICES,
-    SIDE_CHOICES,
     DETAIL_CHOICES,
     ENDS,
-    labelOf,
     LAYER_CHOICES,
     ROWS,
     SAYS,
@@ -35,7 +33,6 @@
   import Choice from './Choice.svelte';
   import Frequency from './Frequency.svelte';
   import NavRow from './NavRow.svelte';
-  import Resting from './Resting.svelte';
   import Packs from './Packs.svelte';
   import Row from './Row.svelte';
   import Screen from './Screen.svelte';
@@ -46,15 +43,6 @@
   import type { Answer } from '@/core/answer';
 
   interface Props {
-    /**
-     * Which surface this is drawn on.
-     *
-     * One view for the whole product: the rows a surface cannot do are the ones it does not
-     * draw. A browser has sites and a pointer; a phone has apps, permissions and a mark to
-     * drag. Everything else - the mode, the language, how often, the palette, the word for
-     * something - is the same question on both, asked once here.
-     */
-    where?: 'browser' | 'phone';
     /** Which screen the reader is on. Bound, so the surface around this view can leave a
      *  screen when the device's own way back is used. */
     view?: string;
@@ -93,17 +81,9 @@
       text: string,
       source: string
     ) => Promise<{ answer: Answer | null; missing: boolean } | null>;
-    /** What the phone has been allowed to do, which is what decides whether it can answer a
-     *  word at all. Nothing on a browser, which asks for neither. */
-    permissions?: { reading: boolean; overlay: boolean };
-    onOpenReading?: () => void;
-    onOpenOverlay?: () => void;
-    /** How many apps are read, for the row that opens the system's own list of them. */
-    onOpenApps?: () => void;
   }
 
   let {
-    where = 'browser',
     view = $bindable('main'),
     settings,
     curve,
@@ -121,17 +101,7 @@
     version = '',
     trouble = [],
     say,
-    permissions,
-    onOpenReading,
-    onOpenOverlay,
-    onOpenApps,
   }: Props = $props();
-
-  /** Whether the phone may read a screen and draw over it. A browser needs neither and is
-   *  ready the moment it is installed. */
-  let ready = $derived(
-    where === 'browser' || Boolean(permissions?.reading && permissions?.overlay)
-  );
 
   /** What the reader asked for in their own language, what came back, and whether the
    *  machine is still thinking about it. */
@@ -204,18 +174,6 @@
   const layers = LAYER_CHOICES;
 
 
-  /** The shape of the screen being placed on, which on a phone is the reader's own. */
-  let screenAcross = $state(9);
-  let screenDown = $state(19.5);
-  $effect(() => {
-    const across = globalThis.screen?.width ?? 0;
-    const down = globalThis.screen?.height ?? 0;
-    if (across > 0 && down > 0 && where === 'phone') {
-      screenAcross = across;
-      screenDown = down;
-    }
-  });
-
   // The languages a reader can pick between, by the name they know them under.
   const named = Object.entries(LANGUAGES)
     .map(([code, row]) => ({ code, english: row.english, native: row.native }))
@@ -225,14 +183,6 @@
   function bothNames(it: { english: string; native: string }): string {
     return it.native && it.native !== it.english ? `${it.english} · ${it.native}` : it.english;
   }
-
-  /** The languages to learn: every one but the reader's own. */
-  let learningChoices = $derived([
-    ...(settings.learning ? [] : [{ value: '', label: SAYS['choose-language'] }]),
-    ...named
-      .filter((it) => it.code !== settings.target)
-      .map((it) => ({ value: it.code, label: bothNames(it) })),
-  ]);
 
   let languages = $derived([
     ...(settings.target ? [] : [{ value: '', label: SAYS['choose-language'] }]),
@@ -303,43 +253,17 @@
     {siteIcon}
     {site}
     on={settings.on}
-    ready={ready}
     {here}
     decided={settings.off.includes(site)}
     change={(on) => change('on', on)}
     onSite={(on) => onSite?.(on)}
     onSay={() => (view = 'say')}
-    onReady={() => (permissions?.reading ? onOpenOverlay?.() : onOpenReading?.())}
   />
 
   <Trouble {trouble} />
 
-  {#if where === 'phone'}
-    <!-- Where the button sits, under the switch that puts it there: the switch above is the
-         button, so this belongs to it rather than standing beside it as a question of its
-         own. -->
-    <h4 class="head">{ROWS['group-button'].name}</h4>
-    <div class="rows">
-      <NavRow
-        name={ROWS.position.name}
-        row="rest"
-        small
-        about={settings.side === 'free'
-          ? SAYS['rest-loose']
-          : settings.pin
-            ? SAYS['rest-edge'].replace(
-                '%s',
-                labelOf(SIDE_CHOICES, settings.side).toLowerCase()
-              )
-            : labelOf(SIDE_CHOICES, settings.side)}
-        open={() => (view = 'rest')}
-      />
-    </div>
-  {/if}
-
   <!-- What the overlay puts over a word: one switch each. On the phone, what the card and
        the panel show. -->
-  {#if where === 'phone'}<h4 class="head">{ROWS['group-shows'].name}</h4>{/if}
   <div class="rows">
     <Row name={ROWS.ipa.name} row="ipa" about={ROWS.ipa.about}>
       {#snippet control()}
@@ -364,7 +288,7 @@
     <!-- The language the words are turned into, asked for only by the modes that turn them
          into one. The mode is already that question's first half, and a switch beside it
          saying the same thing again was a second way to say no. -->
-    {#if where === 'browser' && (settings.layer === 'meaning' || settings.layer === 'both')}
+    {#if settings.layer === 'meaning' || settings.layer === 'both'}
       <Row
         name={ROWS.target.name}
         row="target"
@@ -384,39 +308,10 @@
     {/if}
   </div>
 
-  {#if where === 'phone'}
-    <h4 class="head">{ROWS['group-languages'].name}</h4>
-    <div class="rows">
-      <!-- The two languages the side button works between: what a word is translated into,
-           and what the panel translates to and from. Always here, because the panel uses
-           both whatever the switches say. -->
-      <Row name={ROWS.mine.name} row="mine">
-        {#snippet control()}
-          <Picker
-            options={languages}
-            chosen={settings.target}
-            label={ROWS.mine.name}
-            change={(value) => change('target', value)}
-          />
-        {/snippet}
-      </Row>
-      <Row name={ROWS.learning.name} row="learning">
-        {#snippet control()}
-          <Picker
-            options={learningChoices}
-            chosen={settings.learning}
-            label={ROWS.learning.name}
-            change={(value) => change('learning', value)}
-          />
-        {/snippet}
-      </Row>
-    </div>
-  {/if}
-
   <!-- The bar a reader comes back to, on a row of its own - and only where it decides
        anything: with nothing being replaced there is no how often for it to be, and the phone
        replaces nothing on the page. -->
-  {#if where === 'browser' && settings.layer !== 'off'}
+  {#if settings.layer !== 'off'}
     <Frequency {curve} density={settings.density} change={(at) => change('density', at)} />
   {/if}
 
@@ -454,7 +349,7 @@
 <Screen
   name="page"
   on={view}
-  title={reading ? nameOf(reading) : where === 'phone' ? ROWS.accent.name : ROWS.source.name}
+  title={reading ? nameOf(reading) : ROWS.source.name}
   note={words}
   back={() => (view = 'main')}
 >
@@ -541,50 +436,6 @@
     {get}
     {forget}
   />
-</Screen>
-
-<Screen name="rest" on={view} title={ROWS.rest.name} back={() => (view = 'main')}>
-  <div class="rows">
-    <!-- Which side it comes back to, which is the hand the phone is held in. First, because
-         it is the answer whether or not the button is pinned: unpinned, coming to rest is the
-         shortest way to this side. -->
-    <Row name={ROWS.side.name} row="side">
-      {#snippet wide()}
-        <Segmented
-          choices={SIDE_CHOICES.map((row) => ({ value: row.value, label: row.label }))}
-          chosen={settings.side}
-          change={(value) => change('side', value)}
-        />
-      {/snippet}
-    </Row>
-
-    <!-- Pinned, it waits at one height and nowhere else. Unpinned there is no height to set,
-         so the board below has nothing to do and says so by being greyed. Anywhere has no
-         height either: the button is left wherever it was put down. -->
-    {#if settings.side !== 'free'}
-      <Row name={ROWS['rest-pin'].name} row="rest-pin">
-        {#snippet control()}
-          <Toggle on={settings.pin} label="pinning it" change={(on) => change('pin', on)} />
-        {/snippet}
-      </Row>
-    {/if}
-  </div>
-
-  <!-- Where it sits, drawn. Not when it may sit anywhere: there is no one place to show,
-       because the button is wherever the reader last put it down. -->
-  {#if settings.side !== 'free'}
-    <Resting
-      y={settings.restY}
-      side={settings.side}
-      pinned={settings.pin}
-      across={screenAcross}
-      down={screenDown}
-      put={(edge, y) => {
-        if (settings.side !== edge) change('side', edge);
-        change('restY', Number(y.toFixed(4)));
-      }}
-    />
-  {/if}
 </Screen>
 
 <Screen name="say" on={view} title={ROWS.say.name} back={() => (view = 'main')}>
@@ -690,7 +541,7 @@
 
   <!-- What this page is being read as, and how that language is read. -->
   <NavRow
-    name={reading ? nameOf(reading) : where === 'phone' ? ROWS.accent.name : ROWS.source.name}
+    name={reading ? nameOf(reading) : ROWS.source.name}
     row="page"
     about={reading
       ? `${settings.source ? 'set by you' : 'what the page says'}${
@@ -699,19 +550,6 @@
       : `${elsewhere.length} languages offer a choice`}
     open={() => (view = 'page')}
   />
-
-  {#if where === 'phone'}
-    <!-- Which apps the side button answers in. The list itself is the system's, with its own
-         icons, so it is the one screen the phone draws for itself. -->
-    <NavRow
-      name={ROWS.apps.name}
-      row="apps"
-      about={settings.allApps
-        ? SAYS['every-app']
-        : `${settings.apps.length} app${settings.apps.length === 1 ? '' : 's'} chosen`}
-      open={() => onOpenApps?.()}
-    />
-  {/if}
 
   <div class="rows">
     <Row
@@ -742,7 +580,6 @@
       {/snippet}
     </Row>
 
-    {#if where === 'browser'}
     <Row name={ROWS.delay.name} row="delay" says="{settings.delay} ms">
       {#snippet wide()}
         <Slider
@@ -765,13 +602,11 @@
         />
       {/snippet}
     </Row>
-    {/if}
   </div>
 
   <!-- What actually answers a word, in the order it is asked. A reader deciding whether to
        trust what a card says is deciding it on this, and the card's own pill names which of
-       these answered each time. The browser's: the phone's card carries no pill to explain. -->
-  {#if where === 'browser'}
+       these answered each time. -->
   <div class="rows">
     <Row name="What answers a word" row="how">
       {#snippet wide()}
@@ -792,5 +627,4 @@
       {/snippet}
     </Row>
   </div>
-  {/if}
 </Screen>

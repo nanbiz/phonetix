@@ -49,8 +49,10 @@ object Wording {
     /** Every row of the settings surfaces, by the name it reports itself under. */
     val rows = mapOf(
         "accent" to Words("Accent", ""),
+        "accents" to Words("Accents", ""),
         "advanced" to Words("Advanced", ""),
         "animations" to Words("Animations", ""),
+        "appearance" to Words("Appearance", ""),
         "apps" to Words("Apps", ""),
         "dark" to Words("Light or dark", ""),
         "delay" to Words("Rest before a card opens", ""),
@@ -58,7 +60,7 @@ object Wording {
         "dictionaries" to Words("Dictionaries", ""),
         "group-button" to Words("Side button", ""),
         "group-languages" to Words("Languages", ""),
-        "group-shows" to Words("Shows", ""),
+        "group-shows" to Words("The card shows", ""),
         "ipa" to Words("Pronunciation", ""),
         "layer" to Words("Overlay", ""),
         "learning" to Words("Learning", ""),
@@ -72,7 +74,7 @@ object Wording {
         "on" to Words("Annotate what I read", ""),
         "position" to Words("Position", ""),
         "rest" to Words("Where the button sits", ""),
-        "rest-pin" to Words("Pin", ""),
+        "rest-pin" to Words("Fixed height", ""),
         "say" to Words("The word for something", ""),
         "setup" to Words("Setup", ""),
         "setup-overlay" to Words("Drawing over apps", ""),
@@ -98,9 +100,12 @@ object Wording {
 
     /** Phrases both surfaces use, so neither invents its own wording. */
     val says = mapOf(
+        "accent-rule" to "derived from pronunciation rules",
         "allow" to "Allow",
         "allow-overlay" to "Allow overlay",
         "already-in" to "This page is already in %s",
+        "apps-chosen" to "%s chosen",
+        "back" to "Back",
         "broad-mark" to "/ /",
         "change" to "Change",
         "choose-language" to "Choose a language",
@@ -122,6 +127,10 @@ object Wording {
         "nothing-found" to "Nothing by that name",
         "nothing-yet" to "nothing yet",
         "open-accessibility" to "Open accessibility",
+        "other-languages" to "Other languages",
+        "packs-held" to "%s downloaded",
+        "packs-here" to "On this phone",
+        "packs-more" to "Available",
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
         "remove" to "Remove",
@@ -139,6 +148,7 @@ object Wording {
         "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched.",
         "touch-on" to "A swipe that starts on a word will not scroll the page.",
         "use-this" to "Use this",
+        "words-count" to "%s words",
     )
 
     /** What one row is called, or the name it is asked for when the table is short. */

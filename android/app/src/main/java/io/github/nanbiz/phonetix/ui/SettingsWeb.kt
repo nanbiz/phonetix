@@ -10,7 +10,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import io.github.nanbiz.phonetix.core.Frequency
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Settings
@@ -50,7 +49,6 @@ fun SettingsWeb(
     open: String = "",
     onOpenReading: () -> Unit,
     onOpenOverlay: () -> Unit,
-    onOpenApps: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -127,7 +125,7 @@ fun SettingsWeb(
                 addJavascriptInterface(
                     Bridge(
                         { dark.value }, ctx, work, web, { asking.value() }, onOpenReading,
-                        onOpenOverlay, onOpenApps,
+                        onOpenOverlay,
                     ) { screen -> inside.value = screen != "main" },
                     "Phonetix",
                 )
@@ -150,7 +148,8 @@ fun SettingsWeb(
 private const val FROM = "https://assets.phonetix.invalid"
 
 private class FromAssets(context: Context) : android.webkit.WebViewClient() {
-    private val assets = context.applicationContext.assets
+    private val context = context.applicationContext
+    private val assets = this.context.assets
 
     override fun shouldInterceptRequest(
         view: WebView,
@@ -158,6 +157,15 @@ private class FromAssets(context: Context) : android.webkit.WebViewClient() {
     ): android.webkit.WebResourceResponse? {
         val url = request.url
         if ("$FROM".removePrefix("https://") != url.host) return null
+        // An app's icon, drawn from the package manager rather than carried in the assets.
+        val asked = url.path.orEmpty()
+        if (asked.startsWith("/icon/")) {
+            val png = iconOf(context, asked.removePrefix("/icon/").removeSuffix(".png")) ?: ByteArray(0)
+            return android.webkit.WebResourceResponse(
+                "image/png", null, if (png.isEmpty()) 404 else 200, if (png.isEmpty()) "no icon" else "OK",
+                emptyMap(), java.io.ByteArrayInputStream(png),
+            )
+        }
         val path = "ui" + (url.path ?: "/index.html")
         return runCatching {
             android.webkit.WebResourceResponse(
@@ -208,7 +216,6 @@ private class Bridge(
     private val permissions: () -> Pair<Boolean, Boolean>,
     private val onOpenReading: () -> Unit,
     private val onOpenOverlay: () -> Unit,
-    private val onOpenApps: () -> Unit,
     private val onView: (String) -> Unit,
 ) {
 
@@ -234,10 +241,14 @@ private class Bridge(
                         Packs.forget(context, asked.optString("lang"))
                         JSONObject()
                     }
-                    "say" -> said(asked)
                     "openReading" -> { onOpenReading(); JSONObject() }
                     "openOverlay" -> { onOpenOverlay(); JSONObject() }
-                    "openApps" -> { onOpenApps(); JSONObject() }
+                    "apps" -> JSONObject().put("apps", kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        JSONArray(launcherApps(context).map { (pkg, label) ->
+                            JSONObject().put("pkg", pkg).put("label", label)
+                        })
+                    })
+                    "toggleApp" -> { SettingsStore.toggleApp(asked.optString("pkg")); JSONObject() }
                     // Which screen the reader is on. The phone's back gesture belongs to the
                     // app, and without this it left the app from a screen the reader had only
                     // opened a moment ago.
@@ -297,10 +308,6 @@ private class Bridge(
         }
         return JSONObject()
             .put("settings", chosen(settings))
-            // The bar's own positions, as the core decides them: a hundred and one steps,
-            // the same hundred and one the extension draws, so a density set on one surface
-            // means the same word in the same paragraph on the other.
-            .put("curve", JSONArray((0..100).map { Frequency.densityForPos(it / 100f) }))
             .put(
                 "packs",
                 JSONObject()
@@ -383,6 +390,7 @@ private class Bridge(
             "pin" -> SettingsStore.setPin(value == true)
             "restY" -> SettingsStore.setRestY((value as? Number)?.toFloat() ?: return)
             "touchWords" -> SettingsStore.setTouchWords(value == true)
+            "allApps" -> SettingsStore.setAllApps(value == true)
             "accents" -> {
                 val said = value as? JSONObject ?: return
                 for (lang in said.keys()) SettingsStore.setAccent(lang, said.optString(lang))
@@ -393,20 +401,32 @@ private class Bridge(
             // view newer than this app, and is left alone rather than half-stored.
         }
     }
-
-    /** The word for something the reader wants to say, answered with the card's own JSON. */
-    private suspend fun said(asked: JSONObject): JSONObject {
-        val text = asked.optString("text")
-        val source = asked.optString("source")
-        val target = asked.optString("target")
-        val answer = kotlinx.coroutines.withContext(Dispatchers.IO) {
-            Reading.say(context, text, source, target)
-        }
-        val missing = answer == null && !io.github.nanbiz.phonetix.core.Translator.ready(
-            Packs.models(context), target, source,
-        )
-        return JSONObject()
-            .put("answer", answer?.json?.let { JSONObject(it) })
-            .put("missing", missing)
-    }
 }
+
+/** The apps on the launcher, by package and by the name the launcher shows, this one left out. */
+private fun launcherApps(context: Context): List<Pair<String, String>> {
+    val pm = context.packageManager
+    val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+        .addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+    return pm.queryIntentActivities(intent, 0)
+        .mapNotNull { info ->
+            val pkg = info.activityInfo?.packageName ?: return@mapNotNull null
+            if (pkg == context.packageName) return@mapNotNull null
+            pkg to (info.loadLabel(pm)?.toString() ?: pkg)
+        }
+        .distinctBy { it.first }
+        .sortedBy { it.second.lowercase() }
+}
+
+/** An app's launcher icon as a PNG, drawn at the size the screen shows it. */
+private fun iconOf(context: Context, pkg: String): ByteArray? = runCatching {
+    val drawable = context.packageManager.getApplicationIcon(pkg)
+    val size = (36 * context.resources.displayMetrics.density).toInt()
+    val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    drawable.setBounds(0, 0, size, size)
+    drawable.draw(canvas)
+    java.io.ByteArrayOutputStream().also {
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+    }.toByteArray()
+}.getOrNull()
