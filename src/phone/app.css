@@ -386,6 +386,25 @@ label.item:active {
   outline-offset: 2px;
 }
 
+.icon-button.get {
+  color: var(--color-accent);
+}
+
+.item-chevron,
+.icon-button[data-does="remove"] {
+  color: var(--color-ink-faint);
+}
+
+button.item:disabled,
+.search:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.item:disabled:active {
+  background: none;
+}
+
 /* A press that does something, such as fetching a dictionary. */
 .button {
   flex: 0 0 auto;
@@ -498,7 +517,7 @@ label.item:active {
   flex-direction: column;
   justify-content: space-evenly;
   align-items: center;
-  height: 240px;
+  height: 176px;
   margin: 4px auto;
   padding: 24px 0;
   box-sizing: border-box;

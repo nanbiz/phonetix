@@ -37,11 +37,10 @@
   </Item>
 </Group>
 
-{#if !settings.allApps}
-  <input class="search" type="search" placeholder={SAYS['search']} bind:value={typed} />
+<input class="search" disabled={settings.allApps} type="search" placeholder={SAYS['search']} bind:value={typed} />
   <Group>
     {#each ordered as app (app.pkg)}
-      {@const on = settings.apps.includes(app.pkg)}
+      {@const on = settings.allApps || settings.apps.includes(app.pkg)}
       <button
         class="item option"
         class:on
@@ -49,6 +48,7 @@
         aria-checked={on}
         data-row="app"
         data-pkg={app.pkg}
+        disabled={settings.allApps}
         onclick={() => toggle(app.pkg)}
       >
         <img class="app-icon" src="./icon/{app.pkg}.png" alt="" loading="lazy" />
@@ -58,4 +58,3 @@
     {/each}
     {#if ordered.length === 0}<p class="none">{SAYS['nothing-found']}</p>{/if}
   </Group>
-{/if}

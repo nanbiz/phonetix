@@ -23,7 +23,8 @@
   let typed = $state('');
   let shown = $derived.by(() => {
     const wanted = typed.trim().toLowerCase();
-    if (!wanted) return options;
+    // What is chosen comes first, so the list opens on it.
+    if (!wanted) return [...options.filter((it) => it.value === chosen), ...options.filter((it) => it.value !== chosen)];
     return options.filter(
       (it) => it.label.toLowerCase().includes(wanted) || it.value.toLowerCase() === wanted
     );

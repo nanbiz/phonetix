@@ -4,6 +4,8 @@
   import { SAYS } from '@/data/wording';
   import type { Offered } from '@/host/packs';
   import Loader from 'virtual:icons/line-md/loading-twotone-loop';
+  import Download from 'virtual:icons/pixelarticons/download';
+  import Remove from 'virtual:icons/pixelarticons/close';
   import Group from '../parts/Group.svelte';
 
   interface Props {
@@ -54,12 +56,12 @@
           {#if fetching === pack.lang}
             <span aria-label="fetching"><Loader class="option-check" /></span>
           {:else if held.includes(pack.lang)}
-            <button class="button quiet" data-does="remove" onclick={() => forget(pack.lang)}>
-              {SAYS['remove']}
+            <button class="icon-button" data-does="remove" aria-label={SAYS['remove']} onclick={() => forget(pack.lang)}>
+              <Remove />
             </button>
           {:else}
-            <button class="button" data-does="get" onclick={() => get(pack.lang)}>
-              {SAYS['get']}
+            <button class="icon-button get" data-does="get" aria-label={SAYS['get']} onclick={() => get(pack.lang)}>
+              <Download />
             </button>
           {/if}
         </div>
