@@ -115,23 +115,26 @@
 {/each}
 
 <div class:resting={ready && !settings.on}>
-  <Group name={ROWS['group-languages'].name}>
-    <div class="pair">
-      <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
-        <span class="language-role" data-name>{ROWS.mine.name}</span>
-        <span class="language-name" class:empty={!settings.target} data-about>
-          {settings.target ? named(settings.target) : SAYS['choose-language']}
-        </span>
-      </button>
-      <span class="pair-between" aria-hidden="true">⇄</span>
-      <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
-        <span class="language-role" data-name>{ROWS.learning.name}</span>
-        <span class="language-name" class:empty={!settings.learning} data-about>
-          {settings.learning ? named(settings.learning) : SAYS['choose-language']}
-        </span>
-      </button>
-    </div>
-  </Group>
+  <!-- Only translation works between two languages; pronunciation is read off the word. -->
+  {#if meaning}
+    <Group name={ROWS['group-languages'].name}>
+      <div class="pair">
+        <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
+          <span class="language-role" data-name>{ROWS.mine.name}</span>
+          <span class="language-name" class:empty={!settings.target} data-about>
+            {settings.target ? named(settings.target) : SAYS['choose-language']}
+          </span>
+        </button>
+        <span class="pair-between" aria-hidden="true">⇄</span>
+        <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
+          <span class="language-role" data-name>{ROWS.learning.name}</span>
+          <span class="language-name" class:empty={!settings.learning} data-about>
+            {settings.learning ? named(settings.learning) : SAYS['choose-language']}
+          </span>
+        </button>
+      </div>
+    </Group>
+  {/if}
 
   <Group name={ROWS['group-shows'].name}>
     <div class="shows">
