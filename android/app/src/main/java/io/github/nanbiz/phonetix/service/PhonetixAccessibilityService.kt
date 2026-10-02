@@ -13,6 +13,8 @@ import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.MainActivity
 import io.github.nanbiz.phonetix.core.Lex
 import io.github.nanbiz.phonetix.core.Dictionary
+import io.github.nanbiz.phonetix.core.DisplayIpa
+import io.github.nanbiz.phonetix.ui.Defined
 import io.github.nanbiz.phonetix.core.Eld
 import io.github.nanbiz.phonetix.core.IpaSymbols
 import io.github.nanbiz.phonetix.core.Language
@@ -3168,7 +3170,26 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Which way the question is answered, where the reader turned the arrow: otherwise it
         // is worked out from what is typed.
         var turned: Boolean? = null
-        fun ask() = said(panel, panel.field.text.toString(), mine, learning, turned)
+        // With translation off nothing is turned into another language: a word is answered in
+        // the one it is typed in, with how it is said and what it means.
+        val translating = settings.layer == "meaning" || settings.layer == "both"
+        var typedIn = settings.learning.ifEmpty { lastScreenLanguage.orEmpty() }.ifEmpty { mine }
+        fun ask() = if (translating) {
+            said(panel, panel.field.text.toString(), mine, learning, turned)
+        } else {
+            defined(panel, panel.field.text.toString(), typedIn)
+        }
+        fun offerOne() {
+            panel.setSingle(
+                (listOf(typedIn) + offered).distinct(),
+                typedIn,
+            ) { code ->
+                typedIn = code
+                SettingsStore.setLearning(code)
+                offerOne()
+                ask()
+            }
+        }
         fun offer() {
             panel.setPair(
                 offered, mine, learning, forward = turned ?: true,
@@ -3190,11 +3211,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 },
             )
         }
-        offer()
+        if (translating) offer() else offerOne()
         panel.onSubmit = { asked ->
             // Something new typed is worked out afresh.
             turned = null
-            said(panel, asked, mine, learning, null)
+            if (translating) said(panel, asked, mine, learning, null) else defined(panel, asked, typedIn)
         }
         panel.onOpenApp = {
             closeSay()
@@ -3215,13 +3236,19 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 main.post {
                     panel.heard(phrase)
                     panel.listening(false)
-                    said(panel, phrase, mine, learning, turned)
+                    if (translating) {
+                        said(panel, phrase, mine, learning, turned)
+                    } else {
+                        defined(panel, phrase, typedIn)
+                    }
                 }
             }
             hearing.onState = { on -> main.post { panel.listening(on) } }
             panel.onDictate = {
                 if (hearing.hasPermission()) {
-                    hearing.start(if (turned == false) learning else mine)
+                    hearing.start(
+                        if (!translating) typedIn else if (turned == false) learning else mine,
+                    )
                 } else {
                     // The app asks, because a runtime permission needs a screen. The panel
                     // stays where it is: the reader comes back to what they were typing.
@@ -3232,8 +3259,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
         } else {
             panel.onDictate = null
         }
+        // Inset from the screen's edges, so it reads as a card over the app rather than a band
+        // across it.
+        val inset = (12 * resources.displayMetrics.density).toInt()
         val lp = android.view.WindowManager.LayoutParams(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            resources.displayMetrics.widthPixels - 2 * inset,
             android.view.WindowManager.LayoutParams.WRAP_CONTENT,
             android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
             // Focusable, because it is typed into; the touches it does not take go to the app
@@ -3246,7 +3276,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             android.graphics.PixelFormat.TRANSLUCENT,
         ).apply {
             dimAmount = 0.45f
-            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
             y = (72 * resources.displayMetrics.density).toInt()
             softInputMode =
                 android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
@@ -3272,6 +3302,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     private var back: android.window.OnBackInvokedCallback? = null
+
+    /** How many ways of reading a typed word the panel lists. */
+    private val DEFINED_AT_MOST = 4
 
     /** Which way the last question was answered: from the reader's language when true. */
     @Volatile private var panelForward = true
@@ -3391,6 +3424,72 @@ class PhonetixAccessibilityService : AccessibilityService() {
             }
             askStage = "answered with a line"
             main.post { if (asking === panel && turn == asks) panel.showLine(line, ipa) }
+        }
+    }
+
+    /**
+     * What the panel answers with where nothing is translated: the word in [lang], each way it
+     * is read, said and defined. A phrase, or a word no dictionary holds, is answered by the
+     * voice with how it sounds.
+     */
+    private fun defined(panel: AskPanel, asked: String, lang: String) {
+        val text = asked.trim()
+        if (text.isEmpty()) return
+        val turn = ++asks
+        askedFor = text
+        askedInto = lang
+        askedAt = System.currentTimeMillis()
+        val settings = SettingsStore.current
+        val sound = settings.layer == "sound"
+        io.post {
+            if (lang != "en" && lang !in Packs.held(this)) {
+                askStage = "getting the $lang dictionary"
+                Fetch.packNow(this, lang)
+            }
+            Packs.openHeld(this)
+            fun shown(ipa: String) = DisplayIpa.display(ipa, settings.narrow, settings.hideStress)
+            val found = if (text.contains(' ')) null else {
+                Reading.lookUp(text, lang, lang, settings.accentFor(lang))?.takeIf { it.found }
+            }
+            val readings = found?.let { answer ->
+                val each = answer.readings.map { reading ->
+                    Defined(
+                        reading.ipa.firstOrNull()?.let(::shown),
+                        reading.pos.orEmpty(),
+                        reading.glosses.firstOrNull().orEmpty(),
+                    )
+                }.ifEmpty {
+                    listOf(
+                        Defined(
+                            answer.ipa.firstOrNull()?.let(::shown),
+                            answer.pos.orEmpty(),
+                            answer.glosses.firstOrNull().orEmpty(),
+                        ),
+                    )
+                }
+                each.filter { it.ipa != null || it.gloss.isNotBlank() }
+                    .distinctBy { it.ipa to it.pos }
+                    .take(DEFINED_AT_MOST)
+            }.orEmpty()
+            // What the dictionary does not hold is said by the voice, which knows how a word
+            // of the language sounds but not what it means.
+            val shownReadings = readings.ifEmpty {
+                val words = text.split(Regex("\\s+"))
+                    .map { it.trim { c -> !c.isLetterOrDigit() } }
+                    .filter { it.isNotBlank() }
+                val voiced = Speech.phonemes(Accents.voiceOf(lang, settings.accentFor(lang)), words)
+                val ipa = words.mapNotNull { voiced[it] }.joinToString(" ") { shown(it) }
+                if (ipa.isEmpty()) emptyList() else listOf(Defined(ipa, "", ""))
+            }
+            askStage = "answered with ${shownReadings.size} readings"
+            main.post {
+                if (asking !== panel || turn != asks) return@post
+                if (shownReadings.isEmpty() || (!sound && shownReadings.all { it.gloss.isBlank() })) {
+                    panel.saying(Wording.says["say-nothing"].orEmpty())
+                } else {
+                    panel.showDefined(text, shownReadings, sound || shownReadings.all { it.gloss.isBlank() })
+                }
+            }
         }
     }
 

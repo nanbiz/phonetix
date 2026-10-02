@@ -55,6 +55,11 @@ fun GlanceCard(
         .distinct()
         .take(ALSO)
     val definition = answer.glosses.firstOrNull()?.takeIf { it.isNotBlank() }
+    // The readings said differently from each other, where the page left it open which one.
+    val spoken = if (answer.state != Answer.State.Homograph) emptyList() else answer.readings
+        .filter { it.ipa.firstOrNull()?.isNotBlank() == true }
+        .distinctBy { it.ipa.first() }
+        .take(ALSO + 1)
     val guessed = answer.state == Answer.State.Guess
 
     Column(
@@ -121,6 +126,35 @@ fun GlanceCard(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.reported(example, report),
+                        )
+                    }
+                }
+            }
+            // A spelling that is said more than one way, and the page cannot tell which: each
+            // way, with what tells it apart ("record" the noun and the verb).
+            sound && spoken.size > 1 -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                for (reading in spoken) {
+                    val way = "/${reading.ipa.first()}/"
+                    Text(
+                        text = way,
+                        color = Color(palette.ipa),
+                        fontSize = Tokens.Scale.fontSizeIpa.sp,
+                        style = IpaStyle,
+                        maxLines = 1,
+                        modifier = Modifier.reported(way, report),
+                    )
+                    val what = listOfNotNull(
+                        reading.pos,
+                        reading.glosses.firstOrNull()?.takeIf { it.isNotBlank() },
+                    ).joinToString(" · ")
+                    if (what.isNotEmpty()) {
+                        Text(
+                            text = what,
+                            color = Color(palette.inkMuted),
+                            fontSize = Tokens.Scale.fontSizeSmall.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.reported(what, report),
                         )
                     }
                 }

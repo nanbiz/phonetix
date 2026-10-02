@@ -54,13 +54,14 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
      * top of it.
      */
     private fun chip() = TextView(context).apply {
-        textSize = 14f
+        textSize = 15f
         setTextColor(palette.ink.toInt())
-        setPadding(dp(12f), dp(8f), dp(12f), dp(8f))
+        setTypeface(typeface, Typeface.BOLD)
+        gravity = Gravity.CENTER
+        setPadding(dp(14f), dp(9f), dp(14f), dp(9f))
         background = GradientDrawable().apply {
-            cornerRadius = Tokens.Scale.radiusButton * density
-            setColor(palette.chipBg.toInt())
-            setStroke(dp(Tokens.Scale.borderWidth), palette.border.toInt())
+            cornerRadius = dp(9f).toFloat()
+            setColor(palette.surface.toInt())
         }
     }
 
@@ -71,8 +72,19 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     /** Which way the question is answered, and the way to turn it round. */
     private val arrow = TextView(context).apply {
         textSize = 18f
-        setTextColor(palette.inkMuted.toInt())
+        setTextColor(palette.accent.toInt())
         gravity = Gravity.CENTER
+    }
+
+    /** The languages as one control: the two of them and the arrow, or the one typed in. */
+    private val pair = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(12f).toFloat()
+            setColor(palette.chipBg.toInt())
+        }
     }
 
     /** The list itself, over the panel, filtered by what is typed into it. */
@@ -137,12 +149,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     private val asking = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(48f)
         background = GradientDrawable().apply {
-            cornerRadius = Tokens.Scale.radiusButton * density
-            setColor(palette.surfaceRaised.toInt())
-            setStroke(dp(Tokens.Scale.borderWidth), palette.border.toInt())
+            cornerRadius = dp(24f).toFloat()
+            setColor(palette.pageBg.toInt())
         }
-        setPadding(dp(14f), 0, dp(4f), 0)
+        setPadding(dp(18f), 0, dp(4f), 0)
         addView(field, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         addView(mic, LayoutParams(dp(TOUCH_DP), dp(TOUCH_DP)))
     }
@@ -166,13 +178,11 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 
     /** The mark, which opens the app: the panel stays about the word being asked for, and
      *  everything else is set where everything else is set. */
-    private val mark = TextView(context).apply {
-        text = "[ɤ]"
-        textSize = 15f
-        setTextColor(palette.accent.toInt())
-        typeface = Typeface.SERIF
-        setTypeface(typeface, Typeface.BOLD)
-        gravity = Gravity.CENTER
+    private val mark = android.widget.ImageView(context).apply {
+        setImageResource(io.github.nanbiz.phonetix.R.mipmap.ic_mark)
+        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+        val inset = dp(8f)
+        setPadding(inset, inset, inset, inset)
     }
 
     /** The top line: which language the answer comes back in, and the way through to the app.
@@ -180,11 +190,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     private val header = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(mineChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        addView(arrow, LayoutParams(dp(40f), dp(40f)))
-        addView(learningChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        pair.addView(mineChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        pair.addView(arrow, LayoutParams(dp(40f), dp(38f)))
+        pair.addView(learningChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(pair, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         addView(android.view.View(context), LayoutParams(0, 0, 1f))
-        addView(mark, LayoutParams(dp(40f), dp(40f)))
+        addView(mark, LayoutParams(dp(44f), dp(44f)))
     }
 
     /** Opens the app, from the mark on the panel. */
@@ -203,11 +214,11 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         setViewTreeSavedStateRegistryOwner(answer)
         orientation = VERTICAL
         background = GradientDrawable().apply {
-            cornerRadius = Tokens.Scale.radiusCard * density
+            cornerRadius = dp(20f).toFloat()
             setColor(palette.surface.toInt())
-            setStroke(dp(Tokens.Scale.borderWidth), palette.border.toInt())
         }
-        val pad = dp(14f)
+        elevation = dp(8f).toFloat()
+        val pad = dp(16f)
         setPadding(pad, pad, pad, pad)
         addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(chooser, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
@@ -222,7 +233,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         addView(
             asking,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(6f)
+                topMargin = dp(12f)
             },
         )
         addView(
@@ -234,7 +245,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         addView(
             answer.view,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(10f)
+                topMargin = dp(14f)
             },
         )
         answer.shown()
@@ -291,6 +302,8 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         onPick: (mine: Boolean, code: String) -> Unit,
         onTurn: () -> Unit,
     ) {
+        arrow.visibility = VISIBLE
+        learningChip.visibility = VISIBLE
         mineChip.text = Languages.english(mine)
         learningChip.text = if (learning.isBlank()) {
             Wording.says["choose-language"].orEmpty()
@@ -315,6 +328,27 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         }
         opens(mineChip, true, mine)
         opens(learningChip, false, learning)
+    }
+
+    /**
+     * The one language a word is typed in, where nothing is translated: the panel then answers
+     * with how the word is said and what it means, in the language it is in.
+     */
+    fun setSingle(languages: List<String>, typedIn: String, onPick: (String) -> Unit) {
+        arrow.visibility = GONE
+        learningChip.visibility = GONE
+        mineChip.text = Languages.english(typedIn)
+        mineChip.setOnClickListener {
+            if (chooser.visibility == VISIBLE) {
+                closeChooser()
+            } else {
+                chooser.visibility = VISIBLE
+                search.setText("")
+                searching = { typed -> fill(languages, typedIn, onPick, typed) }
+                fill(languages, typedIn, onPick, "")
+                search.requestFocus()
+            }
+        }
     }
 
     /** Which way the question is being answered, once it has been worked out. */
@@ -346,6 +380,11 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
                 setOnClickListener {
                     closeChooser()
                     onPick(code)
+                    // Back to the question, with the keyboard, since a language is chosen to
+                    // type in it.
+                    field.requestFocus()
+                    context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                        ?.showSoftInput(field, 0)
                 }
             }
             listed.addView(
@@ -386,6 +425,14 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         note.visibility = GONE
         answer.view.setContent {
             io.github.nanbiz.phonetix.ui.MeaningsList(meanings, palette, sound)
+        }
+    }
+
+    /** A word in its own language: each way it is read, said and defined. */
+    fun showDefined(word: String, readings: List<io.github.nanbiz.phonetix.ui.Defined>, sound: Boolean) {
+        note.visibility = GONE
+        answer.view.setContent {
+            io.github.nanbiz.phonetix.ui.DefinedList(word, readings, palette, sound)
         }
     }
 
