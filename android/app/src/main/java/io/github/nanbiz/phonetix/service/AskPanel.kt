@@ -102,18 +102,30 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         setHintTextColor(palette.inkFaint.toInt())
         hint = Wording.says["search"].orEmpty()
         isSingleLine = true
-        background = null
-        setPadding(dp(12f), dp(10f), dp(12f), dp(10f))
-        textSize = 15f
+        minHeight = dp(44f)
+        background = GradientDrawable().apply {
+            cornerRadius = dp(22f).toFloat()
+            setColor(palette.pageBg.toInt())
+        }
+        setPadding(dp(18f), 0, dp(18f), 0)
+        textSize = 16f
     }
     private val listed = LinearLayout(context).apply { orientation = VERTICAL }
     private val chooser = LinearLayout(context).apply {
         orientation = VERTICAL
         visibility = GONE
-        addView(search, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(
-            android.widget.ScrollView(context).apply { addView(listed) },
-            LayoutParams(LayoutParams.MATCH_PARENT, dp(260f)),
+            search,
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(12f)
+            },
+        )
+        addView(
+            android.widget.ScrollView(context).apply {
+                isVerticalScrollBarEnabled = false
+                addView(listed)
+            },
+            LayoutParams(LayoutParams.MATCH_PARENT, dp(280f)).apply { topMargin = dp(8f) },
         )
     }
 
@@ -375,14 +387,52 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         val wanted = typed.trim().lowercase()
         for (code in languages) {
             val name = Languages.english(code)
-            if (wanted.isNotEmpty() && !name.lowercase().contains(wanted)) continue
-            val row = TextView(context).apply {
-                text = name
-                textSize = 15f
-                val lit = code == chosen
-                setTextColor((if (lit) palette.accent else palette.ink).toInt())
-                setTypeface(typeface, if (lit) Typeface.BOLD else Typeface.NORMAL)
-                setPadding(dp(12f), dp(12f), dp(12f), dp(12f))
+            if (wanted.isNotEmpty() && !name.lowercase().contains(wanted) &&
+                !Languages.native(code).lowercase().contains(wanted)
+            ) continue
+            val lit = code == chosen
+            val native = Languages.native(code).takeIf { it != name && it != code }
+            val row = LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                minimumHeight = dp(52f)
+                setPadding(dp(16f), dp(6f), dp(12f), dp(6f))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(12f).toFloat()
+                    setColor((if (lit) palette.accentBg else Color.TRANSPARENT.toLong()).toInt())
+                }
+                addView(
+                    LinearLayout(context).apply {
+                        orientation = VERTICAL
+                        addView(TextView(context).apply {
+                            text = name
+                            textSize = 16f
+                            setTextColor((if (lit) palette.accent else palette.ink).toInt())
+                            if (lit) setTypeface(typeface, Typeface.BOLD)
+                        })
+                        if (native != null) {
+                            addView(TextView(context).apply {
+                                text = native
+                                textSize = 13f
+                                setTextColor(palette.inkMuted.toInt())
+                                // Under the English name whichever way the name itself runs.
+                                textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+                                textDirection = View.TEXT_DIRECTION_LTR
+                                includeFontPadding = false
+                            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+                        }
+                    },
+                    LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f),
+                )
+                if (lit) {
+                    addView(
+                        android.widget.ImageView(context).apply {
+                            setImageResource(io.github.nanbiz.phonetix.R.drawable.ic_check)
+                            imageTintList = android.content.res.ColorStateList.valueOf(palette.accent.toInt())
+                        },
+                        LayoutParams(dp(22f), dp(22f)),
+                    )
+                }
                 setOnClickListener {
                     closeChooser()
                     onPick(code)
