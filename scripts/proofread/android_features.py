@@ -1220,6 +1220,15 @@ def check_settings_screen(r, dev):
     words = wording()
     try:
         with View() as view:
+            # The languages are only on the screen while something is translated.
+            for _ in range(20):
+                if view.evaluate("Boolean(document.querySelector('[data-row=translate] input'))"):
+                    break
+                time.sleep(1)
+            view.evaluate(
+                "(() => { const t = document.querySelector('[data-row=translate] input');"
+                " if (t && !t.checked) t.click(); })()")
+            time.sleep(1)
             drawn = None
             for _ in range(20):
                 drawn = view.evaluate("""
