@@ -3149,7 +3149,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // language they keep a dictionary for.
         val held = Packs.held(this)
         var mine = settings.target.ifEmpty { Language.OURS }
-        var learning = settings.learning.ifEmpty {
+        var learning = settings.learning.takeIf { it != mine }.orEmpty().ifEmpty {
             lastScreenLanguage?.takeIf { it != mine } ?: held.firstOrNull { it != mine }.orEmpty()
         }
         // Every language, in the order worth offering: the two in use, the ones asked in
@@ -3173,7 +3173,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // With translation off nothing is turned into another language: a word is answered in
         // the one it is typed in, with how it is said and what it means.
         val translating = settings.layer == "meaning" || settings.layer == "both"
-        var typedIn = settings.learning.ifEmpty { lastScreenLanguage.orEmpty() }.ifEmpty { mine }
+        var typedIn = settings.recent.firstOrNull().orEmpty().ifEmpty { settings.learning }
+            .ifEmpty { lastScreenLanguage.orEmpty() }.ifEmpty { mine }
         fun ask() = if (translating) {
             said(panel, panel.field.text.toString(), mine, learning, turned)
         } else {
@@ -3185,7 +3186,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 typedIn,
             ) { code ->
                 typedIn = code
-                SettingsStore.setLearning(code)
+                SettingsStore.askedIn(code)
                 offerOne()
                 ask()
             }
@@ -3216,10 +3217,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // Something new typed is worked out afresh.
             turned = null
             if (translating) said(panel, asked, mine, learning, null) else defined(panel, asked, typedIn)
-        }
-        panel.onOpenApp = {
-            closeSay()
-            openApp()
         }
         panel.onClose = { closeSay() }
         // Saying it rather than typing it, where the phone can hear: the words go into the

@@ -54,14 +54,16 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
      * top of it.
      */
     private fun chip() = TextView(context).apply {
-        textSize = 15f
+        textSize = 16f
         setTextColor(palette.ink.toInt())
         setTypeface(typeface, Typeface.BOLD)
         gravity = Gravity.CENTER
-        setPadding(dp(14f), dp(9f), dp(14f), dp(9f))
+        maxLines = 1
+        ellipsize = android.text.TextUtils.TruncateAt.END
+        setPadding(dp(12f), 0, dp(12f), 0)
         background = GradientDrawable().apply {
-            cornerRadius = dp(9f).toFloat()
-            setColor(palette.surface.toInt())
+            cornerRadius = dp(12f).toFloat()
+            setColor(Color.TRANSPARENT)
         }
     }
 
@@ -70,19 +72,26 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     private val learningChip = chip()
 
     /** Which way the question is answered, and the way to turn it round. */
-    private val arrow = TextView(context).apply {
-        textSize = 18f
-        setTextColor(palette.accent.toInt())
-        gravity = Gravity.CENTER
+    private val arrow = android.widget.ImageView(context).apply {
+        setImageResource(io.github.nanbiz.phonetix.R.drawable.ic_arrow)
+        imageTintList = android.content.res.ColorStateList.valueOf(palette.accentInk.toInt())
+        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+        val inset = dp(9f)
+        setPadding(inset, inset, inset, inset)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(palette.accent.toInt())
+        }
     }
 
-    /** The languages as one control: the two of them and the arrow, or the one typed in. */
+    /** The languages as one control across the panel: the two of them halves of it with the
+     *  arrow between, or the one typed in across the whole of it. */
     private val pair = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(3f), dp(3f), dp(3f), dp(3f))
+        setPadding(dp(4f), dp(4f), dp(4f), dp(4f))
         background = GradientDrawable().apply {
-            cornerRadius = dp(12f).toFloat()
+            cornerRadius = dp(16f).toFloat()
             setColor(palette.chipBg.toInt())
         }
     }
@@ -176,34 +185,16 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     /** The panel is being taken down, however that was asked for. */
     var onClose: () -> Unit = {}
 
-    /** The mark, which opens the app: the panel stays about the word being asked for, and
-     *  everything else is set where everything else is set. */
-    private val mark = android.widget.ImageView(context).apply {
-        setImageResource(io.github.nanbiz.phonetix.R.mipmap.ic_mark)
-        scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-        val inset = dp(8f)
-        setPadding(inset, inset, inset, inset)
-    }
-
     /** The top line: which language the answer comes back in, and the way through to the app.
      *  One row rather than two, because a panel of two rows has nothing to spare. */
     private val header = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        pair.addView(mineChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        pair.addView(arrow, LayoutParams(dp(40f), dp(38f)))
-        pair.addView(learningChip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        addView(pair, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
-        addView(android.view.View(context), LayoutParams(0, 0, 1f))
-        addView(mark, LayoutParams(dp(44f), dp(44f)))
+        pair.addView(mineChip, LayoutParams(0, dp(44f), 1f))
+        pair.addView(arrow, LayoutParams(dp(36f), dp(36f)))
+        pair.addView(learningChip, LayoutParams(0, dp(44f), 1f))
+        addView(pair, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
     }
-
-    /** Opens the app, from the mark on the panel. */
-    var onOpenApp: (() -> Unit)? = null
-        set(value) {
-            field = value
-            mark.setOnClickListener { value?.invoke() }
-        }
 
     init {
         // The owners a composition needs are looked for up the view tree from the window's
@@ -242,8 +233,12 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
                 topMargin = dp(8f)
             },
         )
+        // A word with many meanings scrolls inside the panel rather than running off the
+        // screen under the keyboard.
+        val answers = Capped(context, (context.resources.displayMetrics.heightPixels * 0.3f).toInt())
+        answers.addView(answer.view)
         addView(
-            answer.view,
+            answers,
             LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(14f)
             },
@@ -304,13 +299,14 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     ) {
         arrow.visibility = VISIBLE
         learningChip.visibility = VISIBLE
+        mineChip.setCompoundDrawablesRelative(null, null, null, null)
         mineChip.text = Languages.english(mine)
         learningChip.text = if (learning.isBlank()) {
             Wording.says["choose-language"].orEmpty()
         } else {
             Languages.english(learning)
         }
-        arrow.text = if (forward) "→" else "←"
+        arrow.rotation = if (forward) 0f else 180f
         arrow.setOnClickListener { onTurn() }
         fun opens(chip: TextView, isMine: Boolean, chosen: String) {
             chip.setOnClickListener {
@@ -338,6 +334,16 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         arrow.visibility = GONE
         learningChip.visibility = GONE
         mineChip.text = Languages.english(typedIn)
+        // It opens a list, and says so the way a menu does.
+        mineChip.setCompoundDrawablesRelative(
+            null, null,
+            context.getDrawable(io.github.nanbiz.phonetix.R.drawable.ic_chevron_down)?.mutate()?.apply {
+                setTint(palette.inkMuted.toInt())
+                setBounds(0, 0, dp(20f), dp(20f))
+            },
+            null,
+        )
+        mineChip.compoundDrawablePadding = dp(6f)
         mineChip.setOnClickListener {
             if (chooser.visibility == VISIBLE) {
                 closeChooser()
@@ -353,7 +359,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 
     /** Which way the question is being answered, once it has been worked out. */
     fun direction(forward: Boolean) {
-        arrow.text = if (forward) "→" else "←"
+        arrow.animate().rotation(if (forward) 0f else 180f).setDuration(160).start()
     }
 
     /** What the filter does, kept so a keystroke reaches the list that is open. */
@@ -475,6 +481,18 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
 }
 
 private fun Long.toInt(): Int = this.toInt()
+
+/** A scroll that grows with what it holds up to [most] pixels, and scrolls from there. */
+private class Capped(context: Context, private val most: Int) : android.widget.ScrollView(context) {
+    init {
+        isVerticalScrollBarEnabled = false
+        overScrollMode = OVER_SCROLL_NEVER
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(most, MeasureSpec.AT_MOST))
+    }
+}
 
 /** A view is what a window holds; this is what it is put in one as. */
 fun askPanelView(panel: AskPanel): View = panel

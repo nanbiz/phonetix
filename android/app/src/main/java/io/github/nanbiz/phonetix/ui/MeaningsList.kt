@@ -30,13 +30,15 @@ fun MeaningsList(meanings: List<Meant>, palette: Tokens.Palette, sound: Boolean)
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space2.dp),
     ) {
-        for (meant in meanings) {
+        for ((at, meant) in meanings.withIndex()) {
+            // The commonest meaning is the answer; the rest are there to be glanced at.
+            val first = at == 0
             Column(Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = meant.word,
                         color = Color(palette.ink),
-                        fontSize = Tokens.Scale.fontSizeLemma.sp,
+                        fontSize = (if (first) Tokens.Scale.fontSizeHeadline else Tokens.Scale.fontSizeLemma).sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -74,8 +76,8 @@ fun TranslatedLine(text: String, ipa: String?, palette: Tokens.Palette) {
         Text(
             text = text,
             color = Color(palette.ink),
-            fontSize = Tokens.Scale.fontSizeLemma.sp,
-            fontWeight = FontWeight.Medium,
+            fontSize = Tokens.Scale.fontSizeHeadline.sp,
+            fontWeight = FontWeight.SemiBold,
         )
         if (!ipa.isNullOrBlank()) {
             Text(

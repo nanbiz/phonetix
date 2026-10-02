@@ -217,6 +217,17 @@ object SettingsStore {
     /** Put the overlay down, or pick it up again: the press held on the button. */
     fun setTarget(v: String) = update { it.copy(target = v) }
     /** What they are learning now, and the few they have asked in before it. */
+    /** A language asked in where nothing is translated: kept at the top of the recent ones,
+     *  and taken as the one being learned only where it is not the reader's own. */
+    fun askedIn(v: String) = update {
+        it.copy(
+            learning = if (v != it.target) v else it.learning,
+            recent = (listOf(v) + it.recent).filter { lang -> lang.isNotBlank() }
+                .distinct()
+                .take(RECENT),
+        )
+    }
+
     fun setLearning(v: String) = update {
         it.copy(
             learning = v,

@@ -44,6 +44,8 @@
   }: Props = $props();
 
   let ready = $derived(permissions.reading && permissions.overlay);
+  /** The language being learned, which is never the reader's own. */
+  let learning = $derived(settings.learning !== settings.target ? settings.learning : '');
 
   /** Which language list is open over the screen, if one is. */
   let choosing = $state<'' | 'target' | 'learning'>('');
@@ -125,11 +127,13 @@
             {settings.target ? named(settings.target) : SAYS['choose-language']}
           </span>
         </button>
-        <span class="pair-between" aria-hidden="true">⇄</span>
+        <span class="pair-between" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99zM21 9l-3.99-4v3H10v2h7.01v3z" fill="currentColor" /></svg>
+      </span>
         <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
           <span class="language-role" data-name>{ROWS.learning.name}</span>
-          <span class="language-name" class:empty={!settings.learning} data-about>
-            {settings.learning ? named(settings.learning) : SAYS['choose-language']}
+          <span class="language-name" class:empty={!learning} data-about>
+            {learning ? named(learning) : SAYS['choose-language']}
           </span>
         </button>
       </div>
@@ -252,7 +256,7 @@
   <ListSheet
     title={ROWS.learning.name}
     options={everyLanguage.filter((it) => it.value !== settings.target)}
-    chosen={settings.learning}
+    chosen={learning}
     change={(value) => change('learning', value)}
     close={() => (choosing = '')}
   />

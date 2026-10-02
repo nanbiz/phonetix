@@ -212,9 +212,9 @@ label.item:active {
   cursor: pointer;
 }
 
-.language + .pair-between + .language {
-  text-align: right;
-  align-items: flex-end;
+.language {
+  align-items: center;
+  text-align: center;
 }
 
 .language:active {
@@ -245,8 +245,19 @@ label.item:active {
 
 .pair-between {
   align-self: center;
-  font-size: 22px;
-  color: var(--color-ink-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.pair-between svg {
+  width: 20px;
+  height: 20px;
 }
 
 /* What the card shows: two tiles, each on or off. */
