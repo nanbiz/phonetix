@@ -94,7 +94,13 @@ export default defineConfig({
             },
           },
         }
-      : { minimum_chrome_version: '109' }),
+      : {
+          minimum_chrome_version: '109',
+          // The public half of the key the crx is signed with (scripts/release.sh), so an
+          // unpacked build loads under the same id as the crx, cpdkbgaandlgpgifdneoffhclgedkghm,
+          // and takes over its settings instead of arriving as a second, empty Phonetix.
+          key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuhN4/UdvsfVt7F421/s/PzHmAdtue34oMVAgxiiDZGZgKJ0/y0PVItQ7iqR8IyohvZbP3OvoN5ffH1AF/ZSy0JwTfJbqIDLV74VjW+3uPkQjDFH3IDzhBlZZp92I8g4vj8E53OlgwZ1HzfDEYhi9X5UZfrE+UHjMp0ZuW2m6vCJaIGNoCBb6uz7ACUbwS/iSGVb3ebl5KYKf3N6jS4pCEgnb1fr1nKidmglEaNAt7xIjiAHs1hdDghH/cdMKw0ffCQuR3ICnAJoytFkTjCWaIjOaHq39AwWVJ7QXlG3lpDTMVvfMnNVRExEjQb08JNK55tgfw8aQc8vaqP6LoPNtUwIDAQAB',
+        }),
   }),
   ...(paths
     ? { webExt: { binaries: { chrome: paths['chrome'], firefox: paths['firefox'] } } }
