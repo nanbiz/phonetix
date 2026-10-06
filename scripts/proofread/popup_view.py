@@ -68,12 +68,75 @@ def edges(path, inset=3):
     return seen, image.size
 
 
+def real_popup(cdp, extid):
+    """Open the popup the way the toolbar button does and measure the window it got.
+
+    Every other question here is asked of popup.html in a tab, at a viewport the check sets
+    itself, and none of them can see how big the browser makes the popup: it sizes the window
+    to the document, and lays the document out to find that size in a viewport a few pixels
+    wide. A width relative to the viewport passed every check in a tab and opened as a line
+    25px wide on the toolbar.
+    """
+    failures = []
+    worker = next(
+        t for t in cdp.send("Target.getTargets")["targetInfos"]
+        if t["type"] == "service_worker" and t["url"].startswith(f"chrome-extension://{extid}/"))
+    session = cdp.send(
+        "Target.attachToTarget", {"targetId": worker["targetId"], "flatten": True},
+    )["sessionId"]
+    opened = evaluate(
+        cdp, session, "chrome.action.openPopup().then(() => 'opened', e => String(e))")
+    if opened != "opened":
+        return [f"the popup would not open from the toolbar button: {opened}"]
+    popup = None
+    for _ in range(20):
+        popup = next((t for t in cdp.send("Target.getTargets")["targetInfos"]
+                      if t["url"].startswith(f"chrome-extension://{extid}/popup.html")), None)
+        if popup:
+            break
+        time.sleep(0.5)
+    if not popup:
+        return ["the toolbar button opened no popup"]
+    session = cdp.send(
+        "Target.attachToTarget", {"targetId": popup["targetId"], "flatten": True},
+    )["sessionId"]
+    cdp.send("Page.enable", session=session)
+    # The view draws once the settings are read; the size is taken once it has rows.
+    for _ in range(20):
+        if evaluate(cdp, session, "document.querySelectorAll('[data-name]').length"):
+            break
+        time.sleep(0.5)
+    time.sleep(1)
+    size = json.loads(evaluate(cdp, session, """
+        JSON.stringify({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          wide: document.documentElement.scrollWidth,
+          rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
+        })
+    """))
+    picture = shot(cdp, session, "toolbar-popup")
+    print(f"  the toolbar popup: {size['width']}x{size['height']}, {picture}")
+    # The width the stylesheet gives it, 24rem, and as tall as at least its header and a
+    # few rows.
+    if abs(size["width"] - 24 * size["rem"]) > 2:
+        failures.append(
+            f"the toolbar popup is {size['width']}px wide, not {24 * size['rem']:.0f}")
+    if size["height"] < 200:
+        failures.append(f"the toolbar popup is {size['height']}px tall")
+    if size["wide"] > size["width"]:
+        failures.append(
+            f"the toolbar popup scrolls sideways: {size['wide']}px in {size['width']}px")
+    return failures
+
+
 def main():
     cdp = PipeCDP()
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     failures = []
     try:
+        failures += real_popup(cdp, extid)
         target = cdp.send("Target.createTarget",
                           {"url": f"chrome-extension://{extid}/popup.html"})
         session = cdp.send(
@@ -144,6 +207,10 @@ def main():
         # And every row starts where every other row starts - a banner inset by its own padding
         # rather than the panel's was 4px left of everything under it.
         PHONE = 360
+        # A finger, so the view sees the coarse pointer a phone's browser reports and lays
+        # itself out for the sheet rather than for a desktop popup window.
+        cdp.send("Emulation.setTouchEmulationEnabled",
+                 {"enabled": True, "maxTouchPoints": 5}, session=session)
         for _ in range(6):
             cdp.send("Emulation.setDeviceMetricsOverride", {
                 "width": PHONE, "height": 760, "deviceScaleFactor": 1, "mobile": True,
@@ -185,6 +252,7 @@ def main():
         # it sits after an icon rather than at the panel's margin.
         if len(lefts) > 2:
             failures.append(f"rows start at {lefts}: {narrow['edges'][:6]}")
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False}, session=session)
         cdp.send("Emulation.setDeviceMetricsOverride", {
             "width": 384, "height": 700, "deviceScaleFactor": 1, "mobile": False,
         }, session=session)
