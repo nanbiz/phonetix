@@ -3,6 +3,7 @@
 // The shape of them and everything answered from a value alone is in ./shape, which the phone
 // draws the same view from: this half is the browser's storage and nothing else.
 import { DEFAULTS, type Settings } from './shape';
+import { LANGUAGES } from '@/data/languages';
 
 export {
   DEFAULTS, accentFor, allowed, darkSide, readInto, setAccent, type Settings,
@@ -54,7 +55,16 @@ export async function current(): Promise<Settings> {
       }
     })
   );
+  // The reader's own language, until they say otherwise, is the one their browser speaks:
+  // the card translates into it, and a card with nothing to translate into answers nothing.
+  if (!out.target) out.target = browserLanguage();
   return out;
+}
+
+/** The language the browser is set to, where it is one the product knows. */
+function browserLanguage(): string {
+  const said = (globalThis.navigator?.language ?? '').split('-')[0].toLowerCase();
+  return said in LANGUAGES ? said : 'en';
 }
 
 /** Watch every setting, told which one changed and what everything is now. */

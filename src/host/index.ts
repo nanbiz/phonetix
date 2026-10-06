@@ -167,6 +167,13 @@ export function host(): void {
     }
   });
 
+  onMessage('guess', async ({ data }) => {
+    const [said] = await guessed(data.source, data.target, [data.word]).catch(() => []);
+    const word = (said ?? '').trim();
+    // The word handed back unchanged is the engine saying it has nothing.
+    return word.toLowerCase() === data.word.trim().toLowerCase() ? '' : word;
+  });
+
   onMessage('phrase', async ({ data }) => {
     // Nothing but an engine can answer several words at once, so this does not ask the packs.
     // What comes back is a guess and the core is what says so.
@@ -216,9 +223,24 @@ export function host(): void {
       data.accent ? open(data.accent).catch(() => null) : null,
       openHomographs(data.source).catch(() => 0),
     ]);
-    return lookUp(
+    const answer = await lookUp(
       data.word, data.source, data.target, data.accent ?? '', data.before ?? '', data.drawn ?? ''
     );
+    if (answer.ipa.length > 0 || answer.state === 'Phrase') return answer;
+    // No dictionary here says how this word is said: one still on its way, a form the
+    // dictionary lists only under its lemma, a language nobody built one for. The voice says
+    // it, as it does for the same word on the page, and the card marks it as the voice's.
+    const spoken = await ipa(voiceOf(data.source, data.accent ?? ''), [data.word])
+      .then((said) => said[data.word] ?? '')
+      .catch(() => '');
+    if (!spoken) return answer;
+    return {
+      ...answer,
+      state: answer.state === 'NoPack' || answer.state === 'None' ? 'IpaOnly' : answer.state,
+      ipa: [spoken],
+      symbols: await symbolsOf(spoken).catch(() => []),
+      provenance: answer.provenance ?? { kind: 'synthesised' },
+    };
   });
 }
 

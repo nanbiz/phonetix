@@ -56,7 +56,13 @@
   );
 
   async function answer(text: string, into: string) {
-    if (!text.trim() || !into) return;
+    // An emptied field is a question taken back, and the answer goes with it.
+    if (!text.trim()) {
+      said = null;
+      nothing = false;
+      return;
+    }
+    if (!into) return;
     asking = true;
     nothing = false;
     const came = await ask(text.trim(), into).catch(() => null);

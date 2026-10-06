@@ -209,8 +209,10 @@ def main():
             "data": {"word": WORD, "source": "es", "target": "en"},
         })
         state = (alone.get("ok") or {}).get("state")
+        meaning = (alone.get("ok") or {}).get("says") or (alone.get("ok") or {}).get("glosses")
         print(f"  the dictionary on {WORD}: {state}")
-        if state != "None":
+        # How it is said may come from the voice; what it means comes from no dictionary.
+        if state not in ("None", "IpaOnly") or meaning:
             failures.append(
                 f"{WORD} is answered by a pack ({state}), so this proves nothing about the engine")
 
@@ -296,32 +298,15 @@ def main():
             if got.get("state") == "Homograph":
                 failures.append(f"the translated line decided nothing about {word}")
 
-        # And on a page: what the reader sees changes once the lines are back, without their
-        # touching anything.
-        cdp.send("Runtime.evaluate", {
-            "expression": "chrome.storage.local.set({on:true,layer:'meaning',density:1})",
-            "awaitPromise": True, "returnByValue": True,
-        }, session=session)
-        tab = cdp.send("Target.createTarget", {"url": f"{base}/lines.html"})
-        page = cdp.send(
-            "Target.attachToTarget", {"targetId": tab["targetId"], "flatten": True},
-        )["sessionId"]
-        cdp.send("Runtime.enable", session=page)
-        over = {}
-        for _ in range(40):
-            got = cdp.send("Runtime.evaluate", {
-                "expression": """JSON.stringify([...document.querySelectorAll('.px-w')].map(w =>
-                    [((w.querySelector('.px-was') || w.lastChild) || {}).textContent || '',
-                     (w.querySelector('.px-gl') || {}).textContent || '']))""",
-                "returnByValue": True,
-            }, session=page).get("result", {}).get("value")
-            over = dict(json.loads(got or "[]"))
-            if over.get("banco") == "bench" and over.get("llama") == "flame":
-                break
-            time.sleep(1)
-        print(f"  on the page: banco {over.get('banco')!r}, llama {over.get('llama')!r}")
-        if over.get("banco") != "bench" or over.get("llama") != "flame":
-            failures.append(f"the page never drew what its lines are about: {over}")
+        # And on the card a reader opens on that word: what the engine makes of it, asked once
+        # the card is up, the way the page asks it.
+        guess = ask(cdp, session, {
+            "phonetix": "guess",
+            "data": {"word": WORD, "source": "es", "target": "en"},
+        }, tries=10, gap=3)
+        print(f"  the card's guess at {WORD}: {guess.get('ok')!r}")
+        if "bat" not in (guess.get("ok") or "").lower():
+            failures.append(f"the card's guess at {WORD} is {guess}")
 
         # Several words at once, which is a gesture of its own and only an engine can answer.
         # Asked of the host the way the page asks it after a drag.

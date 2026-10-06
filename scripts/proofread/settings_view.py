@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""The settings view, driven the way a reader drives it.
+"""The toolbar popup, driven the way a reader drives it.
 
-A setting is only a setting if changing it changes what the reader sees. This opens the view
-in the built extension, works its controls, and looks at a page each time: the switch, what is
-drawn over a word, how often, and which language the answers come in.
+A setting is only a setting if changing it changes what the reader sees. This opens the popup
+over a page, the way the toolbar button does, works its controls and looks at the page each
+time: the words replaced by how they are said and how many of them, the card a word pointed at
+opens and the language it answers in, the translator, the accent, and the two switches.
 
   uv run python scripts/proofread/settings_view.py
 """
@@ -18,45 +19,99 @@ from on_a_page import PORT, build_packs, evaluate, serve, wait_for
 
 
 def words(cdp, page):
-    """What the page carries now: the annotations, and what they say."""
+    """What the page carries now: the words replaced, and what replaced them."""
     return json.loads(evaluate(cdp, page, """
         (() => {
-          const words = [...document.querySelectorAll('.px-w')];
+          const replaced = [...document.querySelectorAll('.px-rep')];
           return JSON.stringify({
-            count: words.length,
-            glosses: words.map(w => (w.querySelector('.px-gl') || {}).textContent || '')
-                          .filter(Boolean),
-            sounds: words.map(w => (w.querySelector('.px-ph') || {}).textContent || '')
-                         .filter(Boolean),
-            swapped: [...document.querySelectorAll('.px-rep')].map(r => r.textContent),
+            count: replaced.length,
+            sounds: replaced.map(r => (r.querySelector('.px-ph') || {}).textContent || '')
+              .filter(Boolean),
+            meanings: replaced.map(r => (r.querySelector('.px-gl') || {}).textContent || '')
+              .filter(Boolean),
           });
         })()
     """) or "{}")
 
 
-def mode(cdp, view, sound, gloss):
-    """Set what a word is replaced by: the two switches, worked one at a time.
-
-    There is no list of modes any more - how it sounds and what it means are a switch each,
-    and nothing between them - so this is what choosing a mode is. One at a time because each
-    switch writes both halves of the setting, and two clicks in the same breath write the
-    second from what the first had not finished saying.
-    """
-    for row, want in (("ipa", sound), ("translate", gloss)):
-        evaluate(cdp, view, f"""
-            (() => {{
-              const box = document.querySelector('[data-row={row}] input');
-              if (box && box.checked !== {str(bool(want)).lower()}) box.click();
-            }})()
-        """)
-        time.sleep(1.5)
-    time.sleep(1.5)
+def shadow_text(host_id):
+    """What one of our windows over the page says, without its stylesheet."""
+    return """
+        (() => {
+          const host = document.getElementById(%r);
+          if (!host || !host.shadowRoot) return null;
+          return [...host.shadowRoot.children].filter(c => c.tagName !== 'STYLE')
+            .map(c => c.innerText).join(' ').replace(/\\s+/g, ' ').trim();
+        })()
+    """ % host_id
 
 
-def control(cdp, view, expression):
-    """Work one control in the settings view and let the page hear about it."""
-    evaluate(cdp, view, expression)
-    time.sleep(2.5)
+def control(cdp, view, expression, settle=2.5):
+    """Work one control in the popup and let the page hear about it."""
+    got = evaluate(cdp, view, expression)
+    time.sleep(settle)
+    return got
+
+
+def popup(cdp, extid, page_target):
+    """The popup, opened over the page by the toolbar button's own call."""
+    cdp.send("Target.activateTarget", {"targetId": page_target})
+    time.sleep(0.5)
+    worker = next(
+        t for t in cdp.send("Target.getTargets")["targetInfos"]
+        if t["type"] == "service_worker" and t["url"].startswith(f"chrome-extension://{extid}/"))
+    session = cdp.send(
+        "Target.attachToTarget", {"targetId": worker["targetId"], "flatten": True},
+    )["sessionId"]
+    opened = evaluate(cdp, session, "chrome.action.openPopup().then(() => 'opened', e => String(e))")
+    if opened != "opened":
+        raise SystemExit(f"FAIL - the popup would not open: {opened}")
+    for _ in range(20):
+        found = next((t for t in cdp.send("Target.getTargets")["targetInfos"]
+                      if t["url"].startswith(f"chrome-extension://{extid}/popup.html")), None)
+        if found:
+            view = cdp.send(
+                "Target.attachToTarget", {"targetId": found["targetId"], "flatten": True},
+            )["sessionId"]
+            cdp.send("Runtime.enable", session=view)
+            return view
+        time.sleep(0.5)
+    raise SystemExit("FAIL - the toolbar button opened no popup")
+
+
+def point_at(cdp, page, word):
+    """Rest the pointer on a word of the page, as a reader does, and read the card it opens."""
+    where = json.loads(evaluate(cdp, page, """
+        (() => {
+          const prose = document.getElementById('prose');
+          // A word the page replaced is pointed at where its replacement is drawn.
+          const box = [...prose.querySelectorAll('.px-w')]
+            .find(w => (w.querySelector('.px-was') || {}).textContent === %r);
+          if (box) {
+            const at = box.getBoundingClientRect();
+            return JSON.stringify({x: at.left + at.width / 2, y: at.top + at.height / 2});
+          }
+          const walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            const at = node.nodeValue.indexOf(%r);
+            if (at < 0 || node.parentElement.closest('.px-rep')) continue;
+            const range = document.createRange();
+            range.setStart(node, at);
+            range.setEnd(node, at + %d);
+            const box = range.getBoundingClientRect();
+            return JSON.stringify({x: box.left + box.width / 2, y: box.top + box.height / 2});
+          }
+          return 'null';
+        })()
+    """ % (word, word, len(word))) or "null")
+    if not where:
+        return None
+    cdp.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 2, "y": 2}, session=page)
+    time.sleep(0.6)
+    for dx in (0, 1):
+        cdp.send("Input.dispatchMouseEvent",
+                 {"type": "mouseMoved", "x": where["x"] + dx, "y": where["y"]}, session=page)
+    return wait_for(cdp, page, shadow_text("phonetix-card-host"), lambda v: bool(v), tries=10)
 
 
 def main():
@@ -69,7 +124,8 @@ def main():
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     try:
-        # A reader with nothing chosen yet, except where the dictionaries come from.
+        # A reader with nothing chosen yet, except where the dictionaries come from, and both
+        # of the host's dictionaries already here.
         book = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/viewbook.html"})
         book_session = cdp.send(
             "Target.attachToTarget", {"targetId": book["targetId"], "flatten": True},
@@ -78,361 +134,225 @@ def main():
         time.sleep(2)
         evaluate(cdp, book_session, (
             f"chrome.storage.local.set({{packBaseUrl:'{base}'}})"
-            ".then(() => chrome.storage.local.remove("
-            "['on','layer','density','targetLanguage','sourceLanguage']))"
+            ".then(() => chrome.storage.local.remove(['on','layer','density','targetLanguage',"
+            "'sourceLanguage','learning','sitesOff','accents']))"
         ))
+        for lang in ("es", "de"):
+            evaluate(cdp, book_session, (
+                "chrome.runtime.sendMessage({phonetix:'getPack',data:{lang:'" + lang + "'}})"
+                ".then(r => JSON.stringify(r))"
+            ))
         cdp.send("Target.closeTarget", {"targetId": book["targetId"]})
 
-        page_target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})
+        page_target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})["targetId"]
         page = cdp.send(
-            "Target.attachToTarget", {"targetId": page_target["targetId"], "flatten": True},
+            "Target.attachToTarget", {"targetId": page_target, "flatten": True},
         )["sessionId"]
         cdp.send("Runtime.enable", session=page)
+        cdp.send("Emulation.setDeviceMetricsOverride", {
+            "width": 1280, "height": 900, "deviceScaleFactor": 1, "mobile": False,
+        }, session=page)
 
-        view_target = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/popup.html"})
-        view = cdp.send(
-            "Target.attachToTarget", {"targetId": view_target["targetId"], "flatten": True},
-        )["sessionId"]
-        cdp.send("Runtime.enable", session=view)
+        # With nothing chosen, the page is read as it comes: some of its words replaced by how
+        # they are said, and none by what they mean.
+        wait_for(cdp, page, "document.querySelectorAll('.px-rep').length", lambda v: v)
+        fresh = words(cdp, page)
+        print(f"  a fresh reader's page: {fresh['count']} words replaced, {fresh['sounds'][:4]}")
+        if not fresh["sounds"]:
+            failures.append("a fresh reader's page has no word replaced by how it is said")
+        if fresh["meanings"]:
+            failures.append(f"words on the page were replaced by meanings: {fresh['meanings'][:4]}")
 
-        # It draws itself from what the reader has chosen and what the host holds.
+        view = popup(cdp, extid, page_target)
         drawn = wait_for(cdp, view, """
             (() => {
-              const panel = document.querySelector('main');
-              if (!panel) return null;
+              if (!document.querySelector('[data-row=on]')) return null;
               return JSON.stringify({
-                rows: [...panel.querySelectorAll('[data-row] [data-name]')]
-                  .map(r => r.textContent.trim()),
-                choices: [...panel.querySelectorAll('[data-view="layer"] [data-choice]')]
-                  .map(c => (c.querySelector('.c-name') || c).textContent.trim()),
-                on: panel.querySelector('[data-row="on"] input').checked,
-                often: (panel.querySelector('[data-row="density"] [data-about]') || {})
-                  .textContent || '',
-                switches: ['ipa', 'translate']
-                  .filter(row => panel.querySelector(`[data-row=${row}] input`)).length,
-                surface: getComputedStyle(document.body).backgroundColor,
-                width: Math.round(panel.getBoundingClientRect().width),
+                rows: [...document.querySelectorAll('[data-row]')].map(r => r.dataset.row),
+                on: document.querySelector('[data-row=on] input').checked,
+                site: (document.querySelector('[data-row=site] [data-about]') || {}).textContent,
+                mine: (document.querySelector('[data-row=mine] [data-about]') || {}).textContent,
               });
             })()
         """, lambda v: v is not None)
         if not drawn:
-            print("FAIL - the settings view drew nothing")
+            print("FAIL - the popup drew nothing")
             sys.exit(1)
         panel = json.loads(drawn)
-        print(f"  {len(panel['rows'])} settings, {panel['switches']} switches, "
-              f"{panel['width']}px wide on {panel['surface']}")
-        if len(panel["rows"]) < 5:
-            failures.append(f"the view offers {panel['rows']}")
+        print(f"  rows: {panel['rows']}")
+        for row in ("on", "site", "inline", "density", "mine", "learning", "translator",
+                    "pronunciation", "theme"):
+            if row not in panel["rows"]:
+                failures.append(f"the popup has no {row} row")
         if not panel["on"]:
             failures.append("a fresh reader is switched off")
-        if "rgba(0, 0, 0, 0)" in panel["surface"]:
-            failures.append("the view has no surface colour, so the tokens did not reach it")
-        if panel["width"] < 300:
-            failures.append(f"the view measured {panel['width']}px wide")
+        # Their own language is the browser's until they say otherwise, so the card has
+        # something to translate into from the first word.
+        if not (panel["mine"] or "").strip():
+            failures.append("a fresh reader has no language of their own")
+        expected = "following the main switch (currently: on)"
+        print(f"  the site row: {panel['site']!r}")
+        if (panel["site"] or "").strip() != expected:
+            failures.append(f"the site row says {panel['site']!r}, not {expected!r}")
 
-        # The language the words are turned into, asked for by the mode that turns them into
-        # one and by nothing else.
-        # Opened and then chosen from, with a moment between: the list is drawn in answer to
-        # the press, so a check that opens it and picks in the same breath picks from nothing.
-        control(cdp, view, "document.querySelector('[data-row=target] .select').click()")
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=en]').click()")
-        time.sleep(1)
-
-        # The dictionaries, fetched the way a reader fetches them: from the list, by name,
-        # one button each. Nothing arrives because a page happened to be in that language.
-        for _ in range(4):
-            got = evaluate(cdp, view, """
-                (() => {
-                  // The host's own, not the published ones listed after them.
-                  const row = [...document.querySelectorAll('[data-row="pack"]')].find(
-                    r => ['es', 'de'].includes(r.dataset.lang)
-                      && (r.querySelector('[data-does]') || {}).textContent?.trim() === 'get');
-                  if (!row) return 'none left';
-                  row.querySelector('[data-does]').click();
-                  return row.querySelector('[data-name]').textContent.trim();
-                })()
-            """)
-            if got == "none left":
-                break
-            print(f"  fetching {got}")
-            time.sleep(4)
-
-        # The page starts annotated, in the language it is written in, because nothing has been
-        # chosen to read into yet.
-        before = wait_for(cdp, page, "document.querySelectorAll('.px-w').length", lambda v: v)
-        if not before:
-            failures.append("the page was not annotated to begin with")
-
-        # Every word first, so that what the other settings do is visible on a page whose
-        # dictionary knows only a handful of its words.
-        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
-                           "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        told = evaluate(
-            cdp, view,
-            "document.querySelector('[data-row=density] [data-about]').textContent")
-        dense = words(cdp, page)
-        # At the dense end every word is annotated, and the view says so in those words
-        # rather than as "one word in 1", which is a ratio nobody reads.
-        if "every word" not in (told or "").lower():
-            failures.append(f"the dense end says {told!r}")
-
-        # Reading into German: the answers change language.
-        control(cdp, view, "document.querySelector('[data-row=target] .select').click()")
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=de]').click()")
-        print("  DEBUG after de:", evaluate(cdp, view, """
-            (() => JSON.stringify({
-              sheet: Boolean(document.querySelector('[data-sheet]')),
-              chose: (document.querySelector('[data-row=target] .select') || {}).textContent,
-              density: (document.querySelector('[data-row=density] input') || {}).value,
-              max: (document.querySelector('[data-row=density] input') || {}).max,
-            }))()
-        """))
-        german = words(cdp, page)
-        print(f"  reading into German: {german['glosses'][:4]}")
-        if "Hund" not in german["glosses"]:
-            failures.append(f"the answers are {german['glosses'][:6]}, not German")
-
-        # What a word is replaced by: how it is said rather than what it means.
-        mode(cdp, view, sound=True, gloss=False)
-        sound = words(cdp, page)
-        print(f"  showing the sound: {sound['sounds'][:3]}")
-        if sound["glosses"]:
-            failures.append(f"meanings are still drawn: {sound['glosses'][:4]}")
-        if not sound["sounds"]:
-            failures.append("nothing is said about how the words sound")
-
-        # Both: the word is replaced by how its translation is said, and by nothing else -
-        # "perro" read into German is "hʊnt", not "Hund" and not how "perro" sounds.
-        mode(cdp, view, sound=True, gloss=True)
-        together = words(cdp, page)
-        print(f"  both: {together['glosses'][:3]} said {together['sounds'][:3]}")
-        if together["glosses"]:
-            failures.append(f"both drew the meanings as written: {together['glosses'][:4]}")
-        if "hʊnt" not in together["sounds"]:
-            failures.append(f"both did not say the translation: {together['sounds'][:4]}")
-
-        # Back to meanings for what follows.
-        mode(cdp, view, sound=False, gloss=True)
-
-        # An accent whose difference is a rule changes the transcriptions on the page.
-        # Every word again first: the bar was left at its sparse end by the check above, and
-        # a page with nothing on it says nothing about accents.
-        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
-                           "s.value = s.max; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        mode(cdp, view, sound=True, gloss=False)
-
-        def sound_of(word):
-            said = evaluate(cdp, page, """
-                (() => {
-                  const box = [...document.querySelectorAll('.px-w')]
-                    .find(w => w.textContent.includes(%r));
-                  return box ? ((box.querySelector('.px-ph') || {}).textContent || '') : '';
-                })()
-            """ % word)
-            return said or ""
-
-        # Waited for, and the page nudged into reading itself again if it is still bare: the
-        # word this step is about has no dictionary entry, so its transcription comes from the
-        # synthesiser, and a page annotated while that was still starting holds a token without
-        # one until something asks for the page again.
-        for _ in range(8):
-            if sound_of("calle"):
-                break
-            # Down and back up, because the bar is already at its dense end: a control set to
-            # the value it already holds changes no setting, so nothing asks the page again.
-            control(cdp, view, """
+        def bar(at):
+            return control(cdp, view, """
                 (() => {
                   const s = document.querySelector('[data-row=density] input');
-                  s.value = 0;
+                  s.value = %s;
                   s.dispatchEvent(new Event('input', {bubbles: true}));
-                  s.value = s.max;
-                  s.dispatchEvent(new Event('input', {bubbles: true}));
+                  return document.querySelector('[data-row=density] [data-about]').textContent;
                 })()
-            """)
-            time.sleep(3)
-        before = sound_of("calle")
-        # The accents are a screen of their own, opened from the row that says which one is
-        # set: driven the way a reader drives it, through the row and then the choice.
-        picked = evaluate(cdp, view, """
+            """ % at)
+
+        # How many words: every word at one end of the bar, few at the other, said in words.
+        # Once the bar has its positions, which come from the host.
+        wait_for(cdp, view, "Number(document.querySelector('[data-row=density] input').max)",
+                 lambda v: bool(v))
+        bar("s.max")
+        told = evaluate(cdp, view, "document.querySelector('[data-row=density] [data-about]').textContent")
+        dense = words(cdp, page)
+        bar("0")
+        sparse = words(cdp, page)
+        print(f"  every word: {dense['count']} replaced ({told!r}); fewest: {sparse['count']}")
+        if "every word" not in (told or "").lower():
+            failures.append(f"the dense end says {told!r}")
+        if dense["count"] <= sparse["count"]:
+            failures.append(f"the bar changed nothing: {dense['count']} then {sparse['count']}")
+        bar("s.max")
+
+        # Replacing switched off: nothing on the page is replaced, and a word pointed at still
+        # opens its card.
+        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        bare = words(cdp, page)
+        card = point_at(cdp, page, "perro")
+        print(f"  replacing off: {bare['count']} replaced; pointing at perro: {(card or '')[:60]!r}")
+        if bare["count"]:
+            failures.append(f"{bare['count']} words stayed replaced with replacing off")
+        if not card or "perro" not in card:
+            failures.append(f"pointing at a word opened no card for it: {card!r}")
+        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+
+        # My language: the card says what a word means in it.
+        control(cdp, view, "document.querySelector('[data-row=mine]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=de]').click()")
+        card = point_at(cdp, page, "camino")
+        print(f"  my language German, pointing at camino: {(card or '')[:80]!r}")
+        if not card or "Weg" not in card:
+            failures.append(f"the card did not answer in German: {card!r}")
+
+        # An accent whose difference is a rule changes how the page says a word.
+        def sound_of(word):
+            return evaluate(cdp, page, """
+                (() => {
+                  const box = [...document.querySelectorAll('.px-w')]
+                    .find(w => (w.querySelector('.px-was') || {}).textContent === %r);
+                  return box ? ((box.querySelector('.px-ph') || {}).textContent || '') : '';
+                })()
+            """ % word) or ""
+
+        before = wait_for(cdp, page, """
             (() => {
-              const row = document.querySelector('[data-row="page"]');
-              if (!row) return 'no page row';
-              row.click();
-              const choice = [...document.querySelectorAll('[data-accent]')]
+              const box = [...document.querySelectorAll('.px-w')]
+                .find(w => (w.querySelector('.px-was') || {}).textContent === 'calle');
+              return box ? ((box.querySelector('.px-ph') || {}).textContent || null) : null;
+            })()
+        """, lambda v: bool(v), tries=12) or ""
+        control(cdp, view, "document.querySelector('[data-row=pronunciation]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-row=accent-elsewhere]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()", settle=1)
+        picked = control(cdp, view, """
+            (() => {
+              const choice = [...document.querySelectorAll('[data-sheet] [data-choice]')]
                 .find(c => c.textContent.includes('Latin'));
               if (!choice) return 'no Latin American accent';
               choice.click();
-              return choice.getAttribute('data-accent');
+              return choice.dataset.choice;
             })()
-        """)
-        time.sleep(3)
+        """, settle=3)
         after = sound_of("calle")
-        # And back out of it, the way a reader leaves a screen they are done with.
-        evaluate(cdp, view, "(document.querySelector('[data-view=page] .back') || {}).click?.()")
         print(f"  accent {picked}: calle said {before!r} -> {after!r}")
         if picked and picked.startswith("no "):
-            failures.append(f"the view offers no accent to pick ({picked})")
+            failures.append(f"the popup offers no accent to pick ({picked})")
         elif not before:
             failures.append("the word the accent changes was not on the page")
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
+        control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
 
-
-        # How often: the sparse end of the bar draws fewer words than the dense end.
-        control(cdp, view, "(() => { const s = document.querySelector('[data-row=density] input');"
-                           "s.value = 0; s.dispatchEvent(new Event('input',{bubbles:true})); })()")
-        sparse = words(cdp, page)
-        print(f"  dense {dense['count']} words ({told}), sparse {sparse['count']}")
-        if dense["count"] <= sparse["count"]:
-            failures.append(
-                f"the bar changed nothing: {dense['count']} dense, {sparse['count']} sparse")
-
-        # The dictionaries a reader can have, and the two things to do with one. Behind the
-        # advanced screen, because a reader who has one never opens this again.
-        offered = wait_for(cdp, view, """
-            (() => {
-              const rows = [...document.querySelectorAll('[data-row="pack"]')]
-                .filter(r => r.querySelector('[data-does]'));
-              if (rows.length === 0) return null;
-              return JSON.stringify(rows.map(r => ({
-                name: r.querySelector('[data-name]').textContent.trim(),
-                about: r.querySelector('[data-about]').textContent.trim(),
-                action: r.querySelector('[data-does]').textContent.trim(),
-              })));
-            })()
-        """, lambda v: v is not None)
-        listed = json.loads(offered or "[]")
-        print(f"  dictionaries offered: {[(d['name'], d['action']) for d in listed]}")
-        # The host's own two first, as it describes them, and the published ones after.
-        own = [(d["name"], d["about"].split(" ")[0]) for d in listed[:2]]
-        if own != [("Spanish", "12"), ("German", "12")]:
-            failures.append(f"the view does not lead with the host's own dictionaries: {listed[:3]}")
-        elif not all(
-            "words" in row["about"] and any(u in row["about"] for u in (" B", "KB", "MB"))
-            for row in listed
-        ):
-            failures.append(f"a dictionary row says nothing about its cost: {listed}")
-
-        # Giving one up: the row offers it back, and the page loses the answers it gave.
-        held_before = json.loads(offered)
-        if any(row["action"] == "remove" for row in held_before):
-            control(cdp, view, "[...document.querySelectorAll('[data-row=pack] [data-does]')]"
-                               ".find(b => b.textContent.trim() === 'remove').click()")
-            time.sleep(2)
-            after = json.loads(evaluate(cdp, view, """
-                (() => JSON.stringify([...document.querySelectorAll('[data-row=pack] [data-does]')]
-                  .map(b => b.textContent.trim())))()
-            """) or "[]")
-            print(f"  after giving one up: {after}")
-            if after.count("get") < 1:
-                failures.append(f"a dictionary given up is not offered back: {after}")
+        # The translator: opened from the popup, over the page, and answering both ways
+        # between the reader's language and the one being learned.
+        control(cdp, view, "document.querySelector('[data-row=learning]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()", settle=1)
+        evaluate(cdp, view, "document.querySelector('[data-does=open-panel]').click()")
+        time.sleep(2)
+        opened = evaluate(cdp, page, shadow_text("phonetix-card-host-ask"))
+        print(f"  the translator: {(opened or '')[:40]!r}")
+        if opened is None:
+            failures.append("the popup's button opened no translator on the page")
         else:
-            failures.append(f"no dictionary was held to give up: {held_before}")
+            def type_in(text):
+                evaluate(cdp, page, """
+                    (() => {
+                      const field = document.getElementById('phonetix-card-host-ask')
+                        .shadowRoot.querySelector('input');
+                      field.value = %r;
+                      field.dispatchEvent(new Event('input', {bubbles: true}));
+                    })()
+                """ % text)
 
-        # Where the dictionaries come from is not a setting any more - the reader does not run
-        # a host and has nothing to type - but it is still a value, and what the view offers
-        # comes from whatever it points at first, and from the published release after it. Changed where it actually lives, which is
-        # storage, and the view opened again after it, because that is what the reader does.
-        def pointed_at(where):
-            control(cdp, view, "chrome.storage.local.set({packBaseUrl: %r})" % where)
-            evaluate(cdp, view, "location.reload()")
-            time.sleep(4)
-
-        pointed_at("http://127.0.0.1:9")
-        without = evaluate(cdp, view, """
-            (() => document.querySelectorAll('[data-row=pack]').length)()
-        """)
-        pointed_at(base)
-        back = wait_for(cdp, view, """
-            (() => document.querySelectorAll('[data-row=pack]').length)()
-        """, lambda v: v)
-        print(f"  from a host with nothing on it: {without} dictionaries; "
-              f"from one that has them: {back}")
-        # The published dictionaries stand in for a host that has nothing, so the reader is
-        # still offered them.
-        if not without:
-            failures.append("a host with nothing on it left the reader with no dictionaries")
-
-        # And when something really stops answering, the view says so. A dictionary host that
-        # is set and answers nothing is the case a reader cannot otherwise see: what it would
-        # have served is simply missing from the page, which looks like a word nobody wrote an
-        # entry for.
-        pointed_at("http://127.0.0.1:9")
-        said = wait_for(cdp, view, """
-            (() => (document.querySelector('[data-row=trouble] [data-name]') || {})
-              .textContent || null)()
-        """, lambda v: v is not None, tries=12)
-        print(f"  with a host that answers nothing: {(said or '').strip()[:70]}")
-        if not said:
-            failures.append("a host that answers nothing was reported as nothing wrong")
-
-        # And says nothing once it answers again: a warning that stays after the trouble has
-        # passed is a warning a reader learns to ignore.
-        pointed_at(base)
-        quiet = wait_for(cdp, view, """
-            (() => !document.querySelector('[data-row=trouble]'))()
-        """, lambda v: v, tries=10)
-        if not quiet:
-            failures.append("the view still reports trouble once the host answers again")
-
-        # A site nobody has decided on says it follows the main switch, and which way that is.
-        following = evaluate(cdp, view, """
-            (() => {
-              const about = document.querySelector('[data-row="site"] [data-about]');
-              const on = document.querySelector('[data-row="on"] input').checked;
-              return JSON.stringify({says: about ? about.textContent.trim() : null, on});
-            })()
-        """)
-        following = json.loads(following)
-        print(f"  the site row: {following['says']!r}")
-        expected = f"following the main switch (currently: {'on' if following['on'] else 'off'})"
-        if following["says"] != expected:
-            failures.append(f"the site row says {following['says']!r}, not {expected!r}")
+            for typed, wanted in (("perro", "Hund"), ("Hund", "perro")):
+                # Emptied first, and the last answer gone, so what is read is this word's.
+                type_in("")
+                emptied = wait_for(cdp, page, shadow_text("phonetix-card-host-ask"),
+                                   lambda v: v is not None and "dictionary" not in v, tries=6)
+                if emptied is None or "dictionary" in emptied:
+                    failures.append("emptying the translator's field left the last answer")
+                type_in(typed)
+                said = wait_for(cdp, page, shadow_text("phonetix-card-host-ask"),
+                                lambda v: bool(v) and wanted in v, tries=12)
+                print(f"  typed {typed}: {(said or '')[:70]!r}")
+                if not said or wanted not in said:
+                    failures.append(f"the translator did not answer {typed} with {wanted}")
+            evaluate(cdp, page, "document.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape'}))")
 
         # One site, rather than everywhere: switched off here, the page is bare, and the
         # extension is still on for everything else.
-        control(cdp, view, """
-            (() => {
-              const row = document.querySelector('[data-row="site"]');
-              if (!row) return 'no row';
-              row.querySelector('input').click();
-              return row.querySelector('[data-name]').textContent.trim();
-            })()
-        """)
-        time.sleep(2)
+        view = popup(cdp, extid, page_target)
+        wait_for(cdp, view, "document.querySelector('[data-row=site] input') !== null", lambda v: v)
+        control(cdp, view, "document.querySelector('[data-row=site] input').click()")
         here = words(cdp, page)
-        still_on = evaluate(cdp, view, """
-            (() => {
-              return document.querySelector('[data-row="on"] input').checked;
-            })()
-        """)
-        print(f"  switched off for this site: {here['count']} words, still on elsewhere: {still_on}")
+        state = json.loads(evaluate(cdp, view, """
+            JSON.stringify({
+              on: document.querySelector('[data-row=on] input').checked,
+              says: (document.querySelector('[data-row=site] [data-about]') || {}).textContent,
+            })
+        """))
+        print(f"  switched off for this site: {here['count']} replaced, "
+              f"still on elsewhere: {state['on']}, the row says {state['says']!r}")
         if here["count"] != 0:
-            failures.append(f"{here['count']} annotations survived switching the site off")
-        if not still_on:
+            failures.append(f"{here['count']} words stayed replaced with the site switched off")
+        if not state["on"]:
             failures.append("switching one site off switched the extension off everywhere")
+        control(cdp, view, "document.querySelector('[data-row=site] input').click()")
+        back = words(cdp, page)
+        if back["count"] == 0:
+            failures.append("switching the site back on left the page bare")
 
-        # And the switch takes it all away.
+        # And the main switch takes it all away.
         control(cdp, view, "document.querySelector('[data-row=on] input').click()")
         off = words(cdp, page)
         if off["count"] != 0:
-            failures.append(f"{off['count']} annotations survived the switch")
-
-        cdp.send("Target.closeTarget", {"targetId": view_target["targetId"]})
-        cdp.send("Target.closeTarget", {"targetId": page_target["targetId"]})
+            failures.append(f"{off['count']} words stayed replaced with the extension off")
     finally:
         cdp.close()
 
-    for m in cdp.events:
-        text = json.dumps(m.get("params", {}))[:200]
-        if '"error"' in text or "Error" in text:
-            print("  LOG", text)
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - every setting in the view changes what the reader sees")
+    print("\nPASS - every control in the popup changes what the reader sees")
 
 
 if __name__ == "__main__":

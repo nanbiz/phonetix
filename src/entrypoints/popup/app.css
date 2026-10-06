@@ -1,28 +1,19 @@
-/* The settings view's ground.
+/* The toolbar popup.
  *
- * The design tokens and the settings surfaces are both generated from
- * docs/merge/surface.html, and are what the card, the inline annotations and the phone are
- * drawn in. There is no second palette here to keep in step: a settings screen half in one
- * palette and half in another is how a surface ends up looking like two products.
+ * Drawn with the phone app's stylesheet, so the two settings screens are one design: the ground,
+ * cards on it holding rows, a name over each card. What is here is only what a popup window
+ * needs on top of that.
  */
-@import "../../ui/tokens.css";
-@import "../../ui/settings/settings.css";
-/* The card, because the say screen answers with it: what a machine handed over is judged the
-   way every other answer in this product is. */
-@import "../../ui/card/card.css";
+@import "../../phone/app.css";
 
-/* The popup is a fixed width and sizes its height to what is showing, so a short screen stays
-   short and a taller one grows until the browser's own cap scrolls it. The width is what the
+/* The popup is a fixed width and sizes its height to what is showing. The width is what the
    desktop browser sizes its popup window to, and it lays the document out in a viewport a few
    pixels wide while it does: anything relative to the viewport there (100vw, 100%) collapses
-   the popup to a line. On a phone the popup is a sheet the width of the device, and 24rem on a
-   360px screen put the right edge of every row past it, so under a finger the view takes the
-   sheet's width instead. */
+   the popup to a line. On a phone the popup is a sheet the width of the device, so under a
+   finger the view takes the sheet's width instead. */
 html,
 body {
   width: 24rem;
-  margin: 0;
-  overflow-x: hidden;
 }
 
 @media (pointer: coarse) {
@@ -32,37 +23,359 @@ body {
   }
 }
 
-/* The document is the surface. Left to the browser's default it painted white behind the
-   panel, and what showed at the popup's edges was a white L down the top and left of every
-   screen. */
-html,
-body,
+/* A popup is read at a desk, closer than a phone and with a pointer: rows a little tighter. */
+.top {
+  min-height: 52px;
+  padding: 6px 16px 0;
+}
+
+.top .icon-button {
+  margin-left: -8px;
+}
+
+.title {
+  font-size: 20px;
+}
+
+.mark {
+  width: 32px;
+  height: 32px;
+}
+
+.group {
+  margin: 0 12px;
+}
+
+.group-name {
+  padding: 12px 4px 6px;
+  font-size: 13px;
+}
+
+.group:not(:has(.group-name)) {
+  padding-top: 10px;
+}
+
+/* The last card is not drawn against the window's edge. */
 #app {
-  background: var(--color-surface);
-  color: var(--color-ink);
+  padding-bottom: 12px;
 }
 
-body {
-  font-family: var(--font-ui);
-  font-size: var(--font-size-body);
-  line-height: var(--line-body);
-  color-scheme: light dark;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+.item {
+  min-height: 48px;
+  padding: 8px 14px;
+  gap: 12px;
 }
 
-#app {
-  width: 100%;
+.item-name {
+  font-size: 15px;
 }
 
-/* The panel fills the popup rather than sitting on it as a card: inside a window of its own
-   there is nothing for a card to be raised above. */
-.panel {
-  max-width: none;
+.item-value {
+  font-size: 13px;
+}
+
+.item + .item::before,
+.item + .density::before,
+.density + .item::before,
+[data-row="narrow"] + .item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 14px;
+  right: 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+button.item:hover,
+label.item:hover {
+  background: var(--color-scrim);
+}
+
+.segments button {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.switch {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+}
+
+.switch::before {
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+}
+
+.switch:checked::before {
+  left: 21px;
+}
+
+.button {
+  min-height: 32px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.site-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+/* The keys that open the translator, drawn as keys; pressing them is where they are bound. */
+.keys {
+  display: flex;
+  align-self: flex-start;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 2px 0 0;
+  padding: 0;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
+  background: none;
+  font-size: 13px;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.keys:hover kbd {
+  border-color: var(--color-accent);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 14px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: var(--border-width) solid var(--color-border);
+  border-bottom-width: 2px;
+  background: var(--color-page-bg);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* The two languages, side by side, at the popup's size. */
+.language {
+  padding: 12px 8px;
+  gap: 2px;
+}
+
+.language:hover {
+  background: var(--color-scrim);
+}
+
+.language-role {
+  font-size: 12px;
+}
+
+.language-name {
+  font-size: 17px;
+}
+
+.language-name.empty {
+  font-size: 14px;
+}
+
+.pair-between {
+  width: 30px;
+  height: 30px;
+}
+
+.pair-between svg {
+  width: 18px;
+  height: 18px;
+}
+
+.pair + .item::before {
+  left: 14px;
+}
+
+/* Which build this is, beside the name, for a reader saying what they are looking at. */
+.version-tag {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: var(--weight-regular, 400);
+  color: var(--color-ink-faint);
+}
+
+/* How many words: the name and what it is set to on one line, the bar under them. */
+.density {
+  padding-bottom: 12px;
+}
+
+.density-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.density-says {
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  color: var(--color-accent);
+}
+
+.range {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin: 6px 0 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--at),
+    var(--color-chip-bg) var(--at)
+  );
+}
+
+.range::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-chip-bg);
+}
+
+.range::-moz-range-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-accent);
+}
+
+.range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.range:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* A list over the popup fills what the popup has: it is as tall as the screen under it. */
+.sheet-top {
+  min-height: 52px;
+  padding: 8px 8px 0 16px;
+}
+
+.sheet-title {
+  font-size: 18px;
+}
+
+.sheet-list {
+  padding: 12px 12px 16px;
+}
+
+.search {
+  width: calc(100% - 24px);
+  margin: 8px 12px 0;
+  min-height: 40px;
+}
+
+/* Simple or detailed, each drawn as the same word written that way. */
+.shows {
+  gap: 10px;
+  padding: 10px;
+}
+
+.show {
+  gap: 6px;
+  padding: 12px;
+  background: none;
+  text-align: left;
+}
+
+.show-picture {
+  height: 26px;
+  font-size: 20px;
+}
+
+.show-name {
+  font-size: 15px;
+}
+
+.show:hover {
+  border-color: var(--color-accent);
+}
+
+/* The one list that has to scroll says so: its bar stays in view and the rows fade out at the
+   bottom edge where more of them are waiting. */
+.sheet-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-faint) transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+  padding-bottom: 32px;
+}
+
+.sheet-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sheet-list::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: var(--color-ink-faint);
+}
+
+/* Two rows set once and left, side by side on one line, with a rule between them. */
+.duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.duo .item {
+  gap: 4px;
+  padding-right: 8px;
+}
+
+.duo .item + .item::before {
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  right: auto;
+  border-top: none;
+  border-left: var(--border-width) solid var(--color-border);
+}
+
+.duo .item-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.range:disabled {
+  opacity: 0.45;
+  cursor: default;
 }

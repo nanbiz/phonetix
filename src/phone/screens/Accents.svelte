@@ -24,11 +24,7 @@
   function optionsOf(lang: string) {
     return [
       { value: '', label: capital(SAYS['dictionary-accent']) },
-      ...(ACCENTS[lang] ?? []).map((it) => ({
-        value: it.id,
-        label: it.name,
-        about: it.rule ? SAYS['accent-rule'] : undefined,
-      })),
+      ...(ACCENTS[lang] ?? []).map((it) => ({ value: it.id, label: it.name })),
     ];
   }
 

@@ -7,9 +7,11 @@
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import {
-  accentFor, allowed, current, DEFAULTS, readInto, watch, type Settings,
+  accentFor, allowed, current, DEFAULTS, watch, type Settings,
 } from '@/settings';
-import { hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing } from './card';
+import {
+  hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing, type CardActions,
+} from './card';
 import { open as openAsk } from './ask';
 import {
   isPainted,
@@ -23,8 +25,11 @@ import {
 } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
-import { OURS, scan, type ScannedRun } from './scan';
+import { OURS, readable, scan, type ScannedRun } from './scan';
 import { commons } from '@/data/links';
+
+/** What is drawn over the words of a page: how each is said. */
+const INLINE = 'sound';
 
 // Until the stored ones are read, which is one await away.
 let settings: Settings = DEFAULTS;
@@ -146,26 +151,33 @@ async function draw(): Promise<void> {
     unpaint();
     // A site the reader switched off is a site this does nothing on, which is not the same
     // as the extension being off everywhere.
-    if (!allowed(settings, location.hostname) || settings.layer === 'off') {
+    if (!allowed(settings, location.hostname)) {
       state('off');
       return;
     }
-    styles();
     const runs = scan();
     if (runs.length === 0) {
       state('nothing to read');
       return;
     }
+    // What the page is in, which the card needs whether or not anything is drawn over it.
     await readLanguage(runs);
+    if (settings.layer === 'off') {
+      state('nothing drawn');
+      return;
+    }
+    styles();
     await readEachRun(runs);
     const source = pageLanguage();
     state(`asking about ${runs.length} runs`);
+    // What goes over a word on the page is how it is said, and only that: what a word means is
+    // the card's, which opens on the word a reader points at.
     const batch = await sendMessage('annotate', {
       runs: runs.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
-      target: readInto(settings) || source,
+      target: settings.target || source,
       options: {
-        mode: settings.layer,
+        mode: INLINE,
         density: settings.density,
         narrow: settings.narrow,
         hideStress: settings.hideStress,
@@ -183,7 +195,7 @@ async function draw(): Promise<void> {
     for (const run of runs) {
       const tokens = byRun.get(run.id);
       if (!tokens) continue;
-      paint(run, tokens, settings.layer);
+      paint(run, tokens, INLINE);
       drew += tokens.filter((token) => token.inline).length;
     }
     state(`drew ${drew} of ${batch.tokens.length}`);
@@ -234,37 +246,152 @@ async function play(bytes: number[]): Promise<void> {
   source.start();
 }
 
+/**
+ * What a card is pinned to: a word the page drew, or a stretch of the page's own text.
+ *
+ * The card follows it on a scroll, goes when it leaves the page, and stays while the pointer is
+ * on it, whichever of the two it is.
+ */
+interface Anchor {
+  box(): DOMRect;
+  alive(): boolean;
+  holds(x: number, y: number): boolean;
+}
+
+function onElement(element: HTMLElement): Anchor {
+  return {
+    box: () => element.getBoundingClientRect(),
+    alive: () => element.isConnected,
+    holds: (x, y) => {
+      const at = document.elementFromPoint(x, y);
+      return at !== null && element.contains(at);
+    },
+  };
+}
+
+function onRange(range: Range): Anchor {
+  return {
+    box: () => range.getBoundingClientRect(),
+    alive: () => range.startContainer.isConnected,
+    holds: (x, y) => within(range, x, y),
+  };
+}
+
+/** Whether a point is on the text a range covers, line by line. */
+function within(range: Range, x: number, y: number): boolean {
+  return [...range.getClientRects()].some(
+    (box) => x >= box.left && x <= box.right && y >= box.top && y <= box.bottom
+  );
+}
+
+/** One word to open a card for: how the page spells it, what it is in, and what it drew. */
+interface Asked {
+  spelling: string;
+  lang: string;
+  before: string;
+  /** What the page drew over it, where it had decided which word it is. */
+  drawn: string;
+}
+
+function askedOf(token: Token, before: string): Asked {
+  return {
+    spelling: token.spelling,
+    lang: token.lang,
+    before,
+    drawn: token.state !== 'Homograph' ? (token.gloss ?? '') : '',
+  };
+}
+
+/**
+ * The word of the page's own text under a point, where there is one.
+ *
+ * Every word a reader can point at is a word they can ask about, not only the ones the page
+ * drew a transcription over: the sprinkle chooses one word in so many, and a card that opened
+ * on those alone answered one word in twelve.
+ */
+function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null {
+  const caret = caretAt(x, y);
+  if (!caret || !(caret.node instanceof Text)) return null;
+  const node = caret.node;
+  const parent = node.parentElement;
+  if (!parent || ours(node) || !readable(parent)) return null;
+  const text = node.nodeValue ?? '';
+  const lang = languageOf(node);
+  let before = '';
+  for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
+    if (part.index > caret.offset) break;
+    const end = part.index + part.segment.length;
+    if (part.isWordLike && caret.offset <= end) {
+      const range = document.createRange();
+      range.setStart(node, part.index);
+      range.setEnd(node, end);
+      // The caret is the nearest place to the point, which is a word even where the pointer is
+      // in the margin beside a line: only a word actually under the pointer is asked about.
+      if (within(range, x, y)) {
+        return { range, asked: { spelling: part.segment, lang, before, drawn: '' } };
+      }
+    }
+    if (part.isWordLike) before = part.segment;
+  }
+  return null;
+}
+
+/** Where in the text a point falls, by whichever of the two names the engine gives it. */
+function caretAt(x: number, y: number): { node: Node; offset: number } | null {
+  const engine = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+  };
+  if (engine.caretPositionFromPoint) {
+    const at = engine.caretPositionFromPoint(x, y);
+    return at ? { node: at.offsetNode, offset: at.offset } : null;
+  }
+  const range = document.caretRangeFromPoint?.(x, y);
+  return range ? { node: range.startContainer, offset: range.startOffset } : null;
+}
+
+/** The language a stretch of text is in: what its own element declares, or the page's. */
+function languageOf(node: Text): string {
+  const declared = node.parentElement?.closest('[lang]');
+  if (declared && declared !== document.documentElement && declared !== document.body) {
+    const lang = declared.getAttribute('lang')?.trim().split('-')[0].toLowerCase();
+    if (lang) return lang;
+  }
+  return pageLanguage();
+}
+
 /** Open the card for a word the reader stopped at. */
-async function open(element: HTMLElement, token: Token, before = ''): Promise<void> {
-  const source = token.lang || pageLanguage();
+async function open(anchor: Anchor, word: Asked): Promise<void> {
+  const source = word.lang || pageLanguage();
   const answer = await sendMessage('lookUp', {
-    word: token.spelling,
+    word: word.spelling,
     source,
-    target: readInto(settings) || source,
+    // Into the reader's own language, which for a word already in it is the word itself: the
+    // card then says how it is said and nothing is translated.
+    target: settings.target || source,
     accent: accentFor(settings, source),
     // What the inline layer already knew: a spelling that is several words is decided by the
     // one before it, and the card must not ask a question the page has answered.
-    before,
+    before: word.before,
     // And what it drew, where it had decided which word this is.
-    drawn: token.state !== 'Homograph' ? (token.gloss ?? '') : '',
+    drawn: word.drawn,
   });
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
-  if (!element.isConnected) return;
-  const key = token.spelling.toLowerCase();
+  if (!anchor.alive() || anchored !== anchor) return;
+  const key = word.spelling.toLowerCase();
   if (!asked.includes(key)) asked.push(key);
   // What a person recorded, where Wiktionary has one: a recording is what a reader trusts,
   // and a machine reading a transcription is not the same thing.
-  const said = await sendMessage('enrich', { word: token.spelling, lang: source })
+  const said = await sendMessage('enrich', { word: word.spelling, lang: source })
     .catch(() => null);
   const recording = said?.audio[0];
-  if (!element.isConnected) return;
+  if (!anchor.alive() || anchored !== anchor) return;
   // A transcription a person wrote, where the pack had none.
   const shown = answer.ipa.length === 0 && said?.ipa.length
     ? { ...answer, ipa: [said.ipa[0]], symbols: await sendMessage('symbols', { ipa: said.ipa[0] })
         .catch(() => answer.symbols) }
     : answer;
-  show(shown, element.getBoundingClientRect(), {
+  const actions: CardActions = {
     recorded: Boolean(recording),
     accent: accentFor(settings, source),
     eased: settings.animations,
@@ -272,13 +399,26 @@ async function open(element: HTMLElement, token: Token, before = ''): Promise<vo
       if (recording) void recorded(commons(recording));
       // The accent's own voice where the reader chose one, since a synthesised word is
       // said by whichever voice is asked for.
-      else void speak(token.spelling, source);
+      else void speak(word.spelling, source);
     },
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
     // host, because the page's own policy would refuse the load.
     onPlayUrl: (url) => void recorded(url),
     diagram: (file) => sendMessage('diagram', { file, width: DIAGRAM_WIDTH }),
-  });
+  };
+  show(shown, anchor.box(), actions);
+  // A word no dictionary means anything by, in another language than the reader's: the card
+  // is up with how it is said, and what the engine makes of it follows, marked as its guess.
+  const target = settings.target || source;
+  if (shown.says.length > 0 || shown.glosses.length > 0 || target === source) return;
+  const guess = await sendMessage('guess', { word: word.spelling, source, target })
+    .catch(() => '');
+  if (!guess || !anchor.alive() || anchored !== anchor) return;
+  show(
+    { ...shown, state: 'Guess', says: [guess], provenance: { kind: 'guess', engine: 'bergamot' } },
+    anchor.box(),
+    actions
+  );
 }
 
 /**
@@ -300,7 +440,7 @@ async function selected(): Promise<void> {
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
   const source = pageLanguage();
-  const target = readInto(settings) || source;
+  const target = settings.target || source;
   if (!target || target === source) return;
   const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
   if (!answer) return;
@@ -315,7 +455,9 @@ const PHRASE_LIMIT = 240;
 const GRACE = 220;
 
 /** The word the card on screen is about, so it can be put back where that word is now. */
-let anchored: HTMLElement | null = null;
+let anchored: Anchor | null = null;
+/** The wait for the pointer to come to rest over the page's own text. */
+let resting: ReturnType<typeof setTimeout> | null = null;
 let closing: ReturnType<typeof setTimeout> | null = null;
 /**
  * Whether the reader has taken hold of the card.
@@ -362,6 +504,7 @@ function letGo(): void {
     // at exactly what they were looking at.
     const at = under();
     if (at && (inside(at) || wordAt(at))) return;
+    if (anchored?.holds(pointer.x, pointer.y)) return;
     hide();
     anchored = null;
   }, GRACE);
@@ -392,6 +535,21 @@ function gestures(): void {
     'mousemove',
     (event) => {
       pointer = { x: event.clientX, y: event.clientY };
+      if (resting) clearTimeout(resting);
+      resting = null;
+      // A word the page drew is answered by its own mouseover, and the card by itself; a
+      // button held down is a selection being made rather than a word being pointed at.
+      if (touched || event.buttons !== 0 || inside(event.target) || wordAt(event.target)) return;
+      if (showing() && anchored && !anchored.holds(pointer.x, pointer.y)) letGo();
+      if (!allowed(settings, location.hostname)) return;
+      resting = setTimeout(() => {
+        resting = null;
+        if (anchored?.holds(pointer.x, pointer.y)) return;
+        const found = wordUnder(pointer.x, pointer.y);
+        if (!found) return;
+        anchored = onRange(found.range);
+        void open(anchored, found.asked);
+      }, Math.max(0, settings.delay));
     },
     { passive: true }
   );
@@ -410,8 +568,8 @@ function gestures(): void {
     keep();
     if (opening) clearTimeout(opening);
     opening = setTimeout(() => {
-      anchored = found.element;
-      void open(found.element, found.token, found.before);
+      anchored = onElement(found.element);
+      void open(anchored, askedOf(found.token, found.before));
     }, Math.max(0, settings.delay));
   });
   document.addEventListener('mouseout', (event) => {
@@ -433,8 +591,8 @@ function gestures(): void {
       event.preventDefault();
       grabbed = false;
       if (touched) reveal(found.element);
-      anchored = found.element;
-      void open(found.element, found.token, found.before);
+      anchored = onElement(found.element);
+      void open(anchored, askedOf(found.token, found.before));
       return;
     }
     grabbed = false;
@@ -453,12 +611,12 @@ function gestures(): void {
     () => {
       if (!showing()) return;
       const word = anchored;
-      if (!word?.isConnected) {
+      if (!word?.alive()) {
         hide();
         anchored = null;
         return;
       }
-      const box = word.getBoundingClientRect();
+      const box = word.box();
       if (box.bottom < 0 || box.top > window.innerHeight) {
         hide();
         anchored = null;
@@ -533,7 +691,7 @@ function answerAsked(): void {
 /** The panel the keyboard shortcut opens, which is the other direction: everything else on
  *  this page is about a word somebody else wrote. */
 function askedForAWord(): void {
-  void openAsk();
+  void openAsk(pageLanguage());
 }
 
 /** Start reading this document. */

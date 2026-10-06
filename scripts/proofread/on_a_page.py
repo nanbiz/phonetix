@@ -89,6 +89,11 @@ def manifest():
     return json.dumps(rows).encode()
 
 
+# Packs the host is refusing for now, so a check can have a page open before its dictionary is
+# here: every pack is fetched by itself the moment a page needs it.
+REFUSED: set = set()
+
+
 def serve():
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *a):
@@ -105,6 +110,9 @@ def serve():
                 return
             if self.path.endswith(".pack"):
                 path = os.path.join(WORK, os.path.basename(self.path))
+                if os.path.basename(self.path)[:-len(".pack")] in REFUSED:
+                    self.send_error(503)
+                    return
                 if os.path.exists(path):
                     body = open(path, "rb").read()
                     self.send_response(200)
@@ -170,7 +178,7 @@ def main():
         time.sleep(2)
         evaluate(cdp, settings, (
             f"chrome.storage.local.set({{packBaseUrl:'{base}',targetLanguage:'de',"
-            "on:true,layer:'both',density:1})"
+            "on:true,layer:'sound',density:1})"
         ))
         # The dictionaries, asked for the way the settings view asks: nothing is fetched
         # because a page happened to be in a language.
@@ -193,7 +201,7 @@ def main():
               const words = [...document.querySelectorAll('.px-w')];
               return JSON.stringify({
                 count: words.length,
-                // What replaces each word: with both asked for, how its translation is said.
+                // What replaces each word: how that word is said.
                 glosses: words.map(w => (w.querySelector('.px-rep') || {}).textContent || ''),
                 // The word the page wrote, which the box keeps beside the answer for the
                 // reveal to show.
@@ -220,36 +228,33 @@ def main():
 
         if painted["count"] < 5:
             failures.append(f"only {painted['count']} words were annotated")
-        # The annotation over a word has to be about that word. With both asked for, what
-        # replaces it is how its translation is said: "perro" is "Hund", said [hʊnt].
+        # What replaces a word has to be that word, said: "perro" is [pero], whatever language
+        # the reader reads into, because what it means is the card's.
         pairs = dict(zip(painted["spellings"], painted["glosses"]))
-        said = {"perro": "hʊnt", "camino": "veːk"}
+        said = {"perro": "pero", "camino": "kamino"}
         for word, answer in said.items():
             if pairs.get(word) != answer:
                 failures.append(f"{word} carries {pairs.get(word)!r}, not {answer!r}")
         # The heading. A page capitalises its headings whatever the language does, and while
         # the cascade compared spellings byte for byte every one of them went unanswered - on
         # a real page that is most of what a reader looks at first.
-        for word, answer in (("Perro", "hʊnt"), ("Camino", "veːk")):
+        for word, answer in (("Perro", "pero"), ("Camino", "kamino")):
             if pairs.get(word) != answer:
                 failures.append(f"the heading's {word} carries {pairs.get(word)!r}, not {answer!r}")
-        # A word the packs cannot answer is left plain rather than given an empty annotation.
-        if pairs.get("calle"):
-            failures.append(f"calle was given {pairs['calle']!r} from nowhere")
         if painted["inCode"]:
             failures.append("code was annotated")
         if painted["inNav"]:
             failures.append("the navigation was annotated")
         # The answer takes the word's place, so what a reader reads is the sentence with the
-        # answered words swapped and everything else exactly as the page wrote it. The word
+        # words swapped and everything between them exactly as the page wrote it. The word
         # itself is still in the page, beside the answer, for the reveal to show.
         reading = painted["words"]
+        print(f"  the sentence reads {reading!r}")
         for word, answer in said.items():
             if answer not in reading:
                 failures.append(f"{word} was not replaced by {answer}: {reading!r}")
-        for kept in ("corre", "descansa", "calle"):
-            if kept not in reading:
-                failures.append(f"{kept}, which nothing answered, is not on the page: {reading!r}")
+        if not reading.endswith(".") or reading.count(" ") != SENTENCE.count(" "):
+            failures.append(f"what lies between the words was not kept: {reading!r}")
 
         # The page stops moving.
         #
@@ -514,11 +519,8 @@ def main():
         if not said.get("length"):
             failures.append(f"the voice said nothing ({said})")
 
-        # A page that says nothing about its language is read rather than assumed English.
-        # Asked in the mode that shows what a word means, which is what says it was read as
-        # Spanish: the step above left the setting on how words are said.
-        evaluate(cdp, settings, "chrome.storage.local.set({layer:'meaning'})")
-        time.sleep(2)
+        # A page that says nothing about its language is read rather than assumed English:
+        # its words are said the Spanish way.
         undeclared = cdp.send("Target.createTarget", {"url": f"{base}/undeclared.html"})
         other = cdp.send(
             "Target.attachToTarget", {"targetId": undeclared["targetId"], "flatten": True},
@@ -527,20 +529,18 @@ def main():
         found = wait_for(cdp, other, """
             (() => {
               const words = [...document.querySelectorAll('.px-w')];
-              const glosses = words.map(w => (w.querySelector('.px-gl') || {}).textContent || '')
-                                   .filter(Boolean);
-              return glosses.length ? JSON.stringify(glosses) : null;
+              const sounds = words.map(w => (w.querySelector('.px-ph') || {}).textContent || '')
+                                  .filter(Boolean);
+              return sounds.length ? JSON.stringify(sounds) : null;
             })()
-        """, lambda v: v is not None, tries=25)
+        """, lambda v: v is not None and "pero" in v, tries=25)
         print(f"  a page that declares nothing: {json.loads(found or '[]')[:4]}")
-        if not found or "Hund" not in found:
+        if not found or "pero" not in found:
             failures.append(f"an undeclared Spanish page was not read as Spanish ({found})")
         cdp.send("Target.closeTarget", {"targetId": undeclared["targetId"]})
 
         # A line in another language is read as that language, rather than as the page's. Told
         # in sounds, because that is what differs between the two languages for these words.
-        evaluate(cdp, settings, "chrome.storage.local.set({layer:'sound'})")
-        time.sleep(2)
         mixed = cdp.send("Target.createTarget", {"url": f"{base}/mixed.html"})
         other = cdp.send(
             "Target.attachToTarget", {"targetId": mixed["targetId"], "flatten": True},
@@ -567,28 +567,52 @@ def main():
             failures.append("both lines came back with the same sounds")
         cdp.send("Target.closeTarget", {"targetId": mixed["targetId"]})
 
-        # A dictionary that arrives while the page is open is answered on the page, without
-        # the reader loading it again. Which dictionaries are held is not a setting, so the
-        # page had no way of hearing about one and sat exactly as it was - a reader who
-        # fetched the dictionary for the page in front of them saw no change at all.
-        evaluate(cdp, settings, "chrome.storage.local.set({layer:'meaning',targetLanguage:'en'})")
-        time.sleep(2)
+        # A dictionary that arrives while the page is open is answered without the reader
+        # loading it again: the card on a word says what it means the moment the meanings are
+        # here. Which dictionaries are held is not a setting, so nothing else tells the page.
+        def card_on(word):
+            spot = json.loads(evaluate(cdp, page, """
+                (() => {
+                  const box = [...document.querySelectorAll('#prose .px-w')]
+                    .find(w => (w.querySelector('.px-was') || {}).textContent === %r);
+                  const r = box.getBoundingClientRect();
+                  return JSON.stringify({x: r.left + r.width / 2, y: r.top + r.height / 2});
+                })()
+            """ % word))
+            cdp.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 2, "y": 2},
+                     session=page)
+            time.sleep(0.6)
+            for step in (0, 1):
+                cdp.send("Input.dispatchMouseEvent", {
+                    "type": "mouseMoved", "x": spot["x"] + step, "y": spot["y"],
+                }, session=page)
+            return wait_for(cdp, page, """
+                (() => {
+                  const host = document.getElementById('phonetix-card-host');
+                  const card = host && host.shadowRoot && host.shadowRoot.querySelector('.card');
+                  return card ? card.innerText.replace(/\\s+/g, ' ') : null;
+                })()
+            """, lambda v: v is not None and word in v, tries=8)
+
+        REFUSED.add("es")
         evaluate(cdp, settings, (
             "chrome.runtime.sendMessage({phonetix:'forgetPack',data:{lang:'es'}})"
             ".then(r => JSON.stringify(r))"
         ))
-        bare = wait_for(cdp, page, "document.querySelectorAll('.px-gl').length",
-                        lambda v: v == 0)
+        time.sleep(1)
+        without = card_on("perro") or ""
+        REFUSED.discard("es")
         evaluate(cdp, settings, (
             "chrome.runtime.sendMessage({phonetix:'getPack',data:{lang:'es'}})"
             ".then(r => JSON.stringify(r))"
         ))
-        meant = wait_for(cdp, page, "document.querySelectorAll('.px-gl').length",
-                         lambda v: v and v > 0, tries=10)
-        print(f"  a dictionary fetched with the page open: {bare} meanings -> {meant}")
-        if not meant:
-            failures.append(
-                "a dictionary fetched while the page was open changed nothing on it")
+        time.sleep(1)
+        with_it = card_on("perro") or ""
+        print(f"  a dictionary fetched with the page open: {without[:40]!r} -> {with_it[:40]!r}")
+        if "Hund" in without:
+            failures.append(f"the card knew what perro means with no dictionary: {without!r}")
+        if "Hund" not in with_it:
+            failures.append("a dictionary fetched while the page was open changed nothing on it")
 
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")

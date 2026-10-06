@@ -331,6 +331,22 @@
     "accents": {
       "name": "Accents",
       "about": ""
+    },
+    "group-page": {
+      "name": "On the page",
+      "about": ""
+    },
+    "inline": {
+      "name": "Replace words with their IPA",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Words replaced",
+      "about": ""
+    },
+    "translator": {
+      "name": "Translator",
+      "about": ""
     }
   },
   "ends": {
@@ -352,7 +368,7 @@
     "choose-language": "Choose a language",
     "close": "Close",
     "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
-    "dictionary-accent": "as the dictionary gives it",
+    "dictionary-accent": "default",
     "every-app": "Every app",
     "get": "Get",
     "loading-dictionary": "Loading the dictionary…",
@@ -388,10 +404,21 @@
     "back": "Back",
     "apps-chosen": "%s chosen",
     "packs-held": "%s downloaded",
-    "accent-rule": "derived from pronunciation rules",
     "other-languages": "Other languages",
     "words-count": "%s words",
     "packs-here": "On this phone",
-    "packs-more": "Available"
+    "packs-more": "Available",
+    "every-word": "every word",
+    "one-in": "one in %s",
+    "open-panel": "Open",
+    "site-off": "always off here",
+    "site-following": "following the main switch (currently: %s)",
+    "on": "on",
+    "off": "off",
+    "set-key": "Set a key",
+    "simple": "Simple",
+    "detailed": "Detailed",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]"
   }
 }

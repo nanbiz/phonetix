@@ -1,0 +1,127 @@
+<script lang="ts">
+  // How the IPA is written: how much detail, whether stress is marked, and which accent each
+  // language is read in.
+  //
+  // One screen that fits the popup without scrolling. The detail is shown by example rather than
+  // described: the same word written both ways says what the difference is. Each language a
+  // reader uses has its accent on one row, and every other language is one row behind those.
+  import { ACCENTS } from '@/data/accents';
+  import { named } from '@/data/languages';
+  import { ROWS, SAYS } from '@/data/wording';
+  import { accentFor, setAccent, type Settings } from '@/settings/shape';
+  import Group from '@/phone/parts/Group.svelte';
+  import Item from '@/phone/parts/Item.svelte';
+  import Switch from '@/phone/parts/Switch.svelte';
+  import ListSheet from '@/phone/parts/ListSheet.svelte';
+
+  interface Props {
+    settings: Settings;
+    change: <K extends keyof Settings>(name: K, value: Settings[K]) => void;
+  }
+
+  let { settings, change }: Props = $props();
+
+  function capital(text: string): string {
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function optionsOf(lang: string) {
+    return [
+      { value: '', label: capital(SAYS['dictionary-accent']) },
+      ...(ACCENTS[lang] ?? []).map((it) => ({ value: it.id, label: it.name })),
+    ];
+  }
+
+  function accentName(lang: string): string {
+    return optionsOf(lang).find((it) => it.value === accentFor(settings, lang))?.label ?? '';
+  }
+
+  /** The languages with more than one accent to choose between. */
+  const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 0);
+  /** The reader's own two, each on a row of its own. */
+  let mine = $derived(
+    [settings.target, settings.learning].filter(
+      (lang, at, all) => lang && offering.includes(lang) && all.indexOf(lang) === at
+    )
+  );
+  let others = $derived(
+    offering
+      .filter((lang) => !mine.includes(lang))
+      .sort((a, b) => named(a).localeCompare(named(b)))
+      .map((lang) => ({ value: lang, label: named(lang), about: accentName(lang) }))
+  );
+
+  /** Which list is open: the other languages, or one language's accents. */
+  let choosing = $state<'' | 'others' | string>('');
+</script>
+
+<Group name={ROWS.narrow.name}>
+  <div class="shows" role="radiogroup" aria-label={ROWS.narrow.name} data-row="narrow">
+    {#each [
+      { value: false, name: SAYS['simple'], example: SAYS['simple-example'] },
+      { value: true, name: SAYS['detailed'], example: SAYS['detailed-example'] },
+    ] as option (option.name)}
+      <button
+        class="show"
+        class:on={settings.narrow === option.value}
+        role="radio"
+        aria-checked={settings.narrow === option.value}
+        data-choice={option.value ? 'narrow' : 'broad'}
+        onclick={() => change('narrow', option.value)}
+      >
+        <span class="show-picture ipa" aria-hidden="true">{option.example}</span>
+        <span class="show-name" data-name>{option.name}</span>
+      </button>
+    {/each}
+  </div>
+</Group>
+
+<Group>
+  <Item name={ROWS.stress.name} row="stress">
+    {#snippet control()}
+      <Switch
+        on={!settings.hideStress}
+        label={ROWS.stress.name}
+        change={(on) => change('hideStress', !on)}
+      />
+    {/snippet}
+  </Item>
+</Group>
+
+<Group name={ROWS.accents.name}>
+  {#each mine as lang (lang)}
+    <Item
+      name={named(lang)}
+      row="accent"
+      value={accentName(lang)}
+      open={() => (choosing = lang)}
+    />
+  {/each}
+  {#if others.length > 0}
+    <Item
+      name={SAYS['other-languages']}
+      row="accent-elsewhere"
+      open={() => (choosing = 'others')}
+    />
+  {/if}
+</Group>
+
+{#if choosing === 'others'}
+  <ListSheet
+    title={SAYS['other-languages']}
+    options={others}
+    chosen=""
+    change={(lang) => setTimeout(() => (choosing = lang))}
+    close={() => {
+      if (choosing === 'others') choosing = '';
+    }}
+  />
+{:else if choosing}
+  <ListSheet
+    title={named(choosing)}
+    options={optionsOf(choosing)}
+    chosen={accentFor(settings, choosing)}
+    change={(value) => change('accents', setAccent(settings, choosing, value))}
+    close={() => (choosing = '')}
+  />
+{/if}

@@ -50,7 +50,7 @@ const TECHNICAL = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{2}-\d{2}T|
 export const OURS = 'phonetix-card-host';
 
 /** Whether this element's subtree holds text a reader is reading. */
-function readable(element: Element): boolean {
+export function readable(element: Element): boolean {
   if (NOT_PROSE.has(element.tagName)) return false;
   if (element.id === OURS) return false;
   if ((element as HTMLElement).isContentEditable) return false;

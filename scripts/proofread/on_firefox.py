@@ -144,7 +144,7 @@ def main():
         told = driver.script(
             "const done = arguments[0];"
             f"browser.storage.local.set({{packBaseUrl: '{base}', targetLanguage: 'de',"
-            " density: 1, layer: 'meaning'})"
+            " density: 1, layer: 'sound'})"
             "  .then(() => Promise.all(['es', 'de'].map(lang =>"
             "     browser.runtime.sendMessage({phonetix: 'openPack', data: {lang}}))))"
             "  .then(r => done(JSON.stringify(r)), e => done('failed: ' + e));",
@@ -164,7 +164,7 @@ def main():
                 "const done = arguments[0];"
                 "done(JSON.stringify({"
                 "  count: document.querySelectorAll('.px-w').length,"
-                "  said: [...document.querySelectorAll('.px-gl')].map(g => g.textContent)"
+                "  said: [...document.querySelectorAll('.px-ph')].map(g => g.textContent)"
                 "    .slice(0, 4),"
                 "  state: document.documentElement.dataset.phonetix || ''}));"
             )
@@ -175,8 +175,8 @@ def main():
               f"[{drawn.get('state')}]")
         if not drawn.get("count"):
             failures.append(f"nothing was annotated on Gecko: {drawn}")
-        elif "Hund" not in (drawn.get("said") or []):
-            failures.append(f"the answers are {drawn.get('said')}, not the German ones")
+        elif "pero" not in (drawn.get("said") or []):
+            failures.append(f"the words are said {drawn.get('said')}, not the Spanish way")
 
         # And the settings view knows which site it is looking at. In a tab of its own, with
         # the page left open in the one behind it: that is the shape a reader opens it in, and

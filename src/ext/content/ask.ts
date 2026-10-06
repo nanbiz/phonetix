@@ -40,7 +40,7 @@ export function showing(): boolean {
  * which is remembered; the language they typed in is worked out by the core rather than
  * assumed, so they can ask in whatever language the word came to them in.
  */
-export async function open(): Promise<void> {
+export async function open(page = ''): Promise<void> {
   if (drawn) {
     close();
     return;
@@ -64,7 +64,11 @@ export async function open(): Promise<void> {
     'width:min(28rem, calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;';
   shadow.appendChild(frame);
 
-  let learning = settings.learning || packs.held.find((lang) => lang !== settings.target) || '';
+  // The language chosen before, and otherwise the one the page is in, where that is not the
+  // reader's own: a reader on a Spanish page asking for a word is asking for it in Spanish.
+  let learning =
+    settings.learning || (page && page !== settings.target ? page : '') ||
+    packs.held.find((lang) => lang !== settings.target) || '';
   let recent = settings.recent;
   drawn = mount(Ask, {
     target: frame,
@@ -81,11 +85,30 @@ export async function open(): Promise<void> {
         void set('recent', recent);
       },
       ask: async (text: string, into: string) => {
-        // What language it was typed in, asked of the core rather than assumed.
-        const guess = await sendMessage('detect', { text }).catch(() => null);
-        const from = guess?.language || settings.target || 'en';
-        if (!into || into === from) return { answer: null, missing: false };
-        return sendMessage('say', { text, source: into, target: from }).catch(() => null);
+        const mine = settings.target;
+        const typed = text.trim();
+        if (!into || !mine || into === mine || !typed) return { answer: null, missing: false };
+        if (/\s/.test(typed)) {
+          // Several words are a clause for the engine, translated whichever way they were
+          // written: the detector is sure of a clause where it cannot be of a word.
+          const guess = await sendMessage('detect', { text: typed }).catch(() => null);
+          const from = guess?.language === into ? into : mine;
+          const answer = await sendMessage('phrase', {
+            text: typed,
+            source: from,
+            target: from === into ? mine : into,
+          }).catch(() => null);
+          return { answer, missing: false };
+        }
+        // One word is first read as a word of the language being learned, which is what a
+        // reader pasting it from a page means: found there, it is answered in their own. A
+        // word that language does not have is the word for something, asked for in it.
+        const read = await sendMessage('lookUp', { word: typed, source: into, target: mine })
+          .catch(() => null);
+        if (read && (read.glosses.length > 0 || read.says.length > 0)) {
+          return { answer: read, missing: false };
+        }
+        return sendMessage('say', { text: typed, source: into, target: mine }).catch(() => null);
       },
       close,
     },

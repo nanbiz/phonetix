@@ -106,11 +106,20 @@ def real_popup(cdp, extid):
         if evaluate(cdp, session, "document.querySelectorAll('[data-name]').length"):
             break
         time.sleep(0.5)
-    time.sleep(1)
+    # And until the window has stopped growing: it is resized as the view fills in, and a
+    # picture taken while it was still growing came out as two halves of different frames.
+    last = None
+    for _ in range(10):
+        time.sleep(0.5)
+        now = evaluate(cdp, session, "window.innerHeight")
+        if now == last:
+            break
+        last = now
     size = json.loads(evaluate(cdp, session, """
         JSON.stringify({
           width: window.innerWidth,
           height: window.innerHeight,
+          tall: document.documentElement.scrollHeight,
           wide: document.documentElement.scrollWidth,
           rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
         })
@@ -127,6 +136,11 @@ def real_popup(cdp, extid):
     if size["wide"] > size["width"]:
         failures.append(
             f"the toolbar popup scrolls sideways: {size['wide']}px in {size['width']}px")
+    # A browser gives a popup at most 600px and scrolls the rest, and a first screen that
+    # scrolls hides its last rows from a reader who never thinks to.
+    if size["tall"] > size["height"]:
+        failures.append(
+            f"the toolbar popup's first screen is {size['tall']}px in a {size['height']}px window")
     return failures
 
 
@@ -229,7 +243,7 @@ def main():
                 f"{evaluate(cdp, session, 'window.innerWidth')}px")
         narrow = json.loads(evaluate(cdp, session, """
             (() => {
-              const edges = [...document.querySelectorAll('[data-view=main] [data-name]')]
+              const edges = [...document.querySelectorAll('.card .item [data-name]')]
                 .filter(el => el.offsetParent !== null)
                 .map(el => ({
                   says: el.textContent.trim().slice(0, 18),
@@ -262,7 +276,7 @@ def main():
         # in the surface colour it vanished into it in both palettes.
         knob = json.loads(evaluate(cdp, session, """
             (() => {
-              const el = document.querySelector('input.toggle');
+              const el = document.querySelector('input.switch');
               if (!el) return JSON.stringify({found: false});
               const box = getComputedStyle(el);
               const dot = getComputedStyle(el, '::before');
