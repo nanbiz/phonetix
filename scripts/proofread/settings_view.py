@@ -375,6 +375,20 @@ def main():
         if not quiet:
             failures.append("the view still reports trouble once the host answers again")
 
+        # A site nobody has decided on says it follows the main switch, and which way that is.
+        following = evaluate(cdp, view, """
+            (() => {
+              const about = document.querySelector('[data-row="site"] [data-about]');
+              const on = document.querySelector('[data-row="on"] input').checked;
+              return JSON.stringify({says: about ? about.textContent.trim() : null, on});
+            })()
+        """)
+        following = json.loads(following)
+        print(f"  the site row: {following['says']!r}")
+        expected = f"following the main switch (currently: {'on' if following['on'] else 'off'})"
+        if following["says"] != expected:
+            failures.append(f"the site row says {following['says']!r}, not {expected!r}")
+
         # One site, rather than everywhere: switched off here, the page is bare, and the
         # extension is still on for everything else.
         control(cdp, view, """

@@ -128,7 +128,7 @@
             ? here
               ? 'always on here'
               : 'always off here'
-            : `following the switch above, which is ${on ? 'on' : 'off'}`}
+            : `following the main switch (currently: ${on ? 'on' : 'off'})`}
         </span>
       </span>
       <Toggle on={here} label="on {site}" change={(value) => onSite?.(value)} />
