@@ -2,8 +2,8 @@
   // The toolbar popup: the three things the extension does, each with what it needs.
   //
   // Over the page, how its words are said, on as many of them as the reader wants. Pointing at
-  // a word, a card that says it and, where it is not the reader's own language, translates it.
-  // And on a key, a panel that translates into the language the reader is learning. Everything
+  // a word in a language they do not read, a card that says it and translates it into theirs.
+  // And on a key, a panel that translates into whichever language they pick in it. Everything
   // set once and left (accents, colours) is a screen behind a row.
   //
   // Drawn from the phone app's parts, so the two settings screens are one design. A setting is
@@ -36,7 +36,9 @@
   let shortcut = $state('');
   /** Which screen is showing, and which language list is open over it. */
   let view = $state<'main' | 'accents' | 'appearance'>('main');
-  let choosing = $state<'' | 'target' | 'learning'>('');
+  /** The dictionaries on their way and how far each has got, as the host tells it. */
+  let arriving = $state<Record<string, number>>({});
+  let choosing = $state<'' | 'target' | 'known'>('');
 
   const icon = browser.runtime.getURL('/icon/48.png');
   const version = browser.runtime.getManifest().version;
@@ -77,6 +79,15 @@
     curve = await curving;
   }
 
+  async function follow() {
+    arriving = ((await browser.storage.local.get('arriving')).arriving as Record<string, number>) ?? {};
+    browser.storage.onChanged.addListener((changes, area) => {
+      if (area === 'local' && 'arriving' in changes) {
+        arriving = (changes.arriving.newValue as Record<string, number> | undefined) ?? {};
+      }
+    });
+  }
+
   function change<K extends keyof Settings>(name: K, value: Settings[K]) {
     if (!settings) return;
     settings = { ...settings, [name]: value };
@@ -105,15 +116,27 @@
   }
 
   void load();
+  void follow();
 
 
 
   let drawing = $derived(settings !== null && settings.layer !== 'off');
   let here = $derived(settings !== null && site !== '' && !settings.off.includes(site));
-  /** The language being learned, which is never the reader's own. */
-  let learning = $derived(
-    settings && settings.learning !== settings.target ? settings.learning : ''
+  /** The languages left as they are besides the reader's own, by name. */
+  let knownNames = $derived(
+    settings
+      ? settings.known.filter((lang) => lang !== settings?.target).map(named).join(', ')
+      : ''
   );
+
+  /** Tick a language the reader reads as it is, or put it back among the translated ones. */
+  function toggleKnown(lang: string) {
+    if (!settings) return;
+    const known = settings.known.includes(lang)
+      ? settings.known.filter((it) => it !== lang)
+      : [...settings.known, lang];
+    change('known', known);
+  }
   let accentName = $derived.by(() => {
     if (!settings) return '';
     const lang = settings.target;
@@ -161,6 +184,16 @@
       </Group>
     {/if}
 
+    {#each Object.entries(arriving) as [lang, share] (lang)}
+      <!-- Until a language's dictionary is here its words are only said, and on a slow line
+           that is minutes: what is on its way, and how far. -->
+      <div class="arriving" data-row="arriving">
+        <span>Getting the {named(lang)} dictionary</span>
+        <span class="arriving-share">{Math.round(share * 100)}%</span>
+        <progress max="1" value={share}></progress>
+      </div>
+    {/each}
+
     <div class:resting={!settings.on || !here && site !== ''}>
       <Group name={ROWS['group-page'].name}>
         <Item name={ROWS.inline.name} row="inline">
@@ -177,22 +210,23 @@
         {/if}
       </Group>
 
-      <!-- The two languages everything translates between: a word pointed at is put into the
-           reader's own, and the translator works both ways between the two. -->
-      <Group name={ROWS['group-languages'].name}>
-        <div class="pair">
-          <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
-            <span class="language-role" data-name>{ROWS.mine.name}</span>
-            <span class="language-name" data-about>{named(settings.target)}</span>
-          </button>
-          <span class="pair-between" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99zM21 9l-3.99-4v3H10v2h7.01v3z" fill="currentColor" /></svg>
-          </span>
-          <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
-            <span class="language-role" data-name>{ROWS.learning.name}</span>
-            <span class="language-name" class:empty={!learning} data-about>
-              {learning ? named(learning) : SAYS['choose-language']}
+      <!-- What a word pointed at is translated into, and which languages are left alone: a
+           reader who reads German and English wants the card to translate everything else. -->
+      <Group name={ROWS.translate.name}>
+        <div class="duo">
+          <button class="item" data-row="target" onclick={() => (choosing = 'target')}>
+            <span class="item-text">
+              <span class="item-name" data-name>{ROWS.into.name}</span>
+              <span class="item-value" data-about>{named(settings.target)}</span>
             </span>
+            <Chevron class="item-chevron" />
+          </button>
+          <button class="item" data-row="known" onclick={() => (choosing = 'known')}>
+            <span class="item-text">
+              <span class="item-name" data-name>{ROWS.known.name}</span>
+              <span class="item-value" data-about>{knownNames || SAYS['nothing-else']}</span>
+            </span>
+            <Chevron class="item-chevron" />
           </button>
         </div>
         <div class="item" data-row="translator">
@@ -264,12 +298,12 @@
       change={(value) => change('target', value)}
       close={() => (choosing = '')}
     />
-  {:else if choosing === 'learning'}
+  {:else if choosing === 'known'}
     <ListSheet
-      title={ROWS.learning.name}
+      title={ROWS.known.name}
       options={everyLanguage.filter((it) => it.value !== settings?.target)}
-      chosen={learning}
-      change={(value) => change('learning', value)}
+      chosen={settings.known}
+      change={toggleKnown}
       close={() => (choosing = '')}
     />
   {/if}

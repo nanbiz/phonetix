@@ -359,16 +359,21 @@ def main():
             failures.append(
                 f"the arrow points at {arrow['at']}px, the word is at {arrow['wanted']}px")
 
-        # A tap on a symbol says what that sound is, on the card's own line for it. The line
-        # is there before anything is tapped and is always the same height, so a reader who
-        # explores a transcription never has the card move out from under the cursor.
-        before = evaluate(cdp, page, """
+        # A tap on a symbol says what that sound is, on a line the card grows for it. Nothing
+        # describes a sound before one is asked about, and the symbol that was tapped stays
+        # where it was, so the card does not move out from under the cursor.
+        before = json.loads(evaluate(cdp, page, """
             (() => {
               const host = document.getElementById('phonetix-card-host');
-              const card = host.shadowRoot.querySelector('.card');
-              return Math.round(card.getBoundingClientRect().height);
+              const sym = host.shadowRoot.querySelectorAll('.sym')[1];
+              return JSON.stringify({
+                described: Boolean(host.shadowRoot.querySelector('.detail')),
+                top: sym ? Math.round(sym.getBoundingClientRect().top) : null,
+              });
             })()
-        """)
+        """))
+        if before["described"]:
+            failures.append("the card describes a sound nobody asked about")
         symbol = evaluate(cdp, page, """
             (() => {
               const host = document.getElementById('phonetix-card-host');
@@ -390,7 +395,7 @@ def main():
                 example: (line.querySelector('.d-eg') || {}).textContent || '',
                 links: [...line.querySelectorAll('a, button')]
                   .map(b => b.getAttribute('aria-label') || '').filter(Boolean),
-                height: Math.round(card.height),
+                top: Math.round(host.shadowRoot.querySelectorAll('.sym')[1].getBoundingClientRect().top),
               });
             })()
         """, lambda v: v is not None, tries=10)
@@ -405,9 +410,9 @@ def main():
                     f"the card describes {sound['symbol']!r}, not the {symbol!r} that was tapped")
             if not sound["name"]:
                 failures.append("the sound is not named")
-            if sound["height"] != before:
+            if before["top"] is not None and abs(sound["top"] - before["top"]) > 1:
                 failures.append(
-                    f"the card changed height when a sound was read: {before} -> {sound['height']}")
+                    f"the tapped symbol moved when its sound was read: {before['top']} -> {sound['top']}")
 
         # The card is a thing to walk into. Between the word and the card there is a gap the
         # pointer has to cross, and a card that closed the moment the cursor left the word was

@@ -40,7 +40,7 @@
   const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 0);
   /** The reader's own two, each on a row of its own. */
   let mine = $derived(
-    [settings.target, settings.learning].filter(
+    [settings.target, ...(settings.known ?? [])].filter(
       (lang, at, all) => lang && offering.includes(lang) && all.indexOf(lang) === at
     )
   );

@@ -22,17 +22,19 @@ from harness import PipeCDP
 # What each state has to show, and what it must not. A state naming a piece it does not have
 # is how a card ends up with a row that says only that a row was drawn.
 WANT = {
-    "entry": {"headline": "Hund", "badges": [], "example": "El perro ladra.", "symbols": 6},
-    "form": {"headline": "Hund", "badges": [], "lemma": "perro", "form": "form: perros"},
-    "homograph": {"headline": "banco is more than one word", "readings": ["Bank", "buchen"]},
+    # A card read in a glance: the word, what it means, how it is said. The dictionary's
+    # example and its other senses are not on a card under the pointer.
+    "entry": {"headline": "Hund", "badges": [], "example": "", "symbols": 6},
+    "form": {"headline": "Hund", "badges": [], "form": "form of perro"},
+    # A spelling that is several words leads with the likeliest and names the others on one
+    # line, rather than leading with a sentence about itself.
+    "homograph": {"headline": "Bank", "readings": ["buchen"]},
     "guess": {"headline": "Regenschauer", "badges": ["guess"], "symbols": 10},
     "anchored": {"headline": "way, route", "badges": ["in English"]},
-    # A word translated is answered by its translation: the dictionary's other senses of it
-    # are not listed under a card that has already said which word it is.
     "senses": {"headline": "Punkt", "others": [], "more": ""},
     # Nothing leads a card that knows only how the word is said. The word is on the row above
     # and its transcription is under it, so a headline here is the same word three times.
-    "ipa-only": {"headline": "", "foot": "", "symbols": 6},
+    "ipa-only": {"headline": "", "symbols": 6},
     "no-pack": {"note": "No dictionary for Spanish yet"},
     "none": {"note": "Nothing found for perro"},
 }
@@ -76,13 +78,13 @@ def main():
                       symbols: [...card.querySelectorAll('.sym')].map(s => s.textContent),
                       marks: [...card.querySelectorAll('.ipa-mark')].map(m => m.getAttribute('aria-label')),
                       play: [...card.querySelectorAll('.audio')].length,
-                      lemma: (card.querySelector('.lemma') || {}).textContent || '',
-                      form: (card.querySelector('.g-sub') || {}).textContent || '',
-                      readings: [...card.querySelectorAll('.card-body .gram .lemma')].map(r => r.textContent),
+                      form: (card.querySelector('[data-form]') || {}).textContent?.trim() || '',
+                      readings: ((card.querySelector('[data-others] .lemma') || {}).textContent || '')
+                        .split(' · ').filter(Boolean),
                       others: [...card.querySelectorAll('.card-body .note')].map(n => n.textContent),
-                      more: (card.querySelector('.card-body .btn-text') || {}).textContent || '',
+                      more: (card.querySelector('.btn-text') || {}).textContent || '',
                       example: (card.querySelector('.ex') || {}).textContent || '',
-                      foot: (card.querySelector('.card-foot span') || {}).textContent || '',
+                      described: Boolean(card.querySelector('.detail')),
                       width: Math.round(box.width),
                       height: Math.round(box.height),
                       surface: style.backgroundColor,
@@ -117,14 +119,16 @@ def main():
                     failures.append(f"{uid}: {field} is {card.get(field)!r}, expected {expected!r}")
 
             # Every card is a card: measured, painted, and never a bare strip of text.
-            if card["width"] < 200 or card["height"] < 40:
+            if card["width"] < 150 or card["height"] < 40:
                 failures.append(f"{uid}: measured {card['width']}x{card['height']}")
             if "rgba(0, 0, 0, 0)" in card["surface"]:
                 failures.append(f"{uid}: no surface colour, so the tokens did not reach it")
-            # A transcription always comes with a way to hear it and with what made the sound.
-            if card["symbols"] and (card["play"] != 1 or card["marks"] != ["synthesised voice"]):
-                failures.append(
-                    f"{uid}: {card['play']} play buttons and marks {card['marks']}")
+            # A transcription always comes with a way to hear it, and no sound is described
+            # until a reader asks about one.
+            if card["symbols"] and card["play"] != 1:
+                failures.append(f"{uid}: {card['play']} play buttons")
+            if card["described"]:
+                failures.append(f"{uid}: describes a sound nobody asked about")
             if not card["symbols"] and (card["play"] or card["marks"]):
                 failures.append(f"{uid}: a sound offered for a card with no transcription")
 

@@ -17,17 +17,41 @@ export type Layer = 'off' | 'meaning' | 'sound' | 'both';
 /** What one annotated word is wrapped in. Named once: the session recognises its own work by it. */
 export const WORD = 'px-w';
 
-/** One text node that was painted, and what it held before. */
+/**
+ * One text node that was painted.
+ *
+ * The node itself is kept, detached, rather than what it said: putting it back is then the
+ * page's own node in the page's own place, and a scan after that finds the same node it found
+ * before, so a word that reads the same is a word left alone.
+ */
 interface Painted {
+  node: Text;
   /** The elements that took the text node's place, in order. */
   drawn: Node[];
-  /** Exactly what the node said, so it can be put back as it was. */
-  was: string;
-  parent: Node;
+  /** What was drawn over it, so a pass that would draw the same leaves it as it is. */
+  said: string;
 }
 
-const painted: Painted[] = [];
+/** Every painted node, by the node, in the order they were painted. */
+const painted = new Map<Text, Painted>();
 
+/** The page's text between painted words, which this cut out of the page's own node, each with
+ *  the node it was cut from: the page's words, but not a node the page made, and not one to be
+ *  read again as new. */
+const cut = new WeakMap<Node, { node: Text; at: number }>();
+
+/** The page's own node a piece of text was cut from and where in it the piece starts, or the
+ *  node itself where it was not cut. */
+export function originOf(node: Text): { node: Text; at: number } {
+  return cut.get(node) ?? { node, at: 0 };
+}
+
+/** Whether a node is one this put in the page, a painted word or the text between them. */
+export function drewIt(node: Node): boolean {
+  if (cut.has(node)) return true;
+  const element = node instanceof Element ? node : node.parentElement;
+  return element?.closest(`.${WORD}`) != null;
+}
 /**
  * Make room above the line for what will be drawn there.
  *
@@ -177,19 +201,34 @@ function instead(token: Token, layer: Layer): HTMLElement | null {
   return swapped;
 }
 
+/** What one run has drawn over it, written so two passes that would draw the same compare equal. */
+function saying(tokens: Token[], layer: Layer): string {
+  return JSON.stringify([layer, theme, side, tokens.map((token) => [
+    token.start, token.end, token.ipa, token.gloss, token.glossIpa, token.state,
+    token.provenance?.kind,
+  ])]);
+}
+
 /**
  * Paint one run's tokens over its text node.
  *
  * The node is replaced by the pieces of itself: the text between the annotated words as it
- * was, and each annotated word inside a box carrying its annotation. The pieces are kept so
- * that putting the node back is a single replacement rather than an unpicking.
+ * was, and each annotated word inside a box carrying its annotation. A node already painted
+ * with exactly this is left as it is, and one painted differently is put back and painted
+ * again in the same step, so a reader never sees a word go back to the page's spelling on its
+ * way to a new reading.
  */
 export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
-  if (layer === 'off') return;
-  room(layer);
-  if (painted.length === 0) onDark = darkHere();
-  const drawn = tokens.filter((token) => token.inline && token.run === run.id);
+  const drawn = layer === 'off'
+    ? []
+    : tokens.filter((token) => token.inline && token.run === run.id);
+  const said = saying(drawn, layer);
+  const was = painted.get(run.node);
+  if (was?.said === said) return;
+  if (was) restore(was);
   if (drawn.length === 0) return;
+  room(layer);
+  if (painted.size === 0) onDark = darkHere();
   const parent = run.node.parentNode;
   if (!parent) return;
 
@@ -198,38 +237,91 @@ export function paint(run: ScannedRun, tokens: Token[], layer: Layer): void {
   let at = 0;
   // The word before the one being painted, within this run. A run is a line the page drew, so
   // the first word of one has no neighbour rather than borrowing the last word of another.
-  let said = '';
+  let before = '';
   for (const token of drawn) {
     if (token.start < at || token.end > text.length) continue;   // the node moved under us
-    if (token.start > at) pieces.push(document.createTextNode(text.slice(at, token.start)));
+    if (token.start > at) pieces.push(between(text.slice(at, token.start), run.node, at));
     const spelling = text.slice(token.start, token.end);
     // The theme the tokens are keyed by, on the box itself: every colour is defined inside
     // one, so a box naming no theme would have none of them.
     const box = span(`${WORD} ${themeOf(onDark, theme)}`);
     const swapped = instead(token, layer);
     if (swapped) {
-      // The word repainted as the answer, with the word itself kept beside it: a reader who
-      // wants to know what was there asks for it - a rest, a tap - rather than hunting for a
-      // tooltip the browser draws whenever it feels like it.
-      swapped.title = spelling;
+      // The word repainted as the answer, with the word itself kept beside it for a tap to
+      // show. No title: the card names the word, and the browser's tooltip drew the same
+      // word a second time beside it.
       box.appendChild(swapped);
       box.appendChild(span('px-was', spelling));
     } else {
       box.appendChild(document.createTextNode(spelling));
     }
     words.set(box, token);
-    neighbours.set(box, said);
-    said = spelling;
+    neighbours.set(box, before);
+    before = spelling;
     pieces.push(box);
     at = token.end;
   }
   if (pieces.length === 0) return;
-  if (at < text.length) pieces.push(document.createTextNode(text.slice(at)));
+  if (at < text.length) pieces.push(between(text.slice(at), run.node, at));
 
   const fragment = document.createDocumentFragment();
   for (const piece of pieces) fragment.appendChild(piece);
   parent.replaceChild(fragment, run.node);
-  painted.push({ drawn: pieces, was: text, parent });
+  painted.set(run.node, { node: run.node, drawn: pieces, said });
+}
+
+/** A stretch of the page's text between two painted words, cut from the page's node where
+ *  it starts at `at`. */
+function between(text: string, from: Text, at: number): Text {
+  const node = document.createTextNode(text);
+  cut.set(node, { node: from, at });
+  return node;
+}
+
+/** Put one painted node back where its pieces are. */
+function restore(record: Painted): void {
+  painted.delete(record.node);
+  const first = record.drawn.find((piece) => piece.parentNode);
+  // The page took the pieces out itself: there is nowhere left to put the node back.
+  if (!first?.parentNode) return;
+  first.parentNode.insertBefore(record.node, first);
+  for (const piece of record.drawn) piece.parentNode?.removeChild(piece);
+}
+
+/**
+ * Run something over the page as the page wrote it, and put every painted word back after.
+ *
+ * In one step, so nothing is drawn in between: a scan has to see the page's own text nodes,
+ * and a reader must not see the page lose its annotations for the length of a pass.
+ */
+export function asWritten<T>(work: () => T): T {
+  const held = [...painted.values()].filter((record) =>
+    record.drawn.some((piece) => piece.parentNode)
+  );
+  for (const record of [...held].reverse()) {
+    const first = record.drawn.find((piece) => piece.parentNode);
+    first?.parentNode?.insertBefore(record.node, first);
+    for (const piece of record.drawn) piece.parentNode?.removeChild(piece);
+  }
+  try {
+    return work();
+  } finally {
+    for (const record of held) {
+      const parent = record.node.parentNode;
+      if (!parent) continue;
+      const fragment = document.createDocumentFragment();
+      for (const piece of record.drawn) fragment.appendChild(piece);
+      parent.replaceChild(fragment, record.node);
+    }
+  }
+}
+
+/** Put back every painted node that is not one of these, which a pass no longer draws on. */
+export function keepOnly(nodes: Set<Text>): void {
+  for (const record of [...painted.values()].reverse()) {
+    if (!nodes.has(record.node)) restore(record);
+  }
+  if (painted.size === 0) document.documentElement.classList.remove('px');
 }
 
 /** The word whose original is being shown, so the last one comes down when the next goes up. */
@@ -275,21 +367,7 @@ function behind(element: HTMLElement | null): string {
  * outwards puts a node back into a parent that is about to be replaced itself.
  */
 export function unpaint(): void {
-  document.documentElement.classList.remove('px');
-  revealed = null;
-  for (let i = painted.length - 1; i >= 0; i--) {
-    const { drawn, was, parent } = painted[i];
-    const first = drawn[0];
-    if (!first.parentNode) continue;   // the page removed it before we could
-    const restored = document.createTextNode(was);
-    first.parentNode.insertBefore(restored, first);
-    for (const piece of drawn) piece.parentNode?.removeChild(piece);
-    void parent;
-  }
-  painted.length = 0;
+  unreveal();
+  keepOnly(new Set());
 }
 
-/** Whether anything is painted, so a caller can tell a fresh page from a painted one. */
-export function isPainted(): boolean {
-  return painted.length > 0;
-}

@@ -6,15 +6,19 @@
 // chose.
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
+import type { Answer } from '@/core/answer';
 import {
-  accentFor, allowed, current, DEFAULTS, watch, type Settings,
+  accentFor, allowed, current, DEFAULTS, translates, watch, type Settings,
 } from '@/settings';
 import {
   hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing, type CardActions,
 } from './card';
 import { open as openAsk } from './ask';
 import {
-  isPainted,
+  asWritten,
+  drewIt,
+  keepOnly,
+  originOf,
   paint,
   paintedIn,
   reveal,
@@ -36,17 +40,30 @@ let settings: Settings = DEFAULTS;
 /** Words the reader has opened a card for, which stay annotated afterwards. */
 const asked: string[] = [];
 let opening: ReturnType<typeof setTimeout> | null = null;
+/** Whether a pass is under way. One at a time: each one starts from what the last one drew. */
 let painting = false;
-let drawAgain = false;
+/** Whether the whole page is to be read again, because something it was drawn by changed. */
+let wholeWanted = false;
+/** What the page added since it was last read, to be read on its own. */
+const arrived = new Set<Node>();
+/**
+ * How often each word has occurred in everything drawn so far, lowercased.
+ *
+ * Text a page adds later is read on its own and continues this count, so it gets the words
+ * it would have got had it been there from the start, and nothing already on the page changes
+ * because something was added under it.
+ */
+let counts: Record<string, number> = {};
+/** How many words are drawn and how many were read, for the state the page carries. */
+let drewWords = 0;
+let readWords = 0;
 
 /**
  * What watches the page for text arriving after it loaded.
  *
- * Held here so that painting can throw away the mutations it caused itself. Annotating a page
- * changes the page, those changes arrive at the observer after the paint has finished, and
- * without dropping them the observer asks for another paint, which causes more of them: a
- * page that redrew itself twice a second for as long as it was open, with every line moving
- * as the annotations came off and went back on.
+ * Held here so that painting can throw away the mutations it caused itself: annotating a page
+ * changes the page, and a paint that came back as page text arriving would be read again,
+ * and cause more of it, for as long as the page was open.
  */
 let watcher: MutationObserver | null = null;
 
@@ -116,9 +133,26 @@ async function readEachRun(runs: ScannedRun[]): Promise<void> {
     .catch(() => null);
   if (!read) return;
   read.forEach((said, at) => {
-    if (said.language) worth[at].lang = said.language;
+    if (said.language) {
+      worth[at].lang = said.language;
+      readAs.set(worth[at].node, said.language);
+    }
   });
 }
+
+/**
+ * What the page's pass decided about every word of each text node, drawn or not.
+ *
+ * The pass reads each word in its line, with the trained classifier and the words around it,
+ * and a card about a word that was not drawn is the same question: asked again of the word
+ * alone it was a different answer, and "Die" opening a sentence was "that" on the card where
+ * the line had read it as "the".
+ */
+const read = new WeakMap<Text, Token[]>();
+
+/** What each of the page's text nodes turned out to be in, where it said enough to tell, so a
+ *  word pointed at in an English line on a German page is asked about as English. */
+const readAs = new WeakMap<Text, string>();
 
 /** The stylesheet the annotations are drawn by, put in the page once. */
 function styles(): void {
@@ -132,48 +166,120 @@ function styles(): void {
 }
 
 /**
- * Annotate what is on the page now.
+ * Read the whole page again and draw what changed.
  *
  * One pass over the whole document rather than one per paragraph: the sprinkle counts a word's
  * occurrences across everything a reader sees, and a page annotated a paragraph at a time
  * would count each one from zero and annotate the same word every time it appeared.
+ *
+ * What is drawn stays drawn while the pass is under way, and only the words whose reading
+ * changed are drawn again: a reader changing a setting or a dictionary arriving sees those
+ * words change and nothing else move.
  */
-async function draw(): Promise<void> {
-  // Asked for again while a draw is under way - a dictionary arrived, the lines came back
-  // translated - and drawn again once it is done. Dropped, as it was, the page kept what the
-  // first draw had before either of those, and nothing asked again.
-  if (painting) {
-    drawAgain = true;
+async function drawWhole(): Promise<void> {
+  // A site the reader switched off is a site this does nothing on, which is not the same
+  // as the extension being off everywhere.
+  if (!allowed(settings, location.hostname)) {
+    unpaint();
+    state('off');
     return;
   }
-  painting = true;
-  try {
+  const runs = asWritten(() => scan());
+  watcher?.takeRecords();
+  if (runs.length === 0) {
     unpaint();
-    // A site the reader switched off is a site this does nothing on, which is not the same
-    // as the extension being off everywhere.
-    if (!allowed(settings, location.hostname)) {
-      state('off');
-      return;
+    state('nothing to read');
+    return;
+  }
+  // What the page and each line of it is in, which the card needs whether or not anything is
+  // drawn over it: it decides which words are translated at all.
+  await readLanguage(runs);
+  await readEachRun(runs);
+  if (settings.layer === 'off') {
+    unpaint();
+    watcher?.takeRecords();
+    state('nothing drawn');
+    return;
+  }
+  styles();
+  state(`asking about ${runs.length} runs`);
+  counts = {};
+  drewWords = 0;
+  readWords = 0;
+  await drawRuns(runs, () => keepOnly(new Set(runs.map((run) => run.node))));
+}
+
+/**
+ * Read what the page added and draw it, leaving everything already drawn as it is.
+ *
+ * A page that adds a preview under the pointer, a comment, the next screen of a feed, gets
+ * that read; a page redrawn whole for each of those was a page whose every line went back to
+ * its own spelling and came back seconds later, over and over, for as long as it was open.
+ */
+async function drawAdded(roots: Node[]): Promise<void> {
+  if (!allowed(settings, location.hostname)) return;
+  const fresh = roots.filter(
+    (root) =>
+      root.isConnected &&
+      !ours(root) &&
+      !roots.some((other) => other !== root && other.contains(root))
+  );
+  let id = 0;
+  const runs = fresh.flatMap((root) => {
+    // Without the text between painted words, which a page that moved a painted paragraph
+    // brings back as added: it is a line already read.
+    const found = scan(root, id).filter((run) => !drewIt(run.node));
+    id += found.length;
+    return found;
+  });
+  if (runs.length === 0) return;
+  await readEachRun(runs);
+  if (settings.layer === 'off') return;
+  styles();
+  await drawRuns(runs);
+}
+
+/**
+ * How much text one request carries.
+ *
+ * The host reads a request in one go, and a card asked for while it reads waits behind it: a
+ * long article sent whole held every card for three seconds. In pieces of this size a card
+ * waits for one piece at most, and the page is drawn top first as the pieces come back.
+ */
+const PIECE = 12000;
+
+/** Runs cut into pieces of about PIECE characters, in the order they are read. */
+function pieces(runs: ScannedRun[]): ScannedRun[][] {
+  const out: ScannedRun[][] = [];
+  let piece: ScannedRun[] = [];
+  let size = 0;
+  for (const run of runs) {
+    piece.push(run);
+    size += run.text.length;
+    if (size >= PIECE) {
+      out.push(piece);
+      piece = [];
+      size = 0;
     }
-    const runs = scan();
-    if (runs.length === 0) {
-      state('nothing to read');
-      return;
-    }
-    // What the page is in, which the card needs whether or not anything is drawn over it.
-    await readLanguage(runs);
-    if (settings.layer === 'off') {
-      state('nothing drawn');
-      return;
-    }
-    styles();
-    await readEachRun(runs);
-    const source = pageLanguage();
-    state(`asking about ${runs.length} runs`);
-    // What goes over a word on the page is how it is said, and only that: what a word means is
-    // the card's, which opens on the word a reader points at.
+  }
+  if (piece.length > 0) out.push(piece);
+  return out;
+}
+
+/**
+ * Ask what to draw on these runs and draw it, a piece at a time.
+ *
+ * Each piece continues the count of the one before, so the page gets the words it would have
+ * got asked about whole. `settle` runs in the same step as the last piece is drawn, for
+ * whatever else that step has to put right.
+ */
+async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> {
+  const source = pageLanguage();
+  for (const piece of pieces(runs)) {
+    // What goes over a word on the page is how it is said, and only that: what a word means
+    // is the card's, which opens on the word a reader points at.
     const batch = await sendMessage('annotate', {
-      runs: runs.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
+      runs: piece.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
       target: settings.target || source,
       options: {
@@ -183,34 +289,52 @@ async function draw(): Promise<void> {
         hideStress: settings.hideStress,
         accent: accentFor(settings, source),
         seen: asked,
+        counts,
       },
     });
     const byRun = new Map<number, Token[]>();
     for (const token of batch.tokens) {
+      const key = token.spelling.toLowerCase();
+      counts[key] = (counts[key] ?? 0) + 1;
       const held = byRun.get(token.run);
       if (held) held.push(token);
       else byRun.set(token.run, [token]);
     }
-    let drew = 0;
-    for (const run of runs) {
-      const tokens = byRun.get(run.id);
-      if (!tokens) continue;
+    for (const run of piece) {
+      const tokens = byRun.get(run.id) ?? [];
+      read.set(run.node, tokens);
       paint(run, tokens, INLINE);
-      drew += tokens.filter((token) => token.inline).length;
+      drewWords += tokens.filter((token) => token.inline).length;
     }
-    state(`drew ${drew} of ${batch.tokens.length}`);
+    readWords += batch.tokens.length;
+    // Our own changes, dropped before the observer can take them for the page's.
+    watcher?.takeRecords();
+  }
+  settle?.();
+  watcher?.takeRecords();
+  state(`drew ${drewWords} of ${readWords}`);
+}
+
+/** Run whatever passes are wanted, one after another, until none is. */
+async function pump(): Promise<void> {
+  if (painting) return;
+  painting = true;
+  try {
+    while (wholeWanted || arrived.size > 0) {
+      if (wholeWanted) {
+        wholeWanted = false;
+        arrived.clear();
+        await drawWhole();
+      } else {
+        const roots = [...arrived];
+        arrived.clear();
+        await drawAdded(roots);
+      }
+    }
   } catch (e) {
     state(`failed: ${String(e)}`);
-    throw e;
   } finally {
-    // Our own mutations, dropped before anything can act on them. Ordered before the guard
-    // comes down, since a record delivered after it is a record that starts this again.
-    watcher?.takeRecords();
     painting = false;
-    if (drawAgain) {
-      drawAgain = false;
-      redraw();
-    }
   }
 }
 
@@ -284,21 +408,31 @@ function within(range: Range, x: number, y: number): boolean {
   );
 }
 
-/** One word to open a card for: how the page spells it, what it is in, and what it drew. */
+/** One word to open a card for: how the page spells it, how it is read, what it is in, and
+ *  the word before it. */
 interface Asked {
+  /** As the word is read, which is what is looked up. */
   spelling: string;
+  /** As the page writes it, which is what the card shows. */
+  written: string;
   lang: string;
   before: string;
-  /** What the page drew over it, where it had decided which word it is. */
-  drawn: string;
 }
 
+/**
+ * The question the page's own pass asked about a word, asked again for its card.
+ *
+ * The same spelling, read the same way, after the same word: the card then reads the word the
+ * page read. Handing the core the word the page drew instead, as though it were the line
+ * translated, sent "the" looking for itself among the readings of "die" and found it in "the
+ * one, him".
+ */
 function askedOf(token: Token, before: string): Asked {
   return {
-    spelling: token.spelling,
+    spelling: token.reading || token.spelling,
+    written: token.spelling,
     lang: token.lang,
     before,
-    drawn: token.state !== 'Homograph' ? (token.gloss ?? '') : '',
   };
 }
 
@@ -314,9 +448,13 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
   if (!caret || !(caret.node instanceof Text)) return null;
   const node = caret.node;
   const parent = node.parentElement;
-  if (!parent || ours(node) || !readable(parent)) return null;
+  // The text between painted words is the page's own and is asked about like any other; a
+  // painted word answers through its own box.
+  if (!parent || parent.closest(`.${WORD}, #${OURS}`) || !readable(parent)) return null;
   const text = node.nodeValue ?? '';
   const lang = languageOf(node);
+  const origin = originOf(node);
+  const decided = read.get(origin.node) ?? [];
   let before = '';
   for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
     if (part.index > caret.offset) break;
@@ -328,7 +466,15 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
       // The caret is the nearest place to the point, which is a word even where the pointer is
       // in the margin beside a line: only a word actually under the pointer is asked about.
       if (within(range, x, y)) {
-        return { range, asked: { spelling: part.segment, lang, before, drawn: '' } };
+        // The page's own reading of this word where its pass reached it.
+        const at = origin.at + part.index;
+        const token = decided.find((it) => it.start <= at && at < it.end);
+        return {
+          range,
+          asked: token
+            ? { ...askedOf(token, before), lang: token.lang || lang }
+            : { spelling: part.segment, written: part.segment, lang, before },
+        };
       }
     }
     if (part.isWordLike) before = part.segment;
@@ -349,8 +495,11 @@ function caretAt(x: number, y: number): { node: Node; offset: number } | null {
   return range ? { node: range.startContainer, offset: range.startOffset } : null;
 }
 
-/** The language a stretch of text is in: what its own element declares, or the page's. */
+/** The language a stretch of text is in: what its own element declares, what it was read as,
+ *  or the page's. */
 function languageOf(node: Text): string {
+  const said = readAs.get(originOf(node).node);
+  if (said) return said;
   const declared = node.parentElement?.closest('[lang]');
   if (declared && declared !== document.documentElement && declared !== document.body) {
     const lang = declared.getAttribute('lang')?.trim().split('-')[0].toLowerCase();
@@ -359,40 +508,58 @@ function languageOf(node: Text): string {
   return pageLanguage();
 }
 
+/** How far each dictionary on its way has got, as the host last said. */
+let coming: Record<string, number> = {};
+/** What the card on screen does when that changes. */
+let following: (() => void) | null = null;
+
+/** What is known about a word with what it means left off: how it is said, and which form of
+ *  which word it is. */
+function said(answer: Answer): Answer {
+  return {
+    ...answer,
+    state: answer.state === 'Homograph' ? 'Entry' : answer.state,
+    lead: null,
+    says: [],
+    glosses: [],
+    marks: [],
+    example: null,
+    readings: [],
+    provenance: answer.provenance?.kind === 'guess' ? null : answer.provenance,
+  };
+}
+
 /** Open the card for a word the reader stopped at. */
 async function open(anchor: Anchor, word: Asked): Promise<void> {
   const source = word.lang || pageLanguage();
-  const answer = await sendMessage('lookUp', {
+  // Into the reader's own language, unless this is one they read as it is: then the card says
+  // how the word is said and nothing else, since what it means is the one thing they did not
+  // ask for. A dictionary's English definition of a German word is a translation all the same.
+  const translating = translates(settings, source);
+  const target = translating ? settings.target : source;
+  const looked = await sendMessage('lookUp', {
     word: word.spelling,
     source,
-    // Into the reader's own language, which for a word already in it is the word itself: the
-    // card then says how it is said and nothing is translated.
-    target: settings.target || source,
+    target,
     accent: accentFor(settings, source),
     // What the inline layer already knew: a spelling that is several words is decided by the
     // one before it, and the card must not ask a question the page has answered.
     before: word.before,
-    // And what it drew, where it had decided which word this is.
-    drawn: word.drawn,
+    drawn: '',
   });
+  // Shown as the page writes it, whichever way it was read.
+  const written = { ...looked, spelling: word.written };
+  const answer = translating ? written : said(written);
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
-  if (!anchor.alive() || anchored !== anchor) return;
+  const current = () => anchor.alive() && anchored === anchor;
+  if (!current()) return;
   const key = word.spelling.toLowerCase();
   if (!asked.includes(key)) asked.push(key);
-  // What a person recorded, where Wiktionary has one: a recording is what a reader trusts,
-  // and a machine reading a transcription is not the same thing.
-  const said = await sendMessage('enrich', { word: word.spelling, lang: source })
-    .catch(() => null);
-  const recording = said?.audio[0];
-  if (!anchor.alive() || anchored !== anchor) return;
-  // A transcription a person wrote, where the pack had none.
-  const shown = answer.ipa.length === 0 && said?.ipa.length
-    ? { ...answer, ipa: [said.ipa[0]], symbols: await sendMessage('symbols', { ipa: said.ipa[0] })
-        .catch(() => answer.symbols) }
-    : answer;
+  let recording = '';
   const actions: CardActions = {
-    recorded: Boolean(recording),
+    recorded: false,
+    arriving: coming[source] ?? null,
     accent: accentFor(settings, source),
     eased: settings.animations,
     onPlay: () => {
@@ -406,19 +573,48 @@ async function open(anchor: Anchor, word: Asked): Promise<void> {
     onPlayUrl: (url) => void recorded(url),
     diagram: (file) => sendMessage('diagram', { file, width: DIAGRAM_WIDTH }),
   };
+  // Up with what the dictionary said, at once. What the network and the engine add arrives
+  // after and fills the same card: a card that waited on Wiktionary waited a second or more
+  // on every word.
+  let shown = answer;
   show(shown, anchor.box(), actions);
-  // A word no dictionary means anything by, in another language than the reader's: the card
-  // is up with how it is said, and what the engine makes of it follows, marked as its guess.
-  const target = settings.target || source;
-  if (shown.says.length > 0 || shown.glosses.length > 0 || target === source) return;
+  // Told again as the dictionary for its language comes in, and asked again once it is here.
+  following = () => {
+    if (!current()) return;
+    const share = coming[source] ?? null;
+    if (share === null && actions.arriving !== null) {
+      void open(anchor, word);
+      return;
+    }
+    actions.arriving = share;
+    show(shown, anchor.box(), actions);
+  };
+  const enriched = sendMessage('enrich', { word: word.spelling, lang: source })
+    .then(async (found) => {
+      if (!found || !current()) return;
+      recording = found.audio[0] ?? '';
+      actions.recorded = Boolean(recording);
+      // A transcription a person wrote, where the pack had none.
+      if (shown.ipa.length === 0 && found.ipa.length > 0) {
+        const symbols = await sendMessage('symbols', { ipa: found.ipa[0] })
+          .catch(() => shown.symbols);
+        shown = { ...shown, ipa: [found.ipa[0]], symbols };
+      }
+      if (current()) show(shown, anchor.box(), actions);
+    })
+    .catch(() => undefined);
+  // A word no dictionary means anything by, in another language than the reader's: what the
+  // engine makes of it follows, marked as its guess.
+  if (answer.says.length > 0 || answer.glosses.length > 0 || !translating) return;
   const guess = await sendMessage('guess', { word: word.spelling, source, target })
     .catch(() => '');
-  if (!guess || !anchor.alive() || anchored !== anchor) return;
-  show(
-    { ...shown, state: 'Guess', says: [guess], provenance: { kind: 'guess', engine: 'bergamot' } },
-    anchor.box(),
-    actions
-  );
+  await enriched;
+  if (!guess || !current()) return;
+  shown = {
+    ...shown, state: 'Guess', lead: null, says: [guess],
+    provenance: { kind: 'guess', engine: 'bergamot' },
+  };
+  show(shown, anchor.box(), actions);
 }
 
 /**
@@ -439,9 +635,9 @@ async function selected(): Promise<void> {
   if (text.length > PHRASE_LIMIT) return;
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
-  const source = pageLanguage();
-  const target = settings.target || source;
-  if (!target || target === source) return;
+  const source = at instanceof Text ? languageOf(at) : pageLanguage();
+  if (!translates(settings, source)) return;
+  const target = settings.target;
   const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
   if (!answer) return;
   const range = selection.getRangeAt(0).getBoundingClientRect();
@@ -546,7 +742,9 @@ function gestures(): void {
         resting = null;
         if (anchored?.holds(pointer.x, pointer.y)) return;
         const found = wordUnder(pointer.x, pointer.y);
-        if (!found) return;
+        // A word in a language the reader reads is left to them: its card would only say how
+        // it is said, which is what the words drawn over the page are for.
+        if (!found || !translates(settings, found.asked.lang)) return;
         anchored = onRange(found.range);
         void open(anchored, found.asked);
       }, Math.max(0, settings.delay));
@@ -562,9 +760,9 @@ function gestures(): void {
     const found = wordAt(event.target);
     if (!found) return;
     if (touched) return;
-    // What the swap covered, back for as long as the cursor is on it. Immediately, because
-    // it is the word itself rather than a card about it.
-    reveal(found.element);
+    // The word stays as it is drawn: the card names what the page wrote, and flipping each
+    // word back to its spelling as the pointer crossed it set the line jumping under a reader
+    // moving across it.
     keep();
     if (opening) clearTimeout(opening);
     opening = setTimeout(() => {
@@ -638,8 +836,9 @@ function gestures(): void {
 
 /** Whether a node is something this extension drew rather than something the page brought. */
 function ours(node: Node): boolean {
+  if (drewIt(node)) return true;
   const element = node instanceof Element ? node : node.parentElement;
-  return element !== null && element.closest(`.${WORD}, #${OURS}`) !== null;
+  return element !== null && element.closest(`#${OURS}`) !== null;
 }
 
 /**
@@ -651,19 +850,18 @@ function ours(node: Node): boolean {
 function follow(): void {
   let soon: ReturnType<typeof setTimeout> | null = null;
   watcher = new MutationObserver((changes) => {
-    if (painting) return;
     // Text the page brought, not text we drew. An annotation is an element of ours holding
     // the word it annotates, so a change inside one is our own work coming back to us.
-    const real = changes.some((change) =>
-      !ours(change.target) &&
-      [...change.addedNodes].some(
-        (node) =>
-          !ours(node) && (node.nodeType === Node.TEXT_NODE || node instanceof HTMLElement)
-      )
-    );
-    if (!real) return;
+    for (const change of changes) {
+      if (ours(change.target)) continue;
+      for (const node of change.addedNodes) {
+        if (ours(node)) continue;
+        if (node.nodeType === Node.TEXT_NODE || node instanceof HTMLElement) arrived.add(node);
+      }
+    }
+    if (arrived.size === 0) return;
     if (soon) clearTimeout(soon);
-    soon = setTimeout(() => void draw(), 500);
+    soon = setTimeout(() => void pump(), 300);
   });
   watcher.observe(document.body, { childList: true, subtree: true });
 }
@@ -722,8 +920,7 @@ export async function session(): Promise<void> {
     ) {
       paintedIn(fresh.theme, fresh.dark);
       cardPaintedIn(fresh.theme, fresh.dark);
-      if (!allowed(fresh, location.hostname) && isPainted()) unpaint();
-      else redraw();
+      redraw();
     }
   });
   // And when a dictionary arrives or is given up, which is not a setting and used to leave
@@ -732,17 +929,21 @@ export async function session(): Promise<void> {
   // And when lines of it have come back translated, which decides which word or which sense
   // some of its words are: what was drawn before was the dictionary's first.
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== 'local' || !('heldPacks' in changes || 'linesTranslated' in changes)) return;
+    if (area !== 'local') return;
+    if ('arriving' in changes) {
+      coming = (changes.arriving.newValue as Record<string, number> | undefined) ?? {};
+      if (showing()) following?.();
+    }
+    if (!('heldPacks' in changes || 'linesTranslated' in changes)) return;
     redraw();
   });
-  await draw();
+  coming = ((await browser.storage.local.get('arriving')).arriving as Record<string, number>) ?? {};
+  wholeWanted = true;
+  await pump();
 }
 
-/**
- * Draw the page again, from something that cannot wait for it: a setting changing, a
- * dictionary arriving. A failure is already written down where the page's state is kept, so
- * what is left is to keep it from becoming a rejection nobody is listening for.
- */
+/** Draw the whole page again, once whatever pass is under way has finished. */
 function redraw(): void {
-  draw().catch(() => undefined);
+  wholeWanted = true;
+  void pump();
 }

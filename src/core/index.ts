@@ -145,7 +145,9 @@ export async function annotate(
       options.narrow ?? false,
       options.hideStress ? 1 : 0,
       options.accent ?? '',
-      options.seen ?? []
+      options.seen ?? [],
+      Object.keys(options.counts ?? {}),
+      new Uint32Array(Object.values(options.counts ?? {}))
     )
   ) as Batch;
 }

@@ -13,7 +13,7 @@
    finger the view takes the sheet's width instead. */
 html,
 body {
-  width: 24rem;
+  width: 26rem;
 }
 
 @media (pointer: coarse) {
@@ -25,8 +25,8 @@ body {
 
 /* A popup is read at a desk, closer than a phone and with a pointer: rows a little tighter. */
 .top {
-  min-height: 52px;
-  padding: 6px 16px 0;
+  min-height: 48px;
+  padding: 4px 16px 0;
 }
 
 .top .icon-button {
@@ -47,12 +47,12 @@ body {
 }
 
 .group-name {
-  padding: 12px 4px 6px;
+  padding: 8px 4px 6px;
   font-size: 13px;
 }
 
 .group:not(:has(.group-name)) {
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 /* The last card is not drawn against the window's edge. */
@@ -77,6 +77,7 @@ body {
 .item + .item::before,
 .item + .density::before,
 .density + .item::before,
+.duo + .item::before,
 [data-row="narrow"] + .item::before {
   content: "";
   position: absolute;
@@ -378,4 +379,67 @@ kbd {
 .range:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+/* A dictionary on its way: what, how far, and a bar for it, between the site and the cards. */
+.arriving {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  margin: 10px 16px 0;
+  font-size: 13px;
+  color: var(--color-ink-muted);
+}
+
+.arriving-share {
+  font-variant-numeric: tabular-nums;
+}
+
+.arriving progress {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border: none;
+  border-radius: 2px;
+  background: var(--color-chip-bg);
+}
+
+.arriving progress::-webkit-progress-bar {
+  border-radius: 2px;
+  background: var(--color-chip-bg);
+}
+
+.arriving progress::-webkit-progress-value {
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.arriving progress::-moz-progress-bar {
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+/* The palettes three to a row, so all five fit the window with the light-or-dark row above
+   them: two to a row ran the last one past the bottom of the popup. */
+.palettes {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+}
+
+.palette {
+  gap: 8px;
+  padding: 10px;
+}
+
+.palette-name {
+  font-size: 14px;
+}
+
+.palette-check {
+  right: 8px;
+  bottom: 8px;
+  width: 16px;
+  height: 16px;
 }

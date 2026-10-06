@@ -17,4 +17,15 @@ void current().then((settings) => {
 });
 document.documentElement.classList.add(...themeOf(dark).split(' '));
 
-export default mount(App, { target: document.getElementById('app')! });
+const app = document.getElementById('app')!;
+
+// A whole number of pixels tall. The browser sizes the popup window to the document and rounds
+// a fractional height down, and rows set in a line height of 1.3 are fractions of a pixel: a
+// view 506.8px tall got a 506px window and scrolled by the pixel it lost.
+// The body is held to the view's height rounded up, and the view itself is left free, so it is
+// still told when a screen half as tall replaces it.
+new ResizeObserver(() => {
+  document.body.style.minHeight = `${Math.ceil(app.getBoundingClientRect().height)}px`;
+}).observe(app);
+
+export default mount(App, { target: app });

@@ -24,6 +24,13 @@ export interface Settings {
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
   /**
+   * The languages the reader reads as they are, which nothing translates.
+   *
+   * Their own language is always one of them whether it is listed or not. A word in any other
+   * language is translated into theirs; a word in one of these is left as it is and only said.
+   */
+  known: string[];
+  /**
    * The language the reader is learning, which is what a word they are looking for comes
    * back in.
    *
@@ -98,6 +105,7 @@ export const DEFAULTS: Settings = {
   density: 12,
   target: '',
   source: '',
+  known: [],
   learning: '',
   recent: [],
   narrow: false,
@@ -129,6 +137,12 @@ export function readInto(settings: Settings): string {
   // not. A switch beside it saying the same thing again was a second way to say no, and a
   // reader who set one and not the other got a screen that did nothing.
   return settings.layer === 'meaning' || settings.layer === 'both' ? settings.target : '';
+}
+
+/** Whether a word in this language is one the reader wants translated: anything but their own
+ *  and the ones they read as they are. A language nobody could tell is not translated either. */
+export function translates(settings: Settings, lang: string): boolean {
+  return Boolean(lang) && lang !== settings.target && !(settings.known ?? []).includes(lang);
 }
 
 /** Whether the dark side of the palette is the one to draw, given what the device says. */

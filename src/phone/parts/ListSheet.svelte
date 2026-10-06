@@ -2,7 +2,7 @@
   // A long list to choose from, over the whole screen, with a search at its top.
   //
   // Standing while it is open, so the phone's way back closes it rather than the app.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { SAYS } from '@/data/wording';
   import { standing } from '@/ui/controls/sheets.svelte';
   import Close from 'virtual:icons/pixelarticons/close';
@@ -11,7 +11,9 @@
   interface Props {
     title: string;
     options: { value: string; label: string; about?: string }[];
-    chosen: string;
+    /** One value, chosen by picking it, which closes the list; or several, each picked or put
+     *  back on its own while the list stays open. */
+    chosen: string | string[];
     /** From how many options the list gets a search. */
     searchFrom?: number;
     change: (value: string) => void;
@@ -21,10 +23,13 @@
   let { title, options, chosen, searchFrom = 12, change, close }: Props = $props();
 
   let typed = $state('');
+  /** What was chosen when the list opened, which comes first so the list opens on it. Taken
+   *  once: a row that jumped to the top as it was ticked would leave the reader's finger on
+   *  another one. */
+  const first = untrack(() => (Array.isArray(chosen) ? [...chosen] : [chosen]));
   let shown = $derived.by(() => {
     const wanted = typed.trim().toLowerCase();
-    // What is chosen comes first, so the list opens on it.
-    if (!wanted) return [...options.filter((it) => it.value === chosen), ...options.filter((it) => it.value !== chosen)];
+    if (!wanted) return [...options.filter((it) => first.includes(it.value)), ...options.filter((it) => !first.includes(it.value))];
     return options.filter(
       (it) => it.label.toLowerCase().includes(wanted) || it.value.toLowerCase() === wanted
     );
@@ -50,7 +55,7 @@
         {chosen}
         change={(value) => {
           change(value);
-          close();
+          if (!Array.isArray(chosen)) close();
         }}
       />
     </div>

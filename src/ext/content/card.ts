@@ -22,6 +22,9 @@ let frame: HTMLElement | null = null;
 let drawn: ReturnType<typeof mount> | null = null;
 /** What the card on screen is about, so a second ask about the same word is not a redraw. */
 let about: string | null = null;
+/** Which word the card on screen is about, so an answer filled in later is told apart from a
+ *  card for another word. */
+let spelling = '';
 /** The palette the reader chose, which every surface of ours is drawn in. */
 let theme = THEME;
 /** Which side of it, where the reader insisted rather than leaving it to the page. */
@@ -56,7 +59,11 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   // the same way the annotations decide, so a card and the words it is about never come out
   // of two different palettes.
   frame.className = themeOf(darkHere(), theme);
-  frame.style.cssText = 'position:fixed;width:var(--card-width);max-width:calc(100vw - 16px);';
+  // As wide as what it says, up to the card's width: a one-word answer in a card sized for a
+  // definition was mostly empty card.
+  frame.style.cssText =
+    'position:fixed;width:max-content;min-width:220px;' +
+    'max-width:min(var(--card-width), calc(100vw - 16px));';
   shadow.appendChild(frame);
   return { shadow, frame };
 }
@@ -93,6 +100,14 @@ function place(at: DOMRect): void {
   }
 }
 
+/** Lift the card just enough to keep its bottom edge inside the window. */
+function keepInWindow(): void {
+  if (!frame) return;
+  const box = frame.getBoundingClientRect();
+  const over = box.bottom - (window.innerHeight - GAP);
+  if (over > 0) frame.style.top = `${Math.round(Math.max(GAP, box.top - over))}px`;
+}
+
 /** What the card can be asked to do, which is the session's business rather than the card's. */
 export interface CardActions {
   /** Whether what the play button plays is a person rather than a machine. */
@@ -108,6 +123,8 @@ export interface CardActions {
   /** A picture of the mouth making a sound, from wherever the host can reach it. */
   diagram?: (file: string) => Promise<string>;
   onOpen?: (url: string) => void;
+  /** How far the dictionary for the word's language has got, where it is on its way. */
+  arriving?: number | null;
 }
 
 /** Where the card is anchored, so it can be put back in place when it changes height. */
@@ -117,14 +134,20 @@ let anchor: DOMRect = new DOMRect();
 export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): void {
   anchor = at;
   const { frame: box } = build();
-  const key = `${answer.spelling}:${answer.state}:${actions.recorded ?? false}:${
-    actions.accent ?? ''
-  }:${actions.eased ?? false}`;
+  const key = JSON.stringify([
+    answer.spelling, answer.state, answer.ipa[0], answer.says[0], actions.recorded ?? false,
+    actions.accent ?? '', actions.eased ?? false,
+    actions.arriving == null ? null : Math.round(actions.arriving * 100),
+  ]);
   if (drawn && about === key) {
     place(at);
     return;
   }
+  // The same word with more found out about it is the same card filled in: it neither eases
+  // in a second time nor leaves the word it is under.
+  const filling = drawn !== null && spelling === answer.spelling;
   hide();
+  spelling = answer.spelling;
   const { frame: fresh } = build();
   drawn = mount(Opened, {
     target: fresh,
@@ -132,22 +155,28 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
       answer,
       recorded: actions.recorded ?? false,
       accent: actions.accent ?? '',
-      eased: actions.eased ?? false,
+      eased: !filling && (actions.eased ?? false),
       // Anchored to a word, so it says which one it is about.
       points: 'below',
       diagram: actions.diagram,
       onPlay: actions.onPlay,
       onPlayUrl: actions.onPlayUrl,
       onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
-      // A sheet opening under the card makes it taller, and a card that grew where it stood
-      // can end up hanging off the bottom of the window.
-      onSymbol: () => requestAnimationFrame(() => place(anchor)),
+      arriving: actions.arriving ?? null,
+      // A sound described makes the card taller. It grows where it stands, so the symbol the
+      // reader just pressed stays under the pointer, and moves up only as far as the window's
+      // bottom edge makes it.
+      onSymbol: () => requestAnimationFrame(keepInWindow),
     },
   });
   about = key;
   void box;
-  // Placed after it has drawn, since where it fits depends on how tall it turned out to be.
-  requestAnimationFrame(() => place(at));
+  // Placed as soon as it is drawn, since where it fits depends on how tall it turned out to
+  // be, and before the frame is painted: placed a frame later, a card showed for one frame
+  // wherever the last one had been and then jumped to its word. Again on the next frame, for
+  // anything the card lays out late.
+  place(at);
+  requestAnimationFrame(() => place(anchor));
 }
 
 /**

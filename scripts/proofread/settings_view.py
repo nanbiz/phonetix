@@ -135,7 +135,7 @@ def main():
         evaluate(cdp, book_session, (
             f"chrome.storage.local.set({{packBaseUrl:'{base}'}})"
             ".then(() => chrome.storage.local.remove(['on','layer','density','targetLanguage',"
-            "'sourceLanguage','learning','sitesOff','accents']))"
+            "'sourceLanguage','learning','knownLanguages','sitesOff','accents']))"
         ))
         for lang in ("es", "de"):
             evaluate(cdp, book_session, (
@@ -171,7 +171,7 @@ def main():
                 rows: [...document.querySelectorAll('[data-row]')].map(r => r.dataset.row),
                 on: document.querySelector('[data-row=on] input').checked,
                 site: (document.querySelector('[data-row=site] [data-about]') || {}).textContent,
-                mine: (document.querySelector('[data-row=mine] [data-about]') || {}).textContent,
+                mine: (document.querySelector('[data-row=target] [data-about]') || {}).textContent,
               });
             })()
         """, lambda v: v is not None)
@@ -180,7 +180,7 @@ def main():
             sys.exit(1)
         panel = json.loads(drawn)
         print(f"  rows: {panel['rows']}")
-        for row in ("on", "site", "inline", "density", "mine", "learning", "translator",
+        for row in ("on", "site", "inline", "density", "target", "known", "translator",
                     "pronunciation", "theme"):
             if row not in panel["rows"]:
                 failures.append(f"the popup has no {row} row")
@@ -234,12 +234,38 @@ def main():
         control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
 
         # My language: the card says what a word means in it.
-        control(cdp, view, "document.querySelector('[data-row=mine]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-row=target]').click()", settle=1)
         control(cdp, view, "document.querySelector('[data-sheet] [data-choice=de]').click()")
         card = point_at(cdp, page, "camino")
         print(f"  my language German, pointing at camino: {(card or '')[:80]!r}")
         if not card or "Weg" not in card:
             failures.append(f"the card did not answer in German: {card!r}")
+
+        # A language the reader reads as it is: its words pointed at open nothing, and a word
+        # the page replaced opens a card that says it and does not translate it.
+        control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
+        control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
+        known = evaluate(cdp, view, "document.querySelector('[data-row=known] [data-about]').textContent")
+        # Every word is replaced at this end of the bar, so the plain word is pointed at with
+        # replacing off.
+        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        plain = point_at(cdp, page, "por")
+        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        print(f"  never translate {known!r}: pointing at por: {(plain or '')[:60]!r}")
+        if (known or "").strip() != "Spanish":
+            failures.append(f"the never-translate row says {known!r} after choosing Spanish")
+        if plain:
+            failures.append(f"a word in a language never translated opened a card: {plain!r}")
+        replaced = point_at(cdp, page, "camino")
+        print(f"  ... pointing at the replaced camino: {(replaced or '')[:60]!r}")
+        if not replaced or "camino" not in replaced:
+            failures.append(f"a replaced word in a language never translated opened no card: {replaced!r}")
+        elif "Weg" in replaced:
+            failures.append(f"a word in a language never translated was translated: {replaced!r}")
+        control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
+        control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
 
         # An accent whose difference is a rule changes how the page says a word.
         def sound_of(word):
@@ -281,9 +307,7 @@ def main():
         control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
 
         # The translator: opened from the popup, over the page, and answering both ways
-        # between the reader's language and the one being learned.
-        control(cdp, view, "document.querySelector('[data-row=learning]').click()", settle=1)
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()", settle=1)
+        # between the reader's language and the one it opens on, which is the page's.
         evaluate(cdp, view, "document.querySelector('[data-does=open-panel]').click()")
         time.sleep(2)
         opened = evaluate(cdp, page, shadow_text("phonetix-card-host-ask"))

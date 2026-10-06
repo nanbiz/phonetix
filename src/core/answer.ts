@@ -46,6 +46,10 @@ export interface Reading {
 
 export interface Answer {
   state: AnswerState;
+  /** The word the card leads with, which is the word the page draws over this one: "the" for
+   *  German "die", where the dictionary's own first line is a note about its grammar. Absent
+   *  where nothing was found to lead with. */
+  lead?: string | null;
   /** What the reader met, as it is written on the page. */
   spelling: string;
   /** The dictionary form, where that is a different word from the one on the page. */
@@ -87,7 +91,7 @@ export function headline(answer: Answer): string | null {
   // The word itself is never the headline. The row above the card already names it and the
   // transcription under it is the same word again, so leading with it showed the reader the
   // same word three times over; a card with no sense to lead with leads with nothing.
-  return answer.says[0] ?? answer.glosses[0] ?? null;
+  return answer.lead || answer.says[0] || answer.glosses[0] || null;
 }
 
 /**

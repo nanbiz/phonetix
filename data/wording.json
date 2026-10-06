@@ -347,6 +347,14 @@
     "translator": {
       "name": "Translator",
       "about": ""
+    },
+    "into": {
+      "name": "Translate into",
+      "about": ""
+    },
+    "known": {
+      "name": "Never translate",
+      "about": ""
     }
   },
   "ends": {
@@ -419,6 +427,7 @@
     "simple": "Simple",
     "detailed": "Detailed",
     "simple-example": "/tɒp/",
-    "detailed-example": "[tʰɒp]"
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "nothing else"
   }
 }

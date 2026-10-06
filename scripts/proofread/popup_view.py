@@ -18,9 +18,11 @@ what is drawn. The picture is kept either way, so there is something to look at.
 # ///
 
 import base64
+import http.server
 import json
 import os
 import sys
+import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,6 +31,21 @@ from harness import PipeCDP
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-popup")
+PORT = int(os.environ.get("PHONETIX_POPUP_PORT", "8933"))
+
+
+class Page(http.server.BaseHTTPRequestHandler):
+    """A page for the popup to be about: on a site, it carries the row for that site."""
+
+    def do_GET(self):
+        body = b"<!doctype html><html lang='de'><body><p>Der Hund liest ein Buch.</p></body></html>"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):
+        pass
 
 
 def evaluate(cdp, session, expression):
@@ -68,6 +85,34 @@ def edges(path, inset=3):
     return seen, image.size
 
 
+def wrapped(cdp, session, where):
+    """Every name and value in the view that runs onto a second line.
+
+    A row says what it is and what it is set to, one line each: a value that wrapped left its
+    last word alone on a line under it, "(currently: on)" split from what it belonged to.
+    """
+    broken = json.loads(evaluate(cdp, session, """
+        JSON.stringify([...document.querySelectorAll(
+            '[data-name], [data-about], .item-name, .item-value, .group-name, .density-says, ' +
+            '.arriving span, .show-name, .button, kbd')]
+          .filter(el => el.offsetParent !== null)
+          .filter(el => {
+            // The lines the text itself sits on, whatever padding its box has.
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            // Two lines are a line's height apart; a key drawn beside text sits a few pixels
+            // lower on the same one.
+            const bottoms = [...range.getClientRects()]
+              .filter(box => box.width > 0)
+              .map(box => box.bottom);
+            const line = parseFloat(getComputedStyle(el).fontSize);
+            return bottoms.some(b => b - Math.min(...bottoms) > line * 0.8);
+          })
+          .map(el => el.textContent.trim().slice(0, 40)))
+    """))
+    return [f"{where}: text on two lines: {text!r}" for text in broken]
+
+
 def real_popup(cdp, extid):
     """Open the popup the way the toolbar button does and measure the window it got.
 
@@ -78,12 +123,19 @@ def real_popup(cdp, extid):
     25px wide on the toolbar.
     """
     failures = []
+    # Over a page on a site, which is when the popup is at its tallest: the site's own row.
+    page = cdp.send("Target.createTarget", {"url": f"http://127.0.0.1:{PORT}/"})["targetId"]
+    time.sleep(2)
+    cdp.send("Target.activateTarget", {"targetId": page})
     worker = next(
         t for t in cdp.send("Target.getTargets")["targetInfos"]
         if t["type"] == "service_worker" and t["url"].startswith(f"chrome-extension://{extid}/"))
     session = cdp.send(
         "Target.attachToTarget", {"targetId": worker["targetId"], "flatten": True},
     )["sessionId"]
+    # At its tallest: with a dictionary on its way, which adds a row the popup has to make
+    # room for without scrolling.
+    evaluate(cdp, session, "chrome.storage.local.set({arriving: {de: 0.4}}).then(() => 1)")
     opened = evaluate(
         cdp, session, "chrome.action.openPopup().then(() => 'opened', e => String(e))")
     if opened != "opened":
@@ -126,11 +178,40 @@ def real_popup(cdp, extid):
     """))
     picture = shot(cdp, session, "toolbar-popup")
     print(f"  the toolbar popup: {size['width']}x{size['height']}, {picture}")
-    # The width the stylesheet gives it, 24rem, and as tall as at least its header and a
+    if not evaluate(cdp, session, "document.querySelectorAll('[data-row=arriving]').length"):
+        failures.append("a dictionary on its way is not shown in the popup")
+    if not evaluate(cdp, session, "document.querySelectorAll('[data-row=site]').length"):
+        failures.append("the popup over a site has no row for that site")
+    # The width the stylesheet gives it, 26rem, and as tall as at least its header and a
     # few rows.
-    if abs(size["width"] - 24 * size["rem"]) > 2:
+    if abs(size["width"] - 26 * size["rem"]) > 2:
         failures.append(
-            f"the toolbar popup is {size['width']}px wide, not {24 * size['rem']:.0f}")
+            f"the toolbar popup is {size['width']}px wide, not {26 * size['rem']:.0f}")
+    failures += wrapped(cdp, session, "the toolbar popup")
+    # And every screen behind it, each as it opens in the same window: one that wraps or runs
+    # past the window is as broken as the first.
+    for row, name in (("pronunciation", "pronunciation"), ("theme", "appearance")):
+        evaluate(cdp, session, f"document.querySelector('[data-row={row}]').click()")
+        time.sleep(1)
+        failures += wrapped(cdp, session, f"the {name} screen")
+        inner = json.loads(evaluate(cdp, session, """JSON.stringify({
+            tall: document.documentElement.scrollHeight, height: window.innerHeight})"""))
+        shot(cdp, session, f"toolbar-{name}")
+        # No higher than the first screen's window could be made: a browser gives a popup
+        # at most 600px less its own frame, and a headless one on a small screen less still.
+        if inner["tall"] > inner["height"] or inner["tall"] > 520:
+            failures.append(f"the {name} screen is {inner['tall']}px in a "
+                            f"{inner['height']}px window")
+        evaluate(cdp, session, "document.querySelector('[aria-label=Back]').click()")
+        time.sleep(0.5)
+    # The lists of languages, which scroll inside themselves and say so.
+    for row in ("target", "known"):
+        evaluate(cdp, session, f"document.querySelector('[data-row={row}]').click()")
+        time.sleep(1)
+        failures += wrapped(cdp, session, f"the {row} list")
+        shot(cdp, session, f"toolbar-{row}")
+        evaluate(cdp, session, "document.querySelector('[data-sheet] .icon-button').click()")
+        time.sleep(0.5)
     if size["height"] < 200:
         failures.append(f"the toolbar popup is {size['height']}px tall")
     if size["wide"] > size["width"]:
@@ -138,13 +219,15 @@ def real_popup(cdp, extid):
             f"the toolbar popup scrolls sideways: {size['wide']}px in {size['width']}px")
     # A browser gives a popup at most 600px and scrolls the rest, and a first screen that
     # scrolls hides its last rows from a reader who never thinks to.
-    if size["tall"] > size["height"]:
+    if size["tall"] > size["height"] or size["tall"] > 560:
         failures.append(
             f"the toolbar popup's first screen is {size['tall']}px in a {size['height']}px window")
     return failures
 
 
 def main():
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Page)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
     cdp = PipeCDP()
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
@@ -161,7 +244,7 @@ def main():
         # The popup's own width, so the picture is the shape a reader sees rather than a
         # window's default.
         cdp.send("Emulation.setDeviceMetricsOverride", {
-            "width": 384, "height": 700, "deviceScaleFactor": 1, "mobile": False,
+            "width": 416, "height": 700, "deviceScaleFactor": 1, "mobile": False,
         }, session=session)
         time.sleep(3)
 
@@ -217,7 +300,7 @@ def main():
                 f"controls whose label drags into a selection: {controls['selectable'][:4]}")
 
         # On a phone the popup is a sheet the width of the device, and the view has to be that
-        # width: at a fixed 24rem on a 360px screen the right edge of every row was past it.
+        # width: at a fixed 26rem on a 360px screen the right edge of every row was past it.
         # And every row starts where every other row starts - a banner inset by its own padding
         # rather than the panel's was 4px left of everything under it.
         PHONE = 360
@@ -268,7 +351,7 @@ def main():
             failures.append(f"rows start at {lefts}: {narrow['edges'][:6]}")
         cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False}, session=session)
         cdp.send("Emulation.setDeviceMetricsOverride", {
-            "width": 384, "height": 700, "deviceScaleFactor": 1, "mobile": False,
+            "width": 416, "height": 700, "deviceScaleFactor": 1, "mobile": False,
         }, session=session)
         time.sleep(1)
 

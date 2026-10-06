@@ -1,10 +1,9 @@
 <script lang="ts">
   // What a reader has open about one word: the answer, and the sound they asked about.
   //
-  // The sound is described on the card's own detail line rather than in a panel under it, and
-  // that line is always there and always the same height. A panel that appeared and grew with
-  // the description moved the card while a reader was reading it, and a card that moves under
-  // the cursor is a card that closes itself.
+  // The sound is described on a line under the transcription that is there only once a sound
+  // has been asked about: the card grows downward from the word it is under, so the line it
+  // adds moves nothing the reader is looking at.
   import type { Answer } from '@/core/answer';
   import AnswerCard from './AnswerCard.svelte';
 
@@ -25,6 +24,8 @@
     onOpen?: (url: string) => void;
     /** Told when a sound is opened or closed, so a host can measure what is on screen. */
     onSymbol?: (symbol: string | null) => void;
+    /** How far the dictionary for the word's language has got, where it is on its way. */
+    arriving?: number | null;
   }
 
   let {
@@ -38,23 +39,13 @@
     onPlayUrl,
     onOpen,
     onSymbol,
+    arriving = null,
   }: Props = $props();
 
   let opened = $state<string | null>(null);
-  // The first sound of the word until the reader picks another: the line is there either way,
-  // and a described sound teaches what the line is for where a prompt only says it. A sound,
-  // not the stress mark most transcriptions start with: "primary stress" opened nearly every
-  // card and told the reader nothing about the word.
-  let sound = $derived(
-    answer.symbols.find((symbol) => symbol.token === opened) ??
-      (opened === null
-        ? (answer.symbols.find(
-            (symbol) => symbol.name !== '' && (symbol.kind === 'vowel' || symbol.kind === 'consonant')
-          ) ??
-          answer.symbols.find((symbol) => symbol.name !== '') ??
-          null)
-        : null)
-  );
+  // Only the sound the reader asked about. A card that opened with the first sound described
+  // was a card about phonetics laid over a word the reader wanted translated.
+  let sound = $derived(answer.symbols.find((symbol) => symbol.token === opened) ?? null);
   let picture = $state<string | null>(null);
 
   // The mouth that makes whichever sound the line is showing, fetched by the host that can
@@ -93,4 +84,5 @@
   onPlaySymbol={onPlayUrl}
   {onPlay}
   {onOpen}
+  {arriving}
 />

@@ -27,8 +27,12 @@ function remind(): void {
   }
 }
 
-/** The whole body of a response, read so that the worker reading it stays awake. */
-export async function whole(res: Response): Promise<Uint8Array<ArrayBuffer>> {
+/** The whole body of a response, read so that the worker reading it stays awake, telling
+ *  `got` how many bytes have arrived as they do. */
+export async function whole(
+  res: Response,
+  got?: (bytes: number) => void
+): Promise<Uint8Array<ArrayBuffer>> {
   remind();
   const awake = setInterval(remind, REMIND_MS);
   try {
@@ -41,6 +45,7 @@ export async function whole(res: Response): Promise<Uint8Array<ArrayBuffer>> {
       if (done) break;
       pieces.push(value);
       length += value.length;
+      got?.(length);
     }
     const out = new Uint8Array(length);
     let at = 0;

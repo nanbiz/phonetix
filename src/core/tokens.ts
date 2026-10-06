@@ -27,6 +27,9 @@ export interface Token {
   start: number;
   end: number;
   spelling: string;
+  /** The spelling the word was read as, where that is not the one on the page: a capital that
+   *  only opens a sentence is read in small letters. */
+  reading?: string | null;
   lang: string;
   state: AnswerState;
   /** The headline gloss, already cut to what an inline annotation can carry. */
@@ -75,4 +78,7 @@ export interface AnnotateOptions {
   accent?: string;
   /** Spellings the reader has opened a card for, which stay annotated afterwards. */
   seen?: string[];
+  /** How often each word, lowercased, occurred in what was annotated before this batch, so a
+   *  page annotated a piece at a time picks the words it would have picked whole. */
+  counts?: Record<string, number>;
 }

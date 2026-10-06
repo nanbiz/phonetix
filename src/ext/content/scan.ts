@@ -49,6 +49,10 @@ const TECHNICAL = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{2}-\d{2}T|
 /** Our own windows, which must never be scanned into the page they are drawn over. */
 export const OURS = 'phonetix-card-host';
 
+/** What a painted word is wrapped in: the inline layer's own name for it, repeated here so the
+ *  scan can leave what was drawn alone without importing the code that draws it. */
+const DRAWN = 'px-w';
+
 /** Whether this element's subtree holds text a reader is reading. */
 export function readable(element: Element): boolean {
   if (NOT_PROSE.has(element.tagName)) return false;
@@ -83,18 +87,23 @@ function declared(node: Text): string | undefined {
  * and a run spanning several would have to be cut apart again at exactly the boundaries the
  * page already has.
  */
-export function scan(root: ParentNode = document.body, from = 0): ScannedRun[] {
+export function scan(root: Node = document.body, from = 0): ScannedRun[] {
   const runs: ScannedRun[] = [];
+  const accept = (node: Node): boolean => {
+    const text = node.nodeValue ?? '';
+    if (text.trim().length < 2) return false;
+    if (TECHNICAL.test(text)) return false;
+    const parent = (node as Text).parentElement;
+    return Boolean(parent && !parent.closest(`.${DRAWN}`) && readable(parent));
+  };
+  // A text node the page added on its own is a run of its own, or nothing.
+  if (root instanceof Text) {
+    if (accept(root)) runs.push({ id: from, text: root.nodeValue ?? '', node: root, lang: declared(root) });
+    return runs;
+  }
   if (!(root instanceof Element) && !(root instanceof Document)) return runs;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node: Node) {
-      const text = node.nodeValue ?? '';
-      if (text.trim().length < 2) return NodeFilter.FILTER_REJECT;
-      if (TECHNICAL.test(text)) return NodeFilter.FILTER_REJECT;
-      const parent = (node as Text).parentElement;
-      if (!parent || !readable(parent)) return NodeFilter.FILTER_REJECT;
-      return NodeFilter.FILTER_ACCEPT;
-    },
+    acceptNode: (node) => (accept(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
   });
   let id = from;
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {

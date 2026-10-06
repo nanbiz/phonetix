@@ -221,12 +221,13 @@ async function fetchPack(lang: string): Promise<string | null> {
   for (const at of from) {
     const listed = listing.find((pack) => pack.lang === lang && (pack.at ?? base) === at);
     try {
-      bytes = await packFrom(at, lang, listed?.sha256);
+      bytes = await packFrom(at, lang, listed?.sha256, listed?.bytes);
       break;
     } catch (e) {
       failed = e;
     }
   }
+  await arrived(lang);
   if (!bytes) throw failed instanceof Error ? failed : new Error(`no ${lang} pack could be had`);
   const opened = await openPack(bytes);
   await keep(opened, bytes.slice().buffer, store);
@@ -240,16 +241,45 @@ async function packFrom(
   at: string,
   lang: string,
   sha256: string | undefined,
+  size: number | undefined,
 ): Promise<Uint8Array<ArrayBuffer>> {
   const res = await fetch(`${at}/${lang}.pack`);
   if (!res.ok) throw new Error(`${res.status} fetching the ${lang} pack`);
-  const bytes = await whole(res);
+  const total = size || Number(res.headers.get('content-length')) || 0;
+  const bytes = await whole(res, (got) => arriving(lang, total > 0 ? got / total : 0));
   if (sha256) {
     const digest = await crypto.subtle.digest('SHA-256', bytes);
     const got = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
     if (got !== sha256) throw new Error(`the ${lang} pack arrived as ${got}`);
   }
   return bytes;
+}
+
+/** How far each dictionary on its way has got, as last told. */
+const coming: Record<string, number> = {};
+let toldComing = 0;
+
+/**
+ * Say how far a dictionary on its way has got, where a page and the popup can hear it.
+ *
+ * Until it is here a word in its language is said by the voice and means nothing, and on a
+ * slow line that is minutes: a reader looking at a card with no meaning on it is owed that
+ * the meaning is on its way, and how far. Told every second at most, since storage is not a
+ * channel for every packet.
+ */
+function arriving(lang: string, share: number): void {
+  coming[lang] = share;
+  const now = Date.now();
+  if (now - toldComing < 1000) return;
+  toldComing = now;
+  browser.storage.local.set({ arriving: { ...coming } }).catch(() => undefined);
+}
+
+/** A dictionary is here, or will not be: nothing more to say about it arriving. */
+async function arrived(lang: string): Promise<void> {
+  delete coming[lang];
+  toldComing = 0;
+  await browser.storage.local.set({ arriving: { ...coming } }).catch(() => undefined);
 }
 
 /**
