@@ -3,8 +3,8 @@
 
 The tooltip tells the reader what a sound is. A name written from recollection is
 worse than none: it reads as authoritative and can be wrong, and nothing in the
-build would notice. Each name in src/data/ipa-symbols.ts is therefore checked here
-against the ipapy database, which carries the IPA's own descriptors.
+build would notice. Each name in the core's table, core/src/symbols/table.rs, is therefore
+checked here against the ipapy database, which carries the IPA's own descriptors.
 
 The check is containment, not equality: our names are the readable form of the
 descriptor ("retroflex nasal" for ipapy's "voiced retroflex nasal consonant"), so
@@ -20,7 +20,7 @@ import sys
 from ipapy import UNICODE_TO_IPA
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SOURCE = os.path.join(ROOT, "src", "lib", "ipa-symbols.ts")
+SOURCE = os.path.join(ROOT, "core", "src", "symbols", "table.rs")
 
 # ipapy spells some descriptors as one hyphenated word; the readable name splits them.
 REWRITE = {
@@ -61,7 +61,14 @@ IGNORE = {
     "l",                     # "dark L" names the letter, not a property of the sound
 }
 
-ENTRY = re.compile(r"^\s*'(?P<sym>[^']+)':\s*\{\s*name:\s*'(?P<name>[^']+)'")
+# One row of the table: the symbol, then its name, as Rust string literals.
+ENTRY = re.compile(r'token:\s*"(?P<sym>(?:[^"\\]|\\.)*)",\s*name:\s*"(?P<name>(?:[^"\\]|\\.)*)"')
+
+
+def literal(text):
+    """A Rust string literal's text, its escapes undone."""
+    text = re.sub(r"\\u\{([0-9a-fA-F]+)\}", lambda m: chr(int(m.group(1), 16)), text)
+    return text.replace('\\"', '"').replace("\\\\", "\\")
 
 
 def words(text):
@@ -84,11 +91,8 @@ def main():
     unknown = []
     wrong = []
 
-    for line in source.splitlines():
-        m = ENTRY.match(line)
-        if not m:
-            continue
-        symbol, name = m.group("sym"), m.group("name")
+    for m in ENTRY.finditer(source):
+        symbol, name = literal(m.group("sym")), literal(m.group("name"))
 
         ipa_char = UNICODE_TO_IPA.get(symbol)
         if ipa_char is None:
