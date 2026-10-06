@@ -27,7 +27,8 @@ const GLOSS_LIMIT: usize = 18;
 ///
 /// The occurrence count that the sprinkle keys on runs across the whole batch rather than per
 /// run, because a reader sees a page and not a text node: a word appearing once in each of
-/// twenty paragraphs is a word appearing twenty times.
+/// twenty paragraphs is a word appearing twenty times. It starts from the options' counts, so a
+/// page annotated in pieces picks exactly the words it would have picked annotated whole.
 pub fn annotate<D: AsRef<[u8]>>(
     runs: &[TextRun],
     source: &Lang,
@@ -37,7 +38,7 @@ pub fn annotate<D: AsRef<[u8]>>(
 ) -> (Vec<Token>, Vec<Miss>) {
     let mut tokens = Vec::new();
     let mut misses = Vec::new();
-    let mut seen_before: HashMap<String, u32> = HashMap::new();
+    let mut seen_before: HashMap<String, u32> = options.counts.clone();
 
     for run in runs {
         let lang = run.lang_hint.clone().unwrap_or_else(|| source.clone());
@@ -169,6 +170,7 @@ pub fn annotate<D: AsRef<[u8]>>(
                 run_id: run.id,
                 start: word.start,
                 end: word.end,
+                reading: (reading != spelling).then_some(reading),
                 spelling,
                 lang: lang.clone(),
                 state: answer.state,
@@ -528,7 +530,7 @@ const TITLES: &[&str] = &[
 
 /// Whether every sense is a note about grammar: "Obsolete form of its", "Misspelling of its".
 /// Such a reading is another word's spelling, and what it says is that word's meaning.
-fn only_grammar(glosses: &[String]) -> bool {
+pub(crate) fn only_grammar(glosses: &[String]) -> bool {
     !glosses.is_empty() && glosses.iter().all(|gloss| about_grammar(gloss))
 }
 
@@ -567,6 +569,14 @@ pub(crate) const SENSES_CONSIDERED: usize = 6;
 /// The card still shows every sense as the dictionary wrote it.
 fn inline_of(senses: &[String]) -> Option<String> {
     senses.iter().find_map(|sense| plain(sense))
+}
+
+/// The word a card about this answer leads with: the one the page draws over it, in full.
+///
+/// One rule for both, so a reader who sees "the" over "die" and points at it is not told
+/// "nominative masculine singular definite article, the".
+pub fn lead<D: AsRef<[u8]>>(answer: &crate::resolve::Answer, open: &Open<D>) -> Option<String> {
+    drawn_as(answer, &answer.source, &answer.target, open)
 }
 
 /// What a word is drawn as, looking as far as it takes to find a meaning.
@@ -780,6 +790,31 @@ pub(crate) fn about_grammar(part: &str) -> bool {
     if lowered.contains("letter") && lowered.contains("name of the") {
         return true;
     }
+    // Nothing but the names of a form, however short: "accusative masculine", "dative plural",
+    // "third-person singular present" are where a dump lost the word they are forms of.
+    const FORM_WORDS: &[&str] = &[
+        "nominative", "accusative", "dative", "genitive", "ablative", "vocative", "locative",
+        "instrumental", "singular", "plural", "dual", "masculine", "feminine", "neuter",
+        "first-person", "second-person", "third-person", "present", "past", "preterite",
+        "perfect", "imperfect", "future", "imperative", "subjunctive", "indicative",
+        "conditional", "infinitive", "participle", "gerund", "definite", "indefinite", "strong",
+        "weak", "mixed", "comparative", "superlative",
+    ];
+    // Words that join form names, and are a gloss of their own alone: "and" is "y", "I" is
+    // "ich".
+    const JOINING: &[&str] = &["and", "or", "i", "ii"];
+    let named: Vec<&str> = lowered
+        .split(|c: char| c.is_whitespace() || c == '/' || c == ',')
+        .filter(|word| !word.is_empty())
+        .collect();
+    // Two names at least: one alone is as often a word - "present", "past", "perfect".
+    if named.iter().filter(|word| FORM_WORDS.contains(word)).count() >= 2
+        && named
+            .iter()
+            .all(|word| FORM_WORDS.contains(word) || JOINING.contains(word))
+    {
+        return true;
+    }
     let grammatical = GRAMMAR.iter().any(|word| lowered.contains(word));
     let points_elsewhere = lowered.contains(" of ");
     let words = lowered.split_whitespace().count();
@@ -842,6 +877,7 @@ mod tests {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: HashMap::new(),
         }
     }
 
@@ -912,6 +948,55 @@ mod tests {
         );
         let perro = tokens.iter().find(|t| t.spelling == "perro").unwrap();
         assert!(perro.inline);
+    }
+
+    #[test]
+    fn the_names_of_a_form_are_grammar_and_a_word_is_not() {
+        for note in ["accusative masculine", "dative plural", "third-person singular present",
+                     "nominative/accusative singular feminine", "second-person plural subjunctive I"] {
+            assert!(about_grammar(note), "{note}");
+        }
+        for word in ["and", "I", "or", "plus, and", "present", "animal"] {
+            assert!(!about_grammar(word), "{word}");
+        }
+    }
+
+    #[test]
+    fn a_page_annotated_in_pieces_picks_what_it_would_whole() {
+        let first = "el perro y el gato y el perro del camino y el banco";
+        let second = "el perro corre y el gato duerme y el perro come en el camino";
+        let es = Lang("es".into());
+        let sound = options(InlineMode::Sound, 3);
+        let whole = annotate(
+            &[
+                TextRun { id: 1, text: first.into(), lang_hint: None },
+                TextRun { id: 2, text: second.into(), lang_hint: None },
+            ],
+            &es,
+            &es,
+            &nothing_open(),
+            &sound,
+        )
+        .0;
+        let (before, _) = annotate(&runs(first), &es, &es, &nothing_open(), &sound);
+        let mut counts = HashMap::new();
+        for token in &before {
+            *counts.entry(token.spelling.to_lowercase()).or_insert(0) += 1;
+        }
+        let after = annotate(
+            &runs(second),
+            &es,
+            &es,
+            &nothing_open(),
+            &AnnotateOptions { counts, ..sound.clone() },
+        )
+        .0;
+        let picked = |tokens: &[Token]| tokens.iter().map(|t| t.inline).collect::<Vec<_>>();
+        let pieces: Vec<bool> = picked(&before).into_iter().chain(picked(&after)).collect();
+        assert_eq!(picked(&whole), pieces);
+        // And counting the second piece from zero would not have: the check means something.
+        let fresh = annotate(&runs(second), &es, &es, &nothing_open(), &sound).0;
+        assert_ne!(picked(&whole)[before.len()..], picked(&fresh)[..]);
     }
 
     #[test]

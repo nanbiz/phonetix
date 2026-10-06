@@ -45,6 +45,7 @@ fn main() {
         hide_stress: false,
         accent: None,
         seen: Vec::new(),
+        counts: Default::default(),
     };
     let target = Lang(into.clone());
     let (mut tokens, misses) = annotate(

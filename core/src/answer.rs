@@ -75,6 +75,10 @@ pub struct Token {
     pub start: u32,
     pub end: u32,
     pub spelling: String,
+    /// The spelling the word was read as, where that is not the one on the page: a capital
+    /// that only opens a sentence is read in small letters. A card asked about the word asks
+    /// with this, so it reads the word the page read.
+    pub reading: Option<String>,
     pub lang: Lang,
     pub state: AnswerState,
     /// The headline gloss, already cut to what an inline annotation can carry.
@@ -122,6 +126,11 @@ pub struct AnnotateOptions {
     pub accent: Option<String>,
     /// Spellings the reader has opened a card for, which stay annotated afterwards.
     pub seen: Vec<String>,
+    /// How many times each word, lowercased, already occurred in text annotated before this
+    /// batch. A page that grows is annotated a piece at a time, and the sprinkle keys on a
+    /// word's occurrence across the whole page: counting each new piece from zero would pick
+    /// the same occurrences in every piece.
+    pub counts: std::collections::HashMap<String, u32>,
 }
 
 /// What a word the core could not answer needs from the host's engines.

@@ -12,11 +12,18 @@ use crate::resolve::Answer;
 
 /// One answer, as JSON.
 pub fn of(answer: &Answer) -> String {
+    card(answer, None)
+}
+
+/// One answer as a card shows it: with the word it leads with, which is the word the page
+/// would draw for it, so the card and the page never put two different words on one word.
+pub fn card(answer: &Answer, lead: Option<&str>) -> String {
     format!(
-        "{{\"state\":\"{:?}\",\"spelling\":{},\"lemma\":{},\"pos\":{},\
+        "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{}}}",
         answer.state,
+        lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
         maybe(&answer.lemma),
         maybe(&answer.pos),
@@ -66,12 +73,13 @@ pub fn batch(id: u64, tokens: &[crate::answer::Token], misses: &[crate::answer::
 /// One word of a run, with everything needed to draw it.
 fn token(token: &crate::answer::Token) -> String {
     format!(
-        "{{\"run\":{},\"start\":{},\"end\":{},\"spelling\":{},\"lang\":{},\
+        "{{\"run\":{},\"start\":{},\"end\":{},\"spelling\":{},\"reading\":{},\"lang\":{},\
 \"state\":\"{:?}\",\"gloss\":{},\"ipa\":{},\"glossIpa\":{},\"inline\":{},\"provenance\":{}}}",
         token.run_id,
         token.start,
         token.end,
         quoted(&token.spelling),
+        maybe(&token.reading),
         quoted(&token.lang.0),
         token.state,
         maybe(&token.gloss),

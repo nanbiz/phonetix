@@ -9,7 +9,7 @@ fn main() {
     let lines: Vec<String> = serde_json::from_slice(&std::fs::read(&args[3]).expect("reads")).expect("json");
     let into = args.get(4).map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let open = Open { source: Some(&pack), target: into.as_ref(), ..Open::default() };
-    let options = AnnotateOptions { mode: InlineMode::Sound, density: 9, narrow: false, hide_stress: true, accent: None, seen: Vec::new() };
+    let options = AnnotateOptions { mode: InlineMode::Sound, density: 9, narrow: false, hide_stress: true, accent: None, seen: Vec::new(), counts: Default::default() };
     let mut slowest: Vec<(u128, String)> = Vec::new();
     let all = std::time::Instant::now();
     for (at, line) in lines.iter().enumerate() {

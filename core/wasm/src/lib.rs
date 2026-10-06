@@ -249,7 +249,7 @@ impl Core {
             classifier: self.classifiers.get(source),
             others: None,
         };
-        lexcore::json::of(&lexcore::resolve::read_in_context(
+        let answer = lexcore::resolve::read_in_context(
             spelling,
             if before.is_empty() {
                 None
@@ -259,7 +259,9 @@ impl Core {
             &Lang(source.into()),
             &Lang(target.into()),
             &open,
-        ))
+        );
+        // Led by the word the page draws for it, so a card never contradicts its page.
+        lexcore::json::card(&answer, lexcore::annotate::lead(&answer, &open).as_deref())
     }
 
     /// Annotate a batch of runs: one token per word, and the misses the host's engines should
@@ -268,7 +270,7 @@ impl Core {
     /// The runs arrive as three parallel arrays rather than as JSON, because the host has them
     /// as arrays already and serialising a page's text to parse it straight back is a copy of
     /// every word for nothing. An empty language hint means the batch's own source language.
-    // Nine arguments because that is what one pass over a page needs and the boundary carries
+    // Thirteen arguments because that is what one pass over a page needs and the boundary carries
     // values rather than objects: a struct here would be a JavaScript object marshalled into
     // Rust, which is the copy this signature exists to avoid.
     #[allow(clippy::too_many_arguments)]
@@ -286,6 +288,8 @@ impl Core {
         hide_stress: u8,
         accent: String,
         seen: Vec<String>,
+        counted: Vec<String>,
+        counts: Vec<u32>,
     ) -> String {
         let runs: Vec<TextRun> = run_ids
             .iter()
@@ -326,6 +330,7 @@ impl Core {
                 Some(accent.clone())
             },
             seen,
+            counts: counted.into_iter().zip(counts).collect(),
         };
         let (tokens, misses) = annotate(
             &runs,

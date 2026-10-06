@@ -989,6 +989,19 @@ pub fn read_in_context<D: AsRef<[u8]>>(
             )
         })
         .collect();
+    // A form reached through its lemma borrows none of the lemma's transcription, but where
+    // the dictionary has an entry for the spelling itself - "Tiere", "nominative plural of
+    // Tier" - that entry says how it is said, and the voice standing in for it was the
+    // machine contradicting the dictionary.
+    if let Some(own) = found
+        .iter()
+        .find(|entry| same_word(&entry.lemma, spelling) && !entry.ipa.is_empty())
+    {
+        for answer in answers.iter_mut().filter(|answer| answer.ipa.is_empty()) {
+            answer.ipa = own.ipa.clone();
+            answer.symbols = crate::symbols::explain(&own.ipa[0]);
+        }
+    }
     // How this reader's accent says it, decided here so that the inline layer, the card, the
     // lens and the audio cannot show four different transcriptions of the same word.
     //
@@ -1078,6 +1091,16 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         all.swap(0, at);
     }
     let mut first = all.remove(0);
+    // A spelling that is a word of its own is not also every word whose table lists it: "Sie"
+    // is she, they and the polite you, and the German pronoun tables list it under "er", "ich"
+    // and "wir" too. Those come up through another word's forms, and where the spelling has
+    // a meaning of its own of that kind, they are that table talking, not another word.
+    let own: Vec<Option<String>> = std::iter::once(&first)
+        .chain(all.iter())
+        .filter(|answer| answer.lemma.is_none() && !crate::annotate::only_grammar(&answer.glosses))
+        .map(|answer| answer.pos.clone())
+        .collect();
+    all.retain(|answer| answer.lemma.is_none() || !own.contains(&answer.pos));
     first.readings = std::iter::once(&first)
         .chain(all.iter())
         .map(|answer| Reading {
@@ -1088,11 +1111,76 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         })
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
-    // than asking. Undecided, so it asks.
-    if decided.is_none() {
+    // than asking. Undecided, so it asks - but only between words that are different words:
+    // see [distinct].
+    // Only the readings that are words of their own, the one in front first: a note about
+    // which form this is belongs to the form line, not to a list a reader chooses from.
+    first.readings = distinct(&first.readings);
+    if decided.is_none() && first.readings.len() >= 2 {
         first.state = AnswerState::Homograph;
     }
     first
+}
+
+/// What form of its entry a spelling is, as the dump labels it.
+///
+/// A spelling is often several forms of one word, and the label a reader is owed is the
+/// ordinary one: "anerkannten" is listed as a Swiss spelling of a preterite, and leading with
+/// that told a reader on a German page they had met Swiss German. A spelling whose only labels
+/// are a region's or another age's has no label a reader should be handed, and one the dump's
+/// own parser marked as not understood is no label at all.
+fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
+    const UNUSUAL: [&str; 7] =
+        ["swiss", "austrian", "dialect", "archaic", "obsolete", "nonstandard", "alternative"];
+    let labels: Vec<&str> = entry
+        .forms
+        .iter()
+        .filter(|form| same_word(&form.spelling, spelling))
+        .map(|form| form.label.as_str())
+        .filter(|label| !label.is_empty() && !label.contains("error"))
+        .collect();
+    let ordinary = |label: &str| {
+        let lowered = label.to_lowercase();
+        !UNUSUAL.iter().any(|word| lowered.contains(word))
+    };
+    labels
+        .iter()
+        .find(|label| ordinary(label))
+        .map(|label| label.to_string())
+}
+
+/// The readings that are different words to a reader, in order.
+///
+/// Not every entry a spelling reaches is another word. "ist" reaches "sein" and also its own
+/// entry, which says only "third-person singular present of sein"; "Tiere" reaches "Tier" and
+/// an entry saying "nominative plural of Tier"; a verb filed twice says "to be" twice. A note
+/// about grammar is which form of a word this is, and two readings that answer with the same
+/// word of the same kind are one word: counted as several, every inflected word on a page was
+/// a card asking which of its own forms it was. The first reading stays first whatever it is,
+/// since it is the one the card leads with.
+fn distinct(readings: &[Reading]) -> Vec<Reading> {
+    let mut kept: Vec<Reading> = Vec::new();
+    for (at, reading) in readings.iter().enumerate() {
+        if at > 0 && crate::annotate::only_grammar(&reading.glosses) {
+            continue;
+        }
+        let word = |reading: &Reading| {
+            (
+                reading.pos.clone(),
+                reading.says.first().or(reading.glosses.first()).cloned(),
+            )
+        };
+        if kept.iter().any(|other| word(other) == word(reading)) {
+            continue;
+        }
+        kept.push(reading.clone());
+    }
+    // A first reading that is itself only a note about grammar is not a word to set the
+    // others against: it is the form of one of them.
+    if kept.len() == 2 && crate::annotate::only_grammar(&kept[0].glosses) {
+        kept.remove(0);
+    }
+    kept
 }
 
 /// The reading whose answer in the reader's language is met most often in running text, where
@@ -1779,12 +1867,7 @@ fn finish<D: AsRef<[u8]>>(
             Some(entry.lemma.clone())
         },
         // Only for the spelling that was actually met, and only where the dump named it.
-        form: entry
-            .forms
-            .iter()
-            .find(|form| same_word(&form.spelling, spelling))
-            .map(|form| form.label.clone())
-            .filter(|label| !label.is_empty()),
+        form: form_of(entry, spelling),
         pos: if entry.pos.is_empty() {
             None
         } else {

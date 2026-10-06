@@ -1035,6 +1035,7 @@ fn a_word_is_drawn_in_the_sense_its_line_is_about() {
         hide_stress: false,
         accent: None,
         seen: Vec::new(),
+        counts: Default::default(),
     };
     let drawn = |said: &str| {
         let runs = [TextRun {
@@ -1178,6 +1179,7 @@ fn both_says_how_the_translation_is_said() {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: Default::default(),
         },
     );
     let perro = tokens
@@ -1243,6 +1245,7 @@ fn a_gloss_with_its_article_is_said_as_the_word() {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: Default::default(),
         },
     );
     let calle = tokens
@@ -1386,6 +1389,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: Default::default(),
         },
     );
     let drawn = |spelling: &str| {
@@ -1442,6 +1446,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: Default::default(),
         },
     );
     assert_eq!(
@@ -1515,6 +1520,7 @@ fn the_meaning_after_a_grammar_note_and_a_word_that_starts_a_sentence() {
                 hide_stress: false,
                 accent: None,
                 seen: Vec::new(),
+                counts: Default::default(),
             },
         );
         tokens
@@ -1615,6 +1621,7 @@ fn a_function_word_filed_as_a_form_still_wins() {
                 hide_stress: false,
                 accent: None,
                 seen: Vec::new(),
+                counts: Default::default(),
             },
         );
         tokens
@@ -1679,6 +1686,7 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
             hide_stress: false,
             accent: None,
             seen: Vec::new(),
+            counts: Default::default(),
         },
     );
     let drawn: Vec<(String, String)> = tokens

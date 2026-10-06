@@ -167,7 +167,61 @@ pub fn describe(token: &str) -> Option<Symbol> {
 
 /// Every symbol of a transcription that the table can say something about.
 pub fn explain(ipa: &str) -> Vec<Symbol> {
-    tokenize(ipa).iter().filter_map(|t| describe(t)).collect()
+    // Every symbol, described or not: a card draws the transcription out of these, and one
+    // left out because the table had no row for it - "a͡ʊ" in "aufgrund" - took its sound out
+    // of the word, which then read /fˈɡrʊnt/.
+    tokenize(ipa)
+        .iter()
+        .map(|t| describe(t).or_else(|| joined(t)).unwrap_or_else(|| unknown(t)))
+        .collect()
+}
+
+/// Two sounds a tie holds together, where the table names each but not the pair: a diphthong
+/// written "a͡ʊ" is the one sound gliding into the other.
+fn joined(token: &str) -> Option<Symbol> {
+    let parts: Vec<String> = token.split(tie).map(str::to_string).collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    let described: Vec<Symbol> = parts.iter().map(|part| describe(part)).collect::<Option<_>>()?;
+    let kind = described[0].kind.clone();
+    Some(Symbol {
+        token: token.to_string(),
+        name: described
+            .iter()
+            .map(|it| it.name.as_str())
+            .collect::<Vec<_>>()
+            .join(kind_joint(&kind)),
+        kind,
+        example: String::new(),
+        audio: String::new(),
+        wiki: String::new(),
+        diagram: String::new(),
+        seeing: String::new(),
+    })
+}
+
+/// How the names of two tied sounds are joined.
+fn kind_joint(kind: &str) -> &'static str {
+    if kind == "vowel" {
+        " gliding into "
+    } else {
+        " joined to "
+    }
+}
+
+/// A symbol nothing here can name, kept so the transcription is whole.
+fn unknown(token: &str) -> Symbol {
+    Symbol {
+        token: token.to_string(),
+        name: String::new(),
+        kind: String::new(),
+        example: String::new(),
+        audio: String::new(),
+        wiki: String::new(),
+        diagram: String::new(),
+        seeing: String::new(),
+    }
 }
 
 /// The article on one term of a description, where Wikipedia has one.
@@ -325,6 +379,17 @@ mod tests {
     #[test]
     fn a_transcription_is_its_sounds() {
         assert_eq!(tokenize("kæt"), ["k", "æ", "t"]);
+    }
+
+    #[test]
+    fn every_sound_is_kept_whether_or_not_it_is_named() {
+        for ipa in ["a͡ʊfˈɡrʊnt", "ˈhaɪ̯mtiːɐ̯", "t͡ʃa", "x☺y"] {
+            let back: String = explain(ipa).into_iter().map(|symbol| symbol.token).collect();
+            assert_eq!(back, ipa);
+        }
+        let diphthong = &explain("a͡ʊf")[0];
+        assert_eq!(diphthong.kind, "vowel");
+        assert!(diphthong.name.contains(" gliding into "), "{}", diphthong.name);
     }
 
     #[test]
