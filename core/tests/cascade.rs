@@ -131,6 +131,11 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         "a reader who tapped a form is owed it"
     );
     assert_eq!(got.says, vec!["Hund"]);
+    assert!(
+        got.ipa.is_empty() && got.symbols.is_empty(),
+        "perros is not said the way perro is, so it is left for the voice: {:?}",
+        got.ipa
+    );
 }
 
 #[test]
@@ -1737,4 +1742,59 @@ fn a_word_reached_only_through_a_dialect_spelling_is_not_a_reading() {
     assert_eq!(answer.pos.as_deref(), Some("prep"));
     assert!(!answer.says.contains(&"haben".to_string()), "{:?}", answer.says);
     assert!(answer.readings.iter().all(|r| r.pos.as_deref() != Some("verb")));
+}
+
+/// A word met as itself is not read as a word it is only a form of, because the reader's
+/// language says the other word's answer more often.
+///
+/// German "Katze" is also listed as the feminine of "Kater", and English says "tomcat" far more
+/// than "house cat". Which German word was met is a question about German: "Katze" is met more
+/// often than "Kater", so a page saying "Katze" is about a cat. Spanish "notas" is the other
+/// way round: a rare word of its own, and the plural of "nota", which is met far more.
+#[test]
+fn a_word_the_spelling_is_only_a_form_of_wins_only_by_being_commoner_itself() {
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut katze = word("Katze", "noun", "ˈkatsə", &["house cat"]);
+    katze.tags.push("count:12051".to_string());
+    let mut kater = word("Kater", "noun", "ˈkaːtɐ", &["tomcat"]);
+    kater.tags.push("count:7892".to_string());
+    german.add(katze, &[] as &[&str]).unwrap();
+    german.add(kater, &["Katze"]).unwrap();
+    let de = german.finish().unwrap();
+
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut notas = word("notas", "adj", "ˈno.tas", &["show-off"]);
+    notas.tags.push("count:900".to_string());
+    let mut nota = word("nota", "noun", "ˈno.ta", &["note"]);
+    nota.tags.push("count:30000".to_string());
+    spanish.add(notas, &[] as &[&str]).unwrap();
+    spanish.add(nota, &["notas"]).unwrap();
+    let es = spanish.finish().unwrap();
+
+    let mut english = Builder::new("en", Kind::Lex, 0);
+    for (lemma, count) in [("tomcat", 5000), ("house cat", 1), ("note", 80000), ("show-off", 10)] {
+        let mut entry = word(lemma, "noun", "x", &[lemma]);
+        entry.tags.push(format!("count:{count}"));
+        english.add(entry, &[] as &[&str]).unwrap();
+    }
+    let en = english.finish().unwrap();
+    let (de, es, en) = (
+        Pack::open(&de).unwrap(),
+        Pack::open(&es).unwrap(),
+        Pack::open(&en).unwrap(),
+    );
+
+    let reading = |pack: &Pack<&Vec<u8>>, spelling: &str, source: &str| {
+        let open = Open {
+            source: Some(pack),
+            target: Some(&en),
+            ..Open::default()
+        };
+        read_in_context(spelling, None, &lang(source), &lang("en"), &open)
+    };
+    let cat = reading(&de, "Katze", "de");
+    assert_eq!(cat.lemma, None, "Katze is the cat, not a form of Kater: {:?}", cat.says);
+    assert_eq!(cat.says.first().map(String::as_str), Some("house cat"));
+    let notes = reading(&es, "notas", "es");
+    assert_eq!(notes.lemma.as_deref(), Some("nota"), "notas are notes: {:?}", notes.says);
 }

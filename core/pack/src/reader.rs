@@ -72,6 +72,8 @@ pub struct Pack<D: AsRef<[u8]>> {
     /// several blocks, and a page asks about the same words over and over: with only the last
     /// block kept, every lookup decompressed most of what it read again.
     warm: RefCell<Vec<(usize, std::sync::Arc<[u8]>)>>,
+    /// What a crowded spelling names, worked out once (see [CROWDED]).
+    crowded: RefCell<std::collections::HashMap<String, Vec<Entry>>>,
 }
 
 impl<D: AsRef<[u8]>> Pack<D> {
@@ -140,6 +142,7 @@ impl<D: AsRef<[u8]>> Pack<D> {
             blocks,
             starts,
             warm: RefCell::new(Vec::with_capacity(WARM_BLOCKS)),
+            crowded: RefCell::new(std::collections::HashMap::new()),
         })
     }
 
@@ -176,6 +179,12 @@ impl<D: AsRef<[u8]>> Pack<D> {
         let Some(count) = varint::get(hits, &mut cursor) else {
             return Vec::new();
         };
+        let crowded = count as usize > CROWDED;
+        if crowded {
+            if let Some(known) = self.crowded.borrow().get(spelling) {
+                return known.clone();
+            }
+        }
         let mut out = Vec::with_capacity(count as usize);
         for _ in 0..count {
             let Some(which) = varint::get(hits, &mut cursor) else {
@@ -184,6 +193,20 @@ impl<D: AsRef<[u8]>> Pack<D> {
             if let Some(entry) = self.entry(which as u32) {
                 out.push(entry);
             }
+        }
+        if crowded {
+            // Its own entries alone: the rest only list it among their forms, which a spelling
+            // shared by hundreds of words is as an auxiliary - German "haben" is listed under
+            // nine thousand verbs - and never as the word a reader met.
+            let own: Vec<Entry> = out
+                .iter()
+                .filter(|entry| entry.lemma.to_lowercase() == spelling.to_lowercase())
+                .cloned()
+                .collect();
+            if !own.is_empty() {
+                out = own;
+            }
+            self.crowded.borrow_mut().insert(spelling.to_string(), out.clone());
         }
         out
     }
@@ -292,6 +315,13 @@ impl<D: AsRef<[u8]>> Pack<D> {
 /// How many decompressed blocks a pack keeps: a few hundred kilobytes, and a screenful of
 /// words many times over.
 const WARM_BLOCKS: usize = 64;
+
+/// How many entries a spelling may name before it is taken for one that other words only list
+/// among their forms. The most a real word reaches as a form of other words is a few dozen
+/// (a German article, a Spanish clitic); an auxiliary reaches every verb that takes it, which is
+/// thousands, and decompressing all of them for each time it appears on a page is what made a
+/// German page take ten seconds.
+const CROWDED: usize = 200;
 
 fn slice(bytes: &[u8], (offset, length): (u64, u64)) -> &[u8] {
     &bytes[offset as usize..(offset + length) as usize]

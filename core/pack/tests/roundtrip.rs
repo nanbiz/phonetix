@@ -293,3 +293,38 @@ fn a_nested_parenthesis_is_not_part_of_the_term() {
         "(of a person) tall"
     );
 }
+
+#[test]
+fn an_auxiliary_listed_under_every_verb_answers_only_as_itself() {
+    // German "haben" is listed among the forms of every verb that takes it, which in the real
+    // dictionary is nine thousand of them. None of those is the word a reader met.
+    let mut pack = Builder::new("de", Kind::Lex, 1_757_000_000);
+    pack.add(word("haben", "verb", "ˈhaːbn̩", &["to have"]), &["hat", "hatte"])
+        .unwrap();
+    for at in 0..300 {
+        pack.add(
+            word(&format!("verb{at}"), "verb", "x", &["to do something"]),
+            &["haben"],
+        )
+        .unwrap();
+    }
+    // And a word a few others list among their forms keeps every one of them.
+    pack.add(word("Hund", "noun", "hʊnt", &["dog"]), &NO_FORMS)
+        .unwrap();
+    pack.add(word("Hunde", "noun", "ˈhʊndə", &["dogs"]), &NO_FORMS)
+        .unwrap();
+    pack.add(word("hunden", "verb", "x", &["to hound"]), &["Hunde"])
+        .unwrap();
+    let bytes = pack.finish().unwrap();
+    let pack = Pack::open(&bytes).unwrap();
+
+    let found = pack.lookup("haben");
+    assert_eq!(
+        found.iter().map(|entry| entry.lemma.as_str()).collect::<Vec<_>>(),
+        vec!["haben"],
+        "an auxiliary is answered as itself, not as three hundred verbs"
+    );
+    // Asked again, the same: the second time is the one a page pays for.
+    assert_eq!(pack.lookup("haben").len(), 1);
+    assert_eq!(pack.lookup("Hunde").len(), 2);
+}

@@ -546,13 +546,19 @@ class TooltipController(
     private fun answerFor(box: WordBox, said: String?): Answer {
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
-        return Reading.lookUp(
+        val answer = Reading.lookUp(
             box.word, source, settings.into.ifEmpty { source },
             settings.accentFor(source), box.before, said ?: box.decided,
         )
             ?.takeIf { it.found }
             ?: elsewhere(box.word, source, settings.into)
-            ?: Answer.ofTranscription(box.word, voiced(box.word, source), source)
+            ?: return Answer.ofTranscription(box.word, voiced(box.word, source), source)
+        // A form the dictionary lists only under its lemma has no transcription of its own:
+        // the voice says it, rather than the card going without or borrowing the lemma's.
+        if (answer.ipa.isNotEmpty()) return answer
+        val spoken = voiced(box.word, answer.source.ifEmpty { source })
+        if (spoken.isBlank()) return answer
+        return answer.copy(ipa = listOf(spoken), symbols = IpaSymbols.explain(spoken))
     }
 
     private fun build(box: WordBox, answer: Answer): View? {

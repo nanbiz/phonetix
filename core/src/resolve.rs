@@ -1043,10 +1043,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // outranks a rule about parts of speech; where it says nothing, the rule still has its say.
     // Strongest first. What the translator made of the whole sentence outranks both tables:
     // it read the sentence, and they read a word and its neighbour.
-    let meant: Vec<Vec<Vec<String>>> = all
-        .iter()
-        .map(|answer| meant_words(&answer.says, answer.pos.as_deref(), target, pack, open))
-        .collect();
+    // Only with a translated line to look for them in: building every reading's words is the
+    // costly part of reading a word in context, and without the line nothing reads them.
+    let meant: Vec<Vec<Vec<String>>> = match open.said {
+        Some(said) if !said.trim().is_empty() => all
+            .iter()
+            .map(|answer| meant_words(&answer.says, answer.pos.as_deref(), target, pack, open))
+            .collect(),
+        _ => Vec::new(),
+    };
     let verbs: Vec<bool> = all
         .iter()
         .map(|answer| answer.pos.as_deref() == Some("verb"))
@@ -1137,6 +1142,29 @@ fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<us
         .copied()
         .find(|at| all[*at].pos.as_deref() != Some("verb"))
         .or_else(|| with_it.first().copied())?;
+    // A word the spelling is only a form of does not win over the word it is on how often
+    // their answers are met in the reader's language, only on how often the two words are met
+    // in their own. That English says "tomcat" more than "house cat" says nothing about which
+    // German word was met: "Katze" is met more often than "Kater", so it is the cat. Spanish
+    // "notas" is also a rare word of its own, and "nota" is met far more, so it is the notes.
+    if let (Some(lemma), Some(own), Some(source)) = (
+        all[first_with_it].lemma.as_deref(),
+        all.iter().find(|answer| answer.lemma.is_none()),
+        open.source,
+    ) {
+        let met_here = |word: &str| -> u64 {
+            source
+                .lookup(word)
+                .iter()
+                .filter(|entry| same_word(&entry.lemma, word))
+                .filter_map(how_often)
+                .max()
+                .unwrap_or(0)
+        };
+        if met_here(&own.spelling) >= met_here(lemma) {
+            return None;
+        }
+    }
     (*most > 0 && *most >= second.saturating_mul(COMMONER_BY)).then_some(first_with_it)
 }
 
@@ -1286,9 +1314,9 @@ fn meant_words<D: AsRef<[u8]>>(
     pack: &Pack<D>,
     open: &Open<D>,
 ) -> Vec<Vec<String>> {
-    let mut words: Vec<Vec<String>> = Vec::new();
+    let mut words = Words::default();
     // A verb by what the dictionary filed it as, or by the "to" a gloss gives an infinitive.
-    let add = |term: &str, verb: bool, words: &mut Vec<Vec<String>>| {
+    let add = |term: &str, verb: bool, words: &mut Words| {
         let mut pieces = normalised(term);
         if pieces.is_empty() || pieces.len() > 4 {
             return;
@@ -1312,9 +1340,7 @@ fn meant_words<D: AsRef<[u8]>>(
         for form in forms {
             let mut word: Vec<String> = pieces[..head].to_vec();
             word.extend(normalised(&form));
-            if !words.contains(&word) {
-                words.push(word);
-            }
+            words.push(word);
         }
         // A verb with its particle - "to sit down", "to give up" - is inflected on the verb,
         // and a translation often leaves the particle out: "me siento en el banco" is "I sit
@@ -1323,9 +1349,7 @@ fn meant_words<D: AsRef<[u8]>>(
         {
             for form in crate::gloss::english_forms(&pieces[0], true) {
                 for word in [vec![form.clone(), pieces[1].clone()], vec![form]] {
-                    if !words.contains(&word) {
-                        words.push(word);
-                    }
+                    words.push(word);
                 }
             }
         }
@@ -1364,7 +1388,26 @@ fn meant_words<D: AsRef<[u8]>>(
             }
         }
     }
-    words
+    words.order
+}
+
+/// Words found once each, in the order they were found.
+///
+/// A set beside the list rather than a search of it: a word like "der" or "hat" has hundreds of
+/// senses, each with its forms, and asking the list whether it already held each one made a
+/// line of German take seconds.
+#[derive(Default)]
+struct Words {
+    order: Vec<Vec<String>>,
+    seen: std::collections::HashSet<Vec<String>>,
+}
+
+impl Words {
+    fn push(&mut self, word: Vec<String>) {
+        if self.seen.insert(word.clone()) {
+            self.order.push(word);
+        }
+    }
 }
 
 /// The words of a text, lowercased, with everything that is not a letter or a digit dropped.
@@ -1718,6 +1761,15 @@ fn finish<D: AsRef<[u8]>>(
     source: &Lang,
     target: &Lang,
 ) -> Answer {
+    // How the lemma is said is not how its forms are: "dependiendo" reached through
+    // "depender" is not said /depenˈdeɾ/. A form with a pronunciation of its own is an entry of
+    // its own and never comes through here, so a form that did has none, and is left for the
+    // voice to say rather than given its lemma's.
+    let said_as = if same_word(&entry.lemma, spelling) {
+        entry.ipa.clone()
+    } else {
+        Vec::new()
+    };
     Answer {
         state,
         spelling: spelling.to_string(),
@@ -1738,12 +1790,11 @@ fn finish<D: AsRef<[u8]>>(
         } else {
             Some(entry.pos.clone())
         },
-        symbols: entry
-            .ipa
+        symbols: said_as
             .first()
             .map(|ipa| crate::symbols::explain(ipa))
             .unwrap_or_default(),
-        ipa: entry.ipa.clone(),
+        ipa: said_as,
         says,
         glosses,
         marks: entry.senses.iter().map(|s| s.marks.clone()).collect(),
