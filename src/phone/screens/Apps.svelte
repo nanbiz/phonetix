@@ -1,6 +1,6 @@
 <script lang="ts">
   // Which apps the button answers in: every one, or the ones ticked here.
-  import { ROWS, SAYS } from '@/data/wording';
+  import { SAYS } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
   import Check from 'virtual:icons/pixelarticons/check';
   import Group from '../parts/Group.svelte';
