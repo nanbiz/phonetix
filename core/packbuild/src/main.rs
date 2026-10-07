@@ -50,8 +50,11 @@ fn main() {
 
     // Read twice: once for every spelling a lemma lists among its forms, then to build. An
     // entry that only says it is a form of another word, where the other word already lists
-    // it, is the same answer twice and is left out (see [packbuild::is_bare_form]).
+    // it, is the same answer twice and is left out (see [packbuild::is_bare_form]). The first
+    // read also counts how many entries list each spelling, since one listed by too many is
+    // not a form of any of them and is dropped from all (see [packbuild::CROWDED]).
     let mut listed: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut tally: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
     {
         let mut ignored = Skipped::default();
         for line in BufReader::new(extract(from)).lines() {
@@ -59,6 +62,7 @@ fn main() {
             let Some(read) = read_line_filed_as(&line, &filed, &mut ignored) else {
                 continue;
             };
+            packbuild::tally_forms(&read.entry, &mut tally);
             if !packbuild::is_bare_form(&read.entry) {
                 listed.extend(
                     read.entry
@@ -70,6 +74,11 @@ fn main() {
             }
         }
     }
+    listed.retain(|spelling| {
+        tally
+            .get(spelling)
+            .is_none_or(|&count| count as usize <= packbuild::CROWDED)
+    });
     let file = extract(from);
     let built = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -98,6 +107,7 @@ fn main() {
             continue;
         }
         let mut entry = read.entry;
+        packbuild::without_crowded(&mut entry, &tally);
         if let Some(count) = packbuild::how_often(&entry, &counts) {
             entry.tags.push(format!("count:{count}"));
         }

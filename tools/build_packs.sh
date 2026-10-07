@@ -6,7 +6,7 @@
 # 1. the English Wiktionary as kaikki.org extracts it, every language in one file (about 3 GB);
 # 2. split into one file per language in a single pass;
 # 3. one pack per language, with packbuild, and its manifest row beside it;
-# 4. the listing of translation models, pinned to what Mozilla publishes now.
+# 4. the translation models Mozilla publishes now, copied, and the listing of them.
 #
 # Then `node scripts/publish-packs.mjs <work dir>/release` puts them where the app fetches.
 set -euo pipefail
@@ -83,5 +83,10 @@ for lang in "${!filed[@]}"; do
   rm -f "$work/$lang.filed.jsonl.gz"
 done
 
-uv run python tools/models_manifest.py "$out/models.json"
+# Mozilla's CDN refuses Chromium browsers, so the models are served from the release beside the
+# packs (they are MPL 2.0) and the listing names them there.
+uv run python tools/models_manifest.py "$work/models-mozilla.json"
+uv run python tools/mirror_models.py "$work/models-mozilla.json" "$out/models" \
+  https://github.com/nanbiz/phonetix/releases/download/packs-v1
+mv "$out/models/models.json" "$out/models.json"
 cp tools/ATTRIBUTION.md "$out/ATTRIBUTION.md"

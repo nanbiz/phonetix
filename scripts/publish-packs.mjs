@@ -65,6 +65,15 @@ const alongside = ["models.json", "ATTRIBUTION.md"]
     .map((name) => path.join(from, name))
     .filter((file) => fs.existsSync(file));
 
+// The translation models the listing names, copied by tools/mirror_models.py: Mozilla's CDN
+// refuses Chromium browsers, so they are served from here.
+const modelsDir = path.join(from, "models");
+const models = fs.existsSync(modelsDir)
+    ? fs.readdirSync(modelsDir)
+        .filter((name) => !name.endsWith(".part") && name !== "models.json")
+        .map((name) => path.join(modelsDir, name))
+    : [];
+
 const listing = path.join(from, "packs.json");
 fs.writeFileSync(listing, JSON.stringify(packs, null, 2) + "\n");
 console.log(`publishing ${packs.map((p) => p.lang).join(", ")} to ${TAG}`);
@@ -83,10 +92,38 @@ try {
         { stdio: "inherit" },
     );
 }
+// What the release holds already, by checksum: a pack or model that has not changed is not
+// sent again, which over a home connection is the difference between minutes and hours.
+const release = execFileSync(
+    "gh", ["api", `repos/${REPO}/releases/tags/${TAG}`, "--jq", ".id"], { encoding: "utf8" },
+).trim();
+const held = new Map(
+    execFileSync(
+        "gh",
+        ["api", "--paginate", `repos/${REPO}/releases/${release}/assets?per_page=100`,
+         "--jq", ".[] | [.name, .digest]"],
+        { encoding: "utf8", maxBuffer: 1 << 26 },
+    ).trim().split("\n").filter(Boolean).map((row) => JSON.parse(row)),
+);
+const changed = (file) =>
+    held.get(path.basename(file)) !==
+        `sha256:${crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex")}`;
+
+// The files first and the listings last, so a listing is never published naming a file that
+// is not there yet; a few at a time, so a dropped connection costs one batch.
+const files = [...packs.map((p) => path.join(from, `${p.lang}.pack`)), ...models].filter(changed);
+console.log(`${files.length} files changed`);
+for (let at = 0; at < files.length; at += 10) {
+    execFileSync(
+        "gh",
+        ["release", "upload", TAG, "--repo", REPO, "--clobber", ...files.slice(at, at + 10)],
+        { stdio: "inherit" },
+    );
+    console.log(`${Math.min(at + 10, files.length)}/${files.length}`);
+}
 execFileSync(
     "gh",
-    ["release", "upload", TAG, "--repo", REPO, "--clobber", listing, ...alongside,
-     ...packs.map((p) => path.join(from, `${p.lang}.pack`))],
+    ["release", "upload", TAG, "--repo", REPO, "--clobber", ...alongside, listing],
     { stdio: "inherit" },
 );
 console.log("published");

@@ -229,11 +229,12 @@ fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
             continue;
         }
         let tags = strings(form.get("tags"));
-        // A table header the extractor kept as a form, which is a label rather than a word.
-        if tags
-            .iter()
-            .any(|t| t == "table-tags" || t == "inflection-template")
-        {
+        // A table header the extractor kept as a form, which is a label rather than a word;
+        // what a verb is built with, "haben" under every German verb that takes it, or "avoir
+        // + past participle" under every French one; the class a verb is conjugated in; the
+        // classifier a noun is counted with, Vietnamese "con" under eight hundred animals.
+        // None of them is this word met in another shape.
+        if tags.iter().any(|t| NOT_FORMS.contains(&t.as_str())) {
             continue;
         }
         // The headword as the dictionary prints it is kept - "amō" for "amo" - unless what the
@@ -259,6 +260,43 @@ fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
         }
     }
     commonest(out)
+}
+
+/// The tags the dump gives a row of an entry's forms that is not a form of the word.
+const NOT_FORMS: [&str; 6] = [
+    "table-tags",
+    "inflection-template",
+    "auxiliary",
+    "class",
+    "multiword-construction",
+    "classifier",
+];
+
+/// How many entries may list one spelling among their forms before it is taken for something
+/// other than a form of each.
+///
+/// The most a real word is a form of is a few dozen entries: a German article, a Spanish
+/// clitic. Past that it is a row every entry of a kind carries - a pronoun heading a Welsh or
+/// Latvian conjugation table, a note the extractor kept, a paradigm's label - and filed as a
+/// form it sent a reader of "es" to nine hundred verbs, decompressed each time the word
+/// appeared, and added how often the word is met to every one of them.
+pub const CROWDED: usize = 200;
+
+/// Every spelling some entry lists among its forms, and by how many entries.
+pub fn tally_forms(entry: &Entry, tally: &mut std::collections::HashMap<String, u32>) {
+    for form in &entry.forms {
+        *tally.entry(form.spelling.to_lowercase()).or_default() += 1;
+    }
+}
+
+/// An entry without the forms that too many entries list to be a form of any one of them
+/// (see [CROWDED]).
+pub fn without_crowded(entry: &mut Entry, tally: &std::collections::HashMap<String, u32>) {
+    entry.forms.retain(|form| {
+        tally
+            .get(&form.spelling.to_lowercase())
+            .is_none_or(|&listed| (listed as usize) <= CROWDED)
+    });
 }
 
 /// How many spellings one entry may bring with it.
@@ -384,6 +422,56 @@ mod tests {
             }]
         );
         assert_eq!(skipped, Skipped::default());
+    }
+
+    #[test]
+    fn what_a_verb_is_built_with_is_not_a_form_of_it() {
+        let line = r#"{"word":"gehen","pos":"verb","lang_code":"de","senses":[{"glosses":["to go"]}],
+          "forms":[{"form":"geht","tags":["present","singular","third-person"]},
+                   {"form":"sein","tags":["auxiliary"]},
+                   {"form":"7 strong","tags":["class"]},
+                   {"form":"ist gegangen","tags":["multiword-construction"]}]}"#;
+        let read = read_line(line, "de", &mut Skipped::default()).unwrap();
+        let kept: Vec<&str> = read
+            .entry
+            .forms
+            .iter()
+            .map(|form| form.spelling.as_str())
+            .collect();
+        assert_eq!(kept, vec!["geht"]);
+    }
+
+    #[test]
+    fn a_spelling_every_entry_lists_is_a_form_of_none() {
+        let entry = |word: &str| Entry {
+            lemma: word.into(),
+            pos: "verb".into(),
+            tags: Vec::new(),
+            ipa: Vec::new(),
+            senses: Vec::new(),
+            forms: vec![
+                lexpack::Form {
+                    spelling: format!("{word}s"),
+                    label: "plural".into(),
+                },
+                lexpack::Form {
+                    spelling: "Es".into(),
+                    label: "first-person".into(),
+                },
+            ],
+        };
+        let mut tally = std::collections::HashMap::new();
+        for at in 0..=CROWDED {
+            tally_forms(&entry(&format!("w{at}")), &mut tally);
+        }
+        let mut one = entry("w0");
+        without_crowded(&mut one, &tally);
+        let kept: Vec<&str> = one
+            .forms
+            .iter()
+            .map(|form| form.spelling.as_str())
+            .collect();
+        assert_eq!(kept, vec!["w0s"]);
     }
 
     #[test]
