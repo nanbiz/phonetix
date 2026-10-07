@@ -51,8 +51,9 @@
       .map((lang) => ({ value: lang, label: named(lang), about: accentName(lang) }))
   );
 
-  /** Which list is open: the other languages, or one language's accents. */
-  let choosing = $state<'' | 'others' | string>('');
+  /** Which list is open: none (''), the other languages ('others'), or the accents of the
+   *  language with this code. */
+  let choosing = $state<string>('');
 </script>
 
 <Group name={ROWS.narrow.name}>
