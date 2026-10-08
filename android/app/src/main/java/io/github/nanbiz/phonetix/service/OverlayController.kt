@@ -176,6 +176,16 @@ class OverlayController(
     private val reveal = RevealState()
 
     /**
+     * Take the words down and forget them, for a screen that is not to be read: an app the
+     * reader did not choose. Taken down alone, the words of the app before stayed what the
+     * button answered from, and a card for a word of that app came up over the next one.
+     */
+    fun forget() {
+        lastRendered = emptyList()
+        hideNow()
+    }
+
+    /**
      * Everything off the screen, now.
      *
      * The layer has to come down with the windows. It draws the whole set by itself, so

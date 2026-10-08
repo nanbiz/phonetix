@@ -1237,7 +1237,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // The icon stays: it is what the translate panel is opened with, which answers
             // anywhere, and a button that comes and goes with the screen is one a reader
             // cannot find when they reach for it.
-            main.post { overlay.hideNow() }
+            main.post { overlay.forget() }
             // And look again in a moment. What is in front is usually on its way somewhere -
             // the notification shade closing, the recents screen going away - and while it
             // animates it is still the thing in front. The app underneath sends nothing more
@@ -3262,6 +3262,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 return
             }
         asking = panel
+        if (::hover.isInitialized) hover.raise()
         panel.field.requestFocus()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // From Android 13 the way back does not arrive as a key, so it is registered for

@@ -307,6 +307,23 @@ class HoverController(
             .onFailure { android.util.Log.w("Phonetix", "the circle did not go up", it) }
     }
 
+    /**
+     * Put the circle's window back on top of the windows added since, at the same place.
+     *
+     * The panel opens over the screen and dims what is behind it, and the circle can rest
+     * where the panel lies: under it, the tap meant to put the panel away landed on the panel,
+     * and under the dim Android drops a touch on the circle as untrusted. On top, the same tap
+     * reaches the circle and is outside the panel, which is what closes it.
+     */
+    fun raise() {
+        val up = mark ?: return
+        val params = up.layoutParams as? WindowManager.LayoutParams ?: return
+        runCatching {
+            wm.removeViewImmediate(up)
+            wm.addView(up, params)
+        }.onFailure { android.util.Log.w("Phonetix", "the circle could not be put on top", it) }
+    }
+
     /** Where the mark is sitting, for anything that can only read what the service says. */
     private fun parked() {
         if (!io.github.nanbiz.phonetix.BuildConfig.DEBUG) return
