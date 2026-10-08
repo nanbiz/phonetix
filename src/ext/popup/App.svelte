@@ -77,7 +77,7 @@
       tabId = tab.id;
     }
     const commands = await browser.commands.getAll().catch(() => []);
-    shortcut = commands.find((it) => it.name === 'ask-for-a-word')?.shortcut ?? '';
+    shortcut = commands.find((it) => it.name === 'translator')?.shortcut ?? '';
     curve = await curving;
   }
 

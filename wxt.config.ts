@@ -107,14 +107,19 @@ export default defineConfig({
       ? ['storage', 'tabs']
       : ['storage', 'tabs', 'offscreen', 'declarativeNetRequest'],
     host_permissions: ['<all_urls>'],
-    // The word a reader is looking for, without reaching for the mouse: the same question the
-    // phone's mark answers, on the surface where a reader already has both hands on the
-    // keyboard. Alt rather than Ctrl or Command, which every page and every site has already
-    // taken.
+    // Without reaching for the mouse, on the surface where a reader already has both hands on
+    // the keyboard: Phonetix on or off, and the translator, the same panel the phone's mark
+    // opens. Alt+Shift rather than Ctrl or Command, which every page and every site has
+    // already taken, and on letters Chromium hands an extension: it leaves Alt+Shift+P
+    // unassigned whatever asks for it, and keeps A, B, I and T for itself.
     commands: {
-      'ask-for-a-word': {
-        suggested_key: { default: 'Alt+Shift+P' },
-        description: 'Ask for the word for something',
+      'switch-on-off': {
+        suggested_key: { default: 'Alt+Shift+O' },
+        description: 'Switch Phonetix on or off',
+      },
+      translator: {
+        suggested_key: { default: 'Alt+Shift+L' },
+        description: 'Open the translator',
       },
     },
     content_security_policy: {
