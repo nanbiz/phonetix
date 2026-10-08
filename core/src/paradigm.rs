@@ -199,7 +199,7 @@ pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
         }
     }
     Some(Form {
-        ending_at: shared_start(spelling, &entry.lemma),
+        ending_at: stem_length(spelling, entry),
         place,
         along,
         said: None,
@@ -393,7 +393,45 @@ fn counterpart(had: &str, tag: &str, place: &Place, moving: &[&str]) -> bool {
         )
 }
 
-/// How many characters two words begin with alike, which is where a form's ending starts.
+/// Where a form's own ending starts: after the stem every form of its word shares, and never
+/// past what it shares with the lemma. "corre" shares all of itself with "correr", and its
+/// ending is still the "e" that sets it apart from "corro", "corres" and "corrí".
+fn stem_length(spelling: &str, entry: &Entry) -> usize {
+    let lemma = entry.lemma.to_lowercase();
+    // Only the word's own inflections: a German noun's table also lists other words beside it
+    // - "Hündin", "Rüde", "Hündchen" under "Hund" - and an irregular spelling a dictionary
+    // marks as nonstandard.
+    const ASIDE: [&str; 7] = [
+        "diminutive",
+        "augmentative",
+        "nonstandard",
+        "error-unknown-tag",
+        "archaic",
+        "obsolete",
+        "dialectal",
+    ];
+    let inflected = |label: &str| {
+        let first = label.split("; ").next().unwrap_or("");
+        !first.split(' ').any(|tag| ASIDE.contains(&tag))
+            && places(first).first().is_some_and(|place| {
+                place.iter().any(|(_, category)| {
+                    matches!(
+                        *category,
+                        "case" | "number" | "person" | "tense" | "mood" | "nonfinite"
+                    )
+                })
+            })
+    };
+    entry
+        .forms
+        .iter()
+        .filter(|row| !row.spelling.contains(' ') && inflected(&row.label))
+        .fold(shared_start(spelling, &entry.lemma), |stem, row| {
+            stem.min(shared_start(&row.spelling, &lemma))
+        })
+}
+
+/// How many characters two words begin with alike.
 fn shared_start(spelling: &str, lemma: &str) -> usize {
     spelling
         .to_lowercase()
@@ -453,6 +491,7 @@ mod tests {
             ["preterite", "indicative", "third-person", "singular"]
         );
         assert_eq!(found.ending_at, 3, "and|uvo");
+        assert_eq!(form("anda", &andar()).unwrap().ending_at, 3, "and|a");
     }
 
     #[test]

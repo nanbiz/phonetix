@@ -43,7 +43,11 @@ fun GlanceCard(
     val ipa = answer.ipa.firstOrNull()?.takeIf { it.isNotBlank() }
     // What the word is led by: the word the core picks, which is the reader's word for it or,
     // read into English, the first gloss that is a meaning rather than a note about grammar.
-    val says = (answer.lead ?: answer.says.firstOrNull())?.let(::plainly)?.takeIf { it.isNotBlank() }
+    // A form leads with its meaning said in that form: "anduvo" is "he walked", where the
+    // dictionary's meaning is the infinitive's, "to walk".
+    val paradigm = answer.paradigm
+    val says = (paradigm?.said ?: answer.lead ?: answer.says.firstOrNull())
+        ?.let(::plainly)?.takeIf { it.isNotBlank() }
     // The other words the spelling can be, where the dictionary could not tell which one the
     // page means. Decided, the rest are other words entirely: "Reifen", tyres, is also the verb
     // "reifen", to ripen, and naming it beside the tyres answered a question nobody asked.
@@ -68,10 +72,21 @@ fun GlanceCard(
             .padding(horizontal = Tokens.Scale.space4.dp, vertical = Tokens.Scale.space3.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        // The word, and how it is said where that is asked for.
+        // The word, its own ending in the accent where it is a form of another word, and how it
+        // is said on the same line.
         Row(verticalAlignment = Alignment.Bottom) {
+            val ending = paradigm?.endingAt?.takeIf { it in 1 until answer.spelling.length }
             Text(
-                text = answer.spelling,
+                text = androidx.compose.ui.text.buildAnnotatedString {
+                    if (ending == null) {
+                        append(answer.spelling)
+                    } else {
+                        append(answer.spelling.substring(0, ending))
+                        pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(palette.accent)))
+                        append(answer.spelling.substring(ending))
+                        pop()
+                    }
+                },
                 color = Color(palette.inkMuted),
                 fontSize = Tokens.Scale.fontSizeSmall.sp,
                 maxLines = 1,
@@ -101,7 +116,14 @@ fun GlanceCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.reported(says, report),
                 )
-                val kind = listOfNotNull(answer.pos) + also
+                // Which form of which word it is, where it is a form - "preterite · indicative ·
+                // 3rd singular of andar" - and otherwise the kind of word and what else it can be.
+                val form = paradigm?.named()?.takeIf { it.isNotEmpty() }
+                val kind = if (form != null) {
+                    listOf(form.joinToString(" · ") + (answer.lemma?.let { " of $it" } ?: ""))
+                } else {
+                    listOfNotNull(answer.pos) + also
+                }
                 if (kind.isNotEmpty()) {
                     Text(
                         text = kind.joinToString(" · "),

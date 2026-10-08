@@ -47,10 +47,40 @@ data class Answer(
      *  page's words by: "the" for German "die" read into English, where the first gloss is a
      *  note about grammar. Nothing where the core named none. */
     val lead: String? = null,
+    /** Which form of its lemma the word is, where its table says: see [Paradigm]. */
+    val paradigm: Paradigm? = null,
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
 ) {
+    /**
+     * Which form of its lemma a word is: the grammatical values of its place in the lemma's
+     * table in the order a card names them ("preterite", "indicative", "third-person",
+     * "singular"), where its own ending starts, and what it means said in that form ("he
+     * walked"), as the core works them out.
+     */
+    data class Paradigm(val place: List<String>, val endingAt: Int, val said: String?) {
+        /** The place as a card names it, person and number together: "preterite ·
+         *  indicative · 3rd singular". */
+        fun named(): List<String> {
+            val person = place.firstOrNull { it.endsWith("-person") }
+            val number = place.firstOrNull { it == "singular" || it == "plural" || it == "dual" }
+            val ordinal = when (person) {
+                "first-person" -> "1st"
+                "second-person" -> "2nd"
+                "third-person" -> "3rd"
+                else -> null
+            }
+            return place.mapNotNull { value ->
+                when {
+                    value == person -> listOfNotNull(ordinal, number).joinToString(" ")
+                    value == number && person != null -> null
+                    else -> value
+                }
+            }
+        }
+    }
+
     /** What produced an answer. A reader deciding whether to trust a word is owed it. */
     sealed interface Provenance {
         data class Dictionary(val pack: String) : Provenance
@@ -163,6 +193,16 @@ data class Answer(
                 says = list("says"),
                 glosses = list("glosses"),
                 lead = if (o.isNull("lead")) null else o.optString("lead").ifEmpty { null },
+                paradigm = o.optJSONObject("paradigm")?.let { row ->
+                    val place = row.optJSONArray("place") ?: JSONArray()
+                    Paradigm(
+                        place = (0 until place.length()).mapNotNull {
+                            place.optJSONObject(it)?.optString("value")?.ifEmpty { null }
+                        },
+                        endingAt = row.optInt("endingAt"),
+                        said = if (row.isNull("said")) null else row.optString("said").ifEmpty { null },
+                    )
+                },
                 marks = (o.optJSONArray("marks") ?: JSONArray()).let { outer ->
                     (0 until outer.length()).map { at ->
                         val inner = outer.optJSONArray(at) ?: JSONArray()
