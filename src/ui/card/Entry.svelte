@@ -20,19 +20,24 @@
       const readings =
         entry.readings.length > 0
           ? entry.readings
-          : [{ pos: entry.pos, ipa: entry.ipa, says: entry.says, glosses: entry.glosses }];
+          : [{
+              pos: entry.pos, ipa: entry.ipa, says: entry.says, glosses: entry.glosses,
+              marks: entry.marks, examples: entry.examples,
+            }];
       return readings
         .map((reading) => {
           const senses = reading.says.length > 0 ? reading.says : reading.glosses;
-          // The answer's marks are the senses of the reading it leads with, in their order.
-          const marked =
-            reading.glosses.length === entry.glosses.length &&
-            reading.glosses.every((gloss, i) => gloss === entry.glosses[i]);
+          // Marks and examples are the glosses', sense by sense, so they go with the senses
+          // where those are the glosses or one word for each of them.
+          const bySense = senses.length === reading.glosses.length;
           return {
             pos: reading.pos ?? '',
             senses: senses.map((sense, i) => ({
               sense,
-              marks: marked ? (entry.marks[i] ?? []).map((mark) => mark.replaceAll('-', ' ')) : [],
+              marks: bySense
+                ? (reading.marks?.[i] ?? []).map((mark) => mark.replaceAll('-', ' '))
+                : [],
+              example: bySense ? (reading.examples?.[i] ?? null) : null,
             })),
           };
         })
@@ -51,6 +56,7 @@
               class="entry-mark{valueText(mark.replaceAll(' ', '-')) ? ' explained' : ''}"
               title={valueText(mark.replaceAll(' ', '-')) ?? undefined}>{mark}</span
             >{/each}
+          {#if it.example}<span class="entry-example">{it.example}</span>{/if}
         </li>
       {/each}
     </ol>

@@ -51,6 +51,9 @@ pub struct Answer {
     /// worth more than a second gloss, and a made-up sentence would be worth less than
     /// nothing, so this is empty rather than invented.
     pub example: Option<String>,
+    /// Every sense's example, where the dictionary keeps one, in the order of the glosses: a
+    /// word's full entry shows each sense with its own.
+    pub examples: Vec<Option<String>>,
     pub provenance: Option<Provenance>,
     pub source: Lang,
     pub target: Lang,
@@ -68,6 +71,10 @@ pub struct Reading {
     pub says: Vec<String>,
     /// And in English, which is what a reader is left with when it did not.
     pub glosses: Vec<String>,
+    /// What the dictionary marks each sense as, in the order of the glosses.
+    pub marks: Vec<Vec<String>>,
+    /// Each sense's example, where the dictionary keeps one, in the order of the glosses.
+    pub examples: Vec<Option<String>>,
 }
 
 impl Answer {
@@ -85,6 +92,7 @@ impl Answer {
             marks: Vec::new(),
             readings: Vec::new(),
             example: None,
+            examples: Vec::new(),
             provenance: None,
             source: source.clone(),
             target: target.clone(),
@@ -1178,6 +1186,8 @@ pub fn read_in_context<D: AsRef<[u8]>>(
             ipa: answer.ipa.clone(),
             says: answer.says.clone(),
             glosses: answer.glosses.clone(),
+            marks: answer.marks.clone(),
+            examples: answer.examples.clone(),
         })
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
@@ -2071,6 +2081,7 @@ fn finish<D: AsRef<[u8]>>(
         marks: entry.senses.iter().map(|s| s.marks.clone()).collect(),
         readings: Vec::new(),
         example,
+        examples: entry.senses.iter().map(|s| s.example.clone()).collect(),
         provenance: Some(Provenance::Dictionary {
             pack: format!("lex-{}", pack.lang()),
         }),

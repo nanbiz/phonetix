@@ -42,6 +42,10 @@ export interface Reading {
   ipa: string[];
   says: string[];
   glosses: string[];
+  /** What the dictionary marks each sense as, in the order of the glosses. */
+  marks?: string[][];
+  /** Each sense's example, where the dictionary keeps one, in the order of the glosses. */
+  examples?: (string | null)[];
 }
 
 export interface Answer {
@@ -72,6 +76,8 @@ export interface Answer {
   marks: string[][];
   /** The applying sense's example, where the dump had one. Never invented. */
   example: string | null;
+  /** Every sense's example, where the dictionary keeps one, in the order of the glosses. */
+  examples?: (string | null)[];
   /** Each word this spelling is, where it is more than one. */
   readings: Reading[];
   /** Where the answer came from: a dictionary, a machine, or a synthesised voice. The card

@@ -21,7 +21,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
-\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
+\"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
 \"paradigm\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
@@ -34,6 +34,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         strings(&answer.says),
         strings(&answer.glosses),
         maybe(&answer.example),
+        examples(&answer.examples),
         // What each sense is marked as, in the order the glosses are: a reader is owed that a
         // sense is archaic or regional before they use it.
         marks(&answer.marks),
@@ -224,14 +225,22 @@ fn readings(items: &[crate::resolve::Reading]) -> String {
         .iter()
         .map(|reading| {
             format!(
-                "{{\"pos\":{},\"ipa\":{},\"says\":{},\"glosses\":{}}}",
+                "{{\"pos\":{},\"ipa\":{},\"says\":{},\"glosses\":{},\"marks\":{},\"examples\":{}}}",
                 maybe(&reading.pos),
                 strings(&reading.ipa),
                 strings(&reading.says),
                 strings(&reading.glosses),
+                marks(&reading.marks),
+                examples(&reading.examples),
             )
         })
         .collect();
+    format!("[{}]", inner.join(","))
+}
+
+/// Every sense's example or null, in the order the glosses came.
+fn examples(items: &[Option<String>]) -> String {
+    let inner: Vec<String> = items.iter().map(maybe).collect();
     format!("[{}]", inner.join(","))
 }
 
@@ -311,6 +320,7 @@ mod tests {
             marks: vec![vec!["masculine".into()]],
             readings: Vec::new(),
             example: Some("El perro ladra.".into()),
+            examples: Vec::new(),
             provenance: None,
             source: Lang("es".into()),
             target: Lang("de".into()),
@@ -327,12 +337,16 @@ mod tests {
                 ipa: vec!["bʊk".into()],
                 says: vec!["Buch".into()],
                 glosses: vec!["a bound volume".into()],
+                marks: Vec::new(),
+                examples: Vec::new(),
             },
             crate::resolve::Reading {
                 pos: Some("verb".into()),
                 ipa: vec!["bʊk".into()],
                 says: vec!["buchen".into()],
                 glosses: vec!["to reserve".into()],
+                marks: Vec::new(),
+                examples: Vec::new(),
             },
         ];
         let text = of(&answer);
