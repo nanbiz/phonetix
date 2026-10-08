@@ -18,7 +18,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell, card_while_held
+from android_harness import SERIAL, Device, adb, shell, card_while_held
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -84,6 +84,66 @@ def serve():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
+def set_on_the_screen(dev):
+    """The reader ticks a language under Never translate on the app's own screen, and the
+    service is told; the row then names it."""
+    from webview import View
+    import state as State
+    failures = []
+    dev.surface(mode="spanish", known="none", layer="both", enable=1)
+    for _ in range(6):
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+              "--activity-reorder-to-front")
+        time.sleep(2.0)
+        if "MainActivity" in dev.top_activity():
+            break
+    with View() as view:
+        for _ in range(20):
+            if view.evaluate("Boolean(document.querySelector('[data-row=known]'))"):
+                break
+            time.sleep(1)
+        before = view.evaluate("document.querySelector('[data-row=known] [data-about]')?.textContent?.trim()")
+        view.evaluate("document.querySelector('[data-row=known]').click()")
+        time.sleep(1)
+        view.evaluate("document.querySelector('[data-sheet] [data-choice=fr]')?.click()")
+        time.sleep(0.5)
+        still = view.evaluate("Boolean(document.querySelector('[data-sheet]'))")
+        view.evaluate("document.querySelector('[data-sheet] .sheet-top button').click()")
+        time.sleep(1)
+        after = view.evaluate("document.querySelector('[data-row=known] [data-about]')?.textContent?.trim()")
+        wraps = view.evaluate("""(() => { const r = document.querySelector('[data-row=known] [data-about]');
+            const h = parseFloat(getComputedStyle(r).lineHeight) || 20; return r.getBoundingClientRect().height > h * 1.5 })()""")
+    known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known")
+    print(f"  never translate on the screen: {before!r} -> {after!r}, sheet stayed open {still}, "
+          f"service knows {known}")
+    if not still:
+        failures.append("picking one language closed the Never translate list")
+    if "French" not in (after or ""):
+        failures.append(f"the Never translate row does not name French once ticked: {after!r}")
+    if wraps:
+        failures.append("the Never translate row's value wraps")
+    if "fr" not in (known or []):
+        failures.append(f"the service was not told French is never translated: {known}")
+    return failures
+
+
+def learning_is_translated(dev):
+    """Until the reader chooses, the phone's own languages are left as they are, but never the
+    one they are learning: this emulator is set to English, and English is what is learned."""
+    import state as State
+    failures = []
+    for learning, left in (("es", True), ("en", False)):
+        dev.surface(mode="spanish", known="default", target="de", learning=learning,
+                    layer="both", enable=1)
+        time.sleep(2)
+        known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known") or []
+        print(f"  never translated by default while learning {learning}: {known}")
+        if ("en" in known) != left:
+            failures.append(f"learning {learning}, the phone's English is "
+                            f"{'translated' if left else 'never translated'} by default: {known}")
+    return failures
+
+
 def main():
     build_packs()
     serve()
@@ -117,7 +177,7 @@ def main():
         "both": (["Hund", "pe"], []),
     }
     for layer, (has, lacks) in wanted.items():
-        dev.surface(mode="spanish", packHost=base, target="de", layer=layer,
+        dev.surface(mode="spanish", packHost=base, target="de", known="none", layer=layer,
                     enable=1, density=1)
         time.sleep(4)
         texts, closed = card_while_held(dev, "perro")
@@ -134,6 +194,27 @@ def main():
                 failures.append(f"with {layer}, the card for perro shows {part!r}: {texts}")
         if not closed:
             failures.append(f"with {layer}, the card stayed up after the button was let go")
+
+    # Spanish among the languages the reader reads as they are: nothing translates it. With
+    # only translation on there is nothing to show, and with both the card only says it.
+    for layer, has, lacks in (("meaning", None, ["Hund"]), ("both", ["pe"], ["Hund"])):
+        dev.surface(mode="spanish", packHost=base, target="de", known="es", layer=layer,
+                    enable=1, density=1)
+        time.sleep(4)
+        texts, closed = card_while_held(dev, "perro")
+        print(f"  {layer}, Spanish never translated: the card for perro says {texts}")
+        joined = " ".join(texts)
+        if has is None and texts:
+            failures.append(f"Spanish is never translated, yet with {layer} a card came up: {texts}")
+        for part in has or []:
+            if part not in joined:
+                failures.append(f"Spanish never translated, with {layer} the card lacks {part!r}")
+        for part in lacks:
+            if part in joined:
+                failures.append(f"Spanish never translated, with {layer} the card shows {part!r}")
+
+    failures += set_on_the_screen(dev)
+    failures += learning_is_translated(dev)
 
     if failures:
         print("\nFAIL")

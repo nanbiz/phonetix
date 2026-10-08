@@ -356,6 +356,7 @@ private class Bridge(
         .put("density", settings.density)
         .put("target", settings.target)
         .put("learning", settings.learning)
+        .put("known", JSONArray(settings.untranslated.toList()))
         .put("source", "")
         .put("narrow", settings.narrow)
         .put("hideStress", settings.hideStress)
@@ -381,6 +382,10 @@ private class Bridge(
             "density" -> SettingsStore.setDensity((value as? Number)?.toInt() ?: return)
             "target" -> SettingsStore.setTarget(value?.toString().orEmpty())
             "learning" -> SettingsStore.setLearning(value?.toString().orEmpty())
+            "known" -> {
+                val said = value as? JSONArray ?: return
+                SettingsStore.setKnown((0 until said.length()).map { said.optString(it) }.toSet())
+            }
             "narrow" -> SettingsStore.setNarrow(value == true)
             "hideStress" -> SettingsStore.setHideStress(value == true)
             "theme" -> SettingsStore.setTheme(value?.toString().orEmpty())

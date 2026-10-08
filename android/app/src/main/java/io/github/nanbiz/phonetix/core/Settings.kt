@@ -32,6 +32,11 @@ data class Settings(
      * answer should come back in.
      */
     val target: String = "",
+    /**
+     * The languages the reader chose to read as they are, which nothing translates: a word in
+     * one of these is only said. Nothing until they choose, and then [untranslated] answers.
+     */
+    val known: Set<String>? = null,
     /** The language the reader is learning, which is what a word they are looking for comes
      *  back in. Set in the panel that asks for one. */
     val learning: String = "",
@@ -96,6 +101,26 @@ data class Settings(
     val into: String get() = if (layer == "meaning" || layer == "both") target else ""
 
     /**
+     * The languages nothing translates besides the reader's own: the ones they chose, or until
+     * they choose, the languages the phone is set to, as the browser takes the ones it is set
+     * to - but never the one they are learning, which is the language they most want read.
+     */
+    val untranslated: Set<String>
+        get() = known ?: run {
+            val locales = android.os.LocaleList.getDefault()
+            (0 until locales.size()).map { locales[it].language }
+                .filter { it.isNotEmpty() && it != target && it != learning }
+                .toSet()
+        }
+
+    /** Whether a word in [lang] is translated, or left as it is because the reader reads it. */
+    fun translates(lang: String): Boolean =
+        lang.isNotEmpty() && lang != target && lang !in untranslated
+
+    /** The language a word in [lang] is read into: nothing where it is not translated. */
+    fun intoFor(lang: String): String = if (translates(lang)) into else ""
+
+    /**
      * Whether nothing is painted over the page, which is always: the words of a screen are
      * read so the side button can answer about the one it is dragged over, and the page itself
      * is left as its app drew it.
@@ -120,6 +145,7 @@ object SettingsStore {
     private const val K_TOUCH = "touch_words"
     private const val K_TARGET = "target"
     private const val K_LEARNING = "learning"
+    private const val K_KNOWN = "known"
     private const val K_RECENT = "recent"
     private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
@@ -150,6 +176,7 @@ object SettingsStore {
             touchWords = p.getBoolean(K_TOUCH, true),
             target = p.getString(K_TARGET, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
+            known = p.getStringSet(K_KNOWN, null)?.toSet(),
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
             layer = mode(p.getString(K_LAYER, "") ?: ""),
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
@@ -195,6 +222,7 @@ object SettingsStore {
             ?.putBoolean(K_TOUCH, next.touchWords)
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARNING, next.learning)
+            ?.putStringSet(K_KNOWN, next.known)
             ?.putString(K_RECENT, next.recent.joinToString(","))
             ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
@@ -216,6 +244,8 @@ object SettingsStore {
 
     /** Put the overlay down, or pick it up again: the press held on the button. */
     fun setTarget(v: String) = update { it.copy(target = v) }
+    /** The languages left as they are, or nothing to go back to the phone's own. */
+    fun setKnown(v: Set<String>?) = update { it.copy(known = v) }
     /** What they are learning now, and the few they have asked in before it. */
     /** A language asked in where nothing is translated: kept at the top of the recent ones,
      *  and taken as the one being learned only where it is not the reader's own. */

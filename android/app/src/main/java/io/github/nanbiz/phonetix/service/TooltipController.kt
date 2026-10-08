@@ -26,6 +26,7 @@ import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Speech
 import io.github.nanbiz.phonetix.core.SettingsStore
+import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wiktionary
 import io.github.nanbiz.phonetix.core.IpaSymbols
@@ -227,8 +228,9 @@ class TooltipController(
             // reading of it is the verb. The card is redrawn only if that changes the answer.
             val settings = SettingsStore.current
             val source = asked.language.ifEmpty { Language.OURS }
-            if (first == null || settings.into.isEmpty() || asked.sentence.isBlank()) return@execute
-            val said = Reading.lineSaid(asked.sentence, source, settings.into)
+            val into = settings.intoFor(source)
+            if (first == null || into.isEmpty() || asked.sentence.isBlank()) return@execute
+            val said = Reading.lineSaid(asked.sentence, source, into)
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "TOOLTIP line ${asked.sentence.take(60)} => $said")
             }
@@ -547,11 +549,11 @@ class TooltipController(
         val settings = SettingsStore.current
         val source = box.language.ifEmpty { Language.OURS }
         val answer = Reading.lookUp(
-            box.word, source, settings.into.ifEmpty { source },
+            box.word, source, settings.intoFor(source).ifEmpty { source },
             settings.accentFor(source), box.before, said ?: box.decided,
         )
             ?.takeIf { it.found }
-            ?: elsewhere(box.word, source, settings.into)
+            ?: elsewhere(box.word, source, settings)
             ?: return Answer.ofTranscription(box.word, voiced(box.word, source), source)
         // A form the dictionary lists only under its lemma has no transcription of its own:
         // the voice says it, rather than the card going without or borrowing the lemma's.
@@ -567,9 +569,14 @@ class TooltipController(
         // card and the app that switches it on are one set of colours.
         val dark = box.background == 0 || isDark(box.background)
         val palette = Tokens.palette(themeNamed(SettingsStore.current.theme), dark)
-        val layer = SettingsStore.current.layer
+        val settings = SettingsStore.current
+        val layer = settings.layer
         val sound = layer == "sound" || layer == "both"
-        val meaning = layer == "meaning" || layer == "both"
+        val translating = layer == "meaning" || layer == "both"
+        // A word in a language the reader reads is not translated: it is only said, and where
+        // only translation is switched on there is nothing to show about it at all.
+        val meaning = translating && settings.translates(answer.source.ifEmpty { box.language })
+        if (translating && !meaning && !sound) return null
         if (!glanceHasSomething(answer, sound, meaning)) return null
         val fresh = OverlayHost(context)
         host = fresh
@@ -590,12 +597,12 @@ class TooltipController(
      * "feat" in a song title on a German screen is English, and a card that opened on nothing
      * was no card at all.
      */
-    private fun elsewhere(word: String, source: String, into: String): Answer? =
+    private fun elsewhere(word: String, source: String, settings: Settings): Answer? =
         (listOf(Language.OURS) + Packs.held(context))
             .distinct()
             .filter { it != source }
             .firstNotNullOfOrNull { lang ->
-                Reading.lookUp(word, lang, into.ifEmpty { lang })?.takeIf {
+                Reading.lookUp(word, lang, settings.intoFor(lang).ifEmpty { lang })?.takeIf {
                     it.found && it.state != Answer.State.None && it.state != Answer.State.NoPack
                 }
             }

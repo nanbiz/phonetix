@@ -43,6 +43,10 @@ data class Answer(
     val provenance: Provenance?,
     val source: String,
     val target: String,
+    /** The word the answer leads with, which the core picks by the rule the extension draws a
+     *  page's words by: "the" for German "die" read into English, where the first gloss is a
+     *  note about grammar. Nothing where the core named none. */
+    val lead: String? = null,
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
@@ -84,7 +88,7 @@ data class Answer(
      *  under it is the same word again, so leading with the spelling showed a reader the same
      *  word three times over; a card with no sense to lead with leads with nothing. */
     val headline: String?
-        get() = says.firstOrNull() ?: glosses.firstOrNull()
+        get() = lead ?: says.firstOrNull() ?: glosses.firstOrNull()
 
     /** Whether anything was found at all, which decides between a card and a message.
      *
@@ -158,6 +162,7 @@ data class Answer(
                 },
                 says = list("says"),
                 glosses = list("glosses"),
+                lead = if (o.isNull("lead")) null else o.optString("lead").ifEmpty { null },
                 marks = (o.optJSONArray("marks") ?: JSONArray()).let { outer ->
                     (0 until outer.length()).map { at ->
                         val inner = outer.optJSONArray(at) ?: JSONArray()

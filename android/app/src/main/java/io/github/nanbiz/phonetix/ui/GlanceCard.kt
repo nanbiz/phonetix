@@ -45,7 +45,9 @@ fun GlanceCard(
     report: Reporter? = null,
 ) {
     val ipa = answer.ipa.firstOrNull()?.takeIf { it.isNotBlank() }
-    val says = answer.says.firstOrNull()?.let(::plainly)?.takeIf { it.isNotBlank() }
+    // What the word is led by: the word the core picks, which is the reader's word for it or,
+    // read into English, the first gloss that is a meaning rather than a note about grammar.
+    val says = (answer.lead ?: answer.says.firstOrNull())?.let(::plainly)?.takeIf { it.isNotBlank() }
     // The other words the spelling can be, where the dictionary could not tell which one the
     // page means. Decided, the rest are other words entirely: "Reifen", tyres, is also the verb
     // "reifen", to ripen, and naming it beside the tyres answered a question nobody asked.
@@ -191,7 +193,7 @@ fun GlanceCard(
  *  would only repeat the word is not opened at all. */
 fun glanceHasSomething(answer: Answer, sound: Boolean, meaning: Boolean): Boolean {
     val ipa = answer.ipa.any { it.isNotBlank() }
-    val says = answer.says.any { it.isNotBlank() }
+    val says = !answer.lead.isNullOrBlank() || answer.says.any { it.isNotBlank() }
     val definition = answer.glosses.any { it.isNotBlank() }
     return (meaning && says) || ipa || definition
 }

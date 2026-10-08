@@ -367,7 +367,10 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         &lexcore::answer::Lang(target),
         &open,
     );
-    env.new_string(lexcore::json::of(&answer)).unwrap_or(empty)
+    // Led by the word the extension's page would draw for it, the same rule on both surfaces.
+    let lead = lexcore::annotate::lead(&answer, &open);
+    env.new_string(lexcore::json::card(&answer, lead.as_deref()))
+        .unwrap_or(empty)
 }
 
 /// One of the dictionaries the app ships, turned into a pack it can read.

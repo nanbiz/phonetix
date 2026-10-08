@@ -48,7 +48,20 @@
   let learning = $derived(settings.learning !== settings.target ? settings.learning : '');
 
   /** Which language list is open over the screen, if one is. */
-  let choosing = $state<'' | 'target' | 'learning'>('');
+  let choosing = $state<'' | 'target' | 'learning' | 'known'>('');
+
+  /** The languages left as they are besides the reader's own, by name. */
+  let knownNames = $derived(
+    settings.known.filter((lang) => lang !== settings.target).map(named).join(', ')
+  );
+
+  /** Tick a language the reader reads as it is, or put it back among the translated ones. */
+  function toggleKnown(lang: string) {
+    const known = settings.known.includes(lang)
+      ? settings.known.filter((it) => it !== lang)
+      : [...settings.known, lang];
+    change('known', known);
+  }
 
   const everyLanguage = Object.entries(LANGUAGES)
     .map(([code, it]) => ({
@@ -179,6 +192,12 @@
         </span>
       </button>
     </div>
+    <Item
+      name={ROWS.known.name}
+      row="known"
+      value={knownNames || SAYS['nothing-else']}
+      open={() => (choosing = 'known')}
+    />
     {/if}
   </Group>
 
@@ -257,6 +276,14 @@
     options={everyLanguage.filter((it) => it.value !== settings.target)}
     chosen={learning}
     change={(value) => change('learning', value)}
+    close={() => (choosing = '')}
+  />
+{:else if choosing === 'known'}
+  <ListSheet
+    title={ROWS.known.name}
+    options={everyLanguage.filter((it) => it.value !== settings.target)}
+    chosen={settings.known}
+    change={toggleKnown}
     close={() => (choosing = '')}
   />
 {/if}

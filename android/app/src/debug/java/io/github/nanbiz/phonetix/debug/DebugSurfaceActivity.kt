@@ -623,6 +623,15 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 )
 
             }
+            // The languages the reader reads as they are, comma separated: "none" for none,
+            // "default" for the phone's own languages.
+            if (i.hasExtra("known")) {
+                val said = i.getStringExtra("known").orEmpty()
+                io.github.nanbiz.phonetix.core.SettingsStore.setKnown(
+                    if (said == "default") null
+                    else said.split(',').filter { it.isNotBlank() && it != "none" }.toSet(),
+                )
+            }
             // Which language the reader is learning, which is what the panel answers in.
             if (i.hasExtra("learning")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setLearning(
