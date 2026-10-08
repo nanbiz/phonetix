@@ -959,9 +959,28 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // plural of mein" and nothing more, and "mein", "my", is the reading. It takes the place
     // of the note, ahead of every other word that lists the spelling among its forms - "sein"
     // lists "meine" too.
+    // Not past an entry of the spelling that means something of its own and stands as high
+    // as the note does: "camino" is also filed as "first-person singular present indicative
+    // of caminar", and the noun, the way, is still the word.
+    let meaning_rank: Option<u8> = found
+        .iter()
+        .filter(|entry| {
+            same_word(&entry.lemma, spelling)
+                // A sense the dictionary marks as a form of another word points at that word
+                // even where it says what it means: "ihre" is "her, its, their" as a form of
+                // "ihr".
+                && entry.senses.iter().any(|sense| {
+                    form_of_word(&sense.gloss).is_none()
+                        && !crate::annotate::about_grammar(&sense.gloss)
+                        && !sense.marks.iter().any(|mark| mark == "form-of")
+                })
+        })
+        .map(|entry| rank_of(entry, spelling))
+        .min();
     let named: Vec<(String, u8)> = found
         .iter()
         .filter(|entry| same_word(&entry.lemma, spelling))
+        .filter(|entry| meaning_rank.is_none_or(|meaning| rank_of(entry, spelling) < meaning))
         .flat_map(|entry| {
             let rank = rank_of(entry, spelling);
             entry
@@ -1270,6 +1289,19 @@ fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<us
         .map(|word| word.as_deref().map(met).unwrap_or(0))
         .collect();
     let (best, most) = counts.iter().enumerate().max_by_key(|(_, count)| **count)?;
+    // Two readings of one word - Spanish "perro" the noun and "perro" the adjective - are not
+    // told apart by how often the reader's language says their answers: German says "schlimm"
+    // far more often than "Hund", and every Spanish dog was read as "awful". Which of them is
+    // meant is the dictionary's order to say, and its first is the noun.
+    let word_of = |answer: &Answer| {
+        answer
+            .lemma
+            .clone()
+            .unwrap_or_else(|| answer.spelling.clone())
+    };
+    if best != 0 && same_word(&word_of(&all[best]), &word_of(&all[0])) {
+        return None;
+    }
     // Against the readings that answer with another word: two readings that both come out as
     // "note" are not competing with each other.
     let second = counts
@@ -1309,7 +1341,19 @@ fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<us
                 .max()
                 .unwrap_or(0)
         };
-        if met_here(&own.spelling) >= met_here(lemma) {
+        // A lemma's count is every form of it put together, the spelling on the page among
+        // them, so it is weighed without that spelling: "caminar" is met 200 thousand times,
+        // 140 thousand of them as "camino", and the rest are fewer than the noun "camino".
+        // The spelling's own share is the count of its barest entry, which is the spelling
+        // alone.
+        let alone = source
+            .lookup(&own.spelling)
+            .iter()
+            .filter(|entry| same_word(&entry.lemma, &own.spelling))
+            .filter_map(how_often)
+            .min()
+            .unwrap_or(0);
+        if met_here(&own.spelling) >= met_here(lemma).saturating_sub(alone) {
             return None;
         }
     }
@@ -1892,9 +1936,23 @@ fn resolve_one<D: AsRef<[u8]>>(
         (_, true) => AnswerState::Form,
         (_, false) => AnswerState::Entry,
     };
-    finish(
+    let lemma_said = (says.len() == 1).then(|| says[0].clone());
+    let mut answer = finish(
         state, spelling, entry, says, glosses, example, pack, source, target,
-    )
+    );
+    // Said in the reader's German in the form the word has: "anduvo" is "er ging", from the
+    // German dictionary's own table of "gehen".
+    if target.0 == "de" {
+        if let (Some(form), Some(lemma)) = (answer.paradigm.as_mut(), lemma_said) {
+            form.said = crate::inflect::german(&lemma, &entry.pos, &form.place, other);
+            for along in &mut form.along {
+                for each in &mut along.forms {
+                    each.said = crate::inflect::german(&lemma, &entry.pos, &each.place, other);
+                }
+            }
+        }
+    }
+    answer
 }
 
 #[allow(clippy::too_many_arguments)]

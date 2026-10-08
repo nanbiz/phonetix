@@ -856,6 +856,23 @@ pub fn about_grammar(part: &str) -> bool {
     grammatical && (points_elsewhere || words > 2)
 }
 
+/// Whether a part names nothing but a form, even one name alone: "plural", "dative plural".
+///
+/// Only for a part already known to be about a form - nested under "inflection of meiner:",
+/// or a sense the dictionary marks as a form of another word - since alone "present" and
+/// "past" are as often words.
+pub fn only_form_names(part: &str) -> bool {
+    let lowered = drop_parentheses(part).to_lowercase();
+    let named: Vec<&str> = lowered
+        .split(|c: char| c.is_whitespace() || c == '/' || c == ',')
+        .filter(|word| !word.is_empty())
+        .collect();
+    !named.is_empty()
+        && named.iter().all(|word| {
+            crate::paradigm::category_of(word).is_some() || matches!(*word, "and" | "or")
+        })
+}
+
 /// The sense without what its parentheses and quotation marks add.
 fn drop_parentheses(sense: &str) -> String {
     let mut out = String::with_capacity(sense.len());

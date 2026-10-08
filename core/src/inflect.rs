@@ -257,6 +257,119 @@ fn verb(base: &str, rest: &str, place: &Place) -> Option<String> {
     Some(said)
 }
 
+/// [lemma] said in the place [place] names, in German, from the German dictionary's own table
+/// of it: "gehen" in the third person singular of the preterite is "er ging". The future and
+/// the conditional are said with "werden" and "würde", the way German says them, and a
+/// subjunctive's past with "würde" too, which is how it is said in speech.
+pub fn german<D: AsRef<[u8]>>(
+    lemma: &str,
+    pos: &str,
+    place: &Place,
+    pack: &lexpack::Pack<D>,
+) -> Option<String> {
+    let entry = pack
+        .lookup(lemma)
+        .into_iter()
+        .find(|entry| entry.lemma == lemma && entry.pos == pos)?;
+    match pos {
+        "noun" => match value(place, "number") {
+            Some("plural") => cell(&entry, &[("nominative", "case"), ("plural", "number")])
+                .or_else(|| cell(&entry, &[("plural", "number")])),
+            Some("singular") => Some(lemma.to_string()),
+            _ => None,
+        },
+        "verb" => {
+            let person = value(place, "person");
+            let number = value(place, "number").unwrap_or("singular");
+            let who = match (person, number) {
+                (Some("first-person"), "plural") => "wir",
+                (Some("first-person"), _) => "ich",
+                (Some("second-person"), "plural") => "ihr",
+                (Some("second-person"), _) => "du",
+                (Some("third-person"), "plural") => "sie",
+                (Some("third-person"), _) => "er",
+                _ => return None,
+            };
+            let person = person?;
+            let finite = |entry: &lexpack::Entry, tense: &str| -> Option<String> {
+                cell(
+                    entry,
+                    &[(person, "person"), (number, "number"), (tense, "tense")],
+                )
+                // A table lists no form spelled like its lemma, and "wir gehen", "sie gehen"
+                // are spelled so.
+                .or_else(|| {
+                    (tense == "present" && number == "plural" && person != "second-person")
+                        .then(|| entry.lemma.clone())
+                })
+            };
+            let helper = |subjunctive: bool| -> Option<String> {
+                let werden = pack
+                    .lookup("werden")
+                    .into_iter()
+                    .find(|entry| entry.lemma == "werden" && entry.pos == "verb")?;
+                if subjunctive {
+                    cell(
+                        &werden,
+                        &[
+                            (person, "person"),
+                            (number, "number"),
+                            ("subjunctive", "mood"),
+                        ],
+                    )
+                    .filter(|form| form.starts_with("wü"))
+                    .or_else(|| {
+                        Some(
+                            match (person, number) {
+                                ("second-person", "plural") => "würdet",
+                                ("second-person", _) => "würdest",
+                                (_, "plural") => "würden",
+                                _ => "würde",
+                            }
+                            .to_string(),
+                        )
+                    })
+                } else {
+                    finite(&werden, "present")
+                }
+            };
+            let said = match (value(place, "mood"), value(place, "tense")) {
+                (Some("imperative"), _) => return None,
+                (Some("subjunctive"), _) => format!("{} {lemma}", helper(true)?),
+                (_, Some("present")) => finite(&entry, "present")?,
+                (_, Some("preterite" | "past" | "imperfect")) => finite(&entry, "preterite")?,
+                (_, Some("future")) => format!("{} {lemma}", helper(false)?),
+                (_, Some("conditional")) => format!("{} {lemma}", helper(true)?),
+                _ => return None,
+            };
+            Some(format!("{who} {said}"))
+        }
+        _ => None,
+    }
+}
+
+/// The spelling in [entry]'s table of the place that has every one of [wanted], in the
+/// indicative unless a mood is among them, the one naming fewest other values where several do.
+fn cell(entry: &lexpack::Entry, wanted: &[(&str, &str)]) -> Option<String> {
+    let mood_wanted = wanted.iter().any(|(_, category)| *category == "mood");
+    entry
+        .forms
+        .iter()
+        .flat_map(|row| {
+            crate::paradigm::places(&row.label)
+                .into_iter()
+                .map(move |place| (row.spelling.clone(), place))
+        })
+        .filter(|(_, place)| {
+            wanted
+                .iter()
+                .all(|(tag, _)| place.iter().any(|(had, _)| had == tag))
+                && (mood_wanted || value(place, "mood").is_none_or(|mood| mood == "indicative"))
+        })
+        .min_by_key(|(_, place)| place.len())
+        .map(|(spelling, _)| spelling)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

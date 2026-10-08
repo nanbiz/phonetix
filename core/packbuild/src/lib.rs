@@ -194,8 +194,13 @@ fn senses(value: &Value) -> Vec<Sense> {
         // Only a gloss that is nothing but the names of a form is given its word; one nested
         // the same way that says what the form means - "her, its, their" under "inflection of
         // ihr:" - is a meaning, and stays one.
+        let nested = glosses.len() > 1;
         let gloss = match form_of(sense) {
-            Some(lemma) if !mentions(gloss, &lemma) && lexcore::annotate::about_grammar(gloss) => {
+            Some(lemma)
+                if !mentions(gloss, &lemma)
+                    && (lexcore::annotate::about_grammar(gloss)
+                        || (nested && lexcore::annotate::only_form_names(gloss))) =>
+            {
                 format!("{} of {lemma}", gloss.trim())
             }
             _ => gloss.trim().to_string(),

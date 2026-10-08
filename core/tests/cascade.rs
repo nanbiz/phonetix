@@ -1645,6 +1645,67 @@ fn a_function_word_filed_as_a_form_still_wins() {
     assert_eq!(drawn(&french, "fr", "de la banque", "la"), "the");
 }
 
+/// A word of its own is not read as a form of a verb because the verb, counted with all its
+/// forms, and the verb's answer in the reader's language are both met more often: "camino" is
+/// the way, though "caminar" counts "camino" among its forms and German says "gehen" more
+/// than "Weg".
+#[test]
+fn a_word_of_its_own_beats_a_verb_that_counts_it_among_its_forms() {
+    let counted = |mut entry: Entry, count: u64| {
+        entry.tags = vec![format!("count:{count}")];
+        entry
+    };
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    spanish
+        .add(
+            counted(word("caminar", "verb", "kamiˈnaɾ", &["to walk"]), 200_439),
+            &["camino", "camina"],
+        )
+        .unwrap();
+    spanish
+        .add(
+            counted(word("camino", "noun", "kaˈmino", &["way, route"]), 147_472),
+            &["caminos"],
+        )
+        .unwrap();
+    spanish
+        .add(
+            counted(
+                word(
+                    "camino",
+                    "verb",
+                    "kaˈmino",
+                    &["first-person singular present indicative of caminar"],
+                ),
+                140_092,
+            ),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(
+            counted(word("gehen", "verb", "ˈɡeːən", &["to walk"]), 900_000),
+            &[] as &[&str],
+        )
+        .unwrap();
+    german
+        .add(
+            counted(word("Weg", "noun", "veːk", &["way, route"]), 90_000),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&spanish),
+        target: Some(&german),
+        ..Open::default()
+    };
+    let got = look_up("camino", &lang("es"), &lang("de"), &open);
+    assert_eq!(got.says.first().map(String::as_str), Some("Weg"), "{got:?}");
+}
+
 /// An entry that says only which form of another word it is reads as that word, and as the
 /// one it names rather than any other word listing the same spelling among its forms.
 #[test]
