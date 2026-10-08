@@ -62,6 +62,26 @@ PAGE = (
 ).encode()
 
 
+# A paragraph several lines deep, narrow enough that a card opened on one of its words covers
+# the words of the lines beside it. Once near the top of the window, where a card opens under
+# its word, and once pinned to the bottom, where there is no room under a word and the card
+# opens over it.
+LINES = (
+    "El perro descansa tranquilamente en el camino y camina despacio por la calle. La calle "
+    "principal es larga y el perro duerme tranquilamente en el banco del camino. Por la tarde "
+    "el perro camina otra vez despacio por la calle principal y descansa en el camino."
+)
+
+
+def lines_page(low):
+    where = "position:fixed;left:48px;bottom:12px;margin:0;" if low else "margin:120px 0 0 48px;"
+    return (
+        "<!doctype html><html lang='es'><meta charset='utf-8'><body style='margin:0'>"
+        f"<p id='lines' style='{where}width:320px;font-size:17px;line-height:1.6'>{LINES}</p>"
+        "</body></html>"
+    ).encode()
+
+
 def run(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=900, **kw)
 
@@ -124,7 +144,9 @@ def serve():
                 self.send_error(404)
                 return
             body = (
-                UNDECLARED if self.path.startswith("/undeclared")
+                lines_page(low=True) if self.path.startswith("/lines-low")
+                else lines_page(low=False) if self.path.startswith("/lines")
+                else UNDECLARED if self.path.startswith("/undeclared")
                 else MIXED if self.path.startswith("/mixed")
                 else PAGE
             )
@@ -157,6 +179,315 @@ def wait_for(cdp, session, expression, want, tries=20):
             return value
         time.sleep(1)
     return value
+
+
+# Where every word of the paragraph is: the painted ones by their box, the page's own text by
+# the range each word covers, which is what a card on that text is anchored to.
+WORDS_JS = """
+(() => {
+  const p = document.getElementById('lines');
+  const painted = %s;
+  const out = [];
+  if (painted) {
+    for (const w of p.querySelectorAll('.px-w')) {
+      const r = w.getBoundingClientRect();
+      const text = ((w.querySelector('.px-was') || {}).textContent || '').trim();
+      out.push({text, left: r.left, right: r.right, top: r.top, bottom: r.bottom});
+    }
+  } else {
+    const walk = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (n.parentElement.closest('.px-w')) continue;
+      const parts = new Intl.Segmenter('es', {granularity: 'word'}).segment(n.nodeValue);
+      for (const s of parts) {
+        if (!s.isWordLike) continue;
+        const range = document.createRange();
+        range.setStart(n, s.index);
+        range.setEnd(n, s.index + s.segment.length);
+        const rects = range.getClientRects();
+        if (rects.length !== 1) continue;
+        const r = rects[0];
+        out.push({text: s.segment, left: r.left, right: r.right, top: r.top, bottom: r.bottom});
+      }
+    }
+  }
+  return {
+    painted: p.querySelectorAll('.px-w').length,
+    left: p.getBoundingClientRect().left,
+    words: out.map(w => ({...w, x: (w.left + w.right) / 2, y: (w.top + w.bottom) / 2})),
+  };
+})()
+"""
+
+# The card as a reader meets it: which word it is about, which side of it, where its arrow is,
+# and whether it takes the pointer yet.
+CARD_JS = """
+(() => {
+  const host = document.getElementById('phonetix-card-host');
+  const card = host && host.shadowRoot && host.shadowRoot.querySelector('.card');
+  if (!card) return {open: false};
+  const box = (e) => {
+    const r = e.getBoundingClientRect();
+    return {left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+            x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2,
+            width: r.width, height: r.height};
+  };
+  const arrow = card.querySelector('.card-arrow');
+  const sym = card.querySelector('.sym');
+  return {
+    open: true,
+    word: (card.querySelector('.card-top .word') || {}).textContent || '',
+    way: card.classList.contains('above') ? 'above' : 'below',
+    card: box(card),
+    arrow: arrow ? box(arrow) : null,
+    sym: sym ? box(sym) : null,
+    takes: getComputedStyle(card.parentElement).pointerEvents,
+    detail: !!card.querySelector('.detail'),
+  };
+})()
+"""
+
+# What the page itself finds at a point: the card, a painted word, or the page's own element.
+HIT_JS = """
+(() => {
+  const at = document.elementFromPoint(%f, %f);
+  if (!at) return null;
+  if (at.id === 'phonetix-card-host') return 'card';
+  return at.closest('.px-w') ? 'word' : at.tagName.toLowerCase();
+})()
+"""
+
+
+class ChromeHand:
+    """A mouse and a question, over CDP, for the checks both engines share."""
+
+    def __init__(self, cdp, session):
+        self.cdp, self.session = cdp, session
+
+    def ask(self, expression):
+        got = evaluate(self.cdp, self.session,
+                       f"(async () => JSON.stringify(await ({expression})))()")
+        return json.loads(got) if got else None
+
+    def move(self, x, y):
+        self.cdp.send("Input.dispatchMouseEvent", {
+            "type": "mouseMoved", "x": round(x), "y": round(y),
+        }, session=self.session)
+
+    def click(self, x, y):
+        for kind in ("mousePressed", "mouseReleased"):
+            self.cdp.send("Input.dispatchMouseEvent", {
+                "type": kind, "x": round(x), "y": round(y), "button": "left", "clickCount": 1,
+            }, session=self.session)
+
+
+def walk(hand, start, end, step=3, pause=0.012, each=None):
+    """Move the pointer along a straight line in small steps, the way a hand moves a mouse.
+
+    `each` is told every point on the way and may stop the walk by returning True.
+    """
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    count = max(1, int(max(abs(dx), abs(dy)) / step))
+    for i in range(1, count + 1):
+        point = (start[0] + dx * i / count, start[1] + dy * i / count)
+        hand.move(*point)
+        time.sleep(pause)
+        if each and each(point):
+            return point
+    return end
+
+
+def same_word(said, written):
+    return said.strip().lower() == written.strip().lower()
+
+
+def arrow_checks(hand, name, painted, low, failures):
+    """The card is entered through its arrow and nowhere else.
+
+    A reader moving from a word to the line next to it crosses the card that word opened. A card
+    that took the pointer anywhere along its edge caught that reader and kept the next line out
+    of reach, so the card keeps a gap from its word, the arrow spans the gap, and only the arrow
+    lets the pointer in. Asked of a word near the top of the window, whose card opens under it,
+    and of one near the bottom, whose card opens over it; of a painted word and of the page's
+    own text.
+    """
+    def fail(message):
+        failures.append(f"{name}: {message}")
+
+    def card():
+        return hand.ask(CARD_JS) or {"open": False}
+
+    def away():
+        hand.click(2, 2)
+        hand.move(2, 2)
+        time.sleep(0.8)
+
+    def open_on(word):
+        away()
+        for step in (0, 1):
+            hand.move(word["x"] + step, word["y"])
+            time.sleep(0.05)
+        for _ in range(24):
+            seen = card()
+            if seen["open"] and same_word(seen["word"], word["text"]):
+                return seen
+            time.sleep(0.25)
+        return None
+
+    found = hand.ask(WORDS_JS % ("true" if painted else "false"))
+    words = found["words"]
+    # Lines, top to bottom, by where their words start.
+    tops = []
+    for word in sorted(words, key=lambda w: w["top"]):
+        if not tops or word["top"] - tops[-1] > 4:
+            tops.append(word["top"])
+    lines = [[w for w in words if abs(w["top"] - top) <= 4] for top in tops]
+    print(f"  {name}: {len(words)} words on {len(lines)} lines, {found['painted']} painted")
+    if len(lines) < 4:
+        fail(f"the paragraph is {len(lines)} lines deep, too few to cross")
+        return
+    # The word the card opens on: a second line from the top or from the bottom, so there is a
+    # line on either side of it, and wide enough that a pointer can leave it beside the arrow.
+    at = len(lines) - 2 if low else 1
+    wanted = "above" if low else "below"
+    toward = -1 if low else 1
+    candidates = sorted(lines[at], key=lambda w: -(w["right"] - w["left"]))
+    word = next((w for w in candidates if w["right"] - w["left"] >= 52), None)
+    if not word:
+        fail("no word on the line is wide enough to leave beside the arrow")
+        return
+
+    shown = open_on(word)
+    if not shown:
+        fail(f"no card opened on {word['text']!r}")
+        return
+    arrow, body = shown["arrow"], shown["card"]
+    if shown["way"] != wanted or not arrow:
+        fail(f"the card opened {shown['way']} its word, wanted {wanted}, arrow {arrow}")
+        return
+    # The arrow points at the word, reaches it, and is the whole of the gap.
+    tip = arrow["top"] if not low else arrow["bottom"]
+    edge = word["bottom"] if not low else word["top"]
+    gap = (body["top"] - word["bottom"]) if not low else (word["top"] - body["bottom"])
+    print(f"  {name}: card {wanted} {word['text']!r}, arrow {arrow['width']:.0f}x"
+          f"{arrow['height']:.0f} at {arrow['x'] - word['x']:+.1f}px from the word's middle, "
+          f"tip {tip - edge:+.1f}px from the word, gap {gap:.1f}px, takes {shown['takes']}")
+    if abs(arrow["x"] - word["x"]) > 2:
+        fail(f"the arrow is {arrow['x'] - word['x']:+.1f}px off the word's middle")
+    if abs(tip - edge) > 1.5:
+        fail(f"the arrow's point is {tip - edge:+.1f}px from the word")
+    if not 26 <= arrow["width"] <= 36:
+        fail(f"the arrow is {arrow['width']:.0f}px wide")
+    if gap < 8:
+        fail(f"the gap between the word and the card is {gap:.1f}px")
+    if shown["takes"] != "none":
+        fail(f"a card nobody has entered takes the pointer ({shown['takes']})")
+
+    # Under the card the page is still the page: a word the card covers is what the pointer
+    # finds there, not the card.
+    side = [w for i, line in enumerate(lines) for w in line
+            if (i - at) * toward > 0
+            and body["left"] + 4 < w["x"] < body["right"] - 4
+            and body["top"] + 4 < w["y"] < body["bottom"] - 4
+            and abs(w["x"] - arrow["x"]) > arrow["width"] / 2 + 6]
+    if not side:
+        fail("no word lies under the card to check")
+        return
+    covered = min(side, key=lambda w: abs(w["y"] - word["y"]))
+    hit = hand.ask(HIT_JS % (covered["x"], covered["y"]))
+    print(f"  {name}: under the card at {covered['text']!r} the page finds {hit!r}")
+    if hit == "card":
+        fail(f"the card catches the pointer over {covered['text']!r}, which it covers")
+
+    # 1. Through the arrow: the card stays, takes the pointer, and a symbol on it is pressed.
+    inside_card = body["top"] + 24 if not low else body["bottom"] - 24
+    walk(hand, (word["x"], word["y"]), (word["x"], inside_card))
+    time.sleep(0.6)
+    after = card()
+    print(f"  {name}: in through the arrow: open {after['open']}, "
+          f"about {after.get('word')!r}, takes {after.get('takes')}")
+    if not after["open"] or not same_word(after["word"], word["text"]):
+        fail("the card closed when the pointer came in through its arrow")
+    else:
+        if after["takes"] != "auto":
+            fail(f"the card entered through its arrow does not take the pointer ({after['takes']})")
+        if after["sym"]:
+            sym = after["sym"]
+            walk(hand, (word["x"], inside_card), (sym["x"], sym["y"]))
+            time.sleep(0.3)
+            hand.click(sym["x"], sym["y"])
+            time.sleep(0.6)
+            pressed = card()
+            print(f"  {name}: a symbol pressed in the card: open {pressed['open']}, "
+                  f"described {pressed.get('detail')}")
+            if not pressed["open"] or not pressed.get("detail"):
+                fail("a symbol on the card could not be pressed")
+        else:
+            fail("the card has no symbol to press")
+
+    # 2. Beside the arrow: the card is gone by the time the pointer is on it, and the word the
+    # pointer goes on to opens a card of its own.
+    shown = open_on(word)
+    if not shown:
+        fail(f"no card opened on {word['text']!r} a second time")
+        return
+    arrow, body = shown["arrow"], shown["card"]
+    beside = arrow["right"] + 6
+    if beside > word["right"] - 2:
+        beside = arrow["left"] - 6
+    if beside < word["left"] + 2:
+        fail(f"{word['text']!r} is too narrow to leave beside the arrow")
+        return
+    walk(hand, (word["x"], word["y"]), (beside, word["y"]))
+    closed = {"depth": None}
+
+    def watch(point):
+        depth = (point[1] - body["top"]) if not low else (body["bottom"] - point[1])
+        if depth >= 4:
+            closed["depth"] = depth if not card()["open"] else None
+            return True
+        return False
+
+    deep = body["top"] + 30 if not low else body["bottom"] - 30
+    stop = walk(hand, (beside, word["y"]), (beside, deep), each=watch)
+    print(f"  {name}: out beside the arrow: closed "
+          f"{'at ' + format(closed['depth'], '.0f') + 'px into the card' if closed['depth'] else 'NOT'}")
+    if closed["depth"] is None:
+        fail("the card stayed when the pointer came onto it beside the arrow")
+    walk(hand, stop, (covered["x"], covered["y"]))
+    reached = None
+    for _ in range(16):
+        reached = card()
+        if reached["open"] and same_word(reached["word"], covered["text"]):
+            break
+        time.sleep(0.25)
+    print(f"  {name}: the word it covered, {covered['text']!r}, opened "
+          f"{reached.get('word')!r}")
+    if not reached["open"] or not same_word(reached["word"], covered["text"]):
+        fail(f"{covered['text']!r}, which the card covered, did not get a card of its own")
+
+    # 3. The other way, onto the line on the far side of the word: that word's card, and the
+    # first one gone.
+    if not open_on(word):
+        fail(f"no card opened on {word['text']!r} a third time")
+        return
+    other = min(lines[at - toward], key=lambda w: abs(w["x"] - word["x"]))
+    walk(hand, (word["x"], word["y"]), (other["x"], other["y"]))
+    reached = None
+    for _ in range(16):
+        reached = card()
+        if reached["open"] and same_word(reached["word"], other["text"]):
+            break
+        time.sleep(0.25)
+    print(f"  {name}: the other way, onto {other['text']!r}: card about {reached.get('word')!r}")
+    if not reached["open"] or not same_word(reached["word"], other["text"]):
+        fail(f"moving away from the card onto {other['text']!r} did not open its card")
+    # And onto open page, where nothing is: the card goes.
+    walk(hand, (other["x"], other["y"]), (found["left"] - 30, other["y"]))
+    time.sleep(0.6)
+    if card()["open"]:
+        fail("the card stayed with the pointer out on the open page")
+    away()
 
 
 def main():
@@ -414,26 +745,35 @@ def main():
                 failures.append(
                     f"the tapped symbol moved when its sound was read: {before['top']} -> {sound['top']}")
 
-        # The card is a thing to walk into. Between the word and the card there is a gap the
-        # pointer has to cross, and a card that closed the moment the cursor left the word was
-        # a card nobody could reach: nothing on it could be pressed, read to the end, or
-        # copied out.
-        cdp.send("Input.dispatchMouseEvent", {
-            "type": "mouseMoved", "x": spot["x"], "y": spot["y"] - 40,
-        }, session=page)
-        time.sleep(0.15)
-        reachable = evaluate(cdp, page, """
-            (() => !!(document.getElementById('phonetix-card-host')
-              || {}).shadowRoot?.querySelector('.card'))()
-        """)
-        print(f"  the card is still there a moment after the cursor left: {reachable}")
-        if not reachable:
-            failures.append("the card closed the instant the cursor left the word")
+        # The card is entered through its arrow and nowhere else, over painted words and the
+        # page's own text, under a word and over one. Each on a page of its own, so the page
+        # the rest of this check reads is left as it was.
+        for density, painted in ((1, True), (100000, False)):
+            evaluate(cdp, settings, f"chrome.storage.local.set({{density:{density}}})")
+            for low in (False, True):
+                lined = cdp.send("Target.createTarget",
+                                 {"url": f"{base}/{'lines-low' if low else 'lines'}.html"})
+                at = cdp.send(
+                    "Target.attachToTarget", {"targetId": lined["targetId"], "flatten": True},
+                )["sessionId"]
+                cdp.send("Runtime.enable", session=at)
+                # Until the paragraph is drawn as the setting says, and then a moment for it to
+                # stop moving.
+                wait_for(cdp, at, """
+                    document.querySelectorAll('#lines .px-w').length %s
+                """ % ("> 20" if painted else "< 5"), lambda v: v, tries=25)
+                time.sleep(1.5)
+                arrow_checks(ChromeHand(cdp, at),
+                             f"chrome, {'painted words' if painted else 'page text'}, "
+                             f"card {'above' if low else 'below'}",
+                             painted, low, failures)
+                cdp.send("Target.closeTarget", {"targetId": lined["targetId"]})
+        evaluate(cdp, settings, "chrome.storage.local.set({density:1})")
+        time.sleep(1)
 
         # And it goes with its word when the page scrolls under it, rather than staying where
         # it was drawn and pointing at whatever has scrolled into that spot. In a window short
-        # enough to have somewhere to scroll to, with the cursor put back on the word: the
-        # grace period above has by now taken the card down, which is what it is for.
+        # enough to have somewhere to scroll to, with the cursor put back on the word.
         # Tall enough that the card sits under its word rather than being pushed against the
         # top of the window, where a clamped card would sit still however far the page moved.
         cdp.send("Emulation.setDeviceMetricsOverride", {

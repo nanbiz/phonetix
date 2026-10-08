@@ -12,14 +12,16 @@
   import { accentFor } from '@/settings/shape';
   import { accentsOf } from '@/data/accents';
   import { LANGUAGES, named } from '@/data/languages';
-  import { DARK_CHOICES, labelOf, ROWS, SAYS } from '@/data/wording';
+  import { DARK_CHOICES, LAYER_CHOICES, labelOf, ROWS, SAYS } from '@/data/wording';
   import { sendMessage } from '@/host/messages';
+  import type { Layer } from '@/ext/content/inline';
   import { THEME, themeOf } from '@/ui/theme';
   import Back from 'virtual:icons/pixelarticons/chevron-left';
   import Chevron from 'virtual:icons/pixelarticons/chevron-right';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
+  import Segments from '@/phone/parts/Segments.svelte';
   import ListSheet from '@/phone/parts/ListSheet.svelte';
   import Pronunciation from './Pronunciation.svelte';
   import Appearance from '@/phone/screens/Appearance.svelte';
@@ -121,6 +123,10 @@
 
 
   let drawing = $derived(settings !== null && settings.layer !== 'off');
+  /** What can take a word's place on the page: nothing, or one of the two, never both. */
+  const replacing = (['off', 'sound', 'meaning'] as const).map(
+    (value) => LAYER_CHOICES.find((it) => it.value === value) ?? { value, label: value }
+  );
   let here = $derived(settings !== null && site !== '' && !settings.off.includes(site));
   /** The languages left as they are besides the reader's own, by name. */
   let knownNames = $derived(
@@ -189,22 +195,23 @@
            that is minutes: what is on its way, and how far. -->
       <div class="arriving" data-row="arriving">
         <span>Getting the {named(lang)} dictionary</span>
-        <span class="arriving-share">{Math.round(share * 100)}%</span>
         <progress max="1" value={share}></progress>
+        <span class="arriving-share">{Math.round(share * 100)}%</span>
       </div>
     {/each}
 
     <div class:resting={!settings.on || !here && site !== ''}>
-      <Group name={ROWS['group-page'].name}>
-        <Item name={ROWS.inline.name} row="inline">
-          {#snippet control()}
-            <Switch
-              on={drawing}
-              label={ROWS.inline.name}
-              change={(on) => change('layer', on ? 'sound' : 'off')}
-            />
-          {/snippet}
-        </Item>
+      <Group name={ROWS.inline.name}>
+        <!-- One thing takes a word's place, so the page reads as running text: how the word
+             is said, or what it means. The card over a word says both either way. -->
+        <div class="item wide" data-row="inline">
+          <Segments
+            choices={replacing}
+            chosen={settings.layer === 'sound' || settings.layer === 'off' ? settings.layer : 'meaning'}
+            label={ROWS.inline.name}
+            change={(value) => change('layer', value as Layer)}
+          />
+        </div>
         {#if drawing}
           <Density {curve} density={settings.density} change={(at) => change('density', at)} />
         {/if}

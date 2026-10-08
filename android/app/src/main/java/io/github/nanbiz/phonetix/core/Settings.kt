@@ -43,14 +43,6 @@ data class Settings(
     /** The languages they have asked in, most recent first: a reader asks in two or three,
      *  and a list of fifty in alphabetical order makes them hunt for one of them every time. */
     val recent: List<String> = emptyList(),
-    /**
-     * What a word is replaced by: "meaning", "sound", "both", or "off".
-     *
-     * The same three the browser offers, in the same words, because they are the same product:
-     * what a word means, how it is said, or what it means and how to say that. Where the answer
-     * goes is not a choice on either surface - it takes the word's place.
-     */
-    val layer: String = "meaning",
     /** The palette every surface of ours is drawn in, by the name the tokens key it under. */
     val theme: String = "phonetix",
     /** Which side of it: "system", "light" or "dark". */
@@ -92,15 +84,6 @@ data class Settings(
     fun accentFor(lang: String): String = accents[lang] ?: ""
 
     /**
-     * The language to read into, which is nothing at all while translation is switched off.
-     *
-     * Asked for here rather than read off [target] directly, because the two are one
-     * question: what this does to a word, and what language that leaves it in. The browser
-     * asks the same way.
-     */
-    val into: String get() = if (layer == "meaning" || layer == "both") target else ""
-
-    /**
      * The languages nothing translates besides the reader's own: the ones they chose, or until
      * they choose, the languages the phone is set to, as the browser takes the ones it is set
      * to - but never the one they are learning, which is the language they most want read.
@@ -118,7 +101,7 @@ data class Settings(
         lang.isNotEmpty() && lang != target && lang !in untranslated
 
     /** The language a word in [lang] is read into: nothing where it is not translated. */
-    fun intoFor(lang: String): String = if (translates(lang)) into else ""
+    fun intoFor(lang: String): String = if (translates(lang)) target else ""
 
     /**
      * Whether nothing is painted over the page, which is always: the words of a screen are
@@ -147,7 +130,6 @@ object SettingsStore {
     private const val K_LEARNING = "learning"
     private const val K_KNOWN = "known"
     private const val K_RECENT = "recent"
-    private const val K_LAYER = "layer"
     private const val K_HOST = "pack_host"
     private const val K_SIDE = "side"
     private const val K_PIN = "pinned"
@@ -178,7 +160,6 @@ object SettingsStore {
             learning = p.getString(K_LEARNING, "") ?: "",
             known = p.getStringSet(K_KNOWN, null)?.toSet(),
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
-            layer = mode(p.getString(K_LAYER, "") ?: ""),
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
             dark = p.getString(K_DARK, "system") ?: "system",
             packHost = p.getString(K_HOST, "") ?: "",
@@ -198,19 +179,6 @@ object SettingsStore {
         )
     }
 
-    /**
-     * What was stored, in the words the core reads now.
-     *
-     * The two modes were called "gloss" and "ipa" before the third one existed. A phone that
-     * has been used since then holds one of those, and the core reads a word it does not know
-     * as off, which leaves a reader who changed nothing with a screen that stopped answering.
-     */
-    private fun mode(stored: String): String = when (stored) {
-        "gloss", "" -> "meaning"
-        "ipa" -> "sound"
-        else -> stored
-    }
-
     private fun update(block: (Settings) -> Settings) {
         val next = block(_state.value)
         _state.value = next
@@ -224,7 +192,6 @@ object SettingsStore {
             ?.putString(K_LEARNING, next.learning)
             ?.putStringSet(K_KNOWN, next.known)
             ?.putString(K_RECENT, next.recent.joinToString(","))
-            ?.putString(K_LAYER, next.layer)
             ?.putString(K_HOST, next.packHost)
             ?.putString(K_SIDE, next.side)
             ?.putBoolean(K_PIN, next.pin)
@@ -266,10 +233,6 @@ object SettingsStore {
                 .take(RECENT),
         )
     }
-    /** In the words the core reads, whoever is asking: a shortcut, a test harness or a
-     *  build of the screen older than this one can still say "ipa", and a mode the core does
-     *  not know is a screen that stops answering. */
-    fun setLayer(v: String) = update { it.copy(layer = mode(v)) }
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }

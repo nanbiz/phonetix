@@ -11,7 +11,8 @@ import {
   accentFor, allowed, current, DEFAULTS, translates, watch, type Settings,
 } from '@/settings';
 import {
-  hide, inside, moveTo, paintedIn as cardPaintedIn, show, showing, type CardActions,
+  hide, inside, moveTo, paintedIn as cardPaintedIn, passedOver, show, showing,
+  type CardActions,
 } from './card';
 import { open as openAsk } from './ask';
 import {
@@ -26,14 +27,22 @@ import {
   unreveal,
   WORD,
   wordAt,
+  type Layer,
 } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { OURS, readable, scan, type ScannedRun } from './scan';
 import { commons } from '@/data/links';
 
-/** What is drawn over the words of a page: how each is said. */
-const INLINE = 'sound';
+/**
+ * What takes the place of the words of a page: how each is said, or what it means.
+ *
+ * One of the two and never both, so the page still reads as running text. A mode stored as
+ * both, from before the choice was one of two, is read as meaning.
+ */
+function inline(): Layer {
+  return settings.layer === 'sound' ? 'sound' : 'meaning';
+}
 
 // Until the stored ones are read, which is one await away.
 let settings: Settings = DEFAULTS;
@@ -276,14 +285,12 @@ function pieces(runs: ScannedRun[]): ScannedRun[][] {
 async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> {
   const source = pageLanguage();
   for (const piece of pieces(runs)) {
-    // What goes over a word on the page is how it is said, and only that: what a word means
-    // is the card's, which opens on the word a reader points at.
     const batch = await sendMessage('annotate', {
       runs: piece.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
       target: settings.target || source,
       options: {
-        mode: INLINE,
+        mode: inline(),
         density: settings.density,
         narrow: settings.narrow,
         hideStress: settings.hideStress,
@@ -303,8 +310,14 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
     for (const run of piece) {
       const tokens = byRun.get(run.id) ?? [];
       read.set(run.node, tokens);
-      paint(run, tokens, INLINE);
-      drewWords += tokens.filter((token) => token.inline).length;
+      // A word in a language the reader reads is left as it is where words are replaced by
+      // what they mean: translating it is translating what they never asked to have translated.
+      const shown = inline() === 'meaning'
+        ? tokens.map((token) =>
+          translates(settings, token.lang || run.lang || source) ? token : { ...token, inline: false })
+        : tokens;
+      paint(run, shown, inline());
+      drewWords += shown.filter((token) => token.inline).length;
     }
     readWords += batch.tokens.length;
     // Our own changes, dropped before the observer can take them for the page's.
@@ -529,8 +542,8 @@ function said(answer: Answer): Answer {
   };
 }
 
-/** Open the card for a word the reader stopped at. */
-async function open(anchor: Anchor, word: Asked): Promise<void> {
+/** Open the card for a word the reader stopped at, or tapped, which is asking for it outright. */
+async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> {
   const source = word.lang || pageLanguage();
   // Into the reader's own language, unless this is one they read as it is: then the card says
   // how the word is said and nothing else, since what it means is the one thing they did not
@@ -562,6 +575,7 @@ async function open(anchor: Anchor, word: Asked): Promise<void> {
     arriving: coming[source] ?? null,
     accent: accentFor(settings, source),
     eased: settings.animations,
+    entered: tapped,
     onPlay: () => {
       if (recording) void recorded(commons(recording));
       // The accent's own voice where the reader chose one, since a synthesised word is
@@ -583,7 +597,7 @@ async function open(anchor: Anchor, word: Asked): Promise<void> {
     if (!current()) return;
     const share = coming[source] ?? null;
     if (share === null && actions.arriving !== null) {
-      void open(anchor, word);
+      void open(anchor, word, tapped);
       return;
     }
     actions.arriving = share;
@@ -641,13 +655,20 @@ async function selected(): Promise<void> {
   const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
   if (!answer) return;
   const range = selection.getRangeAt(0).getBoundingClientRect();
-  show(answer, range, { recorded: false });
+  // Asked for by selecting, so there is no word to come in from and nothing to pass through.
+  show(answer, range, { recorded: false, entered: true });
 }
 
 /** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
 const PHRASE_LIMIT = 240;
 
-/** How long a card stays after the cursor leaves the word, so it can be walked into. */
+/**
+ * How long a card stays after the cursor leaves its word for the open page.
+ *
+ * The way into the card is its arrow, whose point is narrower than most words, so a pointer
+ * leaving the word near the arrow's side crosses a few pixels of page before it is on the
+ * arrow. A pointer that comes onto the card anywhere else takes it down at once.
+ */
 const GRACE = 220;
 
 /** The word the card on screen is about, so it can be put back where that word is now. */
@@ -730,13 +751,26 @@ function gestures(): void {
   document.addEventListener(
     'mousemove',
     (event) => {
+      const was = pointer;
       pointer = { x: event.clientX, y: event.clientY };
       if (resting) clearTimeout(resting);
       resting = null;
+      // A page that scrolls under a still cursor is reported as a move to where the cursor
+      // already was. That is the page moving rather than the reader, and the card goes with its
+      // word rather than closing, even where the scroll has brought the card under the cursor.
+      const moved = was.x !== pointer.x || was.y !== pointer.y;
+      // On the card without having come in by its arrow: the reader is moving on to what the
+      // card covers, which the card lets the pointer through to and must not hide.
+      if (moved && passedOver(was, pointer) && !anchored?.holds(pointer.x, pointer.y)) {
+        keep();
+        grabbed = false;
+        hide();
+        anchored = null;
+      }
       // A word the page drew is answered by its own mouseover, and the card by itself; a
       // button held down is a selection being made rather than a word being pointed at.
       if (touched || event.buttons !== 0 || inside(event.target) || wordAt(event.target)) return;
-      if (showing() && anchored && !anchored.holds(pointer.x, pointer.y)) letGo();
+      if (moved && showing() && anchored && !anchored.holds(pointer.x, pointer.y)) letGo();
       if (!allowed(settings, location.hostname)) return;
       resting = setTimeout(() => {
         resting = null;
@@ -775,9 +809,11 @@ function gestures(): void {
     if (!wordAt(event.target)) return;
     if (opening) clearTimeout(opening);
     unreveal();
-    // Not straight away: the card sits under the word, and the pointer has to cross the gap
-    // between them to reach it.
-    if (showing()) letGo();
+    // Not straight away: the pointer may be on its way onto the arrow, which is narrower at
+    // its point than the word it leaves. And not at all where the word left a still cursor,
+    // which is a scroll: the browser reports the way out before the move that causes it, so a
+    // reader leaving is reported from somewhere other than where the pointer last was.
+    if (showing() && (event.clientX !== pointer.x || event.clientY !== pointer.y)) letGo();
   });
 
   // A touch opens it outright: there is no resting on a phone, and the annotation is small
@@ -790,7 +826,7 @@ function gestures(): void {
       grabbed = false;
       if (touched) reveal(found.element);
       anchored = onElement(found.element);
-      void open(anchored, askedOf(found.token, found.before));
+      void open(anchored, askedOf(found.token, found.before), touched);
       return;
     }
     grabbed = false;

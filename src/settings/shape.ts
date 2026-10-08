@@ -14,12 +14,12 @@ import type { Layer } from '@/ext/content/inline';
 export interface Settings {
   /** Whether the extension annotates at all. */
   on: boolean;
-  /** What a word is replaced by: what it means, how it is said, or both. */
+  /** What takes a word's place on the page: how it is said, what it means, or nothing. */
   layer: Layer;
   /** One word in every N, from the reader's frequency bar. */
   density: number;
-  /** The language the reader is reading into. Empty until they choose one, and asked for
-   *  only by the modes that turn a word into another language: see [readInto]. */
+  /** The language the reader reads into: what a word in any language they do not read is
+   *  translated into. Empty until they choose one, and then the browser's. */
   target: string;
   /** The language of the page, when the reader overrides what the page declares. */
   source: string;
@@ -101,7 +101,7 @@ export interface Settings {
 
 export const DEFAULTS: Settings = {
   on: true,
-  layer: 'meaning',
+  layer: 'sound',
   density: 12,
   target: '',
   source: '',
@@ -125,19 +125,6 @@ export const DEFAULTS: Settings = {
   allApps: true,
 };
 
-
-/**
- * The language to read into, which is nothing at all where the mode does not translate.
- *
- * Asked for here rather than read off `target` directly, because the two are one question:
- * what this does to a word, and what language that leaves it in.
- */
-export function readInto(settings: Settings): string {
-  // The mode is the answer: two of the three turn a word into another language and one does
-  // not. A switch beside it saying the same thing again was a second way to say no, and a
-  // reader who set one and not the other got a screen that did nothing.
-  return settings.layer === 'meaning' || settings.layer === 'both' ? settings.target : '';
-}
 
 /** Whether a word in this language is one the reader wants translated: anything but their own
  *  and the ones they read as they are. A language nobody could tell is not translated either. */

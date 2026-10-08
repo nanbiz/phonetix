@@ -6,7 +6,7 @@ import { DEFAULTS, type Settings } from './shape';
 import { LANGUAGES } from '@/data/languages';
 
 export {
-  DEFAULTS, accentFor, allowed, darkSide, readInto, setAccent, translates, type Settings,
+  DEFAULTS, accentFor, allowed, darkSide, setAccent, translates, type Settings,
 } from './shape';
 
 /** Where each setting lives, as the storage key it is watched under. */

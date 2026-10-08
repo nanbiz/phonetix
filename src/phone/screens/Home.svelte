@@ -1,12 +1,11 @@
 <script lang="ts">
-  // The first screen: whether the button is out, the two languages it works between, what
-  // its card shows, where it waits, and the way to everything set once and left.
+  // The first screen: whether the button is out, how its card writes a sound, the languages
+  // the reader knows, where the button waits, and the way to everything set once and left.
   import { LANGUAGES, named } from '@/data/languages';
   import { accentFor } from '@/settings/shape';
   import { accentsOf } from '@/data/accents';
   import { THEME } from '@/ui/theme';
   import { DARK_CHOICES, DETAIL_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
-  import type { Layer } from '@/ext/content/inline';
   import type { Settings } from '@/settings/shape';
   import Check from 'virtual:icons/pixelarticons/check';
   import Group from '../parts/Group.svelte';
@@ -44,11 +43,8 @@
   }: Props = $props();
 
   let ready = $derived(permissions.reading && permissions.overlay);
-  /** The language being learned, which is never the reader's own. */
-  let learning = $derived(settings.learning !== settings.target ? settings.learning : '');
-
   /** Which language list is open over the screen, if one is. */
-  let choosing = $state<'' | 'target' | 'learning' | 'known'>('');
+  let choosing = $state<'' | 'target' | 'known'>('');
 
   /** The languages left as they are besides the reader's own, by name. */
   let knownNames = $derived(
@@ -70,16 +66,6 @@
       about: it.native !== it.english ? it.native : undefined,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
-
-  /** The card's two switches, stored as the one mode they always were. */
-  let sound = $derived(settings.layer === 'sound' || settings.layer === 'both');
-  let meaning = $derived(settings.layer === 'meaning' || settings.layer === 'both');
-  function layerOf(withSound: boolean, withMeaning: boolean): Layer {
-    if (withSound && withMeaning) return 'both';
-    if (withSound) return 'sound';
-    if (withMeaning) return 'meaning';
-    return 'off';
-  }
 
   /** The reader's screen, so the board is drawn its shape. */
   const across = globalThis.screen?.width || 9;
@@ -131,74 +117,45 @@
 
 <div class:resting={ready && !settings.on}>
 
-  <Group name={ROWS['group-shows'].name}>
-    <div class="shows">
-      <label class="show" class:on={sound} data-row="ipa">
-        <input
-          type="checkbox"
-          checked={sound}
-          onchange={(event) => change('layer', layerOf(event.currentTarget.checked, meaning))}
-        />
-        <span class="show-picture ipa" aria-hidden="true">/ə/</span>
-        <span class="show-name" data-name>{ROWS.ipa.name}</span>
-      </label>
-      <label class="show" class:on={meaning} data-row="translate">
-        <input
-          type="checkbox"
-          checked={meaning}
-          onchange={(event) => change('layer', layerOf(sound, event.currentTarget.checked))}
-        />
-        <span class="show-picture" aria-hidden="true">文A</span>
-        <span class="show-name" data-name>{ROWS.translate.name}</span>
-      </label>
+  <!-- The card always says both how a word sounds and what it means, so what is set here is
+       how the one is written and what the other is translated into. -->
+  <Group name={ROWS.ipa.name}>
+    <div class="item" data-row="narrow">
+      <span class="item-text"><span class="item-name" data-name>{ROWS.narrow.name}</span></span>
+      <Segments
+        choices={DETAIL_CHOICES}
+        chosen={settings.narrow ? 'narrow' : 'broad'}
+        label={ROWS.narrow.name}
+        change={(value) => change('narrow', value === 'narrow')}
+      />
     </div>
-    {#if sound}
-      <div class="item" data-row="narrow">
-        <span class="item-text"><span class="item-name" data-name>{ROWS.narrow.name}</span></span>
-        <Segments
-          choices={DETAIL_CHOICES}
-          chosen={settings.narrow ? 'narrow' : 'broad'}
-          label={ROWS.narrow.name}
-          change={(value) => change('narrow', value === 'narrow')}
+    <Item name={ROWS.stress.name} row="stress">
+      {#snippet control()}
+        <Switch
+          on={!settings.hideStress}
+          label={ROWS.stress.name}
+          change={(on) => change('hideStress', !on)}
         />
-      </div>
-      <Item name={ROWS.stress.name} row="stress">
-        {#snippet control()}
-          <Switch
-            on={!settings.hideStress}
-            label={ROWS.stress.name}
-            change={(on) => change('hideStress', !on)}
-          />
-        {/snippet}
-      </Item>
-    {/if}
-    <!-- What translation works between, under the switch it belongs to, the way the
-         transcription's rows are under theirs. -->
-    {#if meaning}
-    <div class="pair">
-      <button class="language" data-row="mine" onclick={() => (choosing = 'target')}>
-        <span class="language-role" data-name>{ROWS.mine.name}</span>
-        <span class="language-name" class:empty={!settings.target} data-about>
-          {settings.target ? named(settings.target) : SAYS['choose-language']}
-        </span>
-      </button>
-      <span class="pair-between" aria-hidden="true">
-      <svg viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99zM21 9l-3.99-4v3H10v2h7.01v3z" fill="currentColor" /></svg>
-    </span>
-      <button class="language" data-row="learning" onclick={() => (choosing = 'learning')}>
-        <span class="language-role" data-name>{ROWS.learning.name}</span>
-        <span class="language-name" class:empty={!learning} data-about>
-          {learning ? named(learning) : SAYS['choose-language']}
-        </span>
-      </button>
-    </div>
+      {/snippet}
+    </Item>
+  </Group>
+
+  <!-- The languages the reader knows: the one everything else is translated into, and the
+       others read as they are. Which language a page is in is the page's business, and the
+       one a word is asked for in is chosen in the panel that asks, so neither is set here. -->
+  <Group name={ROWS.translate.name}>
+    <Item
+      name={ROWS.mine.name}
+      row="mine"
+      value={settings.target ? named(settings.target) : SAYS['choose-language']}
+      open={() => (choosing = 'target')}
+    />
     <Item
       name={ROWS.known.name}
       row="known"
       value={knownNames || SAYS['nothing-else']}
       open={() => (choosing = 'known')}
     />
-    {/if}
   </Group>
 
   <Group name={ROWS['group-button'].name}>
@@ -268,14 +225,6 @@
     options={everyLanguage}
     chosen={settings.target}
     change={(value) => change('target', value)}
-    close={() => (choosing = '')}
-  />
-{:else if choosing === 'learning'}
-  <ListSheet
-    title={ROWS.learning.name}
-    options={everyLanguage.filter((it) => it.value !== settings.target)}
-    chosen={learning}
-    change={(value) => change('learning', value)}
     close={() => (choosing = '')}
   />
 {:else if choosing === 'known'}

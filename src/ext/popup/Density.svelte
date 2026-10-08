@@ -33,10 +33,7 @@
 </script>
 
 <div class="item wide density" data-row="density">
-  <div class="density-head">
-    <span class="item-name" data-name>{ROWS.replaced.name}</span>
-    <span class="density-says" data-about>{says}</span>
-  </div>
+  <span class="item-name" data-name>{ROWS.replaced.name}</span>
   <input
     class="range"
     type="range"
@@ -48,4 +45,5 @@
     style="--at: {curve.length > 1 ? (position / (curve.length - 1)) * 100 : 0}%"
     oninput={(event) => change(curve[Number(event.currentTarget.value)] ?? density)}
   />
+  <span class="density-says" data-about>{says}</span>
 </div>

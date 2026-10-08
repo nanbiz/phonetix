@@ -90,7 +90,7 @@ def set_on_the_screen(dev):
     from webview import View
     import state as State
     failures = []
-    dev.surface(mode="spanish", known="none", layer="both", enable=1)
+    dev.surface(mode="spanish", known="none", enable=1)
     for _ in range(6):
         shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
               "--activity-reorder-to-front")
@@ -103,6 +103,9 @@ def set_on_the_screen(dev):
                 break
             time.sleep(1)
         before = view.evaluate("document.querySelector('[data-row=known] [data-about]')?.textContent?.trim()")
+        # The languages the reader knows are all there is to set: which one a page is in is the
+        # page's, and the card says both how a word sounds and what it means.
+        extra = view.evaluate("[...document.querySelectorAll('[data-row=learning], [data-row=ipa], [data-row=translate]')].map(r => r.dataset.row)")
         view.evaluate("document.querySelector('[data-row=known]').click()")
         time.sleep(1)
         view.evaluate("document.querySelector('[data-sheet] [data-choice=fr]')?.click()")
@@ -116,6 +119,8 @@ def set_on_the_screen(dev):
     known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known")
     print(f"  never translate on the screen: {before!r} -> {after!r}, sheet stayed open {still}, "
           f"service knows {known}")
+    if extra:
+        failures.append(f"the screen still offers {extra}")
     if not still:
         failures.append("picking one language closed the Never translate list")
     if "French" not in (after or ""):
@@ -134,7 +139,7 @@ def learning_is_translated(dev):
     failures = []
     for learning, left in (("es", True), ("en", False)):
         dev.surface(mode="spanish", known="default", target="de", learning=learning,
-                    layer="both", enable=1)
+                    enable=1)
         time.sleep(2)
         known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known") or []
         print(f"  never translated by default while learning {learning}: {known}")
@@ -170,48 +175,25 @@ def main():
     # Through the harness, which insists the page is really in front: the app's own screen is
     # an activity of the same app, and with it on top a bare `am start` delivers the intent to
     # the task behind it and reports success.
-    # What each setting of the two switches puts on the card for "perro", read into German.
-    wanted = {
-        "meaning": (["Hund"], ["ˈpe"]),
-        "sound": (["pe"], ["Hund"]),
-        "both": (["Hund", "pe"], []),
-    }
-    for layer, (has, lacks) in wanted.items():
-        dev.surface(mode="spanish", packHost=base, target="de", known="none", layer=layer,
-                    enable=1, density=1)
+    # The card for "perro" read into German says how it is said and what it means, and with
+    # Spanish among the languages the reader reads as they are it only says how it is said.
+    for known, has, lacks in (("none", ["Hund", "pe"], []), ("es", ["pe"], ["Hund"])):
+        dev.surface(mode="spanish", packHost=base, target="de", known=known, enable=1, density=1)
         time.sleep(4)
         texts, closed = card_while_held(dev, "perro")
-        print(f"  {layer}: the card for perro says {texts}, closed after release: {closed}")
+        print(f"  never translating {known}: the card for perro says {texts}, closed after release: {closed}")
         if not texts:
-            failures.append(f"with {layer}, no card came up for perro")
+            failures.append(f"never translating {known}, no card came up for perro")
             continue
         joined = " ".join(texts)
         for part in has:
             if part not in joined:
-                failures.append(f"with {layer}, the card for perro lacks {part!r}: {texts}")
+                failures.append(f"never translating {known}, the card for perro lacks {part!r}: {texts}")
         for part in lacks:
             if part in joined:
-                failures.append(f"with {layer}, the card for perro shows {part!r}: {texts}")
+                failures.append(f"never translating {known}, the card for perro shows {part!r}: {texts}")
         if not closed:
-            failures.append(f"with {layer}, the card stayed up after the button was let go")
-
-    # Spanish among the languages the reader reads as they are: nothing translates it. With
-    # only translation on there is nothing to show, and with both the card only says it.
-    for layer, has, lacks in (("meaning", None, ["Hund"]), ("both", ["pe"], ["Hund"])):
-        dev.surface(mode="spanish", packHost=base, target="de", known="es", layer=layer,
-                    enable=1, density=1)
-        time.sleep(4)
-        texts, closed = card_while_held(dev, "perro")
-        print(f"  {layer}, Spanish never translated: the card for perro says {texts}")
-        joined = " ".join(texts)
-        if has is None and texts:
-            failures.append(f"Spanish is never translated, yet with {layer} a card came up: {texts}")
-        for part in has or []:
-            if part not in joined:
-                failures.append(f"Spanish never translated, with {layer} the card lacks {part!r}")
-        for part in lacks:
-            if part in joined:
-                failures.append(f"Spanish never translated, with {layer} the card shows {part!r}")
+            failures.append(f"never translating {known}, the card stayed up after the button was let go")
 
     failures += set_on_the_screen(dev)
     failures += learning_is_translated(dev)
@@ -221,7 +203,7 @@ def main():
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - the side button's card follows the switches and goes with the finger")
+    print("\nPASS - the side button's card says how a word sounds and what it means, and goes with the finger")
 
 
 if __name__ == "__main__":

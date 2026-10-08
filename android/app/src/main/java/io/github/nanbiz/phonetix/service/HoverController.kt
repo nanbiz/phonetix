@@ -40,8 +40,9 @@ import kotlin.math.roundToInt
  */
 class HoverController(
     private val context: Context,
-    /** What word is at a point on the screen, which only the overlay knows. */
-    private val wordAt: (Float, Float) -> WordBox?,
+    /** What word is at a point on the screen, which only the overlay knows, given the word the
+     *  circle already sits on: that one is kept until the point is plainly elsewhere. */
+    private val wordAt: (Float, Float, WordBox?) -> WordBox?,
     /** Every word the overlay believes is on screen, for the state dump alone: a card about
      *  the wrong word is explained by which boxes were near the circle and how near. */
     private val onScreen: () -> List<WordBox> = { emptyList() },
@@ -135,6 +136,17 @@ class HoverController(
      *  above the thumb so the word can be seen, and what it reports is its own centre. */
     private var lookedAt = android.graphics.Point(-1, -1)
 
+    /**
+     * Where the ring is drawn and how wide, which is not where the circle looks.
+     *
+     * The circle that looks rides on the leash and swings; the ring a reader sees settles on
+     * the word that circle is over, centred on it and sized to it, and glides from one word to
+     * the next. Over no word it goes back to riding the leash.
+     */
+    private var ringX = 0f
+    private var ringY = 0f
+    private var ringRadius = 0f
+
     /** Everything this believes, for [StateDump]: what is on screen, where the mark is, what
      *  the circle is over and whether a sweep is being gathered. */
     fun state(): org.json.JSONObject = org.json.JSONObject()
@@ -143,6 +155,9 @@ class HoverController(
         .put("dragging", layer != null)
         .put("lookingAt", org.json.JSONObject()
             .put("x", lookedAt.x).put("y", lookedAt.y))
+        .put("ringAt", org.json.JSONObject()
+            .put("x", ringX.roundToInt()).put("y", ringY.roundToInt())
+            .put("radius", ringRadius.roundToInt()))
         .put("hovered", StateDump.box(hovered))
         // Why that word and not another: the circle is wider than a word and sits between two
         // of them as often as on one, so what it takes is the nearest box within a line's
@@ -474,7 +489,7 @@ class HoverController(
     /** What the circle is over now, told once per word rather than once per frame. */
     private fun hoverAt(x: Int, y: Int) {
         lookedAt.set(x, y)
-        val found = wordAt(x.toFloat(), y.toFloat())
+        val found = wordAt(x.toFloat(), y.toFloat(), hovered)
         // The same word, even where its box has shifted: the screen is read again several
         // times a second, and on one whose content keeps changing - a chat, a feed - the box
         // under a still finger arrives a pixel from where it was. Compared exactly, every one
@@ -566,7 +581,8 @@ class HoverController(
         // The ball is not nailed to a point above the finger; it is on the end of the thread.
         // It is pulled towards where the finger holds it, it has weight, and it swings past
         // and settles rather than stopping where the hand stopped - which is what makes the
-        // thread read as a leash instead of a stick.
+        // thread read as a leash instead of a stick. It is the point that asks what word is
+        // under it; the ring is drawn there only while it is over no word (see [ringX]).
         private var ballX = 0f
         private var ballY = 0f
         private var ballVx = 0f
@@ -625,27 +641,58 @@ class HoverController(
                 ballY = wantY + dy / far * slack
             }
             val radius = view.width / 2f
-            mist?.follow(fingerX, fingerY, ballX, ballY, radius)
             // The thread is redrawn every frame because that is what makes it move; what is
             // under the ball is asked half as often, because a word is a hundred times the
             // size of the distance the ball travels in a frame and reading the screen for one
             // is not free.
             asked = !asked
-            if (asked) {
+            // Nothing is asked about while the target holds the mark: the reader is putting
+            // it away, and a card opening over the foot of the page is in the way.
+            if (asked && drop?.holding != true) hoverAt(ballX.roundToInt(), ballY.roundToInt())
+            settleRing(dt, radius)
+            mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius)
+            if (asked && io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
                 // Where the hand is and where it holds the circle, apart from where the circle
                 // has swung to: the carry is decided by the first two, and a check reading the
-                // swinging circle on a slow machine reads the leash's lag instead.
-                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
-                    android.util.Log.d(
-                        "Phonetix",
-                        "LENSCARRY finger=${fingerX.roundToInt()},${fingerY.roundToInt()} " +
-                            "want=${wantX.roundToInt()},${wantY.roundToInt()}",
-                    )
-                }
-                // Nothing is asked about while the target holds the mark: the reader is
-                // putting it away, and a card opening over the foot of the page is in the way.
-                if (drop?.holding != true) hoverAt(ballX.roundToInt(), ballY.roundToInt())
+                // swinging circle on a slow machine reads the leash's lag instead. Then where
+                // the ring is drawn and the word it is on, which is what a reader sees.
+                val on = hovered?.word?.replace(' ', '_') ?: "nothing"
+                android.util.Log.d(
+                    "Phonetix",
+                    "LENSCARRY finger=${fingerX.roundToInt()},${fingerY.roundToInt()} " +
+                        "want=${wantX.roundToInt()},${wantY.roundToInt()} " +
+                        "ring=${ringX.roundToInt()},${ringY.roundToInt()}," +
+                        "${ringRadius.roundToInt()} on=$on",
+                )
             }
+        }
+
+        /**
+         * One frame of the ring: towards the middle of the word the ball is over, as wide as
+         * that word, or onto the ball itself while it is over none.
+         *
+         * Settled on the word rather than riding the finger, so it sits still while the
+         * finger makes the small movements a hand always makes, and the word it marks is the
+         * word the card is about. Eased there rather than put there: a ring that jumps from
+         * word to word reads as a new ring each time, where one that glides is one ring
+         * moving along the line.
+         */
+        private fun settleRing(dt: Float, radius: Float) {
+            val on = hovered
+            val toX = on?.rect?.centerX() ?: ballX
+            val toY = on?.rect?.centerY() ?: ballY
+            val toRadius = if (on == null) {
+                radius
+            } else {
+                // Wide enough to hold the word with a little room, and never so small it is
+                // lost on a two-letter word or so large it covers the lines around a long one.
+                (maxOf(on.rect.width(), on.rect.height()) / 2f + dp(RING_ROOM_DP))
+                    .coerceIn(radius * RING_LEAST, radius * RING_MOST)
+            }
+            val k = 1f - kotlin.math.exp(-dt / GLIDE_S)
+            ringX += (toX - ringX) * k
+            ringY += (toY - ringY) * k
+            ringRadius += (toRadius - ringRadius) * k
         }
 
         override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -953,9 +1000,12 @@ class HoverController(
                 ballY = wantY
                 ballVx = 0f
                 ballVy = 0f
+                ringX = ballX
+                ringY = ballY
+                ringRadius = radius
                 lastSwing = 0L
                 mist?.onLight = view.onLight
-                mist?.form(event.rawX, event.rawY, ballX, ballY, radius)
+                mist?.form(event.rawX, event.rawY, ringX, ringY, ringRadius)
                 Choreographer.getInstance().postFrameCallback(swing)
             }
         }
@@ -1028,6 +1078,21 @@ class HoverController(
 
         /** How far behind the ball may fall before the thread is simply taut, in dp. */
         const val LEASH_DP = 120f
+
+        /**
+         * How quickly the ring glides onto a word, as the time it takes to close all but a
+         * third of the way, in seconds. About a hundred and fifty milliseconds from one word
+         * to the next, which is how long the word's own highlight takes to slide there too.
+         */
+        const val GLIDE_S = 0.045f
+
+        /** The room the ring leaves around a word, in dp. */
+        const val RING_ROOM_DP = 4f
+
+        /** The smallest and largest the ring is around a word, as shares of its radius over no
+         *  word. */
+        const val RING_LEAST = 0.8f
+        const val RING_MOST = 1.6f
 
         /** How much of the screen, from the foot, brings up the target the mark is put away
          *  on. */

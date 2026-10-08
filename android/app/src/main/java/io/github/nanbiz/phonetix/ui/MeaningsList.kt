@@ -22,10 +22,10 @@ data class Meant(val word: String, val pos: String, val hint: String, val ipa: S
  * What a typed word means in the other language: one line per meaning, the commonest first.
  *
  * The word leads each line; which meaning it is follows in small type, and how it is said only
- * where the reader has pronunciation switched on. Nothing else: the list is read at a glance.
+ * where the voice could say it. Nothing else: the list is read at a glance.
  */
 @Composable
-fun MeaningsList(meanings: List<Meant>, palette: Tokens.Palette, sound: Boolean) {
+fun MeaningsList(meanings: List<Meant>, palette: Tokens.Palette) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space2.dp),
@@ -44,7 +44,7 @@ fun MeaningsList(meanings: List<Meant>, palette: Tokens.Palette, sound: Boolean)
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (sound && !meant.ipa.isNullOrBlank()) {
+                    if (!meant.ipa.isNullOrBlank()) {
                         Text(
                             text = "  /${meant.ipa}/",
                             color = Color(palette.ipa),
@@ -87,54 +87,6 @@ fun TranslatedLine(text: String, ipa: String?, palette: Tokens.Palette) {
                 style = IpaStyle.copy(fontWeight = FontWeight.Normal),
                 modifier = Modifier.padding(top = 2.dp),
             )
-        }
-    }
-}
-
-/** One way a word is read in its own language: how it is said, and what it is. */
-data class Defined(val ipa: String?, val pos: String, val gloss: String)
-
-/**
- * A typed word in the language it is in, where nothing is translated: the word, and under it
- * each way it is read. With pronunciation on, every reading leads with how it is said and the
- * definition tells the readings apart ("record" the noun and the verb are said differently);
- * with it off the definitions are the answer.
- */
-@Composable
-fun DefinedList(word: String, readings: List<Defined>, palette: Tokens.Palette, sound: Boolean) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(Tokens.Scale.space3.dp),
-    ) {
-        Text(
-            text = word,
-            color = Color(palette.inkMuted),
-            fontSize = Tokens.Scale.fontSizeSense.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        for (reading in readings) {
-            Column(Modifier.fillMaxWidth()) {
-                if (sound && !reading.ipa.isNullOrBlank()) {
-                    Text(
-                        text = "/${reading.ipa}/",
-                        color = Color(palette.ipa),
-                        fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
-                        style = IpaStyle,
-                        maxLines = 2,
-                    )
-                }
-                val about = listOf(reading.pos, reading.gloss).filter { it.isNotBlank() }
-                if (about.isNotEmpty()) {
-                    Text(
-                        text = about.joinToString(" · "),
-                        color = Color(if (sound) palette.inkMuted else palette.ink),
-                        fontSize = (if (sound) Tokens.Scale.fontSizeSmall else Tokens.Scale.fontSizeBody).sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
         }
     }
 }

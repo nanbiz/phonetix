@@ -638,11 +638,6 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     i.getStringExtra("learning").orEmpty(),
                 )
             }
-            if (i.hasExtra("layer")) {
-                io.github.nanbiz.phonetix.core.SettingsStore.setLayer(
-                    i.getStringExtra("layer").orEmpty(),
-                )
-            }
             if (i.hasExtra("accent")) {
                 // "none" rather than an empty string, as with the reading language above. An
                 // accent belongs to a language, so the tag says which: "es-ar" is Spanish's.

@@ -238,4 +238,16 @@
       {/if}
     {/if}
   </header>
+  {#if points}
+    <!-- The way in from the word: a wedge whose fill is what takes the pointer, and whose two
+         slanted edges carry the card's border, so the base it shares with the card stays open.
+         Stretched to whatever size the stylesheet gives it, with the edges kept one border
+         wide however far that is. -->
+    <span class="card-arrow" aria-hidden="true">
+      <svg viewBox="0 0 32 12" preserveAspectRatio="none">
+        <polygon points="0,12 16,0 32,12" />
+        <polyline points="0,12 16,0 32,12" />
+      </svg>
+    </span>
+  {/if}
 </article>

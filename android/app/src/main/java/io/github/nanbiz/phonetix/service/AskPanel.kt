@@ -338,37 +338,6 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         opens(learningChip, false, learning)
     }
 
-    /**
-     * The one language a word is typed in, where nothing is translated: the panel then answers
-     * with how the word is said and what it means, in the language it is in.
-     */
-    fun setSingle(languages: List<String>, typedIn: String, onPick: (String) -> Unit) {
-        arrow.visibility = GONE
-        learningChip.visibility = GONE
-        mineChip.text = Languages.english(typedIn)
-        // It opens a list, and says so the way a menu does.
-        mineChip.setCompoundDrawablesRelative(
-            null, null,
-            context.getDrawable(io.github.nanbiz.phonetix.R.drawable.ic_chevron_down)?.mutate()?.apply {
-                setTint(palette.inkMuted.toInt())
-                setBounds(0, 0, dp(20f), dp(20f))
-            },
-            null,
-        )
-        mineChip.compoundDrawablePadding = dp(6f)
-        mineChip.setOnClickListener {
-            if (chooser.visibility == VISIBLE) {
-                closeChooser()
-            } else {
-                chooser.visibility = VISIBLE
-                search.setText("")
-                searching = { typed -> fill(languages, typedIn, onPick, typed) }
-                fill(languages, typedIn, onPick, "")
-                search.requestFocus()
-            }
-        }
-    }
-
     /** Which way the question is being answered, once it has been worked out. */
     fun direction(forward: Boolean) {
         arrow.animate().rotation(if (forward) 0f else 180f).setDuration(160).start()
@@ -477,18 +446,10 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
     }
 
     /** Everything a word can mean in the other language. */
-    fun showMeanings(meanings: List<io.github.nanbiz.phonetix.ui.Meant>, sound: Boolean) {
+    fun showMeanings(meanings: List<io.github.nanbiz.phonetix.ui.Meant>) {
         note.visibility = GONE
         answer.view.setContent {
-            io.github.nanbiz.phonetix.ui.MeaningsList(meanings, palette, sound)
-        }
-    }
-
-    /** A word in its own language: each way it is read, said and defined. */
-    fun showDefined(word: String, readings: List<io.github.nanbiz.phonetix.ui.Defined>, sound: Boolean) {
-        note.visibility = GONE
-        answer.view.setContent {
-            io.github.nanbiz.phonetix.ui.DefinedList(word, readings, palette, sound)
+            io.github.nanbiz.phonetix.ui.MeaningsList(meanings, palette)
         }
     }
 

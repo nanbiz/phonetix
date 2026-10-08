@@ -8,8 +8,7 @@
           "value": "off",
           "label": "Off",
           "on": [
-            "browser",
-            "phone"
+            "browser"
           ],
           "about": {
             "browser": "nothing is replaced; ask about a word yourself",
@@ -20,8 +19,7 @@
           "value": "meaning",
           "label": "Translation",
           "on": [
-            "browser",
-            "phone"
+            "browser"
           ],
           "about": {
             "browser": "the word replaced by what it means",
@@ -32,8 +30,7 @@
           "value": "sound",
           "label": "Pronunciation",
           "on": [
-            "browser",
-            "phone"
+            "browser"
           ],
           "about": {
             "browser": "the word replaced by how it is said",
@@ -44,8 +41,7 @@
           "value": "both",
           "label": "Both",
           "on": [
-            "browser",
-            "phone"
+            "browser"
           ],
           "about": {
             "browser": "what it means, and how to say that",
@@ -304,16 +300,8 @@
       "name": "My language",
       "about": ""
     },
-    "learning": {
-      "name": "Learning",
-      "about": ""
-    },
     "group-button": {
       "name": "Side button",
-      "about": ""
-    },
-    "group-shows": {
-      "name": "The card shows",
       "about": ""
     },
     "group-languages": {
@@ -332,12 +320,8 @@
       "name": "Accents",
       "about": ""
     },
-    "group-page": {
-      "name": "On the page",
-      "about": ""
-    },
     "inline": {
-      "name": "Replace words with their IPA",
+      "name": "Replace words",
       "about": ""
     },
     "replaced": {

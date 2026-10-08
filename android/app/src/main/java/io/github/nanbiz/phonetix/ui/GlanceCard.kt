@@ -25,12 +25,9 @@ import io.github.nanbiz.phonetix.core.Answer
  * is still on the screen.
  *
  * Display only: it takes no touch and is gone when the button is let go, so nothing on it is
- * a control. What it says follows the reader's two switches:
- *
- * - translation: the word it means, the kind of word and what else it can mean, one example;
- * - pronunciation: how it is said;
- * - both: how it is said, then what it means;
- * - neither: what the dictionary says it is.
+ * a control. It says how the word is said and then what it means: the word it means, the
+ * kind of word and what else it can mean. A word in a language the reader reads is not
+ * translated, so its card says how it is said, and failing that what the dictionary says it is.
  *
  * The word itself heads it in small type, so a reader dragging over a line knows which word
  * the answer is for.
@@ -39,7 +36,6 @@ import io.github.nanbiz.phonetix.core.Answer
 fun GlanceCard(
     answer: Answer,
     palette: Tokens.Palette,
-    sound: Boolean,
     meaning: Boolean,
     modifier: Modifier = Modifier,
     report: Reporter? = null,
@@ -82,7 +78,7 @@ fun GlanceCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.reported(answer.spelling, report),
             )
-            if (sound && meaning && ipa != null && says != null) {
+            if (meaning && ipa != null && says != null) {
                 Text(
                     text = "  /$ipa/",
                     color = Color(palette.ipa),
@@ -116,25 +112,10 @@ fun GlanceCard(
                         modifier = Modifier.reported(kind.joinToString(" · "), report),
                     )
                 }
-                // One example, where it is short enough to read at a glance: a dictionary's
-                // examples run to whole paragraphs about something else entirely.
-                if (!sound) {
-                    answer.example?.takeIf { it.isNotBlank() && it.length <= EXAMPLE_AT_MOST }?.let { example ->
-                        Text(
-                            text = example,
-                            color = Color(palette.inkMuted),
-                            fontSize = Tokens.Scale.fontSizeSmall.sp,
-                            fontStyle = FontStyle.Italic,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.reported(example, report),
-                        )
-                    }
-                }
             }
             // A spelling that is said more than one way, and the page cannot tell which: each
             // way, with what tells it apart ("record" the noun and the verb).
-            sound && spoken.size > 1 -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            spoken.size > 1 -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (reading in spoken) {
                     val way = "/${reading.ipa.first()}/"
                     Text(
@@ -161,7 +142,7 @@ fun GlanceCard(
                     }
                 }
             }
-            sound && ipa != null -> Text(
+            ipa != null -> Text(
                 text = "/$ipa/",
                 color = Color(palette.ipa),
                 fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
@@ -177,21 +158,13 @@ fun GlanceCard(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.reported(definition, report),
             )
-            ipa != null -> Text(
-                text = "/$ipa/",
-                color = Color(palette.ipa),
-                fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
-                style = IpaStyle,
-                maxLines = 2,
-                modifier = Modifier.reported("/$ipa/", report),
-            )
         }
     }
 }
 
-/** Whether the card has anything to say about [answer] under these switches: a card that
- *  would only repeat the word is not opened at all. */
-fun glanceHasSomething(answer: Answer, sound: Boolean, meaning: Boolean): Boolean {
+/** Whether the card has anything to say about [answer]: a card that would only repeat the
+ *  word is not opened at all. */
+fun glanceHasSomething(answer: Answer, meaning: Boolean): Boolean {
     val ipa = answer.ipa.any { it.isNotBlank() }
     val says = !answer.lead.isNullOrBlank() || answer.says.any { it.isNotBlank() }
     val definition = answer.glosses.any { it.isNotBlank() }
@@ -212,9 +185,6 @@ fun plainly(sense: String): String {
     }
     return out.split(';').first().trim().trimEnd('.', ',', ':').trim()
 }
-
-/** The longest example the card shows, in characters. */
-private const val EXAMPLE_AT_MOST = 70
 
 /** How many other meanings the card names beside the kind of word. */
 private const val ALSO = 2

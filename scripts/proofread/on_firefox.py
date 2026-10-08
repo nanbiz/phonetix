@@ -9,7 +9,8 @@ caught until CI stopped running.
 
 So this launches a real Firefox, headless, on a profile of its own, installs the built add-on
 as a temporary one and asks the same questions the Chrome checks ask: is a page annotated, does
-the card open on a word, and does the settings view know which site it is looking at.
+the card open on a word and let the pointer in only through its arrow, and does the settings
+view know which site it is looking at.
 
   uv run python scripts/proofread/on_firefox.py
 
@@ -26,7 +27,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from on_a_page import PORT, build_packs, serve
+from on_a_page import PORT, arrow_checks, build_packs, serve
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -87,6 +88,44 @@ class Marionette:
             "WebDriver:ExecuteAsyncScript",
             {"script": source, "args": [], "scriptTimeout": timeout},
         )["value"]
+
+
+class FirefoxHand:
+    """A mouse and a question, over Marionette, for the checks both engines share.
+
+    The pointer is moved through WebDriver actions, which Gecko turns into the same mouse
+    events a hand makes, hit tested and with their boundary events, rather than events
+    dispatched at an element.
+    """
+
+    def __init__(self, driver):
+        self.driver = driver
+
+    def ask(self, expression):
+        got = self.driver.script(
+            "const done = arguments[0];"
+            f"(async () => JSON.stringify(await ({expression})))()"
+            ".then(done, e => done(JSON.stringify({failed: String(e)})));"
+        )
+        return json.loads(got) if got else None
+
+    def act(self, steps):
+        self.driver.send("WebDriver:PerformActions", {"actions": [{
+            "type": "pointer", "id": "mouse", "parameters": {"pointerType": "mouse"},
+            "actions": steps,
+        }]})
+
+    def move(self, x, y):
+        self.act([{"type": "pointerMove", "duration": 0, "origin": "viewport",
+                   "x": round(x), "y": round(y)}])
+
+    def click(self, x, y):
+        self.act([
+            {"type": "pointerMove", "duration": 0, "origin": "viewport",
+             "x": round(x), "y": round(y)},
+            {"type": "pointerDown", "button": 0},
+            {"type": "pointerUp", "button": 0},
+        ])
 
 
 def profile(into):
@@ -178,6 +217,33 @@ def main():
         elif "pero" not in (drawn.get("said") or []):
             failures.append(f"the words are said {drawn.get('said')}, not the Spanish way")
 
+        # The card is entered through its arrow and nowhere else, the same four ways the Chrome
+        # check asks it: hit testing a card the pointer passes through, and finding the text
+        # under it, are each engine's own.
+        hand = FirefoxHand(driver)
+        for density, painted in ((1, True), (100000, False)):
+            driver.send("WebDriver:Navigate", {"url": f"{view}/viewbook.html"})
+            time.sleep(1)
+            driver.script(
+                "const done = arguments[0];"
+                f"browser.storage.local.set({{density: {density}}}).then(() => done('ok'));"
+            )
+            for low in (False, True):
+                driver.send("WebDriver:Navigate",
+                            {"url": f"{base}/{'lines-low' if low else 'lines'}.html"})
+                for _ in range(25):
+                    count = hand.ask("document.querySelectorAll('#lines .px-w').length")
+                    if (count > 20) if painted else (count < 5):
+                        break
+                    time.sleep(1)
+                time.sleep(1.5)
+                arrow_checks(hand,
+                             f"firefox, {'painted words' if painted else 'page text'}, "
+                             f"card {'above' if low else 'below'}",
+                             painted, low, failures)
+        driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
+        time.sleep(2)
+
         # And the settings view knows which site it is looking at. In a tab of its own, with
         # the page left open in the one behind it: that is the shape a reader opens it in, and
         # a view navigated on top of the page would have no page left to be about. Asked
@@ -217,7 +283,8 @@ def main():
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - the other engine annotates a page and knows which site it is on")
+    print("\nPASS - the other engine annotates a page, lets the pointer into a card only "
+          "through its arrow, and knows which site it is on")
 
 
 if __name__ == "__main__":

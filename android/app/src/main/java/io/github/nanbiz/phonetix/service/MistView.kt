@@ -36,8 +36,9 @@ import kotlin.math.sin
  * word while it is held, and back down into the mark when it is let go.
  *
  * It lives in the layer that already covers the screen and takes no touch, so it is drawn
- * here rather than owning a window: a frame clock advances the wave, the ring rides the
- * finger, and on release the whole thing draws back into the mark.
+ * here rather than owning a window: a frame clock advances the wave, the ring sits where the
+ * drag puts it (on the word under it, or riding the finger over no word), and on release the
+ * whole thing draws back into the mark.
  */
 class MistView(context: Context) : View(context) {
 
@@ -173,7 +174,8 @@ class MistView(context: Context) : View(context) {
         start()
     }
 
-    /** Every frame of the drag: the ring rides the finger and the thread follows. */
+    /** Every frame of the drag: where the hand is, and where the ring is and how wide. The
+     *  thread runs between the two. */
     fun follow(fingerX: Float, fingerY: Float, ringX: Float, ringY: Float, radius: Float) {
         this.fingerX = fingerX; this.fingerY = fingerY
         this.ringX = ringX; this.ringY = ringY; this.ringRadius = radius

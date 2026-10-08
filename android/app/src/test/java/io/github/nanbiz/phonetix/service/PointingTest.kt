@@ -100,6 +100,37 @@ class PointingTest {
     }
 
     @Test
+    fun a_circle_on_a_word_stays_on_it_across_the_gap_to_the_next() {
+        // Three pixels past "What" and seven short of "the", with the circle already on
+        // "the": nearest alone says "What", and a leash swinging over that gap would carry
+        // the circle and the card back and forth between the two.
+        assertEquals(0, Pointing.nearest(bubble, 193f, 530f))
+        assertEquals(1, Pointing.settle(bubble, 1, 193f, 530f))
+    }
+
+    @Test
+    fun a_circle_on_a_word_stays_on_its_line_between_two_lines() {
+        // Five pixels under "the" and four above "and": the nearer line is the second, but
+        // the circle is on the first and the point has not reached the second yet.
+        assertEquals(4, Pointing.nearest(bubble, 230f, 568f))
+        assertEquals(1, Pointing.settle(bubble, 1, 230f, 568f))
+    }
+
+    @Test
+    fun a_circle_leaves_its_word_for_one_the_point_is_inside() {
+        assertEquals(4, Pointing.settle(bubble, 1, 230f, 580f))
+    }
+
+    @Test
+    fun a_circle_leaves_its_word_once_the_point_is_plainly_past_it() {
+        // Fifty-five pixels past "Wikipedia", more than half a line, and nearer "YouTube":
+        // the circle moves on.
+        assertEquals(2, Pointing.settle(shortcuts, 1, 485f, 517f))
+        // And a line below the last line is no word, whatever the circle was on.
+        assertEquals(-1, Pointing.settle(bubble, 4, 240f, 720f))
+    }
+
+    @Test
     fun nothing_on_screen_is_nothing_pointed_at() {
         assertEquals(-1, Pointing.nearest(emptyList(), 100f, 100f))
     }

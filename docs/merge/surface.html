@@ -405,17 +405,25 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    Card (answer surface)
    ------------------------------------------------------------------ */
 .card { font-family: var(--font-ui); width: 100%; max-width: var(--card-width); background: var(--color-surface); color: var(--color-ink); border-radius: var(--radius-card); box-shadow: var(--shadow-card); border: var(--border-width) solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; }
-/* The arrow, which is what says which word the card is about: without it a card that opened
-   near two words was a card about either of them. It is drawn as a rotated square carrying two
-   of the card's own borders, so the seam against the card is exactly the card's edge, and it is
-   put where the word is by --arrow-at rather than always at the middle - a card clamped to the
-   side of the window sits nowhere near the word it belongs to. */
+/* The arrow, which says which word the card is about and is the one way into the card from
+   that word. Without it a card that opened near two words was a card about either of them, and
+   a card that took the pointer anywhere along its edge caught a reader moving on to the line
+   underneath. So the card keeps a gap from its word, the arrow spans exactly that gap, and over
+   a page only the arrow takes the pointer until the reader has come in through it; beside it
+   the pointer passes through to the words under the card. It is wide enough to aim at, and it
+   takes the accent while the pointer is on it, so the way in is drawn rather than guessed.
+   Its base lies over the card's own border, so the seam is open where the arrow meets the card
+   and the arrow's edges carry the card's border on. It is put where the word is by --arrow-at
+   rather than always at the middle, since a card clamped to the side of the window sits nowhere
+   near the word it belongs to, and turned over when the card sits above its word. */
 .card.points { position: relative; overflow: visible; }
-.card.points::before { content: ""; position: absolute; left: var(--arrow-at, 50%); width: var(--space-3); height: var(--space-3); background: var(--color-surface); border: var(--border-width) solid var(--color-border); transform: translateX(-50%) rotate(45deg); }
-.card.points.below::before { top: calc(var(--space-3) / -2); border-right: none; border-bottom: none; }
-.card.points.above::before { bottom: calc(var(--space-3) / -2); border-left: none; border-top: none; }
-/* The card's own corners stay drawn under the arrow: the head is the piece the arrow meets. */
-.card.points .card-head { position: relative; background: var(--color-surface); border-radius: var(--radius-card) var(--radius-card) 0 0; }
+.card-arrow { position: absolute; left: var(--arrow-at, 50%); bottom: 100%; width: var(--space-6); height: var(--space-3); transform: translateX(-50%); display: block; }
+.card.points.above .card-arrow { bottom: auto; top: 100%; transform: translateX(-50%) scaleY(-1); }
+.card-arrow svg { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.card-arrow polygon { fill: var(--color-surface); pointer-events: visiblePainted; }
+.card-arrow polyline { fill: none; stroke: var(--color-border); stroke-width: var(--border-width); stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.card-arrow:hover polygon { fill: var(--color-accent-bg); }
+.card-arrow:hover polyline { stroke: var(--color-accent); }
 
 /* The card arriving, where the reader asked for movement. It is off by default and drawn in
    place otherwise: a card that eases in is a card that is not yet readable, and a reader who

@@ -100,14 +100,23 @@ class OverlayController(
      *
      * What the lens is dragged over: it does not take the app's touches, so it has to ask
      * what it is passing rather than being told by a tap.
+     *
+     * [held] is the word the lens already sits on, if any. It keeps the lens until the point
+     * is plainly on another word or off the text (see [Pointing.settle]); it is found in the
+     * newest boxes by its word and by where it was, since the screen is read again while the
+     * lens rests on it and the box arrives a pixel or two from where it was.
      */
-    fun wordAt(x: Float, y: Float): WordBox? {
+    fun wordAt(x: Float, y: Float, held: WordBox? = null): WordBox? {
         val words = lastRendered
-        val at = Pointing.nearest(
-            words.map { Pointing.Box(it.rect.left, it.rect.top, it.rect.right, it.rect.bottom) },
-            x,
-            y,
-        )
+        val boxes = words.map { Pointing.Box(it.rect.left, it.rect.top, it.rect.right, it.rect.bottom) }
+        val at = if (held == null) {
+            Pointing.nearest(boxes, x, y)
+        } else {
+            val kept = words.indexOfFirst {
+                it.word == held.word && android.graphics.RectF.intersects(it.rect, held.rect)
+            }
+            Pointing.settle(boxes, kept, x, y)
+        }
         return words.getOrNull(at)
     }
 

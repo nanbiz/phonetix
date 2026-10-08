@@ -1023,6 +1023,9 @@ def choices_kotlin():
         "object Wording {",
     ]
     for name in sorted(table):
+        # A choice the phone offers none of has nothing to list there.
+        if not any("phone" in row["on"] for row in table[name]["options"]):
+            continue
         lines.append(f"    /** {table[name]['name']}, as an overlay can draw them. */")
         lines.append(f"    val {name} = listOf(")
         for row in table[name]["options"]:

@@ -291,7 +291,7 @@ private class Bridge(
         // had is.
         val arriving = missing != null &&
             io.github.nanbiz.phonetix.core.Fetch.inFlight().contains("model $missing")
-        if (missing != null && settings.into.isNotEmpty() && !arriving) {
+        if (missing != null && settings.target.isNotEmpty() && !arriving) {
             val named = missing.split('-').joinToString(" to ") { Languages.english(it) }
             wrong.add(Wording.says["no-direction"].orEmpty().replace("%s", named))
         }
@@ -352,7 +352,6 @@ private class Bridge(
     /** The reader's choices under the names the view knows them by, which are the browser's. */
     private fun chosen(settings: Settings): JSONObject = JSONObject()
         .put("on", settings.enabled)
-        .put("layer", settings.layer)
         .put("density", settings.density)
         .put("target", settings.target)
         .put("learning", settings.learning)
@@ -378,10 +377,8 @@ private class Bridge(
     private fun set(name: String, value: Any?) {
         when (name) {
             "on" -> SettingsStore.setEnabled(value == true)
-            "layer" -> SettingsStore.setLayer(value.toString())
             "density" -> SettingsStore.setDensity((value as? Number)?.toInt() ?: return)
             "target" -> SettingsStore.setTarget(value?.toString().orEmpty())
-            "learning" -> SettingsStore.setLearning(value?.toString().orEmpty())
             "known" -> {
                 val said = value as? JSONArray ?: return
                 SettingsStore.setKnown((0 until said.length()).map { said.optString(it) }.toSet())

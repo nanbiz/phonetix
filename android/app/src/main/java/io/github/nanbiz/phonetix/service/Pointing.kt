@@ -49,6 +49,41 @@ object Pointing {
         return best
     }
 
+    /**
+     * The index of the word a point means while the circle already sits on [held], or -1.
+     *
+     * The circle settles on a word rather than riding the finger, so between two words it has
+     * to decide when to leave the one it has. It stays until the point is plainly somewhere
+     * else: inside another word's box, or out past [held] by more than [KEEP_SHARE] of its
+     * height in any direction. Without that the circle would hop back and forth over the gap
+     * between two words as the leash swings, and with it the card under the reader's eye.
+     *
+     * Once it lets go the answer is [nearest]'s, so leaving a word for the gap beside it
+     * lands on the nearest word on either side, and only a point out of reach of every word
+     * means none.
+     */
+    fun settle(boxes: List<Box>, held: Int, x: Float, y: Float): Int {
+        val on = boxes.indexOfFirst { inside(it, x, y) }
+        if (on >= 0) return on
+        val kept = boxes.getOrNull(held)
+        if (kept != null) {
+            val margin = kept.height * KEEP_SHARE
+            if (x >= kept.left - margin && x <= kept.right + margin &&
+                y >= kept.top - margin && y <= kept.bottom + margin
+            ) {
+                return held
+            }
+        }
+        return nearest(boxes, x, y)
+    }
+
+    /** How far past a word, as a share of its height, a point still keeps the circle on it:
+     *  half a line, which is as far as [nearest] reaches above or below a word too. */
+    const val KEEP_SHARE = 0.5f
+
+    private fun inside(box: Box, x: Float, y: Float): Boolean =
+        x >= box.left && x <= box.right && y >= box.top && y <= box.bottom
+
     /** How far a point lies outside a span, and nothing when it is inside it. */
     private fun gap(at: Float, from: Float, to: Float): Float =
         when {

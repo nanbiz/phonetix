@@ -31,14 +31,6 @@ object Wording {
         Choice("narrow", "[ ]", "every detail of how it is said, like aspiration and devoicing"),
     )
 
-    /** Overlay, as an overlay can draw them. */
-    val layer = listOf(
-        Choice("off", "Off", "nothing is replaced; the button still answers a word"),
-        Choice("meaning", "Translation", "the word replaced by what it means"),
-        Choice("sound", "Pronunciation", "the word replaced by how it is said"),
-        Choice("both", "Both", "what it means, and how to say that"),
-    )
-
     /** Which side, as an overlay can draw them. */
     val side = listOf(
         Choice("left", "Left", "for a phone held in the left hand"),
@@ -60,14 +52,11 @@ object Wording {
         "dictionaries" to Words("Dictionaries", ""),
         "group-button" to Words("Side button", ""),
         "group-languages" to Words("Languages", ""),
-        "group-page" to Words("On the page", ""),
-        "group-shows" to Words("The card shows", ""),
-        "inline" to Words("Replace words with their IPA", ""),
+        "inline" to Words("Replace words", ""),
         "into" to Words("Translate into", ""),
         "ipa" to Words("Pronunciation", ""),
         "known" to Words("Never translate", ""),
         "layer" to Words("Overlay", ""),
-        "learning" to Words("Learning", ""),
         "lens-drag" to Words("Drag it over a word", "It says what it passes over, and the page under it still scrolls"),
         "lens-hold" to Words("Hold it", "Opens the settings"),
         "lens-sweep" to Words("Hold it, then sweep", "Every word it passes over joins the run, and the card answers the whole clause"),

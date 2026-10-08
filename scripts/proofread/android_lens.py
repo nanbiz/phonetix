@@ -11,6 +11,7 @@ opens for that word, and that the page underneath still scrolls while it does.
 
   PHONETIX_ANDROID_SERIAL=emulator-5554 uv run python scripts/proofread/android_lens.py
 """
+import math
 import os
 import re
 import sys
@@ -101,6 +102,93 @@ def parked_at(dev, mode="mute", **extras):
             return (x + w // 2, y + h // 2)
         time.sleep(5)
     return None
+
+
+def ring_samples(lines):
+    """What the service said each time it asked during a drag: where the finger is, where the
+    leash holds the circle, where the ring is drawn and how wide, and the word it is on."""
+    out = []
+    for m in re.finditer(
+            r"LENSCARRY finger=(-?\d+),(-?\d+) want=(-?\d+),(-?\d+) "
+            r"ring=(-?\d+),(-?\d+),(\d+) on=(\S+)", lines):
+        fx, fy, wx, wy, rx, ry, rr = (int(v) for v in m.groups()[:7])
+        out.append({"finger": (fx, fy), "want": (wx, wy), "ring": (rx, ry), "radius": rr,
+                    "on": m.group(8)})
+    return out
+
+
+def settles_on_words(dev, boxes, dpi):
+    """Drag onto a long word off its middle, hold, shift the finger a few pixels within the
+    word and hold again: the ring must sit on the word's middle both times, the same both
+    times, while the point the leash holds moved with the finger."""
+    failures = []
+    home = mark_at(dev)
+    if home is None:
+        where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
+        if not where:
+            return ["the mark never said where it is, so the ring could not be dragged onto a word"]
+        x, y, w, h = (int(v) for v in where[-1])
+        home = (x + w // 2, y + h // 2)
+    else:
+        home = (home[0] + MARK_PX // 2, home[1] + MARK_PX // 2)
+    # The widest word clear of the top and bottom of the screen: wide enough that a point a
+    # quarter of the way along it is well off its middle and a nudge of a few pixels stays
+    # inside it. Clear of the edges because the circle rides above the finger, and the finger
+    # has to stay on the screen and off the target at its foot.
+    every = list(boxes.values())
+    middling = [b for b in every
+                if dev.height * 0.15 < (b["rect"][1] + b["rect"][3]) / 2 < dev.height * 0.75]
+    if not middling:
+        return ["no word in the middle of the page to settle the ring on"]
+    word = max(middling, key=lambda b: b["rect"][2] - b["rect"][0])
+    left, top, right, bottom = word["rect"]
+    middle = ((left + right) / 2, (top + bottom) / 2)
+    aim = (left + (right - left) * 0.25, middle[1])
+    onto = finger_for(aim, home, dpi, dev.width, dev.height)
+    nudged = (onto[0] + 8, onto[1] + 4)
+    dev.clear_log()
+    drag_and_dwell(home, onto, then=[nudged])
+    time.sleep(2)
+    samples = ring_samples(dev.lines("LENSCARRY", keep=200))
+    # The last thing said with the finger at each place: by then the leash and the ring have
+    # had a second and a half to come to rest.
+    rested = [next((s for s in reversed(samples) if s["finger"] == tuple(at)), None)
+              for at in (onto, nudged)]
+    print(f"  settling on {word['word']!r} at {word['rect']}, aimed {int(aim[0] - middle[0])}px "
+          f"off its middle: {[(s['ring'], s['radius'], s['on'], s['want']) if s else None for s in rested]}")
+    if None in rested:
+        return [f"the service said nothing with the finger held on {word['word']!r} "
+                f"({len(samples)} samples, fingers {sorted({s['finger'] for s in samples})[-4:]})"]
+    for s in rested:
+        rx, ry = s["ring"]
+        on = [b for b in every if b["word"] == s["on"]
+              and b["rect"][0] <= rx <= b["rect"][2] and b["rect"][1] <= ry <= b["rect"][3]]
+        if s["on"] == "nothing":
+            failures.append(f"held on {word['word']!r}, the ring is on no word at {s['ring']}")
+        elif not on:
+            failures.append(
+                f"the ring is on {s['on']!r} by its own account but drawn at {s['ring']}, "
+                f"inside no box of that word")
+        else:
+            box = on[0]["rect"]
+            off = math.hypot(rx - (box[0] + box[2]) / 2, ry - (box[1] + box[3]) / 2)
+            if off > 4:
+                failures.append(
+                    f"the ring is {off:.0f}px from the middle of {s['on']!r} rather than on it")
+    held, moved = rested
+    shifted = math.hypot(moved["want"][0] - held["want"][0], moved["want"][1] - held["want"][1])
+    drifted = math.hypot(moved["ring"][0] - held["ring"][0], moved["ring"][1] - held["ring"][1])
+    print(f"  the finger moved 9px within the word: the leash moved {shifted:.0f}px, "
+          f"the ring {drifted:.0f}px")
+    if shifted < 4:
+        failures.append(
+            f"the finger was nudged and the leash moved {shifted:.0f}px, so the nudge was not "
+            f"measured")
+    elif drifted > 1.5:
+        failures.append(
+            f"the finger moved a few pixels within {word['word']!r} and the ring moved "
+            f"{drifted:.0f}px with it")
+    return failures
 
 
 def main():
@@ -195,6 +283,17 @@ def main():
     elif opened[-1] != over[-1]:
         failures.append(
             f"the lens ended over {over[-1]!r} and the card is about {opened[-1]!r}")
+
+    # The ring settles on the word.
+    #
+    # The circle that looks rides on a leash above the finger, but the ring a reader sees sits
+    # on the word that circle is over: centred on it, still while the finger makes the small
+    # movements a hand always makes, and gliding to the next word only once the circle is
+    # plainly on it. Aimed off the middle of a long word, so a ring drawn where the leash
+    # holds it and a ring settled on the word are told apart; then the finger moves a few
+    # pixels, still inside the word, and the ring must not.
+    snap_failures = settles_on_words(dev, boxes, dpi)
+    failures.extend(snap_failures)
 
     # A page that will not say where its characters are.
     #
@@ -352,7 +451,6 @@ def main():
     # The button rides its side at whatever height the reader chose, and the circle is carried
     # away from wherever that is - so a reader who keeps it high up is not left pointing at
     # words through their own hand.
-    import math
     dev.clear_log()
     dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=30)
     time.sleep(5)

@@ -458,12 +458,15 @@ def finger_for(target, home, dpi, width, height):
     return int(home[0] + dx / far * near), int(home[1] + dy / far * near)
 
 
-def drag_and_dwell(start, end, steps=10, dwell=1.5):
+def drag_and_dwell(start, end, steps=10, dwell=1.5, then=()):
     """Drag from [start] to [end] with real motion events, and stay there before lifting.
 
     `input swipe` lifts the moment it arrives, and the circle is on a leash: on a machine
     drawing a few frames a second it is still catching up when the finger goes, and the drag
     reports the words between. Held at the end, it settles on the word that was aimed at.
+
+    [then] is further points the finger moves on to, in one step each and held as long, before
+    it lifts: a finger that shifts a few pixels while it rests on a word.
 
     Played as one monkey script rather than an `input motionevent` per point: each of those
     starts a process, which on an emulator busy drawing the drag is most of a second, and a
@@ -480,10 +483,13 @@ def drag_and_dwell(start, end, steps=10, dwell=1.5):
         lines.append("UserWait(30)")
         pointer(2, start[0] + (end[0] - start[0]) * i // steps,
                 start[1] + (end[1] - start[1]) * i // steps)
-    for _ in range(3):
-        lines.append(f"UserWait({int(dwell * 1000 / 3)})")
-        pointer(2, *end)
-    pointer(1, *end)
+    last = end
+    for point in (end, *then):
+        for _ in range(3):
+            lines.append(f"UserWait({int(dwell * 1000 / 3)})")
+            pointer(2, *point)
+        last = point
+    pointer(1, *last)
     local = os.path.join(tempfile.gettempdir(), "phonetix-drag.monkey")
     with open(local, "w") as f:
         f.write("\n".join(lines) + "\n")

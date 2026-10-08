@@ -13,8 +13,8 @@ import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
-/** How far from the word the card sits, so the word it is about stays readable. */
-const GAP = 8;
+/** How far the card keeps from the edges of the window. */
+const MARGIN = 8;
 
 let host: HTMLElement | null = null;
 let shadow: ShadowRoot | null = null;
@@ -29,6 +29,16 @@ let spelling = '';
 let theme = THEME;
 /** Which side of it, where the reader insisted rather than leaving it to the page. */
 let side = 'system';
+/**
+ * Whether the reader has come into the card.
+ *
+ * Until then the card takes the pointer only on its arrow, and everywhere else the pointer
+ * passes through it to the page: a reader moving from a word to the line underneath crosses
+ * the card that word opened, and a card that caught the pointer there kept the next line out
+ * of reach. Coming in through the arrow, or asking for the card outright, makes it a thing to
+ * press and select out of like any other.
+ */
+let entered = false;
 
 /** Draw in this palette from now on. */
 export function paintedIn(chosen: string, lightOrDark = 'system'): void {
@@ -60,10 +70,10 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   // of two different palettes.
   frame.className = themeOf(darkHere(), theme);
   // As wide as what it says, up to the card's width: a one-word answer in a card sized for a
-  // definition was mostly empty card.
+  // definition was mostly empty card. Passed through by the pointer until it is entered.
   frame.style.cssText =
     'position:fixed;width:max-content;min-width:220px;' +
-    'max-width:min(var(--card-width), calc(100vw - 16px));';
+    'max-width:min(var(--card-width), calc(100vw - 16px));pointer-events:none;';
   shadow.appendChild(frame);
   return { shadow, frame };
 }
@@ -77,35 +87,66 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
 function place(at: DOMRect): void {
   if (!frame) return;
   const box = frame.getBoundingClientRect();
-  const below = at.bottom + GAP;
-  const above = at.top - GAP - box.height;
+  // The gap between the word and the card is the arrow's to span, point at the word and base
+  // on the card, so the card stands off from its word by exactly as far as the arrow reaches
+  // out of it: further and the pointer would have open page to cross on its way in, nearer and
+  // the arrow would cover the word.
+  const arrow = arrowSize();
+  const below = at.bottom + arrow.reach;
+  const above = at.top - arrow.reach - box.height;
   const under = below + box.height <= window.innerHeight;
-  const top = under ? below : Math.max(GAP, above);
+  const top = under ? below : Math.max(MARGIN, above);
   const middle = at.left + at.width / 2 - box.width / 2;
-  const left = Math.min(Math.max(GAP, middle), window.innerWidth - box.width - GAP);
+  const left = Math.min(Math.max(MARGIN, middle), window.innerWidth - box.width - MARGIN);
+  const placed = Math.round(left);
   frame.style.top = `${Math.round(top)}px`;
-  frame.style.left = `${Math.round(left)}px`;
+  frame.style.left = `${placed}px`;
   // Where the word is along the card's own width, so the arrow points at it rather than at
   // wherever the middle of the card happened to land: a card pushed against the side of the
-  // window is nowhere near the word it belongs to.
-  const pointsAt = Math.min(
-    Math.max(GAP * 2, at.left + at.width / 2 - left),
-    Math.max(GAP * 2, box.width - GAP * 2)
-  );
-  frame.style.setProperty('--arrow-at', `${Math.round(pointsAt)}px`);
+  // window is nowhere near the word it belongs to. Never so near a side that the arrow would
+  // hang off the card's rounded corner. Measured from inside the card's border, which is
+  // where the arrow is positioned from, and not rounded, so its point is on the word's middle
+  // rather than a pixel to one side.
   const card = frame.querySelector('.card');
+  const border = card?.clientLeft ?? 0;
+  const inset = arrow.width / 2 + MARGIN;
+  const pointsAt = Math.min(
+    Math.max(inset, at.left + at.width / 2 - placed - border),
+    Math.max(inset, box.width - inset)
+  );
+  frame.style.setProperty('--arrow-at', `${pointsAt.toFixed(1)}px`);
   if (card) {
     card.classList.toggle('below', under);
     card.classList.toggle('above', !under);
   }
 }
 
+/**
+ * How wide the arrow is, and how far it reaches out of the card.
+ *
+ * Measured rather than repeated here, because the stylesheet decides its size and lays its base
+ * over the card's border; whichever side of the card it is on, what lies outside the card is
+ * the part that spans the gap.
+ */
+function arrowSize(): { width: number; reach: number } {
+  const arrow = frame?.querySelector('.card-arrow');
+  const card = frame?.querySelector('.card');
+  if (!arrow || !card) return { width: 0, reach: MARGIN };
+  const wedge = arrow.getBoundingClientRect();
+  const body = card.getBoundingClientRect();
+  const overlap = Math.max(
+    0,
+    Math.min(wedge.bottom, body.bottom) - Math.max(wedge.top, body.top)
+  );
+  return { width: wedge.width, reach: wedge.height - overlap };
+}
+
 /** Lift the card just enough to keep its bottom edge inside the window. */
 function keepInWindow(): void {
   if (!frame) return;
   const box = frame.getBoundingClientRect();
-  const over = box.bottom - (window.innerHeight - GAP);
-  if (over > 0) frame.style.top = `${Math.round(Math.max(GAP, box.top - over))}px`;
+  const over = box.bottom - (window.innerHeight - MARGIN);
+  if (over > 0) frame.style.top = `${Math.round(Math.max(MARGIN, box.top - over))}px`;
 }
 
 /** What the card can be asked to do, which is the session's business rather than the card's. */
@@ -125,6 +166,9 @@ export interface CardActions {
   onOpen?: (url: string) => void;
   /** How far the dictionary for the word's language has got, where it is on its way. */
   arriving?: number | null;
+  /** Whether the card takes the pointer from the start rather than from its arrow: one opened
+   *  by a tap or for a selection was asked for outright, and there is no hover to come in by. */
+  entered?: boolean;
 }
 
 /** Where the card is anchored, so it can be put back in place when it changes height. */
@@ -146,6 +190,8 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   // The same word with more found out about it is the same card filled in: it neither eases
   // in a second time nor leaves the word it is under.
   const filling = drawn !== null && spelling === answer.spelling;
+  // And a card the reader had already come into stays one they are in.
+  const stayIn = (filling && entered) || (actions.entered ?? false);
   hide();
   spelling = answer.spelling;
   const { frame: fresh } = build();
@@ -171,6 +217,10 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   });
   about = key;
   void box;
+  if (stayIn) enter();
+  // Over the arrow is coming in, whichever way the pointer got there: the arrow is the only
+  // part of a card not yet entered that the pointer can be over at all.
+  fresh.querySelector('.card-arrow')?.addEventListener('pointerover', enter);
   // Placed as soon as it is drawn, since where it fits depends on how tall it turned out to
   // be, and before the frame is painted: placed a frame later, a card showed for one frame
   // wherever the last one had been and then jumped to its word. Again on the next frame, for
@@ -199,6 +249,48 @@ export function hide(): void {
     drawn = null;
   }
   about = null;
+  entered = false;
+  if (frame) frame.style.pointerEvents = 'none';
+}
+
+/** Let the card take the pointer, because the reader came into it. */
+function enter(): void {
+  entered = true;
+  if (frame) frame.style.pointerEvents = 'auto';
+}
+
+/**
+ * Whether a point is on a card the reader has not come into.
+ *
+ * A pointer there got past the word some other way than through the arrow, so it is on its
+ * way to whatever the card covers rather than into the card, and the card should be gone
+ * before it hides that from the reader.
+ */
+export function passedOver(from: Point, to: Point): boolean {
+  if (!drawn || entered || !frame) return false;
+  const card = frame.querySelector('.card');
+  if (!card) return false;
+  const box = card.getBoundingClientRect();
+  if (to.x < box.left || to.x > box.right || to.y < box.top || to.y > box.bottom) return false;
+  // A quick hand moves further between two reports than the arrow is tall, and lands in the
+  // card having crossed the arrow without ever being reported on it. Where the straight line
+  // between the two reports crosses the card's edge says which way it came in.
+  const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
+  const edge = card.classList.contains('above') ? box.bottom : box.top;
+  if (arrow && from.y !== to.y && (from.y - edge) * (to.y - edge) <= 0) {
+    const x = from.x + ((to.x - from.x) * (edge - from.y)) / (to.y - from.y);
+    if (x >= arrow.left && x <= arrow.right) {
+      enter();
+      return false;
+    }
+  }
+  return true;
+}
+
+/** A place in the window, in the coordinates pointer events report. */
+export interface Point {
+  x: number;
+  y: number;
 }
 
 /** Whether a card is on screen, for a gesture deciding whether to close one. */

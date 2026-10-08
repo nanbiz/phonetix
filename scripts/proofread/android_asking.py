@@ -119,7 +119,7 @@ def main():
     shell("input", "keyevent", "3")
     time.sleep(2)
     dev.surface(mode="spanish", packHost=f"http://10.0.2.2:{MODEL_PORT}", target="en",
-                learning="es", enable=1, density=1, layer="both")
+                learning="es", enable=1, density=1)
     time.sleep(8)
 
     at = ((believed().get("mark") or {}).get("markAt") or {})
@@ -147,7 +147,7 @@ def main():
             break
         time.sleep(0.5)
     took = time.time() - began
-    said = re.findall(r"ASKED \S+: (.*)", dev.log())
+    said = re.findall(r"ASKED \S+ \S+->\S+: (.*)", dev.log())
     print(f"  asked for the Spanish for 'dog': {answered and answered.get('stage')} in "
           f"{took:.1f}s {said[-1:] or ''}")
     if answered is None:
@@ -156,9 +156,19 @@ def main():
         failures.append("the panel could not answer at all")
     elif took > FETCH_WITHIN_S:
         failures.append(f"the word took {took:.1f}s, which is a wait a reader notices")
-    # And the model it needed is here now, so the next question is answered at once.
+    # And the model a phrase would need is fetched from the reader's own host and opened behind
+    # the word's answer, so the next question is answered at once.
+    readied = time.time()
+    while time.time() - readied < FETCH_WITHIN_S:
+        if ("en-es" in shell("run-as", "io.github.nanbiz.phonetix", "ls", "files/models")
+                and "TRANSLATOR en-es open=true" in dev.log()):
+            break
+        time.sleep(1)
+    print(f"  the other direction fetched and opened behind it in {time.time() - readied:.1f}s")
     if "en-es" not in shell("run-as", "io.github.nanbiz.phonetix", "ls", "files/models"):
         failures.append("the missing direction was never fetched from the reader's own host")
+    elif "TRANSLATOR en-es open=true" not in dev.log():
+        failures.append("the fetched direction was not opened behind the word's answer")
     # And from the engine on this phone, not from the machine in another app: that is what
     # makes it milliseconds rather than a download.
     # Asked again, with the model now here: this is the wait a reader actually lives with.
@@ -173,7 +183,7 @@ def main():
             break
         time.sleep(0.3)
     again = time.time() - began
-    said = re.findall(r"ASKED \S+: (.*)", dev.log())
+    said = re.findall(r"ASKED \S+ \S+->\S+: (.*)", dev.log())
     print(f"  asked again with the model here: {again:.1f}s {said[-1:] or ''}")
     # Judged on the part that is the app's: the engine's own time, which the app measures and
     # logs. The rest is a keystroke going through the device and this script polling it, and

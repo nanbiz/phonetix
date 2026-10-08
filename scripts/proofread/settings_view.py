@@ -223,7 +223,7 @@ def main():
 
         # Replacing switched off: nothing on the page is replaced, and a word pointed at still
         # opens its card.
-        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
         bare = words(cdp, page)
         card = point_at(cdp, page, "perro")
         print(f"  replacing off: {bare['count']} replaced; pointing at perro: {(card or '')[:60]!r}")
@@ -231,7 +231,22 @@ def main():
             failures.append(f"{bare['count']} words stayed replaced with replacing off")
         if not card or "perro" not in card:
             failures.append(f"pointing at a word opened no card for it: {card!r}")
-        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
+
+        # Translation in place of pronunciation: the words replaced say what they mean, and
+        # none says how it sounds, since one thing takes a word's place.
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=meaning]').click()")
+        kinds = wait_for(cdp, page, """
+            (() => {
+              const meant = document.querySelectorAll('.px-rep .px-gl').length;
+              const said = document.querySelectorAll('.px-rep .px-ph').length;
+              return meant ? [meant, said] : null;
+            })()
+        """, lambda v: bool(v), tries=12) or [0, 0]
+        print(f"  replacing with translations: {kinds[0]} translated, {kinds[1]} transcribed")
+        if not kinds[0] or kinds[1]:
+            failures.append(f"translation in place of words drew {kinds[0]} translations and {kinds[1]} transcriptions")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
 
         # My language: the card says what a word means in it.
         control(cdp, view, "document.querySelector('[data-row=target]').click()", settle=1)
@@ -249,9 +264,9 @@ def main():
         known = evaluate(cdp, view, "document.querySelector('[data-row=known] [data-about]').textContent")
         # Every word is replaced at this end of the bar, so the plain word is pointed at with
         # replacing off.
-        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
         plain = point_at(cdp, page, "por")
-        control(cdp, view, "document.querySelector('[data-row=inline] input').click()")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
         print(f"  never translate {known!r}: pointing at por: {(plain or '')[:60]!r}")
         if (known or "").strip() != "Spanish":
             failures.append(f"the never-translate row says {known!r} after choosing Spanish")

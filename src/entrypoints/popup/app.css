@@ -211,14 +211,12 @@ kbd {
 }
 
 /* How many words: the name and what it is set to on one line, the bar under them. */
-.density {
-  padding-bottom: 12px;
-}
-
-.density-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+/* How many words are replaced, its slider and what that comes to, on one line: the popup
+   fits its window with every row in it, a dictionary's progress included. */
+.item.wide.density {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
   gap: 12px;
 }
 
@@ -381,11 +379,13 @@ kbd {
   cursor: default;
 }
 
-/* A dictionary on its way: what, how far, and a bar for it, between the site and the cards. */
+/* A dictionary on its way: what, a bar for how far, and the share, on one line between the
+   site and the cards, so the popup still fits its window while one arrives. */
 .arriving {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 4px 8px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
   margin: 10px 16px 0;
   font-size: 13px;
   color: var(--color-ink-muted);
@@ -396,7 +396,6 @@ kbd {
 }
 
 .arriving progress {
-  grid-column: 1 / -1;
   width: 100%;
   height: 4px;
   appearance: none;
