@@ -204,7 +204,7 @@ def in_the_view(cdp, extid):
         # and the input reported, which is what the panel listens for.
         typed = evaluate(page, in_panel % ("""
             (root) => {
-              const field = root.querySelector('[data-ask] .field input');
+              const field = root.querySelector('[data-ask] .ask-field input');
               if (!field) return null;
               const set = Object.getOwnPropertyDescriptor(
                 window.HTMLInputElement.prototype, 'value').set;
@@ -223,7 +223,7 @@ def in_the_view(cdp, extid):
         time.sleep(2.5)
         drawn = evaluate(page, in_panel % """
             (root) => {
-              const card = root.querySelector('[data-ask] .answer .card');
+              const card = root.querySelector('[data-ask] [data-said]');
               return card ? card.innerText.replace(/\\s+/g, ' ').slice(0, 120) : '';
             }
         """) or ""

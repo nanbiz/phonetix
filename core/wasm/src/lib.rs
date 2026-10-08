@@ -224,6 +224,41 @@ impl Core {
         }
     }
 
+    /// Everything a typed word can mean in the language it is wanted in, as JSON: an array of
+    /// `{"word","pos","hint","ipa"}`, commonest first. What the panel lists for a single word.
+    #[wasm_bindgen]
+    pub fn meanings(&self, text: &str, typed_in: &str, wanted_in: &str) -> String {
+        let found = lexcore::resolve::meanings(
+            text,
+            &Lang(typed_in.into()),
+            &Lang(wanted_in.into()),
+            self.packs.get(wanted_in),
+            self.packs.get(typed_in),
+        );
+        lexcore::json::meanings(&found)
+    }
+
+    /// Whether what a reader typed into the panel is in their own language rather than the one
+    /// they are learning. See [lexcore::resolve::typed_in_mine].
+    #[wasm_bindgen(js_name = typedInMine)]
+    pub fn typed_in_mine(&self, text: &str, mine: &str, learning: &str) -> bool {
+        lexcore::resolve::typed_in_mine(
+            text,
+            &Lang(learning.into()),
+            self.packs.get(mine),
+            self.packs.get(learning),
+            self.model.as_ref(),
+        )
+    }
+
+    /// How often a word is met in running text in a language. See [lexcore::resolve::met].
+    #[wasm_bindgen]
+    pub fn met(&self, word: &str, lang: &str) -> f64 {
+        self.packs
+            .get(lang)
+            .map_or(0.0, |pack| lexcore::resolve::met(pack, word) as f64)
+    }
+
     /// One word, as JSON, because an Answer is a tree and the boundary carries text.
     #[wasm_bindgen(js_name = lookUp)]
     pub fn look_up(

@@ -77,7 +77,10 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "the settings view looks like one surface" uv run scripts/proofread/popup_view.py
   step "a word no dictionary holds is translated" uv run scripts/proofread/translates.py
   step "the word for something a reader wants to say" uv run scripts/proofread/says.py
-  step "the panel picks the language it answers in" uv run python scripts/proofread/asks.py
+  # Headful, under a display of its own, because the browser's shortcuts reach an extension only
+  # through a window and the keys are pressed for real.
+  step "the translator panel and the keyboard, with real keys" \
+    nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool -c uv run python scripts/proofread/panel.py
   step "a form's card names it and opens its terms" uv run --with pillow python scripts/proofread/grammar_card.py chrome
   # The other engine, which differs in the one place that decides whether anything works:
   # awaiting the chrome namespace on Gecko returns nothing at all.

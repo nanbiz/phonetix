@@ -9,7 +9,14 @@ fn main() {
         .then(|| lexpack::Pack::open(std::fs::read(&args[3]).expect("reads")).expect("opens"));
     for text in &args[4..] {
         println!("{text}");
-        for m in lexcore::resolve::meanings(text, &Lang(args[2].clone()), &wanted, typed.as_ref()) {
+        let wanted_in = Lang(wanted.lang().to_string());
+        for m in lexcore::resolve::meanings(
+            text,
+            &Lang(args[2].clone()),
+            &wanted_in,
+            Some(&wanted),
+            typed.as_ref(),
+        ) {
             println!(
                 "  {:<18} {:<6} {:<34} {}",
                 m.word,

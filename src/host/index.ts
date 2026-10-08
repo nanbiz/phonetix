@@ -4,8 +4,8 @@
 // be a copy per tab. Nothing here decides what a word means; that is the core's, compiled
 // once and run on both platforms.
 import {
-  annotate, complete, curve, detect, lookUp, openHomographs, openLanguages, phrase, readRuns,
-  readScreen, readWiktionary, symbolsOf, wordFor, type Said,
+  annotate, complete, curve, detect, lookUp, meanings, openHomographs, openLanguages, phrase,
+  readRuns, readScreen, readWiktionary, symbolsOf, typedInMine, wordFor, type Said,
 } from '@/core';
 import type { Batch, TextRun } from '@/core/tokens';
 import { afresh, answered, noted, recent } from './health';
@@ -211,6 +211,45 @@ export function host(): void {
       ? phrase(wanted, data.text, data.source, data.target)
       : lookUp(wanted, data.source, data.target, '', ''));
     return { answer, missing: false };
+  });
+
+  onMessage('ask', async ({ data }) => {
+    // Typed in either language and answered in the other, the way the phone's panel answers:
+    // the core works out which it was typed in, and the reader's arrow overrides it.
+    const text = data.text.trim();
+    const { mine, learning } = data;
+    if (!text || !mine || !learning || mine === learning) {
+      return { forward: true, kind: 'nothing' as const };
+    }
+    // What is held now: a dictionary still on its way is fetched behind the answer rather
+    // than in front of it, and the engine answers until it is here.
+    await Promise.all([openReadInto(mine), openReadInto(learning)]);
+    const forward = data.turned ?? (await typedInMine(text, mine, learning));
+    const [from, to] = forward ? [mine, learning] : [learning, mine];
+    if (!/\s/.test(text)) {
+      const found = await meanings(text, from, to).catch(() => []);
+      if (found.length > 0) {
+        // How each is said where no dictionary of that language is here to say it: by the
+        // voice, as the page says such a word.
+        const unsaid = found.filter((m) => !m.ipa).map((m) => m.word);
+        const voiced: Record<string, string> = unsaid.length
+          ? await ipa(voiceOf(to, ''), unsaid).catch(() => ({}))
+          : {};
+        const said = found.map((m) => ({ ...m, ipa: m.ipa ?? voiced[m.word] ?? null }));
+        return { forward, kind: 'meanings' as const, meanings: said };
+      }
+    }
+    const [said] = await guessed(from, to, [text]).catch(() => []);
+    const line = (said ?? '').trim();
+    if (!line || line.toLowerCase() === text.toLowerCase()) {
+      return { forward, kind: 'nothing' as const };
+    }
+    // How the answer is said, word by word, as the page says a word the dictionaries lack.
+    const words = line.split(/\s+/).map((w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+      .filter(Boolean);
+    const voiced: Record<string, string> = await ipa(voiceOf(to, ''), words).catch(() => ({}));
+    const sounds = words.map((w) => voiced[w]).filter(Boolean).join(' ');
+    return { forward, kind: 'line' as const, line, ipa: sounds };
   });
 
   onMessage('lookUp', async ({ data }) => {

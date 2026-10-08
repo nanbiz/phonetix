@@ -189,7 +189,7 @@
 
   {#if term}
     <div
-      class="sheet{over ? ' over' : ''}"
+      class="form-sheet{over ? ' over' : ''}"
       data-sheet={term.category}
       role="dialog"
       tabindex="-1"

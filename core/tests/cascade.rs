@@ -1930,3 +1930,43 @@ fn a_word_the_spelling_is_only_a_form_of_wins_only_by_being_commoner_itself() {
         notes.says
     );
 }
+
+#[test]
+fn a_typed_word_is_in_the_language_whose_dictionary_holds_it() {
+    use lexcore::resolve::typed_in_mine;
+    let (de, es) = (german(), spanish());
+    let (de, es) = (Pack::open(&de).unwrap(), Pack::open(&es).unwrap());
+    let learning = lang("es");
+    // A German reader learning Spanish.
+    assert!(typed_in_mine("Hund", &learning, Some(&de), Some(&es), None));
+    assert!(typed_in_mine("hund", &learning, Some(&de), Some(&es), None));
+    assert!(!typed_in_mine(
+        "perro",
+        &learning,
+        Some(&de),
+        Some(&es),
+        None
+    ));
+    // Nothing holds it and nothing detects it: the reader's own, which is the way a word for
+    // something is asked for.
+    assert!(typed_in_mine(
+        "Zwiebelkuchen",
+        &learning,
+        Some(&de),
+        Some(&es),
+        None
+    ));
+}
+
+#[test]
+fn a_word_is_answered_into_english_from_its_own_dictionary_alone() {
+    use lexcore::resolve::meanings;
+    let es = spanish();
+    let es = Pack::open(&es).unwrap();
+    let found = meanings("perro", &lang("es"), &lang("en"), None, Some(&es));
+    assert_eq!(
+        found.first().map(|m| m.word.as_str()),
+        Some("dog"),
+        "{found:?}"
+    );
+}

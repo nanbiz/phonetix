@@ -342,3 +342,27 @@ export async function dropBatch(batch: number): Promise<void> {
   const it = await coreReady();
   it.dropBatch(BigInt(batch));
 }
+
+/** One thing a typed word can mean in the other language, as the panel lists it. */
+export interface Meant {
+  word: string;
+  pos: string;
+  hint: string;
+  ipa: string | null;
+}
+
+/** Everything a typed word can mean in [wantedIn], commonest first: the panel's answer to one
+ *  word, the same list the phone's panel draws. */
+export async function meanings(text: string, typedIn: string, wantedIn: string): Promise<Meant[]> {
+  const it = await coreReady();
+  return JSON.parse(it.meanings(text, typedIn, wantedIn)) as Meant[];
+}
+
+/** Whether what was typed into the panel is in the reader's own language rather than the one
+ *  they are learning, which is the way it is answered. */
+export async function typedInMine(text: string, mine: string, learning: string): Promise<boolean> {
+  const it = await coreReady();
+  // The detector decides what no dictionary does, and it has to be there to.
+  await modelReady();
+  return it.typedInMine(text, mine, learning);
+}

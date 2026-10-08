@@ -33,7 +33,7 @@ EXTRACT_JS = r"""
 class PipeCDP:
     """Minimal CDP client over chromium --remote-debugging-pipe (fd 3 read, 4 write)."""
 
-    def __init__(self, extra_args=None):
+    def __init__(self, extra_args=None, headless=True):
         self.tc_r, self.tc_w = os.pipe()   # parent -> chrome (chrome fd 3)
         self.fc_r, self.fc_w = os.pipe()   # chrome -> parent (chrome fd 4)
         for fd in (self.tc_r, self.fc_w):
@@ -46,7 +46,10 @@ class PipeCDP:
         self.profile = tempfile.mkdtemp(prefix="phonetix-chrome-")
         args = [
             os.environ.get("PHONETIX_CHROMIUM", "chromium"),
-            "--headless=new", "--no-sandbox", "--disable-gpu",
+            # Headful only where a check presses real keys: the browser's own shortcuts reach
+            # an extension only through a window, and then under a display of the check's own.
+            *(["--headless=new"] if headless else ["--ozone-platform=x11"]),
+            "--no-sandbox", "--disable-gpu",
             "--disable-dev-shm-usage", "--remote-debugging-pipe",
             f"--user-data-dir={self.profile}",
             "--no-first-run", "--no-default-browser-check",
@@ -55,8 +58,14 @@ class PipeCDP:
             "--disable-features=DisableLoadExtensionCommandLineSwitch",
             f"--load-extension={EXT}", f"--disable-extensions-except={EXT}",
         ] + (extra_args or []) + ["about:blank"]
+        # A window goes on the display the check made for itself and nowhere else: a Wayland
+        # socket inherited from the desktop is preferred over DISPLAY and puts it on the user's
+        # screen.
+        env = dict(os.environ)
+        if not headless:
+            env.pop("WAYLAND_DISPLAY", None)
         self.proc = subprocess.Popen(
-            args, close_fds=False, preexec_fn=self._dup,
+            args, close_fds=False, preexec_fn=self._dup, env=env,
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         os.close(self.tc_r); os.close(self.fc_w)
         self.buf = b""

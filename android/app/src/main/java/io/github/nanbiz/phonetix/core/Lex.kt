@@ -201,8 +201,8 @@ object Lex {
      */
     external fun meanings(core: Long, text: String, typedIn: String, wantedIn: String): String
 
-    /** How often [word] is met in running text in [lang], as its pack counts it, or 0. */
-    external fun met(core: Long, word: String, lang: String): Long
+    /** Whether [text], typed into the panel, is in [mine] rather than [learning]. */
+    external fun typedInMine(core: Long, text: String, mine: String, learning: String): Boolean
 
     /**
      * Open a translation direction, keyed "from-to", from a configuration naming files

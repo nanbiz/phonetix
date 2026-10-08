@@ -374,6 +374,61 @@ pub fn how_often(entry: &Entry) -> Option<u64> {
         .and_then(|count| count.parse().ok())
 }
 
+/// How often [word] is met in running text in a pack's language: the count of its commonest
+/// entry spelled that way, or nothing where the pack has none. What tells a word two
+/// dictionaries both hold ("banco" is in English's too) apart by which language says it more.
+pub fn met<D: AsRef<[u8]>>(pack: &Pack<D>, word: &str) -> u64 {
+    let lowered = word.to_lowercase();
+    pack.lookup(word)
+        .into_iter()
+        .chain(pack.lookup(&lowered))
+        .filter(|entry| entry.lemma.to_lowercase() == lowered)
+        .filter_map(|entry| how_often(&entry))
+        .max()
+        .unwrap_or(0)
+}
+
+/// Whether something a reader typed into the panel is in their own language rather than the
+/// one they are learning, which is the way it is answered: from theirs into the other when
+/// true.
+///
+/// What is typed can be in either, and a reader should not have to say which. One word that
+/// one dictionary holds and the other does not is in that one; one both hold ("banco" is in
+/// English's too, from its tables) is in the language that says it more; anything else is
+/// what the detector makes of it, and the reader's own where it makes nothing.
+pub fn typed_in_mine<D: AsRef<[u8]>>(
+    text: &str,
+    learning: &Lang,
+    mine_pack: Option<&Pack<D>>,
+    learning_pack: Option<&Pack<D>>,
+    model: Option<&crate::detect::Model>,
+) -> bool {
+    let text = text.trim();
+    let single = !text.is_empty() && !text.contains(char::is_whitespace);
+    if single {
+        let lowered = text.to_lowercase();
+        let holds = |pack: Option<&Pack<D>>| {
+            pack.is_some_and(|pack| {
+                !pack.lookup(text).is_empty() || !pack.lookup(&lowered).is_empty()
+            })
+        };
+        match (holds(mine_pack), holds(learning_pack)) {
+            (true, false) => return true,
+            (false, true) => return false,
+            (true, true) => {
+                let (Some(mine), Some(theirs)) = (mine_pack, learning_pack) else {
+                    return true;
+                };
+                return met(mine, text) >= met(theirs, text);
+            }
+            (false, false) => {}
+        }
+    }
+    let read = model.map(|model| model.detect(text));
+    read.and_then(|read| read.language)
+        .is_none_or(|language| language != learning.0)
+}
+
 /// Senses a dictionary marks as no longer in use.
 const GONE: &[&str] = &["obsolete", "archaic"];
 
@@ -623,10 +678,14 @@ const MEANINGS: usize = 8;
 /// institution)" and "orilla" is "bank (of a river)". Typed in another language, each sense of
 /// the word in the order its dictionary lists them, answered in [wanted] and told apart by the
 /// sense itself.
+///
+/// Into English [wanted] may be missing: every dictionary glosses in English, so the typed
+/// word's own senses are the answer and English's pack only says how each is said.
 pub fn meanings<D: AsRef<[u8]>>(
     text: &str,
     typed_in: &Lang,
-    wanted: &Pack<D>,
+    wanted_in: &Lang,
+    wanted: Option<&Pack<D>>,
     typed: Option<&Pack<D>>,
 ) -> Vec<Meaning> {
     let text = text.trim();
@@ -643,11 +702,13 @@ pub fn meanings<D: AsRef<[u8]>>(
         {
             return;
         }
-        let ipa = wanted
-            .lookup(&word)
-            .into_iter()
-            .find(|entry| entry.lemma == word && !entry.ipa.is_empty())
-            .and_then(|entry| entry.ipa.first().cloned());
+        let ipa = wanted.and_then(|wanted| {
+            wanted
+                .lookup(&word)
+                .into_iter()
+                .find(|entry| entry.lemma == word && !entry.ipa.is_empty())
+                .and_then(|entry| entry.ipa.first().cloned())
+        });
         out.push(Meaning {
             word,
             pos,
@@ -656,6 +717,9 @@ pub fn meanings<D: AsRef<[u8]>>(
         });
     };
     if typed_in.0 == "en" {
+        let Some(wanted) = wanted else {
+            return out;
+        };
         let asked = vec![(text.to_string(), None)];
         for (_, entry, sense) in ranked_senses(&asked, None, wanted) {
             let gloss = entry
@@ -719,7 +783,7 @@ pub fn meanings<D: AsRef<[u8]>>(
                 continue;
             };
             // Into English the sense is the answer already: every dictionary glosses in it.
-            if wanted.lang() == "en" {
+            if wanted_in.0 == "en" {
                 // "doggy or doggish" is two answers, of which the first is the word.
                 let head = crate::gloss::terms(&meant)
                     .into_iter()
@@ -736,6 +800,9 @@ pub fn meanings<D: AsRef<[u8]>>(
                 }
                 continue;
             }
+            let Some(wanted) = wanted else {
+                return out;
+            };
             let asked = [(meant.clone(), Some(entry.pos.clone()))];
             if let Some((_, found, _)) = ranked_senses(&asked, None, wanted).into_iter().next() {
                 add(found.lemma, entry.pos.clone(), short_hint(&meant), &mut out);

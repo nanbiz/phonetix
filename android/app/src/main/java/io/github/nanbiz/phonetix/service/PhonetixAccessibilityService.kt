@@ -3306,16 +3306,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val single = !text.contains(' ')
             // Open, so which of them knows the word can be asked.
             Packs.openHeld(this)
-            val inLearning = single && Reading.knows(text, learning)
-            val inMine = single && Reading.knows(text, mine)
-            val forward = turned ?: when {
-                inLearning && !inMine -> false
-                inMine && !inLearning -> true
-                // Both hold it - English has "banco" too, from the card table - and it is the
-                // language that says it more that it was typed in.
-                inMine && inLearning -> Reading.met(text, mine) >= Reading.met(text, learning)
-                else -> Eld.readScreen(text).language?.let { it != learning } ?: true
-            }
+            val forward = turned ?: Reading.typedInMine(text, mine, learning)
             panelForward = forward
             val from = if (forward) mine else learning
             val to = if (forward) learning else mine

@@ -154,6 +154,7 @@ object Wording {
         "site-off" to "always off here",
         "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched.",
         "touch-on" to "A swipe that starts on a word will not scroll the page.",
+        "turn" to "Answer the other way round",
         "use-this" to "Use this",
         "words-count" to "%s words",
     )

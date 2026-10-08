@@ -26,6 +26,12 @@ export function close(): void {
   drawn = null;
   host?.remove();
   host = null;
+  document.removeEventListener('pointerdown', outside, true);
+}
+
+/** A press anywhere but the panel puts it away: the question was not asked. */
+function outside(event: PointerEvent): void {
+  if (host && !event.composedPath().includes(host)) close();
 }
 
 /** Whether the panel is up, so the shortcut closes what it opened. */
@@ -34,11 +40,8 @@ export function showing(): boolean {
 }
 
 /**
- * Ask for a word, over whatever is being read.
- *
- * The language it comes back in is the one the reader is learning, which they pick here and
- * which is remembered; the language they typed in is worked out by the core rather than
- * assumed, so they can ask in whatever language the word came to them in.
+ * Ask for a word or a phrase, over whatever is being read, between the reader's own language
+ * and the one they are learning, either way round.
  */
 export async function open(page = ''): Promise<void> {
   if (drawn) {
@@ -64,53 +67,31 @@ export async function open(page = ''): Promise<void> {
     'width:min(28rem, calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;';
   shadow.appendChild(frame);
 
+  const mine = settings.target;
   // The language chosen before, and otherwise the one the page is in, where that is not the
   // reader's own: a reader on a Spanish page asking for a word is asking for it in Spanish.
-  let learning =
-    settings.learning || (page && page !== settings.target ? page : '') ||
-    packs.held.find((lang) => lang !== settings.target) || '';
+  const learning =
+    [settings.learning, page, ...packs.held].find((lang) => lang && lang !== mine) ?? '';
   let recent = settings.recent;
   drawn = mount(Ask, {
     target: frame,
     props: {
+      mine,
       learning,
       held: packs.held,
       recent,
+      onMine: (lang: string) => void set('target', lang),
       onLearning: (lang: string) => {
-        learning = lang;
         void set('learning', lang);
         // Kept so the next panel offers it near the top: the list is every language there is,
         // and a reader asks in a handful of them.
         recent = asked(recent, lang);
         void set('recent', recent);
       },
-      ask: async (text: string, into: string) => {
-        const mine = settings.target;
-        const typed = text.trim();
-        if (!into || !mine || into === mine || !typed) return { answer: null, missing: false };
-        if (/\s/.test(typed)) {
-          // Several words are a clause for the engine, translated whichever way they were
-          // written: the detector is sure of a clause where it cannot be of a word.
-          const guess = await sendMessage('detect', { text: typed }).catch(() => null);
-          const from = guess?.language === into ? into : mine;
-          const answer = await sendMessage('phrase', {
-            text: typed,
-            source: from,
-            target: from === into ? mine : into,
-          }).catch(() => null);
-          return { answer, missing: false };
-        }
-        // One word is first read as a word of the language being learned, which is what a
-        // reader pasting it from a page means: found there, it is answered in their own. A
-        // word that language does not have is the word for something, asked for in it.
-        const read = await sendMessage('lookUp', { word: typed, source: into, target: mine })
-          .catch(() => null);
-        if (read && (read.glosses.length > 0 || read.says.length > 0)) {
-          return { answer: read, missing: false };
-        }
-        return sendMessage('say', { text: typed, source: into, target: mine }).catch(() => null);
-      },
+      ask: (text: string, mine: string, learning: string, turned: boolean | undefined) =>
+        sendMessage('ask', { text, mine, learning, turned }).catch(() => null),
       close,
     },
   });
+  document.addEventListener('pointerdown', outside, true);
 }

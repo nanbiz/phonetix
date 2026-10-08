@@ -123,10 +123,10 @@ CARD_JS = r"""
   const text = (e) => (e ? e.textContent.replace(/\s+/g, ' ').trim() : '');
   const head = card.querySelector('.card-head');
   const lines = [...head.children].filter(e => e.getBoundingClientRect().height > 0);
-  const sheet = card.querySelector('.sheet');
+  const sheet = card.querySelector('.form-sheet');
   // Every element whose text runs past its own box: cut off, or wrapped onto a second line.
   const clipped = [];
-  for (const e of card.querySelectorAll('.sheet td, .sheet-grid > *, .card-top > *, .forms')) {
+  for (const e of card.querySelectorAll('.form-sheet td, .sheet-grid > *, .card-top > *, .forms')) {
     if (e.scrollWidth > e.clientWidth + 1) clipped.push(text(e));
   }
   const words = [];

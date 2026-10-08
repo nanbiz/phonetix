@@ -548,17 +548,10 @@ object Reading {
         }
     }
 
-    /** How often [word] is met in running text in [lang], by its pack's count. */
-    fun met(word: String, lang: String): Long =
-        if (core == 0L) 0L else runCatching { Lex.met(core, word, lang) }.getOrDefault(0L)
-
-    /** Whether [word] is a word of [lang] in the dictionary held for it. */
-    fun knows(word: String, lang: String): Boolean {
-        if (core == 0L || lang.isEmpty()) return false
-        return lookUp(word, lang, lang)?.let {
-            it.state != Answer.State.None && it.state != Answer.State.NoPack && it.found
-        } ?: false
-    }
+    /** Whether [text], typed into the panel, is in the reader's own language rather than the
+     *  one they are learning. The core decides; see `lexcore::resolve::typed_in_mine`. */
+    fun typedInMine(text: String, mine: String, learning: String): Boolean =
+        if (core == 0L) true else runCatching { Lex.typedInMine(core, text, mine, learning) }.getOrDefault(true)
 
     fun say(context: android.content.Context, text: String, source: String, target: String): Answer? {
         val asked = text.trim()

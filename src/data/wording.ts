@@ -168,6 +168,7 @@ export const SAYS: Record<string, string> = {
   "site-off": "always off here",
   "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
   "touch-on": "A swipe that starts on a word will not scroll the page.",
+  "turn": "Answer the other way round",
   "use-this": "Use this",
   "words-count": "%s words",
 };

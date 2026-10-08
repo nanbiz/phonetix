@@ -138,13 +138,13 @@
    wide as the card and a row of a sheet is one line. A sheet hangs off the card, so the card
    lets it out. */
 .card:has(.forms) { width: var(--card-width); max-width: 100%; }
-.card:has(.sheet) { position: relative; overflow: visible; }
+.card:has(.form-sheet) { position: relative; overflow: visible; }
 /* The sheet a term opens: the category it is a value of, what the category and the value are,
    and the word in every value of that category with everything else kept, the word's own row
    lit. Exactly as wide as the card and one gap from it, under the card or over it, whichever
    side the word is not on. Its text keeps the card's inset and its rows are one line each. */
-.sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: calc(100% + var(--space-2) + var(--border-width)); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius-card); box-shadow: var(--shadow-lifted); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
-.sheet.over { top: auto; bottom: calc(100% + var(--space-2) + var(--border-width)); }
+.form-sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: calc(100% + var(--space-2) + var(--border-width)); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius-card); box-shadow: var(--shadow-lifted); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
+.form-sheet.over { top: auto; bottom: calc(100% + var(--space-2) + var(--border-width)); }
 .sheet-cat { padding: 0 var(--space-4); margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
 /* The "?" a term that needs explaining carries in its sheet's heading; the explanation shows
    while it is pointed at or once it is pressed. */
@@ -154,10 +154,10 @@
 .sheet-def p { margin: 0; }
 .sheet-def p + p { margin-top: var(--space-1); }
 .sheet-def b { color: var(--color-accent); font-weight: var(--weight-bold); }
-.sheet .ending { color: var(--color-accent); }
+.form-sheet .ending { color: var(--color-accent); }
 /* A value a row or a heading is named by explains itself on pointing, and carries the dotted
    rule every explained term on the card does. */
-.sheet [title] { text-decoration: underline dotted var(--color-ink-faint); text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; }
+.form-sheet [title] { text-decoration: underline dotted var(--color-ink-faint); text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; }
 .sheet-rows { border-collapse: collapse; width: 100%; }
 .sheet-rows td { padding: 6px var(--space-2); line-height: 17px; border-top: var(--border-width) solid var(--color-border); white-space: nowrap; vertical-align: baseline; }
 .sheet-rows td:first-child { padding-left: var(--space-4); width: var(--sheet-name-width); }

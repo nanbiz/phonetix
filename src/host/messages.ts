@@ -7,7 +7,7 @@
 // library in the middle of it was one more place for a message to disappear between a page and
 // a service worker with nothing to show for it.
 import type { Answer, IpaSymbol } from '@/core/answer';
-import type { Guess, Said, Screen } from '@/core';
+import type { Guess, Meant, Said, Screen } from '@/core';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
 import type { Offered } from './packs';
 
@@ -83,7 +83,20 @@ export interface HostProtocol {
     data: { text: string; source: string; target: string };
     reply: { answer: Answer | null; missing: boolean };
   };
+  /** What the panel answers something typed into it with, between the reader's own language
+   *  and the one they are learning: which way it was answered, and every meaning of one word
+   *  or the translation of anything longer. [turned] is the way the reader set by hand. */
+  ask: {
+    data: { text: string; mine: string; learning: string; turned?: boolean };
+    reply: PanelAnswer;
+  };
 }
+
+/** The panel's answer: which way it went, and what came back. */
+export type PanelAnswer =
+  | { forward: boolean; kind: 'meanings'; meanings: Meant[] }
+  | { forward: boolean; kind: 'line'; line: string; ipa: string }
+  | { forward: boolean; kind: 'nothing' };
 
 type Named = keyof HostProtocol;
 

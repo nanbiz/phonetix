@@ -168,37 +168,6 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_openPack<'a>(
     env.new_string(&lang).unwrap_or(empty)
 }
 
-/// How often [word] is met in running text in [lang], as the pack counts it: 0 where the pack
-/// is not open, does not hold the word, or was built without counts.
-#[no_mangle]
-pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_met(
-    mut env: JNIEnv,
-    _class: JClass,
-    core: jlong,
-    word: JString,
-    lang: JString,
-) -> jlong {
-    if core == 0 {
-        return 0;
-    }
-    let (Ok(word), Ok(lang)) = (env.get_string(&word), env.get_string(&lang)) else {
-        return 0;
-    };
-    let (word, lang): (String, String) = (word.into(), lang.into());
-    let guard = lock_core(core);
-    let Some(pack) = guard.packs.get(&lang) else {
-        return 0;
-    };
-    let lowered = word.to_lowercase();
-    pack.lookup(&word)
-        .into_iter()
-        .chain(pack.lookup(&lowered))
-        .filter(|entry| entry.lemma.to_lowercase() == lowered)
-        .filter_map(|entry| lexcore::resolve::how_often(&entry))
-        .max()
-        .unwrap_or(0) as jlong
-}
-
 /// Everything a typed word can mean in the language it is wanted in, as JSON: an array of
 /// `{"word","pos","hint","ipa"}`, commonest first. What the panel lists for a single word.
 #[no_mangle]
@@ -226,15 +195,13 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_meanings<'a>(
     let found = {
         let guard = lock_core(core);
         let core = &*guard;
-        match core.packs.get(&wanted_in) {
-            Some(wanted) => lexcore::resolve::meanings(
-                &text,
-                &lexcore::answer::Lang(typed_in.clone()),
-                wanted,
-                core.packs.get(&typed_in),
-            ),
-            None => Vec::new(),
-        }
+        lexcore::resolve::meanings(
+            &text,
+            &lexcore::answer::Lang(typed_in.clone()),
+            &lexcore::answer::Lang(wanted_in.clone()),
+            core.packs.get(&wanted_in),
+            core.packs.get(&typed_in),
+        )
     };
     env.new_string(lexcore::json::meanings(&found))
         .unwrap_or(empty)
@@ -816,6 +783,40 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_detect<'a>(
         None => nothing,
     };
     env.new_string(written).unwrap_or(empty)
+}
+
+/// Whether what a reader typed into the panel is in their own language rather than the one
+/// they are learning. See [lexcore::resolve::typed_in_mine].
+#[no_mangle]
+pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_typedInMine(
+    mut env: JNIEnv,
+    _class: JClass,
+    core: jlong,
+    text: JString,
+    mine: JString,
+    learning: JString,
+) -> jni::sys::jboolean {
+    if core == 0 {
+        return 1;
+    }
+    let (Ok(text), Ok(mine), Ok(learning)) = (
+        env.get_string(&text),
+        env.get_string(&mine),
+        env.get_string(&learning),
+    ) else {
+        return 1;
+    };
+    let (text, mine, learning): (String, String, String) =
+        (text.into(), mine.into(), learning.into());
+    let guard = lock_core(core);
+    let held = &*guard;
+    lexcore::resolve::typed_in_mine(
+        &text,
+        &lexcore::answer::Lang(learning.clone()),
+        held.packs.get(&mine),
+        held.packs.get(&learning),
+        held.model.as_ref(),
+    ) as jni::sys::jboolean
 }
 
 /// What a screenful of text is in, as JSON.
