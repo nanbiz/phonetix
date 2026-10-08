@@ -153,7 +153,9 @@ def main():
     profile(where)
     firefox = subprocess.Popen(
         [
-            "firefox", "--headless", "--no-remote", "--marionette",
+            # System access lets the check read whether the tab is making sound, which is
+            # browser state no page can see. The profile is a throwaway one.
+            "firefox", "--headless", "--no-remote", "--marionette", "-remote-allow-system-access",
             "--profile", where, "about:blank",
         ],
         stdout=subprocess.DEVNULL,
@@ -279,11 +281,49 @@ def main():
                 const r = el.getBoundingClientRect();
                 return {x: r.left + r.width / 2, y: r.top + r.height / 2};
             })()""")
+            play = hand.ask("""(() => {
+                const host = document.getElementById('phonetix-card-host');
+                const el = host && host.shadowRoot.querySelector('.audio');
+                if (!el) return null;
+                const r = el.getBoundingClientRect();
+                return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+            })()""")
             if seen and seen.get("arrow") and link:
                 arrow = seen["arrow"]
                 inside = arrow["bottom"] + 14 if seen["way"] == "below" else arrow["top"] - 14
                 walk(hand, (word["x"], word["y"]), (arrow["x"], inside))
-                walk(hand, (arrow["x"], inside), (link["x"], link["y"]))
+                # The play button first: Gecko plays only what a press asked for, which is
+                # where its audio has gone silent before. The browser marks a tab that is
+                # making sound, which is what is read here.
+                def sounding():
+                    driver.send("Marionette:SetContext", {"value": "chrome"})
+                    try:
+                        got = driver.send("WebDriver:ExecuteScript", {
+                            "script": "return gBrowser.selectedTab.hasAttribute('soundplaying')",
+                            "args": []})
+                        return (got or {}).get("value") is True
+                    finally:
+                        driver.send("Marionette:SetContext", {"value": "content"})
+
+                quiet_before = not sounding()
+                sounded = False
+                if play:
+                    walk(hand, (arrow["x"], inside), (play["x"], play["y"]))
+                    time.sleep(0.3)
+                    hand.click(play["x"], play["y"])
+                    for _ in range(20):
+                        time.sleep(0.25)
+                        if sounding():
+                            sounded = True
+                            break
+                print(f"  the card's play button: quiet before {quiet_before}, "
+                      f"{'sound' if sounded else 'silence'} after (button {bool(play)})")
+                if not quiet_before:
+                    failures.append("the tab was already making sound before play was pressed")
+                elif not sounded:
+                    failures.append("the card's play button made no sound on Gecko")
+                start = (play["x"], play["y"]) if play else (arrow["x"], inside)
+                walk(hand, start, (link["x"], link["y"]))
                 time.sleep(0.3)
                 hand.click(link["x"], link["y"])
                 for _ in range(20):
