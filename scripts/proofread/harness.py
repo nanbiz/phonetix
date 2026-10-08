@@ -111,7 +111,9 @@ class PipeCDP:
                 if "error" in m:
                     raise RuntimeError(f"{method}: {m['error']}")
                 return m.get("result", {})
-            if m.get("method") in ("Runtime.consoleAPICalled", "Runtime.exceptionThrown", "Log.entryAdded"):
+            if m.get("method") in ("Runtime.consoleAPICalled", "Runtime.exceptionThrown",
+                                   "Log.entryAdded", "Target.targetCreated") \
+                    or str(m.get("method", "")).startswith("WebAudio."):
                 self.events.append(m)
                 del self.events[:-200]
         raise TimeoutError(method)

@@ -985,6 +985,70 @@ def main():
         if "Hund" not in with_it:
             failures.append("a dictionary fetched while the page was open changed nothing on it")
 
+        # The card's own buttons, pressed where they are drawn: the play button plays the word
+        # through Web Audio, and the Wiktionary link opens the word's entry in a tab.
+        def press_in_card(selector):
+            """Pressed the way a reader reaches it: from the word down through the arrow, which
+            is the card's only way in, and along to the control."""
+            where = evaluate(cdp, page, """
+                (() => {
+                  const host = document.getElementById('phonetix-card-host');
+                  const root = host && host.shadowRoot;
+                  const el = root && root.querySelector(%s);
+                  const arrow = root && root.querySelector('.card-arrow');
+                  if (!el || !arrow) return null;
+                  const r = el.getBoundingClientRect();
+                  const a = arrow.getBoundingClientRect();
+                  return JSON.stringify({x: r.x + r.width / 2, y: r.y + r.height / 2,
+                                         ax: a.x + a.width / 2, top: a.top, bottom: a.bottom});
+                })()
+            """ % json.dumps(selector))
+            if not where:
+                return False
+            box = json.loads(where)
+            path = [(box["ax"], box["top"] - 6), (box["ax"], box["bottom"] + 14), (box["x"], box["y"])]
+            for (x0, y0), (x1, y1) in zip(path, path[1:]):
+                for i in range(1, 9):
+                    cdp.send("Input.dispatchMouseEvent", {
+                        "type": "mouseMoved", "x": x0 + (x1 - x0) * i / 8,
+                        "y": y0 + (y1 - y0) * i / 8}, session=page)
+                    time.sleep(0.03)
+            time.sleep(0.3)
+            for kind in ("mousePressed", "mouseReleased"):
+                cdp.send("Input.dispatchMouseEvent", {"type": kind, "x": box["x"], "y": box["y"],
+                                                      "button": "left", "clickCount": 1},
+                         session=page)
+            return True
+
+        cdp.send("WebAudio.enable", session=page)
+        cdp.events.clear()
+        pressed = press_in_card(".audio")
+        played = []
+        for _ in range(20):
+            time.sleep(0.5)
+            cdp.send("Runtime.evaluate", {"expression": "1"}, session=page)
+            played = [e["params"]["node"]["nodeType"] for e in cdp.events
+                      if e.get("method") == "WebAudio.audioNodeCreated"]
+            if "AudioBufferSource" in played:
+                break
+        print(f"  the card's play button: pressed {pressed}, audio nodes {sorted(set(played))}")
+        if "AudioBufferSource" not in played:
+            failures.append(f"pressing the card's play button played nothing ({pressed})")
+        if not card_on("perro"):
+            failures.append("the card did not come back on perro for its Wiktionary link")
+        cdp.events.clear()
+        pressed = press_in_card("[data-does=Wiktionary]")
+        opened = []
+        for _ in range(20):
+            time.sleep(0.5)
+            opened = [t["url"] for t in cdp.send("Target.getTargets")["targetInfos"]
+                      if "wiktionary.org" in t["url"]]
+            if opened:
+                break
+        print(f"  the card's Wiktionary link: pressed {pressed}, opened {opened[:1]}")
+        if not any("/wiki/perro" in url for url in opened):
+            failures.append(f"the card's Wiktionary link opened no entry for perro: {opened}")
+
         # And switched off, the page is the page again.
         evaluate(cdp, settings, "chrome.storage.local.set({on:false})")
         after = wait_for(cdp, page, "document.querySelectorAll('.px-w').length",
