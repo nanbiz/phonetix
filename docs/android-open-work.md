@@ -7,11 +7,14 @@ Ticked items are done and verified by a suite; the rest are not.
 
 - [x] **Nothing is painted over a page.** Holding the icon opens the app's settings. The
   sections below about transcriptions on their words and following a scroll describe the page
-  overlay, which is gone; they stay as the record of what was measured.
+  overlay, which is gone; they stay as the record of what was measured. The suites they name
+  (`android_words.py`, `android_eyes.py`, `android_ink.py`, `android_overlay.py` and the
+  rest that checked painted words) are no longer in the tree; the history has them.
 - [x] **The card is never kept waiting.** It is answered off the thread that draws, the screen
   read no longer annotates the whole screen under the core's lock, and the node cache is on.
-- [x] **The card is display only and goes with the finger.** What it shows follows the two
-  switches (translation, pronunciation, both, neither); `android_translates.py` holds each.
+- [x] **The card is display only and goes with the finger.** It says how a word sounds and
+  what it means, and only how it sounds for a language the reader knows;
+  `android_translates.py` holds both.
 - [x] **The thread comes out of the icon** and lands on the side of the circle that faces it,
   wherever the circle is carried; the icon stays in sight under the finger.
 - [x] **The card is placed clear of the word, the circle and the icon.**

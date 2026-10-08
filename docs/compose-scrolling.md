@@ -4,6 +4,10 @@ Read out of the androidx and platform source on 2026-09-08, because the overlay 
 apps built with Compose and the behaviour is documented nowhere else. Every claim here is from
 a file that can be opened, not from observation alone, though the observations agree.
 
+The phone no longer paints over a page, so the overlay this was read for and the suites named
+below (`android_pixels.py` among them) are gone from the tree; the history has them. What a
+Compose list reports is unchanged, and the side button still reads it.
+
 ## A Compose scroll event carries no distance
 
 `AndroidComposeViewAccessibilityDelegateCompat.android.kt`, in
