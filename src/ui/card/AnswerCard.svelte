@@ -184,7 +184,9 @@
   <div class="card-handle"></div>
   <header class="card-head">
     <!-- One line: the word, how it is said, what it is read as, and what a reader reaches for
-         outside the card. -->
+         outside the card. A phrase has none of those, and the selection it answers is said once,
+         whole, under its translation. -->
+    {#if !phrase}
     <div class="card-top">
       <span class="word"
         >{#if parts}{parts[0]}<span class="ending">{parts[1]}</span>{:else}{answer.spelling}{/if}</span
@@ -230,6 +232,7 @@
         />
       {/if}
     </div>
+    {/if}
 
     {#if whole}
       <Entry entry={answer} />

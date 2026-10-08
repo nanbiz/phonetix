@@ -81,6 +81,19 @@
       answer: answer({ state: 'NoPack', ipa: [], says: [], glosses: [], pos: null }),
     },
     { uid: 'none', answer: answer({ state: 'None', ipa: [], says: [], glosses: [], pos: null }) },
+    {
+      uid: 'phrase',
+      answer: answer({
+        state: 'Phrase',
+        spelling: 'el perro corre por el camino',
+        ipa: [],
+        says: ['der Hund läuft den Weg entlang'],
+        glosses: [],
+        pos: null,
+        marks: [],
+        provenance: { kind: 'guess', engine: 'Bergamot' },
+      }),
+    },
   ];
 
   const modes = ['light', 'dark'] as const;

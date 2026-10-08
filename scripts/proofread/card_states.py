@@ -37,6 +37,10 @@ WANT = {
     "ipa-only": {"headline": "", "symbols": 6},
     "no-pack": {"note": "No dictionary for Spanish yet"},
     "none": {"note": "Nothing found for perro"},
+    # Several words a reader selected: the translation leads, marked a guess, and the selection
+    # it answers is said once, whole, under it, never again cut short above it.
+    "phrase": {"headline": "der Hund läuft den Weg entlang", "badges": ["guess"], "symbols": 0,
+               "asked": 1},
 }
 
 
@@ -88,6 +92,7 @@ def main():
                       width: Math.round(box.width),
                       height: Math.round(box.height),
                       surface: style.backgroundColor,
+                      asked: card.innerText.split('el perro corre por el camino').length - 1,
                     };
                   }
                   return JSON.stringify(out);

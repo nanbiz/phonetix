@@ -651,17 +651,28 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
  * otherwise close the card a reader had just opened.
  */
 async function selected(): Promise<void> {
+  // Switched off, here or everywhere, is off for every gesture, this one too.
+  if (!allowed(settings, location.hostname)) return;
   const selection = document.getSelection();
   const text = selection?.toString().trim() ?? '';
   if (!selection || selection.isCollapsed || text.split(/\s+/).length < 2) return;
   if (text.length > PHRASE_LIMIT) return;
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
-  const source = at instanceof Text ? languageOf(at) : pageLanguage();
+  // What the selection itself is in, where it says enough to tell: a page tagged German
+  // around an English answer is English where the reader selected it, and asking the engine
+  // to translate it as German handed the same English back as a guess.
+  const guess = await sendMessage('detect', { text }).catch(() => null);
+  const source = guess?.reliable && guess.language
+    ? guess.language
+    : at instanceof Text ? languageOf(at) : pageLanguage();
   if (!translates(settings, source)) return;
   const target = settings.target;
   const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
   if (!answer) return;
+  // The text handed back unchanged is the engine saying it has nothing.
+  const translated = answer.says[0]?.trim().toLowerCase() ?? '';
+  if (!translated || translated === text.toLowerCase()) return;
   const range = selection.getRangeAt(0).getBoundingClientRect();
   // Asked for by selecting, so there is no word to come in from and nothing to pass through.
   show(answer, range, { recorded: false, entered: true });
