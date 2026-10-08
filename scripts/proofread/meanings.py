@@ -25,17 +25,17 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 CASES = {
     "es": ("El perro corre por el camino del banco. La casa es grande y los niños juegan en el parque.",
            {"El": "the", "perro": "dog", "camino": "way, route", "del": "of the, from the",
-            "casa": "house", "es": "to be", "y": "and", "los": "the", "parque": "park"}),
+            "casa": "house", "es": "is", "y": "and", "los": "the", "parque": "park"}),
     "de": ("Er hat die ganze Nacht gearbeitet. Der Hund läuft auf dem Weg zur Bank. Das Haus ist groß. "
            "Meine Kinder spielen mit ihren Freunden.",
-           {"Er": "he", "hat": "to have", "die": "the", "Nacht": "night", "Der": "the",
+           {"Er": "he", "hat": "has", "die": "the", "Nacht": "night", "Der": "the",
             "Hund": "dog, hound", "dem": "the", "Weg": "path, trail, track", "zur": "to the",
-            "Das": "the", "Haus": "house", "ist": "to be", "Meine": "my"}),
+            "Das": "the", "Haus": "house", "ist": "is", "Meine": "my"}),
     "fr": ("Le chien court sur le chemin de la banque. Les enfants jouent dans le parc.",
            {"Le": "the", "chien": "dog", "le": "the", "la": "the", "banque": "bank",
             "Les": "the", "parc": "park"}),
     "it": ("Il cane corre sulla strada verso la banca. La casa è grande.",
-           {"Il": "the", "cane": "dog, male dog", "corre": "to run", "sulla": "on the",
+           {"Il": "the", "cane": "dog, male dog", "corre": "runs", "sulla": "on the",
             "la": "the", "banca": "bank", "casa": "house", "è": "is"}),
     "pt": ("O cão corre pelo caminho do banco. As crianças brincam no parque e a casa é grande.",
            {"O": "the", "cão": "dog", "pelo": "by the", "As": "the", "no": "in the, on the",
@@ -46,17 +46,17 @@ CASES = {
 # it, which is what both hosts do: each reading's meaning is looked for in the translation, as
 # the translation writes it - "est" is "third-person singular present indicative of être" in the
 # dictionary and "is" in the sentence, "court" a form of "courir", "to run", which the sentence
-# writes "runs". A word already decided can still have several senses, and the line picks
+# writes "runs". A form is drawn in its form: "is", "runs", "sit down" for "(I) sit down". A word already decided can still have several senses, and the line picks
 # which is drawn: "banco" is a bank and a bench.
 SETTLED = [
     ("fr", "La maison est grande et le chat court dans le parc.",
      "The house is big and the cat runs in the park.",
-     {"est": "to be", "court": "to run", "chat": "cat", "le": "the", "dans": "in, inside"}),
+     {"est": "is", "court": "runs", "chat": "cat", "le": "the", "dans": "in, inside"}),
     ("fr", "Le chemin est court.", "The path is short.",
-     {"est": "to be", "court": "short"}),
+     {"est": "is", "court": "short"}),
     # And a word that is decided but has several senses, drawn in the one the line is about.
     ("es", "Me siento en el banco del parque.", "I sit on the park bench.",
-     {"banco": "bench", "siento": "to sit down"}),
+     {"banco": "bench", "siento": "sit down"}),
     ("es", "El banco cerró mi cuenta.", "The bank closed my account.",
      {"banco": "bank", "mi": "my", "cuenta": "account"}),
     ("de", "Er sitzt auf der Bank.", "He sits on the bench.", {"Bank": "bench"}),

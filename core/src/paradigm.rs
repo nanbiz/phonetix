@@ -124,6 +124,8 @@ pub struct Form {
     pub along: Vec<Along>,
     /// What the word means said in this place, in the reader's language: "he walked".
     pub said: Option<String>,
+    /// The same without who does it, which is what takes the word's place on a page: "walked".
+    pub bare: Option<String>,
 }
 
 /// One category of a form, and the word in each of its values with everything else kept.
@@ -176,6 +178,14 @@ pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
             .or(candidates.first())?
             .clone(),
     );
+    Some(form_at(spelling, place, entry))
+}
+
+/// The form [spelling] is of [entry] in [place], a place its own entry names rather than its
+/// lemma's table: Italian "corre" is filed as "third-person singular present indicative of
+/// correre", and "correre"'s table does not list it.
+pub fn form_at(spelling: &str, place: Place, entry: &Entry) -> Form {
+    let place = sorted(place);
     let mut along = Vec::new();
     let personal = value_in(&place, "person").is_some();
     for category in CATEGORIES {
@@ -198,12 +208,13 @@ pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
             along.push(Along { category, forms });
         }
     }
-    Some(Form {
+    Form {
         ending_at: stem_length(spelling, entry),
         place,
         along,
         said: None,
-    })
+        bare: None,
+    }
 }
 
 /// A place with its values in the order a card names them.
@@ -367,7 +378,7 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
                 .filter_map(|category| value_in(&place, category))
                 .collect();
             Other {
-                here: theirs == mine && other.to_lowercase() == lowered,
+                here: theirs == mine && unmarked(&other) == unmarked(&lowered),
                 place: sorted(place),
                 spelling: other,
                 said: None,
@@ -429,6 +440,23 @@ fn stem_length(spelling: &str, entry: &Entry) -> usize {
         .fold(shared_start(spelling, &entry.lemma), |stem, row| {
             stem.min(shared_start(&row.spelling, &lemma))
         })
+}
+
+/// A spelling without the marks some dictionaries add to show where the stress falls:
+/// Italian tables write "córre" for the "corre" on a page.
+fn unmarked(spelling: &str) -> String {
+    spelling
+        .to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'á' | 'à' => 'a',
+            'é' | 'è' => 'e',
+            'í' | 'ì' => 'i',
+            'ó' | 'ò' => 'o',
+            'ú' | 'ù' => 'u',
+            other => other,
+        })
+        .collect()
 }
 
 /// How many characters two words begin with alike.

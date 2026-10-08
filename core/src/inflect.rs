@@ -124,8 +124,34 @@ fn value<'a>(place: &'a Place, category: &str) -> Option<&'a str> {
 /// The head of a meaning and what follows it: "to go out with" is "go" and " out with". Only
 /// the first of several meanings, and nothing a parenthesis or a semicolon adds.
 fn head(meaning: &str) -> Option<(String, String)> {
-    let first = meaning.split([',', ';', '(']).next()?.trim();
+    // A sense written under a heading - "Used as a copula. to be" - means what follows it.
+    let meaning = meaning
+        .split(". ")
+        .find(|part| part.trim_start().starts_with("to "))
+        .unwrap_or(meaning);
+    // A label in parentheses before the meaning - "(intransitive) to run" - is not the meaning.
+    let mut meaning = meaning.trim();
+    while let Some(after) = meaning
+        .strip_prefix('(')
+        .and_then(|rest| rest.split_once(')'))
+    {
+        meaning = after.1.trim_start();
+    }
+    // And a note in square brackets anywhere in it: "to run [auxiliary essere or avere]".
+    let mut unbracketed = String::with_capacity(meaning.len());
+    let mut depth = 0usize;
+    for c in meaning.chars() {
+        match c {
+            '[' => depth += 1,
+            ']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => unbracketed.push(c),
+            _ => {}
+        }
+    }
+    let first = unbracketed.split([',', ';', '(']).next()?.trim();
     let first = first.strip_prefix("to ").unwrap_or(first).trim();
+    let first = first.split_whitespace().collect::<Vec<_>>().join(" ");
+    let first = first.as_str();
     if first.is_empty()
         || !first
             .chars()
@@ -144,9 +170,19 @@ fn head(meaning: &str) -> Option<(String, String)> {
 /// third person singular of the preterite indicative is "he walked". Nothing where the place
 /// names nothing English marks, or the meaning is not a word English inflects.
 pub fn english(meaning: &str, pos: &str, place: &Place) -> Option<String> {
+    english_with(meaning, pos, place, true)
+}
+
+/// The same without who does it - "is", "walked", "will walk" - which is what takes the
+/// word's place on a page: the page has its own subject.
+pub fn english_bare(meaning: &str, pos: &str, place: &Place) -> Option<String> {
+    english_with(meaning, pos, place, false)
+}
+
+fn english_with(meaning: &str, pos: &str, place: &Place, subject: bool) -> Option<String> {
     let (word, rest) = head(meaning)?;
     match pos {
-        "verb" => verb(&word, &rest, place),
+        "verb" => verb(&word, &rest, place, subject),
         "noun" => match value(place, "number") {
             Some("plural") => Some(format!("{}{rest}", plural(&word))),
             Some("singular") => Some(format!("{word}{rest}")),
@@ -174,7 +210,7 @@ const STATIVE: [&str; 14] = [
     "exist",
 ];
 
-fn verb(base: &str, rest: &str, place: &Place) -> Option<String> {
+fn verb(base: &str, rest: &str, place: &Place, subject: bool) -> Option<String> {
     let [third, ing, past, participle] = verb_forms(base);
     let person = value(place, "person");
     let number = value(place, "number").unwrap_or("singular");
@@ -217,11 +253,11 @@ fn verb(base: &str, rest: &str, place: &Place) -> Option<String> {
         "were"
     };
     let has = if singular_third { "has" } else { "have" };
-    let with = |subject: &str, verb: String| -> String {
-        if subject.is_empty() {
+    let with = |who: &str, verb: String| -> String {
+        if who.is_empty() || !subject {
             format!("{verb}{rest}")
         } else {
-            format!("{subject} {verb}{rest}")
+            format!("{who} {verb}{rest}")
         }
     };
     let said = match (
@@ -235,13 +271,30 @@ fn verb(base: &str, rest: &str, place: &Place) -> Option<String> {
         (Some("participle"), _, _) => format!("{participle}{rest}"),
         (None, Some("imperative"), _) => format!("{base}{rest}!"),
         (None, Some("subjunctive"), Some("present")) => {
-            format!("(that) {}", with(who, base.to_string()))
+            let said = with(who, base.to_string());
+            if subject {
+                format!("(that) {said}")
+            } else {
+                said
+            }
         }
         (None, Some("subjunctive"), Some("imperfect" | "past" | "preterite")) => {
             let were = if be { "were".to_string() } else { past.clone() };
-            format!("(if) {}", with(who, were))
+            let said = with(who, were);
+            if subject {
+                format!("(if) {said}")
+            } else {
+                said
+            }
         }
-        (None, Some("subjunctive"), Some("future")) => format!("(if) {}", with(who, present)),
+        (None, Some("subjunctive"), Some("future")) => {
+            let said = with(who, present);
+            if subject {
+                format!("(if) {said}")
+            } else {
+                said
+            }
+        }
         (None, _, Some("present")) => with(who, present),
         (None, _, Some("preterite" | "past")) => with(who, simple_past),
         // What went on, for an action - "he was walking" - and what was so, for a verb English
@@ -266,6 +319,26 @@ pub fn german<D: AsRef<[u8]>>(
     pos: &str,
     place: &Place,
     pack: &lexpack::Pack<D>,
+) -> Option<String> {
+    german_with(lemma, pos, place, pack, true)
+}
+
+/// The same without who does it - "ging", "wird gehen" - for the word's place on a page.
+pub fn german_bare<D: AsRef<[u8]>>(
+    lemma: &str,
+    pos: &str,
+    place: &Place,
+    pack: &lexpack::Pack<D>,
+) -> Option<String> {
+    german_with(lemma, pos, place, pack, false)
+}
+
+fn german_with<D: AsRef<[u8]>>(
+    lemma: &str,
+    pos: &str,
+    place: &Place,
+    pack: &lexpack::Pack<D>,
+    subject: bool,
 ) -> Option<String> {
     let entry = pack
         .lookup(lemma)
@@ -342,7 +415,11 @@ pub fn german<D: AsRef<[u8]>>(
                 (_, Some("conditional")) => format!("{} {lemma}", helper(true)?),
                 _ => return None,
             };
-            Some(format!("{who} {said}"))
+            Some(if subject {
+                format!("{who} {said}")
+            } else {
+                said
+            })
         }
         _ => None,
     }

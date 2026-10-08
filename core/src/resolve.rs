@@ -1112,7 +1112,7 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // still gets the likely one.
     let first = answers.remove(0);
     if answers.is_empty() {
-        return first;
+        return with_noted_form(first, pack, open);
     }
     // Several words under one spelling. What the word before it makes likely decides, where
     // it decides clearly; otherwise the card shows the readings and the reader picks, because
@@ -1189,7 +1189,57 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     if decided.is_none() && first.readings.len() >= 2 {
         first.state = AnswerState::Homograph;
     }
-    first
+    with_noted_form(first, pack, open)
+}
+
+/// [answer] with the form its own note names, where it is only a note and its lemma's table
+/// does not list it: Italian "corre" is filed as "third-person singular present indicative of
+/// correre", which is the form, and "correre", "to run", said in it is "he runs".
+fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Open<D>) -> Answer {
+    if answer.paradigm.is_some() {
+        return answer;
+    }
+    let Some(note) = answer.glosses.first() else {
+        return answer;
+    };
+    let Some(lemma) = form_of_word(note) else {
+        return answer;
+    };
+    let Some((named, _)) = note.rsplit_once(" of ") else {
+        return answer;
+    };
+    let Some(place) = crate::paradigm::places(named).into_iter().next() else {
+        return answer;
+    };
+    let pos = answer.pos.clone().unwrap_or_default();
+    let Some(entry) = pack
+        .lookup(&lemma)
+        .into_iter()
+        .find(|entry| same_word(&entry.lemma, &lemma) && entry.pos == pos)
+    else {
+        return answer;
+    };
+    let mut form = crate::paradigm::form_at(&answer.spelling, place, &entry);
+    if answer.target.0 == "en" {
+        if let Some(meaning) = entry
+            .senses
+            .iter()
+            .map(|sense| sense.gloss.as_str())
+            .find(|gloss| !crate::annotate::about_grammar(gloss))
+        {
+            form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
+            form.bare = crate::inflect::english_bare(meaning, &entry.pos, &form.place);
+            for along in &mut form.along {
+                for other in &mut along.forms {
+                    other.said = crate::inflect::english(meaning, &entry.pos, &other.place);
+                }
+            }
+        }
+    }
+    let _ = open;
+    answer.lemma = Some(entry.lemma.clone());
+    answer.paradigm = Some(form);
+    answer
 }
 
 /// What form of its entry a spelling is, as the dump labels it.
@@ -1945,6 +1995,7 @@ fn resolve_one<D: AsRef<[u8]>>(
     if target.0 == "de" {
         if let (Some(form), Some(lemma)) = (answer.paradigm.as_mut(), lemma_said) {
             form.said = crate::inflect::german(&lemma, &entry.pos, &form.place, other);
+            form.bare = crate::inflect::german_bare(&lemma, &entry.pos, &form.place, other);
             for along in &mut form.along {
                 for each in &mut along.forms {
                     each.said = crate::inflect::german(&lemma, &entry.pos, &each.place, other);
@@ -1985,6 +2036,7 @@ fn finish<D: AsRef<[u8]>>(
                 .find(|gloss| !crate::annotate::about_grammar(gloss))
             {
                 form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
+                form.bare = crate::inflect::english_bare(meaning, &entry.pos, &form.place);
                 for along in &mut form.along {
                     for other in &mut along.forms {
                         other.said = crate::inflect::english(meaning, &entry.pos, &other.place);

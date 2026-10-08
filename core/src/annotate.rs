@@ -597,6 +597,11 @@ fn drawn_as<D: AsRef<[u8]>>(
     // in Spanish is neither the page nor the reader's language. A contraction with no word of
     // its own is the words it contracts, which the engine says: the other readings its
     // spelling reaches are "its" misspelled.
+    // A form is drawn as its meaning in that form: "corre" as "runs", "è" as "is", not as the
+    // infinitive the dictionary gives the meaning in.
+    if let Some(bare) = answer.paradigm.as_ref().and_then(|form| form.bare.clone()) {
+        return Some(bare);
+    }
     if target.0 != "en" {
         // A contraction is the words it contracts: German "im" is "in" and "dem", "en el".
         // Asked as a whole, it reached the one Spanish word glossed "in the", which nobody
