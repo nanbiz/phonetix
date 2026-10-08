@@ -281,6 +281,7 @@ name = "packbuild"
 version = "0.1.0"
 dependencies = [
  "flate2",
+ "lexcore",
  "lexpack",
  "serde_json",
  "sha2",

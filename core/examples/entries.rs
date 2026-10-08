@@ -7,7 +7,11 @@ fn main() {
         for entry in pack.lookup(word) {
             println!(
                 "  lemma={:?} pos={:?} tags={:?} ipa={:?} forms={}",
-                entry.lemma, entry.pos, entry.tags, entry.ipa.first(), entry.forms.len()
+                entry.lemma,
+                entry.pos,
+                entry.tags,
+                entry.ipa.first(),
+                entry.forms.len()
             );
             for sense in entry.senses.iter().take(4) {
                 println!("      {:?} {:?}", sense.gloss, sense.marks);

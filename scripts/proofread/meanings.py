@@ -26,10 +26,11 @@ CASES = {
     "es": ("El perro corre por el camino del banco. La casa es grande y los niños juegan en el parque.",
            {"El": "the", "perro": "dog", "camino": "way, route", "del": "of the, from the",
             "casa": "house", "es": "to be", "y": "and", "los": "the", "parque": "park"}),
-    "de": ("Er hat die ganze Nacht gearbeitet. Der Hund läuft auf dem Weg zur Bank. Das Haus ist groß.",
+    "de": ("Er hat die ganze Nacht gearbeitet. Der Hund läuft auf dem Weg zur Bank. Das Haus ist groß. "
+           "Meine Kinder spielen mit ihren Freunden.",
            {"Er": "he", "hat": "to have", "die": "the", "Nacht": "night", "Der": "the",
             "Hund": "dog, hound", "dem": "the", "Weg": "path, trail, track", "zur": "to the",
-            "Das": "the", "Haus": "house", "ist": "to be"}),
+            "Das": "the", "Haus": "house", "ist": "to be", "Meine": "my"}),
     "fr": ("Le chien court sur le chemin de la banque. Les enfants jouent dans le parc.",
            {"Le": "the", "chien": "dog", "le": "the", "la": "the", "banque": "bank",
             "Les": "the", "parc": "park"}),

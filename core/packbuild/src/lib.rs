@@ -188,8 +188,20 @@ fn senses(value: &Value) -> Vec<Sense> {
         if gloss.trim().is_empty() {
             continue;
         }
+        // Which word this is a form of, where the dump names it and the gloss kept does not:
+        // nested under "inflection of mein:", what is left is "nominative/accusative feminine
+        // singular", and German "meine" was read as whichever other word listed it - "his".
+        // Only a gloss that is nothing but the names of a form is given its word; one nested
+        // the same way that says what the form means - "her, its, their" under "inflection of
+        // ihr:" - is a meaning, and stays one.
+        let gloss = match form_of(sense) {
+            Some(lemma) if !mentions(gloss, &lemma) && lexcore::annotate::about_grammar(gloss) => {
+                format!("{} of {lemma}", gloss.trim())
+            }
+            _ => gloss.trim().to_string(),
+        };
         out.push(Sense {
-            gloss: gloss.trim().to_string(),
+            gloss,
             marks: strings(sense.get("tags")),
             // Only for the first senses, which are the ones a card can lead with: the first,
             // or one a translated line picked out of the first few. The rest were a third of the
@@ -206,6 +218,25 @@ fn senses(value: &Value) -> Vec<Sense> {
         });
     }
     out
+}
+
+/// The word a sense says its entry is a form of, where it says one.
+fn form_of(sense: &Value) -> Option<String> {
+    sense
+        .get("form_of")?
+        .as_array()?
+        .first()?
+        .get("word")?
+        .as_str()
+        .map(|word| word.trim().to_string())
+        .filter(|word| !word.is_empty())
+}
+
+/// Whether a gloss already names a word, as a whole word.
+fn mentions(gloss: &str, word: &str) -> bool {
+    gloss
+        .split(|c: char| !c.is_alphanumeric() && c != '-' && c != '\'')
+        .any(|part| part == word)
 }
 
 /// The other spellings that should reach this entry.
@@ -519,6 +550,31 @@ mod tests {
         .to_string();
         let read = read_line(&line, "de", &mut Skipped::default()).unwrap();
         assert_eq!(read.entry.senses[0].gloss, "to be");
+    }
+
+    #[test]
+    fn a_form_nested_under_its_lemma_keeps_the_lemma() {
+        let line = serde_json::json!({
+            "word": "meine", "pos": "det", "lang_code": "de",
+            "sounds": [{"ipa": "/ˈmaɪ̯nə/"}],
+            "senses": [{"glosses": ["inflection of mein:", "nominative/accusative plural"],
+                        "form_of": [{"word": "mein"}], "tags": ["form-of"]},
+                       {"glosses": ["plural of Hund"], "form_of": [{"word": "Hund"}],
+                        "tags": ["form-of"]},
+                       {"glosses": ["inflection of mein:", "my (referring to a plural noun)"],
+                        "form_of": [{"word": "mein"}], "tags": ["form-of"]}],
+        })
+        .to_string();
+        let read = read_line(&line, "de", &mut Skipped::default()).unwrap();
+        assert_eq!(
+            read.entry.senses[0].gloss,
+            "nominative/accusative plural of mein"
+        );
+        assert_eq!(read.entry.senses[1].gloss, "plural of Hund");
+        assert_eq!(
+            read.entry.senses[2].gloss,
+            "my (referring to a plural noun)"
+        );
     }
 
     #[test]

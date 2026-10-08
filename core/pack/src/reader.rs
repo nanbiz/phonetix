@@ -206,7 +206,9 @@ impl<D: AsRef<[u8]>> Pack<D> {
             if !own.is_empty() {
                 out = own;
             }
-            self.crowded.borrow_mut().insert(spelling.to_string(), out.clone());
+            self.crowded
+                .borrow_mut()
+                .insert(spelling.to_string(), out.clone());
         }
         out
     }

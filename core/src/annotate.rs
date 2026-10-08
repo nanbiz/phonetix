@@ -743,7 +743,7 @@ fn tidy(text: &str) -> String {
 /// Two shapes: a note pointing at another word - "plural of perro", "inflection of correr" -
 /// and a description of what kind of word it is - "masculine singular definite article". A
 /// short meaning that merely contains one of these words, "person", is neither.
-pub(crate) fn about_grammar(part: &str) -> bool {
+pub fn about_grammar(part: &str) -> bool {
     const GRAMMAR: &[&str] = &[
         "article",
         "inflection",
@@ -793,12 +793,43 @@ pub(crate) fn about_grammar(part: &str) -> bool {
     // Nothing but the names of a form, however short: "accusative masculine", "dative plural",
     // "third-person singular present" are where a dump lost the word they are forms of.
     const FORM_WORDS: &[&str] = &[
-        "nominative", "accusative", "dative", "genitive", "ablative", "vocative", "locative",
-        "instrumental", "singular", "plural", "dual", "masculine", "feminine", "neuter",
-        "first-person", "second-person", "third-person", "present", "past", "preterite",
-        "perfect", "imperfect", "future", "imperative", "subjunctive", "indicative",
-        "conditional", "infinitive", "participle", "gerund", "definite", "indefinite", "strong",
-        "weak", "mixed", "comparative", "superlative",
+        "nominative",
+        "accusative",
+        "dative",
+        "genitive",
+        "ablative",
+        "vocative",
+        "locative",
+        "instrumental",
+        "singular",
+        "plural",
+        "dual",
+        "masculine",
+        "feminine",
+        "neuter",
+        "first-person",
+        "second-person",
+        "third-person",
+        "present",
+        "past",
+        "preterite",
+        "perfect",
+        "imperfect",
+        "future",
+        "imperative",
+        "subjunctive",
+        "indicative",
+        "conditional",
+        "infinitive",
+        "participle",
+        "gerund",
+        "definite",
+        "indefinite",
+        "strong",
+        "weak",
+        "mixed",
+        "comparative",
+        "superlative",
     ];
     // Words that join form names, and are a gloss of their own alone: "and" is "y", "I" is
     // "ich".
@@ -808,7 +839,11 @@ pub(crate) fn about_grammar(part: &str) -> bool {
         .filter(|word| !word.is_empty())
         .collect();
     // Two names at least: one alone is as often a word - "present", "past", "perfect".
-    if named.iter().filter(|word| FORM_WORDS.contains(word)).count() >= 2
+    if named
+        .iter()
+        .filter(|word| FORM_WORDS.contains(word))
+        .count()
+        >= 2
         && named
             .iter()
             .all(|word| FORM_WORDS.contains(word) || JOINING.contains(word))
@@ -952,8 +987,13 @@ mod tests {
 
     #[test]
     fn the_names_of_a_form_are_grammar_and_a_word_is_not() {
-        for note in ["accusative masculine", "dative plural", "third-person singular present",
-                     "nominative/accusative singular feminine", "second-person plural subjunctive I"] {
+        for note in [
+            "accusative masculine",
+            "dative plural",
+            "third-person singular present",
+            "nominative/accusative singular feminine",
+            "second-person plural subjunctive I",
+        ] {
             assert!(about_grammar(note), "{note}");
         }
         for word in ["and", "I", "or", "plus, and", "present", "animal"] {
@@ -969,8 +1009,16 @@ mod tests {
         let sound = options(InlineMode::Sound, 3);
         let whole = annotate(
             &[
-                TextRun { id: 1, text: first.into(), lang_hint: None },
-                TextRun { id: 2, text: second.into(), lang_hint: None },
+                TextRun {
+                    id: 1,
+                    text: first.into(),
+                    lang_hint: None,
+                },
+                TextRun {
+                    id: 2,
+                    text: second.into(),
+                    lang_hint: None,
+                },
             ],
             &es,
             &es,
@@ -988,7 +1036,10 @@ mod tests {
             &es,
             &es,
             &nothing_open(),
-            &AnnotateOptions { counts, ..sound.clone() },
+            &AnnotateOptions {
+                counts,
+                ..sound.clone()
+            },
         )
         .0;
         let picked = |tokens: &[Token]| tokens.iter().map(|t| t.inline).collect::<Vec<_>>();

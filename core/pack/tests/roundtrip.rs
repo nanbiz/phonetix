@@ -299,8 +299,11 @@ fn an_auxiliary_listed_under_every_verb_answers_only_as_itself() {
     // German "haben" is listed among the forms of every verb that takes it, which in the real
     // dictionary is nine thousand of them. None of those is the word a reader met.
     let mut pack = Builder::new("de", Kind::Lex, 1_757_000_000);
-    pack.add(word("haben", "verb", "ˈhaːbn̩", &["to have"]), &["hat", "hatte"])
-        .unwrap();
+    pack.add(
+        word("haben", "verb", "ˈhaːbn̩", &["to have"]),
+        &["hat", "hatte"],
+    )
+    .unwrap();
     for at in 0..300 {
         pack.add(
             word(&format!("verb{at}"), "verb", "x", &["to do something"]),
@@ -320,7 +323,10 @@ fn an_auxiliary_listed_under_every_verb_answers_only_as_itself() {
 
     let found = pack.lookup("haben");
     assert_eq!(
-        found.iter().map(|entry| entry.lemma.as_str()).collect::<Vec<_>>(),
+        found
+            .iter()
+            .map(|entry| entry.lemma.as_str())
+            .collect::<Vec<_>>(),
         vec!["haben"],
         "an auxiliary is answered as itself, not as three hundred verbs"
     );

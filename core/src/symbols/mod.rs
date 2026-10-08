@@ -172,7 +172,11 @@ pub fn explain(ipa: &str) -> Vec<Symbol> {
     // of the word, which then read /fˈɡrʊnt/.
     tokenize(ipa)
         .iter()
-        .map(|t| describe(t).or_else(|| joined(t)).unwrap_or_else(|| unknown(t)))
+        .map(|t| {
+            describe(t)
+                .or_else(|| joined(t))
+                .unwrap_or_else(|| unknown(t))
+        })
         .collect()
 }
 
@@ -183,7 +187,10 @@ fn joined(token: &str) -> Option<Symbol> {
     if parts.len() < 2 {
         return None;
     }
-    let described: Vec<Symbol> = parts.iter().map(|part| describe(part)).collect::<Option<_>>()?;
+    let described: Vec<Symbol> = parts
+        .iter()
+        .map(|part| describe(part))
+        .collect::<Option<_>>()?;
     let kind = described[0].kind.clone();
     Some(Symbol {
         token: token.to_string(),
@@ -384,12 +391,19 @@ mod tests {
     #[test]
     fn every_sound_is_kept_whether_or_not_it_is_named() {
         for ipa in ["a͡ʊfˈɡrʊnt", "ˈhaɪ̯mtiːɐ̯", "t͡ʃa", "x☺y"] {
-            let back: String = explain(ipa).into_iter().map(|symbol| symbol.token).collect();
+            let back: String = explain(ipa)
+                .into_iter()
+                .map(|symbol| symbol.token)
+                .collect();
             assert_eq!(back, ipa);
         }
         let diphthong = &explain("a͡ʊf")[0];
         assert_eq!(diphthong.kind, "vowel");
-        assert!(diphthong.name.contains(" gliding into "), "{}", diphthong.name);
+        assert!(
+            diphthong.name.contains(" gliding into "),
+            "{}",
+            diphthong.name
+        );
     }
 
     #[test]

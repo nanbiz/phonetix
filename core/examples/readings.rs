@@ -17,16 +17,28 @@ fn main() {
             Some((before, word)) => (Some(before), word),
             None => (None, asked.as_str()),
         };
-        let answer = read_in_context(word, before, &Lang(args[3].clone()), &Lang(args[4].clone()), &open);
+        let answer = read_in_context(
+            word,
+            before,
+            &Lang(args[3].clone()),
+            &Lang(args[4].clone()),
+            &open,
+        );
         println!(
             "{word}: {:?} lemma={:?} form={:?} pos={:?} says={:?} glosses={:?}",
-            answer.state, answer.lemma, answer.form, answer.pos, answer.says,
+            answer.state,
+            answer.lemma,
+            answer.form,
+            answer.pos,
+            answer.says,
             answer.glosses.iter().take(2).collect::<Vec<_>>()
         );
         for reading in &answer.readings {
             println!(
                 "    {:?} says={:?} glosses={:?}",
-                reading.pos, reading.says, reading.glosses.iter().take(2).collect::<Vec<_>>()
+                reading.pos,
+                reading.says,
+                reading.glosses.iter().take(2).collect::<Vec<_>>()
             );
         }
     }

@@ -1645,6 +1645,35 @@ fn a_function_word_filed_as_a_form_still_wins() {
     assert_eq!(drawn(&french, "fr", "de la banque", "la"), "the");
 }
 
+/// An entry that says only which form of another word it is reads as that word, and as the
+/// one it names rather than any other word listing the same spelling among its forms.
+#[test]
+fn a_form_note_reads_as_the_word_it_names() {
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(word("mein", "det", "maɪ̯n", &["my"]), &["meine"])
+        .unwrap();
+    let mut meine = word(
+        "meine",
+        "det",
+        "ˈmaɪ̯nə",
+        &["nominative/accusative plural of mein"],
+    );
+    meine.senses[0].marks = vec!["form-of".to_string()];
+    german.add(meine, &[] as &[&str]).unwrap();
+    // Listed first, as an inflection table can list another word's forms beside its own.
+    german
+        .add(word("sein", "det", "zaɪ̯n", &["his"]), &["meine"])
+        .unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        ..Open::default()
+    };
+    let got = look_up("meine", &lang("de"), &lang("en"), &open);
+    assert_eq!(got.says.first().map(String::as_str), Some("my"), "{got:?}");
+}
+
 /// A capital at the start of a sentence says nothing; in the middle of a German one it does.
 #[test]
 fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
@@ -1715,7 +1744,12 @@ fn a_word_reached_only_through_a_dialect_spelling_is_not_a_reading() {
     // "have and 've" that brings "'ve" up under "of" as well.
     let mut en = Builder::new("en", Kind::Lex, 0);
     en.add(
-        word("of", "prep", "ɒv", &["Since, from (a given time, earlier state etc.)."]),
+        word(
+            "of",
+            "prep",
+            "ɒv",
+            &["Since, from (a given time, earlier state etc.)."],
+        ),
         &[] as &[&str],
     )
     .unwrap();
@@ -1728,14 +1762,22 @@ fn a_word_reached_only_through_a_dialect_spelling_is_not_a_reading() {
     }];
     en.add(spelled, &[] as &[&str]).unwrap();
     en.add(
-        word("'ve", "verb", "v", &["Have (in its sense marking the perfect or retrospective aspect)."]),
+        word(
+            "'ve",
+            "verb",
+            "v",
+            &["Have (in its sense marking the perfect or retrospective aspect)."],
+        ),
         &["of"],
     )
     .unwrap();
     let en = Pack::open(en.finish().unwrap()).unwrap();
     let mut de = Builder::new("de", Kind::Lex, 0);
-    de.add(word("haben", "verb", "ˈhaːbn̩", &["to have"]), &[] as &[&str])
-        .unwrap();
+    de.add(
+        word("haben", "verb", "ˈhaːbn̩", &["to have"]),
+        &[] as &[&str],
+    )
+    .unwrap();
     de.add(word("von", "prep", "fɔn", &["from; of"]), &[] as &[&str])
         .unwrap();
     let de = Pack::open(de.finish().unwrap()).unwrap();
@@ -1748,8 +1790,15 @@ fn a_word_reached_only_through_a_dialect_spelling_is_not_a_reading() {
     let answer = read_in_context("of", None, &lang("en"), &lang("de"), &open);
 
     assert_eq!(answer.pos.as_deref(), Some("prep"));
-    assert!(!answer.says.contains(&"haben".to_string()), "{:?}", answer.says);
-    assert!(answer.readings.iter().all(|r| r.pos.as_deref() != Some("verb")));
+    assert!(
+        !answer.says.contains(&"haben".to_string()),
+        "{:?}",
+        answer.says
+    );
+    assert!(answer
+        .readings
+        .iter()
+        .all(|r| r.pos.as_deref() != Some("verb")));
 }
 
 /// A word met as itself is not read as a word it is only a form of, because the reader's
@@ -1780,7 +1829,12 @@ fn a_word_the_spelling_is_only_a_form_of_wins_only_by_being_commoner_itself() {
     let es = spanish.finish().unwrap();
 
     let mut english = Builder::new("en", Kind::Lex, 0);
-    for (lemma, count) in [("tomcat", 5000), ("house cat", 1), ("note", 80000), ("show-off", 10)] {
+    for (lemma, count) in [
+        ("tomcat", 5000),
+        ("house cat", 1),
+        ("note", 80000),
+        ("show-off", 10),
+    ] {
         let mut entry = word(lemma, "noun", "x", &[lemma]);
         entry.tags.push(format!("count:{count}"));
         english.add(entry, &[] as &[&str]).unwrap();
@@ -1801,8 +1855,17 @@ fn a_word_the_spelling_is_only_a_form_of_wins_only_by_being_commoner_itself() {
         read_in_context(spelling, None, &lang(source), &lang("en"), &open)
     };
     let cat = reading(&de, "Katze", "de");
-    assert_eq!(cat.lemma, None, "Katze is the cat, not a form of Kater: {:?}", cat.says);
+    assert_eq!(
+        cat.lemma, None,
+        "Katze is the cat, not a form of Kater: {:?}",
+        cat.says
+    );
     assert_eq!(cat.says.first().map(String::as_str), Some("house cat"));
     let notes = reading(&es, "notas", "es");
-    assert_eq!(notes.lemma.as_deref(), Some("nota"), "notas are notes: {:?}", notes.says);
+    assert_eq!(
+        notes.lemma.as_deref(),
+        Some("nota"),
+        "notas are notes: {:?}",
+        notes.says
+    );
 }

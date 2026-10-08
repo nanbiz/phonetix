@@ -879,6 +879,17 @@ fn is_minor(entry: &Entry) -> bool {
     spelled_elsewhere || unusual
 }
 
+/// The word a note about a form says it is a form of: "nominative/accusative plural of mein" is
+/// "mein". Only for a note that is nothing but that, since "of" in a meaning is any "of".
+fn form_of_word(gloss: &str) -> Option<String> {
+    if gloss.contains(':') || !crate::annotate::about_grammar(gloss) {
+        return None;
+    }
+    let (_, word) = gloss.rsplit_once(" of ")?;
+    let word = word.trim().trim_end_matches('.');
+    (!word.is_empty() && !word.contains(' ')).then(|| word.to_string())
+}
+
 /// The words a gloss says its entry is a spelling of: "Eye dialect spelling of have and 've,
 /// chiefly in depictions of colloquial speech." is "have" and "'ve".
 fn spelled_as(gloss: &str) -> Vec<String> {
@@ -939,7 +950,34 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // nothing but point at another entry last. The pack lists hits in the order the entries
     // were built, which is the dump's alphabetical order, so "caminar" - whose forms include
     // "camino" - came before "camino" itself, and "camino" was read as "to walk".
-    found.sort_by_key(|entry| rank_of(entry, spelling));
+    // An entry that says only which form of another word it is stands for that word, where
+    // the word is here to say what it means: German "meine" is filed as "nominative/accusative
+    // plural of mein" and nothing more, and "mein", "my", is the reading. It takes the place
+    // of the note, ahead of every other word that lists the spelling among its forms - "sein"
+    // lists "meine" too.
+    let named: Vec<(String, u8)> = found
+        .iter()
+        .filter(|entry| same_word(&entry.lemma, spelling))
+        .flat_map(|entry| {
+            let rank = rank_of(entry, spelling);
+            entry
+                .senses
+                .iter()
+                .filter_map(move |sense| form_of_word(&sense.gloss).map(|word| (word, rank)))
+        })
+        .collect();
+    found.sort_by_key(|entry| {
+        let own = rank_of(entry, spelling);
+        let standing_for = named
+            .iter()
+            .filter(|(word, _)| same_word(word, &entry.lemma))
+            .map(|(_, rank)| *rank)
+            .min();
+        match standing_for {
+            Some(rank) => (own.min(rank), false),
+            None => (own, true),
+        }
+    });
 
     // With the line translated, each entry leads with the sense the line is about: "banco" on
     // a line about a bench is the bench, though the dictionary lists the bank first.
@@ -961,7 +999,12 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     let pointed: Vec<String> = found
         .iter()
         .filter(|entry| same_word(&entry.lemma, spelling) && is_minor(entry))
-        .flat_map(|entry| entry.senses.iter().flat_map(|sense| spelled_as(&sense.gloss)))
+        .flat_map(|entry| {
+            entry
+                .senses
+                .iter()
+                .flat_map(|sense| spelled_as(&sense.gloss))
+        })
         .collect();
     let found: Vec<Entry> = found
         .into_iter()
@@ -1077,7 +1120,11 @@ pub fn read_in_context<D: AsRef<[u8]>>(
         // apart by the dictionary's own join rather than a word of the reader's: how often
         // German says "anzünden" says nothing about whether "light" is the verb, and ranked
         // that way "can" was "einmachen" and "rock" was "wiegen".
-        .or_else(|| (source.0 != "en").then(|| commonest_answer(&all, open)).flatten())
+        .or_else(|| {
+            (source.0 != "en")
+                .then(|| commonest_answer(&all, open))
+                .flatten()
+        })
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
         // the article, not the adverb of "the more the merrier".
@@ -1130,8 +1177,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
 /// are a region's or another age's has no label a reader should be handed, and one the dump's
 /// own parser marked as not understood is no label at all.
 fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
-    const UNUSUAL: [&str; 7] =
-        ["swiss", "austrian", "dialect", "archaic", "obsolete", "nonstandard", "alternative"];
+    const UNUSUAL: [&str; 7] = [
+        "swiss",
+        "austrian",
+        "dialect",
+        "archaic",
+        "obsolete",
+        "nonstandard",
+        "alternative",
+    ];
     let labels: Vec<&str> = entry
         .forms
         .iter()
