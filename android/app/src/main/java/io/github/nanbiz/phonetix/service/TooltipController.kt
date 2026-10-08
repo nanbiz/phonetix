@@ -24,6 +24,7 @@ import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
+import io.github.nanbiz.phonetix.core.Fetch
 import io.github.nanbiz.phonetix.core.Speech
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Settings
@@ -229,7 +230,26 @@ class TooltipController(
             val settings = SettingsStore.current
             val source = asked.language.ifEmpty { Language.OURS }
             val into = settings.intoFor(source)
-            if (first == null || into.isEmpty() || asked.sentence.isBlank()) return@execute
+            if (first == null || into.isEmpty()) return@execute
+            // A word no dictionary here holds is translated by the engine on this phone, and
+            // the card says a machine did it: a card that only said how such a word sounds told
+            // the reader nothing about what it means. Where the direction is not here yet it is
+            // fetched for the next word, rather than kept waiting for under this one.
+            // So is one only another language's dictionary held: "libre" on a Spanish line is
+            // Spanish, and the English dictionary's entry for it said it the English way and
+            // meant nothing. That dictionary answers only where the engine says the word back
+            // unchanged, as it does for "feat" in a German song title.
+            val borrowed = first.source.isNotEmpty() && first.source != source
+            if ((first.says.isEmpty() && first.glosses.isEmpty()) || borrowed) {
+                val guessed = guessFor(asked.word, source, into, first)
+                if (guessed == null) {
+                    Fetch.model(context, source, into)
+                } else {
+                    main.post { if (stillOn(asked) && view != null) render(shown!!, guessed) }
+                }
+                return@execute
+            }
+            if (asked.sentence.isBlank()) return@execute
             val said = Reading.lineSaid(asked.sentence, source, into)
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "TOOLTIP line ${asked.sentence.take(60)} => $said")
@@ -242,6 +262,37 @@ class TooltipController(
             }
             main.post { if (stillOn(asked) && view != null) render(shown!!, better) }
         }
+    }
+
+    /**
+     * [known] with what the engine on this phone makes of [word] in [into], marked as a
+     * machine's answer, or nothing where the engine has no such direction or says the word back.
+     */
+    private fun guessFor(word: String, source: String, into: String, known: Answer): Answer? {
+        val said = Reading.lineSaid(word, source, into)?.trim()?.trim('.', ',', '!', '?')
+            ?.takeIf { it.isNotBlank() && !it.equals(word, ignoreCase = true) }
+            ?: return null
+        // Said the way the screen's language says it, which a dictionary of another language
+        // the answer came from does not.
+        val spoken = if (known.source == source) known.ipa else {
+            voiced(word, source).takeIf { it.isNotBlank() }?.let(::listOf).orEmpty()
+        }
+        return known.copy(
+            state = Answer.State.Guess,
+            says = listOf(said),
+            glosses = emptyList(),
+            ipa = spoken,
+            symbols = spoken.firstOrNull()?.let(IpaSymbols::explain).orEmpty(),
+            // What another language's dictionary said the word is belongs to that language.
+            lemma = known.lemma.takeIf { known.source == source },
+            form = known.form.takeIf { known.source == source },
+            pos = known.pos.takeIf { known.source == source },
+            readings = emptyList(),
+            provenance = Answer.Provenance.Guess("bergamot"),
+            source = source,
+            target = into,
+            lead = null,
+        )
     }
 
     /** Whether the finger is still on [asked]'s word, with no other answer handed in. */

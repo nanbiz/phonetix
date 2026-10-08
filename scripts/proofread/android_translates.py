@@ -3,8 +3,9 @@
 
 This serves the fixture packs the way the release host would, tells the app where they are and
 which language the reader reads into, holds the side button on a word and reads the card it
-shows while held: the translation with the translation switch on, the pronunciation with the
-pronunciation switch on, both with both. The card has to be gone once the button is let go.
+shows while held: how the word is said and what it means, and only how it is said where the
+word is in a language the reader reads as it is. The card has to be gone once the button is
+let go.
 
   PHONETIX_ANDROID_SERIAL=emulator-5554 uv run python scripts/proofread/android_translates.py
 """

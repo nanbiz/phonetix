@@ -43,7 +43,7 @@ def main():
             raise SystemExit("the service would not start")
         dev.set_enabled(True)
         dev.clear_log()
-        dev.surface(mode="plain", packHost="none", target="de", layer="meaning", enable=1,
+        dev.surface(mode="plain", packHost="none", target="de", enable=1,
                     density=1)
         time.sleep(45)
         print(f"  on cellular: asked {fetched(dev)}, holding {[f for f in held() if 'lex' in f]}")

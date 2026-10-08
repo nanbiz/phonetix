@@ -60,7 +60,7 @@ def main():
     shell("am", "force-stop", PKG)
     time.sleep(1)
     dev.enable_service()
-    dev.surface(mode="chat", enable=1, density=1, lens=1, layer="off")
+    dev.surface(mode="chat", enable=1, density=1, lens=1)
     time.sleep(8)
     # Waited for rather than asked once: a page that has just come up has not been read yet,
     # and "nothing believed" then is the check measuring its own impatience.
@@ -79,7 +79,7 @@ def main():
     shell("am", "force-stop", PKG)
     time.sleep(1)
     dev.enable_service()
-    dev.surface(mode="chat", enable=1, density=1, lens=1, layer="off", growEvery=400)
+    dev.surface(mode="chat", enable=1, density=1, lens=1, growEvery=400)
     time.sleep(8)
     written = []
     for _ in range(6):

@@ -61,7 +61,7 @@ def main():
     middle = (across // 2, down // 2)
 
     for side, stays in (("free", True), ("right", False)):
-        dev.surface(mode="plain", enable=1, density=1, lens=1, layer="both",
+        dev.surface(mode="plain", enable=1, density=1, lens=1,
                     target="none", side=side, pin=0)
         time.sleep(6)
         at = where()

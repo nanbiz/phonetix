@@ -3,8 +3,10 @@
 
 An app's own menu or bottom sheet is drawn inside that app's window, not in a window of its
 own, so nothing in the window list says it is there. The words underneath it are still in the
-tree and still report where they are, and their transcriptions were painted on top of the
-sheet - which is what a reader photographed and called covered words still being displayed.
+tree and still report where they are. Their transcriptions used to be painted on top of the
+sheet, which is what a reader photographed; nothing is painted now, but the words the service
+knows are the words the side button answers, and a word behind a sheet answered there is a
+card about a word the reader cannot see.
 
 Draw order is what tells: anything painted after a word's own node is over it. Text was
 exempt from that, because two runs of text in one flow share the visual line where one ends
@@ -22,7 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from android_harness import Device, SERIAL
 import state as State
 
-# The sheet's own words, which are on the screen and must still be transcribed.
+# The sheet's own words, which are on the screen and must still be known.
 ITS_OWN = ("the", "sheet", "over", "it")
 
 
@@ -35,7 +37,7 @@ def believed():
 
 
 def drawn(dev, want=True):
-    """What is painted, waited for rather than sampled once."""
+    """What the service knows is on the screen, waited for rather than sampled once."""
     for _ in range(10):
         boxes = ((believed().get("overlay") or {}).get("boxes") or [])
         if bool(boxes) == want:
@@ -53,15 +55,15 @@ def main():
 
     # First the same page with nothing over it, so what follows is about the sheet and not
     # about the page being unreadable.
-    dev.surface(mode="unique", enable=1, density=1, lens=1, layer="sound")
+    dev.surface(mode="unique", enable=1, density=1, lens=1)
     time.sleep(8)
     bare = drawn(dev)
     print(f"  with nothing over it: {len(bare)} words")
     if not bare:
-        print("FAIL - nothing was transcribed with the page clear, so there is nothing to cover")
+        print("FAIL - no word was known with the page clear, so there is nothing to cover")
         sys.exit(1)
 
-    dev.surface(mode="sheet", enable=1, density=1, lens=1, layer="sound")
+    dev.surface(mode="sheet", enable=1, density=1, lens=1)
     time.sleep(10)
     boxes = drawn(dev)
     top = dev.height // 2
@@ -76,19 +78,19 @@ def main():
 
     if under:
         failures.append(
-            f"{len(under)} words behind the sheet are still transcribed, among them "
+            f"{len(under)} words behind the sheet are still known, among them "
             f"{[b.get('word') for b in under[:5]]}")
     if not above:
-        failures.append("nothing above the sheet is transcribed, so the page was lost entirely")
+        failures.append("nothing above the sheet is known, so the page was lost entirely")
     if not its_own:
-        failures.append("the sheet's own words are not transcribed, though they are on top")
+        failures.append("the sheet's own words are not known, though they are on top")
 
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - what a sheet covers is not transcribed, and what it says is")
+    print("\nPASS - what a sheet covers is not known to the button, and what it says is")
 
 
 if __name__ == "__main__":

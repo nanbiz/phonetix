@@ -92,9 +92,9 @@ def parked_at(dev, mode="mute", **extras):
         # In the caller's own fixture. Asking in a fixed one put the mute page up over
         # whatever the check had arranged: the keyboard check lost the box it types into and
         # reported the page as never having come up.
-        dev.surface(mode=mode, enable=1, density=1, lens=0, layer="off", **extras)
+        dev.surface(mode=mode, enable=1, density=1, lens=0, **extras)
         time.sleep(2)
-        dev.surface(mode=mode, enable=1, density=1, lens=1, layer="off", **extras)
+        dev.surface(mode=mode, enable=1, density=1, lens=1, **extras)
         time.sleep(3)
         found = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         if found:
@@ -302,7 +302,7 @@ def main():
     # looking at it. Those lines used to be read and dropped, leaving the mark a screenful of
     # text to answer nothing about. With nothing drawn over the words, they are laid out
     # evenly across the line's own rectangle instead: near enough to point at.
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off")
+    dev.surface(mode="mute", enable=1, density=1, lens=1)
     time.sleep(8)
     guessed = dev.annotated()
     print(f"  on a page that will not say where its characters are: {len(guessed)} words known")
@@ -320,9 +320,9 @@ def main():
         # old place never touches it - which reads as a mark that passes over nothing.
         # Asked for once more so it says where it parked in a log this drag can see: it says
         # it when it goes up, which was before this page was even asked for.
-        dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
+        dev.surface(mode="mute", enable=1, density=1, lens=0)
         time.sleep(2)
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off")
+        dev.surface(mode="mute", enable=1, density=1, lens=1)
         time.sleep(6)
         again = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         mx, my, mw, mh = (int(v) for v in again[-1])
@@ -407,15 +407,15 @@ def main():
     # where the mark is built, the setting did nothing until something else took it down.
     for side, edge in (("left", "near"), ("right", "far")):
         dev.clear_log()
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side=side)
+        dev.surface(mode="mute", enable=1, density=1, lens=1, side=side)
         time.sleep(4)
         where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)", dev.lines("LENSPARKED"))
         if not where:
             # It says where it is when it is put up or moved, and the log was cleared for
             # this. Ask for the page again so it says so afresh.
-            dev.surface(mode="mute", enable=1, density=1, lens=0, layer="off")
+            dev.surface(mode="mute", enable=1, density=1, lens=0)
             time.sleep(2)
-            dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off",
+            dev.surface(mode="mute", enable=1, density=1, lens=1,
                         side=side)
             time.sleep(5)
             where = re.findall(r"LENSPARKED (\d+),(\d+),(\d+),(\d+)",
@@ -452,7 +452,7 @@ def main():
     # away from wherever that is - so a reader who keeps it high up is not left pointing at
     # words through their own hand.
     dev.clear_log()
-    dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=30)
+    dev.surface(mode="mute", enable=1, density=1, lens=1, side="right", pin=1, restY=30)
     time.sleep(5)
     high = parked_at(dev, side="right", pin=1, restY=30)
     if high is None:
@@ -488,7 +488,7 @@ def main():
     # where it stands and asking for the other side: it has to arrive at the same height.
     if high is not None:
         dev.clear_log()
-        dev.surface(mode="mute", enable=1, density=1, lens=1, layer="off", side="left", pin=0,
+        dev.surface(mode="mute", enable=1, density=1, lens=1, side="left", pin=0,
                     restY=30)
         time.sleep(5)
         across = parked_at(dev, side="left", pin=0, restY=30)
@@ -511,7 +511,7 @@ def main():
     # it takes none of the touches meant for it and cannot be moved out of the way either, so
     # a reader typing - who is exactly the reader asking about what they are reading - is left
     # without it.
-    dev.surface(mode="typing", enable=1, density=1, lens=1, layer="off", side="right", pin=1, restY=92)
+    dev.surface(mode="typing", enable=1, density=1, lens=1, side="right", pin=1, restY=92)
     time.sleep(5)
     low = mark_at(dev)
     told = shell("uiautomator", "dump", "/sdcard/ui.xml") and shell("cat", "/sdcard/ui.xml")
@@ -543,7 +543,7 @@ def main():
             failures.append(
                 f"a keyboard opened at {top} and the button is at {lifted}, behind it")
 
-    dev.surface(mode="spanish", enable=1, density=1, lens=1, layer="meaning")
+    dev.surface(mode="spanish", enable=1, density=1, lens=1)
     time.sleep(4)
 
     # Nothing keeps asking once the finger has gone.

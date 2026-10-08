@@ -50,7 +50,7 @@ def main():
     dev.set_enabled(True)
     failures = []
 
-    dev.surface(mode="plain", enable=1, density=1, lens=1, layer="both", target="none")
+    dev.surface(mode="plain", enable=1, density=1, lens=1, target="none")
     time.sleep(8)
     def middle():
         """Where the button is now.

@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""Talking to a device, and reading what the overlay says it did.
+"""Talking to a device, and reading what the service says it did.
 
-Shared by the overlay test suites. Two things come off the device and they are deliberately
-independent of each other:
-
-  * what the service reports it drew, and where (its own account of itself);
-  * what the screen actually shows, captured through the emulator console, which is the
-    only capture that contains another app's overlay windows.
-
-A test that only ever consults the first is trusting the thing under test. The pixel checks
-exist so at least one oracle owes nothing to our own bookkeeping.
+Shared by the Android suites: which emulator is ours, driving the test page, the side button
+dragged and held over a word with real motion events, the card it shows read off the card's
+own report, and the screen captured through the emulator console, which is the only capture
+that contains our accessibility windows.
 """
 import os
 import re
@@ -80,23 +75,6 @@ def adb(*args, timeout=90):
     ).stdout
 
 
-def wait_until_quiet(limit=1.5, seconds=90):
-    """Hold until the device is not still working through somebody else's load.
-
-    A run that puts the device under load and then measures it has to start from the same
-    place every time, and it does not: the load a previous run left behind decays over
-    minutes, so the same build measured 97% of a movement followed after a long gap and 67%
-    when run straight afterwards. Neither was about the build.
-    """
-    for _ in range(seconds):
-        out = shell("uptime")
-        m = re.search(r"load average:\s*([\d.]+)", out)
-        if m and float(m.group(1)) <= limit:
-            return True
-        time.sleep(1)
-    return False
-
-
 def shell(*args, timeout=90):
     return adb("shell", *args, timeout=timeout)
 
@@ -113,9 +91,6 @@ class Device:
         return (int(m.group(1)), int(m.group(2))) if m else (1080, 1920)
 
     # ---- setup -------------------------------------------------------------
-
-    def install(self, apk):
-        return "Success" in adb("install", "-r", apk, timeout=300)
 
     def hide_error_dialogs(self):
         """Stop the system putting an "isn't responding" dialog over the screen.
@@ -211,7 +186,7 @@ class Device:
         rebuild takes seconds, asking again each time only made the rebuilding worse.
         """
         for _ in range(int(seconds * 2)):
-            if f"mode={mode} " in self.lines(f"SETTINGS "):
+            if f"mode={mode} " in self.lines("SETTINGS "):
                 return
             time.sleep(0.5)
 
@@ -351,36 +326,6 @@ class Device:
             out.append((stamp, boxes))
         return out
 
-    def scroll_timeline(self, log=None):
-        """Where the page said it was, and when. Ground truth the overlay never sees."""
-        out = []
-        for line in (log if log is not None else self.log()).splitlines():
-            m = re.search(r"SCROLLY (\d+) (-?\d+)", line)
-            if m:
-                out.append((int(m.group(1)), int(m.group(2))))
-        return out
-
-    def scroll_at(self, timeline, stamp):
-        """Where the page was at a given instant: the last position it reported by then.
-
-        A page moves in frames, and between two of them it is not on its way anywhere - it
-        is standing exactly where the last frame put it. Reading a straight line between two
-        reports says otherwise, and where the app misses a frame and then covers the whole
-        distance in the next one, that line is a movement the page never made: a reading
-        taken in the middle of it was measured against a position the page was never at, and
-        counted as drift of hundreds of pixels.
-        """
-        if not timeline:
-            return None
-        if stamp <= timeline[0][0]:
-            return timeline[0][1]
-        held = timeline[0][1]
-        for at, y in timeline:
-            if at > stamp:
-                break
-            held = y
-        return held
-
     # ---- what the screen actually shows --------------------------------------
 
     def screenshot(self, into):
@@ -414,21 +359,6 @@ class Device:
                 time.sleep(0.3)
             time.sleep(1.0 + attempt)
         return None
-
-
-def drawn_pairs(line):
-    """Each word of a DRAWN line and what is written over it, in the order they were drawn.
-
-    Apart by " | ", because what is written over a word can be several words: "to be".
-    """
-    rest = line.split("DRAWN ", 1)[1] if "DRAWN " in line else line
-    pairs = []
-    for piece in rest.split(" | "):
-        piece = piece.strip()
-        if "=" in piece:
-            word, said = piece.split("=", 1)
-            pairs.append((word, said))
-    return pairs
 
 
 def finger_for(target, home, dpi, width, height):
@@ -519,19 +449,7 @@ def carried_along(lines, home):
     return int(sorted(offsets)[len(offsets) // 2]) if offsets else 0
 
 
-def rgb(value):
-    return ((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF)
-
-
-def near(a, b, tol):
-    return all(abs(x - y) <= tol for x, y in zip(a, b))
-
-
-def overlaps(a, b):
-    return not (a[2] <= b[0] or b[2] <= a[0] or a[3] <= b[1] or b[3] <= a[1])
-
-
-def card_while_held(dev, word, dwell=6.0):
+def card_while_held(dev, word, dwell=6.0, newest=False):
     """What the card says while the side button is held on [word], and whether it is gone
     once the button is let go.
 
@@ -539,6 +457,10 @@ def card_while_held(dev, word, dwell=6.0):
     under way: the drag is played in the background and the card's own report of what it laid
     out is waited for. Returns (texts on the card, whether it closed after release); texts is
     empty where no card came up for the word.
+
+    [newest] reads the card as it stood when the finger lifted rather than as it first came up:
+    a card is redrawn once the word's line has been translated, where the line decides which
+    of the word's meanings it is.
     """
     import state as State
     box = mark = None
@@ -577,19 +499,33 @@ def card_while_held(dev, word, dwell=6.0):
     player = subprocess.Popen(
         ["adb", "-s", SERIAL, "shell", "monkey", "-f", "/data/local/tmp/phonetix-hold.monkey", "1"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    texts = []
-    started = time.time()
-    while time.time() - started < dwell + 20 and player.poll() is None:
+
+    def laid_out():
         cards = re.findall(r"CARD card@\S+ (?:scrollable=\d+ )?(.*)", dev.lines("CARD card@"))
         for card in reversed(cards):
             found = [t.split("@")[0].replace("·", " ") for t in re.findall(r"\[([^\]]+)\]", card)]
             if word in found:
-                texts = found
-                break
-        if texts:
+                return found
+        return []
+
+    texts = []
+    started = time.time()
+    while time.time() - started < dwell + 20 and player.poll() is None:
+        texts = laid_out()
+        if texts and not newest:
             break
         time.sleep(0.5)
     player.wait(timeout=dwell + 30)
+    # A drag that began where the button was a moment ago, rather than where it is now, starts
+    # on the status bar and pulls the system's shade down instead; left there, everything read
+    # after it is the shade. Put back whatever happened.
+    shell("cmd", "statusbar", "collapse")
+    # Read once more after the finger has gone. The card's report stays in the log, and on a
+    # loaded device one read of the log can take longer than the whole hold: the loop above
+    # then ended with the player before it had read anything, and a card that had been up for
+    # seconds was reported as never having come up.
+    if not texts or newest:
+        texts = laid_out() or texts
     time.sleep(1.5)
     closed = "TOOLTIP closed" in dev.lines("TOOLTIP closed")
     return texts, closed

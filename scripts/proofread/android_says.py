@@ -6,9 +6,11 @@ wrote; this answers a word the reader is looking for, and answers it with the sa
 machine's answer is judged rather than taken: how it is said, what it means back, what sounds
 are in it.
 
-The engine holds one direction open at a time, so the app opens the reverse pair, asks, and
-puts the reading direction back. That is what this drives, from the app's own screen, the way
-a reader reaches it.
+The engine holds the reverse pair open beside the reading direction, so the app opens it, asks,
+and leaves the reading direction as it was. That is what this drives, from the panel a tap on
+the side button opens, the way a reader reaches it. What the panel shows under the word - how
+it is said, what it means back - is drawn in a window nothing reading the screen can see, so
+what is asked of it is the word it answered with, which the service reports.
 
   PHONETIX_ANDROID_SERIAL=emulator-5556 uv run scripts/proofread/android_says.py
 """
@@ -22,15 +24,14 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell
-from webview import View
+from android_harness import Device, adb, shell, SERIAL
+import state as State
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 CORE = os.path.join(ROOT, "core")
 WORK = os.environ.get("PHONETIX_WORK", "/tmp/phonetix-says-phone")
 MODELS = os.environ.get("PHONETIX_MODELS", "/tmp/phonetix-models")
-SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-says-phone-shots")
 PORT = int(os.environ.get("PHONETIX_PACK_PORT", "8934"))
 
 SANDBOX = "https://storage.googleapis.com/bergamot-models-sandbox/0.3.3"
@@ -141,97 +142,57 @@ def main():
 
     if not dev.enable_service():
         raise SystemExit("the service would not start")
-    # Which language the reader reads into, and where their dictionaries come from: the
-    # question only means anything once both are set.
-    dev.surface(mode="spanish", packHost=base, target="en", enable=1, density=1)
-    time.sleep(6)
-    dev.clear_log()
-    # Home first, the way a reader opens the app. The test page and the app's own screen are
-    # two activities of one app: asked for from the page, the system brings that page's task
-    # forward with the page still on top of it, and the screen this drives is never shown.
+    # Which language the reader reads into, the one asked in, and where their dictionaries
+    # come from: the question only means anything once all three are set.
     shell("input", "keyevent", "3")
     time.sleep(2)
-    # Clearing what is above it: the test page and the app's own screen are two activities of
-    # one app, so asking for the screen brings that task forward with the page still on top.
-    shell("am", "start", "--activity-clear-top",
-          "-n", "io.github.nanbiz.phonetix/.MainActivity")
-    time.sleep(4)
+    dev.surface(mode="spanish", packHost=base, target="en", learning="es", enable=1, density=1)
+    time.sleep(6)
 
-    # Driven in the screen itself, which is the product's own settings screen drawn in a web
-    # view: the row that opens it, the field on it, and the card that comes back.
-    said = ""
-    with View() as view:
-        opened = None
-        for _ in range(20):
-            # Behind the mark rather than in the settings: it is not a setting. A reader
-            # holds the mark; a check asks for the same gesture the other way a pointer has
-            # of meaning "and what else does this do".
-            opened = view.evaluate("""
-                (() => {
-                  const mark = document.querySelector('[data-does=say]');
-                  if (!mark) return null;
-                  mark.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true}));
-                  const field = document.querySelector('[data-row=say-field] input');
-                  return field ? 'open' : 'no field';
-                })()
-            """)
-            if opened:
-                break
+    def believed():
+        try:
+            name = State.ask(SERIAL)
+            return State.fetch(SERIAL, name) if name else {}
+        except Exception:
+            return {}
+
+    at = ((believed().get("mark") or {}).get("markAt") or {})
+    if not at:
+        print("FAIL - the button is not on screen, so the panel cannot be opened")
+        sys.exit(1)
+    shell("input", "tap", str(at["x"] + 52), str(at["y"] + 52))
+    time.sleep(3)
+    if not (believed().get("ask") or {}).get("panelUp"):
+        print("FAIL - tapping the button did not open the panel")
+        sys.exit(1)
+
+    # Typed and asked for the way a reader does it. Asked again rather than watched: the engine
+    # opens a model of seventeen megabytes for a direction nobody has been reading in, and the
+    # first ask can be put to an engine that is not up yet.
+    said = []
+    stage = ""
+    for attempt in range(4):
+        dev.clear_log()
+        if attempt == 0:
+            shell("input", "text", WANTED)
             time.sleep(1)
-        if opened != "open":
-            print(f"FAIL - the app has no field to ask in ({opened})")
-            sys.exit(1)
-        # Which language the answer comes back in, where this phone holds more than one
-        # dictionary: the reader says so, and so does this.
-        view.evaluate("""
-            (() => {
-              const pick = document.querySelector('[data-row=say-into] [data-choice=es]');
-              if (pick) pick.click();
-            })()
-        """)
-        time.sleep(1)
-        # Typed the way a reader types it, so the field's own listener is what answers - and
-        # asked again rather than watched, because the engine opens a model of seventeen
-        # megabytes for a direction nobody has been reading in: the first ask can be put to an
-        # engine that is not up yet, and a screen that answered "no model" once will go on
-        # saying so until somebody asks again. Which is what a reader does.
-        for _ in range(12):
-            view.evaluate("""
-                (() => {
-                  const field = document.querySelector('[data-row=say-field] input');
-                  field.focus();
-                  field.value = %r;
-                  field.dispatchEvent(new Event('input', {bubbles: true}));
-                  field.dispatchEvent(new Event('change', {bubbles: true}));
-                })()
-            """ % WANTED)
-            time.sleep(6)
-            said = view.evaluate(
-                "(document.querySelector('[data-view=say]') || {}).textContent || ''") or ""
-            if EXPECTED in said:
+        shell("input", "keyevent", "66")
+        until = time.time() + 30
+        while time.time() < until:
+            stage = (believed().get("ask") or {}).get("stage") or ""
+            if stage.startswith(("answered", "nothing came back")):
                 break
+            time.sleep(0.5)
+        said = re.findall(r"ASKED \S+ \S+->\S+: (.*)", dev.lines("ASKED "))
+        if any(EXPECTED in line for line in said):
+            break
+    print(f"  asked for {WANTED!r}: {stage!r}, {said[-1:] or 'nothing said'}")
+    # Put away, so the next check starts from a page.
+    shell("input", "keyevent", "4")
+    shell("input", "keyevent", "4")
 
-    os.makedirs(SHOTS, exist_ok=True)
-    for name in os.listdir(SHOTS):
-        os.remove(os.path.join(SHOTS, name))
-    adb("emu", "screenrecord", "screenshot", SHOTS)
-    time.sleep(2)
-    shot = [f for f in os.listdir(SHOTS) if f.endswith(".png")]
-    print(f"  screenshot: {os.path.join(SHOTS, shot[0]) if shot else 'none'}")
-    print(f"  the screen says: {said[:160]!r}")
-
-    if EXPECTED not in said:
+    if not any(EXPECTED in line for line in said):
         failures.append(f"nothing on the phone answered {WANTED!r} with {EXPECTED!r}")
-    else:
-        # The entry under the word, which is what makes a machine's answer judgeable. The
-        # stress mark and the syllable break belong to the transcription and are what a
-        # reader is being shown, so they are taken out of the comparison rather than out of
-        # the card.
-        bare = re.sub(r"[ˈˌ.ˑ\s]", "", said)
-        if "baŋko" not in bare:
-            failures.append("the word came back without its pronunciation")
-        if "bench" not in said:
-            failures.append("the word came back without a meaning in the reader's language")
 
     if failures:
         print("\nFAIL")

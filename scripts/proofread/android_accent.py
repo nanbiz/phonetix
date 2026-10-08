@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
-"""The accent the reader chose, on the words and on the card.
+"""The accent the reader chose, on the card the side button shows.
 
 An accent is two things: a pack of words a dictionary tagged for one region, and a rule that
 holds across a whole vocabulary. Which of them answers a word is the cascade's decision, made
-once, so that everything drawn from it agrees. That is the part worth checking on a device:
-the overlay and the card ask for the same word by different routes, and for a while the card
-asked without the accent at all, so a reader who chose Rioplatense saw it on the page and
-lost it the moment they tapped.
+once, so that everything drawn from it agrees. On the phone a word is answered by the card the
+side button shows while it is held over the word, and that card asks the cascade for itself:
+for a while it asked without the accent at all, so a reader who chose Rioplatense never saw it.
+
+So the card is read twice for the same word, once with no accent chosen and once in the
+accent, and the two have to differ the way the accent says.
 
   PHONETIX_ANDROID_SERIAL=emulator-5554 uv run scripts/proofread/android_accent.py
 """
 import http.server
 import json
 import os
-import re
 import subprocess
 import sys
 import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from android_harness import Device, adb, shell, drawn_pairs
+from android_harness import Device, adb, shell, card_while_held
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -89,34 +90,6 @@ def serve():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
-def drawn(dev):
-    """What is written over each word, from the last pass the service made."""
-    lines = re.findall(r"DRAWN (.*)", dev.log())
-    return dict(drawn_pairs(lines[-1])) if lines else {}
-
-
-def on_the_card(dev, word):
-    """Open the card for a word and give back every piece of text it laid out.
-
-    A tap: that is what asks about a word, and a press held lifts the overlay instead. Where
-    the word is is read again immediately before each try, since a screen that settled once
-    more has moved the words under a position read a moment ago.
-    """
-    for _ in range(3):
-        box = next((b for b in dev.annotated(seconds=20).values() if b["word"] == word), None)
-        if not box:
-            return None, "the word was not on the screen to press"
-        left, top, right, bottom = box["rect"]
-        x, y = (left + right) // 2, (top + bottom) // 2
-        dev.clear_log()
-        shell("input", "tap", str(x), str(y))
-        time.sleep(3)
-        cards = re.findall(r"CARD (.*)", dev.log())
-        if cards:
-            return re.findall(r"\[([^@\]]+)@", cards[-1]), None
-    return None, "no card opened"
-
-
 def main():
     build_packs()
     serve()
@@ -135,51 +108,44 @@ def main():
         raise SystemExit("the service would not start")
     dev.set_enabled(True)
 
+    def said(accent):
+        """What the card says of the word with this accent chosen: the pieces that carry a
+        transcription, or None where no card came up."""
+        dev.surface(mode="spanish", packHost=base, target="de", known="none", accent=accent,
+                    enable=1, density=1)
+        time.sleep(4)
+        texts, closed = card_while_held(dev, WORD)
+        if not texts:
+            return None, closed
+        return [t for t in texts if t.startswith("/")], closed
+
     # The standard reading first, so what the accent changed is a difference and not a guess.
-    dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="de", layer="sound", accent="none",
-                enable=1, density=1, touchWords=1)
-    time.sleep(8)
-    standard = drawn(dev).get(WORD)
-    print(f"  standard: {WORD} said {standard!r}")
-    if not standard:
-        print(f"FAIL - {WORD} was not annotated at all, so there is nothing to accent")
+    standard, _ = said("none")
+    print(f"  standard: the card says {standard!r} for {WORD}")
+    if standard is None:
+        print(f"FAIL - no card came up for {WORD}, so there is nothing to accent")
         sys.exit(1)
-    if STANDARD not in standard:
-        failures.append(f"the standard reading of {WORD} is {standard!r}, "
+    if not any(STANDARD in t for t in standard):
+        failures.append(f"the standard reading of {WORD} on the card is {standard!r}, "
                         f"which has no {STANDARD} for an accent to change")
 
     # And in the accent, which is a rule rather than a pack of its own.
-    dev.clear_log()
-    dev.surface(mode="spanish", packHost=base, target="de", layer="sound", accent="es-ar",
-                enable=1, density=1, touchWords=1)
-    time.sleep(8)
-    said = drawn(dev).get(WORD)
-    print(f"  es-ar:    {WORD} said {said!r}")
-    if not said:
-        failures.append(f"{WORD} was not annotated once an accent was chosen")
-    elif RIOPLATENSE not in said:
-        failures.append(f"the page says {said!r} for {WORD}, which is not the accent's")
-
-    # The card is the other route to the same word, and it has to agree. It asked without the
-    # accent for a while, so a reader saw the accent on the page and lost it on the tap.
-    texts, why = on_the_card(dev, WORD)
-    if why:
-        failures.append(f"the card: {why}")
+    accented, closed = said("es-ar")
+    print(f"  es-ar:    the card says {accented!r} for {WORD}, closed after release: {closed}")
+    if accented is None:
+        failures.append(f"no card came up for {WORD} once an accent was chosen")
     else:
-        carrying = [t for t in texts if RIOPLATENSE in t or STANDARD in t]
-        print(f"  the card says: {carrying}")
-        if not any(RIOPLATENSE in t for t in carrying):
-            failures.append(f"the card shows {carrying}, none of it in the accent")
-        if any(STANDARD in t for t in carrying):
-            failures.append(f"the card still shows the standard reading: {carrying}")
+        if not any(RIOPLATENSE in t for t in accented):
+            failures.append(f"the card says {accented!r} for {WORD}, none of it in the accent")
+        if any(STANDARD in t for t in accented):
+            failures.append(f"the card still shows the standard reading: {accented!r}")
 
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - the accent reaches the page and the card alike")
+    print("\nPASS - the accent the reader chose is what the card says")
 
 
 if __name__ == "__main__":

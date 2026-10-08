@@ -8,7 +8,8 @@ button per dictionary, and until the reader found it the page was answered with 
 
 This serves a host the way the published one is laid out - a listing of packs, a listing of
 models naming each file with its checksum - starts from a phone holding neither, and asks that
-reading a Spanish page is enough for both to arrive and be used.
+reading a Spanish page is enough for both to arrive and be opened, and for the card the side
+button shows over a word to say what it means.
 
   PHONETIX_ANDROID_SERIAL=emulator-5596 uv run python scripts/proofread/android_fetches.py
 """
@@ -24,11 +25,12 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import android_says as Says
-from android_harness import Device, shell, SERIAL
-import state as State
+from android_harness import Device, card_while_held, shell
 
 PKG = "io.github.nanbiz.phonetix"
 ARRIVES_WITHIN_S = 120
+# A word on the page, and what the served dictionary says it means.
+MEANT = ("perro", "dog")
 
 
 def free_port():
@@ -105,8 +107,8 @@ def main():
     dev.clear_log()
     shell("input", "keyevent", "3")
     time.sleep(2)
-    dev.surface(mode="spanish", enable=1, density=1, target="en", layer="meaning",
-                paused=0, touchWords=1, packHost=f"http://10.0.2.2:{port}")
+    dev.surface(mode="spanish", enable=1, density=1, target="en", known="none",
+                packHost=f"http://10.0.2.2:{port}")
 
     began = time.time()
     opened = False
@@ -127,12 +129,15 @@ def main():
     if not opened:
         failures.append("what arrived was not opened and used")
 
-    # And used: the words carry what they mean.
-    told = (State.fetch(SERIAL, State.ask(SERIAL)).get("overlay") or {})
-    meant = [(b.get("word"), b.get("drawn")) for b in told.get("boxes") or []]
-    print(f"  on the page: {meant[:6]}")
-    if not any(drawn and drawn != word for word, drawn in meant):
-        failures.append("the page carries no meanings, though both arrived")
+    # And used: the card the side button shows over a word says what it means, out of the
+    # dictionary that arrived.
+    texts, _ = card_while_held(dev, MEANT[0])
+    print(f"  the card for {MEANT[0]}: {texts or 'nothing came up'}")
+    if not texts:
+        failures.append(f"no card came up for {MEANT[0]}")
+    elif MEANT[1] not in " ".join(texts):
+        failures.append(f"the card for {MEANT[0]} does not say {MEANT[1]!r}, though the "
+                        f"dictionary arrived: {texts}")
 
     # Asked for once, not once per screen.
     pack_asks = sum(1 for path in asked if path == "/es.pack")
