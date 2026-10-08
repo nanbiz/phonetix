@@ -26,7 +26,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import PipeCDP
+from harness import PipeCDP, OFFLINE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -45,6 +45,18 @@ class Page(http.server.BaseHTTPRequestHandler):
     """
 
     def do_GET(self):
+        if self.path == "/packs.json":
+            # The page's dictionary, listed here: the check is about this host alone, and the
+            # extension fetches only what a listing offers.
+            body = json.dumps([{"id": "lex-de", "lang": "de", "built": 0, "entries": 0,
+                                "keys": 0, "glosses": 0, "bytes": PACK_BYTES,
+                                "sha256": ""}]).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path.endswith(".pack"):
             self.send_response(200)
             self.send_header("Content-Type", "application/octet-stream")
@@ -256,7 +268,7 @@ def real_popup(cdp, extid):
 def main():
     server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Page)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    cdp = PipeCDP()
+    cdp = PipeCDP(extra_args=[OFFLINE])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     failures = []

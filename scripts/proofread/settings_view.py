@@ -14,7 +14,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import PipeCDP
+from harness import PipeCDP, OFFLINE
 from on_a_page import PORT, build_packs, evaluate, serve, wait_for
 
 
@@ -120,7 +120,7 @@ def main():
     base = f"http://127.0.0.1:{PORT}"
     failures = []
 
-    cdp = PipeCDP()
+    cdp = PipeCDP(extra_args=[OFFLINE])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     try:

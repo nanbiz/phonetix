@@ -18,7 +18,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import PipeCDP
+from harness import PipeCDP, OFFLINE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -518,7 +518,9 @@ def main():
     base = f"http://127.0.0.1:{PORT}"
     failures = []
 
-    cdp = PipeCDP()
+    # Only this check's host serves dictionaries: a real download arriving mid-check redrew the
+    # page while it was meant to be settled and put a dictionary on a card meant to have none.
+    cdp = PipeCDP(extra_args=[OFFLINE])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     try:

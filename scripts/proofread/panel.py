@@ -33,7 +33,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import says  # noqa: E402  the packs, the models and the server, shared with the say check
-from harness import EXT, PipeCDP  # noqa: E402
+from harness import EXT, OFFLINE, PipeCDP  # noqa: E402
 from on_firefox import ADDON_ID, UUID, Marionette, newest_zip  # noqa: E402
 
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-panel")
@@ -100,7 +100,7 @@ class Chrome:
     window_class = "Chromium"
 
     def __init__(self):
-        self.cdp = PipeCDP(headless=False)
+        self.cdp = PipeCDP(headless=False, extra_args=[OFFLINE])
         self.cdp.send("Target.setDiscoverTargets", {"discover": True})
         self.extid = self.cdp.ensure_extension()
         self.manifest = json.load(open(os.path.join(EXT, "manifest.json")))

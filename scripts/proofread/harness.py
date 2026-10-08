@@ -30,6 +30,13 @@ EXTRACT_JS = r"""
 """
 
 
+# The published release made unreachable, for a check that serves its own dictionaries: the
+# extension falls back to the release for a pack its own host refuses or lacks, and a real
+# download arriving mid-check changes what the check is looking at.
+OFFLINE = ("--host-resolver-rules=MAP github.com ~NOTFOUND, MAP *.github.com ~NOTFOUND, "
+           "MAP *.githubusercontent.com ~NOTFOUND")
+
+
 class PipeCDP:
     """Minimal CDP client over chromium --remote-debugging-pipe (fd 3 read, 4 write)."""
 

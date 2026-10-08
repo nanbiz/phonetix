@@ -22,7 +22,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import PipeCDP
+from harness import PipeCDP, OFFLINE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
@@ -250,7 +250,7 @@ def main():
     serve()
     base = f"http://127.0.0.1:{PORT}"
 
-    cdp = PipeCDP()
+    cdp = PipeCDP(extra_args=[OFFLINE])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     failures = []
