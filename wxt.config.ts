@@ -55,9 +55,13 @@ export default defineConfig({
     action: { default_title: 'Phonetix' },
     // tabs, only to know which site the settings view is being opened over: a switch for
     // this site is not a switch at all if it cannot tell which site that is.
+    // declarativeNetRequest, on Chromium only, for the one rule in public/rules: Mozilla's
+    // server for the translation models refuses a request that names Chrome as its browser
+    // (406) and serves the same file to Firefox, so the extension names Firefox to that
+    // server alone. Firefox needs nothing.
     permissions: browser === 'firefox'
       ? ['storage', 'tabs']
-      : ['storage', 'tabs', 'offscreen'],
+      : ['storage', 'tabs', 'offscreen', 'declarativeNetRequest'],
     host_permissions: ['<all_urls>'],
     // The word a reader is looking for, without reaching for the mouse: the same question the
     // phone's mark answers, on the surface where a reader already has both hands on the
@@ -96,6 +100,11 @@ export default defineConfig({
         }
       : {
           minimum_chrome_version: '109',
+          declarative_net_request: {
+            rule_resources: [
+              { id: 'mozilla-models', enabled: true, path: 'rules/mozilla-models.json' },
+            ],
+          },
           // The public half of the key the crx is signed with (scripts/release.sh), so an
           // unpacked build loads under the same id as the crx, cpdkbgaandlgpgifdneoffhclgedkghm,
           // and takes over its settings instead of arriving as a second, empty Phonetix.
