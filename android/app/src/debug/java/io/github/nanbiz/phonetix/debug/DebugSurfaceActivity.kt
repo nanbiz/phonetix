@@ -632,6 +632,10 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                     else said.split(',').filter { it.isNotBlank() && it != "none" }.toSet(),
                 )
             }
+            // Narrow transcriptions rather than broad ones: 1 or 0.
+            if (i.hasExtra("narrow")) {
+                io.github.nanbiz.phonetix.core.SettingsStore.setNarrow(i.getIntExtra("narrow", 0) == 1)
+            }
             // Which language the reader is learning, which is what the panel answers in.
             if (i.hasExtra("learning")) {
                 io.github.nanbiz.phonetix.core.SettingsStore.setLearning(
@@ -1000,6 +1004,12 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 "La silla del banco es nueva",
                 "Un banco y un perro y un camino",
             )) {
+                addView(line(text, Color.WHITE, BACKGROUND))
+            }
+        } else if (mode == "german") {
+            // A word whose dictionary gives a broad and a narrow transcription, /ˈtɛpɪç/ and
+            // [ˈtʰɛ.pʰɪç], for the setting that picks between them.
+            for (text in listOf("Der Teppich liegt im Zimmer", "Der Hund und der Teppich")) {
                 addView(line(text, Color.WHITE, BACKGROUND))
             }
         } else if (mode == "prose") {

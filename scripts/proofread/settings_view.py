@@ -319,7 +319,116 @@ def main():
             failures.append("the word the accent changes was not on the page")
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
+
+        # How the page writes what it says: narrow rather than broad, and with or without the
+        # stress marks. Each is judged by the words on the page changing, not by the setting.
+        def written():
+            return evaluate(cdp, page, "[...document.querySelectorAll('.px-ph')]"
+                                       ".map(p => p.textContent).join(' ')") or ""
+
+        # On a German page in a tab behind this one, every word drawn: Teppich's dictionary
+        # gives a broad and a narrow transcription, and the setting picks which one is drawn.
+        evaluate(cdp, view, "chrome.storage.local.set({density: 1}).then(() => 1)")
+        german_target = cdp.send("Target.createTarget",
+                                 {"url": f"{base}/german.html", "background": True})["targetId"]
+        german = cdp.send("Target.attachToTarget",
+                          {"targetId": german_target, "flatten": True})["sessionId"]
+        cdp.send("Runtime.enable", session=german)
+
+        def carpet():
+            return evaluate(cdp, german, """
+                (() => {
+                  const box = [...document.querySelectorAll('.px-w')]
+                    .find(w => (w.querySelector('.px-was') || {}).textContent === 'Teppich');
+                  return box ? ((box.querySelector('.px-ph') || {}).textContent || null) : null;
+                })()
+            """)
+
+        broad = None
+        for _ in range(30):
+            broad = carpet()
+            if broad:
+                break
+            time.sleep(1)
+        control(cdp, view, "document.querySelector('[data-row=narrow] [data-choice=narrow]').click()",
+                settle=3)
+        narrow = carpet()
+        print(f"  Teppich broad {broad!r}, narrow {narrow!r}")
+        if not broad:
+            failures.append("the German page never drew Teppich")
+        elif broad == narrow or "\u02b0" not in (narrow or ""):
+            failures.append(f"choosing narrow drew Teppich as {narrow!r}, not the narrow [tʰɛpʰɪç]")
+        # And the card, which writes the narrow transcription between brackets.
+        cdp.send("Target.activateTarget", {"targetId": german_target})
+        time.sleep(0.5)
+        card = point_at(cdp, german, "Teppich") or ""
+        print(f"  the card on Teppich, narrow: {card[:40]!r}")
+        if "[" not in card or "\u02b0" not in card:
+            failures.append(f"the card on Teppich is not the narrow transcription: {card[:60]!r}")
+        view = popup(cdp, extid, page_target)
+        control(cdp, view, "document.querySelector('[data-row=pronunciation]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-row=narrow] [data-choice=broad]').click()",
+                settle=3)
+
+        # The stress marks, which the switch puts on the page and takes off again.
+        def marks():
+            return (written() + (carpet() or "")).count("\u02c8")
+
+        shown = evaluate(cdp, view, "document.querySelector('[data-row=stress] input').checked")
+        first = marks()
+        control(cdp, view, "document.querySelector('[data-row=stress] input').click()", settle=3)
+        second = marks()
+        control(cdp, view, "document.querySelector('[data-row=stress] input').click()", settle=3)
+        print(f"  stress marks with the switch {'on' if shown else 'off'}: {first}, "
+              f"turned {'off' if shown else 'on'}: {second}")
+        on, off = (first, second) if shown else (second, first)
+        if not on or off:
+            failures.append(f"the stress switch left {on} marks on and {off} off")
+        evaluate(cdp, view, "chrome.storage.local.remove('density').then(() => 1)")
         control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+
+        # Appearance: a palette is what the page's words are drawn in, and light or dark is
+        # which way round the settings view itself is.
+        def palette():
+            return evaluate(cdp, page, "((document.querySelector('.px-w') || {}).className || '')"
+                                       ".split(' ').find(c => c.startsWith('theme-')) || ''")
+
+        control(cdp, view, "document.querySelector('[data-row=theme]').click()", settle=1)
+        was = palette()
+        picked = control(cdp, view, """
+            (() => {
+              const other = [...document.querySelectorAll('[data-row=palettes] [data-choice]')]
+                .find(c => !c.getAttribute('aria-checked') || c.getAttribute('aria-checked') === 'false');
+              if (!other) return 'no other palette';
+              other.click();
+              return other.dataset.choice;
+            })()
+        """, settle=3)
+        now = palette()
+        print(f"  palette {picked}: the page's words went from {was!r} to {now!r}")
+        if now != f"theme-{picked}":
+            failures.append(f"picking the {picked} palette drew the page's words in {now!r}")
+        sides = {}
+        for side in ("light", "dark"):
+            control(cdp, view, f"document.querySelector('[data-row=dark] [data-choice={side}]').click()",
+                    settle=1)
+            sides[side] = evaluate(cdp, view, "document.documentElement.className")
+        print(f"  the settings view, light: {sides['light']!r}, dark: {sides['dark']!r}")
+        if "mode-light" not in (sides["light"] or "") or "mode-dark" not in (sides["dark"] or ""):
+            failures.append(f"light and dark did not turn the settings view round: {sides}")
+        control(cdp, view, "document.querySelector('[data-row=dark] [data-choice=system]').click()",
+                settle=1)
+        control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+
+        # The translator's keys as the browser bound them, and the way to change them, which is
+        # the browser's own page for it.
+        shown = evaluate(cdp, view, "[...document.querySelectorAll('[data-does=shortcut] kbd')]"
+                                    ".map(k => k.textContent).join('+')")
+        bound = evaluate(cdp, view, "chrome.commands.getAll().then(c => (c.find(x => x.name =="
+                                    " 'translator') || {}).shortcut || '')")
+        print(f"  the translator's keys: shown {shown!r}, bound {bound!r}")
+        if not shown or shown != bound:
+            failures.append(f"the popup shows the translator on {shown!r}, the browser binds {bound!r}")
 
         # The translator: opened from the popup, over the page, and answering both ways
         # between the reader's language and the one it opens on, which is the page's.

@@ -30,6 +30,9 @@ pub struct Answer {
     pub pos: Option<String>,
     /// How it is said, as the pack records it.
     pub ipa: Vec<String>,
+    /// The narrow transcription of the first of those, where the dictionary gives one that
+    /// differs: what a reader who asked for narrow transcriptions is shown.
+    pub narrow: Option<String>,
     /// The first transcription, symbol by symbol, so a card can offer each sound on its own
     /// without a table of its own to look them up in.
     pub symbols: Vec<crate::symbols::Symbol>,
@@ -86,6 +89,7 @@ impl Answer {
             form: None,
             pos: None,
             ipa: Vec::new(),
+            narrow: None,
             symbols: Vec::new(),
             says: Vec::new(),
             glosses: Vec::new(),
@@ -427,6 +431,27 @@ pub fn typed_in_mine<D: AsRef<[u8]>>(
     let read = model.map(|model| model.detect(text));
     read.and_then(|read| read.language)
         .is_none_or(|language| language != learning.0)
+}
+
+/// An entry's narrow transcription, where its dictionary gave one beside the broad: the pack
+/// records which of its transcriptions that is as a `narrow:<index>` tag.
+pub fn narrow_of(entry: &Entry) -> Option<String> {
+    entry
+        .tags
+        .iter()
+        .find_map(|tag| tag.strip_prefix("narrow:"))
+        .and_then(|at| at.parse::<usize>().ok())
+        .and_then(|at| entry.ipa.get(at).cloned())
+}
+
+impl Answer {
+    /// The transcription a surface draws, at the detail the reader asked for.
+    pub fn shown_ipa(&self, narrow: bool) -> Option<&str> {
+        match (&self.narrow, narrow) {
+            (Some(detail), true) => Some(detail.as_str()),
+            _ => self.ipa.first().map(String::as_str),
+        }
+    }
 }
 
 /// Senses a dictionary marks as no longer in use.
@@ -1140,6 +1165,7 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     {
         for answer in answers.iter_mut().filter(|answer| answer.ipa.is_empty()) {
             answer.ipa = own.ipa.clone();
+            answer.narrow = narrow_of(own);
             answer.symbols = crate::symbols::explain(&own.ipa[0]);
         }
     }
@@ -1175,6 +1201,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
                     .iter()
                     .map(|ipa| crate::accent::apply(ipa, open.accent, spelling))
                     .collect(),
+            };
+            // The accent's own pack says nothing of detail; a rule shifts the narrow form the
+            // way it shifts the broad one.
+            answer.narrow = match &said {
+                Some(_) => None,
+                None => answer
+                    .narrow
+                    .as_deref()
+                    .map(|ipa| crate::accent::apply(ipa, open.accent, spelling)),
             };
             answer.symbols = answer
                 .ipa
@@ -2099,10 +2134,10 @@ fn finish<D: AsRef<[u8]>>(
     // "depender" is not said /depenˈdeɾ/. A form with a pronunciation of its own is an entry of
     // its own and never comes through here, so a form that did has none, and is left for the
     // voice to say rather than given its lemma's.
-    let said_as = if same_word(&entry.lemma, spelling) {
-        entry.ipa.clone()
+    let (said_as, narrow) = if same_word(&entry.lemma, spelling) {
+        (entry.ipa.clone(), narrow_of(entry))
     } else {
-        Vec::new()
+        (Vec::new(), None)
     };
     // The form, and its meaning said in it where the reader reads English: the dictionary's
     // meaning of "andar" is "to walk", and "anduvo" means "he walked".
@@ -2143,6 +2178,7 @@ fn finish<D: AsRef<[u8]>>(
             .map(|ipa| crate::symbols::explain(ipa))
             .unwrap_or_default(),
         ipa: said_as,
+        narrow,
         says,
         glosses,
         marks: entry.senses.iter().map(|s| s.marks.clone()).collect(),

@@ -633,6 +633,7 @@ class TooltipController(
                 palette = palette,
                 meaning = meaning,
                 report = if (BuildConfig.DEBUG) laidOut else null,
+                narrow = settings.narrow,
             )
         }
         return fresh.view

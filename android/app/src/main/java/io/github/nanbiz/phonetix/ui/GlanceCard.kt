@@ -39,8 +39,13 @@ fun GlanceCard(
     meaning: Boolean,
     modifier: Modifier = Modifier,
     report: Reporter? = null,
+    narrow: Boolean = false,
 ) {
-    val ipa = answer.ipa.firstOrNull()?.takeIf { it.isNotBlank() }
+    // At the detail the reader asked for: the dictionary's narrow transcription, between
+    // brackets, where they asked for narrow ones and it gives one; the broad one otherwise.
+    val detailed = narrow && !answer.narrow.isNullOrBlank()
+    val ipa = (if (detailed) answer.narrow else answer.ipa.firstOrNull())?.takeIf { it.isNotBlank() }
+    val written = ipa?.let { if (detailed) "[$it]" else "/$it/" }
     // What the word is led by: the word the core picks, which is the reader's word for it or,
     // read into English, the first gloss that is a meaning rather than a note about grammar.
     // A form leads with its meaning said in that form: "anduvo" is "he walked", where the
@@ -95,12 +100,12 @@ fun GlanceCard(
             )
             if (meaning && ipa != null && says != null) {
                 Text(
-                    text = "  /$ipa/",
+                    text = "  $written",
                     color = Color(palette.ipa),
                     fontSize = Tokens.Scale.fontSizeSense.sp,
                     style = IpaStyle.copy(fontWeight = FontWeight.Normal),
                     maxLines = 1,
-                    modifier = Modifier.reported("/$ipa/", report),
+                    modifier = Modifier.reported(written.orEmpty(), report),
                 )
             }
         }
@@ -182,13 +187,13 @@ fun GlanceCard(
                     }
                 }
             }
-            ipa != null -> Text(
-                text = "/$ipa/",
+            written != null -> Text(
+                text = written,
                 color = Color(palette.ipa),
                 fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
                 style = IpaStyle,
                 maxLines = 2,
-                modifier = Modifier.reported("/$ipa/", report),
+                modifier = Modifier.reported(written, report),
             )
             definition != null -> Text(
                 text = definition,

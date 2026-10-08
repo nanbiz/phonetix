@@ -575,6 +575,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     arriving: coming[source] ?? null,
     accent: accentFor(settings, source),
     eased: settings.animations,
+    narrow: settings.narrow,
     entered: tapped,
     onPlay: () => {
       if (recording) void recorded(commons(recording));

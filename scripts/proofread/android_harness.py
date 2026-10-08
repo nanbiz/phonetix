@@ -503,7 +503,9 @@ def card_while_held(dev, word, dwell=6.0, newest=False):
     def laid_out():
         cards = re.findall(r"CARD card@\S+ (?:scrollable=\d+ )?(.*)", dev.lines("CARD card@"))
         for card in reversed(cards):
-            found = [t.split("@")[0].replace("·", " ") for t in re.findall(r"\[([^\]]+)\]", card)]
+            # Each text as "[text@bounds]", ended by its bounds rather than by the first
+            # bracket: a narrow transcription is itself written between brackets.
+            found = [t.replace("·", " ") for t in re.findall(r"\[(.*?)@[^@\[\]]*\]", card)]
             if word in found:
                 return found
         return []

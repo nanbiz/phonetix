@@ -66,6 +66,12 @@ export interface Answer {
   /** The first transcription, symbol by symbol: the card offers each sound on its own and
    *  does not hold a table to look them up in. */
   symbols: IpaSymbol[];
+  /** The dictionary's narrow transcription of the first, where it gives one that differs,
+   *  and its sounds: what a reader who asked for narrow transcriptions is shown. */
+  narrow?: string | null;
+  narrowSymbols?: IpaSymbol[];
+  /** Which transcription [ipa] leads with: the narrow one is written between brackets. */
+  detail?: 'broad' | 'narrow';
   /** The answer in the reader's own language, best first. More than one is an ambiguity the
    *  card shows rather than resolves. */
   says: string[];
@@ -169,5 +175,17 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
     readings: [],
     source,
     target: source,
+  };
+}
+
+/** The answer at the detail the reader asked for: led by the dictionary's narrow transcription
+ *  where they asked for narrow ones and it gives one, and by the broad one otherwise. */
+export function atDetail(answer: Answer, narrow: boolean): Answer {
+  if (!narrow || !answer.narrow) return { ...answer, detail: 'broad' };
+  return {
+    ...answer,
+    ipa: [answer.narrow, ...answer.ipa.filter((ipa) => ipa !== answer.narrow)],
+    symbols: answer.narrowSymbols ?? [],
+    detail: 'narrow',
   };
 }

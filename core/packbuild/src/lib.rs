@@ -78,7 +78,7 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
         return None;
     }
 
-    let ipa = pronunciations(&value);
+    let (ipa, narrow) = pronunciations(&value);
     let senses = senses(&value);
     if senses.is_empty() && ipa.is_empty() {
         skipped.empty += 1;
@@ -89,7 +89,10 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
         entry: Entry {
             lemma: word.to_string(),
             pos: pos.to_string(),
-            tags: strings(value.get("tags")),
+            tags: strings(value.get("tags"))
+                .into_iter()
+                .chain(narrow.map(|at| format!("narrow:{at}")))
+                .collect(),
             ipa,
             senses,
             forms: forms(&value, word),
@@ -141,25 +144,40 @@ pub fn is_bare_form(entry: &Entry) -> bool {
             .all(|sense| sense.marks.iter().any(|mark| mark == "form-of"))
 }
 
-fn pronunciations(value: &Value) -> Vec<String> {
+/// How the word is said, every transcription the dump gives, and which of them is the narrow
+/// one where it gives a narrow one that differs from the broad.
+///
+/// Wiktionary writes a broad, phonemic transcription between slashes (/ˈtɛpɪç/) and a narrow,
+/// phonetic one between brackets ([ˈtʰɛ.pʰɪç]). The delimiters go, since every surface draws
+/// its own, and which one was narrow is kept as an index so a reader who asked for narrow
+/// transcriptions is shown the narrow one rather than the broad one with nothing to strip.
+fn pronunciations(value: &Value) -> (Vec<String>, Option<usize>) {
     let mut out = Vec::new();
+    let mut narrow = None;
     for sound in value
         .get("sounds")
         .and_then(|v| v.as_array())
         .into_iter()
         .flatten()
     {
-        if let Some(ipa) = sound.get("ipa").and_then(|v| v.as_str()) {
-            let ipa = ipa
+        if let Some(written) = sound.get("ipa").and_then(|v| v.as_str()) {
+            let bracketed = written.trim().starts_with('[');
+            let ipa = written
                 .trim()
                 .trim_matches(|c| c == '/' || c == '[' || c == ']')
                 .trim();
-            if !ipa.is_empty() && !out.iter().any(|had: &String| had == ipa) {
-                out.push(ipa.to_string());
+            if ipa.is_empty() || out.iter().any(|had: &String| had == ipa) {
+                continue;
             }
+            // The first narrow transcription after a broad one: the two are the same accent
+            // said at two levels of detail, where later ones are other accents and variants.
+            if bracketed && narrow.is_none() && !out.is_empty() {
+                narrow = Some(out.len());
+            }
+            out.push(ipa.to_string());
         }
     }
-    out
+    (out, narrow)
 }
 
 /// How many of an entry's senses keep their example: as many as a translated line picks a
@@ -445,6 +463,24 @@ mod tests {
       "forms":[{"form":"perros","tags":["plural"]},{"form":"perro"},
                {"form":"inflection-table","tags":["table-tags"]}],
       "tags":["masculine"]}"#;
+
+    /// The narrow transcription is told apart from the broad by its brackets, which the pack
+    /// drops: kept as the index of the narrow one. One identical to the broad is no narrow one.
+    #[test]
+    fn the_narrow_transcription_is_marked_as_the_narrow_one() {
+        let mut skipped = Skipped::default();
+        let carpet = r#"{"word":"Teppich","pos":"noun","lang_code":"de",
+          "senses":[{"glosses":["carpet"]}],
+          "sounds":[{"ipa":"/ˈtɛpɪç/"},{"ipa":"[ˈtʰɛ.pʰɪç]"}]}"#;
+        let read = read_line(carpet, "de", &mut skipped).unwrap().entry;
+        assert_eq!(read.ipa, vec!["ˈtɛpɪç", "ˈtʰɛ.pʰɪç"]);
+        assert_eq!(
+            lexcore::resolve::narrow_of(&read).as_deref(),
+            Some("ˈtʰɛ.pʰɪç")
+        );
+        let dog = read_line(PERRO, "es", &mut skipped).unwrap().entry;
+        assert_eq!(lexcore::resolve::narrow_of(&dog), None);
+    }
 
     /// An entry that only names what it is a form of, with no sound of its own, is a bare
     /// form; one with a pronunciation, or a meaning of its own, is not.

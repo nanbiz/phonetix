@@ -122,8 +122,7 @@ pub fn annotate<D: AsRef<[u8]>>(
             // full form. The accent is already in what the cascade answered, and applying it
             // again here would shift a word its accent's own pack had already spelled out.
             let ipa = answer
-                .ipa
-                .first()
+                .shown_ipa(options.narrow)
                 .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
             // And how the translation is said, where that is what the reader asked for: the
             // word they are being handed is the one they will try to say. Out of the pack for
@@ -379,7 +378,7 @@ pub fn complete<D: AsRef<[u8]>>(
                         }
                         token.gloss = Some(gloss);
                     }
-                    if let Some(ipa) = answer.ipa.first() {
+                    if let Some(ipa) = answer.shown_ipa(options.narrow) {
                         token.ipa = Some(crate::symbols::display(
                             ipa,
                             options.narrow,

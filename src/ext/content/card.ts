@@ -6,7 +6,7 @@
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 
 import Opened from '@/ui/card/Opened.svelte';
-import type { Answer } from '@/core/answer';
+import { atDetail, type Answer } from '@/core/answer';
 import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
 import { darkHere } from './inline';
@@ -176,6 +176,8 @@ export interface CardActions {
   accent?: string;
   /** Whether the card eases in rather than appearing in place. */
   eased?: boolean;
+  /** Whether the reader asked for narrow transcriptions. */
+  narrow?: boolean;
   /** Say the word the card is about. */
   onPlay?: () => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
@@ -196,7 +198,8 @@ export interface CardActions {
 let anchor: DOMRect = new DOMRect();
 
 /** Show one answer, anchored to the word it is about. */
-export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): void {
+export function show(given: Answer, at: DOMRect, actions: CardActions = {}): void {
+  const answer = atDetail(given, actions.narrow ?? false);
   anchor = at;
   const { frame: box } = build();
   const key = JSON.stringify([

@@ -49,6 +49,9 @@ data class Answer(
     val lead: String? = null,
     /** Which form of its lemma the word is, where its table says: see [Paradigm]. */
     val paradigm: Paradigm? = null,
+    /** The dictionary's narrow transcription of the first, where it gives one that differs:
+     *  what a reader who asked for narrow transcriptions is shown. */
+    val narrow: String? = null,
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
@@ -193,6 +196,7 @@ data class Answer(
                 says = list("says"),
                 glosses = list("glosses"),
                 lead = if (o.isNull("lead")) null else o.optString("lead").ifEmpty { null },
+                narrow = if (o.isNull("narrow")) null else o.optString("narrow").ifEmpty { null },
                 paradigm = o.optJSONObject("paradigm")?.let { row ->
                     val place = row.optJSONArray("place") ?: JSONArray()
                     Paradigm(

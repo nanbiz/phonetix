@@ -20,7 +20,7 @@ pub fn of(answer: &Answer) -> String {
 pub fn card(answer: &Answer, lead: Option<&str>) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
-\"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
+\"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
 \"paradigm\":{}}}",
         answer.state,
@@ -31,6 +31,16 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         maybe(&answer.form),
         strings(&answer.ipa),
         symbols_of(&answer.symbols),
+        // The dictionary's narrow transcription, sound by sound, for a reader who asked for
+        // narrow ones.
+        maybe(&answer.narrow),
+        symbols_of(
+            &answer
+                .narrow
+                .as_deref()
+                .map(crate::symbols::explain)
+                .unwrap_or_default()
+        ),
         strings(&answer.says),
         strings(&answer.glosses),
         maybe(&answer.example),
@@ -314,6 +324,7 @@ mod tests {
             form: None,
             pos: Some("noun".into()),
             ipa: vec!["ˈpe.ro".into()],
+            narrow: None,
             symbols: crate::symbols::explain("ˈpe.ro"),
             says: vec!["Hund".into()],
             glosses: vec!["dog".into()],

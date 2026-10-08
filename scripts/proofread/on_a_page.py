@@ -43,6 +43,14 @@ MIXED = (
     "</main></body></html>"
 ).encode()
 
+# A German word its dictionary transcribes twice, broad and narrow: /ˈtɛpɪç/ and the
+# aspirated [ˈtʰɛ.pʰɪç], which is what a reader who asked for narrow transcriptions is shown.
+GERMAN = (
+    "<!doctype html><html lang='de'><meta charset='utf-8'><body><main>"
+    "<p id='prose'>Der Teppich und der Hund.</p>"
+    "</main></body></html>"
+).encode()
+
 # A heading, because a page's headings are where its capitals are, and a heading is written
 # in title case whatever the language does. The words in it are ordinary dictionary words
 # wearing a capital they got from the page.
@@ -148,6 +156,7 @@ def serve():
                 else lines_page(low=False) if self.path.startswith("/lines")
                 else UNDECLARED if self.path.startswith("/undeclared")
                 else MIXED if self.path.startswith("/mixed")
+                else GERMAN if self.path.startswith("/german")
                 else PAGE
             )
             self.send_response(200)

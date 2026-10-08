@@ -193,7 +193,7 @@
       >
       {#if answer.ipa.length > 0 && !phrase && !nothing}
         <span class="ipa">
-          <span class="delim">/</span><!--
+          <span class="delim">{answer.detail === 'narrow' ? '[' : '/'}</span><!--
           Symbol by symbol, because each one is a button. No space between them: a
           transcription is one word and reads as one.
        -->{#if answer.symbols.length > 0}{#each answer.symbols as symbol, i (i)}<button
@@ -202,7 +202,7 @@
               onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}{:else}<!--
             Whole, where the table could not say what its sounds are.
          -->{answer.ipa[0]}{/if}<span
-            class="delim">/</span>
+            class="delim">{answer.detail === 'narrow' ? ']' : '/'}</span>
         </span>
       {/if}
       {#if !phrase && answer.source}

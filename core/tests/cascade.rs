@@ -1970,3 +1970,52 @@ fn a_word_is_answered_into_english_from_its_own_dictionary_alone() {
         "{found:?}"
     );
 }
+
+/// A reader who asked for narrow transcriptions is shown the dictionary's narrow one, and one
+/// who did not is shown the broad one: the two are different transcriptions, not one with its
+/// detail stripped, and the page drew the broad one under both settings.
+#[test]
+fn narrow_shows_the_narrow_transcription_the_dictionary_gives() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let mut pack = Builder::new("de", Kind::Lex, 0);
+    let mut carpet = word("Teppich", "noun", "ˈtɛpɪç", &["carpet"]);
+    carpet.ipa.push("ˈtʰɛ.pʰɪç".to_string());
+    carpet.tags.push("narrow:1".to_string());
+    pack.add(carpet, &[] as &[&str]).unwrap();
+    let pack = pack.finish().unwrap();
+    let pack = Pack::open(&pack).unwrap();
+    let open = Open {
+        source: Some(&pack),
+        ..Open::default()
+    };
+    let drawn = |narrow: bool| {
+        let (tokens, _) = annotate(
+            &[TextRun {
+                id: 1,
+                text: "Der Teppich".to_string(),
+                lang_hint: None,
+            }],
+            &lang("de"),
+            &lang("en"),
+            &open,
+            &AnnotateOptions {
+                mode: InlineMode::Sound,
+                density: 1,
+                narrow,
+                hide_stress: false,
+                accent: None,
+                seen: Vec::new(),
+                counts: Default::default(),
+            },
+        );
+        tokens
+            .into_iter()
+            .find(|token| token.spelling == "Teppich")
+            .and_then(|token| token.ipa)
+    };
+    assert_eq!(drawn(false).as_deref(), Some("ˈtɛpɪç"));
+    // Without its syllable dots, which the page leaves off either way.
+    assert_eq!(drawn(true).as_deref(), Some("ˈtʰɛpʰɪç"));
+}
