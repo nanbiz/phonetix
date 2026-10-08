@@ -9,7 +9,6 @@ still picked when the panel comes back.
   uv run python scripts/proofread/asks.py
 """
 import base64
-import base64
 import http.server
 import json
 import os
@@ -21,7 +20,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import PipeCDP
 
 PORT = int(os.environ.get("PHONETIX_ASK_PORT", "8929"))
-SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-ask")
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-ask")
 PAGE = (
     b"<!doctype html><html lang=en><meta charset=utf-8><title>Ask</title>"
@@ -89,17 +87,6 @@ def shot(cdp, session, name):
     return path
 
 
-def shot(cdp, session, name):
-    """The panel as it is drawn, kept so there is something to look at: every check here asks
-    the DOM, and how a row sits in a panel is not in the DOM."""
-    os.makedirs(SHOTS, exist_ok=True)
-    got = cdp.send("Page.captureScreenshot", {"format": "png"}, session=session)
-    path = os.path.join(SHOTS, f"{name}.png")
-    with open(path, "wb") as f:
-        f.write(base64.b64decode(got["data"]))
-    return path
-
-
 def main():
     serve()
     base = f"http://127.0.0.1:{PORT}"
@@ -149,7 +136,6 @@ def main():
               chips: root.querySelectorAll('.ask-langs .chip').length,
             })
         """)
-        print(f"  the panel: {shot(cdp, page, 'panel')}")
         print(f"  the panel: {shot(cdp, page, 'panel')}")
         shown = json.loads(shown or "{}")
         if shown.get("chips"):

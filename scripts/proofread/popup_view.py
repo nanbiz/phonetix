@@ -32,12 +32,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-popup")
 PORT = int(os.environ.get("PHONETIX_POPUP_PORT", "8933"))
+PACK_BYTES = 1_000_000
 
 
 class Page(http.server.BaseHTTPRequestHandler):
-    """A page for the popup to be about: on a site, it carries the row for that site."""
+    """A page for the popup to be about: on a site, it carries the row for that site.
+
+    And the host its dictionary comes from, which sends four tenths of it and then holds the
+    line open, so the dictionary is on its way for as long as the check looks: the progress the
+    popup shows is the extension's own, not a value written into storage behind its back, which
+    the first real download to end wiped.
+    """
 
     def do_GET(self):
+        if self.path.endswith(".pack"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/octet-stream")
+            self.send_header("Content-Length", str(PACK_BYTES))
+            self.end_headers()
+            try:
+                self.wfile.write(bytes(PACK_BYTES * 4 // 10))
+                self.wfile.flush()
+                time.sleep(600)
+            except OSError:
+                pass
+            return
         body = b"<!doctype html><html lang='de'><body><p>Der Hund liest ein Buch.</p></body></html>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -123,19 +142,28 @@ def real_popup(cdp, extid):
     25px wide on the toolbar.
     """
     failures = []
-    # Over a page on a site, which is when the popup is at its tallest: the site's own row.
-    page = cdp.send("Target.createTarget", {"url": f"http://127.0.0.1:{PORT}/"})["targetId"]
-    time.sleep(2)
-    cdp.send("Target.activateTarget", {"targetId": page})
     worker = next(
         t for t in cdp.send("Target.getTargets")["targetInfos"]
         if t["type"] == "service_worker" and t["url"].startswith(f"chrome-extension://{extid}/"))
     session = cdp.send(
         "Target.attachToTarget", {"targetId": worker["targetId"], "flatten": True},
     )["sessionId"]
-    # At its tallest: with a dictionary on its way, which adds a row the popup has to make
-    # room for without scrolling.
-    evaluate(cdp, session, "chrome.storage.local.set({arriving: {de: 0.4}}).then(() => 1)")
+    # Dictionaries from this check's own host, which never finishes sending one.
+    evaluate(cdp, session,
+             f"chrome.storage.local.set({{packBaseUrl: 'http://127.0.0.1:{PORT}'}}).then(() => 1)")
+    # Over a page on a site, which is when the popup is at its tallest: the site's own row.
+    page = cdp.send("Target.createTarget", {"url": f"http://127.0.0.1:{PORT}/"})["targetId"]
+    cdp.send("Target.activateTarget", {"targetId": page})
+    # At its tallest: with the page's dictionary on its way, which adds a row the popup has to
+    # make room for without scrolling.
+    coming = None
+    for _ in range(30):
+        time.sleep(0.5)
+        coming = evaluate(cdp, session,
+                          "chrome.storage.local.get('arriving').then(r => JSON.stringify(r.arriving ?? {}))")
+        if coming and coming != "{}":
+            break
+    print(f"  on its way: {coming}")
     opened = evaluate(
         cdp, session, "chrome.action.openPopup().then(() => 'opened', e => String(e))")
     if opened != "opened":

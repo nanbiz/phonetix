@@ -386,7 +386,7 @@ kbd {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
-  margin: 10px 16px 0;
+  margin: 10px 16px 6px;
   font-size: 13px;
   color: var(--color-ink-muted);
 }

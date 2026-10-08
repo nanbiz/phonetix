@@ -31,6 +31,11 @@ WORK = os.environ.get("PHONETIX_WORK", "/tmp/phonetix-says")
 MODELS = os.environ.get("PHONETIX_MODELS", "/tmp/phonetix-models")
 PORT = int(os.environ.get("PHONETIX_PACK_PORT", "8933"))
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-says")
+# A page for the panel to open over, in the reader's own language.
+PAGE = (
+    b"<!doctype html><html lang=en><meta charset=utf-8><title>Say</title>"
+    b"<body><p>Reading a paragraph teaches pronunciation quietly.</p></body></html>"
+)
 
 # Both directions, because saying something runs the model the other way: the reader types in
 # the language they already have.
@@ -97,7 +102,9 @@ def serve():
             pass
 
         def do_GET(self):
-            if self.path == "/models.json":
+            if self.path == "/page.html":
+                body, kind = PAGE, "text/html; charset=utf-8"
+            elif self.path == "/models.json":
                 body, kind = registry, "application/json"
             elif self.path.startswith("/models/"):
                 path = os.path.join(MODELS, os.path.basename(self.path))
@@ -142,73 +149,94 @@ def ask(cdp, session, message, tries=1, gap=5):
 
 
 def in_the_view(cdp, extid):
-    """The say screen as a reader meets it, driven the way a reader drives it."""
+    """The panel as a reader meets it: opened from the settings view over a page, typed into,
+    and answered with a card."""
     trouble = []
-    target = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/popup.html"})
-    session = cdp.send(
-        "Target.attachToTarget", {"targetId": target["targetId"], "flatten": True},
+    page_target = cdp.send("Target.createTarget", {"url": f"http://127.0.0.1:{PORT}/page.html"})
+    page = cdp.send(
+        "Target.attachToTarget", {"targetId": page_target["targetId"], "flatten": True},
     )["sessionId"]
-    cdp.send("Runtime.enable", session=session)
-    cdp.send("Page.enable", session=session)
+    cdp.send("Runtime.enable", session=page)
+    cdp.send("Page.enable", session=page)
     cdp.send("Emulation.setDeviceMetricsOverride", {
-        "width": 384, "height": 760, "deviceScaleFactor": 1, "mobile": False,
-    }, session=session)
+        "width": 900, "height": 760, "deviceScaleFactor": 1, "mobile": False,
+    }, session=page)
     time.sleep(3)
 
-    def evaluate(expression, wait=False):
+    view = cdp.send("Target.createTarget", {"url": f"chrome-extension://{extid}/popup.html"})
+    session = cdp.send(
+        "Target.attachToTarget", {"targetId": view["targetId"], "flatten": True},
+    )["sessionId"]
+    cdp.send("Runtime.enable", session=session)
+    time.sleep(3)
+
+    def evaluate(on, expression):
         got = cdp.send("Runtime.evaluate", {
-            "expression": expression, "awaitPromise": wait, "returnByValue": True,
-        }, session=session, timeout=300)
+            "expression": expression, "returnByValue": True,
+        }, session=on, timeout=300)
         return got.get("result", {}).get("value")
 
-    # Behind the mark rather than in the list, since it is not a setting: a reader holds the
-    # product's own mark, and the gesture a pointer has for "what else does this do" is the
-    # context menu, which the mark answers the same way.
-    opened = evaluate("""
+    # The settings view's own button, pressed: it opens the panel on the page it is over.
+    pressed = evaluate(session, """
         (() => {
-          const mark = document.querySelector('[data-does=say]');
-          if (!mark) return 'no mark to hold';
-          mark.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}));
-          return 'opened';
+          const button = document.querySelector('[data-does=open-panel]');
+          if (!button) return 'no button to open the panel';
+          if (button.disabled) return 'the button is off: the view found no page';
+          button.click();
+          return 'pressed';
         })()
     """)
-    if opened != "opened":
-        return [f"the settings view has no way to ask: {opened}"]
-    time.sleep(1)
-    # Typed and committed the way a reader commits a field: the value changes and the field
-    # reports it, which is what the view listens for.
-    typed = evaluate(f"""
-        (() => {{
-          const field = document.querySelector('[data-view=say] input');
-          if (!field) return 'no field';
-          field.value = {json.dumps(WANTED)};
-          field.dispatchEvent(new Event('change', {{bubbles: true}}));
-          return 'typed';
-        }})()
-    """)
-    if typed != "typed":
-        return [f"the say screen has no field to type in: {typed}"]
-    # The engine has the direction open by now, but the view has a round trip of its own.
-    for _ in range(12):
-        time.sleep(5)
-        drawn = evaluate("""
-            (() => {
-              const card = document.querySelector('[data-view=say] .answer .card');
-              if (!card) return '';
-              return card.innerText.replace(/[\\s]+/g, ' ').slice(0, 120);
-            })()
-        """)
-        if drawn:
+    if pressed != "pressed":
+        return [f"the settings view has no way to ask: {pressed}"]
+
+    in_panel = """
+      (() => {
+        const host = document.getElementById('phonetix-card-host-ask');
+        const root = host && host.shadowRoot;
+        if (!root) return null;
+        return (%s)(root);
+      })()
+    """
+    typed = None
+    for _ in range(20):
+        time.sleep(0.5)
+        # Typed the way a field is typed into: its value set through the element's own setter
+        # and the input reported, which is what the panel listens for.
+        typed = evaluate(page, in_panel % ("""
+            (root) => {
+              const field = root.querySelector('[data-ask] .field input');
+              if (!field) return null;
+              const set = Object.getOwnPropertyDescriptor(
+                window.HTMLInputElement.prototype, 'value').set;
+              set.call(field, %s);
+              field.dispatchEvent(new Event('input', {bubbles: true}));
+              return 'typed';
+            }
+        """ % json.dumps(WANTED)))
+        if typed:
             break
-    print(f"  the view answers with: {drawn!r}")
+    if typed != "typed":
+        return ["the button opened no panel to type in"]
+    # The engine has the direction open by now, but the panel has a round trip of its own.
+    drawn = ""
+    for _ in range(24):
+        time.sleep(2.5)
+        drawn = evaluate(page, in_panel % """
+            (root) => {
+              const card = root.querySelector('[data-ask] .answer .card');
+              return card ? card.innerText.replace(/\\s+/g, ' ').slice(0, 120) : '';
+            }
+        """) or ""
+        if EXPECTED in drawn.lower():
+            break
+    print(f"  the panel answers with: {drawn!r}")
     if not drawn:
-        trouble.append("the say screen drew no card for a word that was answered")
+        trouble.append("the panel drew no card for a word that was answered")
     elif EXPECTED not in drawn.lower():
-        trouble.append(f"the card on the say screen is not about {EXPECTED!r}: {drawn!r}")
+        trouble.append(f"the card in the panel is not about {EXPECTED!r}: {drawn!r}")
 
     os.makedirs(SHOTS, exist_ok=True)
-    got = cdp.send("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": True},
-                   session=session)
+    got = cdp.send("Page.captureScreenshot", {"format": "png"}, session=page)
     path = os.path.join(SHOTS, "say.png")
     with open(path, "wb") as f:
         f.write(base64.b64decode(got["data"]))
@@ -237,7 +265,7 @@ def main():
 
         cdp.send("Runtime.evaluate", {
             "expression": f"chrome.storage.local.set({{packBaseUrl:'{base}',"
-                          f"targetLanguage:'en',selectedLanguage:'es'}})",
+                          f"targetLanguage:'en',selectedLanguage:'es',learning:'es'}})",
             "awaitPromise": True, "returnByValue": True,
         }, session=session)
         opened = ask(cdp, session, {"phonetix": "openPack", "data": {"lang": "es"}}, tries=6)
