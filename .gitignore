@@ -47,3 +47,6 @@ android/local.properties
 public/dictionaries/
 # The settings screen, built from src/ui into the app's assets by the Gradle build.
 android/app/src/main/assets/ui/
+
+# Claude Code's own local settings and worktrees
+.claude/
