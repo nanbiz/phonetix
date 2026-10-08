@@ -3,7 +3,7 @@
 // It lives in a shadow root of its own so that a page's stylesheet cannot reach it and its
 // own cannot reach the page. What it draws is the same component the viewbook draws, from the
 // same Answer the phone's card is drawn from.
-import { mount, unmount } from 'svelte';
+import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 
 import Opened from '@/ui/card/Opened.svelte';
 import type { Answer } from '@/core/answer';
@@ -12,6 +12,7 @@ import tokenCss from '@/ui/tokens.css?inline';
 import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
+import { reactive } from './props.svelte';
 
 /** How far the card keeps from the edges of the window. */
 const MARGIN = 8;
@@ -20,6 +21,8 @@ let host: HTMLElement | null = null;
 let shadow: ShadowRoot | null = null;
 let frame: HTMLElement | null = null;
 let drawn: ReturnType<typeof mount> | null = null;
+/** What the card on screen was drawn with, which a card filled in is updated through. */
+let props: ComponentProps<typeof Opened> | null = null;
 /** What the card on screen is about, so a second ask about the same word is not a redraw. */
 let about: string | null = null;
 /** Which word the card on screen is about, so an answer filled in later is told apart from a
@@ -149,6 +152,22 @@ function keepInWindow(): void {
   if (over > 0) frame.style.top = `${Math.round(Math.max(MARGIN, box.top - over))}px`;
 }
 
+/**
+ * Keep a card that changed height on its side of its word: one over the word keeps its bottom
+ * edge where it was and grows upward, one under it grows downward; either stays in the window.
+ */
+function regrow(): void {
+  if (!frame) return;
+  const card = frame.querySelector('.card');
+  if (card?.classList.contains('above')) {
+    const box = frame.getBoundingClientRect();
+    const reach = arrowSize().reach;
+    frame.style.top = `${Math.round(Math.max(MARGIN, anchor.top - reach - box.height))}px`;
+    return;
+  }
+  keepInWindow();
+}
+
 /** What the card can be asked to do, which is the session's business rather than the card's. */
 export interface CardActions {
   /** Whether what the play button plays is a person rather than a machine. */
@@ -166,6 +185,8 @@ export interface CardActions {
   onOpen?: (url: string) => void;
   /** How far the dictionary for the word's language has got, where it is on its way. */
   arriving?: number | null;
+  /** Look a word up the way the card's own word was: its lemma, and its other forms. */
+  lookUp?: (word: string) => Promise<Answer | null>;
   /** Whether the card takes the pointer from the start rather than from its arrow: one opened
    *  by a tap or for a selection was asked for outright, and there is no hover to come in by. */
   entered?: boolean;
@@ -190,31 +211,47 @@ export function show(answer: Answer, at: DOMRect, actions: CardActions = {}): vo
   // The same word with more found out about it is the same card filled in: it neither eases
   // in a second time nor leaves the word it is under.
   const filling = drawn !== null && spelling === answer.spelling;
-  // And a card the reader had already come into stays one they are in.
-  const stayIn = (filling && entered) || (actions.entered ?? false);
+  const next = {
+    answer,
+    recorded: actions.recorded ?? false,
+    accent: actions.accent ?? '',
+    diagram: actions.diagram,
+    onPlay: actions.onPlay,
+    onPlayUrl: actions.onPlayUrl,
+    onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
+    arriving: actions.arriving ?? null,
+    lookUp: actions.lookUp,
+  };
+  if (filling && props) {
+    // Filled in where it is, keeping what the reader has open on it, on the side of its word
+    // it is already on.
+    // Drawn now and measured now, like a card drawn fresh: a card that waited for the next
+    // frame to be put back in place sat over its word in a tab that frame was slow to come to.
+    flushSync(() => Object.assign(props!, next));
+    about = key;
+    if (actions.entered) enter();
+    regrow();
+    requestAnimationFrame(regrow);
+    return;
+  }
+  const stayIn = actions.entered ?? false;
   hide();
   spelling = answer.spelling;
   const { frame: fresh } = build();
-  drawn = mount(Opened, {
-    target: fresh,
-    props: {
-      answer,
-      recorded: actions.recorded ?? false,
-      accent: actions.accent ?? '',
-      eased: !filling && (actions.eased ?? false),
-      // Anchored to a word, so it says which one it is about.
-      points: 'below',
-      diagram: actions.diagram,
-      onPlay: actions.onPlay,
-      onPlayUrl: actions.onPlayUrl,
-      onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
-      arriving: actions.arriving ?? null,
-      // A sound described makes the card taller. It grows where it stands, so the symbol the
-      // reader just pressed stays under the pointer, and moves up only as far as the window's
-      // bottom edge makes it.
-      onSymbol: () => requestAnimationFrame(keepInWindow),
-    },
+  props = reactive({
+    ...next,
+    eased: actions.eased ?? false,
+    // Anchored to a word, so it says which one it is about.
+    points: 'below' as const,
+    // A sound described makes the card taller. It grows where it stands, so the symbol the
+    // reader just pressed stays under the pointer, and moves up only as far as the window's
+    // bottom edge makes it.
+    onSymbol: () => requestAnimationFrame(keepInWindow),
+    // Reading as another form or as the lemma's entry changes how tall the card is. It keeps
+    // the side of its word it is on and the edge nearest that word, and grows away from it.
+    onGrow: () => requestAnimationFrame(regrow),
   });
+  drawn = mount(Opened, { target: fresh, props });
   about = key;
   void box;
   if (stayIn) enter();
@@ -248,6 +285,7 @@ export function hide(): void {
     void unmount(drawn);
     drawn = null;
   }
+  props = null;
   about = null;
   entered = false;
   if (frame) frame.style.pointerEvents = 'none';

@@ -1,11 +1,13 @@
 <script lang="ts">
   // The answer surface: what a reader gets when they stop at a word.
   //
-  // A card under the pointer is read in a glance, so it says four things and nothing else: the
-  // word and what language it is read as, what it means, how it is said, and which form of
-  // which word it is. A spelling that is several words leads with the likeliest and names the
-  // others on one quiet line. Every symbol of the transcription is a button, and the sound a
-  // reader asks about is described on a line that is there only once they ask.
+  // A card under the pointer is read in a glance, so it says three things on three lines and
+  // nothing else: the word with how it is said and what language it is read as, what it means,
+  // and which form of which word it is. A spelling that is several words leads with the
+  // likeliest and names the others on one quiet line. Every symbol of the transcription is a
+  // button, and the sound a reader asks about is described on a line that is there only once
+  // they ask. A form's terms and its lemma open the rest: a sheet per term, the lemma's whole
+  // entry.
   //
   // The markup is the surface page's own and the stylesheet is generated from it.
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
@@ -16,6 +18,10 @@
   import { WIKTIONARY } from './icons';
   import PlayButton from './PlayButton.svelte';
   import SoundLine from './SoundLine.svelte';
+  import FormLine from './FormLine.svelte';
+  import Entry from './Entry.svelte';
+  import { cut } from './grammar';
+  import type { ParadigmForm } from '@/core/answer';
 
   interface Props {
     answer: Answer;
@@ -39,6 +45,16 @@
     onOpen?: (url: string) => void;
     /** How far the dictionary for the word's language has got, where it is on its way. */
     arriving?: number | null;
+    /** The word on the page, where the card is reading as something else: another form of it,
+     *  or its lemma's entry. It is the way back. */
+    back?: string | null;
+    onBack?: () => void;
+    /** Whether the card is the lemma's whole entry rather than one word's answer. */
+    entry?: boolean;
+    /** Open the lemma's entry, where the host can look one up. */
+    onLemma?: () => void;
+    /** Read the card as another form of the word. */
+    onForm?: (form: ParadigmForm) => void;
   }
 
   let {
@@ -54,6 +70,11 @@
     onSymbol,
     onPlay,
     onOpen,
+    back = null,
+    onBack,
+    entry: whole = false,
+    onLemma,
+    onForm,
   }: Props = $props();
 
   /** Which rule a symbol takes: the four kinds the table names are drawn apart. */
@@ -82,7 +103,16 @@
 
   // The meaning in a few words: a dictionary lists synonyms after the first, and three of them
   // in the type a headline is set in ran over two lines of a card read in a glance.
-  let lead = $derived(short(headlineOf(answer)));
+  // A form the core could say in the reader's language is said in it: "he walked" for
+  // "anduvo", where the lemma's meaning would be "to walk".
+  let lead = $derived(answer.paradigm?.said ?? short(headlineOf(answer)));
+  // The word cut where its own ending starts: the stem it shares with its lemma in ink, and
+  // what makes it this form in the accent.
+  let parts = $derived(
+    answer.paradigm && answer.paradigm.endingAt < Array.from(answer.spelling).length
+      ? cut(answer.spelling, answer.paradigm.endingAt)
+      : null
+  );
 
   /** As many of a meaning's comma-separated synonyms as fit in a headline, and always one. */
   function short(meaning: string | null): string | null {
@@ -153,15 +183,44 @@
 <article class="card{eased ? ' eased' : ''}{points ? ` points ${points}` : ''}">
   <div class="card-handle"></div>
   <header class="card-head">
+    <!-- One line: the word, how it is said, what it is read as, and what a reader reaches for
+         outside the card. -->
     <div class="card-top">
-      <span class="word">{answer.spelling}</span>
+      <span class="word"
+        >{#if parts}{parts[0]}<span class="ending">{parts[1]}</span>{:else}{answer.spelling}{/if}</span
+      >
+      {#if answer.ipa.length > 0 && !phrase && !nothing}
+        <span class="ipa">
+          <span class="delim">/</span><!--
+          Symbol by symbol, because each one is a button. No space between them: a
+          transcription is one word and reads as one.
+       -->{#if answer.symbols.length > 0}{#each answer.symbols as symbol, i (i)}<button
+              class="{symbolClass(symbol.kind)}{opened?.token === symbol.token ? ' active' : ''}"
+              title={symbol.name}
+              onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}{:else}<!--
+            Whole, where the table could not say what its sounds are.
+         -->{answer.ipa[0]}{/if}<span
+            class="delim">/</span>
+        </span>
+      {/if}
       {#if !phrase && answer.source}
         <span class="pill" title={readAs.name
           ? `Read as ${named(answer.source)}, ${readAs.name} accent`
           : `Read as ${named(answer.source)}`}>{readAs.label}</span>
       {/if}
       <span class="spacer"></span>
-      {#if !phrase}
+      {#if back}
+        <!-- In place of the word's own play and Wiktionary buttons: a form and its transcription
+             with the way back beside them is all one line of a card holds, and both buttons are
+             one step away, on the word the way back returns to. -->
+        <button class="card-back" data-back onclick={() => onBack?.()}>← {back}</button>
+      {:else if answer.ipa.length > 0 && !phrase && !nothing}
+        <PlayButton
+          label={recorded ? `hear ${answer.spelling}` : `say ${answer.spelling}`}
+          onplay={() => onPlay?.()}
+        />
+      {/if}
+      {#if !phrase && !back}
         <IconLink
           icon={WIKTIONARY}
           label="Wiktionary"
@@ -172,7 +231,9 @@
       {/if}
     </div>
 
-    {#if nothing}
+    {#if whole}
+      <Entry entry={answer} />
+    {:else if nothing}
       <p class="note">{missing}</p>
     {:else}
       {#if lead && lead !== answer.spelling}
@@ -189,36 +250,20 @@
         </div>
       {/if}
 
-      {#if answer.ipa.length > 0 && !phrase}
-        <div class="ipa-row">
-          <span class="ipa">
-            <span class="delim">/</span><!--
-            Symbol by symbol, because each one is a button. No space between them: a
-            transcription is one word and reads as one.
-         -->{#if answer.symbols.length > 0}{#each answer.symbols as symbol, i (i)}<button
-                class="{symbolClass(symbol.kind)}{opened?.token === symbol.token ? ' active' : ''}"
-                title={symbol.name}
-                onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}{:else}<!--
-              Whole, where the table could not say what its sounds are.
-           -->{answer.ipa[0]}{/if}<span
-              class="delim">/</span>
-          </span>
-          <PlayButton
-            label={recorded ? `hear ${answer.spelling}` : `say ${answer.spelling}`}
-            onplay={() => onPlay?.()}
-          />
-        </div>
-        {#if opened}
-          <SoundLine about={opened} {diagram} onPlay={onPlaySymbol} {onOpen} />
-        {/if}
-      {/if}
-
       {#if phrase}
         <!-- What was selected, under what it means, so a reader sees which of it was answered. -->
         <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
       {/if}
 
-      {#if form}
+      {#if answer.paradigm && answer.paradigm.place.length > 0 && !phrase}
+        <FormLine
+          paradigm={answer.paradigm}
+          spelling={answer.spelling}
+          lemma={answer.lemma}
+          {onLemma}
+          {onForm}
+        />
+      {:else if form}
         <div class="gram" data-form><span class="one-line">{form}</span></div>
       {/if}
 
@@ -236,6 +281,11 @@
           <span>or</span><span class="lemma one-line">{others.join(' · ')}</span>
         </div>
       {/if}
+    {/if}
+
+    {#if opened && answer.ipa.length > 0 && !phrase}
+      <!-- Last, so the line a sound adds moves nothing the reader is already reading. -->
+      <SoundLine about={opened} {diagram} onPlay={onPlaySymbol} {onOpen} />
     {/if}
   </header>
   {#if points}

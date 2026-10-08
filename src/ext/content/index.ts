@@ -582,6 +582,14 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
       // said by whichever voice is asked for.
       else void speak(word.spelling, source);
     },
+    // The lemma's entry and the word's other forms, asked the way the word itself was, with
+    // nothing before them: they are not words of the page's sentence.
+    lookUp: async (other) => {
+      const found = await sendMessage('lookUp', {
+        word: other, source, target, accent: accentFor(settings, source), before: '', drawn: '',
+      }).catch(() => null);
+      return found && (translating ? found : said(found));
+    },
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
     // host, because the page's own policy would refuse the load.
     onPlayUrl: (url) => void recorded(url),

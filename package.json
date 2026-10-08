@@ -34,6 +34,7 @@
     "test:popup": "uv run scripts/proofread/popup_view.py",
     "test:phone-guesses": "uv run scripts/proofread/android_guesses.py",
     "test:translates": "uv run scripts/proofread/translates.py",
+    "test:grammar-card": "uv run --with pillow python scripts/proofread/grammar_card.py",
     "test:mozilla-models": "uv run python scripts/proofread/mozilla_models.py",
     "test:slow-pack": "uv run scripts/proofread/slow_pack.py",
     "bundle:dict": "node scripts/bundle-dictionaries.mjs",

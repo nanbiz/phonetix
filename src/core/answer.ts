@@ -79,6 +79,44 @@ export interface Answer {
   provenance: Provenance | null;
   source: string;
   target: string;
+  /** Which form of its lemma the word is, by grammatical category, and the word in every other
+   *  value of each of those categories. Absent for a word the pack has no table for. */
+  paradigm?: Paradigm | null;
+}
+
+/** One grammatical value of a place in a table: "preterite" of the category "tense". */
+export interface PlaceValue {
+  value: string;
+  category: string;
+}
+
+/** The word in one place of its table. */
+export interface ParadigmForm {
+  place: PlaceValue[];
+  spelling: string;
+  /** Whether this is the place of the word the card is about. */
+  here: boolean;
+  /** What the word means said in this place, where the reader reads English: "he will walk". */
+  said: string | null;
+}
+
+/** One category of a form, and the word in each of its values with every other value kept.
+ *  "person" moves person and number together, which a grammar lays out as one grid. */
+export interface ParadigmAlong {
+  category: string;
+  forms: ParadigmForm[];
+}
+
+/** Which form of its lemma a word is, as core/src/paradigm.rs decides it. */
+export interface Paradigm {
+  /** The word's values, in the order a card names them. */
+  place: PlaceValue[];
+  /** Where the word's own ending starts, in characters: what comes before it is shared with
+   *  the lemma. */
+  endingAt: number;
+  /** What the word means said in this place: "he walked". */
+  said: string | null;
+  along: ParadigmAlong[];
 }
 
 /** What this reading answers with, or its English meaning where it answered nothing. */

@@ -32,13 +32,25 @@
 @keyframes card-in { from { opacity: 0; transform: translateY(4px) scale(0.99); } to { opacity: 1; transform: none; } }
 .card.eased { animation: card-in var(--motion-dwell) cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .card-handle { display: none; width: var(--handle-width); height: var(--handle-height); border-radius: var(--radius-bar); background: var(--color-border); margin: var(--space-2) auto 0; }
-.card-head { padding: var(--space-4) var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
-/* The top row: the word as the page spells it, what it is being read as, where the answer came
-   from, and the two things a reader reaches for outside the card. It is one line and stays one
-   line, so what is under the cursor is named before anything else is said about it. */
-.card-top { display: flex; align-items: center; gap: var(--space-2); }
-.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* One inset for every line of text in the card, and one gap between its lines. */
+.card-head { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+/* The top row: the word as the page spells it, how it is said, what it is being read as, and
+   the things a reader reaches for outside the card. It is one line, so what is under the cursor
+   is named and said before anything else is said about it, and the transcription behind the
+   word costs the card no line of its own. The word and its transcription share a baseline; the
+   buttons sit on the row's middle. */
+.card-top { display: flex; align-items: baseline; gap: var(--space-2); }
+/* The word is never cut: where the line is short of room, the transcription behind it wraps. */
+.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 0 auto; max-width: 100%; }
+/* What makes the word the form it is, in the accent, against the stem it shares with its lemma. */
+.card-top .word .ending { color: var(--color-accent); }
+.card-top .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
 .card-top .spacer { flex: 1 1 auto; }
+.card-top .icon-btn, .card-top .audio { align-self: center; }
+/* The way back to the word on the page, where the card is reading as another form of it or as
+   its lemma's entry. */
+.card-back { font: inherit; font-size: var(--font-size-small); color: var(--color-accent); background: none; border: none; padding: 0 var(--space-1); border-radius: var(--radius-button); cursor: pointer; white-space: nowrap; align-self: center; }
+.card-back:hover { background: var(--color-accent-bg); }
 .pill { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; line-height: 1.6; padding: 1px var(--space-2); border-radius: var(--radius-chip); white-space: nowrap; background: var(--color-chip-bg); color: var(--color-chip-ink); flex: 0 0 auto; }
 /* Where the answer came from, in its own colour: a dictionary a person wrote and a machine
    that guessed are not the same claim, and a reader decides how far to trust the card by it. */
@@ -108,6 +120,74 @@
 .chip.class-dictionary { background: var(--color-accent-bg); color: var(--color-accent); }
 .chip.class-partial { background: var(--color-guess-bg); color: var(--color-guess); }
 .chip.class-machine { background: var(--color-guess-bg); color: var(--color-guess); }
+
+/* The form line: which form of which word this is, by the terms of its place. Every term is a
+   thing to point at, drawn with the dotted rule a term with an explanation behind it carries,
+   and the lemma is a link to its entry, which is there only for a word that is not its own
+   lemma. */
+.forms { display: flex; flex-wrap: wrap; align-items: baseline; font-size: var(--font-size-sense); line-height: 1.4; color: var(--color-ink-muted); }
+.form-term { color: var(--color-ink); border-bottom: 1.5px dotted var(--color-ink-faint); cursor: help; }
+.form-term:hover, .form-term.on { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+.form-term:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.form-dot { margin: 0 2px; white-space: pre; color: var(--color-ink-faint); }
+.form-of { white-space: pre; }
+.form-lemma { font: inherit; font-weight: var(--weight-bold); color: var(--color-accent); background: none; border: none; border-bottom: 1.5px solid var(--color-accent); border-radius: 0; padding: 0; cursor: pointer; }
+.form-lemma:hover { background: var(--color-accent-bg); }
+.form-lemma.still { color: var(--color-ink); border-bottom: none; cursor: default; }
+/* A card with a form line is as wide as a card gets, because the sheets its terms open are as
+   wide as the card and a row of a sheet is one line. A sheet hangs off the card, so the card
+   lets it out. */
+.card:has(.forms) { width: var(--card-width); max-width: 100%; }
+.card:has(.sheet) { position: relative; overflow: visible; }
+/* The sheet a term opens: the category it is a value of, what the category and the value are,
+   and the word in every value of that category with everything else kept, the word's own row
+   lit. Exactly as wide as the card and one gap from it, under the card or over it, whichever
+   side the word is not on. Its text keeps the card's inset and its rows are one line each. */
+.sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: calc(100% + var(--space-2) + var(--border-width)); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius-card); box-shadow: var(--shadow-lifted); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
+.sheet.over { top: auto; bottom: calc(100% + var(--space-2) + var(--border-width)); }
+.sheet-cat { padding: 0 var(--space-4); margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
+.sheet-def { padding: 0 var(--space-4); margin-bottom: var(--space-3); line-height: 1.35; }
+.sheet-def p { margin: 0; }
+.sheet-def p + p { margin-top: var(--space-1); }
+.sheet-def b { color: var(--color-accent); font-weight: var(--weight-bold); }
+.sheet .ending { color: var(--color-accent); }
+/* A value a row or a heading is named by explains itself on pointing, and carries the dotted
+   rule every explained term on the card does. */
+.sheet [title] { text-decoration: underline dotted var(--color-ink-faint); text-decoration-thickness: 1px; text-underline-offset: 3px; cursor: help; }
+.sheet-rows { border-collapse: collapse; width: 100%; }
+.sheet-rows td { padding: 6px var(--space-2); line-height: 17px; border-top: var(--border-width) solid var(--color-border); white-space: nowrap; vertical-align: baseline; }
+.sheet-rows td:first-child { padding-left: var(--space-4); width: var(--sheet-name-width); }
+.sheet-rows td:last-child { padding-right: var(--space-4); }
+.sheet-rows .r-name { color: var(--color-ink-muted); }
+.sheet-rows .r-form { font-weight: var(--weight-bold); }
+/* The meaning takes what the name and the form leave, and is cut short rather than wrapped. */
+.sheet-rows .r-said { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--color-ink-muted); font-style: italic; }
+.sheet-rows tr { cursor: pointer; }
+.sheet-rows tr.here { cursor: default; }
+.sheet-rows tr.here td { background: var(--color-accent-bg); }
+.sheet-rows tr.here .r-name { color: var(--color-accent); font-weight: var(--weight-bold); }
+.sheet-rows tr:not(.here):hover td { background: var(--color-chip-bg); }
+/* Person and number as the grid a grammar draws them in: who down the side, how many across. */
+.sheet-grid { display: grid; }
+.sheet-grid > * { padding: 6px var(--space-2); line-height: 17px; border-top: var(--border-width) solid var(--color-border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.sheet-grid .g-head { border-top: none; font-size: var(--font-size-label); color: var(--color-ink-muted); }
+.sheet-grid .g-name { color: var(--color-ink-muted); }
+.sheet-grid .g-name, .sheet-grid .g-head.first { padding-left: var(--space-4); }
+.sheet-grid .last { padding-right: var(--space-4); }
+.sheet-grid .g-cell { font: inherit; line-height: 17px; color: var(--color-ink); background: none; border-left: none; border-right: none; border-bottom: none; border-radius: 0; margin: 0; cursor: pointer; }
+.sheet-grid .g-cell.here { background: var(--color-accent-bg); color: var(--color-accent); font-weight: var(--weight-bold); cursor: default; }
+.sheet-grid .g-cell:not(.here):not(.empty):hover { background: var(--color-chip-bg); }
+.sheet-grid .g-cell.empty { cursor: default; }
+.sheet-grid .g-who { margin-left: var(--space-1); color: var(--color-ink-muted); font-style: italic; font-weight: var(--weight-regular); }
+/* A lemma's whole entry: every sense under the part of speech it belongs to, with what the
+   dictionary marks it as. */
+.entry { font-size: var(--font-size-sense); line-height: 1.4; color: var(--color-ink); }
+.entry-pos { margin: var(--space-1) 0 2px; font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
+.entry-pos:first-child { margin-top: 0; }
+.entry ol { margin: 0; padding-left: 20px; }
+.entry li { margin: 2px 0; }
+.entry-mark { margin-left: var(--space-1); font-size: var(--font-size-label); color: var(--color-ink-faint); }
+.entry-mark.explained { border-bottom: 1.5px dotted var(--color-ink-faint); cursor: help; }
 
 .card-body { padding: 0 var(--space-4) var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); min-height: 0; }
 .card-body:empty { display: none; }

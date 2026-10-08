@@ -412,6 +412,19 @@ def arrow_checks(hand, name, painted, low, failures):
         if after["takes"] != "auto":
             fail(f"the card entered through its arrow does not take the pointer ({after['takes']})")
         if after["sym"]:
+            # Where the symbol is once the card has stopped filling in: an answer the engine
+            # guesses arrives a second or more after the card opens and adds its headline, which
+            # moved the symbol out from under a click aimed at where it had been.
+            still = 0
+            for _ in range(30):
+                time.sleep(0.3)
+                settled = card()
+                if not settled["open"]:
+                    break
+                still = still + 1 if settled.get("sym") == after["sym"] else 0
+                after = settled
+                if still >= 6:
+                    break
             sym = after["sym"]
             walk(hand, (word["x"], inside_card), (sym["x"], sym["y"]))
             time.sleep(0.3)
@@ -954,7 +967,9 @@ def main():
         time.sleep(1)
         with_it = card_on("perro") or ""
         print(f"  a dictionary fetched with the page open: {without[:40]!r} -> {with_it[:40]!r}")
-        if "Hund" in without:
+        # The engine may guess it meanwhile, which the card says is a guess: what must not be
+        # there is the dictionary's own answer.
+        if "Hund" in without and "guess" not in without.lower():
             failures.append(f"the card knew what perro means with no dictionary: {without!r}")
         if "Hund" not in with_it:
             failures.append("a dictionary fetched while the page was open changed nothing on it")
