@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 import Icons from 'unplugin-icons/vite';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -15,6 +16,9 @@ function devBrowsers(): Record<string, string> | undefined {
   }
 }
 const paths = devBrowsers();
+
+/** The service worker's name in this build, between naming it and moving the file. */
+let renamed: { from: string; to: string } | undefined;
 
 export default defineConfig({
   vite: () => ({
@@ -46,6 +50,46 @@ export default defineConfig({
     ],
   },
   modules: ['@wxt-dev/module-svelte'],
+  hooks: {
+    // Chromium can keep running the service worker it registered for an unpacked extension
+    // for as long as the worker's file name stays the same, across restarts and new versions
+    // alike, so a browser that loads this build with --load-extension may run an old worker
+    // under new pages. Each build's worker is therefore named after its version, and the
+    // version carries the commit count as a fourth part so that the name and the version
+    // change together: a new name under a version the browser already registered is a
+    // worker that never starts. version_name keeps the package's version for display and
+    // for the zip's name. A build of uncommitted work has its commit's name and version and
+    // is picked up once committed.
+    'build:manifestGenerated': (wxt, manifest) => {
+      if (wxt.config.browser === 'firefox' || wxt.config.command !== 'build') return;
+      const background = manifest.background;
+      if (!background || !('service_worker' in background)) return;
+      const worker = background.service_worker;
+      let commits = '0';
+      try {
+        commits = execSync('git rev-list --count HEAD', { encoding: 'utf-8' }).trim();
+      } catch {
+        // Outside a checkout the build keeps one name, which is all a fresh install needs.
+      }
+      manifest.version_name = manifest.version_name ?? manifest.version;
+      manifest.version = `${manifest.version}.${commits}`;
+      renamed = { from: worker, to: `background-${manifest.version}.js` };
+      background.service_worker = renamed.to;
+    },
+    // The file follows its name once the build is done, and the build's own list of what it
+    // wrote with it, which the summary after this reads from disk.
+    'build:done': (wxt, output) => {
+      if (!renamed) return;
+      const { from, to } = renamed;
+      renamed = undefined;
+      fs.renameSync(path.join(wxt.config.outDir, from), path.join(wxt.config.outDir, to));
+      for (const step of output.steps) {
+        for (const chunk of step.chunks) {
+          if (chunk.fileName === from) chunk.fileName = to;
+        }
+      }
+    },
+  },
   manifest: ({ browser }) => ({
     name: 'Phonetix - Learn and Understand IPA',
     // The voice needs a document and a Chromium service worker has none, so on Chromium it
