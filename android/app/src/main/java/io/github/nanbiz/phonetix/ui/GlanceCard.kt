@@ -125,8 +125,26 @@ fun GlanceCard(
                     listOfNotNull(answer.pos) + also
                 }
                 if (kind.isNotEmpty()) {
+                    // The word it is a form of set apart from the names of the form: it is the
+                    // word to look up, the rest is what was done to it.
+                    val lemma = answer.lemma?.takeIf { form != null }
                     Text(
-                        text = kind.joinToString(" · "),
+                        text = androidx.compose.ui.text.buildAnnotatedString {
+                            val line = kind.joinToString(" · ")
+                            if (lemma == null || !line.endsWith(" of $lemma")) {
+                                append(line)
+                            } else {
+                                append(line.removeSuffix(lemma))
+                                pushStyle(
+                                    androidx.compose.ui.text.SpanStyle(
+                                        color = Color(palette.accent),
+                                        fontWeight = FontWeight.SemiBold,
+                                    ),
+                                )
+                                append(lemma)
+                                pop()
+                            }
+                        },
                         color = Color(palette.inkMuted),
                         fontSize = Tokens.Scale.fontSizeSmall.sp,
                         maxLines = 1,
