@@ -1,0 +1,2941 @@
+{
+  "note": "Grammatical terms a form in a pack is labelled with, and Wiktionary's definitions of them (en.wiktionary.org, Appendix:Glossary and the terms' own entries, CC BY-SA 4.0). Written by tools/grammar_terms.py; text is null where Wiktionary has none.",
+  "categories": {
+    "mood": {
+      "name": "mood",
+      "text": "One of the forms of a verb, used to indicate the speaker's attitude toward what they are saying (e.g. a statement of fact, of desire, of command, etc.).",
+      "source": "Appendix:Glossary#mood"
+    },
+    "tense": {
+      "name": "tense",
+      "text": "One of the forms of a verb, used to distinguish when an action or state of being occurs or exists.",
+      "source": "Appendix:Glossary#tense"
+    },
+    "aspect": {
+      "name": "aspect",
+      "text": "A property of a verb form indicating the nature of an action as perfective (complete) or imperfective (incomplete or continuing).",
+      "source": "Appendix:Glossary#aspect"
+    },
+    "person": {
+      "name": "person",
+      "text": "A grammatical category that indicates the relationship between the speaker and what is being spoken of.",
+      "source": "Appendix:Glossary#person"
+    },
+    "number": {
+      "name": "number",
+      "text": "A grammatical category that indicates how many items or individuals.",
+      "source": "Appendix:Glossary#number"
+    },
+    "case": {
+      "name": "case",
+      "text": "One of the forms of a noun, used to indicate its function in the phrase or sentence.",
+      "source": "Appendix:Glossary#case"
+    },
+    "gender": {
+      "name": "gender",
+      "text": "A way of classifying nouns in some languages.",
+      "source": "Appendix:Glossary#gender"
+    },
+    "definiteness": {
+      "name": "definiteness",
+      "text": null,
+      "source": null
+    },
+    "declension": {
+      "name": "declension",
+      "text": "The inflection of nouns and words like them, or used together with them (i.e. nominals).",
+      "source": "Appendix:Glossary#declension"
+    },
+    "degree": {
+      "name": "degree",
+      "text": "Inflections of adjectives and adverbs which allow comparisons.",
+      "source": "Appendix:Glossary#degrees_of_comparison"
+    },
+    "voice": {
+      "name": "voice",
+      "text": "A verb characteristic (expressed in some languages by inflection) indicating its relationship with the subject.",
+      "source": "Appendix:Glossary#voice"
+    },
+    "register": {
+      "name": "register",
+      "text": "A variety of a language used for a particular purpose or in a particular social setting.",
+      "source": "Appendix:Glossary#register"
+    },
+    "nonfinite": {
+      "name": "nonfinite",
+      "text": "Of a verb – lacking grammatical person and number attributes; most nonfinite verbs found in English are infinitives, participles and gerunds.",
+      "source": "Appendix:Glossary#nonfinite"
+    }
+  },
+  "values": {
+    "plural": {
+      "category": "number",
+      "text": "A grammatical number that indicates multiple items or individuals.",
+      "source": "Appendix:Glossary#plural_number",
+      "rows": 30636748
+    },
+    "singular": {
+      "category": "number",
+      "text": "A grammatical number that indicates exactly one item or individual.",
+      "source": "Appendix:Glossary#singular_number",
+      "rows": 28452612
+    },
+    "second-person": {
+      "category": "person",
+      "text": "A grammatical person that indicates the person or group to whom one is speaking.",
+      "source": "Appendix:Glossary#second-person",
+      "rows": 13294631
+    },
+    "third-person": {
+      "category": "person",
+      "text": "A grammatical person that indicates someone or something that is neither the person or group to which the speaker belongs, nor the person or group that the speaker is speaking to.",
+      "source": "Appendix:Glossary#third-person",
+      "rows": 13064562
+    },
+    "first-person": {
+      "category": "person",
+      "text": "A grammatical person that indicates the speaker him/her/itself, or a group to which the speaker belongs.",
+      "source": "Appendix:Glossary#first-person",
+      "rows": 12318992
+    },
+    "genitive": {
+      "category": "case",
+      "text": "A case that expresses possession or relation, equivalent to the English of or -'s.",
+      "source": "Appendix:Glossary#genitive_case",
+      "rows": 6710826
+    },
+    "accusative": {
+      "category": "case",
+      "text": "A case that is usually used as the direct object of a verb.",
+      "source": "Appendix:Glossary#accusative_case",
+      "rows": 4715507
+    },
+    "nominative": {
+      "category": "case",
+      "text": "A case that is usually used as the subject of a verb.",
+      "source": "Appendix:Glossary#nominative_case",
+      "rows": 4464190
+    },
+    "indicative": {
+      "category": "mood",
+      "text": "The mood of a verb used in ordinary factual or objective statements.",
+      "source": "Appendix:Glossary#indicative_mood",
+      "rows": 4071918
+    },
+    "feminine": {
+      "category": "gender",
+      "text": "\"Feminine\"; said of a word belonging to the feminine gender, which is usually contrasted with the masculine gender, and also often with a neuter gender.",
+      "source": "Appendix:Glossary#feminine",
+      "rows": 3664348
+    },
+    "masculine": {
+      "category": "gender",
+      "text": "Belonging to the male grammatical gender, in languages that have gender distinctions.",
+      "source": "Appendix:Glossary#masculine",
+      "rows": 3523409
+    },
+    "definite": {
+      "category": "definiteness",
+      "text": "Refers to forms of words that present something as known, identified, or immediately identifiable; in English, this is the basic meaning of the article the; in some languages, this is a nominal or adjectival inflection.",
+      "source": "Appendix:Glossary#definite",
+      "rows": 3207407
+    },
+    "past": {
+      "category": "tense",
+      "text": "The tense of a verb used to refer to an event, transaction, or occurrence that did happen or has happened, or an object that existed, at a point in time before now.",
+      "source": "Appendix:Glossary#past_tense",
+      "rows": 3165230
+    },
+    "present": {
+      "category": "tense",
+      "text": "The tense of a verb used primarily to refer to an event, transaction, or occurrence happening now or at the present time.",
+      "source": "Appendix:Glossary#present_tense",
+      "rows": 2989455
+    },
+    "ablative": {
+      "category": "case",
+      "text": "A case that indicates separation, or moving away from something.",
+      "source": "Appendix:Glossary#ablative_case",
+      "rows": 2758052
+    },
+    "indefinite": {
+      "category": "definiteness",
+      "text": "Refers to forms of words that present something as not yet identified or not immediately identifiable; in English, this is the basic meaning of the article a; in some languages, this is a nominal or adjectival inflection.",
+      "source": "Appendix:Glossary#indefinite",
+      "rows": 2491480
+    },
+    "inessive": {
+      "category": "case",
+      "text": "A noun case used to indicate location inside something.",
+      "source": "inessive case#English (Noun)",
+      "rows": 2352200
+    },
+    "dative": {
+      "category": "case",
+      "text": "A case that is usually used as the indirect object of a verb.",
+      "source": "Appendix:Glossary#dative_case",
+      "rows": 2323737
+    },
+    "partitive": {
+      "category": "case",
+      "text": "A case that expresses a partial object or an action that is not performed to completion.",
+      "source": "Appendix:Glossary#partitive_case",
+      "rows": 2304166
+    },
+    "allative": {
+      "category": "case",
+      "text": "The allative case, or a word in that case.",
+      "source": "allative#English (Noun)",
+      "rows": 2300711
+    },
+    "elative": {
+      "category": "case",
+      "text": "A case which expresses \"moving out of\".",
+      "source": "Appendix:Glossary#elative_case",
+      "rows": 2295964
+    },
+    "adessive": {
+      "category": "case",
+      "text": "A noun case used to indicate adjacent location.",
+      "source": "adessive case#English (Noun)",
+      "rows": 2295283
+    },
+    "neuter": {
+      "category": "gender",
+      "text": "Of neuter gender: having a form which is not masculine nor feminine; or having a form which is not of common gender.",
+      "source": "Appendix:Glossary#neuter",
+      "rows": 2284385
+    },
+    "translative": {
+      "category": "case",
+      "text": "a form of declension that indicates a change in the state of a noun; the Estonian, Finnish and Hungarian languages have such a case",
+      "source": "translative case#English (Noun)",
+      "rows": 2283043
+    },
+    "abessive": {
+      "category": "case",
+      "text": "The abessive case, or a word in this case.",
+      "source": "abessive#English (Noun)",
+      "rows": 2226893
+    },
+    "essive": {
+      "category": "case",
+      "text": "Noun case used to indicate a temporary state of being, such as the site of an action or the time at which it took place.",
+      "source": "essive case#English (Noun)",
+      "rows": 2213828
+    },
+    "illative": {
+      "category": "case",
+      "text": "A case used to indicate movement into something; for example, into the house.",
+      "source": "illative case#English (Noun)",
+      "rows": 2073238
+    },
+    "future": {
+      "category": "tense",
+      "text": "The tense of a verb used to refer to an event that has not yet happened, is expected to happen in the future, or might never happen.",
+      "source": "Appendix:Glossary#future_tense",
+      "rows": 1962668
+    },
+    "conditional": {
+      "category": "mood",
+      "text": "The mood of a verb used to signify that something is contingent upon the outcome of something else.",
+      "source": "Appendix:Glossary#conditional_mood",
+      "rows": 1677802
+    },
+    "subjunctive": {
+      "category": "mood",
+      "text": "The mood of a verb expressing an action or state which is hypothetical or anticipated rather than actual, including wishes and counterfactuals.",
+      "source": "Appendix:Glossary#subjunctive_mood",
+      "rows": 1636559
+    },
+    "imperative": {
+      "category": "mood",
+      "text": "The mood of a verb expressing an order or command.",
+      "source": "Appendix:Glossary#imperative_mood",
+      "rows": 1417468
+    },
+    "active": {
+      "category": "voice",
+      "text": "The voice verb form in which the grammatical subject is the person or thing doing the action (compare passive voice), e.g. The boy kicked the ball.",
+      "source": "Appendix:Glossary#active_voice",
+      "rows": 1375564
+    },
+    "instrumental": {
+      "category": "case",
+      "text": "A case used to express means or agency—and is generally indicated in English by \"by\" or \"with\" with the objective.",
+      "source": "Appendix:Glossary#instrumental_case",
+      "rows": 1179536
+    },
+    "participle": {
+      "category": "nonfinite",
+      "text": "A form of a verb that may function as an adjective or noun.",
+      "source": "Appendix:Glossary#participle",
+      "rows": 1167120
+    },
+    "passive": {
+      "category": "voice",
+      "text": "the voice verb form in which the subject is not the person or thing doing the action, and is usually having the action done on them (compare active voice), e.g. the ball was kicked (by the boy).",
+      "source": "Appendix:Glossary#passive_voice",
+      "rows": 1148771
+    },
+    "perfect": {
+      "category": "tense",
+      "text": "The aspect of a verb indicating that the action described is completed.",
+      "source": "Appendix:Glossary#perfect",
+      "rows": 1090684
+    },
+    "comitative": {
+      "category": "case",
+      "text": "A case that denotes accompaniment.",
+      "source": "Appendix:Glossary#comitative_case",
+      "rows": 984760
+    },
+    "imperfect": {
+      "category": "tense",
+      "text": "The imperfective past tense of a verb, indicating that the action described happened repeatedly, habitually or continuously.",
+      "source": "Appendix:Glossary#imperfect",
+      "rows": 978908
+    },
+    "locative": {
+      "category": "case",
+      "text": "A case used to indicate place, or the place where, or wherein.",
+      "source": "Appendix:Glossary#locative_case",
+      "rows": 968493
+    },
+    "formal": {
+      "category": "register",
+      "text": "Describes word choice and syntax which is appropriate mainly in formal contexts, such as in official or legal documents, essays, and sometimes when talking with one's superiors or elders.",
+      "source": "Appendix:Glossary#formal",
+      "rows": 930522
+    },
+    "vocative": {
+      "category": "case",
+      "text": "A case which indicates that someone or something is being directly addressed (spoken to), often by name.",
+      "source": "Appendix:Glossary#vocative_case",
+      "rows": 907258
+    },
+    "informal": {
+      "category": "register",
+      "text": "Denotes spoken or written words that are used primarily in a familiar or casual context.",
+      "source": "Appendix:Glossary#informal",
+      "rows": 812328
+    },
+    "superlative": {
+      "category": "degree",
+      "text": "An inflection, or different form, of a comparable adjective showing a relative quality, denoting \"to the ultimate extent\".",
+      "source": "Appendix:Glossary#superlative",
+      "rows": 801991
+    },
+    "comparative": {
+      "category": "degree",
+      "text": "An inflection, or different form, of a comparable adjective showing a relative quality, usually denoting \"to a greater extent\" but not \"to the ultimate extent\".",
+      "source": "Appendix:Glossary#comparative",
+      "rows": 774276
+    },
+    "mixed": {
+      "category": "declension",
+      "text": "A type of declension in German that uses endings that are a combination of strong and weak endings.",
+      "source": "Appendix:Glossary#mixed_declension",
+      "rows": 541987
+    },
+    "strong": {
+      "category": "declension",
+      "text": "In German, a declension of adjectives, and of masculine and neuter nouns, that is defined in opposition to the weak declension and mixed declension.",
+      "source": "Appendix:Glossary#strong_declension",
+      "rows": 516767
+    },
+    "imperfective": {
+      "category": "aspect",
+      "text": "An aspect of the verb which denotes an action or condition that does not have a fixed temporal boundary, but is habitual, unfinished, continuous, repetitive or in progress.",
+      "source": "Appendix:Glossary#imperfective_aspect",
+      "rows": 501354
+    },
+    "aorist": {
+      "category": "tense",
+      "text": "A grammatical category of verbs that is often a perfective past.",
+      "source": "Appendix:Glossary#aorist_tense",
+      "rows": 493618
+    },
+    "weak": {
+      "category": "declension",
+      "text": "A declension of adjectives and nouns in several Germanic languages, which originally had (and in some languages still have) an -n- in most of their forms.",
+      "source": "Appendix:Glossary#weak_declension",
+      "rows": 472389
+    },
+    "pluperfect": {
+      "category": "tense",
+      "text": "A verb form of perfect aspect and past tense, which is used to describe an action or event which is regarded as having been completed in the past, in relation to a time already in the past.",
+      "source": "Appendix:Glossary#pluperfect",
+      "rows": 463681
+    },
+    "dual": {
+      "category": "number",
+      "text": "A grammatical number that indicates exactly two items or individuals.",
+      "source": "Appendix:Glossary#dual_number",
+      "rows": 406587
+    },
+    "perfective": {
+      "category": "aspect",
+      "text": "The aspect of a verb that denotes viewing the event the verb describes as a simple whole rather than as having internal structure.",
+      "source": "Appendix:Glossary#perfective_aspect",
+      "rows": 406557
+    },
+    "positive": {
+      "category": "degree",
+      "text": "The 'normal' form of the degrees of comparison of an adjective or adverb.",
+      "source": "Appendix:Glossary#positive",
+      "rows": 397502
+    },
+    "potential": {
+      "category": "mood",
+      "text": "The grammatical mood expressing possibility and potential.",
+      "source": "potential mood#English (Noun)",
+      "rows": 394656
+    },
+    "continuative": {
+      "category": "aspect",
+      "text": "A durative.",
+      "source": "continuative#English (Noun)",
+      "rows": 329562
+    },
+    "inanimate": {
+      "category": "gender",
+      "text": "Having a referent that does not include a human or animal.",
+      "source": "Appendix:Glossary#inanimate",
+      "rows": 305611
+    },
+    "infinitive": {
+      "category": "nonfinite",
+      "text": "A non-finite verb form considered neutral with respect to inflection; depending on language variously found used with auxiliary verbs, in subordinate clauses, or acting as a gerund, and often as the dictionary form.",
+      "source": "Appendix:Glossary#infinitive",
+      "rows": 289357
+    },
+    "non-past": {
+      "category": "tense",
+      "text": "The tense of a verb that does not pertain to the past; in particular, applicable to both the present and the future.",
+      "source": "Appendix:Glossary#non-past",
+      "rows": 283460
+    },
+    "inferential": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 283380
+    },
+    "virile": {
+      "category": "gender",
+      "text": "In Slavic languages, a plural gender used for groups that include men and for masculine personal nouns.",
+      "source": "Appendix:Glossary#virile",
+      "rows": 278111
+    },
+    "preterite": {
+      "category": "tense",
+      "text": "A tense showing an action at a determined moment in the past.",
+      "source": "Appendix:Glossary#preterite",
+      "rows": 267881
+    },
+    "progressive": {
+      "category": "aspect",
+      "text": "The aspect of a verb, indicating that the action described is, was or will be continuing, uncompleted or repeated.",
+      "source": "Appendix:Glossary#progressive_aspect",
+      "rows": 261851
+    },
+    "animate": {
+      "category": "gender",
+      "text": "Having a referent that includes a human or animal.",
+      "source": "Appendix:Glossary#animate",
+      "rows": 241626
+    },
+    "necessitative": {
+      "category": "mood",
+      "text": "A grammatical form that indicates necessity.",
+      "source": "necessitative#English (Noun)",
+      "rows": 208540
+    },
+    "jussive": {
+      "category": "mood",
+      "text": "In certain languages (e.g. Hebrew, Arabic and Esperanto), a mood of a verb used to indicate a command, permission or agreement with a request (distinct from the imperative).",
+      "source": "Appendix:Glossary#jussive_mood",
+      "rows": 206862
+    },
+    "nonvirile": {
+      "category": "gender",
+      "text": "In Slavic languages, a plural gender used for all groups that do not contain men, as well as plurals of masculine animate, masculine inanimate, feminine and neuter nouns.",
+      "source": "Appendix:Glossary#nonvirile",
+      "rows": 199089
+    },
+    "instructive": {
+      "category": "case",
+      "text": ": noun case used to indicate means.",
+      "source": "instructive case#English (Noun)",
+      "rows": 194011
+    },
+    "optative": {
+      "category": "mood",
+      "text": "A category of verb form (a mood) that expresses wishes or similar meanings.",
+      "source": "Appendix:Glossary#optative_mood",
+      "rows": 190684
+    },
+    "prepositional": {
+      "category": "case",
+      "text": "A case used in certain languages, especially Russian, after certain prepositions.",
+      "source": "Appendix:Glossary#prepositional_case",
+      "rows": 172107
+    },
+    "construct": {
+      "category": "definiteness",
+      "text": "The grammatical form of a noun that is used in some languages when the noun in question is modified by a dependent, usually a noun or adjective.",
+      "source": "Appendix:Glossary#construct_state",
+      "rows": 157407
+    },
+    "polite": {
+      "category": "register",
+      "text": "Language that is respectful, complaisant, and (in some cases) deferent.",
+      "source": "Appendix:Glossary#polite",
+      "rows": 155800
+    },
+    "historic": {
+      "category": "tense",
+      "text": "A tense found primarily in writing in some languages, especially certain Romance languages.",
+      "source": "Appendix:Glossary#past_historic",
+      "rows": 148164
+    },
+    "terminative": {
+      "category": "case",
+      "text": "Of, or relating to the terminative case.",
+      "source": "terminative#English (Adjective)",
+      "rows": 131324
+    },
+    "future-i": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 109655
+    },
+    "gerund": {
+      "category": "nonfinite",
+      "text": "Any of various non-finite verb forms in various languages.",
+      "source": "Appendix:Glossary#gerund",
+      "rows": 102036
+    },
+    "impersonal": {
+      "category": "person",
+      "text": "A lack of grammatical person altogether, or an indefinite/undefined person.",
+      "source": "Appendix:Glossary#impersonal",
+      "rows": 98459
+    },
+    "subjunctive-ii": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 98180
+    },
+    "interrogative": {
+      "category": "mood",
+      "text": "A word used to ask questions.",
+      "source": "Appendix:Glossary#interrogative",
+      "rows": 79052
+    },
+    "subjunctive-i": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 75546
+    },
+    "hypothetical": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 74075
+    },
+    "superessive": {
+      "category": "case",
+      "text": "Noun case used to indicate location on an object.",
+      "source": "superessive case#English (Noun)",
+      "rows": 64272
+    },
+    "sublative": {
+      "category": "case",
+      "text": "A case of nouns in Finno-Ugric languages used to express the destination of movement, originally onto the surface of something (e.g. climb onto a tree), and, by extension, in other figurative meanings as well (e.g. to university, or about (a subject)).",
+      "source": "sublative#English (Noun)",
+      "rows": 64271
+    },
+    "delative": {
+      "category": "case",
+      "text": "case used to indicate movement from an object.",
+      "source": "delative case#English (Noun)",
+      "rows": 64260
+    },
+    "causal-final": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 64208
+    },
+    "essive-formal": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 64199
+    },
+    "ergative": {
+      "category": "case",
+      "text": "A case used in some languages, which marks the subject of a transitive verb, but not the subject of an intransitive verb.",
+      "source": "Appendix:Glossary#ergative_case",
+      "rows": 61783
+    },
+    "habitual": {
+      "category": "aspect",
+      "text": "A verbal aspect specifying an action as occurring habitually: the subject performs the action usually, ordinarily, or customarily.",
+      "source": "Appendix:Glossary#habitual",
+      "rows": 59871
+    },
+    "presumptive": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 57742
+    },
+    "affective": {
+      "category": "voice",
+      "text": null,
+      "source": null,
+      "rows": 56856
+    },
+    "conditional-i": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 56767
+    },
+    "future-ii": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 56016
+    },
+    "conditional-ii": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 55806
+    },
+    "objective": {
+      "category": "case",
+      "text": "Any case that is neither nominative nor vocative.",
+      "source": "Appendix:Glossary#objective_case",
+      "rows": 54068
+    },
+    "conjunctive": {
+      "category": "mood",
+      "text": "The mood of a verb expressing an action or state which is hypothetical or anticipated rather than actual, including wishes and counterfactuals.",
+      "source": "Appendix:Glossary#conjunctive",
+      "rows": 53926
+    },
+    "gnomic": {
+      "category": "mood",
+      "text": "Expressing general truths or aphorisms.",
+      "source": "gnomic#English (Adjective)",
+      "rows": 53605
+    },
+    "counterfactual": {
+      "category": "mood",
+      "text": "A conditional statement in which the conditional clause is false.",
+      "source": "counterfactual#English (Noun)",
+      "rows": 52254
+    },
+    "subjective": {
+      "category": "case",
+      "text": "The subjective case.",
+      "source": "subjective#English (Noun)",
+      "rows": 45874
+    },
+    "volitional": {
+      "category": "mood",
+      "text": "Expressing intention, hortation, supposition, or inclusive invitation.",
+      "source": "volitional#English (Adjective)",
+      "rows": 43925
+    },
+    "converb": {
+      "category": "nonfinite",
+      "text": "A non-finite verb form that serves to express adverbial subordination.",
+      "source": "converb#English (Noun)",
+      "rows": 40427
+    },
+    "supine": {
+      "category": "nonfinite",
+      "text": "A term for an infinite verb form in some languages.",
+      "source": "Appendix:Glossary#supine",
+      "rows": 37408
+    },
+    "assertive": {
+      "category": "mood",
+      "text": "An assertion.",
+      "source": "assertive#English (Noun)",
+      "rows": 35988
+    },
+    "oblique": {
+      "category": "case",
+      "text": "Any case that is neither nominative nor vocative.",
+      "source": "Appendix:Glossary#oblique_case",
+      "rows": 34911
+    },
+    "admirative": {
+      "category": "mood",
+      "text": "A verb form similar to mirative, found primarily in some languages of the Balkan sprachbund (i.e. namely Albanian, Bulgarian and Macedonian), which expresses surprise, irony, doubt, or reportedness on the part of the speaker.",
+      "source": "Appendix:Glossary#admirative",
+      "rows": 33279
+    },
+    "contrastive": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 30841
+    },
+    "benefactive": {
+      "category": "case",
+      "text": "A term or sentence element that serves a benefactive role or that is inflected for the benefactive case or a similar case (such as the dative case).",
+      "source": "benefactive#English (Noun)",
+      "rows": 27656
+    },
+    "collective": {
+      "category": "number",
+      "text": "Expressing a collection or aggregate of individuals by a singular form.",
+      "source": "Appendix:Glossary#collective",
+      "rows": 26215
+    },
+    "infinitive-i-long": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 24755
+    },
+    "singulative": {
+      "category": "number",
+      "text": "The marked singular form of an unmarked mass noun.",
+      "source": "Appendix:Glossary#singulative_number",
+      "rows": 22071
+    },
+    "direct": {
+      "category": "case",
+      "text": "A noun case which covers the nominative and possibly other cases such as vocative and/or accusative (the precise definition depends on the case system in question; the term is used especially in simple systems with two or three cases)",
+      "source": "direct case#English (Noun)",
+      "rows": 19508
+    },
+    "majestic": {
+      "category": "register",
+      "text": null,
+      "source": null,
+      "rows": 18009
+    },
+    "destinative": {
+      "category": "case",
+      "text": "The destinative case, a case found in some languages which either marks an object or person as destined for a particular other object, person or end, or marks a destination.",
+      "source": "destinative#English (Noun)",
+      "rows": 17715
+    },
+    "directive": {
+      "category": "case",
+      "text": "Case used to express motion towards a location; generally indicated in English by down to, up to, toward, headed for etc. in combination with the objective case.",
+      "source": "directive case#English (Noun)",
+      "rows": 17713
+    },
+    "honorific": {
+      "category": "register",
+      "text": "A word or word form expressing the speaker's respect for the hearer or the referent.",
+      "source": "honorific#English (Noun)",
+      "rows": 16287
+    },
+    "epicene": {
+      "category": "gender",
+      "text": "Having a single form for both male and female referents.",
+      "source": "Appendix:Glossary#epicene",
+      "rows": 16267
+    },
+    "irrealis": {
+      "category": "mood",
+      "text": "A category of grammatical moods that indicate that a certain situation or action is not known to happen, or have happened, as the speaker is talking.",
+      "source": "irrealis mood#English (Noun)",
+      "rows": 16022
+    },
+    "autonomous": {
+      "category": "person",
+      "text": "Used with no subject, indicating an unknown or unspecified agent; used in similar situations as the passive in English (the difference being that the theme in the English passive construction is the subject, while in the Celtic autonomous construction the theme is the object and there is no subject).",
+      "source": "autonomous#English (Adjective)",
+      "rows": 15730
+    },
+    "absolutive": {
+      "category": "case",
+      "text": "A case used to indicate the patient or experiencer of a verb's action.",
+      "source": "Appendix:Glossary#absolutive_case",
+      "rows": 14911
+    },
+    "transgressive": {
+      "category": "nonfinite",
+      "text": "A verb form in some Balto-Slavic languages that expresses a coincidentally proceeding or following action.",
+      "source": "Appendix:Glossary#transgressive",
+      "rows": 14857
+    },
+    "hortative": {
+      "category": "mood",
+      "text": "A verbal construction (in some languages expressed with a dedicated grammatical mood) whereby a speaker encourages an action on the part of his own group; the hortative is for the first person plural what the imperative is to the second person.",
+      "source": "Appendix:Glossary#hortative",
+      "rows": 14456
+    },
+    "paucal": {
+      "category": "number",
+      "text": "A grammatical number found in some languages (e.g. Arabic) that indicates a small number of items or individuals, often around 3 to 10.",
+      "source": "Appendix:Glossary#paucal_number",
+      "rows": 13736
+    },
+    "fourth-person": {
+      "category": "person",
+      "text": "A variety of the third person sometimes used for indefinite referents, such as one, as in one shouldn't do that.",
+      "source": "fourth person#English (Noun)",
+      "rows": 12436
+    },
+    "familiar": {
+      "category": "register",
+      "text": "Describes a context where those conversing, through speech or written word, are well acquainted with one another and in casual situations often use more informal or colloquial terms to communicate.",
+      "source": "Appendix:Glossary#familiar",
+      "rows": 9656
+    },
+    "l-participle": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 9549
+    },
+    "count-form": {
+      "category": "number",
+      "text": "In some Slavic languages, such as Bulgarian and Russian, a distinct plural form taken by certain nouns when explicitly modified by a quantity.",
+      "source": "Appendix:Glossary#count_form",
+      "rows": 9527
+    },
+    "agentive": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 8723
+    },
+    "exclusive": {
+      "category": "person",
+      "text": "Of or relating to the first-person plural pronoun when excluding the person being addressed.",
+      "source": "exclusive#English (Adjective)",
+      "rows": 8120
+    },
+    "inclusive": {
+      "category": "person",
+      "text": "Of, or relating to the first-person plural pronoun when including the person being addressed.",
+      "source": "inclusive#English (Adjective)",
+      "rows": 8120
+    },
+    "essive-modal": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 8035
+    },
+    "quotative": {
+      "category": "mood",
+      "text": "A grammatical device to mark quoted speech, such as be like in \"he was like, 'who are you?'\".",
+      "source": "quotative#English (Noun)",
+      "rows": 6885
+    },
+    "contemporary": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 6849
+    },
+    "motive-form": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 6660
+    },
+    "consecutive": {
+      "category": "aspect",
+      "text": "A linguistic form that implies or describes an event that follows temporally from another.",
+      "source": "consecutive#English (Noun)",
+      "rows": 5966
+    },
+    "anterior": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 5777
+    },
+    "infinitive-zu": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 4533
+    },
+    "renarrative": {
+      "category": "mood",
+      "text": "The inferential mood.",
+      "source": "renarrative#English (Noun)",
+      "rows": 4424
+    },
+    "prolative": {
+      "category": "case",
+      "text": "the prolative case",
+      "source": "prolative#English (Noun)",
+      "rows": 4065
+    },
+    "realis": {
+      "category": "mood",
+      "text": "A category of grammatical moods, the most common of which is the indicative mood, that indicate that something actually is, or is not, the case.",
+      "source": "realis mood#English (Noun)",
+      "rows": 3862
+    },
+    "general-mood": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 3692
+    },
+    "dubitative": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 3468
+    },
+    "infinitive-aorist": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 3448
+    },
+    "infinitive-ma": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 3446
+    },
+    "gerund-iii": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 3250
+    },
+    "cohortative": {
+      "category": "mood",
+      "text": "The cohortative mood.",
+      "source": "cohortative#English (Noun)",
+      "rows": 3248
+    },
+    "gerund-ii": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 3248
+    },
+    "debitive": {
+      "category": "mood",
+      "text": "This mood, or a verb in this mood.",
+      "source": "debitive#English (Noun)",
+      "rows": 3170
+    },
+    "already-form": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 2983
+    },
+    "not-yet-form": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 2983
+    },
+    "if-when-form": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 2983
+    },
+    "if-not-form": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 2983
+    },
+    "half-participle": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 2977
+    },
+    "volitive": {
+      "category": "mood",
+      "text": "A verb form found in certain languages which indicates that a certain action is willed, although it may not be performed in fact.",
+      "source": "volitive#English (Noun)",
+      "rows": 2903
+    },
+    "intentive": {
+      "category": "mood",
+      "text": "Expressing intent.",
+      "source": "intentive#English (Adjective)",
+      "rows": 2476
+    },
+    "obligative": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 1968
+    },
+    "equative": {
+      "category": "degree",
+      "text": "A construction showing an equal quality; for example, the equative of happy is as happy as.",
+      "source": "Appendix:Glossary#equative",
+      "rows": 1828
+    },
+    "effective": {
+      "category": "aspect",
+      "text": null,
+      "source": null,
+      "rows": 1624
+    },
+    "gerund-i": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 1624
+    },
+    "desiderative": {
+      "category": "mood",
+      "text": "A verb form indicating a wish.",
+      "source": "Appendix:Glossary#desiderative",
+      "rows": 1543
+    },
+    "durative": {
+      "category": "aspect",
+      "text": "This aspect, or a verb in this aspect; a continuative.",
+      "source": "durative#English (Noun)",
+      "rows": 812
+    },
+    "infinitive-da": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 705
+    },
+    "consequential": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 632
+    },
+    "indirect": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 604
+    },
+    "common-gender": {
+      "category": "gender",
+      "text": "Some languages have a distinct common gender that combines masculine and feminine but is distinguished from neuter.",
+      "source": "Appendix:Glossary#common_gender",
+      "rows": 567
+    },
+    "deferential": {
+      "category": "register",
+      "text": null,
+      "source": null,
+      "rows": 428
+    },
+    "conclusive": {
+      "category": "mood",
+      "text": null,
+      "source": null,
+      "rows": 342
+    },
+    "infinitive-iii": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 326
+    },
+    "evidential": {
+      "category": "mood",
+      "text": "A syntactic element (affix, clitic, or particle) that indicates evidentiality.",
+      "source": "evidential#English (Noun)",
+      "rows": 252
+    },
+    "gender-neutral": {
+      "category": "gender",
+      "text": "Of language constructs, not indicating or restricted by gender, and thus applicable to those of any gender and to those of no gender.",
+      "source": "Appendix:Glossary#gender-neutral",
+      "rows": 200
+    },
+    "lative": {
+      "category": "case",
+      "text": "A case of verbs, found in the Uralic and Northern Caucasian languages, used to indicate motion to a location; in the Northern Caucasian languages, the lative also takes up functions of the dative case",
+      "source": "lative case#English (Noun)",
+      "rows": 187
+    },
+    "transitional-past": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 166
+    },
+    "completive": {
+      "category": "aspect",
+      "text": "A construction denoting completion.",
+      "source": "completive#English (Noun)",
+      "rows": 164
+    },
+    "infinitive-ii": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 142
+    },
+    "past-ii": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 134
+    },
+    "past-i": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 124
+    },
+    "separative": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 81
+    },
+    "situative": {
+      "category": "case",
+      "text": null,
+      "source": null,
+      "rows": 46
+    },
+    "infinitive-i": {
+      "category": "nonfinite",
+      "text": null,
+      "source": null,
+      "rows": 40
+    },
+    "past-future": {
+      "category": "tense",
+      "text": null,
+      "source": null,
+      "rows": 36
+    }
+  },
+  "order": {
+    "mood": [
+      "indicative",
+      "conditional",
+      "subjunctive",
+      "imperative",
+      "potential",
+      "inferential",
+      "necessitative",
+      "jussive",
+      "optative",
+      "subjunctive-ii",
+      "interrogative",
+      "subjunctive-i",
+      "hypothetical",
+      "presumptive",
+      "conditional-i",
+      "conditional-ii",
+      "conjunctive",
+      "gnomic",
+      "counterfactual",
+      "volitional",
+      "assertive",
+      "admirative",
+      "contrastive",
+      "irrealis",
+      "hortative",
+      "quotative",
+      "motive-form",
+      "renarrative",
+      "realis",
+      "general-mood",
+      "dubitative",
+      "cohortative",
+      "debitive",
+      "if-when-form",
+      "if-not-form",
+      "volitive",
+      "intentive",
+      "obligative",
+      "desiderative",
+      "consequential",
+      "conclusive",
+      "evidential"
+    ],
+    "tense": [
+      "present",
+      "imperfect",
+      "preterite",
+      "historic",
+      "aorist",
+      "past",
+      "perfect",
+      "pluperfect",
+      "future",
+      "non-past",
+      "future-i",
+      "future-ii",
+      "contemporary",
+      "anterior",
+      "already-form",
+      "not-yet-form",
+      "transitional-past",
+      "past-ii",
+      "past-i",
+      "past-future"
+    ],
+    "aspect": [
+      "imperfective",
+      "perfective",
+      "continuative",
+      "progressive",
+      "habitual",
+      "consecutive",
+      "effective",
+      "durative",
+      "completive"
+    ],
+    "person": [
+      "first-person",
+      "second-person",
+      "third-person",
+      "fourth-person",
+      "impersonal",
+      "autonomous",
+      "exclusive",
+      "inclusive"
+    ],
+    "number": [
+      "singular",
+      "dual",
+      "plural",
+      "collective",
+      "singulative",
+      "paucal",
+      "count-form"
+    ],
+    "case": [
+      "nominative",
+      "genitive",
+      "dative",
+      "accusative",
+      "instrumental",
+      "prepositional",
+      "locative",
+      "vocative",
+      "partitive",
+      "inessive",
+      "elative",
+      "illative",
+      "adessive",
+      "ablative",
+      "allative",
+      "essive",
+      "translative",
+      "instructive",
+      "abessive",
+      "comitative",
+      "terminative",
+      "superessive",
+      "sublative",
+      "delative",
+      "causal-final",
+      "essive-formal",
+      "ergative",
+      "objective",
+      "subjective",
+      "oblique",
+      "benefactive",
+      "direct",
+      "destinative",
+      "directive",
+      "absolutive",
+      "agentive",
+      "essive-modal",
+      "prolative",
+      "indirect",
+      "lative",
+      "separative",
+      "situative"
+    ],
+    "gender": [
+      "masculine",
+      "feminine",
+      "neuter",
+      "common-gender",
+      "animate",
+      "inanimate",
+      "virile",
+      "nonvirile",
+      "epicene",
+      "gender-neutral"
+    ],
+    "definiteness": [
+      "indefinite",
+      "definite",
+      "construct"
+    ],
+    "declension": [
+      "strong",
+      "weak",
+      "mixed"
+    ],
+    "degree": [
+      "positive",
+      "comparative",
+      "superlative",
+      "equative"
+    ],
+    "voice": [
+      "active",
+      "passive",
+      "affective"
+    ],
+    "register": [
+      "informal",
+      "formal",
+      "polite",
+      "majestic",
+      "honorific",
+      "familiar",
+      "deferential"
+    ],
+    "nonfinite": [
+      "infinitive",
+      "gerund",
+      "participle",
+      "supine",
+      "converb",
+      "infinitive-i-long",
+      "transgressive",
+      "l-participle",
+      "infinitive-zu",
+      "infinitive-aorist",
+      "infinitive-ma",
+      "gerund-iii",
+      "gerund-ii",
+      "half-participle",
+      "gerund-i",
+      "infinitive-da",
+      "infinitive-iii",
+      "infinitive-ii",
+      "infinitive-i"
+    ]
+  },
+  "other": {
+    "possessive": {
+      "reason": "a possessive form or suffix",
+      "rows": 9301720
+    },
+    "singular-possessive": {
+      "reason": "the number of the possessor in a Finnish possessive suffix, not of the word",
+      "rows": 8520268
+    },
+    "plural-possessive": {
+      "reason": "the number of the possessor in a Finnish possessive suffix, not of the word",
+      "rows": 8520268
+    },
+    "error-unrecognized-form": {
+      "reason": "the extractor could not read the row",
+      "rows": 2453343
+    },
+    "negative": {
+      "reason": "the negated form of a verb",
+      "rows": 2197331
+    },
+    "romanization": {
+      "reason": "the form written in Latin letters",
+      "rows": 1326696
+    },
+    "includes-article": {
+      "reason": "the form printed with its article",
+      "rows": 855518
+    },
+    "alternative": {
+      "reason": "another spelling of the same form",
+      "rows": 506987
+    },
+    "triptote": {
+      "reason": "an inflection class",
+      "rows": 474203
+    },
+    "possessed-single": {
+      "reason": "a possessive form or suffix",
+      "rows": 446286
+    },
+    "second-person-semantically": {
+      "reason": "a third-person form that addresses the listener (Spanish usted); its person is its third-person tag",
+      "rows": 439063
+    },
+    "possessed-many": {
+      "reason": "a possessive form or suffix",
+      "rows": 437682
+    },
+    "without-article": {
+      "reason": "the form printed without an article",
+      "rows": 426451
+    },
+    "rare": {
+      "reason": "a rarely met form",
+      "rows": 395800
+    },
+    "noun-from-verb": {
+      "reason": "a word derived from this one",
+      "rows": 226749
+    },
+    "adverbial": {
+      "reason": "a participle used as an adverb",
+      "rows": 213095
+    },
+    "proximal": {
+      "reason": "how near a demonstrative points",
+      "rows": 185262
+    },
+    "archaic": {
+      "reason": "an archaic form",
+      "rows": 184978
+    },
+    "ar-infl-a": {
+      "reason": "an inflection class",
+      "rows": 178082
+    },
+    "object-concord": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 149169
+    },
+    "adjectival": {
+      "reason": "a participle used as an adjective",
+      "rows": 137161
+    },
+    "unspecified": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 130894
+    },
+    "sound-form": {
+      "reason": "an inflection class",
+      "rows": 129908
+    },
+    "distal": {
+      "reason": "how near a demonstrative points",
+      "rows": 129670
+    },
+    "subordinate-clause": {
+      "reason": "the order of a separable verb in a subordinate clause",
+      "rows": 127939
+    },
+    "causative": {
+      "reason": "a derived verb that makes someone do the action, filed under aspect",
+      "rows": 127018
+    },
+    "predicative": {
+      "reason": "an adjective form used after a verb; wiktextract files it under case, which it is not",
+      "rows": 119726
+    },
+    "Simplified-Chinese": {
+      "reason": "the script the form is written in",
+      "rows": 114978
+    },
+    "broken-form": {
+      "reason": "an inflection class",
+      "rows": 99881
+    },
+    "stem": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 95879
+    },
+    "relative": {
+      "reason": "a relative verb form (Swahili, Persian, Esperanto), filed under person",
+      "rows": 92407
+    },
+    "singular-only": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 78293
+    },
+    "prospective": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 74858
+    },
+    "dated": {
+      "reason": "a dated form",
+      "rows": 66970
+    },
+    "non-prospective": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 56688
+    },
+    "diptote": {
+      "reason": "an inflection class",
+      "rows": 56017
+    },
+    "colloquial": {
+      "reason": "a usage label",
+      "rows": 53899
+    },
+    "imperfect-se": {
+      "reason": "the -se variant of a Spanish form already tagged imperfect subjunctive",
+      "rows": 53182
+    },
+    "short-form": {
+      "reason": "the short form of an adjective or participle",
+      "rows": 51500
+    },
+    "personal": {
+      "reason": "the personal infinitive, or a personal pronoun",
+      "rows": 50449
+    },
+    "Cyrillic": {
+      "reason": "the script the form is written in",
+      "rows": 48216
+    },
+    "attributive": {
+      "reason": "an adjective form used before a noun; wiktextract files it under case, which it is not",
+      "rows": 45458
+    },
+    "kanji": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 44396
+    },
+    "main-clause": {
+      "reason": "the order of a separable verb in a main clause",
+      "rows": 44187
+    },
+    "like-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 41686
+    },
+    "class-1": {
+      "reason": "an inflection class",
+      "rows": 41324
+    },
+    "class-2": {
+      "reason": "an inflection class",
+      "rows": 41324
+    },
+    "diminutive": {
+      "reason": "a diminutive derived from the word",
+      "rows": 38510
+    },
+    "connegative": {
+      "reason": "the negated or affirmative form",
+      "rows": 29514
+    },
+    "pronoun": {
+      "reason": "the part of speech of the form",
+      "rows": 28424
+    },
+    "adjective": {
+      "reason": "the part of speech of the form",
+      "rows": 27569
+    },
+    "vos-form": {
+      "reason": "the Spanish voseo variant of a second-person form",
+      "rows": 26459
+    },
+    "dependent": {
+      "reason": "the Irish verb form used after certain particles, filed under tense",
+      "rows": 25768
+    },
+    "literary": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 24965
+    },
+    "determiner": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 24704
+    },
+    "kyūjitai": {
+      "reason": "a detail of how the form is written",
+      "rows": 23590
+    },
+    "class-5": {
+      "reason": "an inflection class",
+      "rows": 23412
+    },
+    "class-6": {
+      "reason": "an inflection class",
+      "rows": 23412
+    },
+    "class-7": {
+      "reason": "an inflection class",
+      "rows": 23412
+    },
+    "class-8": {
+      "reason": "an inflection class",
+      "rows": 23412
+    },
+    "class-3": {
+      "reason": "an inflection class",
+      "rows": 23410
+    },
+    "class-4": {
+      "reason": "an inflection class",
+      "rows": 23410
+    },
+    "class-10": {
+      "reason": "an inflection class",
+      "rows": 23410
+    },
+    "class-9": {
+      "reason": "an inflection class",
+      "rows": 23410
+    },
+    "relational": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 22995
+    },
+    "on-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "near-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "in-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "for-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "towards-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "from-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "in-relation-to-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "since-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "up-to-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20843
+    },
+    "together-with-position": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20826
+    },
+    "obsolete": {
+      "reason": "an obsolete form",
+      "rows": 20798
+    },
+    "hangeul": {
+      "reason": "the script the form is written in",
+      "rows": 19815
+    },
+    "eclipsis": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 19702
+    },
+    "object-indefinite": {
+      "reason": "the person or number of an object marked on the verb, not of the word",
+      "rows": 19699
+    },
+    "Traditional-Chinese": {
+      "reason": "the script the form is written in",
+      "rows": 19448
+    },
+    "hanja": {
+      "reason": "the script the form is written in",
+      "rows": 18134
+    },
+    "Flanders": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 18013
+    },
+    "lenition": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 17761
+    },
+    "object-definite": {
+      "reason": "the person or number of an object marked on the verb, not of the word",
+      "rows": 17546
+    },
+    "reflexive": {
+      "reason": "a reflexive form",
+      "rows": 15547
+    },
+    "invariable": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 14340
+    },
+    "soft": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 14242
+    },
+    "adverb": {
+      "reason": "the part of speech of the form",
+      "rows": 14052
+    },
+    "historical": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 13264
+    },
+    "hiragana": {
+      "reason": "the script the form is written in",
+      "rows": 13253
+    },
+    "CJK": {
+      "reason": "the script the form is written in",
+      "rows": 12997
+    },
+    "agent": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 12465
+    },
+    "class-16": {
+      "reason": "an inflection class",
+      "rows": 11844
+    },
+    "Urdu": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 11811
+    },
+    "class-11": {
+      "reason": "an inflection class",
+      "rows": 11706
+    },
+    "class-18": {
+      "reason": "an inflection class",
+      "rows": 11696
+    },
+    "class-15": {
+      "reason": "an inflection class",
+      "rows": 11694
+    },
+    "class-17": {
+      "reason": "an inflection class",
+      "rows": 11694
+    },
+    "dialectal": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 11080
+    },
+    "abstract-noun": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 10415
+    },
+    "traditional": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 10235
+    },
+    "Hán-Nôm": {
+      "reason": "a detail of how the form is written",
+      "rows": 9841
+    },
+    "Hindi": {
+      "reason": "the script the form is written in",
+      "rows": 9721
+    },
+    "specific": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 9449
+    },
+    "Jawi": {
+      "reason": "the script the form is written in",
+      "rows": 8755
+    },
+    "noun-from-adj": {
+      "reason": "a word derived from this one",
+      "rows": 8640
+    },
+    "Brazil": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 7747
+    },
+    "inversion": {
+      "reason": "a Georgian verb whose experiencer is marked like an object, filed under case",
+      "rows": 7541
+    },
+    "ar-infl-in": {
+      "reason": "an inflection class",
+      "rows": 6951
+    },
+    "error-unknown-tag": {
+      "reason": "the extractor could not read the row",
+      "rows": 6222
+    },
+    "Tajik": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 5846
+    },
+    "person": {
+      "reason": "a noun or numeral form for people",
+      "rows": 5774
+    },
+    "McCune-Reischauer": {
+      "reason": "a detail of how the form is written",
+      "rows": 5512
+    },
+    "revised": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 5271
+    },
+    "uncommon": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 5011
+    },
+    "sequential": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 4792
+    },
+    "resultative": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 4625
+    },
+    "derived": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 4476
+    },
+    "Yale": {
+      "reason": "a detail of how the form is written",
+      "rows": 4309
+    },
+    "abbreviation": {
+      "reason": "a shortened or altered form",
+      "rows": 3899
+    },
+    "demonym": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3885
+    },
+    "ar-infl-ah": {
+      "reason": "an inflection class",
+      "rows": 3696
+    },
+    "prothesis-h": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3578
+    },
+    "surname": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3572
+    },
+    "derogatory": {
+      "reason": "a usage label",
+      "rows": 3518
+    },
+    "ar-infl-an-maksura": {
+      "reason": "an inflection class",
+      "rows": 3505
+    },
+    "eumhun": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3370
+    },
+    "adnominal": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3106
+    },
+    "analytic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 3077
+    },
+    "Ekavian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 3035
+    },
+    "Ijekavian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 3033
+    },
+    "form-i": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2879
+    },
+    "stressed": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2857
+    },
+    "enclitic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2852
+    },
+    "direct-object": {
+      "reason": "the role an attached pronoun fills, not a case of the word",
+      "rows": 2778
+    },
+    "stress-pattern-1": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2711
+    },
+    "Traditional": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 2705
+    },
+    "nonstandard": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 2667
+    },
+    "irregular": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2651
+    },
+    "UK": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 2615
+    },
+    "US": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 2544
+    },
+    "converb-ii": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2318
+    },
+    "converb-i": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2314
+    },
+    "indirect-object": {
+      "reason": "the role an attached pronoun fills, not a case of the word",
+      "rows": 2200
+    },
+    "proclitic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2146
+    },
+    "object-second-person": {
+      "reason": "the person or number of an object marked on the verb, not of the word",
+      "rows": 2072
+    },
+    "simultaneous": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 2060
+    },
+    "proscribed": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1904
+    },
+    "stress-pattern-2": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1828
+    },
+    "sigmatic": {
+      "reason": "a Latin form built with an added s, filed under mood",
+      "rows": 1680
+    },
+    "frequentative": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1598
+    },
+    "unstressed": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1595
+    },
+    "uppercase": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1577
+    },
+    "common": {
+      "reason": "a common spelling or form; the common gender is tagged common-gender",
+      "rows": 1555
+    },
+    "augmentative": {
+      "reason": "an augmentative derived from the word",
+      "rows": 1539
+    },
+    "indeclinable": {
+      "reason": "an inflection class",
+      "rows": 1537
+    },
+    "lowercase": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1512
+    },
+    "adverbial-manner": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1488
+    },
+    "pronunciation-spelling": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1424
+    },
+    "Middle": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 1416
+    },
+    "Polish": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 1408
+    },
+    "poetic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1401
+    },
+    "regional": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1354
+    },
+    "form-ii": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1176
+    },
+    "emphatic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 1131
+    },
+    "long-form": {
+      "reason": "the long form of a participle",
+      "rows": 1109
+    },
+    "Gheg": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 1072
+    },
+    "Switzerland": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 1066
+    },
+    "Second-Round-Simplified-Chinese": {
+      "reason": "the script the form is written in",
+      "rows": 1034
+    },
+    "Arabic": {
+      "reason": "the script the form is written in",
+      "rows": 1026
+    },
+    "ar-infl-an-alef": {
+      "reason": "an inflection class",
+      "rows": 1024
+    },
+    "misspelling": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 996
+    },
+    "class-vi": {
+      "reason": "an inflection class",
+      "rows": 996
+    },
+    "Portugal": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 995
+    },
+    "Serbia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 920
+    },
+    "class-ii": {
+      "reason": "an inflection class",
+      "rows": 917
+    },
+    "Valencia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 896
+    },
+    "declension-pattern-of": {
+      "reason": "a detail of how the form is written",
+      "rows": 887
+    },
+    "Bosnia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 873
+    },
+    "possessed-common": {
+      "reason": "a possessive form or suffix",
+      "rows": 862
+    },
+    "Liechtenstein": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 855
+    },
+    "Hokkien": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 767
+    },
+    "possessed-neuter": {
+      "reason": "a possessive form or suffix",
+      "rows": 766
+    },
+    "also": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 758
+    },
+    "special": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 744
+    },
+    "Internet": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 689
+    },
+    "form-iv": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 654
+    },
+    "shinjitai": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 644
+    },
+    "animal-not-person": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 612
+    },
+    "sometimes": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 596
+    },
+    "noun": {
+      "reason": "the part of speech of the form",
+      "rows": 574
+    },
+    "Nynorsk": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 572
+    },
+    "form-v": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 569
+    },
+    "Tamil": {
+      "reason": "the script the form is written in",
+      "rows": 566
+    },
+    "stress-pattern-4": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 565
+    },
+    "class-viii": {
+      "reason": "an inflection class",
+      "rows": 549
+    },
+    "Standard": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 546
+    },
+    "class-iv": {
+      "reason": "an inflection class",
+      "rows": 528
+    },
+    "Croatia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 520
+    },
+    "Łowicz": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 519
+    },
+    "by-personal-gender": {
+      "reason": "a form chosen by the gender of the person meant",
+      "rows": 492
+    },
+    "initialism": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 491
+    },
+    "Rōmaji": {
+      "reason": "a detail of how the form is written",
+      "rows": 490
+    },
+    "ar-infl-awna": {
+      "reason": "an inflection class",
+      "rows": 480
+    },
+    "standard": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 478
+    },
+    "Western-Armenian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 478
+    },
+    "form-viii": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 469
+    },
+    "Scotland": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 436
+    },
+    "pejorative": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 426
+    },
+    "Cantonese": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 406
+    },
+    "variant": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 404
+    },
+    "class-x": {
+      "reason": "an inflection class",
+      "rows": 395
+    },
+    "Medieval-Latin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 366
+    },
+    "excessive": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 363
+    },
+    "Ikavian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 358
+    },
+    "Min-Nan": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 344
+    },
+    "form-iii": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 338
+    },
+    "apocopic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 317
+    },
+    "slang": {
+      "reason": "a usage label",
+      "rows": 313
+    },
+    "form-vi": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 309
+    },
+    "form-x": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 308
+    },
+    "Ulster": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 301
+    },
+    "independent": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 281
+    },
+    "Austria": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 257
+    },
+    "counter": {
+      "reason": "a detail of how the form is written",
+      "rows": 253
+    },
+    "Commonwealth": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 252
+    },
+    "plural-only": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 250
+    },
+    "Tosk": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 242
+    },
+    "Late-Latin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 236
+    },
+    "form-iq": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 230
+    },
+    "vernacular": {
+      "reason": "a usage label",
+      "rows": 230
+    },
+    "stress-pattern-3": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 228
+    },
+    "Hakka": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 227
+    },
+    "humorous": {
+      "reason": "a usage label",
+      "rows": 225
+    },
+    "clipping": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 222
+    },
+    "front-vowel": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 222
+    },
+    "verb": {
+      "reason": "the part of speech of the form",
+      "rows": 219
+    },
+    "ezafe": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 217
+    },
+    "long-construct": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 210
+    },
+    "neologism": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 197
+    },
+    "Munster": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 187
+    },
+    "Singapore": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 182
+    },
+    "Malaysia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 181
+    },
+    "Uruguay": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 181
+    },
+    "Teochew": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 181
+    },
+    "Indonesia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 180
+    },
+    "form-vii": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 173
+    },
+    "literally": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 172
+    },
+    "before-vowel": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 167
+    },
+    "reduplication": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 165
+    },
+    "be-prefix": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 165
+    },
+    "Modern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 164
+    },
+    "postpositional": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 158
+    },
+    "Early": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 157
+    },
+    "hypercorrect": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 156
+    },
+    "contraction": {
+      "reason": "a shortened or altered form",
+      "rows": 155
+    },
+    "acronym": {
+      "reason": "a shortened or altered form",
+      "rows": 150
+    },
+    "Canada": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 149
+    },
+    "especially": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 145
+    },
+    "usually-without-article": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 143
+    },
+    "Argentina": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 135
+    },
+    "Montenegro": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 132
+    },
+    "Brunei": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 131
+    },
+    "Southern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 126
+    },
+    "usually": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 126
+    },
+    "Cois-Fharraige": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 123
+    },
+    "Old-Latin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 123
+    },
+    "Northern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 119
+    },
+    "medial": {
+      "reason": "how near a demonstrative points",
+      "rows": 114
+    },
+    "in-compounds": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 113
+    },
+    "next": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 113
+    },
+    "Min-Dong": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 113
+    },
+    "Dari": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 111
+    },
+    "previous": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 111
+    },
+    "Min": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 107
+    },
+    "Tehrani": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 105
+    },
+    "stress-pattern-3b": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 101
+    },
+    "term-of-address": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 99
+    },
+    "katakana": {
+      "reason": "the script the form is written in",
+      "rows": 99
+    },
+    "quantitative": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 95
+    },
+    "Katharevousa": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 94
+    },
+    "euphemistic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 93
+    },
+    "after-vowel": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 93
+    },
+    "vulgar": {
+      "reason": "a usage label",
+      "rows": 91
+    },
+    "Biscayan": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 91
+    },
+    "Hanyu-Pinyin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 88
+    },
+    "Northumbria": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 86
+    },
+    "Bokmål": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 86
+    },
+    "Western": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 84
+    },
+    "substantive": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 82
+    },
+    "Chakavian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 82
+    },
+    "Arbëresh": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 82
+    },
+    "Latin": {
+      "reason": "the script the form is written in",
+      "rows": 81
+    },
+    "form-iiq": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 78
+    },
+    "Ireland": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 78
+    },
+    "after-consonant": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 77
+    },
+    "Varendra": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 73
+    },
+    "syncope": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 73
+    },
+    "extended": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 71
+    },
+    "Philippines": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 67
+    },
+    "Wu": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 67
+    },
+    "affirmative": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 65
+    },
+    "Louisiana": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 65
+    },
+    "numeral": {
+      "reason": "the part of speech of the form",
+      "rows": 64
+    },
+    "interjection": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 63
+    },
+    "often": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 60
+    },
+    "with-article": {
+      "reason": "what the form goes with",
+      "rows": 60
+    },
+    "triggers-lenition": {
+      "reason": "what the form triggers in the next word",
+      "rows": 57
+    },
+    "Kajkavian": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 57
+    },
+    "Latin-America": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 56
+    },
+    "Karabakh": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 55
+    },
+    "Gyeongsang": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 55
+    },
+    "English": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 54
+    },
+    "symbol": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 54
+    },
+    "Telemark": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 53
+    },
+    "Arvanitika": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 52
+    },
+    "clitic": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 51
+    },
+    "deliberate": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 51
+    },
+    "Geordie": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 51
+    },
+    "figuratively": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 50
+    },
+    "British": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 50
+    },
+    "Persian": {
+      "reason": "the script the form is written in",
+      "rows": 50
+    },
+    "Connacht": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 49
+    },
+    "Australia": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 48
+    },
+    "Eastern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 46
+    },
+    "used-in-the-form": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 46
+    },
+    "Germany": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 45
+    },
+    "Galway": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 45
+    },
+    "Midlandsnormalen": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 45
+    },
+    "possibly": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 44
+    },
+    "Southern-Germany": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 44
+    },
+    "endearing": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 43
+    },
+    "modern": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 42
+    },
+    "Northern-England": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 42
+    },
+    "misconstruction": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 42
+    },
+    "childish": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 41
+    },
+    "Latinate": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 40
+    },
+    "Spain": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 40
+    },
+    "Setesdal": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 40
+    },
+    "unknown": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 39
+    },
+    "contracted": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 39
+    },
+    "Chile": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 38
+    },
+    "North-Wales": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 37
+    },
+    "temporal": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 37
+    },
+    "stress-pattern-3a": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 37
+    },
+    "Min-Bei": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 37
+    },
+    "South-Wales": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 36
+    },
+    "semelfactive": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 36
+    },
+    "Jeolla": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 34
+    },
+    "Mandarin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 34
+    },
+    "New-Zealand": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 32
+    },
+    "Classical-Latin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 32
+    },
+    "determinate": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 32
+    },
+    "Northwestern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 31
+    },
+    "alt-of": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 31
+    },
+    "Mexico": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 31
+    },
+    "pronominal": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 31
+    },
+    "German": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 30
+    },
+    "Belgium": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 30
+    },
+    "digit": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 30
+    },
+    "Poznań": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 30
+    },
+    "Caipira": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 30
+    },
+    "Swiss-German": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 29
+    },
+    "italics": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 28
+    },
+    "Balearic": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 28
+    },
+    "Oxford": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 28
+    },
+    "oppositive": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 28
+    },
+    "unabbreviation": {
+      "reason": "a shortened or altered form",
+      "rows": 28
+    },
+    "al-Andalus": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 27
+    },
+    "Hamgyong": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 27
+    },
+    "Quebec": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 25
+    },
+    "Gipuzkoan": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 25
+    },
+    "New-Latin": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 25
+    },
+    "mainly": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 24
+    },
+    "in-certain-phrases": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 24
+    },
+    "Tuscany": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 24
+    },
+    "North-Korea": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 24
+    },
+    "connective": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 24
+    },
+    "Devanagari": {
+      "reason": "the script the form is written in",
+      "rows": 24
+    },
+    "form-ix": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 23
+    },
+    "capitalized": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 23
+    },
+    "Honduras": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 23
+    },
+    "Iran": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 23
+    },
+    "Brabant": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 23
+    },
+    "Cham": {
+      "reason": "the script the form is written in",
+      "rows": 23
+    },
+    "Southern-US": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 22
+    },
+    "back-vowel-harmony": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 21
+    },
+    "Riksmål": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 21
+    },
+    "Transylvania": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 21
+    },
+    "Northeastern": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 21
+    },
+    "Sichuanese": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 21
+    },
+    "transliteration": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20
+    },
+    "India": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "East": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "southern-Germany": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "Upper-German": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "South-Africa": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "Taiwan": {
+      "reason": "a region, variety or period the form belongs to",
+      "rows": 20
+    },
+    "ateji": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20
+    },
+    "front-vowel-harmony": {
+      "reason": "filed by wiktextract as misc, and no value of the categories here",
+      "rows": 20
+    }
+  }
+}

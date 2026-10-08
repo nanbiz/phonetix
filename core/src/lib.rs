@@ -11,6 +11,7 @@ pub mod annotate;
 pub mod answer;
 pub mod detect;
 pub mod gloss;
+pub mod grammar_tags;
 pub mod homographs;
 pub mod inflect;
 pub mod json;

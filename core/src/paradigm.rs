@@ -13,74 +13,46 @@
 
 use lexpack::Entry;
 
-/// The categories a form is described by, in the order a card names them.
-pub const CATEGORIES: [&str; 9] = [
+/// The categories a form is described by, in the order a card names them. A tag of any other
+/// category - "informal", "formal" say how a form is used to whom, not which it is - is left
+/// out of a form's place.
+pub const CATEGORIES: [&str; 12] = [
     "tense",
+    "aspect",
     "mood",
+    "voice",
     "case",
     "gender",
     "person",
     "number",
     "degree",
     "declension",
+    "definiteness",
     "nonfinite",
 ];
 
-/// The category a tag is a value of, or nothing for a tag that is not a grammatical value -
-/// "informal", "vos-form", "negative" say how a form is used rather than which it is.
+/// The category a tag is a value of, as data/grammar.json files it (see
+/// [crate::grammar_tags]), or nothing for a tag a form is not described by.
+///
+/// The conditional is filed there as a mood, which it is in a grammar of German; the Romance
+/// tables list it among the tenses of the indicative, and the dictionary tags it so -
+/// "conditional indicative" - so a cell with both is a tense of the indicative.
 pub fn category_of(tag: &str) -> Option<&'static str> {
-    Some(match tag {
-        "indicative" | "subjunctive" | "imperative" | "optative" | "jussive" => "mood",
-        "present" | "preterite" | "imperfect" | "future" | "conditional" | "perfect"
-        | "pluperfect" | "past" | "aorist" | "future-perfect" | "past-perfect" => "tense",
-        "first-person" | "second-person" | "third-person" => "person",
-        "singular" | "plural" | "dual" => "number",
-        "nominative" | "accusative" | "dative" | "genitive" | "ablative" | "instrumental"
-        | "locative" | "vocative" | "partitive" | "prepositional" | "essive" | "translative"
-        | "inessive" | "elative" | "illative" | "adessive" | "allative" | "abessive"
-        | "comitative" | "instructive" | "oblique" => "case",
-        "masculine" | "feminine" | "neuter" | "common" => "gender",
-        "comparative" | "superlative" => "degree",
-        "strong" | "weak" | "mixed" | "definite" | "indefinite" => "declension",
-        "infinitive" | "participle" | "gerund" | "supine" => "nonfinite",
-        _ => return None,
-    })
+    let category = match tag {
+        "conditional" => "tense",
+        _ => crate::grammar_tags::category_of(tag)?,
+    };
+    CATEGORIES.contains(&category).then_some(category)
 }
 
 /// The order a grammar's own table lists the values of a category in, which is the order a
 /// card offers them.
-fn order_of(category: &str) -> &'static [&'static str] {
-    match category {
-        "tense" => &[
-            "present",
-            "preterite",
-            "imperfect",
-            "past",
-            "perfect",
-            "pluperfect",
-            "future",
-            "future-perfect",
-            "conditional",
-        ],
-        "mood" => &["indicative", "subjunctive", "imperative"],
-        "person" => &["first-person", "second-person", "third-person"],
-        "number" => &["singular", "plural", "dual"],
-        "case" => &[
-            "nominative",
-            "accusative",
-            "dative",
-            "genitive",
-            "ablative",
-            "instrumental",
-            "locative",
-            "vocative",
-            "partitive",
-        ],
-        "gender" => &["masculine", "feminine", "neuter", "common"],
-        "degree" => &["comparative", "superlative"],
-        "declension" => &["strong", "weak", "mixed", "definite", "indefinite"],
-        _ => &[],
+fn order_of(category: &str) -> Vec<&'static str> {
+    let mut order = crate::grammar_tags::order_of(category).to_vec();
+    if category == "tense" && !order.contains(&"conditional") {
+        order.push("conditional");
     }
+    order
 }
 
 /// One place in a table: the grammatical values that say which it is, each with its category.
@@ -488,7 +460,7 @@ mod tests {
         let found = form("anduvo", &andar()).unwrap();
         let tense = found.along.iter().find(|a| a.category == "tense").unwrap();
         let words: Vec<&str> = tense.forms.iter().map(|o| o.spelling.as_str()).collect();
-        assert_eq!(words, ["anda", "anduvo", "andaba", "andará", "andaría"]);
+        assert_eq!(words, ["anda", "andaba", "anduvo", "andará", "andaría"]);
         assert!(
             tense
                 .forms
