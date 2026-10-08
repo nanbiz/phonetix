@@ -50,6 +50,31 @@ object Fetch {
         }
     }
 
+    /** The languages whose held pack has been held up against the published one. */
+    private val freshened = ConcurrentHashMap.newKeySet<String>()
+
+    /**
+     * Replace a held dictionary with the one published now, where they differ.
+     *
+     * A dictionary is downloaded once and kept, and kept it would be for good: one rebuilt with
+     * something new in it - narrow transcriptions, a table it was missing - reached nobody who
+     * already had the old one. So once per run of the app each held pack is held up against the
+     * listing's checksum, in the background, and a newer one is fetched under the same limit a
+     * first download has.
+     */
+    fun freshen(context: Context, lang: String) {
+        if (lang.isBlank() || !freshened.add(lang)) return
+        start("fresh $lang", {}) {
+            val host = SettingsStore.current.packHost
+            val bytes = Packs.listedBytes(host, lang)
+            when {
+                bytes == null || bytes > byItself(context) -> false
+                Packs.current(context, host, lang) -> true
+                else -> Packs.get(context, host, lang)
+            }
+        }
+    }
+
     /** The same thing, waited for: the panel is answering from it. */
     fun packNow(context: Context, lang: String): Boolean {
         if (lang.isBlank() || lang in Packs.held(context)) return true

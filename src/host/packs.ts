@@ -78,11 +78,45 @@ export async function open(lang: string): Promise<string | null> {
   const bytes = await cached(lang);
   if (bytes) {
     carried.delete(lang);
-    return openPack(bytes);
+    const opened = await openPack(bytes);
+    freshen(opened, bytes);
+    return opened;
   }
   inBackground(lang);
   if ((await openLanguages()).includes(lang)) return lang;
   return fromWhatWeCarry(lang);
+}
+
+/** The languages whose held pack has been held up against the published one this session. */
+const freshened = new Set<string>();
+
+/**
+ * Replace a held pack with the one published now, where they differ.
+ *
+ * A pack is downloaded once and kept, and kept it would be for good: a dictionary rebuilt with
+ * something new in it - narrow transcriptions, a table it was missing - reached nobody who
+ * already had the old one. So the first time a held pack is opened in a session its checksum
+ * is held up against the listing, behind the answer rather than in front of it, and a newer
+ * one is fetched under the same limit a first download has.
+ */
+function freshen(lang: string, bytes: Uint8Array): void {
+  if (freshened.has(lang) || fetching.has(lang)) return;
+  freshened.add(lang);
+  void (async () => {
+    try {
+      const listed = (await offered()).find((pack) => pack.lang === lang);
+      if (!listed?.sha256 || listed.bytes > byItself()) return;
+      const digest = await crypto.subtle.digest('SHA-256', bytes.slice().buffer);
+      const have = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+      if (have === listed.sha256) return;
+      fetching.add(lang);
+      await replaced(lang);
+    } catch {
+      // Kept as it is: an old dictionary answers, and the next session asks again.
+    } finally {
+      fetching.delete(lang);
+    }
+  })();
 }
 
 /**
@@ -206,7 +240,19 @@ async function fetchPack(lang: string): Promise<string | null> {
   // and what is being fetched says what they mean. The fetched pack takes the place of the
   // carried one, which is where the meanings a reader asked for come from.
   if (already && !carried.has(already)) return already;
+  return download(lang);
+}
 
+/** The published pack in place of the one held, which it replaces in the core and on disk. */
+async function replaced(lang: string): Promise<string | null> {
+  const running = getting.get(lang);
+  if (running) return running;
+  const started = download(lang).finally(() => getting.delete(lang));
+  getting.set(lang, started);
+  return started;
+}
+
+async function download(lang: string): Promise<string | null> {
   const base = await host();
   if (!base) return null;
 

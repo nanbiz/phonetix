@@ -33,7 +33,7 @@ EXTRACT_JS = r"""
 class PipeCDP:
     """Minimal CDP client over chromium --remote-debugging-pipe (fd 3 read, 4 write)."""
 
-    def __init__(self, extra_args=None, headless=True):
+    def __init__(self, extra_args=None, headless=True, profile=None):
         self.tc_r, self.tc_w = os.pipe()   # parent -> chrome (chrome fd 3)
         self.fc_r, self.fc_w = os.pipe()   # chrome -> parent (chrome fd 4)
         for fd in (self.tc_r, self.fc_w):
@@ -43,7 +43,10 @@ class PipeCDP:
         # storage - and the last thing the settings check does is switch the extension off
         # for the site, so the next run started with it off and saw a page with nothing on
         # it. It also means these checks never touch a profile the user has open.
-        self.profile = tempfile.mkdtemp(prefix="phonetix-chrome-")
+        # Or one a check keeps across two runs of the browser, which is how a check sees what a
+        # reader's browser holds after a restart; that one is the check's to remove.
+        self.kept = profile is not None
+        self.profile = profile or tempfile.mkdtemp(prefix="phonetix-chrome-")
         args = [
             os.environ.get("PHONETIX_CHROMIUM", "chromium"),
             # Headful only where a check presses real keys: the browser's own shortcuts reach
@@ -161,7 +164,8 @@ class PipeCDP:
             self.proc.terminate(); self.proc.wait(timeout=5)
         except Exception:
             self.proc.kill()
-        shutil.rmtree(getattr(self, "profile", ""), ignore_errors=True)
+        if not getattr(self, "kept", False):
+            shutil.rmtree(getattr(self, "profile", ""), ignore_errors=True)
 
 
 def visit(cdp, url, settle=8.0, shot=True):

@@ -77,6 +77,7 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "the settings view looks like one surface" uv run scripts/proofread/popup_view.py
   step "a word no dictionary holds is translated" uv run scripts/proofread/translates.py
   step "the word for something a reader wants to say" uv run scripts/proofread/says.py
+  step "a pack published again replaces the one held" uv run python scripts/proofread/pack_update.py
   # Headful, under a display of its own, because the browser's shortcuts reach an extension only
   # through a window and the keys are pressed for real.
   step "the translator panel and the keyboard, with real keys" \

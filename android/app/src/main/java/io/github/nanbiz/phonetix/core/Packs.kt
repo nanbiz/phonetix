@@ -55,9 +55,23 @@ object Packs {
             if (!opened.isNullOrEmpty()) {
                 open.add(opened)
                 openClassifier(context, opened)
+                Fetch.freshen(context, opened)
             }
         }
     }
+
+    /** Whether the pack held for [lang] is the one [base] publishes now, by its checksum; true
+     *  where nothing is listed to compare it with. */
+    fun current(context: Context, base: String, lang: String): Boolean {
+        val listed = offered(base).firstOrNull { it.lang == lang } ?: return true
+        if (listed.sha256.isEmpty()) return true
+        val held = file(context, lang)
+        return !held.exists() || sha256(held) == listed.sha256
+    }
+
+    /** How big the pack [base] publishes for [lang] is, or nothing where none is listed. */
+    fun listedBytes(base: String, lang: String): Long? =
+        offered(base).firstOrNull { it.lang == lang }?.bytes
 
     /** Which languages carry a trained homograph classifier, so none is looked for in vain. */
     private val trained = setOf("de", "en", "es", "fr", "it", "ja", "nl", "pt", "ru", "zh")
