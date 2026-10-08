@@ -45,7 +45,7 @@ fn main() {
             line.chars().take(80).collect(),
         ));
     }
-    slowest.sort_by(|a, b| b.0.cmp(&a.0));
+    slowest.sort_by_key(|a| std::cmp::Reverse(a.0));
     println!(
         "all {} lines: {} ms",
         lines.len(),

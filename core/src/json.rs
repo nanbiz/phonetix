@@ -21,7 +21,8 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
     format!(
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
-\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{}}}",
+\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
+\"paradigm\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -43,6 +44,61 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         provenance(&answer.provenance),
         quoted(&answer.source.0),
         quoted(&answer.target.0),
+        // Which form of its lemma the word is, and the word in every other value of each of
+        // its categories, for a card to name and to move through.
+        paradigm(&answer.paradigm),
+    )
+}
+
+/// A form as a card reads it: its place, where its ending starts, its meaning said in it, and
+/// each category with the word in every value.
+fn paradigm(form: &Option<crate::paradigm::Form>) -> String {
+    let Some(form) = form else {
+        return "null".to_string();
+    };
+    let place = |place: &crate::paradigm::Place| -> String {
+        let values: Vec<String> = place
+            .iter()
+            .map(|(value, category)| {
+                format!(
+                    "{{\"value\":{},\"category\":{}}}",
+                    quoted(value),
+                    quoted(category)
+                )
+            })
+            .collect();
+        format!("[{}]", values.join(","))
+    };
+    let along: Vec<String> = form
+        .along
+        .iter()
+        .map(|along| {
+            let forms: Vec<String> = along
+                .forms
+                .iter()
+                .map(|other| {
+                    format!(
+                        "{{\"place\":{},\"spelling\":{},\"here\":{},\"said\":{}}}",
+                        place(&other.place),
+                        quoted(&other.spelling),
+                        other.here,
+                        maybe(&other.said),
+                    )
+                })
+                .collect();
+            format!(
+                "{{\"category\":{},\"forms\":[{}]}}",
+                quoted(along.category),
+                forms.join(",")
+            )
+        })
+        .collect();
+    format!(
+        "{{\"place\":{},\"endingAt\":{},\"said\":{},\"along\":[{}]}}",
+        place(&form.place),
+        form.ending_at,
+        maybe(&form.said),
+        along.join(",")
     )
 }
 
@@ -258,6 +314,7 @@ mod tests {
             provenance: None,
             source: Lang("es".into()),
             target: Lang("de".into()),
+            paradigm: None,
         }
     }
 

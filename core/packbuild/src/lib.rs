@@ -275,22 +275,54 @@ fn forms(value: &Value, word: &str) -> Vec<lexpack::Form> {
         if tags.iter().any(|t| t == "canonical") && !starts_alike(spelling, word) {
             continue;
         }
-        if !out.iter().any(|had| had.spelling == spelling) {
-            // What the dump calls it, as a reader would say it: "plural", "past participle".
-            // Several tags joined, since a form is regularly more than one thing at once, and
-            // nothing where the dump gave none.
-            let label = strings(form.get("tags"))
-                .into_iter()
-                .filter(|tag| tag != "canonical" && tag != "inflection-template")
-                .collect::<Vec<_>>()
-                .join(" ");
-            out.push(lexpack::Form {
+        // What the dump calls it, as a reader would say it: "plural", "past participle".
+        // Several tags joined, since a form is regularly more than one thing at once, and
+        // nothing where the dump gave none.
+        let label = strings(form.get("tags"))
+            .into_iter()
+            .filter(|tag| tag != "canonical" && tag != "inflection-template")
+            .collect::<Vec<_>>()
+            .join(" ");
+        // One spelling can fill several places in the table - Spanish "anda" is the present
+        // for he and the command to you - and each is kept, one after another with "; "
+        // between them, the first place the dump lists first. The pack takes a spelling once.
+        match out.iter_mut().find(|had| had.spelling == spelling) {
+            Some(had) => {
+                if !label.is_empty() && !had.label.split("; ").any(|place| place == label) {
+                    if had.label.is_empty() {
+                        had.label = label;
+                    } else {
+                        had.label = format!("{}; {label}", had.label);
+                    }
+                }
+            }
+            None => out.push(lexpack::Form {
                 spelling: spelling.to_string(),
                 label,
-            });
+            }),
         }
     }
-    commonest(out)
+    // A form with a pronoun attached - Spanish "andarlo", "me ando" - is the word with
+    // another word on it rather than another shape of the word, and a verb carries dozens of
+    // them: kept, they took the table's room from the forms themselves.
+    let single: std::collections::HashSet<String> = out
+        .iter()
+        .filter(|form| !form.spelling.contains(' '))
+        .map(|form| form.spelling.clone())
+        .collect();
+    out.retain(|form| {
+        !form.label.split(' ').any(|tag| tag == "combined-form")
+            && form
+                .spelling
+                .rsplit_once(' ')
+                .is_none_or(|(_, last)| !single.contains(last))
+    });
+    let most = if value.get("pos").and_then(|v| v.as_str()) == Some("verb") {
+        MAX_VERB_FORMS
+    } else {
+        MAX_FORMS
+    };
+    commonest(out, most)
 }
 
 /// The tags the dump gives a row of an entry's forms that is not a form of the word.
@@ -338,14 +370,19 @@ pub fn without_crowded(entry: &mut Entry, tally: &std::collections::HashMap<Stri
 /// forms a reader actually meets are a few dozen of them.
 const MAX_FORMS: usize = 48;
 
+/// How many a verb may bring: its whole conjugation, which is what a reader moves through when
+/// they ask what a form would be in another tense, mood or person. A Spanish verb's table is
+/// about seventy spellings; the cap is for the languages whose tables run to hundreds.
+const MAX_VERB_FORMS: usize = 96;
+
 /// The forms most worth keeping, when an entry has more than [MAX_FORMS].
 ///
 /// Fewer tags first, because a form that is one thing - "plural", "genitive" - is met far more
 /// often than one that is five at once. A possessive ending, and the cases a modern text
 /// hardly uses, go before anything else; within a rank the dump's own order stands, since it
 /// lists the paradigm the way a grammar does.
-fn commonest(mut forms: Vec<lexpack::Form>) -> Vec<lexpack::Form> {
-    if forms.len() <= MAX_FORMS {
+fn commonest(mut forms: Vec<lexpack::Form>, most: usize) -> Vec<lexpack::Form> {
+    if forms.len() <= most {
         return forms;
     }
     const RARE: [&str; 6] = [
@@ -356,14 +393,16 @@ fn commonest(mut forms: Vec<lexpack::Form>) -> Vec<lexpack::Form> {
         "comitative",
         "instructive",
     ];
+    // By the first place a spelling fills: one that fills several is as common as its first.
     let rank = |form: &lexpack::Form| {
-        let tags: Vec<&str> = form.label.split(' ').filter(|t| !t.is_empty()).collect();
+        let first = form.label.split("; ").next().unwrap_or("");
+        let tags: Vec<&str> = first.split(' ').filter(|t| !t.is_empty()).collect();
         let rare = tags.iter().filter(|t| RARE.contains(t)).count();
         rare * 10 + tags.len()
     };
     // Stable, so the dump's order decides between forms of the same rank.
     forms.sort_by_key(rank);
-    forms.truncate(MAX_FORMS);
+    forms.truncate(most);
     forms
 }
 
@@ -550,6 +589,46 @@ mod tests {
         .to_string();
         let read = read_line(&line, "de", &mut Skipped::default()).unwrap();
         assert_eq!(read.entry.senses[0].gloss, "to be");
+    }
+
+    #[test]
+    fn a_verb_keeps_every_place_a_form_fills_and_none_of_its_attached_pronouns() {
+        let mut forms = vec![
+            serde_json::json!({"form": "andarlo", "tags": ["accusative", "combined-form", "infinitive"]}),
+            serde_json::json!({"form": "me ando", "tags": ["first-person", "present", "singular"]}),
+            serde_json::json!({"form": "anda", "tags": ["indicative", "present", "singular", "third-person"]}),
+            serde_json::json!({"form": "anda", "tags": ["imperative", "second-person", "singular"]}),
+        ];
+        // More forms than a noun may keep, so only a verb's cap lets them all in.
+        for at in 0..60 {
+            forms.push(
+                serde_json::json!({"form": format!("x{at}"), "tags": ["a", "b", "c", "d", "e"]}),
+            );
+        }
+        forms.push(serde_json::json!({"form": "ando", "tags": ["first-person", "indicative", "present", "singular"]}));
+        let line = serde_json::json!({
+            "word": "andar", "pos": "verb", "lang_code": "es",
+            "senses": [{"glosses": ["to walk"]}], "forms": forms,
+        })
+        .to_string();
+        let read = read_line(&line, "es", &mut Skipped::default()).unwrap();
+        let label = |spelling: &str| {
+            read.entry
+                .forms
+                .iter()
+                .find(|form| form.spelling == spelling)
+                .map(|form| form.label.clone())
+        };
+        assert_eq!(
+            label("anda").as_deref(),
+            Some("indicative present singular third-person; imperative second-person singular")
+        );
+        assert!(
+            label("ando").is_some(),
+            "a form listed last is kept within a verb's room"
+        );
+        assert_eq!(label("andarlo"), None);
+        assert_eq!(label("me ando"), None);
     }
 
     #[test]

@@ -54,6 +54,9 @@ pub struct Answer {
     pub provenance: Option<Provenance>,
     pub source: Lang,
     pub target: Lang,
+    /// Which form of its lemma the spelling is, by grammatical category, with the meaning said
+    /// in that form and the word in every other value of each category: see [crate::paradigm].
+    pub paradigm: Option<crate::paradigm::Form>,
 }
 
 /// One of the words a spelling is.
@@ -85,6 +88,7 @@ impl Answer {
             provenance: None,
             source: source.clone(),
             target: target.clone(),
+            paradigm: None,
         }
     }
 }
@@ -1190,7 +1194,9 @@ fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
         .forms
         .iter()
         .filter(|form| same_word(&form.spelling, spelling))
-        .map(|form| form.label.as_str())
+        // Each place a spelling fills is a label of its own: "anda" is the present for he and
+        // the command to you.
+        .flat_map(|form| form.label.split("; "))
         .filter(|label| !label.is_empty() && !label.contains("error"))
         .collect();
     let ordinary = |label: &str| {
@@ -1912,6 +1918,24 @@ fn finish<D: AsRef<[u8]>>(
     } else {
         Vec::new()
     };
+    // The form, and its meaning said in it where the reader reads English: the dictionary's
+    // meaning of "andar" is "to walk", and "anduvo" means "he walked".
+    let paradigm = crate::paradigm::form(spelling, entry).map(|mut form| {
+        if target.0 == "en" {
+            if let Some(meaning) = glosses
+                .iter()
+                .find(|gloss| !crate::annotate::about_grammar(gloss))
+            {
+                form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
+                for along in &mut form.along {
+                    for other in &mut along.forms {
+                        other.said = crate::inflect::english(meaning, &entry.pos, &other.place);
+                    }
+                }
+            }
+        }
+        form
+    });
     Answer {
         state,
         spelling: spelling.to_string(),
@@ -1942,5 +1966,6 @@ fn finish<D: AsRef<[u8]>>(
         }),
         source: source.clone(),
         target: target.clone(),
+        paradigm,
     }
 }

@@ -31,5 +31,29 @@ fn main() {
             answer.says,
             answer.readings.len()
         );
+        if let Some(form) = &answer.paradigm {
+            let place: Vec<&str> = form.place.iter().map(|(tag, _)| tag.as_str()).collect();
+            println!(
+                "            form: {} of {:?}, said {:?}",
+                place.join(" "),
+                answer.lemma,
+                form.said
+            );
+            for along in &form.along {
+                let each: Vec<String> = along
+                    .forms
+                    .iter()
+                    .map(|o| {
+                        format!(
+                            "{}{} {:?}",
+                            if o.here { "*" } else { "" },
+                            o.spelling,
+                            o.said
+                        )
+                    })
+                    .collect();
+                println!("            {:<7} {}", along.category, each.join(" | "));
+            }
+        }
     }
 }
