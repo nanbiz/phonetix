@@ -146,6 +146,10 @@
 .sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: calc(100% + var(--space-2) + var(--border-width)); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius-card); box-shadow: var(--shadow-lifted); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
 .sheet.over { top: auto; bottom: calc(100% + var(--space-2) + var(--border-width)); }
 .sheet-cat { padding: 0 var(--space-4); margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
+/* The "?" a term that needs explaining carries in its sheet's heading; the explanation shows
+   while it is pointed at or once it is pressed. */
+.sheet-ask { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: var(--space-2); padding: 0; border: 1.5px solid var(--color-ink-faint); border-radius: 50%; background: none; color: var(--color-ink-muted); font: inherit; font-size: 10px; font-weight: var(--weight-bold); letter-spacing: 0; line-height: 1; vertical-align: 1px; cursor: help; }
+.sheet-ask:hover, .sheet-ask.on { border-color: var(--color-accent); color: var(--color-accent); }
 .sheet-def { padding: 0 var(--space-4); margin-bottom: var(--space-3); line-height: 1.35; }
 .sheet-def p { margin: 0; }
 .sheet-def p + p { margin-top: var(--space-1); }

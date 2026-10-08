@@ -164,6 +164,7 @@ CARD_JS = r"""
         return box(range);
       })(),
       def: text(sheet.querySelector('.sheet-def')),
+      ask: box(sheet.querySelector('[data-ask]')),
       rows: [...sheet.querySelectorAll('tr, .g-cell')].map(r => ({
         spelling: r.dataset.spelling || '', here: r.classList.contains('here'),
         text: text(r), box: box(r)})),
@@ -237,8 +238,10 @@ class Run:
         heights = sorted({round(row["box"]["height"]) for row in sheet["rows"]})
         if any(abs(h - 30) > 1 for h in heights):
             self.fail(f"{where}: rows {heights}px high, not 30")
-        if not sheet["def"]:
-            self.fail(f"{where}: the sheet does not say what {sheet['cat']!r} is")
+        # Explained only when asked: the sheet is the word's other forms, and a paragraph of
+        # definitions over every one of them was a sheet to read rather than a glance.
+        if sheet["def"]:
+            self.fail(f"{where}: the sheet explains {sheet['cat']!r} without being asked")
 
     def check_low(self, word):
         """A card over its word: its sheets open over the card, the same width and gap."""
@@ -323,7 +326,7 @@ class Run:
             return
         print(f"  {self.name}: mood sheet {mood['sheet']['cat']!r}: "
               f"{[r['spelling'] for r in mood['sheet']['rows']]}")
-        if mood["sheet"]["cat"].lower() != "mood · indicative":
+        if mood["sheet"]["cat"].replace("?", "").strip().lower() != "mood · indicative":
             self.fail(f"the sheet is headed {mood['sheet']['cat']!r}")
         if "anduviera" not in [r["spelling"] for r in mood["sheet"]["rows"]]:
             self.fail("the mood sheet has no anduviera row")
@@ -332,6 +335,20 @@ class Run:
         self.sheet_ok(mood, "mood sheet")
         self.words_ok(mood, "mood sheet")
         self.shoot("mood", mood["card"], mood["sheet"]["box"])
+        # "Indicative" is a term most readers have to look up: its "?" says what it is.
+        ask = mood["sheet"].get("ask")
+        if not ask:
+            self.fail("the mood sheet offers no explanation of indicative")
+        else:
+            hand.click(ask["x"], ask["y"])
+            asked = self.wait(lambda c: c.get("sheet") and c["sheet"]["def"], tries=20)
+            said = (asked.get("sheet") or {}).get("def") or ""
+            print(f"  {self.name}: indicative explained: {said[:70]!r}")
+            if "Indicative" not in said:
+                self.fail(f"pressing the mood sheet's ? explained nothing: {said!r}")
+            else:
+                self.shoot("mood-asked", asked["card"], asked["sheet"]["box"])
+            hand.click(ask["x"], ask["y"])
 
         tense = point("tense")
         if tense.get("sheet"):
@@ -348,6 +365,9 @@ class Run:
             if len(cells) != 6:
                 self.fail(f"the person grid has {len(cells)} cells")
             self.sheet_ok(person, "person grid")
+            # Who and how many need no explaining.
+            if person["sheet"].get("ask"):
+                self.fail("the person grid offers to explain person and number")
             self.words_ok(person, "person grid")
             self.shoot("person", person["card"], person["sheet"]["box"])
         else:

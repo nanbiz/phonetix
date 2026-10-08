@@ -56,6 +56,7 @@
   }
   function point(category: string): void {
     stay();
+    if (open !== category) pinned = false;
     open = category;
   }
   function leave(): void {
@@ -127,18 +128,36 @@
 
   const capital = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
 
-  /** What the sheet's term and its category are, each by itself, where Wiktionary says. */
+  /**
+   * The terms nearly every reader already knows, which are not explained: who and how many,
+   * now and later, the genders. A term in a sheet is explained only where it is the kind most
+   * readers would have to look up - "indicative", "preterite", "dative" - and then only when
+   * asked for.
+   */
+  const KNOWN = new Set([
+    'person', 'number', 'gender', 'singular', 'plural', 'first-person', 'second-person',
+    'third-person', 'present', 'past', 'future', 'masculine', 'feminine', 'neuter',
+  ]);
+
+  /** Whether the sheet's explanation is shown: while the pointer is on its "?", or since it was
+   *  pressed, until it is pressed again or another sheet opens. */
+  let hovering = $state(false);
+  let pinned = $state(false);
+  let asked = $derived(hovering || pinned);
+
+  /** What the sheet's term and its category are, each by itself, where Wiktionary says and a
+   *  reader would need telling. */
   function explained(of: Term): { name: string; text: string }[] {
     const said: { name: string; text: string }[] = [];
     for (const value of of.values) {
-      const text = categoryText(value.category);
+      const text = KNOWN.has(value.category) ? null : categoryText(value.category);
       if (text) said.push({ name: value.category, text });
     }
     // A person with its number is two categories and two values, and four definitions made a
     // sheet to read rather than a glance: the grid's own headings say what each value is.
     if (of.values.length > 1) return said;
     for (const value of of.values) {
-      const text = valueText(value.value);
+      const text = KNOWN.has(value.value) ? null : valueText(value.value);
       if (text) said.push({ name: value.value.replaceAll('-', ' '), text });
     }
     return said;
@@ -178,8 +197,18 @@
       onpointerenter={stay}
       onpointerleave={leave}
     >
-      <div class="sheet-cat">{categoryName(term.category)} · {term.long}</div>
-      {#if explained(term).length > 0}
+      <div class="sheet-cat">
+        {categoryName(term.category)} · {term.long}{#if explained(term).length > 0}<button
+            class="sheet-ask{asked ? ' on' : ''}"
+            data-ask
+            aria-label="What this is"
+            aria-expanded={asked}
+            onpointerenter={() => (hovering = true)}
+            onpointerleave={() => (hovering = false)}
+            onclick={() => (pinned = !pinned)}>?</button
+          >{/if}
+      </div>
+      {#if asked && explained(term).length > 0}
         <div class="sheet-def">
           {#each explained(term) as line (line.name)}
             <p><b>{capital(line.name)}:</b> {line.text}</p>
