@@ -27,7 +27,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from on_a_page import PORT, arrow_checks, build_packs, serve
+from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, serve, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -241,6 +241,79 @@ def main():
                              f"firefox, {'painted words' if painted else 'page text'}, "
                              f"card {'above' if low else 'below'}",
                              painted, low, failures)
+        # The card's Wiktionary link, reached the way a reader reaches it: rest on a word until
+        # its card opens, in through the arrow, along to the link, and pressed.
+        driver.send("WebDriver:Navigate", {"url": f"{view}/viewbook.html"})
+        time.sleep(1)
+        driver.script("const done = arguments[0];"
+                      "browser.storage.local.set({density: 1}).then(() => done('ok'));")
+        driver.send("WebDriver:Navigate", {"url": f"{base}/lines.html"})
+        word = None
+        for _ in range(25):
+            word = hand.ask("""(() => {
+                const w = document.querySelector('#lines .px-w');
+                if (!w) return null;
+                const r = w.getBoundingClientRect();
+                return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+            })()""")
+            if word:
+                break
+            time.sleep(1)
+        handles = driver.send("WebDriver:GetWindowHandles")
+        before = set(handles["value"] if isinstance(handles, dict) else handles)
+        opened = []
+        if word:
+            hand.move(2, 2)
+            time.sleep(0.5)
+            hand.move(word["x"], word["y"])
+            seen = None
+            for _ in range(20):
+                time.sleep(0.3)
+                seen = hand.ask(CARD_JS)
+                if seen and seen.get("open") and seen.get("arrow"):
+                    break
+            link = hand.ask("""(() => {
+                const host = document.getElementById('phonetix-card-host');
+                const el = host && host.shadowRoot.querySelector('[data-does=Wiktionary]');
+                if (!el) return null;
+                const r = el.getBoundingClientRect();
+                return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+            })()""")
+            if seen and seen.get("arrow") and link:
+                arrow = seen["arrow"]
+                inside = arrow["bottom"] + 14 if seen["way"] == "below" else arrow["top"] - 14
+                walk(hand, (word["x"], word["y"]), (arrow["x"], inside))
+                walk(hand, (arrow["x"], inside), (link["x"], link["y"]))
+                time.sleep(0.3)
+                hand.click(link["x"], link["y"])
+                for _ in range(20):
+                    time.sleep(0.5)
+                    handles = driver.send("WebDriver:GetWindowHandles")
+                    handles = handles["value"] if isinstance(handles, dict) else handles
+                    if set(handles) - before:
+                        opened = list(set(handles) - before)
+                        break
+        print(f"  the card's Wiktionary link: {len(opened)} tab opened"
+              f" (word {bool(word)}, card {bool(word and seen and seen.get('open'))},"
+              f" link {bool(word and link)})")
+        if not opened:
+            failures.append("the card's Wiktionary link opened nothing on Gecko")
+        else:
+            here = driver.send("WebDriver:GetWindowHandle")
+            here = here["value"] if isinstance(here, dict) else here
+            driver.send("WebDriver:SwitchToWindow", {"handle": opened[0]})
+            for _ in range(10):
+                url = driver.send("WebDriver:GetCurrentURL")
+                url = url["value"] if isinstance(url, dict) else url
+                if "wiktionary.org" in url:
+                    break
+                time.sleep(0.5)
+            print(f"  ... on {url}")
+            if "wiktionary.org/wiki/" not in url:
+                failures.append(f"the card's Wiktionary link opened {url!r}")
+            driver.send("WebDriver:CloseWindow")
+            driver.send("WebDriver:SwitchToWindow", {"handle": here})
+
         driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
         time.sleep(2)
 
