@@ -92,6 +92,20 @@ class PipeCDP:
         os.write(self.tc_w, json.dumps(obj).encode() + b"\0")
 
     def send(self, method, params=None, session=None, timeout=30):
+        # An extension page is isolated (its manifest sets COOP and COEP), and a tab committing
+        # one moves to a process of its own: asked straight after attaching, it has no context
+        # to evaluate in for a moment. Asked again until it has, for as long as a page takes.
+        if method == "Runtime.evaluate":
+            for _ in range(50):
+                try:
+                    return self._send(method, params, session, timeout)
+                except RuntimeError as e:
+                    if "Cannot find default execution context" not in str(e):
+                        raise
+                    time.sleep(0.1)
+        return self._send(method, params, session, timeout)
+
+    def _send(self, method, params=None, session=None, timeout=30):
         self._id += 1
         mid = self._id
         msg = {"id": mid, "method": method, "params": params or {}}
