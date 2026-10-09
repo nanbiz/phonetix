@@ -14,6 +14,9 @@ import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 import { reactive } from './props.svelte';
 
+/** How wide a card over a page may grow, in CSS pixels. */
+const PAGE_CARD_WIDTH = 440;
+
 /** How far the card keeps from the edges of the window. */
 const MARGIN = 8;
 
@@ -74,8 +77,10 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   frame.className = themeOf(darkHere(), theme);
   // As wide as what it says, up to the card's width: a one-word answer in a card sized for a
   // definition was mostly empty card. Passed through by the pointer until it is entered.
+  // Wider over a page than the phone's: a long compound and the card's two buttons share a
+  // line, and its transcription and accent another, where at the phone's width both broke.
   frame.style.cssText =
-    'position:fixed;width:max-content;min-width:220px;' +
+    `--card-width:${PAGE_CARD_WIDTH}px;position:fixed;width:max-content;min-width:220px;` +
     'max-width:min(var(--card-width), calc(100vw - 16px));pointer-events:none;';
   shadow.appendChild(frame);
   return { shadow, frame };
@@ -180,6 +185,8 @@ export interface CardActions {
   narrow?: boolean;
   /** Say the word the card is about. */
   onPlay?: () => void;
+  /** Read the word's language in another accent from now on. */
+  onAccent?: (accent: string) => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
   onPlayUrl?: (url: string) => void;
   /** A picture of the mouth making a sound, from wherever the host can reach it. */
@@ -220,6 +227,7 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     accent: actions.accent ?? '',
     diagram: actions.diagram,
     onPlay: actions.onPlay,
+    onAccent: actions.onAccent,
     onPlayUrl: actions.onPlayUrl,
     onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
     arriving: actions.arriving ?? null,

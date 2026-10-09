@@ -238,7 +238,7 @@ def real_popup(cdp, extid):
             tall: document.documentElement.scrollHeight, height: window.innerHeight})"""))
         shot(cdp, session, f"toolbar-{name}")
         # No higher than the first screen's window could be made: a browser gives a popup
-        # at most 600px less its own frame, and a headless one on a small screen less still.
+        # at most 600px less its own frame.
         if inner["tall"] > inner["height"] or inner["tall"] > 520:
             failures.append(f"the {name} screen is {inner['tall']}px in a "
                             f"{inner['height']}px window")
@@ -268,7 +268,9 @@ def real_popup(cdp, extid):
 def main():
     server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Page)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    cdp = PipeCDP(extra_args=[OFFLINE])
+    # On a screen the size of a desk's: a headless browser's own is small, and it caps a popup
+    # at 510px where a browser on any real screen gives it its 600.
+    cdp = PipeCDP(extra_args=[OFFLINE, "--screen-info={1920x1080}"])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     failures = []

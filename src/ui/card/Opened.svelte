@@ -23,6 +23,8 @@
     /** Which way the arrow points, where the card is anchored to a word. */
     points?: 'above' | 'below' | null;
     onPlay?: () => void;
+    /** Read the word's language in another accent from now on. */
+    onAccent?: (accent: string) => void;
     onPlayUrl?: (url: string) => void;
     onOpen?: (url: string) => void;
     /** Told when a sound is opened or closed, so a host can measure what is on screen. */
@@ -43,6 +45,7 @@
     eased = false,
     points = null,
     onPlay,
+    onAccent,
     onPlayUrl,
     onOpen,
     onSymbol,
@@ -185,6 +188,7 @@
   onSymbol={ask}
   onPlaySymbol={onPlayUrl}
   {onPlay}
+  {onAccent}
   {onOpen}
   {arriving}
   back={shown === answer ? null : answer.spelling}

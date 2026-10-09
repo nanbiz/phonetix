@@ -8,7 +8,7 @@ import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import {
-  accentFor, allowed, current, DEFAULTS, translates, watch, type Settings,
+  accentFor, allowed, current, DEFAULTS, set, setAccent, translates, watch, type Settings,
 } from '@/settings';
 import {
   hide, inside, moveTo, paintedIn as cardPaintedIn, passedOver, show, showing,
@@ -395,13 +395,37 @@ interface Anchor {
   holds(x: number, y: number): boolean;
 }
 
+/**
+ * A word the page drew, followed across a redraw.
+ *
+ * A redraw - an accent chosen, a dictionary arrived - puts a new box where the word was, and a
+ * card tied to the old one was tied to nothing: it could not be asked again, and it stayed over
+ * the page saying what the word used to be. The box now in the old one's place, drawn over the
+ * same spelling, is the same word.
+ */
 function onElement(element: HTMLElement): Anchor {
+  const spelling = element.querySelector('.px-was')?.textContent ?? '';
+  let held = element;
+  let last = element.getBoundingClientRect();
+  const now = (): HTMLElement => {
+    if (held.isConnected) {
+      last = held.getBoundingClientRect();
+      return held;
+    }
+    const at = document.elementFromPoint(last.left + last.width / 2, last.top + last.height / 2);
+    const box = at?.closest<HTMLElement>(`.${WORD}`);
+    if (box && (box.querySelector('.px-was')?.textContent ?? '') === spelling) {
+      held = box;
+      last = box.getBoundingClientRect();
+    }
+    return held;
+  };
   return {
-    box: () => element.getBoundingClientRect(),
-    alive: () => element.isConnected,
+    box: () => now().getBoundingClientRect(),
+    alive: () => now().isConnected,
     holds: (x, y) => {
       const at = document.elementFromPoint(x, y);
-      return at !== null && element.contains(at);
+      return at !== null && now().contains(at);
     },
   };
 }
@@ -450,6 +474,16 @@ function askedOf(token: Token, before: string): Asked {
 }
 
 /**
+ * Whether a segment is a word a card can say, by the rule the core finds words by: a letter in
+ * it and no digit or underscore. A version, a user name or a name out of code ("v31.55",
+ * "justinking3062", "v_dev") said letter by letter and number by number is not how anyone
+ * says it.
+ */
+function isWord(part: Intl.SegmentData): boolean {
+  return Boolean(part.isWordLike) && /\p{L}/u.test(part.segment) && !/[\p{N}_]/u.test(part.segment);
+}
+
+/**
  * The word of the page's own text under a point, where there is one.
  *
  * Every word a reader can point at is a word they can ask about, not only the ones the page
@@ -472,7 +506,7 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
   for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
     if (part.index > caret.offset) break;
     const end = part.index + part.segment.length;
-    if (part.isWordLike && caret.offset <= end) {
+    if (isWord(part) && caret.offset <= end) {
       const range = document.createRange();
       range.setStart(node, part.index);
       range.setEnd(node, end);
@@ -490,7 +524,7 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
         };
       }
     }
-    if (part.isWordLike) before = part.segment;
+    if (isWord(part)) before = part.segment;
   }
   return null;
 }
@@ -594,6 +628,25 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
     // host, because the page's own policy would refuse the load.
     onPlayUrl: (url) => void recorded(url),
+    // Chosen on the card, for every word of the language from now on: the page redraws itself
+    // when the setting changes, and the card is asked again in the accent chosen.
+    onAccent: (accent) => {
+      // Redrawn here rather than left to the watch, which compares what is stored with what
+      // this page last saw and so would find nothing changed.
+      const accents = setAccent(settings, source, accent);
+      // The card first, at whatever it is anchored to now: a redraw puts a new element where
+      // the word was, the pointer resting on it opens the same card on that, and a card asked
+      // again on the old one would be asked about a word no longer in the page.
+      void set('accents', accents).then(async () => {
+        settings = { ...settings, accents };
+        const at = anchored ?? anchor;
+        if (at.alive()) {
+          anchored = at;
+          await open(at, word, true);
+        }
+        redraw();
+      });
+    },
     diagram: (file) => sendMessage('diagram', { file, width: DIAGRAM_WIDTH }),
   };
   // Up with what the dictionary said, at once. What the network and the engine add arrives
@@ -791,14 +844,13 @@ function gestures(): void {
       // button held down is a selection being made rather than a word being pointed at.
       if (touched || event.buttons !== 0 || inside(event.target) || wordAt(event.target)) return;
       if (moved && showing() && anchored && !anchored.holds(pointer.x, pointer.y)) letGo();
-      if (!allowed(settings, location.hostname)) return;
+      if (!allowed(settings, location.hostname) || !settings.cards) return;
       resting = setTimeout(() => {
         resting = null;
         if (anchored?.holds(pointer.x, pointer.y)) return;
+        // Any word, in any language: a word in one the reader reads has a card that says it.
         const found = wordUnder(pointer.x, pointer.y);
-        // A word in a language the reader reads is left to them: its card would only say how
-        // it is said, which is what the words drawn over the page are for.
-        if (!found || !translates(settings, found.asked.lang)) return;
+        if (!found) return;
         anchored = onRange(found.range);
         void open(anchored, found.asked);
       }, Math.max(0, settings.delay));
@@ -813,7 +865,7 @@ function gestures(): void {
     }
     const found = wordAt(event.target);
     if (!found) return;
-    if (touched) return;
+    if (touched || !settings.cards) return;
     // The word stays as it is drawn: the card names what the page wrote, and flipping each
     // word back to its spelling as the pointer crossed it set the line jumping under a reader
     // moving across it.

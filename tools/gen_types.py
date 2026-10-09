@@ -891,6 +891,17 @@ def accents_kt():
     return "\n".join(lines)
 
 
+# How many words of its own an accent needs to read a page in it without a rule: Brazilian and
+# European Portuguese have fifty thousand each, Australian English four thousand, which leaves
+# most of a page read the dictionary's way.
+WHOLE_WORDS = 20000
+
+
+def whole(lang, row):
+    """Whether a page is read in this accent throughout."""
+    return row["id"] == lang or bool(row.get("rule")) or row.get("words", 0) >= WHOLE_WORDS
+
+
 def accents_ts():
     """The accents each language offers, for the view that lets a reader pick one."""
     with open(ACCENTS) as f:
@@ -909,18 +920,23 @@ def accents_ts():
         "  voice: string;",
         "  /** Whether the core rewrites a standard transcription into this accent. */",
         "  rule: boolean;",
+        "  /** Whether a page is read in it throughout: the language's own reading, a rule that",
+        "   *  holds for every word, or readings of its own for most words a page uses. An accent",
+        "   *  with a few thousand words of its own reads the rest the way the dictionary does. */",
+        "  whole: boolean;",
         "}",
         "",
         "export const ACCENTS: Record<string, Accent[]> = {",
     ]
     for lang in sorted(table):
         rows = ", ".join(
-            "{ id: %s, name: %s, voice: %s, rule: %s }"
+            "{ id: %s, name: %s, voice: %s, rule: %s, whole: %s }"
             % (
                 json.dumps(row["id"]),
                 json.dumps(row["name"], ensure_ascii=False),
                 json.dumps(row["voice"]),
                 "true" if row.get("rule") else "false",
+                "true" if whole(lang, row) else "false",
             )
             for row in table[lang]
         )
@@ -936,6 +952,11 @@ def accents_ts():
         "/** The voice that says a word in this accent, or the language's own. */",
         "export function voiceOf(lang: string, accent: string): string {",
         "  return accentsOf(lang).find((row) => row.id === accent)?.voice ?? lang;",
+        "}",
+        "",
+        "/** The accents a page in this language can be read in throughout. */",
+        "export function wholeAccentsOf(lang: string): Accent[] {",
+        "  return accentsOf(lang).filter((row) => row.whole);",
         "}",
         "",
     ]

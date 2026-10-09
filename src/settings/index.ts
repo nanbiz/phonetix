@@ -23,6 +23,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   narrow: 'local:narrow',
   hideStress: 'local:hideStress',
   delay: 'local:hoverDelay',
+  cards: 'local:cardsOnPoint',
   animations: 'local:animations',
   host: 'local:packBaseUrl',
   theme: 'local:theme',

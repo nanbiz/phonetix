@@ -60,6 +60,7 @@ export const ROWS: Record<string, Words> = {
   "animations": { name: "Animations", about: "" },
   "appearance": { name: "Appearance", about: "" },
   "apps": { name: "Apps", about: "" },
+  "cards": { name: "Card on a word you point at", about: "" },
   "dark": { name: "Light or dark", about: "" },
   "delay": { name: "Rest before a card opens", about: "" },
   "density": { name: "How often", about: "" },

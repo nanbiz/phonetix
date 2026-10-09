@@ -362,6 +362,7 @@ private class Bridge(
         .put("accents", JSONObject(settings.accents as Map<*, *>))
         .put("delay", 200)
         .put("animations", true)
+        .put("cards", true)
         .put("host", settings.packHost)
         .put("theme", settings.theme)
         .put("dark", settings.dark)

@@ -79,11 +79,11 @@ def popup(cdp, extid, page_target):
     raise SystemExit("FAIL - the toolbar button opened no popup")
 
 
-def point_at(cdp, page, word):
+def point_at(cdp, page, word, within="prose"):
     """Rest the pointer on a word of the page, as a reader does, and read the card it opens."""
     where = json.loads(evaluate(cdp, page, """
         (() => {
-          const prose = document.getElementById('prose');
+          const prose = document.getElementById(%r);
           // A word the page replaced is pointed at where its replacement is drawn.
           const box = [...prose.querySelectorAll('.px-w')]
             .find(w => (w.querySelector('.px-was') || {}).textContent === %r);
@@ -103,7 +103,7 @@ def point_at(cdp, page, word):
           }
           return 'null';
         })()
-    """ % (word, word, len(word))) or "null")
+    """ % (within, word, word, len(word))) or "null")
     if not where:
         return None
     cdp.send("Input.dispatchMouseEvent", {"type": "mouseMoved", "x": 2, "y": 2}, session=page)
@@ -180,8 +180,8 @@ def main():
             sys.exit(1)
         panel = json.loads(drawn)
         print(f"  rows: {panel['rows']}")
-        for row in ("on", "site", "inline", "density", "target", "known", "translator",
-                    "pronunciation", "theme"):
+        for row in ("on", "site", "inline", "density", "target", "known", "cards",
+                    "translator", "pronunciation", "theme"):
             if row not in panel["rows"]:
                 failures.append(f"the popup has no {row} row")
         if not panel["on"]:
@@ -221,6 +221,23 @@ def main():
             failures.append(f"the bar changed nothing: {dense['count']} then {sparse['count']}")
         bar("s.max")
 
+        # Every word replaced, and still not a version or a year, which are not words; nor
+        # does pointing at one open a card.
+        numbered = evaluate(cdp, page, """
+            JSON.stringify([...document.querySelectorAll('#version .px-w')]
+              .map(w => (w.querySelector('.px-was') || {}).textContent || '')
+              .filter(was => /[0-9]/.test(was)))
+        """)
+        numbered = json.loads(numbered or "[]")
+        named = point_at(cdp, page, "justinking3062", within="version")
+        version = point_at(cdp, page, "v31.55", within="version")
+        print(f"  a version, a name with digits and a year replaced: {numbered}; pointing at "
+              f"v31.55: {(version or '')[:60]!r}, at justinking3062: {(named or '')[:60]!r}")
+        if numbered:
+            failures.append(f"replaced as words: {numbered}")
+        if version or named:
+            failures.append(f"pointing at a version or a name with digits opened a card: {version or named!r}")
+
         # Replacing switched off: nothing on the page is replaced, and a word pointed at still
         # opens its card.
         control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
@@ -256,8 +273,8 @@ def main():
         if not card or "Weg" not in card:
             failures.append(f"the card did not answer in German: {card!r}")
 
-        # A language the reader reads as it is: its words pointed at open nothing, and a word
-        # the page replaced opens a card that says it and does not translate it.
+        # A language the reader reads as it is: a word of it pointed at, replaced or not,
+        # opens a card that says it and does not translate it.
         control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
         control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
         control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
@@ -270,8 +287,10 @@ def main():
         print(f"  never translate {known!r}: pointing at por: {(plain or '')[:60]!r}")
         if (known or "").strip() != "Spanish":
             failures.append(f"the never-translate row says {known!r} after choosing Spanish")
-        if plain:
-            failures.append(f"a word in a language never translated opened a card: {plain!r}")
+        if not plain or "por" not in plain:
+            failures.append(f"a word in a language never translated opened no card: {plain!r}")
+        elif "durch" in plain or "für" in plain:
+            failures.append(f"a word in a language never translated was translated: {plain!r}")
         replaced = point_at(cdp, page, "camino")
         print(f"  ... pointing at the replaced camino: {(replaced or '')[:60]!r}")
         if not replaced or "camino" not in replaced:
@@ -281,6 +300,24 @@ def main():
         control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
         control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
         control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
+
+        # Cards switched off: resting on a word opens none, replaced or not; on, they come back.
+        control(cdp, view, "document.querySelector('[data-row=cards] [role=switch], [data-row=cards] input').click()")
+        stored = evaluate(cdp, view, "chrome.storage.local.get('cardsOnPoint').then(r => String(r.cardsOnPoint))")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
+        plain_off = point_at(cdp, page, "perro")
+        control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
+        replaced_off = point_at(cdp, page, "camino")
+        print(f"  cards off ({stored}): pointing at perro {(plain_off or '')[:40]!r}, "
+              f"at the replaced camino {(replaced_off or '')[:40]!r}")
+        if stored != "false":
+            failures.append(f"switching cards off stored {stored!r}")
+        if plain_off or replaced_off:
+            failures.append(f"with cards off a card opened: {plain_off or replaced_off!r}")
+        control(cdp, view, "document.querySelector('[data-row=cards] [role=switch], [data-row=cards] input').click()")
+        back = point_at(cdp, page, "camino")
+        if not back or "camino" not in back:
+            failures.append(f"with cards on again pointing at camino opened no card: {back!r}")
 
         # An accent whose difference is a rule changes how the page says a word.
         def sound_of(word):
@@ -319,6 +356,44 @@ def main():
             failures.append("the word the accent changes was not on the page")
         elif before == after:
             failures.append(f"picking an accent left calle as {before!r}")
+
+        # And on the card, where the word is: the card names the accent it reads in and offers
+        # the ones that read the whole language; choosing Spain there says calle the way Spain
+        # does, on the card and on the page.
+        card = point_at(cdp, page, "calle")
+        offered = evaluate(cdp, page, """
+            (() => {
+              const s = document.getElementById('phonetix-card-host').shadowRoot
+                .querySelector('select[data-does=accent]');
+              if (!s) return null;
+              const was = s.value;
+              const offered = [...s.options].map(o => o.textContent).join(', ');
+              s.value = 'es';
+              s.dispatchEvent(new Event('change', {bubbles: true}));
+              return JSON.stringify({was, offered});
+            })()
+        """)
+        print(f"  the card on calle: {(card or '')[:50]!r}, accents offered: {offered}")
+        if not offered:
+            failures.append("the card offers no accent to choose")
+        else:
+            offered = json.loads(offered)
+            if offered["was"] != "es-419":
+                failures.append(f"the card names {offered['was']!r} after Latin American was picked")
+            if "ES · Spain" not in offered["offered"] or "ES · Latin America" not in offered["offered"]:
+                failures.append(f"the card offers {offered['offered']!r}")
+            spain = wait_for(cdp, page, """
+              (() => {
+                const card = document.getElementById('phonetix-card-host').shadowRoot.querySelector('.card-top .ipa');
+                const box = [...document.querySelectorAll('.px-w')]
+                  .find(w => (w.querySelector('.px-was') || {}).textContent === 'calle');
+                const page = box ? ((box.querySelector('.px-ph') || {}).textContent || '') : '';
+                return card && card.textContent.includes('ʎ') && page === %r ? page : null;
+              })()
+            """ % before, lambda v: bool(v), tries=16)
+            print(f"  chose Spain on the card: page and card say calle with ʎ: {bool(spain)}")
+            if not spain:
+                failures.append("choosing Spain on the card left the card or the page in the Latin American accent")
 
         # How the page writes what it says: narrow rather than broad, and with or without the
         # stress marks. Each is judged by the words on the page changing, not by the setting.

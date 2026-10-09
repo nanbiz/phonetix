@@ -39,14 +39,26 @@
    is named and said before anything else is said about it, and the transcription behind the
    word costs the card no line of its own. The word and its transcription share a baseline; the
    buttons sit on the row's middle. */
-.card-top { display: flex; align-items: baseline; gap: var(--space-2); }
+/* The same two rows on every card: the word and its buttons, then its transcription with the
+   accent it is read in at the right edge, under the buttons. A row that wrapped wherever its
+   contents ran out put the buttons and the accent somewhere different on every word. The
+   transcription has the whole width, and the accent goes under it only where the two do not
+   fit; the transcription itself breaks only where it is wider than the card. */
+.card-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); }
+.card-top > .word { grid-column: 1; grid-row: 1; justify-self: start; }
+.card-top > .card-actions { grid-column: 2; grid-row: 1; justify-self: end; }
+.card-sound { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.card-sound > .pill { margin-left: auto; }
 /* The word is never cut: where the line is short of room, the transcription behind it wraps. */
-.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 0 auto; max-width: 100%; }
+/* Whole however long: a compound wider than its column breaks rather than losing its end, which
+   is the part a reader is reading it for. */
+.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
 /* What makes the word the form it is, in the accent, against the stem it shares with its lemma. */
 .card-top .word .ending { color: var(--color-accent); }
-.card-top .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
+.card-sound .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
 .card-top .spacer { flex: 1 1 auto; }
 .card-top .icon-btn, .card-top .audio { align-self: center; }
+.card-top .card-actions { display: inline-flex; align-items: center; gap: var(--space-2); }
 /* The way back to the word on the page, where the card is reading as another form of it or as
    its lemma's entry. */
 .card-back { font: inherit; font-size: var(--font-size-small); color: var(--color-accent); background: none; border: none; padding: 0 var(--space-1); border-radius: var(--radius-button); cursor: pointer; white-space: nowrap; align-self: center; }
@@ -54,6 +66,13 @@
 .pill { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; line-height: 1.6; padding: 1px var(--space-2); border-radius: var(--radius-chip); white-space: nowrap; background: var(--color-chip-bg); color: var(--color-chip-ink); flex: 0 0 auto; }
 /* Where the answer came from, in its own colour: a dictionary a person wrote and a machine
    that guessed are not the same claim, and a reader decides how far to trust the card by it. */
+/* The accent, chosen where it is named: the pill holds the browser's own list, drawn as the
+   pill, with the mark that it opens. */
+.accent-pick { position: relative; display: inline-flex; align-items: center; gap: 2px; padding-right: var(--space-1); cursor: pointer; }
+.accent-pick select { appearance: none; -webkit-appearance: none; font: inherit; letter-spacing: inherit; color: inherit; background: none; border: none; padding: 0; margin: 0; cursor: pointer; outline: none; }
+.accent-pick select option { background: var(--color-surface); color: var(--color-ink); }
+.accent-pick:focus-within { box-shadow: 0 0 0 var(--border-width) var(--color-accent); }
+.accent-pick svg { width: 12px; height: 12px; flex: 0 0 auto; pointer-events: none; }
 .pill.from-dictionary { background: var(--color-accent-bg); color: var(--color-accent); }
 .pill.from-machine { background: var(--color-guess-bg); color: var(--color-guess); }
 .icon-btn { width: var(--icon-button); height: var(--icon-button); flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; border-radius: var(--radius-symbol); color: var(--color-ink-faint); cursor: pointer; text-decoration: none; }
@@ -74,6 +93,8 @@
 .ipa-row { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; font-family: var(--font-ipa); font-size: var(--font-size-ipa-large); color: var(--color-ipa); }
 .ipa { display: inline-flex; align-items: baseline; flex-wrap: wrap; }
 .ipa .delim { color: var(--color-ink-faint); }
+/* The space between two words of a transcription, which a row of buttons would drop. */
+.ipa .gap { width: 0.3em; flex: 0 0 auto; }
 /* The rule under a symbol says what kind of sound it is, and follows the letterform rather
    than boxing it: the transcription still reads as one word. */
 .sym { font: inherit; color: var(--color-ink); background: none; border: none; padding: 0 1px 2px; margin: 0; border-radius: var(--radius-symbol); cursor: pointer; line-height: 1.25; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: var(--underline-thickness); text-underline-offset: var(--underline-offset); }

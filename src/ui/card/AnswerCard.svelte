@@ -13,7 +13,9 @@
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
   import { wiktionary } from '@/data/links';
-  import { accentsOf } from '@/data/accents';
+  import { accentsOf, wholeAccentsOf } from '@/data/accents';
+  import { SAYS } from '@/data/wording';
+  import CHOOSE from 'virtual:icons/lucide/chevron-down';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
   import PlayButton from './PlayButton.svelte';
@@ -42,6 +44,9 @@
     /** A sound the reader asked about. */
     onSymbol?: (symbol: string) => void;
     onPlay?: () => void;
+    /** Read the word's language in another accent from now on. Without it the accent is named
+     *  and not chosen here. */
+    onAccent?: (accent: string) => void;
     onOpen?: (url: string) => void;
     /** How far the dictionary for the word's language has got, where it is on its way. */
     arriving?: number | null;
@@ -69,6 +74,7 @@
     onPlaySymbol,
     onSymbol,
     onPlay,
+    onAccent,
     onOpen,
     back = null,
     onBack,
@@ -152,6 +158,29 @@
     !guessed && answer.says.length === 0 && answer.glosses.length > 0 && answer.target !== 'en'
   );
   // What is being read, and in which accent where the reader chose one: one fact, one pill.
+  /**
+   * The accents the word's language can be read in throughout, to choose between on the card:
+   * a reader who hears a word read the other way picks theirs where they hear it. Offered
+   * where there are two or more, with the dictionary's own reading first where the language
+   * has none of its own name, so what is read now is always one of the choices.
+   */
+  let choosable = $derived.by(() => {
+    const whole = wholeAccentsOf(answer.source);
+    if (whole.length < 2) return [];
+    const base = whole.some((row) => row.id === answer.source);
+    return [
+      ...(base ? [] : [{ id: '', name: SAYS['dictionary-accent'] }]),
+      ...whole.map((row) => ({ id: row.id, name: row.name })),
+    ];
+  });
+  /** The choice that is read now: the language's own accent stands for the dictionary's. */
+  let chosen = $derived(
+    choosable.some((row) => row.id === accent)
+      ? accent
+      : choosable.some((row) => row.id === answer.source) && accent === ''
+        ? answer.source
+        : accent
+  );
   let readAs = $derived(
     (() => {
       const name = accentsOf(answer.source).find((row) => row.id === accent)?.name ?? '';
@@ -183,34 +212,54 @@
 <article class="card{eased ? ' eased' : ''}{points ? ` points ${points}` : ''}">
   <div class="card-handle"></div>
   <header class="card-head">
-    <!-- One line: the word, how it is said, what it is read as, and what a reader reaches for
-         outside the card. A phrase has none of those, and the selection it answers is said once,
-         whole, under its translation. -->
+    <!-- The word and what a reader reaches for outside the card, then how it is said and what it
+         is read as. A phrase has none of those, and the selection it answers is said once, whole,
+         under its translation. -->
     {#if !phrase}
     <div class="card-top">
       <span class="word"
         >{#if parts}{parts[0]}<span class="ending">{parts[1]}</span>{:else}{answer.spelling}{/if}</span
       >
-      {#if answer.ipa.length > 0 && !phrase && !nothing}
-        <span class="ipa">
-          <span class="delim">{answer.detail === 'narrow' ? '[' : '/'}</span><!--
-          Symbol by symbol, because each one is a button. No space between them: a
-          transcription is one word and reads as one.
-       -->{#if answer.symbols.length > 0}{#each answer.symbols as symbol, i (i)}<button
-              class="{symbolClass(symbol.kind)}{opened?.token === symbol.token ? ' active' : ''}"
-              title={symbol.name}
-              onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/each}{:else}<!--
-            Whole, where the table could not say what its sounds are.
-         -->{answer.ipa[0]}{/if}<span
-            class="delim">{answer.detail === 'narrow' ? ']' : '/'}</span>
-        </span>
-      {/if}
-      {#if !phrase && answer.source}
-        <span class="pill" title={readAs.name
-          ? `Read as ${named(answer.source)}, ${readAs.name} accent`
-          : `Read as ${named(answer.source)}`}>{readAs.label}</span>
-      {/if}
-      <span class="spacer"></span>
+      <!-- How it is said and the accent it is said in, under the word and its buttons: the
+           accent goes under the transcription only where the two do not fit on one line. -->
+      <div class="card-sound">
+        {#if answer.ipa.length > 0 && !phrase && !nothing}
+          <span class="ipa">
+            <span class="delim">{answer.detail === 'narrow' ? '[' : '/'}</span><!--
+            Symbol by symbol, because each one is a button. No space between them: a
+            transcription is one word and reads as one.
+         -->{#if answer.symbols.length > 0}{#each answer.symbols as symbol, i (i)}{#if symbol.token.trim() === ''}<span
+                class="gap"></span>{:else}<button
+                class="{symbolClass(symbol.kind)}{opened?.token === symbol.token ? ' active' : ''}"
+                title={symbol.name}
+                onclick={() => onSymbol?.(symbol.token)}>{symbol.token}</button>{/if}{/each}{:else}<!--
+              Whole, where the table could not say what its sounds are.
+           -->{answer.ipa[0]}{/if}<span
+              class="delim">{answer.detail === 'narrow' ? ']' : '/'}</span>
+          </span>
+        {/if}
+        {#if !phrase && answer.source && onAccent && choosable.length > 0}
+          <!-- A list of the browser's own, which opens over the page whatever the card is
+               clipped to, and adds nothing to the card's height while it is shut. -->
+          <label class="pill accent-pick" title="Accent {named(answer.source)} is read in">
+            <select
+              data-does="accent"
+              value={chosen}
+              onchange={(event) => onAccent?.(event.currentTarget.value)}
+            >
+              {#each choosable as row (row.id)}
+                <option value={row.id}>{answer.source.toUpperCase()} · {row.name}</option>
+              {/each}
+            </select>
+            <CHOOSE />
+          </label>
+        {:else if !phrase && answer.source}
+          <span class="pill" title={readAs.name
+            ? `Read as ${named(answer.source)}, ${readAs.name} accent`
+            : `Read as ${named(answer.source)}`}>{readAs.label}</span>
+        {/if}
+      </div>
+      <span class="card-actions">
       {#if back}
         <!-- In place of the word's own play and Wiktionary buttons: a form and its transcription
              with the way back beside them is all one line of a card holds, and both buttons are
@@ -231,6 +280,7 @@
           open={onOpen}
         />
       {/if}
+      </span>
     </div>
     {/if}
 

@@ -46,6 +46,7 @@ object Wording {
         "animations" to Words("Animations", ""),
         "appearance" to Words("Appearance", ""),
         "apps" to Words("Apps", ""),
+        "cards" to Words("Card on a word you point at", ""),
         "dark" to Words("Light or dark", ""),
         "delay" to Words("Rest before a card opens", ""),
         "density" to Words("How often", ""),

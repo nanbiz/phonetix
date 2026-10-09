@@ -339,6 +339,10 @@
     "known": {
       "name": "Never translate",
       "about": ""
+    },
+    "cards": {
+      "name": "Card on a word you point at",
+      "about": ""
     }
   },
   "ends": {

@@ -62,6 +62,9 @@ PAGE = (
     "<p id='prose'>" + SENTENCE + "</p>"
     "<pre id='code'>const perro = 1;</pre>"
     "<nav><a href='#'>perro</a></nav>"
+    # A version and a year, which are not words: said digit by digit they are said the way
+    # nobody says them.
+    "<p id='version'>Phonetix v31.55 de justinking3062 en 2013</p>"
     "</main>"
     # Somewhere to scroll to, and nothing in it: a card is anchored to a word, and whether it
     # goes with that word when the page moves cannot be asked of a page that cannot move.

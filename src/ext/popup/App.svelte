@@ -2,7 +2,7 @@
   // The toolbar popup: the three things the extension does, each with what it needs.
   //
   // Over the page, how its words are said, on as many of them as the reader wants. Pointing at
-  // a word in a language they do not read, a card that says it and translates it into theirs.
+  // a word, a card that says it and translates it into theirs where it is in another language.
   // And on a key, a panel that translates into whichever language they pick in it. Everything
   // set once and left (accents, colours) is a screen behind a row.
   //
@@ -230,6 +230,15 @@
       <!-- What a word pointed at is translated into, and which languages are left alone: a
            reader who reads German and English wants the card to translate everything else. -->
       <Group name={ROWS.translate.name}>
+        <Item name={ROWS.cards.name} row="cards">
+          {#snippet control()}
+            <Switch
+              on={settings?.cards ?? true}
+              label={ROWS.cards.name}
+              change={(on) => change('cards', on)}
+            />
+          {/snippet}
+        </Item>
         <div class="duo">
           <button class="item" data-row="target" onclick={() => (choosing = 'target')}>
             <span class="item-text">

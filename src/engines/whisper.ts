@@ -95,6 +95,10 @@ function engine(hosts: Hosts, told: Getting): Promise<Engine> {
       // a file of a hundred megabytes has to be kept awake while it arrives, and what a reader
       // is shown arriving is all the files together.
       const files = new Map<string, { loaded: number; total: number }>();
+      // Told once per hundredth rather than once per piece: the model arrives in some ten
+      // thousand pieces, each told was a message and a write to storage that every open tab
+      // hears, and the extension's pages queued behind them.
+      let told = -1;
       const arrived = (file: string, loaded: number, total: number) => {
         files.set(file, { loaded, total });
         let all = 0;
@@ -103,7 +107,11 @@ function engine(hosts: Hosts, told: Getting): Promise<Engine> {
           here += it.loaded;
           all += it.total;
         }
-        getting(all > 0 ? here / all : 0);
+        const share = all > 0 ? here / all : 0;
+        const step = Math.floor(share * 100);
+        if (step === told) return;
+        told = step;
+        getting(share);
       };
       lib.env.fetch = async (input: string | URL, init?: RequestInit) => {
         const asked = String(input);

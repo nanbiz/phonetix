@@ -11,15 +11,19 @@ export interface Accent {
   voice: string;
   /** Whether the core rewrites a standard transcription into this accent. */
   rule: boolean;
+  /** Whether a page is read in it throughout: the language's own reading, a rule that
+   *  holds for every word, or readings of its own for most words a page uses. An accent
+   *  with a few thousand words of its own reads the rest the way the dictionary does. */
+  whole: boolean;
 }
 
 export const ACCENTS: Record<string, Accent[]> = {
-  de: [{ id: "de", name: "Germany", voice: "de", rule: false }, { id: "de-ch", name: "Switzerland", voice: "de", rule: true }, { id: "de-at", name: "Austria", voice: "de", rule: true }],
-  en: [{ id: "en-gb", name: "British", voice: "en-gb-x-rp", rule: false }, { id: "en-us", name: "American", voice: "en-us", rule: true }, { id: "en-gb-scotland", name: "Scottish", voice: "en-gb-scotland", rule: false }, { id: "en-au", name: "Australian", voice: "en-au", rule: false }, { id: "en-029", name: "Caribbean", voice: "en-029", rule: false }, { id: "en-ca", name: "Canadian", voice: "en-us", rule: true }],
-  es: [{ id: "es", name: "Spain", voice: "es", rule: false }, { id: "es-419", name: "Latin America", voice: "es-419", rule: true }, { id: "es-ar", name: "Rioplatense", voice: "es-419", rule: true }],
-  fr: [{ id: "fr", name: "France", voice: "fr", rule: false }, { id: "fr-ca", name: "Canada", voice: "fr-ca", rule: false }],
-  pt: [{ id: "pt", name: "Portugal", voice: "pt", rule: false }, { id: "pt-br", name: "Brazil", voice: "pt-br", rule: false }],
-  vi: [{ id: "vi", name: "Northern", voice: "vi", rule: false }, { id: "vi-vn-x-central", name: "Central", voice: "vi-vn-x-central", rule: false }],
+  de: [{ id: "de", name: "Germany", voice: "de", rule: false, whole: true }, { id: "de-ch", name: "Switzerland", voice: "de", rule: true, whole: true }, { id: "de-at", name: "Austria", voice: "de", rule: true, whole: true }],
+  en: [{ id: "en-gb", name: "British", voice: "en-gb-x-rp", rule: true, whole: true }, { id: "en-us", name: "American", voice: "en-us", rule: true, whole: true }, { id: "en-gb-scotland", name: "Scottish", voice: "en-gb-scotland", rule: false, whole: false }, { id: "en-au", name: "Australian", voice: "en-au", rule: false, whole: false }, { id: "en-029", name: "Caribbean", voice: "en-029", rule: false, whole: false }, { id: "en-ca", name: "Canadian", voice: "en-us", rule: true, whole: true }],
+  es: [{ id: "es", name: "Spain", voice: "es", rule: false, whole: true }, { id: "es-419", name: "Latin America", voice: "es-419", rule: true, whole: true }, { id: "es-ar", name: "Rioplatense", voice: "es-419", rule: true, whole: true }],
+  fr: [{ id: "fr", name: "France", voice: "fr", rule: false, whole: true }, { id: "fr-ca", name: "Canada", voice: "fr-ca", rule: false, whole: false }],
+  pt: [{ id: "pt", name: "Portugal", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", voice: "pt-br", rule: false, whole: true }],
+  vi: [{ id: "vi", name: "Northern", voice: "vi", rule: false, whole: true }, { id: "vi-vn-x-central", name: "Central", voice: "vi-vn-x-central", rule: false, whole: true }],
 };
 
 /** What a language offers, which is nothing for most of them. */
@@ -30,4 +34,9 @@ export function accentsOf(lang: string): Accent[] {
 /** The voice that says a word in this accent, or the language's own. */
 export function voiceOf(lang: string, accent: string): string {
   return accentsOf(lang).find((row) => row.id === accent)?.voice ?? lang;
+}
+
+/** The accents a page in this language can be read in throughout. */
+export function wholeAccentsOf(lang: string): Accent[] {
+  return accentsOf(lang).filter((row) => row.whole);
 }

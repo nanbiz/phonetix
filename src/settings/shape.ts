@@ -65,6 +65,9 @@ export interface Settings {
   /** How long the cursor rests on a word before its card opens, in milliseconds. A reader who
    *  reads with the pointer wants it slow; one who looks words up wants it instant. */
   delay: number;
+  /** Whether a card opens on any word the pointer rests on, in every language, while the
+   *  extension is on. Off, a card opens only for a word pressed. The extension's. */
+  cards: boolean;
   /** Whether the card eases in and the reveal fades. Off is instant, which is what a reader
    *  who finds movement distracting wants and what a slow machine wants. */
   animations: boolean;
@@ -112,6 +115,7 @@ export const DEFAULTS: Settings = {
   hideStress: true,
   accents: {},
   delay: 200,
+  cards: true,
   animations: false,
   host: '',
   theme: 'phonetix',

@@ -19,7 +19,7 @@ object Accents {
 
     val all: Map<String, List<Accent>> = mapOf(
         "de" to listOf(Accent("de", "Germany", "de", false), Accent("de-ch", "Switzerland", "de", true), Accent("de-at", "Austria", "de", true)),
-        "en" to listOf(Accent("en-gb", "British", "en-gb-x-rp", false), Accent("en-us", "American", "en-us", true), Accent("en-gb-scotland", "Scottish", "en-gb-scotland", false), Accent("en-au", "Australian", "en-au", false), Accent("en-029", "Caribbean", "en-029", false), Accent("en-ca", "Canadian", "en-us", true)),
+        "en" to listOf(Accent("en-gb", "British", "en-gb-x-rp", true), Accent("en-us", "American", "en-us", true), Accent("en-gb-scotland", "Scottish", "en-gb-scotland", false), Accent("en-au", "Australian", "en-au", false), Accent("en-029", "Caribbean", "en-029", false), Accent("en-ca", "Canadian", "en-us", true)),
         "es" to listOf(Accent("es", "Spain", "es", false), Accent("es-419", "Latin America", "es-419", true), Accent("es-ar", "Rioplatense", "es-419", true)),
         "fr" to listOf(Accent("fr", "France", "fr", false), Accent("fr-ca", "Canada", "fr-ca", false)),
         "pt" to listOf(Accent("pt", "Portugal", "pt", false), Accent("pt-br", "Brazil", "pt-br", false)),
