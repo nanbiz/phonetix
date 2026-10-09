@@ -15,7 +15,7 @@
   import { wiktionary } from '@/data/links';
   import { accentsOf } from '@/data/accents';
   import IconLink from '@/ui/controls/IconLink.svelte';
-  import { WIKTIONARY } from './icons';
+  import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
   import PlayButton from './PlayButton.svelte';
   import SoundLine from './SoundLine.svelte';
   import FormLine from './FormLine.svelte';

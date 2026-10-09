@@ -4,7 +4,7 @@
   // With `open` the whole row is a button leading somewhere and ends in a chevron; otherwise
   // the control at its end is what is pressed.
   import type { Snippet } from 'svelte';
-  import Chevron from 'virtual:icons/pixelarticons/chevron-right';
+  import Chevron from 'virtual:icons/lucide/chevron-right';
 
   interface Props {
     name: string;

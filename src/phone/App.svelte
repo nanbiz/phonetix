@@ -6,7 +6,7 @@
   import { ROWS, SAYS } from '@/data/wording';
   import type { Offered } from '@/host/packs';
   import { covered, uncover } from '@/ui/controls/sheets.svelte';
-  import Back from 'virtual:icons/pixelarticons/chevron-left';
+  import Back from 'virtual:icons/lucide/chevron-left';
   import { ask, whenChanged } from './bridge';
   import Home from './screens/Home.svelte';
   import Apps from './screens/Apps.svelte';

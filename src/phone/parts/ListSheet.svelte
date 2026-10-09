@@ -5,7 +5,7 @@
   import { onMount, untrack } from 'svelte';
   import { SAYS } from '@/data/wording';
   import { standing } from '@/ui/controls/sheets.svelte';
-  import Close from 'virtual:icons/pixelarticons/close';
+  import Close from 'virtual:icons/lucide/x';
   import Options from './Options.svelte';
 
   interface Props {

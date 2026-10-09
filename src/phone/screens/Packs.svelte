@@ -4,8 +4,8 @@
   import { SAYS } from '@/data/wording';
   import type { Offered } from '@/host/packs';
   import Loader from 'virtual:icons/line-md/loading-twotone-loop';
-  import Download from 'virtual:icons/pixelarticons/download';
-  import Remove from 'virtual:icons/pixelarticons/close';
+  import Download from 'virtual:icons/lucide/download';
+  import Remove from 'virtual:icons/lucide/x';
   import Group from '../parts/Group.svelte';
 
   interface Props {

@@ -1,7 +1,7 @@
 <script lang="ts">
   // A choice out of a list, each option a row of the card it is drawn on, the ones in force
   // ticked. One value is one choice; a list of them is any number, each row a box of its own.
-  import Check from 'virtual:icons/pixelarticons/check';
+  import Check from 'virtual:icons/lucide/check';
 
   interface Props {
     options: { value: string; label: string; about?: string }[];

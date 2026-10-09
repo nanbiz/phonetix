@@ -7,7 +7,7 @@
   import { THEME } from '@/ui/theme';
   import { DARK_CHOICES, DETAIL_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
-  import Check from 'virtual:icons/pixelarticons/check';
+  import Check from 'virtual:icons/lucide/check';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
   import Switch from '../parts/Switch.svelte';

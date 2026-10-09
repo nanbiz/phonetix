@@ -457,8 +457,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .pill.from-machine { background: var(--color-guess-bg); color: var(--color-guess); }
 .icon-btn { width: var(--icon-button); height: var(--icon-button); flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; border-radius: var(--radius-symbol); color: var(--color-ink-faint); cursor: pointer; text-decoration: none; }
 .icon-btn:hover { color: var(--color-ink); background: var(--color-surface-raised); }
-.icon-btn svg { width: var(--source-mark-size); height: var(--source-mark-size); display: block; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.icon-btn svg.solid { fill: currentColor; stroke: none; }
+.icon-btn svg { width: var(--source-mark-size); height: var(--source-mark-size); display: block; }
 .icon-btn[disabled] { opacity: 0.3; pointer-events: none; }
 .headline { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
 /* The answer takes only the room it needs: growing it pushed the chips beside it - what kind of word it is, what the sense is marked as - out to the far edge of the card, where they read as belonging to nothing. */
@@ -466,7 +465,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .headline .tr.def { font-size: var(--font-size-ipa); font-weight: var(--weight-medium); }
 .headline .tr.quiet { font-size: var(--font-size-body); font-weight: var(--weight-medium); color: var(--color-ink); }
 .audio { flex: 0 0 auto; width: var(--audio-size); height: var(--audio-size); border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-accent-ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; align-self: center; }
-.audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); fill: currentColor; margin-left: 2px; }
+.audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); margin-left: 2px; }
+.audio svg path { fill: currentColor; }
 .audio[disabled] { background: var(--color-chip-bg); color: var(--color-ink-faint); }
 /* The pronunciation, drawn large because it is what the card is for, and each symbol is a
    button: a reader who does not know a sound is one tap from what it is. */

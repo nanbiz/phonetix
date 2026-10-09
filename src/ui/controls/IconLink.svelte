@@ -5,8 +5,10 @@
   // host is still asked first where there is one, because a page's own window is not always
   // where the surface wants a page to open.
 
+  import type { Component } from 'svelte';
+
   interface Props {
-    icon: string;
+    icon: Component;
     label: string;
     url: string;
     name?: string;
@@ -15,6 +17,7 @@
   }
 
   let { icon, label, url, name = '', open }: Props = $props();
+  const Icon = $derived(icon);
 </script>
 
 <a
@@ -31,4 +34,4 @@
       open(url);
     }
   }}
->{@html icon}</a>
+><Icon /></a>

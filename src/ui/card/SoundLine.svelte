@@ -11,7 +11,9 @@
   import { commons, seeingSpeech, wikipedia } from '@/data/links';
   import IconButton from '@/ui/controls/IconButton.svelte';
   import IconLink from '@/ui/controls/IconLink.svelte';
-  import { ARTICLE, FILM, SPEAKER } from './icons';
+  import SPEAKER from 'virtual:icons/lucide/volume-2';
+  import ARTICLE from 'virtual:icons/lucide/info';
+  import FILM from 'virtual:icons/lucide/film';
 
   interface Props {
     /** The sound the line is showing, or nothing while none has been asked about. */

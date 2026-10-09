@@ -12,6 +12,7 @@
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import { SAYS, ROWS } from '@/data/wording';
   import { offering } from '@/settings/shape';
+  import Arrow from 'virtual:icons/lucide/arrow-right';
 
   interface Props {
     /** The reader's own language. */
@@ -172,16 +173,7 @@
       aria-label={SAYS['turn']}
       onclick={turn}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true"
-        ><path
-          d="M4 12h15m-6-6 6 6-6 6"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.4"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        /></svg
-      >
+      <Arrow />
     </button>
     <button
       class="ask-lang {choosing === 'learning' ? 'on' : ''}"

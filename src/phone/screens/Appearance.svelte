@@ -5,7 +5,7 @@
   import { SIDES } from '@/ui/palettes';
   import { THEME, THEMES, themeOf } from '@/ui/theme';
   import type { Settings } from '@/settings/shape';
-  import Check from 'virtual:icons/pixelarticons/check';
+  import Check from 'virtual:icons/lucide/check';
   import Group from '../parts/Group.svelte';
   import Segments from '../parts/Segments.svelte';
 

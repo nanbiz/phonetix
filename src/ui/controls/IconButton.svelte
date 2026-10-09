@@ -1,12 +1,13 @@
 <script lang="ts">
   // A small square button that is a mark rather than a word.
   //
-  // The mark is a string of SVG from the icon set that drew it, so a button is one element and
-  // one rule wherever it appears.
+  // The mark is a component from the icon set that drew it, so a button is one element and one
+  // rule wherever it appears.
+  import type { Component } from 'svelte';
 
   interface Props {
-    /** The mark, as the set's own SVG. */
-    icon: string;
+    /** The mark, as the set draws it. */
+    icon: Component;
     /** What it does, said in words for a reader who cannot see the mark. */
     label: string;
     /** The name it reports itself under, so a check can tell two buttons apart. */
@@ -15,6 +16,7 @@
   }
 
   let { icon, label, name = '', press }: Props = $props();
+  const Icon = $derived(icon);
 </script>
 
 <button
@@ -23,4 +25,4 @@
   aria-label={label}
   data-does={name || undefined}
   onclick={press}
->{@html icon}</button>
+><Icon /></button>

@@ -2,7 +2,7 @@
   // Which apps the button answers in: every one, or the ones ticked here.
   import { SAYS } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
-  import Check from 'virtual:icons/pixelarticons/check';
+  import Check from 'virtual:icons/lucide/check';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
   import Switch from '../parts/Switch.svelte';
