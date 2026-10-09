@@ -393,6 +393,18 @@ interface Anchor {
   box(): DOMRect;
   alive(): boolean;
   holds(x: number, y: number): boolean;
+  /** Whether the word can be seen where it is: not scrolled out of a box of the page's that
+   *  clips it, which leaves it on the screen by its coordinates and hidden all the same. */
+  seen(): boolean;
+}
+
+/** Whether what is at the middle of a box is the word, or something of ours over it. */
+function showsAt(box: DOMRect, holder: Element | null): boolean {
+  if (!holder || box.width === 0 || box.height === 0) return false;
+  const at = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+  // Off the window's edge the point has nothing; the window's own edges are decided apart.
+  if (!at) return true;
+  return holder.contains(at) || at.contains(holder) || ours(at);
 }
 
 /**
@@ -427,6 +439,7 @@ function onElement(element: HTMLElement): Anchor {
       const at = document.elementFromPoint(x, y);
       return at !== null && now().contains(at);
     },
+    seen: () => showsAt(now().getBoundingClientRect(), now()),
   };
 }
 
@@ -435,6 +448,7 @@ function onRange(range: Range): Anchor {
     box: () => range.getBoundingClientRect(),
     alive: () => range.startContainer.isConnected,
     holds: (x, y) => within(range, x, y),
+    seen: () => showsAt(range.getBoundingClientRect(), range.startContainer.parentElement),
   };
 }
 
@@ -654,6 +668,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
   // on every word.
   let shown = answer;
   show(shown, anchor.box(), actions);
+  keepWithWord();
   // Told again as the dictionary for its language comes in, and asked again once it is here.
   following = () => {
     if (!current()) return;
@@ -909,29 +924,6 @@ function gestures(): void {
     }
   });
 
-  // A card anchored to a word that has moved is a card pointing at nothing, so it goes with
-  // the word rather than closing: a reader who scrolls a line to read it has not asked for
-  // the answer to disappear. It closes only once the word it is about is off the screen.
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (!showing()) return;
-      const word = anchored;
-      if (!word?.alive()) {
-        hide();
-        anchored = null;
-        return;
-      }
-      const box = word.box();
-      if (box.bottom < 0 || box.top > window.innerHeight) {
-        hide();
-        anchored = null;
-        return;
-      }
-      moveTo(box);
-    },
-    { passive: true }
-  );
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && showing()) {
       grabbed = false;
@@ -943,6 +935,50 @@ function gestures(): void {
 }
 
 /** Whether a node is something this extension drew rather than something the page brought. */
+/** The frame the card is next checked against its word in, while one is open. */
+let tracking = 0;
+
+/**
+ * Keep the open card with its word, for as long as it is open.
+ *
+ * A card anchored to a word that has moved is a card pointing at nothing, so it goes with the
+ * word rather than closing: a reader who scrolls a line to read it has not asked for the answer
+ * to disappear. The word moves with no event this page hears whenever the page scrolls a box of
+ * its own rather than the window, or adds lines above it - a chat that keeps writing - and a card
+ * that moved only on the window's scroll stayed where the word had been, its arrow pointing at
+ * whatever came there next. So the word is looked at once a frame, which is one measurement, and
+ * the card closes once the word is gone, off the screen, or scrolled out of its box.
+ */
+function keepWithWord(): void {
+  if (tracking) return;
+  let was: DOMRect | null = null;
+  const step = () => {
+    tracking = 0;
+    if (!showing()) return;
+    const word = anchored;
+    if (!word) return;
+    if (!word.alive()) {
+      hide();
+      anchored = null;
+      return;
+    }
+    const box = word.box();
+    const moved =
+      !was || box.top !== was.top || box.left !== was.left || box.width !== was.width;
+    if (moved) {
+      if (box.bottom < 0 || box.top > window.innerHeight || (was && !word.seen())) {
+        hide();
+        anchored = null;
+        return;
+      }
+      if (was) moveTo(box);
+      was = box;
+    }
+    tracking = requestAnimationFrame(step);
+  };
+  tracking = requestAnimationFrame(step);
+}
+
 function ours(node: Node): boolean {
   if (drewIt(node)) return true;
   const element = node instanceof Element ? node : node.parentElement;

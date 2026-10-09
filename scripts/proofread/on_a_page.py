@@ -51,6 +51,16 @@ GERMAN = (
     "</main></body></html>"
 ).encode()
 
+# A chat: the page scrolls a box of its own rather than the window, and keeps writing lines
+# above the one being read. Neither moves the word with an event the window hears.
+CHAT = (
+    "<!doctype html><html lang='es'><meta charset='utf-8'><body style='margin:40px'>"
+    "<div id='box' style='height:300px;overflow:auto;border:1px solid #ccc'>"
+    "<div id='above'></div>"
+    "<p id='prose' style='margin:120px 0 0'>" + SENTENCE + "</p>"
+    "<div style='height:900px'></div></div></body></html>"
+).encode()
+
 # A heading, because a page's headings are where its capitals are, and a heading is written
 # in title case whatever the language does. The words in it are ordinary dictionary words
 # wearing a capital they got from the page.
@@ -160,6 +170,7 @@ def serve():
                 else UNDECLARED if self.path.startswith("/undeclared")
                 else MIXED if self.path.startswith("/mixed")
                 else GERMAN if self.path.startswith("/german")
+                else CHAT if self.path.startswith("/chat")
                 else PAGE
             )
             self.send_response(200)
@@ -291,6 +302,81 @@ class ChromeHand:
             self.cdp.send("Input.dispatchMouseEvent", {
                 "type": kind, "x": round(x), "y": round(y), "button": "left", "clickCount": 1,
             }, session=self.session)
+
+
+def chat_follows(hand, engine, failures):
+    """The card on a word in a chat goes with the word as the chat moves it.
+
+    Lines written above the word, then the page's own box scrolled, move the word with nothing
+    the window hears; the box scrolled past the word takes the card down rather than leaving it
+    pointing at whatever came there. Asked of the chat page, already open in the hand's tab."""
+    for _ in range(20):
+        if hand.ask("document.querySelectorAll('.px-w').length"):
+            break
+        time.sleep(1)
+    spot = hand.ask("""
+        (() => {
+          const word = [...document.querySelectorAll('.px-w')]
+            .find(w => w.textContent.includes('perro'));
+          if (!word) return null;
+          const r = word.getBoundingClientRect();
+          return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+        })()
+    """)
+    if not spot:
+        failures.append(f"{engine}: the chat's words were never drawn")
+        return
+    for step in (0, 1):
+        hand.move(spot["x"] + step, spot["y"] + step)
+        time.sleep(0.3)
+    opened = False
+    for _ in range(20):
+        opened = hand.ask("""!!(document.getElementById('phonetix-card-host')
+                                || {}).shadowRoot?.querySelector('.card')""")
+        if opened:
+            break
+        time.sleep(0.5)
+    if not opened:
+        failures.append(f"{engine}: no card opened on a word in a box of the page's own")
+        return
+    followed = hand.ask("""
+        (async () => {
+          const host = document.getElementById('phonetix-card-host');
+          const card = () => host.shadowRoot.querySelector('.card');
+          const word = () => [...document.querySelectorAll('.px-w')]
+            .find(w => w.textContent.includes('perro'));
+          const at = () => ({card: card() ? Math.round(card().getBoundingClientRect().top) : null,
+                             word: Math.round(word().getBoundingClientRect().top)});
+          const wait = (ms) => new Promise(r => setTimeout(r, ms));
+          const start = at();
+          const line = document.createElement('p');
+          line.textContent = 'Ran 1 command';
+          line.style.height = '60px';
+          document.getElementById('above').appendChild(line);
+          await wait(400);
+          const written = at();
+          document.getElementById('box').scrollTop += 30;
+          await wait(400);
+          const scrolled = at();
+          document.getElementById('box').scrollTop += 400;
+          await wait(400);
+          return {start, written, scrolled, gone: !card()};
+        })()
+    """) or {}
+    print(f"  {engine}, in a chat: {followed}")
+    for name, was, now in (("lines were written above it", "start", "written"),
+                           ("its box scrolled", "written", "scrolled")):
+        word_moved = followed[now]["word"] - followed[was]["word"]
+        card = followed[now]["card"]
+        if card is None:
+            failures.append(f"{engine}: the card closed when {name}")
+        elif not word_moved:
+            failures.append(f"{engine}: the word did not move when {name}, so nothing was learned")
+        elif abs((card - followed[was]["card"]) - word_moved) > 4:
+            failures.append(f"{engine}: the card did not follow its word when {name}: the word "
+                            f"moved {word_moved}px, the card {card - followed[was]['card']}px")
+    if not followed.get("gone"):
+        failures.append(f"{engine}: the card stayed open after its word was scrolled out of its box")
 
 
 def walk(hand, start, end, step=3, pause=0.012, each=None):
@@ -856,6 +942,21 @@ def main():
                 f"the card {round(moved['before'] - moved['now'])}px")
         cdp.send("Emulation.clearDeviceMetricsOverride", {}, session=page)
         time.sleep(0.4)
+
+        # And in a chat: lines written above the word, then the page's own box scrolled, move
+        # the word with nothing the window hears, and the card goes with it all the same; the
+        # box scrolled past the word takes the card down rather than leaving it pointing at
+        # whatever came there.
+        chat_target = cdp.send("Target.createTarget", {"url": f"{base}/chat.html"})["targetId"]
+        chat = cdp.send("Target.attachToTarget",
+                        {"targetId": chat_target, "flatten": True})["sessionId"]
+        cdp.send("Runtime.enable", session=chat)
+        cdp.send("Emulation.setDeviceMetricsOverride", {
+            "width": 900, "height": 800, "deviceScaleFactor": 1, "mobile": False,
+        }, session=chat)
+        cdp.send("Target.activateTarget", {"targetId": chat_target})
+        chat_follows(ChromeHand(cdp, chat), "chrome", failures)
+        cdp.send("Target.closeTarget", {"targetId": chat_target})
 
         # A word no pack holds still gets a transcription, from the voice rather than from a
         # dictionary, and the annotation says which by its own state. Asked in the mode that
