@@ -108,7 +108,6 @@ object Wording {
         "detail-explained" to "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
         "detailed" to "Detailed",
         "detailed-example" to "[tʰɒp]",
-        "dictionary-accent" to "default",
         "every-app" to "Every app",
         "every-word" to "every word",
         "get" to "Get",

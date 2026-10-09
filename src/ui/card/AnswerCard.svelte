@@ -13,8 +13,7 @@
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
   import { wiktionary } from '@/data/links';
-  import { accentsOf, wholeAccentsOf } from '@/data/accents';
-  import { SAYS } from '@/data/wording';
+  import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
@@ -161,26 +160,15 @@
   /**
    * The accents the word's language can be read in throughout, to choose between on the card:
    * a reader who hears a word read the other way picks theirs where they hear it. Offered
-   * where there are two or more, with the dictionary's own reading first where the language
-   * has none of its own name, so what is read now is always one of the choices.
+   * where there are two or more; what is read now is always one of them, since a language with
+   * accents is always read in one.
    */
   let choosable = $derived.by(() => {
     const whole = wholeAccentsOf(answer.source);
-    if (whole.length < 2) return [];
-    const base = whole.some((row) => row.id === answer.source);
-    return [
-      ...(base ? [] : [{ id: '', name: SAYS['dictionary-accent'] }]),
-      ...whole.map((row) => ({ id: row.id, name: row.name })),
-    ];
+    return whole.length < 2 ? [] : whole.map((row) => ({ id: row.id, name: row.name }));
   });
-  /** The choice that is read now: the language's own accent stands for the dictionary's. */
-  let chosen = $derived(
-    choosable.some((row) => row.id === accent)
-      ? accent
-      : choosable.some((row) => row.id === answer.source) && accent === ''
-        ? answer.source
-        : accent
-  );
+  /** The choice that is read now. */
+  let chosen = $derived(accent || defaultAccentOf(answer.source));
   let readAs = $derived(
     (() => {
       const name = accentsOf(answer.source).find((row) => row.id === accent)?.name ?? '';

@@ -135,6 +135,9 @@ pub struct AnnotateOptions {
     /// annotate. Keyed on the word alone, the first "now" or "the" of every page on every site
     /// was picked or passed over alike, and a reader saw the same words replaced everywhere.
     pub seed: u32,
+    /// The accent each language is read in, for the lines of the page in another language
+    /// than [accent]'s.
+    pub accents: std::collections::HashMap<String, String>,
 }
 
 /// What a word the core could not answer needs from the host's engines.

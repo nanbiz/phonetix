@@ -22,7 +22,7 @@ object Accents {
         "en" to listOf(Accent("en-gb", "British", "en-gb-x-rp", true), Accent("en-us", "American", "en-us", true), Accent("en-gb-scotland", "Scottish", "en-gb-scotland", false), Accent("en-au", "Australian", "en-au", false), Accent("en-029", "Caribbean", "en-029", false), Accent("en-ca", "Canadian", "en-us", true)),
         "es" to listOf(Accent("es", "Spain", "es", false), Accent("es-419", "Latin America", "es-419", true), Accent("es-ar", "Rioplatense", "es-419", true)),
         "fr" to listOf(Accent("fr", "France", "fr", false), Accent("fr-ca", "Canada", "fr-ca", false)),
-        "pt" to listOf(Accent("pt", "Portugal", "pt", false), Accent("pt-br", "Brazil", "pt-br", false)),
+        "pt" to listOf(Accent("pt-pt", "Portugal", "pt", false), Accent("pt-br", "Brazil", "pt-br", false)),
         "vi" to listOf(Accent("vi", "Northern", "vi", false), Accent("vi-vn-x-central", "Central", "vi-vn-x-central", false)),
     )
 
@@ -32,4 +32,17 @@ object Accents {
     /** The voice that says a word in this accent, or the language's own. */
     fun voiceOf(lang: String, accent: String): String =
         of(lang).firstOrNull { it.id == accent }?.voice ?: lang
+
+    /** The accent a language is read in until the reader picks another, or nothing for
+     *  a language with no accents to choose between. */
+    fun defaultOf(lang: String): String = DEFAULTS[lang] ?: ""
+
+    private val DEFAULTS: Map<String, String> = mapOf(
+        "de" to "de",
+        "en" to "en-us",
+        "es" to "es",
+        "fr" to "fr",
+        "pt" to "pt-br",
+        "vi" to "vi",
+    )
 }

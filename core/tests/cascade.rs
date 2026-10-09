@@ -1037,6 +1037,7 @@ fn a_word_is_drawn_in_the_sense_its_line_is_about() {
         seen: Vec::new(),
         counts: Default::default(),
         seed: 0,
+        accents: Default::default(),
     };
     let drawn = |said: &str| {
         let runs = [TextRun {
@@ -1182,6 +1183,7 @@ fn both_says_how_the_translation_is_said() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     let perro = tokens
@@ -1249,6 +1251,7 @@ fn a_gloss_with_its_article_is_said_as_the_word() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     let calle = tokens
@@ -1394,6 +1397,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     let drawn = |spelling: &str| {
@@ -1452,6 +1456,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     assert_eq!(
@@ -1527,6 +1532,7 @@ fn the_meaning_after_a_grammar_note_and_a_word_that_starts_a_sentence() {
                 seen: Vec::new(),
                 counts: Default::default(),
                 seed: 0,
+                accents: Default::default(),
             },
         );
         tokens
@@ -1629,6 +1635,7 @@ fn a_function_word_filed_as_a_form_still_wins() {
                 seen: Vec::new(),
                 counts: Default::default(),
                 seed: 0,
+                accents: Default::default(),
             },
         );
         tokens
@@ -1742,6 +1749,111 @@ fn a_form_note_reads_as_the_word_it_names() {
     assert_eq!(got.says.first().map(String::as_str), Some("my"), "{got:?}");
 }
 
+/// A line in another language than the page's is read in the accent the reader reads that
+/// language in: a Portuguese quotation on an English page, for a reader who reads Portuguese
+/// the way Portugal does, says "de" as Portugal does and not as the dictionary leads with.
+#[test]
+fn a_line_in_another_language_is_read_in_that_language_s_accent() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let no_forms: [&str; 0] = [];
+    let mut english = Builder::new("en", Kind::Lex, 0);
+    english
+        .add(word("milk", "noun", "mɪlk", &["milk"]), &no_forms)
+        .unwrap();
+    let mut portuguese = Builder::new("pt", Kind::Lex, 0);
+    portuguese
+        .add(word("de", "prep", "d͡ʒi", &["of"]), &no_forms)
+        .unwrap();
+    let mut portugal = Builder::new("pt-pt", Kind::Lex, 0);
+    portugal
+        .add(word("de", "prep", "dɨ", &[]), &no_forms)
+        .unwrap();
+    let mut held = std::collections::HashMap::new();
+    held.insert(
+        "en".to_string(),
+        Pack::open(english.finish().unwrap()).unwrap(),
+    );
+    held.insert(
+        "pt".to_string(),
+        Pack::open(portuguese.finish().unwrap()).unwrap(),
+    );
+    held.insert(
+        "pt-pt".to_string(),
+        Pack::open(portugal.finish().unwrap()).unwrap(),
+    );
+    let open = Open {
+        source: held.get("en"),
+        others: Some(&held),
+        ..Open::default()
+    };
+    let mut accents = std::collections::HashMap::new();
+    accents.insert("pt".to_string(), "pt-pt".to_string());
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "copo de leite".to_string(),
+            lang_hint: Some(lang("pt")),
+        }],
+        &lang("en"),
+        &lang("de"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Sound,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: Some("en-us".to_string()),
+            seen: Vec::new(),
+            counts: Default::default(),
+            seed: 0,
+            accents,
+        },
+    );
+    let de = tokens.iter().find(|token| token.spelling == "de").unwrap();
+    assert_eq!(de.ipa.as_deref(), Some("dɨ"), "{tokens:?}");
+}
+
+/// A language read in its own accent, which is what it is read in until the reader picks
+/// another, keeps each reading's own sound: its dictionary is no accent pack laid over itself.
+#[test]
+fn a_language_in_its_own_accent_keeps_every_reading() {
+    let no_forms: [&str; 0] = [];
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add(word("modern", "adj", "moˈdɛʁn", &["modern"]), &no_forms)
+        .unwrap();
+    german
+        .add(word("modern", "verb", "ˈmoːdɐn", &["to rot"]), &no_forms)
+        .unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let read = |accent: &str, accent_pack| {
+        let open = Open {
+            source: Some(&german),
+            target: None,
+            ipa_only: false,
+            accent,
+            accent_pack,
+            said: None,
+            classifier: None,
+            others: None,
+        };
+        look_up("modern", &lang("de"), &lang("en"), &open)
+    };
+    let plain = read("", None);
+    let own = read("de", Some(&german));
+    assert_eq!(own.ipa, plain.ipa);
+    let readings = |answer: &lexcore::resolve::Answer| {
+        answer
+            .readings
+            .iter()
+            .map(|it| it.ipa.clone())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(readings(&own), readings(&plain));
+}
+
 /// "I" opening a sentence is the pronoun, not the small-letter "i" the start of a sentence would
 /// otherwise reach: a capital is the page's only where the small spelling is the commoner word.
 #[test]
@@ -1802,6 +1914,7 @@ fn a_word_commoner_with_its_capital_keeps_it_at_the_start_of_a_sentence() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     let said: Vec<(String, String)> = tokens
@@ -1870,6 +1983,7 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
             seen: Vec::new(),
             counts: Default::default(),
             seed: 0,
+            accents: Default::default(),
         },
     );
     let drawn: Vec<(String, String)> = tokens
@@ -2106,6 +2220,7 @@ fn narrow_shows_the_narrow_transcription_the_dictionary_gives() {
                 seen: Vec::new(),
                 counts: Default::default(),
                 seed: 0,
+                accents: Default::default(),
             },
         );
         tokens

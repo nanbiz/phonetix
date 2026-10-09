@@ -150,7 +150,7 @@
     if (!settings) return '';
     const lang = settings.target;
     const id = accentFor(settings, lang);
-    const name = accentsOf(lang).find((it) => it.id === id)?.name ?? SAYS['dictionary-accent'];
+    const name = accentsOf(lang).find((it) => it.id === id)?.name ?? '';
     return name.charAt(0).toUpperCase() + name.slice(1);
   });
   let themeName = $derived(
@@ -283,7 +283,7 @@
           <span class="item-text">
             <span class="item-name" data-name>{ROWS.ipa.name}</span>
             <span class="item-value" data-about
-              >{settings.narrow ? SAYS['detailed'] : SAYS['simple']} · {accentName}</span
+              >{settings.narrow ? SAYS['detailed'] : SAYS['simple']}{accentName ? ` · ${accentName}` : ''}</span
             >
           </span>
           <Chevron class="item-chevron" />

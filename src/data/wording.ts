@@ -122,7 +122,6 @@ export const SAYS: Record<string, string> = {
   "detail-explained": "Broad is the sounds that tell words apart; narrow is every detail of how one is said, as a speaker of that accent says it.",
   "detailed": "Detailed",
   "detailed-example": "[tʰɒp]",
-  "dictionary-accent": "default",
   "every-app": "Every app",
   "every-word": "every word",
   "get": "Get",

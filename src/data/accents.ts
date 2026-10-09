@@ -22,7 +22,7 @@ export const ACCENTS: Record<string, Accent[]> = {
   en: [{ id: "en-gb", name: "British", voice: "en-gb-x-rp", rule: true, whole: true }, { id: "en-us", name: "American", voice: "en-us", rule: true, whole: true }, { id: "en-gb-scotland", name: "Scottish", voice: "en-gb-scotland", rule: false, whole: false }, { id: "en-au", name: "Australian", voice: "en-au", rule: false, whole: false }, { id: "en-029", name: "Caribbean", voice: "en-029", rule: false, whole: false }, { id: "en-ca", name: "Canadian", voice: "en-us", rule: true, whole: true }],
   es: [{ id: "es", name: "Spain", voice: "es", rule: false, whole: true }, { id: "es-419", name: "Latin America", voice: "es-419", rule: true, whole: true }, { id: "es-ar", name: "Rioplatense", voice: "es-419", rule: true, whole: true }],
   fr: [{ id: "fr", name: "France", voice: "fr", rule: false, whole: true }, { id: "fr-ca", name: "Canada", voice: "fr-ca", rule: false, whole: false }],
-  pt: [{ id: "pt", name: "Portugal", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", voice: "pt-br", rule: false, whole: true }],
+  pt: [{ id: "pt-pt", name: "Portugal", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", voice: "pt-br", rule: false, whole: true }],
   vi: [{ id: "vi", name: "Northern", voice: "vi", rule: false, whole: true }, { id: "vi-vn-x-central", name: "Central", voice: "vi-vn-x-central", rule: false, whole: true }],
 };
 
@@ -40,3 +40,19 @@ export function voiceOf(lang: string, accent: string): string {
 export function wholeAccentsOf(lang: string): Accent[] {
   return accentsOf(lang).filter((row) => row.whole);
 }
+
+/** The accent a language is read in until the reader picks another, or nothing for a
+ *  language with no accents to choose between. There is always one where there are
+ *  accents: a reading in no accent in particular is a mix of them. */
+export function defaultAccentOf(lang: string): string {
+  return DEFAULTS[lang] ?? '';
+}
+
+const DEFAULTS: Record<string, string> = {
+  de: "de",
+  en: "en-us",
+  es: "es",
+  fr: "fr",
+  pt: "pt-br",
+  vi: "vi",
+};

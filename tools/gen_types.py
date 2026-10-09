@@ -885,6 +885,17 @@ def accents_kt():
         "    /** The voice that says a word in this accent, or the language's own. */",
         "    fun voiceOf(lang: String, accent: String): String =",
         "        of(lang).firstOrNull { it.id == accent }?.voice ?: lang",
+        "",
+        "    /** The accent a language is read in until the reader picks another, or nothing for",
+        "     *  a language with no accents to choose between. */",
+        "    fun defaultOf(lang: String): String = DEFAULTS[lang] ?: \"\"",
+        "",
+        "    private val DEFAULTS: Map<String, String> = mapOf(",
+    ] + [
+        f'        {json.dumps(lang)} to {json.dumps(default_of(table[lang]))},'
+        for lang in sorted(table)
+    ] + [
+        "    )",
         "}",
         "",
     ]
@@ -897,9 +908,19 @@ def accents_kt():
 WHOLE_WORDS = 20000
 
 
+def default_of(rows):
+    """The accent a language is read in until the reader picks another: the one marked so."""
+    marked = [row["id"] for row in rows if row.get("default")]
+    if len(marked) != 1:
+        raise SystemExit(f"data/accents.json: {rows[0]['id']}'s language marks {len(marked)} defaults")
+    return marked[0]
+
+
 def whole(lang, row):
-    """Whether a page is read in this accent throughout."""
-    return row["id"] == lang or bool(row.get("rule")) or row.get("words", 0) >= WHOLE_WORDS
+    """Whether a page is read in this accent throughout: the language's own reading or its
+    default, a rule over every word, or words of its own for most of a page."""
+    return (row["id"] == lang or bool(row.get("default")) or bool(row.get("rule"))
+            or row.get("words", 0) >= WHOLE_WORDS)
 
 
 def accents_ts():
@@ -958,6 +979,20 @@ def accents_ts():
         "export function wholeAccentsOf(lang: string): Accent[] {",
         "  return accentsOf(lang).filter((row) => row.whole);",
         "}",
+        "",
+        "/** The accent a language is read in until the reader picks another, or nothing for a",
+        " *  language with no accents to choose between. There is always one where there are",
+        " *  accents: a reading in no accent in particular is a mix of them. */",
+        "export function defaultAccentOf(lang: string): string {",
+        "  return DEFAULTS[lang] ?? '';",
+        "}",
+        "",
+        "const DEFAULTS: Record<string, string> = {",
+    ] + [
+        f"  {lang}: {json.dumps(default_of(table[lang]))},"
+        for lang in sorted(table)
+    ] + [
+        "};",
         "",
     ]
     return "\n".join(lines)

@@ -28,12 +28,16 @@ import json, os
 
 # The dump's name for an accent, where it is not ours. Wiktionary tags Scottish English as
 # Scotland and Central Vietnamese by the city it is spoken in.
-ALSO_CALLED = {"en-gb-scotland": "en-scotland", "vi-vn-x-central": "vi-hue"}
+ALSO_CALLED = {"en-gb-scotland": "en-scotland", "vi-vn-x-central": "vi-hue", "pt-pt": "pt"}
 
 accents = json.load(open("data/accents.json"))["accents"]
 for lang, listed in accents.items():
     for accent in listed:
         name = accent["id"]
+        # A language's own accent is its dictionary's reading, which the language pack is; a
+        # pack built under its name would also take the language pack's file name.
+        if name == lang:
+            continue
         stem = ALSO_CALLED.get(name, name)
         path = f"assets/dictionaries/accents/{lang}.{stem}.json.gz"
         if os.path.exists(path):

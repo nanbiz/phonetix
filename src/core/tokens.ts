@@ -83,4 +83,7 @@ export interface AnnotateOptions {
   counts?: Record<string, number>;
   /** Which page this is, as a number: each page picks its own words to annotate. */
   seed?: number;
+  /** The accent each language is read in, for lines of the page in another language than
+   *  [accent]'s. */
+  accents?: Record<string, string>;
 }

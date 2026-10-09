@@ -599,6 +599,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         seen: Vec::new(),
         counts: Default::default(),
         seed: 0,
+        accents: Default::default(),
     };
     let (tokens, misses) = lexcore::annotate::annotate(
         &runs,

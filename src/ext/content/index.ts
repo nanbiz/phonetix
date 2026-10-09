@@ -312,6 +312,11 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
         seen: asked,
         counts,
         seed: pageSeed(),
+        // A line in another language is read in the accent the reader reads that one in.
+        accents: Object.fromEntries(
+          [...new Set(piece.map((run) => run.lang).filter((lang): lang is string => Boolean(lang)))]
+            .map((lang) => [lang, accentFor(settings, lang)])
+        ),
       },
     });
     const byRun = new Map<number, Token[]>();

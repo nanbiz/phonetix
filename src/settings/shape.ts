@@ -10,6 +10,7 @@
 // The names are the same on both platforms; how they are stored is not, which is why this file
 // is browser-side and the phone has its own store of the same keys.
 import type { Layer } from '@/ext/content/inline';
+import { accentsOf, defaultAccentOf } from '@/data/accents';
 
 export interface Settings {
   /** Whether the extension annotates at all. */
@@ -52,14 +53,13 @@ export interface Settings {
   /** Leave the stress marks off the line over a word. */
   hideStress: boolean;
   /**
-   * Which accent to read each language in, as language tag to accent tag: en → en-us,
-   * es → es-419.
+   * Which accent to read each language in, as language tag to accent tag: en → en-gb,
+   * es → es-419. A language left out is read in its default accent (data/accents.json).
    *
    * Per language rather than one for everything, because an accent is only meaningful
    * relative to a language: a page in German has nothing to do with the reader's choice
    * between British and American English, and one field for both meant choosing an accent
-   * for a page threw away the choice made for every other. A language with no entry is read
-   * the way its dictionary lists it, which is what most readers want.
+   * for a page threw away the choice made for every other.
    */
   accents: Record<string, string>;
   /** How long the cursor rests on a word before its card opens, in milliseconds. A reader who
@@ -141,9 +141,13 @@ export function darkSide(settings: Settings, device: boolean): boolean {
   return settings.dark === 'system' ? device : settings.dark === 'dark';
 }
 
-/** Which accent this language is read in, or none, which is how its dictionary lists it. */
+/** Which accent this language is read in: the reader's choice, or the language's default,
+ *  since a reading in no accent in particular is a mix of them. None for a language with no
+ *  accents to choose between. */
 export function accentFor(settings: Settings, lang: string): string {
-  return settings.accents[lang] ?? '';
+  const chosen = settings.accents[lang];
+  // Only one the language still offers: Portugal was once stored as plain "pt".
+  return chosen && accentsOf(lang).some((it) => it.id === chosen) ? chosen : defaultAccentOf(lang);
 }
 
 /** Read one language in one accent, leaving the choice made for every other alone. */

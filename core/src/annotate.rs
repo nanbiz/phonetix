@@ -45,7 +45,8 @@ pub fn annotate<D: AsRef<[u8]>>(
         // A line in another language is read with that language's pack, where the host has
         // one: an English notice on a German screen read with the German pack drew "auf" as
         // the English misspelling "oaf".
-        let reading_open = open.reading(&lang.0, &source.0);
+        let accent = options.accents.get(&lang.0).map_or("", String::as_str);
+        let reading_open = open.reading(&lang.0, &source.0, accent);
         let open = &reading_open;
         // The word before this one, within the run. A run is a line the page drew, so the
         // first word of one has no neighbour rather than borrowing the last word of another.
@@ -298,7 +299,11 @@ pub fn complete<D: AsRef<[u8]>>(
         let Some(token) = tokens.get_mut(result.token_index as usize) else {
             continue;
         };
-        let token_open = open.reading(&token.lang.0, &read_as);
+        let accent = options
+            .accents
+            .get(&token.lang.0)
+            .map_or("", String::as_str);
+        let token_open = open.reading(&token.lang.0, &read_as, accent);
         let open = &token_open;
         // The part of the translated line this word became, as near as order tells: a line
         // holds "reseñas" for "reviews" and "revisión" for "review sites" further on, and read
@@ -945,6 +950,7 @@ mod tests {
             seen: Vec::new(),
             counts: HashMap::new(),
             seed: 0,
+            accents: Default::default(),
         }
     }
 

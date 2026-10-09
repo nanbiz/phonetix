@@ -71,14 +71,11 @@
   const across = globalThis.screen?.width || 9;
   const down = globalThis.screen?.height || 19.5;
 
-  function capital(text: string): string {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
 
   let accentName = $derived.by(() => {
     const lang = settings.learning;
     const id = accentFor(settings, lang);
-    return accentsOf(lang).find((it) => it.id === id)?.name ?? capital(SAYS['dictionary-accent']);
+    return accentsOf(lang).find((it) => it.id === id)?.name ?? '';
   });
   let themeName = $derived(
     (settings.theme || THEME).charAt(0).toUpperCase() + (settings.theme || THEME).slice(1)

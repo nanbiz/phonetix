@@ -1,5 +1,5 @@
 {
-  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent can have both, and the good ones do: the pack answers the words it holds and the rule answers everything else, which is most of a vocabulary. The cascade keeps them apart, so a word the pack spelled out is never shifted again.",
+  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent can have both, and the good ones do: the pack answers the words it holds and the rule answers everything else, which is most of a vocabulary. The cascade keeps them apart, so a word the pack spelled out is never shifted again. 'default' is the accent a language is read in until the reader picks another: there is always one, since a reading in no accent in particular is a mix of them. 'tags' are the labels Wiktionary gives this accent's pronunciations, best first, which tools/build_accent_overlays.py reads its words from.",
   "accents": {
     "en": [
       {
@@ -7,26 +7,42 @@
         "name": "British",
         "voice": "en-gb-x-rp",
         "rule": true,
-        "words": 12237
+        "words": 4533,
+        "tags": [
+          "Received-Pronunciation",
+          "British",
+          "UK"
+        ]
       },
       {
         "id": "en-us",
         "name": "American",
         "voice": "en-us",
         "rule": true,
-        "words": 27044
+        "words": 23474,
+        "default": true,
+        "tags": [
+          "General-American",
+          "US"
+        ]
       },
       {
         "id": "en-gb-scotland",
         "name": "Scottish",
         "voice": "en-gb-scotland",
-        "words": 2387
+        "words": 2362,
+        "tags": [
+          "Scotland"
+        ]
       },
       {
         "id": "en-au",
         "name": "Australian",
         "voice": "en-au",
-        "words": 4272
+        "words": 3982,
+        "tags": [
+          "Australian"
+        ]
       },
       {
         "id": "en-029",
@@ -38,14 +54,18 @@
         "name": "Canadian",
         "voice": "en-us",
         "rule": true,
-        "words": 3315
+        "words": 2626,
+        "tags": [
+          "Canada"
+        ]
       }
     ],
     "es": [
       {
         "id": "es",
         "name": "Spain",
-        "voice": "es"
+        "voice": "es",
+        "default": true
       },
       {
         "id": "es-419",
@@ -64,7 +84,8 @@
       {
         "id": "de",
         "name": "Germany",
-        "voice": "de"
+        "voice": "de",
+        "default": true
       },
       {
         "id": "de-ch",
@@ -83,23 +104,33 @@
     ],
     "pt": [
       {
-        "id": "pt",
+        "id": "pt-pt",
         "name": "Portugal",
         "voice": "pt",
-        "words": 56594
+        "words": 54270,
+        "tags": [
+          "Portugal"
+        ]
       },
       {
         "id": "pt-br",
         "name": "Brazil",
         "voice": "pt-br",
-        "words": 57356
+        "default": true,
+        "tags": [
+          "Brazil",
+          "Southern-Brazil",
+          "São-Paulo",
+          "Rio-de-Janeiro"
+        ]
       }
     ],
     "fr": [
       {
         "id": "fr",
         "name": "France",
-        "voice": "fr"
+        "voice": "fr",
+        "default": true
       },
       {
         "id": "fr-ca",
@@ -111,13 +142,17 @@
       {
         "id": "vi",
         "name": "Northern",
-        "voice": "vi"
+        "voice": "vi",
+        "default": true
       },
       {
         "id": "vi-vn-x-central",
         "name": "Central",
         "voice": "vi-vn-x-central",
-        "words": 24634
+        "words": 27237,
+        "tags": [
+          "Huế"
+        ]
       }
     ]
   }

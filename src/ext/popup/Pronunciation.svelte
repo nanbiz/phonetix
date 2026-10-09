@@ -22,13 +22,9 @@
 
   let { settings, change }: Props = $props();
 
-  function capital(text: string): string {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
 
   function optionsOf(lang: string) {
     return [
-      { value: '', label: capital(SAYS['dictionary-accent']) },
       ...(ACCENTS[lang] ?? []).map((it) => ({ value: it.id, label: it.name })),
     ];
   }

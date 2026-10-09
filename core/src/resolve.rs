@@ -139,12 +139,22 @@ pub struct Open<'a, D: AsRef<[u8]>> {
 impl<'a, D: AsRef<[u8]>> Open<'a, D> {
     /// The same packs, read as [lang] where it is not the language they were opened for and
     /// the host holds a pack for it.
-    pub fn reading(&self, lang: &str, source: &str) -> Open<'a, D> {
+    ///
+    /// [accent] is the accent the reader reads that language in, which a line in it is read in
+    /// too: a Portuguese quotation on an English page is read the way the reader reads
+    /// Portuguese, not in no accent at all, which is a mix of them.
+    pub fn reading<'b>(&self, lang: &str, source: &str, accent: &'b str) -> Open<'b, D>
+    where
+        'a: 'b,
+    {
         match self.others.and_then(|all| all.get(lang)) {
             Some(pack) if lang != source => Open {
                 source: Some(pack),
-                accent: "",
-                accent_pack: None,
+                accent,
+                accent_pack: self
+                    .others
+                    .filter(|_| !accent.is_empty() && accent != lang)
+                    .and_then(|all| all.get(accent)),
                 classifier: None,
                 ..*self
             },
@@ -1328,7 +1338,10 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     // pack says nothing - which is most of a vocabulary, since a pack of a few thousand words
     // is what a dictionary tags for a country - the rule stands in, because a rule reaches
     // every word including the ones no data set lists.
-    if !open.accent.is_empty() {
+    //
+    // A language's own accent is its dictionary's reading, which is already what was answered:
+    // read as an accent, its pack would put its first entry's sound on every reading of a word.
+    if !open.accent.is_empty() && open.accent != source.0 {
         let said = open
             .accent_pack
             .and_then(|pack| {

@@ -5,6 +5,7 @@
   import { themeOf } from '@/ui/theme';
   import { ROWS, SAYS } from '@/data/wording';
   import type { Offered } from '@/host/packs';
+  import { ACCENTS } from '@/data/accents';
   import { covered, uncover } from '@/ui/controls/sheets.svelte';
   import Back from 'virtual:icons/lucide/chevron-left';
   import { ask, whenChanged } from './bridge';
@@ -16,6 +17,10 @@
 
   let settings = $state<Settings | null>(null);
   let view = $state('main');
+  /** The packs that are an accent's words rather than a language's dictionary. */
+  const ACCENT_PACKS = new Set(
+    Object.entries(ACCENTS).flatMap(([lang, rows]) => rows.map((it) => it.id).filter((id) => id !== lang))
+  );
   let packs = $state<{ held: string[]; offered: Offered[] }>({ held: [], offered: [] });
   let fetching = $state<string | null>(null);
   let permissions = $state({ reading: false, overlay: false });
@@ -54,6 +59,8 @@
     }>('state');
     if (edits === before || !settings) settings = { ...DEFAULTS, ...told.settings };
     packs = told.packs ?? { held: [], offered: [] };
+    // The dictionaries, not the accents' packs listed beside them, which come with an accent.
+    packs = { ...packs, offered: packs.offered.filter((it) => !ACCENT_PACKS.has(it.lang)) };
     permissions = told.permissions ?? { reading: false, overlay: false };
     device = told.device ?? false;
     version = told.version ?? '';

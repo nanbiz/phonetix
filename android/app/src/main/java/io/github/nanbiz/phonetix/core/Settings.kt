@@ -80,8 +80,12 @@ data class Settings(
     /** Leave the stress marks off the line over a word. The card always shows them. */
     val hideStress: Boolean = true,
 ) {
-    /** Which accent this language is read in, or none, which is how its dictionary lists it. */
-    fun accentFor(lang: String): String = accents[lang] ?: ""
+    /** Which accent this language is read in: the reader's choice, or the language's default,
+     *  since a reading in no accent in particular is a mix of them. */
+    fun accentFor(lang: String): String =
+        // Only one the language still offers: Portugal was once stored as plain "pt".
+        accents[lang]?.takeIf { chosen -> Accents.of(lang).any { it.id == chosen } }
+            ?: Accents.defaultOf(lang)
 
     /**
      * The languages nothing translates besides the reader's own: the ones they chose, or until
