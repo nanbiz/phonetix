@@ -420,15 +420,16 @@ def main():
                 settle=1)
         control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
 
-        # The translator's keys as the browser bound them, and the way to change them, which is
-        # the browser's own page for it.
-        shown = evaluate(cdp, view, "[...document.querySelectorAll('[data-does=shortcut] kbd')]"
-                                    ".map(k => k.textContent).join('+')")
-        bound = evaluate(cdp, view, "chrome.commands.getAll().then(c => (c.find(x => x.name =="
-                                    " 'translator') || {}).shortcut || '')")
-        print(f"  the translator's keys: shown {shown!r}, bound {bound!r}")
-        if not shown or shown != bound:
-            failures.append(f"the popup shows the translator on {shown!r}, the browser binds {bound!r}")
+        # Both commands' keys as the browser bound them, the main switch's beside it and the
+        # translator's on its row.
+        for does, command in (("shortcut-on-off", "switch-on-off"), ("shortcut", "translator")):
+            shown = evaluate(cdp, view, f"[...document.querySelectorAll('[data-does={does}] kbd')]"
+                                        ".map(k => k.textContent).join('+')")
+            bound = evaluate(cdp, view, "chrome.commands.getAll().then(c => (c.find(x => x.name =="
+                                        f" '{command}') || {{}}).shortcut || '')")
+            print(f"  the keys for {command}: shown {shown!r}, bound {bound!r}")
+            if not shown or shown != bound:
+                failures.append(f"the popup shows {command} on {shown!r}, the browser binds {bound!r}")
 
         # The translator: opened from the popup, over the page, and answering both ways
         # between the reader's language and the one it opens on, which is the page's.
@@ -492,6 +493,30 @@ def main():
         off = words(cdp, page)
         if off["count"] != 0:
             failures.append(f"{off['count']} words stayed replaced with the extension off")
+
+        # And the keys are changed where the browser changes them: pressing either opens its
+        # page for an extension's shortcuts. Last, since the popup closes behind it.
+        for does in ("shortcut-on-off", "shortcut"):
+            try:
+                evaluate(cdp, view, "window.close()")
+            except RuntimeError:
+                pass  # closed already, by the last press
+            time.sleep(1)
+            view = popup(cdp, extid, page_target)
+            wait_for(cdp, view, f"document.querySelector('[data-does={does}]') !== null", lambda v: v)
+            evaluate(cdp, view, f"document.querySelector('[data-does={does}]').click()")
+            opened = None
+            for _ in range(10):
+                time.sleep(0.5)
+                opened = next((t for t in cdp.send("Target.getTargets")["targetInfos"]
+                               if t["url"].startswith("chrome://extensions/shortcuts")), None)
+                if opened:
+                    break
+            print(f"  pressing the keys for {does}: {opened['url'] if opened else 'nothing opened'}")
+            if not opened:
+                failures.append(f"pressing the {does} keys opened no page to change them on")
+            else:
+                cdp.send("Target.closeTarget", {"targetId": opened["targetId"]})
     finally:
         cdp.close()
 

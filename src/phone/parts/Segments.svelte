@@ -1,8 +1,9 @@
 <script lang="ts">
-  // One choice out of a few, all of them in view.
+  // One choice out of a few, all of them in view. A choice that is a way of writing something
+  // shows it written that way beside its name.
 
   interface Props {
-    choices: { value: string; label: string }[];
+    choices: { value: string; label: string; example?: string }[];
     chosen: string;
     /** What the choice is about, for a screen reader. */
     label: string;
@@ -20,7 +21,9 @@
       class:on={chosen === choice.value}
       aria-checked={chosen === choice.value}
       data-choice={choice.value}
-      onclick={() => change(choice.value)}>{choice.label}</button
+      onclick={() => change(choice.value)}
+      >{#if choice.example}<span class="segment-example ipa" aria-hidden="true">{choice.example}</span
+        >{/if}{choice.label}</button
     >
   {/each}
 </div>

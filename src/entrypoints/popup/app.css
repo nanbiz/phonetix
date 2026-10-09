@@ -29,6 +29,18 @@ body {
   padding: 4px 16px 0;
 }
 
+/* The main switch with the keys that work it beside it. */
+.top-on {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-on .keys {
+  align-self: center;
+  margin: 0;
+}
+
 .top .icon-button {
   margin-left: -8px;
 }
@@ -304,30 +316,10 @@ kbd {
   min-height: 40px;
 }
 
-/* Simple or detailed, each drawn as the same word written that way. */
-.shows {
-  gap: 10px;
-  padding: 10px;
-}
-
-.show {
-  gap: 6px;
-  padding: 12px;
-  background: none;
-  text-align: left;
-}
-
-.show-picture {
-  height: 26px;
-  font-size: 20px;
-}
-
-.show-name {
+/* Simple or detailed, each beside the same word written that way. */
+.segment-example {
+  margin-right: 6px;
   font-size: 15px;
-}
-
-.show:hover {
-  border-color: var(--color-accent);
 }
 
 /* The one list that has to scroll says so: its bar stays in view and the rows fade out at the

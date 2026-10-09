@@ -125,7 +125,7 @@ def wrapped(cdp, session, where):
     broken = json.loads(evaluate(cdp, session, """
         JSON.stringify([...document.querySelectorAll(
             '[data-name], [data-about], .item-name, .item-value, .group-name, .density-says, ' +
-            '.arriving span, .show-name, .button, kbd')]
+            '.arriving span, .segments button, .button, kbd')]
           .filter(el => el.offsetParent !== null)
           .filter(el => {
             // The lines the text itself sits on, whatever padding its box has.

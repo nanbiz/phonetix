@@ -12,6 +12,7 @@
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
+  import Segments from '@/phone/parts/Segments.svelte';
   import ListSheet from '@/phone/parts/ListSheet.svelte';
 
   interface Props {
@@ -57,23 +58,16 @@
 </script>
 
 <Group name={ROWS.narrow.name}>
-  <div class="shows" role="radiogroup" aria-label={ROWS.narrow.name} data-row="narrow">
-    {#each [
-      { value: false, name: SAYS['simple'], example: SAYS['simple-example'] },
-      { value: true, name: SAYS['detailed'], example: SAYS['detailed-example'] },
-    ] as option (option.name)}
-      <button
-        class="show"
-        class:on={settings.narrow === option.value}
-        role="radio"
-        aria-checked={settings.narrow === option.value}
-        data-choice={option.value ? 'narrow' : 'broad'}
-        onclick={() => change('narrow', option.value)}
-      >
-        <span class="show-picture ipa" aria-hidden="true">{option.example}</span>
-        <span class="show-name" data-name>{option.name}</span>
-      </button>
-    {/each}
+  <div class="item wide" data-row="narrow">
+    <Segments
+      choices={[
+        { value: 'broad', label: SAYS['simple'], example: SAYS['simple-example'] },
+        { value: 'narrow', label: SAYS['detailed'], example: SAYS['detailed-example'] },
+      ]}
+      chosen={settings.narrow ? 'narrow' : 'broad'}
+      label={ROWS.narrow.name}
+      change={(value) => change('narrow', value === 'narrow')}
+    />
   </div>
 </Group>
 

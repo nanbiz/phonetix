@@ -16,8 +16,8 @@
   import { sendMessage } from '@/host/messages';
   import type { Layer } from '@/ext/content/inline';
   import { THEME, themeOf } from '@/ui/theme';
-  import Back from 'virtual:icons/pixelarticons/chevron-left';
-  import Chevron from 'virtual:icons/pixelarticons/chevron-right';
+  import Back from 'virtual:icons/lucide/chevron-left';
+  import Chevron from 'virtual:icons/lucide/chevron-right';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
@@ -36,6 +36,8 @@
   let tabId = $state<number | undefined>(undefined);
   /** The keys that open the translate panel, as the browser has them bound. */
   let shortcut = $state('');
+  /** And the keys that switch Phonetix on or off. */
+  let switching = $state('');
   /** Which screen is showing, and which language list is open over it. */
   let view = $state<'main' | 'accents' | 'appearance'>('main');
   /** The dictionaries on their way and how far each has got, as the host tells it. */
@@ -78,6 +80,7 @@
     }
     const commands = await browser.commands.getAll().catch(() => []);
     shortcut = commands.find((it) => it.name === 'translator')?.shortcut ?? '';
+    switching = commands.find((it) => it.name === 'switch-on-off')?.shortcut ?? '';
     curve = await curving;
   }
 
@@ -160,7 +163,14 @@
     <header class="top">
       <img class="mark" src={icon} alt="" />
       <h1 class="title">Phonetix{#if version}<span class="version-tag">v{version}</span>{/if}</h1>
-      <span data-row="on">
+      <span class="top-on" data-row="on">
+        <button class="keys" data-does="shortcut-on-off" onclick={shortcuts}>
+          {#if switching}
+            {#each switching.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+          {:else}
+            {SAYS['set-key']}
+          {/if}
+        </button>
         <Switch on={settings.on} label={ROWS.on.name} change={(on) => change('on', on)} />
       </span>
     </header>
