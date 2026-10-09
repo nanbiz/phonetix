@@ -33,7 +33,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import says  # noqa: E402  the packs, the models and the server, shared with the say check
-from harness import EXT, OFFLINE, PipeCDP  # noqa: E402
+from harness import EXT, OFFLINE, PipeCDP, QuietAudio  # noqa: E402
 from on_firefox import ADDON_ID, UUID, Marionette, newest_zip  # noqa: E402
 
 SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-panel")
@@ -201,6 +201,12 @@ class Firefox:
             )
         env = {k: v for k, v in os.environ.items() if k != "WAYLAND_DISPLAY"}
         env["MOZ_ENABLE_WAYLAND"] = "0"
+        # Sound into a server of the check's own: the one a check that hears set up, or one
+        # whose output goes nowhere.
+        self.quiet = None
+        if "PULSE_SERVER" not in os.environ:
+            self.quiet = QuietAudio()
+            env = self.quiet.env(env)
         # What the add-on writes to its console, kept where PHONETIX_FIREFOX_LOG says.
         log = os.environ.get("PHONETIX_FIREFOX_LOG")
         out = open(log, "w") if log else subprocess.DEVNULL
@@ -269,6 +275,8 @@ class Firefox:
             self.browser.wait(timeout=20)
         except subprocess.TimeoutExpired:
             self.browser.kill()
+        if self.quiet:
+            self.quiet.close()
         shutil.rmtree(self.where, ignore_errors=True)
 
 

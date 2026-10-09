@@ -31,7 +31,7 @@ import threading
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from harness import PipeCDP
+from harness import PipeCDP, QuietAudio
 from on_a_page import ChromeHand, evaluate, walk
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -495,11 +495,13 @@ def firefox(failures):
     base = f"http://127.0.0.1:{PORT}"
     where = tempfile.mkdtemp(prefix="phonetix-firefox-")
     profile(where)
+    # Sound into a server of the check's own whose output goes nowhere, never the reader's.
+    quiet = QuietAudio()
     proc = subprocess.Popen(
         ["firefox", "--headless", "--no-remote", "--marionette", "--profile", where,
          "--width", "1280", "--height", "900", "about:blank"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        env={**os.environ, "MOZ_MARIONETTE_PORT": "2828"})
+        env={**quiet.env(), "MOZ_MARIONETTE_PORT": "2828"})
     driver = None
     try:
         for _ in range(60):
@@ -554,6 +556,7 @@ def firefox(failures):
             proc.wait(timeout=20)
         except subprocess.TimeoutExpired:
             proc.kill()
+        quiet.close()
         shutil.rmtree(where, ignore_errors=True)
 
 

@@ -27,6 +27,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from harness import QuietAudio  # noqa: E402
 from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, serve, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -151,6 +152,7 @@ def main():
 
     where = tempfile.mkdtemp(prefix="phonetix-firefox-")
     profile(where)
+    quiet = QuietAudio()
     firefox = subprocess.Popen(
         [
             # System access lets the check read whether the tab is making sound, which is
@@ -160,7 +162,9 @@ def main():
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        env={**os.environ, "MOZ_MARIONETTE_PORT": "2828"},
+        # Sound into a server of the check's own whose output goes nowhere: the card's play
+        # button is pressed, and it spoke through the reader's speakers.
+        env={**quiet.env(), "MOZ_MARIONETTE_PORT": "2828"},
     )
     driver = None
     try:
@@ -389,6 +393,7 @@ def main():
             firefox.wait(timeout=20)
         except subprocess.TimeoutExpired:
             firefox.kill()
+        quiet.close()
         shutil.rmtree(where, ignore_errors=True)
 
     if failures:

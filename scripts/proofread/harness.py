@@ -37,6 +37,55 @@ OFFLINE = ("--host-resolver-rules=MAP github.com ~NOTFOUND, MAP *.github.com ~NO
            "MAP *.githubusercontent.com ~NOTFOUND")
 
 
+class QuietAudio:
+    """A PulseAudio server of the check's own whose one output goes nowhere.
+
+    Firefox plays a card's word through whatever server it finds, which was the reader's: a
+    check that pressed play said the word through their speakers. Firefox given this one plays
+    for real - the tab still marks itself as making sound, which a check reads - and nothing is
+    heard. Started without the desktop's session bus or runtime directory, so nothing of the
+    reader's audio is touched."""
+
+    def __init__(self):
+        self.where = tempfile.mkdtemp(prefix="phonetix-quiet-")
+        socket_path = os.path.join(self.where, "pulse.sock")
+        config = os.path.join(self.where, "default.pa")
+        with open(config, "w") as f:
+            f.write(f"load-module module-native-protocol-unix socket={socket_path} auth-anonymous=1\n"
+                    "load-module module-null-sink sink_name=quiet\nset-default-sink quiet\n")
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS")}
+        env["XDG_RUNTIME_DIR"] = self.where
+        env["HOME"] = self.where
+        server = ["pulseaudio"] if shutil.which("pulseaudio") else \
+            ["nix", "shell", "nixpkgs#pulseaudio", "-c", "pulseaudio"]
+        self.server = subprocess.Popen(
+            server + ["-n", "--daemonize=no", "--exit-idle-time=-1", "--disallow-exit",
+                      "-F", config, "--use-pid-file=no"],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(300):
+            if os.path.exists(socket_path):
+                break
+            time.sleep(0.1)
+        else:
+            raise SystemExit("the check's own audio server did not start")
+        self.address = f"unix:{socket_path}"
+
+    def env(self, base=None):
+        """An environment that plays into this server."""
+        env = dict(os.environ if base is None else base)
+        env["PULSE_SERVER"] = self.address
+        return env
+
+    def close(self):
+        self.server.terminate()
+        try:
+            self.server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.server.kill()
+        shutil.rmtree(self.where, ignore_errors=True)
+
+
 class PipeCDP:
     """Minimal CDP client over chromium --remote-debugging-pipe (fd 3 read, 4 write)."""
 
@@ -60,6 +109,10 @@ class PipeCDP:
             # an extension only through a window, and then under a display of the check's own.
             *(["--headless=new"] if headless else ["--ozone-platform=x11"]),
             "--no-sandbox", "--disable-gpu",
+            # Nothing a check plays reaches the reader's sound server: the card says its word
+            # aloud, and a check that pressed play spoke through their speakers. The page still
+            # plays, into a sink that goes nowhere, which is what the checks ask about.
+            "--disable-audio-output", "--mute-audio",
             "--disable-dev-shm-usage", "--remote-debugging-pipe",
             f"--user-data-dir={self.profile}",
             "--no-first-run", "--no-default-browser-check",
