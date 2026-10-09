@@ -409,6 +409,25 @@ fn read_strings(bytes: &[u8], at: &mut usize) -> Option<Vec<String>> {
     Some(out)
 }
 
+/// How many single-character edits turn one spelling into the other.
+fn edits(a: &str, b: &str) -> u32 {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut row: Vec<u32> = (0..=b.len() as u32).collect();
+    for (i, ca) in a.iter().enumerate() {
+        let mut diagonal = row[0];
+        row[0] = i as u32 + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let above = row[j + 1];
+            row[j + 1] = (above + 1)
+                .min(row[j] + 1)
+                .min(diagonal + u32::from(ca != cb));
+            diagonal = above;
+        }
+    }
+    row[b.len()]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -428,23 +447,4 @@ mod tests {
         varint::put(&mut bytes, FORMAT as u64);
         assert!(matches!(Pack::open(&bytes), Err(PackError::Truncated)));
     }
-}
-
-/// How many single-character edits turn one spelling into the other.
-fn edits(a: &str, b: &str) -> u32 {
-    let a: Vec<char> = a.chars().collect();
-    let b: Vec<char> = b.chars().collect();
-    let mut row: Vec<u32> = (0..=b.len() as u32).collect();
-    for (i, ca) in a.iter().enumerate() {
-        let mut diagonal = row[0];
-        row[0] = i as u32 + 1;
-        for (j, cb) in b.iter().enumerate() {
-            let above = row[j + 1];
-            row[j + 1] = (above + 1)
-                .min(row[j] + 1)
-                .min(diagonal + u32::from(ca != cb));
-            diagonal = above;
-        }
-    }
-    row[b.len()]
 }
