@@ -304,6 +304,63 @@ class ChromeHand:
             }, session=self.session)
 
 
+EMBER_JS = """
+  (() => {
+    const host = document.getElementById('phonetix-card-host-ember');
+    if (!host) return null;
+    const root = host.shadowRoot;
+    const ball = root.querySelector('.ember'), light = root.querySelector('.ember-word');
+    return {ball: ball.className, word: light.className,
+            lit: light.classList.contains('on') ? light.getBoundingClientRect().toJSON() : null};
+  })()
+"""
+
+
+def ember_checks(hand, engine, failures, off):
+    """The ember goes with the pointer while Phonetix is on: just under it over nothing, into
+    the word it is on, which lights, and nowhere at all once Phonetix is off. [off] switches it
+    off and on again. Asked of a page with a paragraph #prose, open in the hand's tab."""
+    where = hand.ask("""
+        (() => {
+          const prose = document.getElementById('prose').getBoundingClientRect();
+          const word = [...document.querySelectorAll('#prose .px-w')][0];
+          const box = word ? word.getBoundingClientRect() : null;
+          // Over nothing: the window's far corner, away from any card still open.
+          return {empty: {x: innerWidth - 40, y: innerHeight - 40},
+                  word: box ? {x: box.left + box.width / 2, y: box.top + box.height / 2,
+                               box: box.toJSON()} : null};
+        })()
+    """)
+    hand.move(where["empty"]["x"] - 6, where["empty"]["y"])
+    hand.move(where["empty"]["x"], where["empty"]["y"])
+    time.sleep(0.4)
+    empty = hand.ask(EMBER_JS)
+    print(f"  {engine}, the ember over nothing: {empty}")
+    if not empty or "on" not in empty["ball"].split() or "in" in empty["ball"].split():
+        failures.append(f"{engine}: no ember under the pointer over nothing: {empty}")
+    elif empty["lit"]:
+        failures.append(f"{engine}: a word was lit with the pointer on none: {empty}")
+    if where["word"]:
+        hand.move(where["word"]["x"] - 3, where["word"]["y"])
+        hand.move(where["word"]["x"], where["word"]["y"])
+        time.sleep(0.5)
+        on_word = hand.ask(EMBER_JS)
+        print(f"  {engine}, the ember on a word: {on_word}")
+        lit, box = (on_word or {}).get("lit"), where["word"]["box"]
+        if not lit or not (lit["left"] <= box["left"] and lit["right"] >= box["right"]):
+            failures.append(f"{engine}: the word under the pointer was not lit: {on_word}")
+        if on_word and "in" not in on_word["ball"].split():
+            failures.append(f"{engine}: the ember did not go into the word: {on_word}")
+    off(True)
+    hand.move(where["empty"]["x"] + 4, where["empty"]["y"])
+    time.sleep(0.6)
+    gone = hand.ask(EMBER_JS)
+    print(f"  {engine}, the ember with Phonetix off: {gone}")
+    if gone and "on" in gone["ball"].split():
+        failures.append(f"{engine}: the ember stayed with Phonetix off: {gone}")
+    off(False)
+
+
 def chat_follows(hand, engine, failures):
     """The card on a word in a chat goes with the word as the chat moves it.
 
@@ -977,6 +1034,9 @@ def main():
         # the word with nothing the window hears, and the card goes with it all the same; the
         # box scrolled past the word takes the card down rather than leaving it pointing at
         # whatever came there.
+        ember_checks(ChromeHand(cdp, page), "chrome", failures, lambda off: (
+            evaluate(cdp, settings, f"chrome.storage.local.set({{on: {'false' if off else 'true'}}})"),
+            time.sleep(1.5)))
         chat_target = cdp.send("Target.createTarget", {"url": f"{base}/chat.html"})["targetId"]
         chat = cdp.send("Target.attachToTarget",
                         {"targetId": chat_target, "flatten": True})["sessionId"]

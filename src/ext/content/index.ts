@@ -31,6 +31,7 @@ import {
 } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
+import { emberAt, emberAway, emberPaintedIn } from './ember';
 import { OURS, readable, scan, type ScannedRun } from './scan';
 import { commons } from '@/data/links';
 
@@ -860,6 +861,33 @@ function letGo(): void {
   }, GRACE);
 }
 
+/** The frame the ember is next put where the pointer is, while one is asked for. */
+let emberFrame = 0;
+
+/**
+ * Put the ember where the pointer is: under the word it is on, the page's own or one drawn
+ * over it, or just below the pointer where it is on no word. Away where no card would open -
+ * Phonetix off here, cards off, a finger rather than a pointer, a button held down for a
+ * selection - and over anything of ours.
+ */
+function followWithEmber(): void {
+  emberFrame = 0;
+  if (pointer.x < 0 || touched || !allowed(settings, location.hostname) || !settings.cards) {
+    emberAway();
+    return;
+  }
+  const at = document.elementFromPoint(pointer.x, pointer.y);
+  if (!at || inside(at)) {
+    emberAway();
+    return;
+  }
+  const drawn = wordAt(at);
+  const word = drawn
+    ? drawn.element.getBoundingClientRect()
+    : (wordUnder(pointer.x, pointer.y)?.range.getBoundingClientRect() ?? null);
+  emberAt(pointer.x, pointer.y, word);
+}
+
 function gestures(): void {
   document.addEventListener(
     'pointerdown',
@@ -917,6 +945,18 @@ function gestures(): void {
     },
     { passive: true }
   );
+
+  // The ember goes with the pointer, once a frame however often the pointer moves, and with
+  // the page where it scrolls under a still pointer.
+  const followSoon = () => {
+    if (!emberFrame) emberFrame = requestAnimationFrame(followWithEmber);
+  };
+  document.addEventListener('mousemove', followSoon, { passive: true });
+  window.addEventListener('scroll', followSoon, { capture: true, passive: true });
+  // Off the window, the pointer is nowhere on the page.
+  document.addEventListener('mouseout', (event) => {
+    if (!event.relatedTarget) emberAway();
+  });
 
   document.addEventListener('mouseover', (event) => {
     if (inside(event.target)) {
@@ -1086,12 +1126,15 @@ export async function session(): Promise<void> {
   settings = await current();
   paintedIn(settings.theme, settings.dark);
   cardPaintedIn(settings.theme, settings.dark);
+  emberPaintedIn(settings.theme, settings.animations);
   answerAsked();
   gestures();
   follow();
   watch((fresh) => {
     const was = settings;
     settings = fresh;
+    emberPaintedIn(fresh.theme, fresh.animations);
+    if (!allowed(fresh, location.hostname) || !fresh.cards) emberAway();
     // Only what changes the page redraws it: a reader dragging the frequency bar changes it
     // on every step, and a redraw per step is a page rebuilt fifty times.
     if (

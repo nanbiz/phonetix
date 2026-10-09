@@ -28,7 +28,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, serve, walk
+from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, serve, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -357,6 +357,26 @@ def main():
                 failures.append(f"the card's Wiktionary link opened {url!r}")
             driver.send("WebDriver:CloseWindow")
             driver.send("WebDriver:SwitchToWindow", {"handle": here})
+
+        # The ember, on the page as it is; switched off from a tab of the extension's own,
+        # since the page cannot reach the settings.
+        def switched(off):
+            here = driver.send("WebDriver:GetWindowHandle")
+            here = here["value"] if isinstance(here, dict) else here
+            fresh = driver.send("WebDriver:NewWindow", {"type": "tab", "focus": False})
+            driver.send("WebDriver:SwitchToWindow", {"handle": fresh["handle"]})
+            driver.send("WebDriver:Navigate", {"url": f"{view}/viewbook.html"})
+            time.sleep(1)
+            driver.script("const done = arguments[0];"
+                          f"browser.storage.local.set({{on: {'false' if off else 'true'}}})"
+                          ".then(() => done('ok'));")
+            driver.send("WebDriver:CloseWindow")
+            driver.send("WebDriver:SwitchToWindow", {"handle": here})
+            time.sleep(1.5)
+
+        driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
+        time.sleep(3)
+        ember_checks(FirefoxHand(driver), "firefox", failures, switched)
 
         # A chat, which moves its words with nothing the window hears.
         driver.send("WebDriver:Navigate", {"url": f"{base}/chat.html"})
