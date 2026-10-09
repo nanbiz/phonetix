@@ -45,8 +45,16 @@ const fn ending(from: &'static str, to: &'static str, spelled: &'static str) -> 
 
 /// The accents that are a rule, and what the rule is. Order matters: a narrower rule comes
 /// first, because a broader one would swallow it.
-static EN_US: [Rule; 3] = [plain("əʊ", "oʊ"), plain("ɐ", "ɚ"), plain("ɒ", "ɑ")];
-static EN_GB: [Rule; 5] = [
+static EN_US: [Rule; 5] = [
+    plain("(ɹ)", "ɹ"),
+    plain("(r)", "ɹ"),
+    plain("əʊ", "oʊ"),
+    plain("ɐ", "ɚ"),
+    plain("ɒ", "ɑ"),
+];
+static EN_GB: [Rule; 7] = [
+    plain("(ɹ)", ""),
+    plain("(r)", ""),
     plain("oʊ", "əʊ"),
     plain("ɝː", "ɜː"),
     plain("ɝ", "ɜː"),
@@ -68,12 +76,14 @@ static DE_AT: [Rule; 2] = [ending("ɪç", "ɪk", "ig"), plain("ʔ", "")];
 fn rules(accent: &str) -> &'static [Rule] {
     match accent {
         // General American, for words no American data covers. The standard transcriptions
-        // lean British, so an uncovered word came out British: American is rhotic, its GOAT
-        // vowel is [oʊ], and LOT is unrounded.
+        // lean British, so an uncovered word came out British: American is rhotic - the r a
+        // transcription marks as optional, "wə(ɹ)", is said - its GOAT vowel is [oʊ], and LOT
+        // is unrounded.
         "en-us" | "en-ca" => &EN_US,
         // Received Pronunciation, for words no British data covers. Some of the standard
         // transcriptions are American, and those came out American under a British label:
-        // its GOAT vowel is [əʊ], it has no r-coloured vowels, and no flapped t. Only what
+        // its GOAT vowel is [əʊ], it has no r-coloured vowels and does not say an r marked as
+        // optional, and no flapped t. Only what
         // an American transcription marks unambiguously: its LOT and BATH vowels are one
         // [ɑ] where British has two, and that cannot be undone from the transcription.
         "en-gb" => &EN_GB,
@@ -141,6 +151,12 @@ mod tests {
         assert_eq!(apply("bɝːd", "en-gb", "bird"), "bɜːd");
         assert_eq!(apply("bɝd", "en-gb", "bird"), "bɜːd");
         assert_eq!(apply("ˈkɒmə", "en-gb", "comma"), "ˈkɒmə");
+    }
+
+    #[test]
+    fn an_optional_r_is_said_in_american_and_not_in_british() {
+        assert_eq!(apply("wə(ɹ)", "en-us", "were"), "wəɹ");
+        assert_eq!(apply("wə(ɹ)", "en-gb", "were"), "wə");
     }
 
     #[test]
