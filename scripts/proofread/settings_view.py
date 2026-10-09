@@ -226,17 +226,20 @@ def main():
         numbered = evaluate(cdp, page, """
             JSON.stringify([...document.querySelectorAll('#version .px-w')]
               .map(w => (w.querySelector('.px-was') || {}).textContent || '')
-              .filter(was => /[0-9]/.test(was)))
+              .filter(was => /[0-9_.]|^[a-z].*[A-Z]/.test(was)))
         """)
         numbered = json.loads(numbered or "[]")
         named = point_at(cdp, page, "justinking3062", within="version")
+        filed = point_at(cdp, page, "MXXX.sqlite", within="version")
         version = point_at(cdp, page, "v31.55", within="version")
         print(f"  a version, a name with digits and a year replaced: {numbered}; pointing at "
               f"v31.55: {(version or '')[:60]!r}, at justinking3062: {(named or '')[:60]!r}")
         if numbered:
             failures.append(f"replaced as words: {numbered}")
-        if version or named:
-            failures.append(f"pointing at a version or a name with digits opened a card: {version or named!r}")
+        print(f"  pointing at MXXX.sqlite: {(filed or '')[:60]!r}")
+        if version or named or filed:
+            failures.append(f"pointing at a version, a user name or a file opened a card: "
+                            f"{version or named or filed!r}")
 
         # Replacing switched off: nothing on the page is replaced, and a word pointed at still
         # opens its card.

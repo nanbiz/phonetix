@@ -69,8 +69,12 @@ pub fn pos_for_density(density: u32, steps: u32) -> f64 {
 /// down the page rather than all or nothing, since a word that is always annotated has
 /// nothing left to teach after the first time.
 ///
+/// And it keys on the page, by [seed]: keyed on the word and its occurrence alone, the first
+/// "now" of every page was picked or passed over alike, so the same words were replaced on
+/// every page of every site.
+///
 /// The word is expected lowercased; the occurrence counts from zero within one pass.
-pub fn picks(word: &str, occurrence: u32, density: u32) -> bool {
+pub fn picks(word: &str, occurrence: u32, density: u32, seed: u32) -> bool {
     // The end of the bar means every word and has to mean it exactly: the rarity boost would
     // otherwise hold short words back to one in two at the densest setting, and a reader who
     // asked for all of them would find some missing with no way to ask harder.
@@ -80,7 +84,13 @@ pub fn picks(word: &str, occurrence: u32, density: u32) -> bool {
     let length = word.encode_utf16().count() as f64;
     let boost = (length / 5.0).clamp(0.6, 2.4);
     let n = ((density as f64 / boost).round() as u32).max(1);
-    hash(&format!("{word}#{occurrence}")).is_multiple_of(n)
+    // Seed 0 is no page in particular, and keeps the rule both platforms were pinned to.
+    let key = if seed == 0 {
+        format!("{word}#{occurrence}")
+    } else {
+        format!("{seed}#{word}#{occurrence}")
+    };
+    hash(&key).is_multiple_of(n)
 }
 
 #[cfg(test)]
@@ -110,24 +120,37 @@ mod tests {
     fn the_densest_setting_takes_every_word() {
         for word in ["a", "the", "unfamiliar", "pronunciation"] {
             for occurrence in 0..5 {
-                assert!(picks(word, occurrence, DENSITY_MIN));
+                assert!(picks(word, occurrence, DENSITY_MIN, 7));
             }
         }
     }
 
     #[test]
     fn one_word_is_decided_the_same_way_twice() {
-        assert_eq!(picks("paragraph", 3, 12), picks("paragraph", 3, 12));
+        assert_eq!(picks("paragraph", 3, 12, 7), picks("paragraph", 3, 12, 7));
     }
 
     #[test]
     fn a_longer_word_is_taken_at_least_as_often() {
         let density = 20;
-        let short: usize = (0..200).filter(|i| picks("the", *i, density)).count();
+        let short: usize = (0..200).filter(|i| picks("the", *i, density, 7)).count();
         let long: usize = (0..200)
-            .filter(|i| picks("pronunciation", *i, density))
+            .filter(|i| picks("pronunciation", *i, density, 7))
             .count();
         assert!(long > short, "long {long} short {short}");
+    }
+
+    #[test]
+    fn each_page_picks_its_own_words() {
+        // The first occurrence of each of these words, on a hundred pages: a word picked on
+        // every page or on none is a word the reader sees replaced everywhere or nowhere.
+        for word in ["now", "the", "and", "model", "shared"] {
+            let pages = (0..100).filter(|page| picks(word, 0, 12, *page)).count();
+            assert!(
+                (1..100).contains(&pages),
+                "{word} picked on {pages} pages of 100"
+            );
+        }
     }
 
     #[test]

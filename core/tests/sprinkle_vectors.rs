@@ -33,7 +33,7 @@ fn every_word_is_picked_the_way_it_was() {
         let occurrence = case["occurrence"].as_u64().unwrap() as u32;
         let density = case["density"].as_u64().unwrap() as u32;
         let want = case["picked"].as_bool().unwrap();
-        if picks(word, occurrence, density) != want {
+        if picks(word, occurrence, density, 0) != want {
             wrong.push(format!("{word}#{occurrence} at 1 in {density}"));
         }
     }

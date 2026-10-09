@@ -335,6 +335,7 @@ impl Core {
         seen: Vec<String>,
         counted: Vec<String>,
         counts: Vec<u32>,
+        seed: u32,
     ) -> String {
         let runs: Vec<TextRun> = run_ids
             .iter()
@@ -376,6 +377,7 @@ impl Core {
             },
             seen,
             counts: counted.into_iter().zip(counts).collect(),
+            seed,
         };
         let (tokens, misses) = annotate(
             &runs,

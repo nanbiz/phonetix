@@ -474,6 +474,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_picks(
         &word.to_lowercase(),
         occurrence.max(0) as u32,
         density.max(1) as u32,
+        0,
     );
     u8::from(picked)
 }
@@ -597,6 +598,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         accent: accent_pack.clone(),
         seen: Vec::new(),
         counts: Default::default(),
+        seed: 0,
     };
     let (tokens, misses) = lexcore::annotate::annotate(
         &runs,

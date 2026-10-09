@@ -24,6 +24,7 @@ fn main() {
         accent: None,
         seen: Vec::new(),
         counts: Default::default(),
+        seed: 0,
     };
     let mut slowest: Vec<(u128, String)> = Vec::new();
     let all = std::time::Instant::now();

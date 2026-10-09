@@ -48,12 +48,86 @@ fn needs_a_lexicon(c: char) -> bool {
 
 /// Whether a segment is a word rather than punctuation or space.
 ///
-/// A word has a letter in it and no digit or underscore. Numbers, dashes and quotation marks
-/// are not words a reader needs a transcription of, and neither is a version, a user name or a
-/// name out of code ("v31.55", "justinking3062", "v_dev"), which said letter by letter and
-/// number by number is said the way nobody says it.
+/// A word has a letter in it and nothing that makes it a name for a machine. Numbers, dashes
+/// and quotation marks are not words a reader needs a transcription of, and neither is what a
+/// page writes for a computer to read: a version, a user name, a file, a site or a name out of
+/// code ("v31.55", "justinking3062", "MXXX.sqlite", "example.com", "v_dev", "useState"), which
+/// said letter by letter and number by number is said the way nobody says it.
 fn is_a_word(text: &str) -> bool {
-    text.chars().any(char::is_alphabetic) && !text.chars().any(|c| c.is_numeric() || c == '_')
+    text.chars().any(char::is_alphabetic) && !for_a_machine(text)
+}
+
+/// The run of text between spaces a segment is part of, without the punctuation around it.
+///
+/// What a name for a machine is made of is not always one segment: the rules split
+/// "user@example.com" at the at sign and "src/ext/index.ts" at each slash, and a browser's own
+/// segmenter splits "MXXX.sqlite" at the dot where these rules do not. Judged by the whole
+/// run, each of its pieces is what the run is.
+pub fn chunk(text: &str, start: usize, end: usize) -> &str {
+    let from = text[..start]
+        .char_indices()
+        .rev()
+        .find(|(_, c)| c.is_whitespace())
+        .map_or(0, |(at, c)| at + c.len_utf8());
+    let to = text[end..]
+        .char_indices()
+        .find(|(_, c)| c.is_whitespace())
+        .map_or(text.len(), |(at, _)| end + at);
+    text[from..to].trim_matches(|c: char| {
+        matches!(
+            c,
+            '"' | '\''
+                | '('
+                | ')'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '<'
+                | '>'
+                | '«'
+                | '»'
+                | '“'
+                | '”'
+                | '‘'
+                | '’'
+                | '„'
+                | ','
+                | ';'
+                | '!'
+                | '?'
+                | '¿'
+                | '¡'
+                | '*'
+        )
+    })
+}
+
+/// Whether a run of text is a name written for a computer rather than a word: a digit or an
+/// underscore in it; an at sign, or a slash beside a full stop or another slash (an address, a
+/// path - "and/or" is still two words); a full stop or colon inside it that is not an
+/// abbreviation's ("e.g.", "U.S." keep theirs, being single letters); or a capital after a
+/// small letter at the start ("useState", "getElementById"), which no language writes a word
+/// with.
+pub fn for_a_machine(text: &str) -> bool {
+    if text.chars().any(|c| c.is_numeric() || c == '_' || c == '@') {
+        return true;
+    }
+    let slashes = text.matches(['/', '\\']).count();
+    if slashes > 1 || (slashes == 1 && text.trim_end_matches(['.', ':']).contains('.')) {
+        return true;
+    }
+    let inside = text.trim_end_matches(['.', ':']);
+    if inside.contains(['.', ':']) {
+        let abbreviation = inside
+            .split(['.', ':'])
+            .all(|part| part.chars().count() == 1);
+        if !abbreviation {
+            return true;
+        }
+    }
+    let mut chars = text.chars();
+    chars.next().is_some_and(char::is_lowercase) && chars.any(char::is_uppercase)
 }
 
 /// The words of a run, in order.
@@ -71,7 +145,7 @@ pub fn words(text: &str) -> Vec<Word> {
         units += text[last_byte..at].encode_utf16().count() as u32;
         last_byte = at;
         let length = piece.encode_utf16().count() as u32;
-        if is_a_word(piece) {
+        if is_a_word(piece) && !for_a_machine(chunk(text, at, at + piece.len())) {
             out.push(Word {
                 text: piece.to_string(),
                 start: units,
@@ -103,6 +177,22 @@ mod tests {
         assert_eq!(spellings("a, b. 42 -- c!"), ["a", "b", "c"]);
         assert_eq!(spellings("v31.55 of mp3 files, 4K"), ["of", "files"]);
         assert_eq!(spellings("by justinking3062 on v_dev"), ["by", "on"]);
+        assert_eq!(
+            spellings("open MXXX.sqlite at example.com, see useState and getElementById"),
+            ["open", "at", "see", "and"]
+        );
+        assert_eq!(
+            spellings("e.g. the U.S. at 9 a.m."),
+            ["e.g", "the", "U.S", "at", "a.m"]
+        );
+        assert_eq!(spellings("iPhone and McDonald"), ["and", "McDonald"]);
+        assert_eq!(
+            spellings(
+                "mail me@example.org, read src/ext/index.ts or (https://x.org/a) and/or not."
+            ),
+            ["mail", "read", "or", "and", "or", "not"]
+        );
+        assert_eq!(spellings("\"Done.\" It ended."), ["Done", "It", "ended"]);
     }
 
     #[test]

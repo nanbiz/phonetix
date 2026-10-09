@@ -282,6 +282,20 @@ function pieces(runs: ScannedRun[]): ScannedRun[][] {
  * got asked about whole. `settle` runs in the same step as the last piece is drawn, for
  * whatever else that step has to put right.
  */
+/**
+ * This page as a number, so that it picks its own words to annotate: the address without the
+ * part that only scrolls it. Never 0, which the core keeps for no page in particular.
+ */
+function pageSeed(): number {
+  const page = location.href.split('#')[0];
+  let hash = 2166136261;
+  for (let at = 0; at < page.length; at++) {
+    hash ^= page.charCodeAt(at);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return hash || 1;
+}
+
 async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> {
   const source = pageLanguage();
   for (const piece of pieces(runs)) {
@@ -297,6 +311,7 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
         accent: accentFor(settings, source),
         seen: asked,
         counts,
+        seed: pageSeed(),
       },
     });
     const byRun = new Map<number, Token[]>();
@@ -488,13 +503,38 @@ function askedOf(token: Token, before: string): Asked {
 }
 
 /**
- * Whether a segment is a word a card can say, by the rule the core finds words by: a letter in
- * it and no digit or underscore. A version, a user name or a name out of code ("v31.55",
- * "justinking3062", "v_dev") said letter by letter and number by number is not how anyone
- * says it.
+ * Whether a segment is a word a card can say, by the rule the core finds words by
+ * (core/src/segment.rs): a letter in it, and neither it nor the run of text between spaces it
+ * is part of a name written for a computer. A version, a user name, a file, an address or a
+ * name out of code ("v31.55", "justinking3062", "MXXX.sqlite", "me@example.org", "useState")
+ * said letter by letter is not how anyone says it, and the run is what decides, since this
+ * segmenter splits "MXXX.sqlite" at the dot where the core's does not.
  */
-function isWord(part: Intl.SegmentData): boolean {
-  return Boolean(part.isWordLike) && /\p{L}/u.test(part.segment) && !/[\p{N}_]/u.test(part.segment);
+function isWord(part: Intl.SegmentData, text: string): boolean {
+  if (!part.isWordLike || !/\p{L}/u.test(part.segment) || forAMachine(part.segment)) return false;
+  return !forAMachine(chunk(text, part.index, part.index + part.segment.length));
+}
+
+/** The run of text between spaces from start to end is part of, without the punctuation
+ *  around it. */
+function chunk(text: string, start: number, end: number): string {
+  let from = start;
+  while (from > 0 && !/\s/u.test(text[from - 1])) from--;
+  let to = end;
+  while (to < text.length && !/\s/u.test(text[to])) to++;
+  return text.slice(from, to).replace(/^["'()[\]{}<>«»“”‘’„,;!?¿¡*]+|["'()[\]{}<>«»“”‘’„,;!?¿¡*]+$/gu, '');
+}
+
+/** Whether a run of text is a name written for a computer, as the core decides it. */
+function forAMachine(text: string): boolean {
+  if (/[\p{N}_@]/u.test(text)) return true;
+  const slashes = (text.match(/[/\\]/gu) ?? []).length;
+  const inside = text.replace(/[.:]+$/u, '');
+  if (slashes > 1 || (slashes === 1 && inside.includes('.'))) return true;
+  if (/[.:]/u.test(inside) && !inside.split(/[.:]/u).every((piece) => [...piece].length === 1)) {
+    return true;
+  }
+  return /^\p{Ll}.*\p{Lu}/u.test(text);
 }
 
 /**
@@ -520,7 +560,7 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
   for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
     if (part.index > caret.offset) break;
     const end = part.index + part.segment.length;
-    if (isWord(part) && caret.offset <= end) {
+    if (isWord(part, text) && caret.offset <= end) {
       const range = document.createRange();
       range.setStart(node, part.index);
       range.setEnd(node, end);
@@ -538,7 +578,7 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
         };
       }
     }
-    if (isWord(part)) before = part.segment;
+    if (isWord(part, text)) before = part.segment;
   }
   return null;
 }

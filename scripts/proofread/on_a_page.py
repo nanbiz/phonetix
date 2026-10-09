@@ -74,7 +74,7 @@ PAGE = (
     "<nav><a href='#'>perro</a></nav>"
     # A version and a year, which are not words: said digit by digit they are said the way
     # nobody says them.
-    "<p id='version'>Phonetix v31.55 de justinking3062 en 2013</p>"
+    "<p id='version'>Phonetix v31.55 de justinking3062 en 2013, MXXX.sqlite y useState</p>"
     "</main>"
     # Somewhere to scroll to, and nothing in it: a card is anchored to a word, and whether it
     # goes with that word when the page moves cannot be asked of a page that cannot move.
@@ -942,6 +942,36 @@ def main():
                 f"the card {round(moved['before'] - moved['now'])}px")
         cdp.send("Emulation.clearDeviceMetricsOverride", {}, session=page)
         time.sleep(0.4)
+
+        # Each page picks its own words: the same text at three addresses has different words
+        # replaced, and the same address loaded again has the same ones, so nothing a reader
+        # is reading changes under them.
+        evaluate(cdp, settings, "chrome.storage.local.set({density:3})")
+        time.sleep(1)
+
+        def replaced_at(path):
+            target = cdp.send("Target.createTarget", {"url": f"{base}/{path}"})["targetId"]
+            session = cdp.send("Target.attachToTarget",
+                               {"targetId": target, "flatten": True})["sessionId"]
+            cdp.send("Runtime.enable", session=session)
+            wait_for(cdp, session, "document.querySelectorAll('#prose .px-w').length",
+                     lambda v: v, tries=12)
+            time.sleep(1)
+            got = evaluate(cdp, session, """JSON.stringify([...document.querySelectorAll('#prose .px-w')]
+                .map(w => (w.querySelector('.px-was') || {}).textContent))""")
+            cdp.send("Target.closeTarget", {"targetId": target})
+            return json.loads(got or "[]")
+
+        chosen = {path: replaced_at(path) for path in ("one.html", "two.html", "three.html")}
+        again = replaced_at("one.html")
+        print(f"  the same text on three pages replaced {list(chosen.values())}, "
+              f"the first again {again}")
+        if len({tuple(words) for words in chosen.values()}) == 1:
+            failures.append(f"three pages replaced the same words: {chosen['one.html']}")
+        if again != chosen["one.html"]:
+            failures.append(f"one page loaded twice replaced {chosen['one.html']} then {again}")
+        evaluate(cdp, settings, "chrome.storage.local.set({density:1})")
+        time.sleep(1)
 
         # And in a chat: lines written above the word, then the page's own box scrolled, move
         # the word with nothing the window hears, and the card goes with it all the same; the

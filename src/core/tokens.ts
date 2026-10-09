@@ -81,4 +81,6 @@ export interface AnnotateOptions {
   /** How often each word, lowercased, occurred in what was annotated before this batch, so a
    *  page annotated a piece at a time picks the words it would have picked whole. */
   counts?: Record<string, number>;
+  /** Which page this is, as a number: each page picks its own words to annotate. */
+  seed?: number;
 }

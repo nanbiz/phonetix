@@ -131,6 +131,10 @@ pub struct AnnotateOptions {
     /// word's occurrence across the whole page: counting each new piece from zero would pick
     /// the same occurrences in every piece.
     pub counts: std::collections::HashMap<String, u32>,
+    /// Which page this is, as a number the host makes of it: each page picks its own words to
+    /// annotate. Keyed on the word alone, the first "now" or "the" of every page on every site
+    /// was picked or passed over alike, and a reader saw the same words replaced everywhere.
+    pub seed: u32,
 }
 
 /// What a word the core could not answer needs from the host's engines.

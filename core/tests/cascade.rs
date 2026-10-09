@@ -1036,6 +1036,7 @@ fn a_word_is_drawn_in_the_sense_its_line_is_about() {
         accent: None,
         seen: Vec::new(),
         counts: Default::default(),
+        seed: 0,
     };
     let drawn = |said: &str| {
         let runs = [TextRun {
@@ -1180,6 +1181,7 @@ fn both_says_how_the_translation_is_said() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     let perro = tokens
@@ -1246,6 +1248,7 @@ fn a_gloss_with_its_article_is_said_as_the_word() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     let calle = tokens
@@ -1390,6 +1393,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     let drawn = |spelling: &str| {
@@ -1447,6 +1451,7 @@ fn a_real_dictionarys_words_are_drawn_as_the_words_they_mean() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     assert_eq!(
@@ -1521,6 +1526,7 @@ fn the_meaning_after_a_grammar_note_and_a_word_that_starts_a_sentence() {
                 accent: None,
                 seen: Vec::new(),
                 counts: Default::default(),
+                seed: 0,
             },
         );
         tokens
@@ -1622,6 +1628,7 @@ fn a_function_word_filed_as_a_form_still_wins() {
                 accent: None,
                 seen: Vec::new(),
                 counts: Default::default(),
+                seed: 0,
             },
         );
         tokens
@@ -1794,6 +1801,7 @@ fn a_word_commoner_with_its_capital_keeps_it_at_the_start_of_a_sentence() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     let said: Vec<(String, String)> = tokens
@@ -1861,6 +1869,7 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
             accent: None,
             seen: Vec::new(),
             counts: Default::default(),
+            seed: 0,
         },
     );
     let drawn: Vec<(String, String)> = tokens
@@ -2096,6 +2105,7 @@ fn narrow_shows_the_narrow_transcription_the_dictionary_gives() {
                 accent: None,
                 seen: Vec::new(),
                 counts: Default::default(),
+                seed: 0,
             },
         );
         tokens

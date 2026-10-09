@@ -80,7 +80,7 @@ pub fn annotate<D: AsRef<[u8]>>(
             let inline = match options.mode {
                 InlineMode::Off => false,
                 _ if named => false,
-                _ => asked_about || picks(&key, occurrence, options.density),
+                _ => asked_about || picks(&key, occurrence, options.density, options.seed),
             };
 
             // With the word before it, which is what decides a spelling that is several
@@ -944,6 +944,7 @@ mod tests {
             accent: None,
             seen: Vec::new(),
             counts: HashMap::new(),
+            seed: 0,
         }
     }
 
