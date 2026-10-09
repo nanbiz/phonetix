@@ -1735,6 +1735,88 @@ fn a_form_note_reads_as_the_word_it_names() {
     assert_eq!(got.says.first().map(String::as_str), Some("my"), "{got:?}");
 }
 
+/// "I" opening a sentence is the pronoun, not the small-letter "i" the start of a sentence would
+/// otherwise reach: a capital is the page's only where the small spelling is the commoner word.
+#[test]
+fn a_word_commoner_with_its_capital_keeps_it_at_the_start_of_a_sentence() {
+    use lexcore::annotate::annotate;
+    use lexcore::answer::{AnnotateOptions, InlineMode, TextRun};
+
+    let no_forms: [&str; 0] = [];
+    let counted = |mut entry: Entry, count: u64| {
+        entry.tags.push(format!("count:{count}"));
+        entry
+    };
+    let mut english = Builder::new("en", Kind::Lex, 0);
+    english
+        .add(
+            counted(word("I", "pron", "aɪ", &["myself"]), 38_000_000),
+            &no_forms,
+        )
+        .unwrap();
+    english
+        .add(
+            counted(word("i", "prep", "ə", &["in"]), 34_000_000),
+            &no_forms,
+        )
+        .unwrap();
+    english
+        .add(
+            counted(word("A", "character", "eɪ", &["the letter"]), 16_000_000),
+            &no_forms,
+        )
+        .unwrap();
+    english
+        .add(
+            counted(word("a", "article", "ə", &["one"]), 23_000_000),
+            &no_forms,
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        ..Open::default()
+    };
+    let (tokens, _) = annotate(
+        &[TextRun {
+            id: 1,
+            text: "I think. A dog. Then I left.".to_string(),
+            lang_hint: None,
+        }],
+        &lang("en"),
+        &lang("de"),
+        &open,
+        &AnnotateOptions {
+            mode: InlineMode::Sound,
+            density: 1,
+            narrow: false,
+            hide_stress: false,
+            accent: None,
+            seen: Vec::new(),
+            counts: Default::default(),
+        },
+    );
+    let said: Vec<(String, String)> = tokens
+        .iter()
+        .filter(|token| token.spelling == "I" || token.spelling == "A")
+        .map(|token| {
+            (
+                token.spelling.clone(),
+                token.ipa.clone().unwrap_or_default(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        said,
+        [
+            ("I".to_string(), "aɪ".to_string()),
+            ("A".to_string(), "ə".to_string()),
+            ("I".to_string(), "aɪ".to_string()),
+        ],
+        "{tokens:?}"
+    );
+}
+
 /// A capital at the start of a sentence says nothing; in the middle of a German one it does.
 #[test]
 fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
@@ -1749,12 +1831,14 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
     german
         .add(word("er", "pron", "eːɐ̯", &["he"]), &no_forms)
         .unwrap();
-    german
-        .add(word("Morgen", "noun", "ˈmɔʁɡn̩", &["morning"]), &no_forms)
-        .unwrap();
-    german
-        .add(word("morgen", "adv", "ˈmɔʁɡn̩", &["tomorrow"]), &no_forms)
-        .unwrap();
+    // The noun commoner than the adverb, as it is in running text: in German that still says
+    // nothing about which one opens a sentence.
+    let mut morning = word("Morgen", "noun", "ˈmɔʁɡn̩", &["morning"]);
+    morning.tags.push("count:900".to_string());
+    let mut tomorrow = word("morgen", "adv", "ˈmɔʁɡn̩", &["tomorrow"]);
+    tomorrow.tags.push("count:500".to_string());
+    german.add(morning, &no_forms).unwrap();
+    german.add(tomorrow, &no_forms).unwrap();
     let german = Pack::open(german.finish().unwrap()).unwrap();
     let open = Open {
         source: Some(&german),
@@ -1763,7 +1847,7 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
     let (tokens, _) = annotate(
         &[TextRun {
             id: 1,
-            text: "Er kommt. Am Morgen kommt er.".to_string(),
+            text: "Er kommt. Am Morgen kommt er. Morgen kommt er.".to_string(),
             lang_hint: None,
         }],
         &lang("de"),
@@ -1795,6 +1879,10 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
     );
     assert!(
         drawn.contains(&("Morgen".to_string(), "morning".to_string())),
+        "{drawn:?}"
+    );
+    assert!(
+        drawn.contains(&("Morgen".to_string(), "tomorrow".to_string())),
         "{drawn:?}"
     );
 }

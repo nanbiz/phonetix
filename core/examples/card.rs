@@ -26,8 +26,9 @@ fn main() {
             &open,
         );
         println!(
-            "{word:>10}  {:?} says={:?} readings={}",
+            "{word:>10}  {:?} ipa={:?} says={:?} readings={}",
             answer.state,
+            answer.ipa,
             answer.says,
             answer.readings.len()
         );

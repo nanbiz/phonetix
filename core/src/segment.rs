@@ -48,10 +48,12 @@ fn needs_a_lexicon(c: char) -> bool {
 
 /// Whether a segment is a word rather than punctuation or space.
 ///
-/// A word has a letter in it. Numbers, dashes and quotation marks are not words a reader
-/// needs a transcription of, and a segment that is all of those is skipped.
+/// A word has a letter in it and no digit or underscore. Numbers, dashes and quotation marks
+/// are not words a reader needs a transcription of, and neither is a version, a user name or a
+/// name out of code ("v31.55", "justinking3062", "v_dev"), which said letter by letter and
+/// number by number is said the way nobody says it.
 fn is_a_word(text: &str) -> bool {
-    text.chars().any(char::is_alphabetic)
+    text.chars().any(char::is_alphabetic) && !text.chars().any(|c| c.is_numeric() || c == '_')
 }
 
 /// The words of a run, in order.
@@ -99,6 +101,8 @@ mod tests {
     #[test]
     fn punctuation_and_numbers_are_not_words() {
         assert_eq!(spellings("a, b. 42 -- c!"), ["a", "b", "c"]);
+        assert_eq!(spellings("v31.55 of mp3 files, 4K"), ["of", "files"]);
+        assert_eq!(spellings("by justinking3062 on v_dev"), ["by", "on"]);
     }
 
     #[test]

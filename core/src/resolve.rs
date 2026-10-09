@@ -209,12 +209,30 @@ fn lookup_either_case<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Vec<Ent
     // same: "Le" at the start of a French sentence is the article, not the surname. A word
     // that is only ever capitalised - a German noun - has no small-letter entry to compete.
     let small = pack.lookup(&lowered);
-    if small.is_empty() {
+    if small.is_empty() || keeps_its_capital(pack.lang(), &found, &small) {
         return found;
     }
     let (names, words): (Vec<Entry>, Vec<Entry>) =
         found.into_iter().partition(|entry| entry.pos == "name");
     words.into_iter().chain(small).chain(names).collect()
+}
+
+/// Whether a language writes every noun with a capital, so that a capital in it is a word of
+/// its own rather than the page's: German "Morgen", "morning", is not "morgen", "tomorrow".
+pub fn capitalises_nouns(lang: &str) -> bool {
+    matches!(lang, "de" | "lb")
+}
+
+/// Whether a capitalised word is that word and not the small one the capital may be the page's
+/// on: where it is met more often with its capital than without, in a language that capitalises
+/// nothing for its kind. English "I" is, and the small "i" - a letter, a dialect's "in", said
+/// /ə/ - is not the word a capital I is on any line. Most capitalised words are the other way
+/// round, "Le" and "le", and those the small spelling is read for wherever the capital may be
+/// the page's. In German a capital makes a noun, which is commoner than the word it shares a
+/// spelling with however the sentence uses it, so there the small word is read as before.
+pub fn keeps_its_capital(lang: &str, capital: &[Entry], small: &[Entry]) -> bool {
+    let often = |entries: &[Entry]| entries.iter().filter_map(how_often).max().unwrap_or(0);
+    !capitalises_nouns(lang) && often(capital) > often(small)
 }
 
 /// Where an entry stands among the ones a spelling reaches: the word itself, then what it is

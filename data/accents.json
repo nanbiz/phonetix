@@ -6,6 +6,7 @@
         "id": "en-gb",
         "name": "British",
         "voice": "en-gb-x-rp",
+        "rule": true,
         "words": 12237
       },
       {

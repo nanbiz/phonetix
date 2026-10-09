@@ -95,7 +95,17 @@ pub fn annotate<D: AsRef<[u8]>>(
             let reading = match open.source {
                 Some(pack) if starts_sentence(&run.text, word.start) => {
                     let small = spelling.to_lowercase();
-                    if small != spelling && !pack.lookup(&small).is_empty() {
+                    // Unless the word is commoner with its capital than without: "I" opening
+                    // a sentence is the pronoun, not the rare "i" said /ə/.
+                    let lower = pack.lookup(&small);
+                    if small != spelling
+                        && !lower.is_empty()
+                        && !crate::resolve::keeps_its_capital(
+                            pack.lang(),
+                            &pack.lookup(&spelling),
+                            &lower,
+                        )
+                    {
                         small
                     } else {
                         spelling.clone()
@@ -467,7 +477,7 @@ fn cased_like(answer: &str, word: &str, into: &Lang) -> String {
 /// Whether a word is a name, by its capital: in the middle of a sentence, in a language that
 /// capitalises nothing else there.
 fn a_name(text: &str, start_utf16: u32, spelling: &str, lang: &Lang) -> bool {
-    !matches!(lang.0.as_str(), "de" | "lb")
+    !crate::resolve::capitalises_nouns(&lang.0)
         && spelling.chars().next().is_some_and(char::is_uppercase)
         && !starts_sentence(text, start_utf16)
 }

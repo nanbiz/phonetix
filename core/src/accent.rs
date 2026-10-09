@@ -46,6 +46,13 @@ const fn ending(from: &'static str, to: &'static str, spelled: &'static str) -> 
 /// The accents that are a rule, and what the rule is. Order matters: a narrower rule comes
 /// first, because a broader one would swallow it.
 static EN_US: [Rule; 3] = [plain("əʊ", "oʊ"), plain("ɐ", "ɚ"), plain("ɒ", "ɑ")];
+static EN_GB: [Rule; 5] = [
+    plain("oʊ", "əʊ"),
+    plain("ɝː", "ɜː"),
+    plain("ɝ", "ɜː"),
+    plain("ɚ", "ə"),
+    plain("ɾ", "t"),
+];
 static ES_419: [Rule; 2] = [plain("θ", "s"), plain("ʎ", "ʝ")];
 static ES_AR: [Rule; 3] = [plain("θ", "s"), plain("ʎ", "ʃ"), plain("ʝ", "ʃ")];
 static DE_CH: [Rule; 6] = [
@@ -64,6 +71,12 @@ fn rules(accent: &str) -> &'static [Rule] {
         // lean British, so an uncovered word came out British: American is rhotic, its GOAT
         // vowel is [oʊ], and LOT is unrounded.
         "en-us" | "en-ca" => &EN_US,
+        // Received Pronunciation, for words no British data covers. Some of the standard
+        // transcriptions are American, and those came out American under a British label:
+        // its GOAT vowel is [əʊ], it has no r-coloured vowels, and no flapped t. Only what
+        // an American transcription marks unambiguously: its LOT and BATH vowels are one
+        // [ɑ] where British has two, and that cannot be undone from the transcription.
+        "en-gb" => &EN_GB,
         // Latin-American Spanish: seseo and yeísmo.
         "es-419" => &ES_419,
         // Rioplatense: seseo and yeísmo, then žeísmo - what the rest of the Spanish world
@@ -117,8 +130,17 @@ mod tests {
 
     #[test]
     fn an_accent_with_no_rule_changes_nothing() {
-        assert_eq!(apply("ˈhɛloʊ", "en-gb", "hello"), "ˈhɛloʊ");
+        assert_eq!(apply("ˈhɛloʊ", "en-au", "hello"), "ˈhɛloʊ");
         assert_eq!(apply("ˈhɛloʊ", "", "hello"), "ˈhɛloʊ");
+    }
+
+    #[test]
+    fn british_undoes_what_an_american_transcription_marks() {
+        assert_eq!(apply("ˈhoʊstɪŋ", "en-gb", "hosting"), "ˈhəʊstɪŋ");
+        assert_eq!(apply("ˈwɔːɾɚ", "en-gb", "water"), "ˈwɔːtə");
+        assert_eq!(apply("bɝːd", "en-gb", "bird"), "bɜːd");
+        assert_eq!(apply("bɝd", "en-gb", "bird"), "bɜːd");
+        assert_eq!(apply("ˈkɒmə", "en-gb", "comma"), "ˈkɒmə");
     }
 
     #[test]
@@ -155,7 +177,7 @@ mod tests {
 
     #[test]
     fn applying_an_accent_twice_changes_nothing_the_second_time() {
-        for accent in ["en-us", "es-419", "es-ar", "de-ch", "de-at"] {
+        for accent in ["en-us", "en-gb", "es-419", "es-ar", "de-ch", "de-at"] {
             for (ipa, word) in [
                 ("ˈkɒmə", "comma"),
                 ("ˈkaʎe", "calle"),
