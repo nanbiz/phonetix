@@ -360,6 +360,13 @@ export async function meanings(text: string, typedIn: string, wantedIn: string):
 
 /** Whether what was typed into the panel is in the reader's own language rather than the one
  *  they are learning, which is the way it is answered. */
+/** What a recogniser wrote down in [lang], each word the language's dictionary does not hold put
+ *  right where it holds one a letter away. As it was where no dictionary of [lang] is open. */
+export async function heard(text: string, lang: string): Promise<string> {
+  const it = await coreReady();
+  return it.heard(text, lang);
+}
+
 export async function typedInMine(text: string, mine: string, learning: string): Promise<boolean> {
   const it = await coreReady();
   // The detector decides what no dictionary does, and it has to be there to.

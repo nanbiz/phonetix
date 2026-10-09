@@ -36,8 +36,8 @@
     onMine: (lang: string) => void;
     onLearning: (lang: string) => void;
     close: () => void;
-    /** Hear the question said rather than typed, in one of these languages. */
-    hear?: (langs: string[]) => Promise<Heard>;
+    /** Hear the question said rather than typed, in this language. */
+    hear?: (lang: string) => Promise<Heard>;
     /** End what is being heard now. */
     stopHearing?: () => void;
     /** Be told what the microphone is doing while a question is said; returns how to stop
@@ -103,15 +103,15 @@
       return;
     }
     pressed = true;
-    const heard = await hear([ours, theirs].filter(Boolean)).catch(() => ({ kind: 'nothing' as const }));
+    // Said in the language the arrow comes from: the reader turns it to speak the other.
+    const heard = await hear(from).catch(() => ({ kind: 'nothing' as const }));
     pressed = false;
     hearing = null;
     refused = heard.kind === 'refused';
     if (heard.kind !== 'said') return;
     wanted = heard.text;
-    // Said in one of the two, and which one is known: that is the way it is answered.
-    turned = heard.lang === ours;
-    forward = turned;
+    // Answered the way the arrow points, since that is the language it was said in.
+    turned = forward;
     field?.focus();
     void answer();
   }

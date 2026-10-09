@@ -2019,3 +2019,19 @@ fn narrow_shows_the_narrow_transcription_the_dictionary_gives() {
     // Without its syllable dots, which the page leaves off either way.
     assert_eq!(drawn(true).as_deref(), Some("ˈtʰɛpʰɪç"));
 }
+
+/// A word heard rather than typed is put right against the dictionary of the language it was
+/// said in: one letter off becomes the word, two words run together come apart, and what the
+/// dictionary holds or nothing is near stays as heard.
+#[test]
+fn a_word_heard_a_letter_wrong_becomes_the_word_the_dictionary_holds() {
+    let es = Pack::open(spanish()).unwrap();
+    let de = Pack::open(german()).unwrap();
+    assert_eq!(lexcore::resolve::heard("Camimo.", &es), "Camino.");
+    assert_eq!(lexcore::resolve::heard("el perros", &es), "el perros");
+    assert_eq!(lexcore::resolve::heard("Hundeweg", &de), "Hunde Weg");
+    assert_eq!(lexcore::resolve::heard("Sitzbamk", &de), "Sitzbank");
+    // Short, and nothing near: as heard.
+    assert_eq!(lexcore::resolve::heard("Bnk", &de), "Bnk");
+    assert_eq!(lexcore::resolve::heard("Xylofon", &de), "Xylofon");
+}

@@ -91,7 +91,7 @@ export async function open(page = ''): Promise<void> {
       },
       ask: (text: string, mine: string, learning: string, turned: boolean | undefined) =>
         sendMessage('ask', { text, mine, learning, turned }).catch(() => null),
-      hear: (langs: string[]) => sendMessage('listen', { langs }),
+      hear: (lang: string) => sendMessage('listen', { lang }),
       stopHearing: () => void sendMessage('stopListening', {}).catch(() => undefined),
       // What the microphone is doing, which the host keeps where a page can watch it.
       watchHearing: (told: (now: Listening | null) => void) => {

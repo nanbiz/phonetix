@@ -280,6 +280,27 @@ impl<D: AsRef<[u8]>> Pack<D> {
         out
     }
 
+    /// The spellings within [distance] edits of this one, each with how many edits away it is.
+    ///
+    /// What a word heard rather than read is checked against: a recogniser that writes down
+    /// "knädig" for "gnädig" is one letter from a word the dictionary has. Empty where the
+    /// search would be too large to build, which only a long spelling at a large distance is.
+    pub fn near(&self, spelling: &str, distance: u32) -> Vec<(String, u32)> {
+        use fst::automaton::Levenshtein;
+        use fst::{IntoStreamer, Streamer};
+        let Ok(automaton) = Levenshtein::new(spelling, distance) else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        let mut stream = self.keys.search(&automaton).into_stream();
+        while let Some((key, _)) = stream.next() {
+            let found = String::from_utf8_lossy(key).into_owned();
+            let edits = edits(spelling, &found);
+            out.push((found, edits));
+        }
+        out
+    }
+
     /// Every spelling in the pack, in order. For tests and for the builder's own checks.
     pub fn spellings(&self) -> Vec<String> {
         use fst::Streamer;
@@ -407,4 +428,23 @@ mod tests {
         varint::put(&mut bytes, FORMAT as u64);
         assert!(matches!(Pack::open(&bytes), Err(PackError::Truncated)));
     }
+}
+
+/// How many single-character edits turn one spelling into the other.
+fn edits(a: &str, b: &str) -> u32 {
+    let a: Vec<char> = a.chars().collect();
+    let b: Vec<char> = b.chars().collect();
+    let mut row: Vec<u32> = (0..=b.len() as u32).collect();
+    for (i, ca) in a.iter().enumerate() {
+        let mut diagonal = row[0];
+        row[0] = i as u32 + 1;
+        for (j, cb) in b.iter().enumerate() {
+            let above = row[j + 1];
+            row[j + 1] = (above + 1)
+                .min(row[j] + 1)
+                .min(diagonal + u32::from(ca != cb));
+            diagonal = above;
+        }
+    }
+    row[b.len()]
 }

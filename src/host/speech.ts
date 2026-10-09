@@ -12,7 +12,7 @@
 
 import { ask } from './voice';
 import { allowed, resample } from '@/engines/listen';
-import { MODEL_HOST } from '@/engines/whisper';
+import { ENCODER_URL, MODEL_HOST, type Hosts } from '@/engines/whisper';
 import type { Heard } from './messages';
 
 const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
@@ -20,16 +20,20 @@ const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
 /** What the panel shows while a question is under way: recording or writing it down, and how
  *  much of the model has arrived where it is still arriving. */
 export interface Listening {
-  phase: 'listening' | 'thinking';
+  /** The microphone being opened, hearing, or writing down what it heard. */
+  phase: 'asking' | 'listening' | 'thinking';
   share?: number;
 }
 
 /** Where the model comes from. A host of the reader's own may serve it, as one may serve the
- *  dictionaries; nothing in the product sets it. */
-async function modelHost(): Promise<string> {
+ *  dictionaries, with the encoder under speech-v1/ as the release has it; nothing in the
+ *  product sets it. */
+async function modelHosts(): Promise<Hosts> {
   const got = await browser.storage.local.get('speechBaseUrl');
   const own = got.speechBaseUrl;
-  return typeof own === 'string' && own ? own.replace(/\/?$/, '/') : MODEL_HOST;
+  if (typeof own !== 'string' || !own) return { model: MODEL_HOST, encoder: ENCODER_URL };
+  const base = own.replace(/\/?$/, '/');
+  return { model: base, encoder: `${base}speech-v1/${ENCODER_URL.split('/').pop()}` };
 }
 
 /** Shown to the panel through storage, which a content script can watch. */
@@ -129,7 +133,15 @@ if (IS_FIREFOX) {
     // what was said up to then is the question.
     port.onDisconnect.addListener(() => end());
     arriving = it;
-    started?.(it);
+    // Listening from the first piece of what is said, not from the popup opening: its
+    // microphone takes the better part of a second to start, and a reader shown it is on
+    // starts talking.
+    const first = (message: { piece?: number[]; done?: boolean }) => {
+      if (!message.piece && !message.done) return;
+      port.onMessage.removeListener(first);
+      started?.(it);
+    };
+    port.onMessage.addListener(first);
   });
 }
 
@@ -183,35 +195,38 @@ async function recorded(it: Arriving): Promise<{ samples: Float32Array; rate: nu
 }
 
 /** Hear a question on Firefox, the popup already opening. */
-async function hearInPopup(langs: string[], opening: Promise<Arriving>): Promise<Heard> {
+async function hearInPopup(lang: string, opening: Promise<Arriving>): Promise<Heard> {
   try {
-    const host = await modelHost();
+    const hosts = await modelHosts();
     const { prepare, transcribe } = await import('@/engines/whisper');
     let share: number | undefined;
-    let phase: Listening['phase'] = 'listening';
+    // Asking until the popup's microphone is sending: the model's progress is told meanwhile,
+    // and a reader shown it as hearing would start talking too soon.
+    let phase: Listening['phase'] = 'asking';
     const tell = () => void show({ phase, ...(share !== undefined && share < 1 ? { share } : {}) });
-    const ready = prepare(host, (got) => {
+    const ready = prepare(hosts, (got) => {
       share = got;
       tell();
     });
     ready.catch(() => undefined);
     const it = await opening;
+    phase = 'listening';
     tell();
     const { samples, rate, spoke } = await recorded(it);
     if (!spoke) return { kind: 'nothing' };
     phase = 'thinking';
     tell();
     await ready;
-    const said = await transcribe(host, resample(samples, rate), langs);
-    return said.text ? { kind: 'said', ...said } : { kind: 'nothing' };
+    const text = await transcribe(hosts, resample(samples, rate), lang);
+    return text ? { kind: 'said', text } : { kind: 'nothing' };
   } finally {
     await show(null);
   }
 }
 
 /**
- * What the reader said, and in which of [langs]; or that they would not let the extension hear
- * them, or said nothing.
+ * What the reader said in [lang]; or that they would not let the extension hear them, or said
+ * nothing.
  *
  * [tab] is the tab the panel is in, which a page asking for the microphone opens beside.
  *
@@ -219,8 +234,8 @@ async function hearInPopup(langs: string[], opening: Promise<Arriving>): Promise
  * records can only be opened by a press, and the one that asked has been handled by the time
  * the reader answered. The next press hears.
  */
-export function hear(langs: string[], tab: number | undefined): Promise<Heard> {
-  if (IS_FIREFOX && mayHear === 'granted') return hearInPopup(langs, openRecorder());
+export function hear(lang: string, tab: number | undefined): Promise<Heard> {
+  if (IS_FIREFOX && mayHear === 'granted') return hearInPopup(lang, openRecorder());
   return (async (): Promise<Heard> => {
     try {
       let state = await permitted();
@@ -233,10 +248,10 @@ export function hear(langs: string[], tab: number | undefined): Promise<Heard> {
         if (IS_FIREFOX) return { kind: 'nothing' };
       }
       if (IS_FIREFOX) return { kind: 'nothing' };
-      const host = await modelHost();
-      await show({ phase: 'listening' });
-      const said = await ask<{ text: string; lang: string }>('listen', '', langs, undefined, host);
-      return said.text ? { kind: 'said', ...said } : { kind: 'nothing' };
+      const hosts = await modelHosts();
+      // Listening is shown by the page that records, once its microphone is sending.
+      const text = await ask<string>('listen', lang, [], undefined, undefined, hosts);
+      return text ? { kind: 'said', text } : { kind: 'nothing' };
     } finally {
       await show(null);
     }

@@ -53,6 +53,9 @@ export async function allowed(): Promise<'granted' | 'denied' | 'prompt'> {
  * while, or has gone on for longer than a question is; or when [Recording.stop] is called.
  * [heard] is given each piece as it arrives, at the rate it was recorded at, for a page that
  * passes the recording on as it goes.
+ *
+ * Resolves once the microphone is sending, not once it was asked for: opening one takes the
+ * better part of a second, and a reader shown it is on starts talking.
  */
 export async function record(
   heard?: (piece: Float32Array, rate: number) => void,
@@ -63,6 +66,9 @@ export async function record(
   // The device's own rate: Firefox refuses to connect a microphone to a context running at
   // any other, so the recording is brought down to the model's rate afterwards instead.
   const context = new AudioContext();
+  // A context made away from a press can start suspended, and a suspended one sends the
+  // worklet nothing: no samples, and no pause ever heard to end the recording.
+  await context.resume().catch(() => undefined);
   await context.audioWorklet.addModule(chrome.runtime.getURL('capture.js'));
   const source = context.createMediaStreamSource(stream);
   const capture = new AudioWorkletNode(context, 'phonetix-capture');
@@ -98,9 +104,23 @@ export async function record(
       resolve({ samples, rate, spoke });
     };
   });
+  // The rules below count time in samples. If none arrive, the clock does not stop it, so it
+  // is also stopped by the wall clock: when nothing at all has been heard by the time a reader
+  // would have said something, and at the longest a question is.
+  const silent = setTimeout(() => {
+    if (pieces.length === 0) finish();
+  }, NOTHING_MS);
+  const longest = setTimeout(() => finish(), LONGEST_MS + 1000);
+  void done.then(() => {
+    clearTimeout(silent);
+    clearTimeout(longest);
+  });
 
+  let sending: () => void = () => {};
+  const sent = new Promise<void>((resolve) => (sending = resolve));
   capture.port.onmessage = (event: MessageEvent<Float32Array>) => {
     const piece = event.data;
+    sending();
     pieces.push(piece);
     heard?.(piece, rate);
     for (const value of piece) {
@@ -128,6 +148,8 @@ export async function record(
       }
     }
   };
+  // Sending, or stopped without ever having sent: either way there is nothing more to wait for.
+  await Promise.race([sent, done]);
   return { stop: () => finish(), done };
 }
 

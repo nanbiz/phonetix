@@ -150,6 +150,12 @@ export default defineConfig({
         }
       : {
           minimum_chrome_version: '109',
+          // The extension's own pages isolated, which is what lets the speech model run on
+          // several of the processor's threads rather than one: about a third quicker on a
+          // question said to the translator panel. "credentialless" rather than "require-corp",
+          // so an image from another site, a site's icon in the popup, still loads.
+          cross_origin_embedder_policy: { value: 'credentialless' },
+          cross_origin_opener_policy: { value: 'same-origin' },
           declarative_net_request: {
             rule_resources: [
               { id: 'mozilla-models', enabled: true, path: 'rules/mozilla-models.json' },

@@ -6,6 +6,7 @@
 import {
   annotate, complete, curve, detect, lookUp, meanings, openHomographs, openLanguages, phrase,
   readRuns, readScreen, readWiktionary, symbolsOf, typedInMine, wordFor, type Said,
+  heard as heardIn,
 } from '@/core';
 import type { Batch, TextRun } from '@/core/tokens';
 import { afresh, answered, noted, recent } from './health';
@@ -255,12 +256,18 @@ export function host(): void {
 
   // What is said to the panel rather than typed into it: recorded and written down here, and
   // then asked like anything typed.
-  onMessage('listen', ({ data, tab }) =>
-    hear(data.langs, tab).catch((e) => {
+  onMessage('listen', async ({ data, tab }) => {
+    // The language's dictionary, opened while the reader speaks, puts right a word the
+    // recogniser missed by a letter.
+    const opening = open(data.lang).catch(() => null);
+    const said = await hear(data.lang, tab).catch((e) => {
       console.warn('[Phonetix] Nothing was heard:', e);
       throw e;
-    }),
-  );
+    });
+    if (said.kind !== 'said') return said;
+    await opening;
+    return { kind: 'said' as const, text: await heardIn(said.text, data.lang).catch(() => said.text) };
+  });
   onMessage('stopListening', async () => {
     await stopHearing();
     return true;

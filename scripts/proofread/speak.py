@@ -6,16 +6,16 @@ opens the extension's own page to ask for the microphone, once, and the browser'
 answered on screen; nothing is asked of the site. What is said then is written into the field,
 in the language it was said in, and answered like anything typed.
 
-What is said is a person's recording of a Spanish sentence (Tatoeba), played to Chromium as its
-microphone. Firefox can only be given a tone as a microphone, so there the check is that the
-recording reaches the extension through the toolbar popup, ends by itself, is written down by
-the same model, and leaves the panel ready for the next question; what the model makes of real
-speech is checked on Chromium.
+What is said is people's recordings of sentences (Tatoeba). Chromium plays one as its microphone.
+Firefox has no such switch, so it is given a microphone of the check's own: a PulseAudio server
+started for the check alone, on a socket under /tmp and never the desktop's, whose one source is
+a pipe the recording is written into once Firefox is listening. Whatever either browser plays
+goes to that server's silent sink.
 
 The model is the one the product fetches, served from a copy kept in .cache/whisper and fetched
 from Hugging Face the first time.
 
-  nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick -c uv run scripts/proofread/speak.py [chrome|firefox]
+  nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick nixpkgs#pulseaudio -c uv run scripts/proofread/speak.py [chrome|firefox]
 """
 # /// script
 # dependencies = ["pillow"]
@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unicodedata
@@ -47,8 +48,8 @@ SHOTS = os.environ.get("PHONETIX_SHOTS", "/tmp/phonetix-speak")
 
 # Sentences people said, and what they said, one in the language being learned and one in the
 # reader's own: Tatoeba's recordings, by native speakers, kept in .cache and never in the
-# repository. Each is answered in the other language, which is how the language it was said in
-# is seen to have been heard.
+# repository. Each is said in the language the arrow comes from, turned first for the one being
+# learned, and answered in the other.
 SENTENCES = [
     {"audio": 444306, "text": "La línea está ocupada.", "lang": "es", "way": ["es", "en"]},
     {"audio": 39352, "text": "Where is the station?", "lang": "en", "way": ["en", "es"]},
@@ -79,6 +80,12 @@ def allow_button(engine, picture):
     return None
 
 
+# How long writing a short question down may take once the reader has stopped, the model
+# already held: what the panel was measured at with room to spare, on Chromium's threads and on
+# Firefox's one.
+QUICK = {"chrome": 4.0, "firefox": 8.0}
+
+
 def plain(text):
     """Text compared the way a listener hears it: no accents, no punctuation, no case."""
     text = unicodedata.normalize("NFD", text or "")
@@ -103,8 +110,8 @@ def recording(said):
 
 
 def serve_model():
-    """The model at a host of the check's own, as Hugging Face serves it: each file fetched from
-    there once and kept."""
+    """The model at a host of the check's own, as Hugging Face serves it, and the encoder as the
+    speech-v1 release does: each file fetched from there once and kept."""
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *a):
@@ -118,8 +125,10 @@ def serve_model():
             kept = os.path.join(MODELS, path)
             if not os.path.exists(kept):
                 os.makedirs(os.path.dirname(kept), exist_ok=True)
+                origin = ("https://github.com/nanbiz/phonetix/releases/download"
+                          if path.startswith("speech-v1/") else "https://huggingface.co")
                 try:
-                    urllib.request.urlretrieve(f"https://huggingface.co/{path}", kept + ".part")
+                    urllib.request.urlretrieve(f"{origin}/{path}", kept + ".part")
                     os.replace(kept + ".part", kept)
                 except Exception:
                     self.send_error(404)
@@ -139,7 +148,93 @@ def serve_model():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
-def check(engine, said, wav, again=True):
+# The model's large files, fetched into the check's copy before any browser asks, so the time a
+# question takes is the panel's and not the time a first download takes.
+LARGE = [
+    "onnx-community/whisper-small/resolve/36050c46d777d46dc4b5f43f6d90574fc38f8732/onnx/decoder_model_merged_quantized.onnx",
+    "speech-v1/whisper-small-encoder-q8.onnx",
+]
+
+
+class Microphone:
+    """A PulseAudio server of the check's own whose microphone says what it is told to.
+
+    Silence, written at the pace it is played, until [say] is called; then the recording; then
+    silence again. Started without the desktop's session bus or runtime directory, so nothing
+    the reader's own audio uses is touched."""
+
+    RATE = 48000
+    PIECE = RATE // 50  # twenty milliseconds
+
+    def __init__(self):
+        self.where = tempfile.mkdtemp(prefix="phonetix-pulse-")
+        socket_path = os.path.join(self.where, "pulse.sock")
+        self.pipe = os.path.join(self.where, "speech")
+        config = os.path.join(self.where, "default.pa")
+        with open(config, "w") as f:
+            f.write(f"load-module module-native-protocol-unix socket={socket_path} auth-anonymous=1\n"
+                    f"load-module module-pipe-source source_name=speech file={self.pipe}"
+                    f" format=s16le rate={self.RATE} channels=1\n"
+                    "load-module module-null-sink sink_name=quiet\n"
+                    "set-default-source speech\nset-default-sink quiet\n")
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS")}
+        env["XDG_RUNTIME_DIR"] = self.where
+        env["HOME"] = self.where
+        self.server = subprocess.Popen(
+            ["pulseaudio", "-n", "--daemonize=no", "--exit-idle-time=-1", "--disallow-exit",
+             "-F", config, "--use-pid-file=no", "--log-target=stderr"],
+            env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            if os.path.exists(self.pipe) and os.path.exists(socket_path):
+                break
+            time.sleep(0.1)
+        else:
+            raise SystemExit("the check's own audio server did not start")
+        self.address = f"unix:{socket_path}"
+        self.queue = []
+        self.lock = threading.Lock()
+        self.running = True
+        threading.Thread(target=self._play, daemon=True).start()
+
+    def say(self, wav):
+        """Say this recording, once."""
+        with open(wav, "rb") as f:
+            data = f.read()
+        # The samples after the WAV header, which ffmpeg wrote as 48 kHz mono 16-bit.
+        at = data.index(b"data") + 8
+        with self.lock:
+            self.queue.append(data[at:])
+
+    def _play(self):
+        silence = bytes(self.PIECE * 2)
+        with open(self.pipe, "wb", buffering=0) as out:
+            start = time.time()
+            sent = 0
+            while self.running:
+                with self.lock:
+                    speech = self.queue.pop(0) if self.queue else None
+                for at in range(0, len(speech), self.PIECE * 2) if speech else [None]:
+                    piece = speech[at:at + self.PIECE * 2] if speech else silence
+                    out.write(piece)
+                    sent += len(piece) // 2
+                    # At the pace it is played, so what is said arrives when it is said.
+                    ahead = sent / self.RATE - (time.time() - start)
+                    if ahead > 0.1:
+                        time.sleep(ahead - 0.1)
+
+    def close(self):
+        self.running = False
+        self.server.terminate()
+        shutil.rmtree(self.where, ignore_errors=True)
+
+
+def warm():
+    for path in LARGE:
+        urllib.request.urlopen(f"http://127.0.0.1:{MODEL_PORT}/{path}", timeout=1800).read()
+
+
+def check(engine, said, wav, microphone, again=True):
     """One browser asked one sentence; [again] goes on to press the microphone twice more."""
     failures = []
     if engine == "chrome":
@@ -149,7 +244,7 @@ def check(engine, said, wav, again=True):
             f"--use-file-for-fake-audio-capture={wav}%noloop",
         ])
     else:
-        browser = panel.Firefox(prefs=[("media.navigator.streams.fake", True)])
+        browser = panel.Firefox()
     try:
         api = "browser" if engine == "firefox" else "chrome"
         browser.ext(
@@ -182,9 +277,9 @@ def check(engine, said, wav, again=True):
             print(f"  picture: {path}")
             return path
 
-        def press_mic():
+        def press_on(does):
             box = in_panel("""(root) => {
-                const el = root.querySelector('[data-does=speak]');
+                const el = root.querySelector('[data-does=""" + does + """]');
                 if (!el) return null;
                 const r = el.getBoundingClientRect();
                 return {x: r.x + r.width / 2, y: r.y + r.height / 2};
@@ -194,6 +289,9 @@ def check(engine, said, wav, again=True):
             browser.press(box["x"], box["y"])
             return True
 
+        def press_mic():
+            return press_on("speak")
+
         state = "(root) => (root.querySelector('[data-does=speak]') || {}).dataset?.hearing ?? null"
         field = "(root) => root.querySelector('.ask-field input').value"
 
@@ -202,6 +300,11 @@ def check(engine, said, wav, again=True):
             return [f"the panel did not open"]
         if in_panel(state) != "idle":
             failures.append(f"the microphone is not drawn waiting in the panel: {in_panel(state)!r}")
+
+        # Said in the language the arrow comes from: turned to the one being learned first.
+        if said["way"][0] != "en":
+            press_on("turn")
+            time.sleep(0.5)
 
         # The first press: the extension's own page asks, under the extension's name, and the
         # site is asked nothing.
@@ -223,6 +326,8 @@ def check(engine, said, wav, again=True):
             focus_window(browser.window_class)
             press_mic()
         listening = wait(state, lambda got: got in ("listening", "thinking"), seconds=15, gap=0.25)
+        if engine == "firefox":
+            microphone.say(wav)
         print(f"  {engine}: after allowing it once: {listening!r}")
         if listening not in ("listening", "thinking"):
             failures.append(f"the microphone did not start after it was allowed: {listening!r}")
@@ -231,32 +336,49 @@ def check(engine, said, wav, again=True):
         if site != "prompt":
             failures.append(f"the site itself was given the microphone: {site!r}")
 
-        # Then it ends by itself at the pause, and what was said is written into the field.
-        shot("hearing")
-        done = wait(state, lambda got: got == "idle", seconds=240, gap=1)
+        # Then it ends by itself at the pause, and what was said is written into the field, in
+        # about as long as a reader waits for an answer.
+        # One watch over the whole question: the last moment it was still listening is the
+        # pause, and the first moment it is idle again is the words being there.
+        heard_until = time.time()
+        done = None
+        end = time.time() + 240
+        seen = []
+        while time.time() < end:
+            done = in_panel(state)
+            if not seen or seen[-1][1] != done:
+                seen.append((round(time.time() - heard_until, 2), done))
+            if done == "listening":
+                heard_until = time.time()
+                if len(seen) == 1:
+                    shot("hearing")
+                    seen.append((0, "pictured"))
+            if done == "idle":
+                break
+            time.sleep(0.05)
+        took = time.time() - heard_until
+        print(f"  {engine}: states {seen}")
+        print(f"  {engine}: from the pause to the words: {took:.1f}s")
+        if took > QUICK[engine]:
+            failures.append(f"writing it down took {took:.1f}s, more than {QUICK[engine]}s")
         heard = in_panel(field)
         print(f"  {engine}: written down: {heard!r}")
         if done != "idle":
             failures.append(f"the microphone never stopped: {done!r}")
-        if engine == "firefox" and heard:
-            # A tone is not speech, and what Whisper makes of a sound that is not ("you",
-            # "Thank you") is not a question anybody asked.
-            failures.append(f"a tone with nothing said in it was written down as {heard!r}")
-        if engine == "chrome":
-            want = plain(said["text"])
-            got = plain(heard)
-            missed = [word for word in want if word not in got]
-            if len(missed) > 1:
-                failures.append(f"heard {heard!r} for {said['text']!r}")
-            answer = wait("(root) => (root.querySelector('[data-said]') || {}).textContent ?? null",
-                          lambda got: bool(got), seconds=60)
-            way = in_panel("(root) => [root.querySelector('[data-ask]').dataset.from,"
-                           " root.querySelector('[data-ask]').dataset.into]")
-            print(f"  {engine}: answered {way}: {answer!r}")
-            if way != said["way"]:
-                failures.append(f"{said['lang']} said was answered {way}, not {said['way']}")
-            if not answer:
-                failures.append("what was said was never answered")
+        want = plain(said["text"])
+        got = plain(heard)
+        missed = [word for word in want if word not in got]
+        if len(missed) > 1:
+            failures.append(f"heard {heard!r} for {said['text']!r}")
+        answer = wait("(root) => (root.querySelector('[data-said]') || {}).textContent ?? null",
+                      lambda got: bool(got), seconds=60)
+        way = in_panel("(root) => [root.querySelector('[data-ask]').dataset.from,"
+                       " root.querySelector('[data-ask]').dataset.into]")
+        print(f"  {engine}: answered {way}: {answer!r}")
+        if way != said["way"]:
+            failures.append(f"{said['lang']} said was answered {way}, not {said['way']}")
+        if not answer:
+            failures.append("what was said was never answered")
         shot("answered")
 
         if not again:
@@ -273,6 +395,10 @@ def check(engine, said, wav, again=True):
         if ended != "idle":
             failures.append(f"pressing the microphone while it heard did not end it: {ended!r}")
         if engine == "firefox":
+            # Nothing was said that time, only the check's silence: nothing is written over
+            # the question already there.
+            if in_panel(field) != heard:
+                failures.append(f"silence was written down as {in_panel(field)!r}")
             tabs_after = browser.ext(f"{api}.tabs.query({{}}).then(t => t.length)")
             if tabs_after != tabs_before:
                 failures.append("the second press asked for the microphone again")
@@ -282,30 +408,35 @@ def check(engine, said, wav, again=True):
 
 
 def main():
-    for tool in ("Xvfb", "xdotool", "ffmpeg", "import"):
+    for tool in ("Xvfb", "xdotool", "ffmpeg", "import", "pulseaudio"):
         if not shutil.which(tool):
             raise SystemExit(f"{tool} is not on PATH: run this inside `nix shell nixpkgs#xorg.xvfb "
-                             "nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick`")
+                             "nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick nixpkgs#pulseaudio`")
     engines = sys.argv[1:] or ["chrome", "firefox"]
     wavs = [recording(said) for said in SENTENCES]
     says.fetch_models()
     says.build_packs()
     says.serve()
     serve_model()
+    warm()
+    microphone = Microphone()
+    # Every browser started from here plays into the check's silent sink, and Firefox hears the
+    # check's microphone.
+    os.environ["PULSE_SERVER"] = microphone.address
     shown, server = display()
     os.environ["DISPLAY"] = shown
     os.environ.pop("WAYLAND_DISPLAY", None)
     failures = []
     try:
         for engine in engines:
-            # Chromium hears each sentence, in a browser of its own since the recording is the
-            # browser's microphone; Firefox hears its tone once.
+            # Each sentence in a browser of its own, since a first question in each is asked
+            # for the microphone the way a reader's first is.
             for at, (said, wav) in enumerate(zip(SENTENCES, wavs)):
-                if engine == "firefox" and at > 0:
-                    break
-                failures += [f"{engine}: {line}" for line in check(engine, said, wav, again=at == 0)]
+                found = check(engine, said, wav, microphone, again=at == 0)
+                failures += [f"{engine}: {line}" for line in found]
     finally:
-        server.kill()
+        panel.close_display(server)
+        microphone.close()
     if failures:
         print("\nFAIL")
         for line in failures:

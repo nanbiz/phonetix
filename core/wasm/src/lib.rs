@@ -251,6 +251,15 @@ impl Core {
         )
     }
 
+    /// What a recogniser wrote down in a language, put right against that language's pack, or
+    /// as it was where no pack is open. See [lexcore::resolve::heard].
+    #[wasm_bindgen]
+    pub fn heard(&self, text: &str, lang: &str) -> String {
+        self.packs
+            .get(lang)
+            .map_or_else(|| text.to_string(), |pack| lexcore::resolve::heard(text, pack))
+    }
+
     /// How often a word is met in running text in a language. See [lexcore::resolve::met].
     #[wasm_bindgen]
     pub fn met(&self, word: &str, lang: &str) -> f64 {

@@ -10,6 +10,7 @@
 // the same engine is simply called. Neither difference reaches anything above this file.
 
 import { host } from './packs';
+import type { Hosts } from '@/engines/whisper';
 
 const CHROMIUM_OFFSCREEN = 'offscreen.html';
 
@@ -71,13 +72,14 @@ export async function ask<T>(
   words: string[],
   into?: string,
   base?: string,
+  hosts?: Hosts,
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     await offscreen();
     let answered: { ok: T } | { failed: string } | undefined;
     let reached = true;
     try {
-      answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base }));
+      answered = (await chrome.runtime.sendMessage({ voice, lang, words, into, base, hosts }));
     } catch (e) {
       // What a browser says when nothing is listening: the page is gone, rather than the
       // engine having failed at something. Anything else is the engine's own answer.

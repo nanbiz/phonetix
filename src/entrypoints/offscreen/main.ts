@@ -13,7 +13,7 @@
 import { phonemizeBatch, synthesizeWav } from '@/engines/espeak';
 import { pairs, translate } from '@/engines/bergamot';
 import { allowed, record, resample, type Recording } from '@/engines/listen';
-import { prepare, transcribe } from '@/engines/whisper';
+import { prepare, transcribe, type Hosts } from '@/engines/whisper';
 
 interface Asked {
   voice: 'ipa' | 'audio' | 'translate' | 'pairs' | 'listen' | 'stop-listening' | 'microphone';
@@ -22,6 +22,8 @@ interface Asked {
   into?: string;
   /** Where the models are served from. Passed in: this page has no access to the setting. */
   base?: string;
+  /** And the speech model, which has two. */
+  hosts?: Hosts;
   words: string[];
 }
 
@@ -34,29 +36,31 @@ function phase(listening: { phase: string; share?: number } | null): void {
   void chrome.runtime.sendMessage({ listening }).catch(() => undefined);
 }
 
-/** Record what the reader says and write it down, in whichever of [langs] it was said in.
+/** Record what the reader says and write it down, in [lang].
  *  The model is made ready while they speak, and the first time that is a download, whose
  *  progress goes with whatever else is happening. */
-async function listen(base: string, langs: string[]) {
+async function listen(hosts: Hosts, lang: string): Promise<string> {
   recording?.stop();
-  let now: 'listening' | 'thinking' = 'listening';
+  // Asking until the microphone is sending, though the model's progress is told meanwhile.
+  let now: 'asking' | 'listening' | 'thinking' = 'asking';
   let share: number | undefined;
   const tell = () => phase({ phase: now, ...(share !== undefined && share < 1 ? { share } : {}) });
-  const ready = prepare(base, (got) => {
+  const ready = prepare(hosts, (got) => {
     share = got;
     tell();
   });
   ready.catch(() => undefined);
   const it = await record();
   recording = it;
+  now = 'listening';
   tell();
   const { samples, rate, spoke } = await it.done;
   if (recording === it) recording = null;
-  if (!spoke) return { text: '', lang: '' };
+  if (!spoke) return '';
   now = 'thinking';
   tell();
   await ready;
-  return transcribe(base, resample(samples, rate), langs);
+  return transcribe(hosts, resample(samples, rate), lang);
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
@@ -67,7 +71,8 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
     return true;
   }
   if (asked.voice === 'listen') {
-    listen(asked.base ?? '', asked.words)
+    if (!asked.hosts) return false;
+    listen(asked.hosts, asked.lang)
       .then((said) => respond({ ok: said }))
       .catch((e) => respond({ failed: String(e) }));
     return true;

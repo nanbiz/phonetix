@@ -8,7 +8,7 @@ description = "The pack format: one file per language, read the same way in a br
 # A finite state transducer for the key index. Pure Rust, so the same index code compiles to
 # WebAssembly and to every Android ABI; the alternative, a sorted table with binary search,
 # would hold every spelling in full rather than sharing their prefixes.
-fst = "0.4"
+fst = { version = "0.4", features = ["levenshtein"] }
 # Decompression is pure Rust for the same reason: the reference zstd library is C, and the
 # reader has to run in a browser. Compression is the writer's job and the writer only runs in
 # CI on a real machine, so it may use the C one.

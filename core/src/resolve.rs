@@ -392,6 +392,138 @@ pub fn met<D: AsRef<[u8]>>(pack: &Pack<D>, word: &str) -> u64 {
         .unwrap_or(0)
 }
 
+/// What a recogniser wrote down, with each word the dictionary does not hold put right where it
+/// holds one a letter or two away.
+///
+/// A recogniser hears sounds and writes the spelling it finds likeliest, and on one or two words
+/// with nothing around them it misses by a letter: "knädig" for "gnädig", "Diluviava" for
+/// "diluviaba", a "b" for a Spanish "v" that sounds the same. The dictionary of the language it
+/// was said in knows which spellings are words. A word it holds is kept as heard; one it does
+/// not is first tried as two words run together ("Tomfriert" for "Tom friert"), then replaced by
+/// the nearest it does hold, by fewest edits and then by how often each is met. Short words are
+/// left alone: at three letters most spellings are a letter from some word.
+pub fn heard<D: AsRef<[u8]>>(text: &str, pack: &Pack<D>) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut word = String::new();
+    let flush = |word: &mut String, out: &mut String| {
+        if !word.is_empty() {
+            out.push_str(&closest_word(pack, word).unwrap_or_else(|| word.clone()));
+            word.clear();
+        }
+    };
+    for c in text.chars() {
+        if c.is_alphabetic() || (!word.is_empty() && (c == '\'' || c == '-')) {
+            word.push(c);
+        } else {
+            flush(&mut word, &mut out);
+            out.push(c);
+        }
+    }
+    flush(&mut word, &mut out);
+    out
+}
+
+/// The word a pack holds nearest to one it does not, or nothing where it holds this one or
+/// none close enough.
+fn closest_word<D: AsRef<[u8]>>(pack: &Pack<D>, word: &str) -> Option<String> {
+    let lowered = word.to_lowercase();
+    if spelt(pack, word).is_some() {
+        return None;
+    }
+    let length = lowered.chars().count();
+    if length < 4 {
+        return None;
+    }
+    // One edit first, then two words run together, then two edits for a long word: at two
+    // edits a shorter word is near too many others, and a split into two common words beats a
+    // single letter wrong too often ("Diluviava" is one from "diluviaba" and "diluvia va").
+    let best = nearest(pack, word, &lowered, 1)
+        .or_else(|| two_words(pack, word))
+        .or_else(|| {
+            (length >= 9)
+                .then(|| nearest(pack, word, &lowered, 2))
+                .flatten()
+        })?;
+    if best.contains(' ') {
+        return Some(best);
+    }
+    // In the case it was heard in: a sentence's first word comes back capitalised.
+    let capital = word.chars().next().is_some_and(char::is_uppercase);
+    if capital && best.chars().next().is_some_and(char::is_lowercase) {
+        let mut chars = best.chars();
+        let first = chars.next()?;
+        return Some(first.to_uppercase().chain(chars).collect());
+    }
+    Some(best)
+}
+
+/// The spelling a pack holds within [distance] edits of a word, fewest edits first and then
+/// the one met most often.
+fn nearest<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    word: &str,
+    lowered: &str,
+    distance: u32,
+) -> Option<String> {
+    let mut found = pack.near(lowered, distance);
+    // Spelt as heard too, for a language that capitalises its nouns: "Bahnhoff" is near
+    // "Bahnhof", and "bahnhoff" is near nothing.
+    if lowered != word {
+        found.extend(pack.near(word, distance));
+    }
+    found
+        .into_iter()
+        .map(|(spelling, edits)| {
+            let often = held(pack, &spelling);
+            (spelling, (edits, std::cmp::Reverse(often)))
+        })
+        .min_by(|a, b| a.1.cmp(&b.1))
+        .map(|(spelling, _)| spelling)
+}
+
+/// The spelling a pack holds a word under: as written, in small letters, or with a capital,
+/// which is how German holds its nouns and a recogniser does not always write them.
+fn spelt<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Option<String> {
+    let lowered = spelling.to_lowercase();
+    let mut chars = lowered.chars();
+    let capital: String = chars
+        .next()
+        .map(|first| first.to_uppercase().chain(chars).collect())
+        .unwrap_or_default();
+    [spelling.to_string(), lowered, capital]
+        .into_iter()
+        .find(|it| !pack.lookup(it).is_empty())
+}
+
+/// How often a spelling is met as any word the pack holds under it, a form as much as a
+/// lemma: 1 where it holds it without a count, 0 where it does not hold it.
+fn held<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> u64 {
+    let Some(found) = spelt(pack, spelling) else {
+        return 0;
+    };
+    pack.lookup(&found)
+        .iter()
+        .filter_map(how_often)
+        .max()
+        .unwrap_or(1)
+        .max(1)
+}
+
+/// A word the pack does not hold, as two it does, run together by the recogniser: the split
+/// whose rarer half is met most often, where both halves are words of two letters or more.
+fn two_words<D: AsRef<[u8]>>(pack: &Pack<D>, word: &str) -> Option<String> {
+    let chars: Vec<char> = word.chars().collect();
+    (2..chars.len().saturating_sub(1))
+        .filter_map(|at| {
+            let first: String = chars[..at].iter().collect();
+            let second = spelt(pack, &chars[at..].iter().collect::<String>())?;
+            let often = held(pack, &first).min(held(pack, &second));
+            (often > 0).then(|| (format!("{first} {second}"), often))
+        })
+        .max_by_key(|(_, often)| *often)
+        .map(|(two, _)| two)
+}
+
 /// Whether something a reader typed into the panel is in their own language rather than the
 /// one they are learning, which is the way it is answered: from theirs into the other when
 /// true.

@@ -90,17 +90,16 @@ export interface HostProtocol {
     data: { text: string; mine: string; learning: string; turned?: boolean };
     reply: PanelAnswer;
   };
-  /** Something said to the panel instead of typed, written down, with which of [langs] it was
-   *  said in; or that the reader would not let the extension hear them, or that nothing was
-   *  said. */
-  listen: { data: { langs: string[] }; reply: Heard };
+  /** Something said to the panel instead of typed, in [lang], written down; or that the reader
+   *  would not let the extension hear them, or that nothing was said. */
+  listen: { data: { lang: string }; reply: Heard };
   /** End what the panel is recording now. */
   stopListening: { data: Record<string, never>; reply: boolean };
 }
 
 /** What the panel's microphone heard. */
 export type Heard =
-  | { kind: 'said'; text: string; lang: string }
+  | { kind: 'said'; text: string }
   | { kind: 'refused' }
   | { kind: 'nothing' };
 

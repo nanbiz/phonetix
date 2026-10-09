@@ -87,10 +87,11 @@ if [[ "$what" == all || "$what" == browser ]]; then
   # both run in.
   step "the translator panel and the keyboard, with real keys" \
     nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool -c uv run python scripts/proofread/panel.py
-  # The browser's own microphone prompt is answered on screen, so this too has a display.
+  # The browser's own microphone prompt is answered on screen, so this too has a display, and
+  # Firefox hears through an audio server of the check's own.
   step "the translator panel hears a question said" \
     nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick \
-    -c uv run scripts/proofread/speak.py
+    nixpkgs#pulseaudio -c uv run scripts/proofread/speak.py
   step "the other engine annotates a page" uv run python scripts/proofread/on_firefox.py
 fi
 
