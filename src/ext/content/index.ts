@@ -1063,9 +1063,9 @@ function follow(): void {
  */
 function answerAsked(): void {
   chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
-    const asked = message as { phonetix?: string };
+    const asked = message as { phonetix?: string; data?: { listen?: boolean } };
     if (asked?.phonetix === 'askForAWord') {
-      askedForAWord();
+      askedForAWord(asked.data?.listen ?? false);
       respond({ ok: true });
       return true;
     }
@@ -1077,8 +1077,8 @@ function answerAsked(): void {
 
 /** The panel the keyboard shortcut opens, which is the other direction: everything else on
  *  this page is about a word somebody else wrote. */
-function askedForAWord(): void {
-  void openAsk(pageLanguage());
+function askedForAWord(listen: boolean): void {
+  void openAsk(pageLanguage(), listen);
 }
 
 /** Start reading this document. */

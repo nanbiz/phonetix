@@ -181,6 +181,21 @@ function openRecorder(): Promise<Arriving> {
   return Promise.all([begun, opened]).then(([it]) => it).finally(() => (started = null));
 }
 
+/** The recorder the microphone's key opened, for the panel that key opens to hear with. */
+let primed: Promise<Arriving> | null = null;
+
+/**
+ * Open Firefox's recorder for the microphone's key, while the key is being handled: by the
+ * time the panel it opens asks to hear, the key is over and the popup could not be opened.
+ * Nothing on Chromium, whose recorder needs no press, or where the microphone is not yet
+ * allowed: the panel's press asks for it as a press on its microphone does.
+ */
+export function primeRecorder(): void {
+  if (!IS_FIREFOX || mayHear !== 'granted') return;
+  primed = openRecorder();
+  primed.catch(() => (primed = null));
+}
+
 /** Everything the popup recorded, once it has stopped. */
 async function recorded(it: Arriving): Promise<{ samples: Float32Array; rate: number; spoke: boolean }> {
   await it.ended;
@@ -235,6 +250,11 @@ async function hearInPopup(lang: string, opening: Promise<Arriving>): Promise<He
  * the reader answered. The next press hears.
  */
 export function hear(lang: string, tab: number | undefined): Promise<Heard> {
+  if (IS_FIREFOX && primed) {
+    const opening = primed;
+    primed = null;
+    return hearInPopup(lang, opening);
+  }
   if (IS_FIREFOX && mayHear === 'granted') return hearInPopup(lang, openRecorder());
   return (async (): Promise<Heard> => {
     try {

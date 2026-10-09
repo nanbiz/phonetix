@@ -164,6 +164,20 @@ label.item:hover {
   border-color: var(--color-accent);
 }
 
+/* The translator's two keys side by side: the panel, and the panel hearing. */
+.key-pair {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.keys .keys-icon {
+  width: 14px;
+  height: 14px;
+  align-self: center;
+  color: var(--color-ink-faint);
+}
+
 kbd {
   display: inline-block;
   min-width: 14px;

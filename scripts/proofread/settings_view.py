@@ -504,7 +504,8 @@ def main():
 
         # Both commands' keys as the browser bound them, the main switch's beside it and the
         # translator's on its row.
-        for does, command in (("shortcut-on-off", "switch-on-off"), ("shortcut", "translator")):
+        for does, command in (("shortcut-on-off", "switch-on-off"), ("shortcut", "translator"),
+                              ("shortcut-speak", "speak")):
             shown = evaluate(cdp, view, f"[...document.querySelectorAll('[data-does={does}] kbd')]"
                                         ".map(k => k.textContent).join('+')")
             bound = evaluate(cdp, view, "chrome.commands.getAll().then(c => (c.find(x => x.name =="
@@ -578,7 +579,7 @@ def main():
 
         # And the keys are changed where the browser changes them: pressing either opens its
         # page for an extension's shortcuts. Last, since the popup closes behind it.
-        for does in ("shortcut-on-off", "shortcut"):
+        for does in ("shortcut-on-off", "shortcut", "shortcut-speak"):
             try:
                 evaluate(cdp, view, "window.close()")
             except RuntimeError:

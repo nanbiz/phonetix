@@ -43,6 +43,10 @@
     /** Be told what the microphone is doing while a question is said; returns how to stop
      *  being told. */
     watchHearing?: (told: (now: Listening | null) => void) => () => void;
+    /** Hear a question from the moment it is drawn, as the microphone's key opens it. */
+    listenNow?: boolean;
+    /** Told how to press the microphone, for its key on a panel already open. */
+    onMic?: (press: () => void) => void;
   }
 
   let {
@@ -57,6 +61,8 @@
     hear,
     stopHearing,
     watchHearing,
+    listenNow = false,
+    onMic,
   }: Props = $props();
 
   // The values it opened with, on purpose: the reader changes them here while the panel is up,
@@ -84,6 +90,8 @@
   // shadow root after the page has loaded is not reached by autofocus.
   onMount(() => {
     field?.focus();
+    onMic?.(() => void speak());
+    if (untrack(() => listenNow)) void speak();
     return watchHearing?.((now) => (hearing = now));
   });
 

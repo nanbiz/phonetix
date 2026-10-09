@@ -18,6 +18,7 @@
   import { THEME, themeOf } from '@/ui/theme';
   import Back from 'virtual:icons/lucide/chevron-left';
   import Chevron from 'virtual:icons/lucide/chevron-right';
+  import Mic from 'virtual:icons/lucide/mic';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
@@ -38,6 +39,8 @@
   let shortcut = $state('');
   /** And the keys that switch Phonetix on or off. */
   let switching = $state('');
+  /** And the keys that open the translator hearing what to translate. */
+  let speaking = $state('');
   /** Which screen is showing, and which language list is open over it. */
   let view = $state<'main' | 'accents' | 'appearance'>('main');
   /** The dictionaries on their way and how far each has got, as the host tells it. */
@@ -81,6 +84,7 @@
     const commands = await browser.commands.getAll().catch(() => []);
     shortcut = commands.find((it) => it.name === 'translator')?.shortcut ?? '';
     switching = commands.find((it) => it.name === 'switch-on-off')?.shortcut ?? '';
+    speaking = commands.find((it) => it.name === 'speak')?.shortcut ?? '';
     curve = await curving;
   }
 
@@ -258,13 +262,24 @@
         <div class="item" data-row="translator">
           <span class="item-text">
             <span class="item-name" data-name>{ROWS.translator.name}</span>
-            <button class="keys" data-does="shortcut" onclick={shortcuts}>
-              {#if shortcut}
-                {#each shortcut.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-              {:else}
-                {SAYS['set-key']}
-              {/if}
-            </button>
+            <span class="key-pair">
+              <button class="keys" data-does="shortcut" onclick={shortcuts}>
+                {#if shortcut}
+                  {#each shortcut.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+                {:else}
+                  {SAYS['set-key']}
+                {/if}
+              </button>
+              <!-- The same panel, opened hearing what to translate. -->
+              <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
+                <Mic class="keys-icon" />
+                {#if speaking}
+                  {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+                {:else}
+                  {SAYS['set-key']}
+                {/if}
+              </button>
+            </span>
           </span>
           <button
             class="button"

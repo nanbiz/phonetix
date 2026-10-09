@@ -234,8 +234,11 @@ def warm():
         urllib.request.urlopen(f"http://127.0.0.1:{MODEL_PORT}/{path}", timeout=1800).read()
 
 
-def check(engine, said, wav, microphone, again=True):
-    """One browser asked one sentence; [again] goes on to press the microphone twice more."""
+def check(engine, said, wav, microphone, again=True, by_key=False):
+    """One browser asked one sentence; [again] goes on to press the microphone twice more.
+
+    [by_key] asks it with the microphone's own key rather than the panel's key and a press on
+    its microphone: the key opens the panel hearing."""
     failures = []
     if engine == "chrome":
         # The recording as the microphone, played once; the prompt is the browser's own.
@@ -295,10 +298,12 @@ def check(engine, said, wav, microphone, again=True):
         state = "(root) => (root.querySelector('[data-does=speak]') || {}).dataset?.hearing ?? null"
         field = "(root) => root.querySelector('.ask-field input').value"
 
-        keys(browser.manifest["commands"]["translator"]["suggested_key"]["default"].lower())
+        command = "speak" if by_key else "translator"
+        key = browser.manifest["commands"][command]["suggested_key"]["default"].lower()
+        keys(key)
         if wait("(root) => !!root.querySelector('[data-ask]')", lambda got: got is True) is not True:
-            return [f"the panel did not open"]
-        if in_panel(state) != "idle":
+            return [f"the panel did not open from {key}"]
+        if not by_key and in_panel(state) != "idle":
             failures.append(f"the microphone is not drawn waiting in the panel: {in_panel(state)!r}")
 
         # Said in the language the arrow comes from: turned to the one being learned first.
@@ -307,8 +312,9 @@ def check(engine, said, wav, microphone, again=True):
             time.sleep(0.5)
 
         # The first press: the extension's own page asks, under the extension's name, and the
-        # site is asked nothing.
-        press_mic()
+        # site is asked nothing. The microphone's key has pressed it already.
+        if not by_key:
+            press_mic()
         time.sleep(3)
         found = allow_button(engine, shot("asked"))
         if not found:
@@ -324,7 +330,10 @@ def check(engine, said, wav, microphone, again=True):
             if back != "idle":
                 failures.append(f"allowing the microphone left it at {back!r}")
             focus_window(browser.window_class)
-            press_mic()
+            if by_key:
+                keys(key)
+            else:
+                press_mic()
         listening = wait(state, lambda got: got in ("listening", "thinking"), seconds=15, gap=0.25)
         if engine == "firefox":
             microphone.say(wav)
@@ -432,7 +441,7 @@ def main():
             # Each sentence in a browser of its own, since a first question in each is asked
             # for the microphone the way a reader's first is.
             for at, (said, wav) in enumerate(zip(SENTENCES, wavs)):
-                found = check(engine, said, wav, microphone, again=at == 0)
+                found = check(engine, said, wav, microphone, again=at == 0, by_key=at == 1)
                 failures += [f"{engine}: {line}" for line in found]
     finally:
         panel.close_display(server)

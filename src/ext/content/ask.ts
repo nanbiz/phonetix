@@ -24,12 +24,15 @@ const TYPING = [
   'compositionstart', 'compositionupdate', 'compositionend', 'paste',
 ] as const;
 let drawn: ReturnType<typeof mount> | null = null;
+/** Press the open panel's microphone, as its key does. */
+let pressMic: (() => void) | null = null;
 
 /** Take the panel down. */
 export function close(): void {
   // Nothing to wait for: the panel has no transition out.
   if (drawn) void unmount(drawn);
   drawn = null;
+  pressMic = null;
   host?.remove();
   host = null;
   document.removeEventListener('pointerdown', outside, true);
@@ -49,9 +52,12 @@ export function showing(): boolean {
  * Ask for a word or a phrase, over whatever is being read, between the reader's own language
  * and the one they are learning, either way round.
  */
-export async function open(page = ''): Promise<void> {
+export async function open(page = '', listen = false): Promise<void> {
   if (drawn) {
-    close();
+    // The microphone's key on an open panel presses its microphone, which also ends what it
+    // is hearing; the panel's own key takes it down.
+    if (listen) pressMic?.();
+    else close();
     return;
   }
   const settings = await current();
@@ -114,6 +120,9 @@ export async function open(page = ''): Promise<void> {
         return () => browser.storage.onChanged.removeListener(changed);
       },
       close,
+      // Opened by the microphone's key: listening from the start, as a press on it would.
+      listenNow: listen,
+      onMic: (press: () => void) => (pressMic = press),
     },
   });
   document.addEventListener('pointerdown', outside, true);
