@@ -51,18 +51,42 @@ IN_PANEL = """
 
 
 def display():
-    """An X display nothing else is using, with a server on it."""
+    """An X display nothing else is using, with a server on it.
+
+    A display whose lock names a server that is no longer running is free: a check that was
+    killed leaves its lock behind, and thirty of them used every number this looks at."""
     for number in range(91, 120):
-        if not os.path.exists(f"/tmp/.X11-unix/X{number}") and not os.path.exists(f"/tmp/.X{number}-lock"):
-            server = subprocess.Popen(
-                ["Xvfb", f":{number}", "-screen", "0", "1280x900x24", "-nolisten", "tcp"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            for _ in range(50):
-                if os.path.exists(f"/tmp/.X11-unix/X{number}"):
-                    return f":{number}", server
-                time.sleep(0.1)
-            server.kill()
+        lock, socket_path = f"/tmp/.X{number}-lock", f"/tmp/.X11-unix/X{number}"
+        if os.path.exists(lock):
+            try:
+                os.kill(int(open(lock).read().strip()), 0)
+                continue
+            except (OSError, ValueError):
+                for stale in (lock, socket_path):
+                    try:
+                        os.remove(stale)
+                    except OSError:
+                        pass
+        if os.path.exists(socket_path):
+            continue
+        server = subprocess.Popen(
+            ["Xvfb", f":{number}", "-screen", "0", "1280x900x24", "-nolisten", "tcp"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(50):
+            if os.path.exists(socket_path):
+                return f":{number}", server
+            time.sleep(0.1)
+        close_display(server)
     raise SystemExit("no X display could be started")
+
+
+def close_display(server):
+    """Stop a display's server the way that lets it take its lock with it."""
+    server.terminate()
+    try:
+        server.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        server.kill()
 
 
 def keys(*combo):
@@ -512,7 +536,7 @@ def main():
             for path in shots:
                 print(f"  picture: {path}")
     finally:
-        server.kill()
+        close_display(server)
     if failures:
         print("\nFAIL")
         for line in failures:
