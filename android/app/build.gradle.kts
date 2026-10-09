@@ -240,3 +240,10 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
 }
+
+// The app's package is never taken from the build cache: it differs on every build, so a cached
+// one is never used again, and at the size the dictionaries and models make it each build left
+// another 284 MB in the cache, which filled the disk in a day of checks.
+tasks.matching { it.name == "packageDebug" || it.name == "packageRelease" }.configureEach {
+    outputs.cacheIf { false }
+}
