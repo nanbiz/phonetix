@@ -18,6 +18,11 @@ import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
 let host: HTMLElement | null = null;
+/** Everything typing sends, which leaves a shadow root for the page to hear. */
+const TYPING = [
+  'keydown', 'keypress', 'keyup', 'beforeinput', 'input',
+  'compositionstart', 'compositionupdate', 'compositionend', 'paste',
+] as const;
 let drawn: ReturnType<typeof mount> | null = null;
 
 /** Take the panel down. */
@@ -55,6 +60,11 @@ export async function open(page = ''): Promise<void> {
   host.id = `${OURS}-ask`;
   host.style.cssText = 'position:fixed;inset:0 auto auto 0;width:0;height:0;z-index:2147483646;';
   document.body.appendChild(host);
+  // What is typed into the panel stays in it. A page that sends typing to a box of its own
+  // whenever its document has the keys and no field of its own is focused - a chat's message
+  // box - sees the panel only as this element, which is no field, and took every key typed
+  // into the panel for its own. The panel's own handlers are inside, and have run by here.
+  for (const kind of TYPING) host.addEventListener(kind, (event) => event.stopPropagation());
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
   style.textContent = `${tokenCss}\n${cardCss}\n${askCss}`;

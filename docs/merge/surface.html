@@ -465,13 +465,17 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .pill { font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; line-height: 1.6; padding: 1px var(--space-2); border-radius: var(--radius-chip); white-space: nowrap; background: var(--color-chip-bg); color: var(--color-chip-ink); flex: 0 0 auto; }
 /* Where the answer came from, in its own colour: a dictionary a person wrote and a machine
    that guessed are not the same claim, and a reader decides how far to trust the card by it. */
-/* The accent, chosen where it is named: the pill holds the browser's own list, drawn as the
-   pill, with the mark that it opens. */
-.accent-pick { position: relative; display: inline-flex; align-items: center; gap: 2px; padding-right: var(--space-1); cursor: pointer; }
-.accent-pick select { appearance: none; -webkit-appearance: none; font: inherit; letter-spacing: inherit; color: inherit; background: none; border: none; padding: 0; margin: 0; cursor: pointer; outline: none; }
-.accent-pick select option { background: var(--color-surface); color: var(--color-ink); }
-.accent-pick:focus-within { box-shadow: 0 0 0 var(--border-width) var(--color-accent); }
-.accent-pick svg { width: 12px; height: 12px; flex: 0 0 auto; pointer-events: none; }
+/* The accent, chosen where it is named: the pill opens a list in the card's own look under it,
+   over whatever is below, with the one read now ticked. */
+.accent-pick { position: relative; display: inline-flex; }
+.accent-name { display: inline-flex; align-items: center; gap: var(--space-1); border: none; cursor: pointer; font: inherit; font-family: var(--font-ui); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.04em; }
+.accent-name:hover, .accent-pick[data-picking="true"] .accent-name { background: var(--color-accent-bg); color: var(--color-accent); }
+.accent-name svg { width: 12px; height: 12px; flex: 0 0 auto; }
+.accent-menu { position: absolute; top: calc(100% + var(--space-1)); right: 0; z-index: 2; display: flex; flex-direction: column; min-width: 100%; padding: var(--space-1); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); box-shadow: var(--shadow-card); }
+.accent-choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-1) var(--space-2); border: none; border-radius: var(--radius-symbol); background: none; color: var(--color-ink); font: inherit; font-family: var(--font-ui); font-size: var(--font-size-small); text-align: left; white-space: nowrap; cursor: pointer; }
+.accent-choice:hover { background: var(--color-accent-bg); }
+.accent-choice.on { color: var(--color-accent); font-weight: var(--weight-medium); }
+.accent-choice svg { width: 14px; height: 14px; flex: 0 0 auto; }
 .pill.from-dictionary { background: var(--color-accent-bg); color: var(--color-accent); }
 .pill.from-machine { background: var(--color-guess-bg); color: var(--color-guess); }
 .icon-btn { width: var(--icon-button); height: var(--icon-button); flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; background: none; border-radius: var(--radius-symbol); color: var(--color-ink-faint); cursor: pointer; text-decoration: none; }

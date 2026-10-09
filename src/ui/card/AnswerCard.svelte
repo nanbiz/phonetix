@@ -15,6 +15,7 @@
   import { wiktionary } from '@/data/links';
   import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
+  import CHOSEN from 'virtual:icons/lucide/check';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
   import PlayButton from './PlayButton.svelte';
@@ -169,6 +170,8 @@
   });
   /** The choice that is read now. */
   let chosen = $derived(accent || defaultAccentOf(answer.source));
+  /** Whether the list of accents is open. */
+  let picking = $state(false);
   let readAs = $derived(
     (() => {
       const name = accentsOf(answer.source).find((row) => row.id === accent)?.name ?? '';
@@ -227,20 +230,43 @@
           </span>
         {/if}
         {#if !phrase && answer.source && onAccent && choosable.length > 0}
-          <!-- A list of the browser's own, which opens over the page whatever the card is
-               clipped to, and adds nothing to the card's height while it is shut. -->
-          <label class="pill accent-pick" title="Accent {named(answer.source)} is read in">
-            <select
+          <!-- The accent it is read in, chosen where it is named: a list in the card's own
+               look, opening under the name over whatever is below it. -->
+          <span class="accent-pick" data-picking={picking}>
+            <button
+              class="pill accent-name"
               data-does="accent"
-              value={chosen}
-              onchange={(event) => onAccent?.(event.currentTarget.value)}
+              aria-haspopup="listbox"
+              aria-expanded={picking}
+              title="Accent {named(answer.source)} is read in"
+              onclick={() => (picking = !picking)}
+              onkeydown={(event) => {
+                if (event.key === 'Escape' && picking) {
+                  event.stopPropagation();
+                  picking = false;
+                }
+              }}
+              >{answer.source.toUpperCase()} · {choosable.find((row) => row.id === chosen)?.name ?? ''}<CHOOSE
+              /></button
             >
-              {#each choosable as row (row.id)}
-                <option value={row.id}>{answer.source.toUpperCase()} · {row.name}</option>
-              {/each}
-            </select>
-            <CHOOSE />
-          </label>
+            {#if picking}
+              <span class="accent-menu" role="listbox">
+                {#each choosable as row (row.id)}
+                  <button
+                    class="accent-choice {row.id === chosen ? 'on' : ''}"
+                    role="option"
+                    aria-selected={row.id === chosen}
+                    data-choice={row.id}
+                    onclick={() => {
+                      picking = false;
+                      if (row.id !== chosen) onAccent?.(row.id);
+                    }}
+                    ><span>{row.name}</span>{#if row.id === chosen}<CHOSEN />{/if}</button
+                  >
+                {/each}
+              </span>
+            {/if}
+          </span>
         {:else if !phrase && answer.source}
           <span class="pill" title={readAs.name
             ? `Read as ${named(answer.source)}, ${readAs.name} accent`

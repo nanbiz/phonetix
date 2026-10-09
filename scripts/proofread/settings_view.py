@@ -365,14 +365,18 @@ def main():
         # does, on the card and on the page.
         card = point_at(cdp, page, "calle")
         offered = evaluate(cdp, page, """
-            (() => {
-              const s = document.getElementById('phonetix-card-host').shadowRoot
-                .querySelector('select[data-does=accent]');
-              if (!s) return null;
-              const was = s.value;
-              const offered = [...s.options].map(o => o.textContent).join(', ');
-              s.value = 'es';
-              s.dispatchEvent(new Event('change', {bubbles: true}));
+            (async () => {
+              const root = document.getElementById('phonetix-card-host').shadowRoot;
+              const pill = root.querySelector('[data-does=accent]');
+              if (!pill) return null;
+              pill.click();
+              await new Promise(r => setTimeout(r, 300));
+              const choices = [...root.querySelectorAll('.accent-menu [data-choice]')];
+              const was = (choices.find(c => c.getAttribute('aria-selected') === 'true') || {})
+                .dataset?.choice ?? null;
+              const offered = choices.map(c => 'ES · ' + c.textContent.trim()).join(', ');
+              const spain = choices.find(c => c.dataset.choice === 'es');
+              if (spain) spain.click();
               return JSON.stringify({was, offered});
             })()
         """)
