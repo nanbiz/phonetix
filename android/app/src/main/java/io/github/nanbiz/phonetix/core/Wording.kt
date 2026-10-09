@@ -152,6 +152,7 @@ object Wording {
         "simple-example" to "/tɒp/",
         "site-following" to "following the main switch (currently: %s)",
         "site-off" to "always off here",
+        "speak" to "Say it",
         "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched.",
         "touch-on" to "A swipe that starts on a word will not scroll the page.",
         "turn" to "Answer the other way round",

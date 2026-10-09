@@ -99,8 +99,8 @@ class Chrome:
     name = "chrome"
     window_class = "Chromium"
 
-    def __init__(self):
-        self.cdp = PipeCDP(headless=False, extra_args=[OFFLINE])
+    def __init__(self, extra_args=()):
+        self.cdp = PipeCDP(headless=False, extra_args=[OFFLINE, *extra_args])
         self.cdp.send("Target.setDiscoverTargets", {"discover": True})
         self.extid = self.cdp.ensure_extension()
         self.manifest = json.load(open(os.path.join(EXT, "manifest.json")))
@@ -156,10 +156,14 @@ class Firefox:
     name = "firefox"
     window_class = "firefox"
 
-    def __init__(self):
+    def __init__(self, prefs=()):
         self.where = tempfile.mkdtemp(prefix="phonetix-firefox-")
         port = free_port()
         with open(os.path.join(self.where, "user.js"), "w") as f:
+            f.write("".join(f'user_pref("{name}", {json.dumps(value)});\n' for name, value in prefs))
+            if os.environ.get("PHONETIX_FIREFOX_LOG"):
+                f.write('user_pref("devtools.console.stdout.chrome", true);\n'
+                        'user_pref("devtools.console.stdout.content", true);\n')
             f.write(
                 # The port is the profile's to say: the environment variable is not read.
                 f'user_pref("marionette.port", {port});\n'
@@ -173,9 +177,12 @@ class Firefox:
             )
         env = {k: v for k, v in os.environ.items() if k != "WAYLAND_DISPLAY"}
         env["MOZ_ENABLE_WAYLAND"] = "0"
+        # What the add-on writes to its console, kept where PHONETIX_FIREFOX_LOG says.
+        log = os.environ.get("PHONETIX_FIREFOX_LOG")
+        out = open(log, "w") if log else subprocess.DEVNULL
         self.browser = subprocess.Popen(
             ["firefox", "--no-remote", "--marionette", "--profile", self.where, "about:blank"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+            stdout=out, stderr=out, env=env)
         self.driver = None
         for _ in range(60):
             try:

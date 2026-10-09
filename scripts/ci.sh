@@ -78,14 +78,19 @@ if [[ "$what" == all || "$what" == browser ]]; then
   step "a word no dictionary holds is translated" uv run scripts/proofread/translates.py
   step "the word for something a reader wants to say" uv run scripts/proofread/says.py
   step "a pack published again replaces the one held" uv run python scripts/proofread/pack_update.py
-  # Headful, under a display of its own, because the browser's shortcuts reach an extension only
-  # through a window and the keys are pressed for real.
-  step "the translator panel and the keyboard, with real keys" \
-    nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool -c uv run python scripts/proofread/panel.py
   step "a form's card names it and opens its terms" uv run --with pillow python scripts/proofread/grammar_card.py chrome
   # The other engine, which differs in the one place that decides whether anything works:
   # awaiting the chrome namespace on Gecko returns nothing at all.
   step "the extension builds for the other engine" pnpm zip:firefox
+  # Headful, under a display of its own, because the browser's shortcuts reach an extension only
+  # through a window and the keys are pressed for real; after the other engine's build, which
+  # both run in.
+  step "the translator panel and the keyboard, with real keys" \
+    nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool -c uv run python scripts/proofread/panel.py
+  # The browser's own microphone prompt is answered on screen, so this too has a display.
+  step "the translator panel hears a question said" \
+    nix shell nixpkgs#xorg.xvfb nixpkgs#xdotool nixpkgs#ffmpeg nixpkgs#imagemagick \
+    -c uv run scripts/proofread/speak.py
   step "the other engine annotates a page" uv run python scripts/proofread/on_firefox.py
 fi
 

@@ -8,6 +8,7 @@ public/espeak/
 # Copied from assets/homographs by the same script, for the same reason.
 public/homographs/
 public/bergamot/
+public/whisper/
 
 # Built from kaikki.org data (run: pnpm build:dict)
 assets/dictionaries/

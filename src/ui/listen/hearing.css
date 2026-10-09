@@ -1,0 +1,49 @@
+@import "../tokens.css";
+
+/* A page that is only the microphone: the asking page and Firefox's recording popup. */
+html,
+body {
+  margin: 0;
+  background: var(--color-page-bg);
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.hearing {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: 24px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+}
+
+.hearing svg {
+  width: 32px;
+  height: 32px;
+}
+
+.hearing.refused {
+  background: var(--color-chip-bg);
+  color: var(--color-ink-faint);
+}
+
+/* Hearing: a ring going out from it, the way a microphone that is on is drawn everywhere. */
+.hearing.recording {
+  animation: hearing 1.4s ease-out infinite;
+}
+
+@keyframes hearing {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 18px color-mix(in srgb, var(--color-accent) 0%, transparent);
+  }
+}

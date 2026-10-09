@@ -12,6 +12,7 @@ import tokenCss from '@/ui/tokens.css?inline';
 import { current, set } from '@/settings';
 import { asked } from '@/settings/shape';
 import { sendMessage } from '@/host/messages';
+import type { Listening } from '@/host/speech';
 import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
@@ -90,6 +91,18 @@ export async function open(page = ''): Promise<void> {
       },
       ask: (text: string, mine: string, learning: string, turned: boolean | undefined) =>
         sendMessage('ask', { text, mine, learning, turned }).catch(() => null),
+      hear: (langs: string[]) => sendMessage('listen', { langs }),
+      stopHearing: () => void sendMessage('stopListening', {}).catch(() => undefined),
+      // What the microphone is doing, which the host keeps where a page can watch it.
+      watchHearing: (told: (now: Listening | null) => void) => {
+        const changed = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+          if (area === 'local' && 'listening' in changes) {
+            told((changes.listening.newValue as Listening | undefined) ?? null);
+          }
+        };
+        browser.storage.onChanged.addListener(changed);
+        return () => browser.storage.onChanged.removeListener(changed);
+      },
       close,
     },
   });

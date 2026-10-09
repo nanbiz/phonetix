@@ -90,7 +90,19 @@ export interface HostProtocol {
     data: { text: string; mine: string; learning: string; turned?: boolean };
     reply: PanelAnswer;
   };
+  /** Something said to the panel instead of typed, written down, with which of [langs] it was
+   *  said in; or that the reader would not let the extension hear them, or that nothing was
+   *  said. */
+  listen: { data: { langs: string[] }; reply: Heard };
+  /** End what the panel is recording now. */
+  stopListening: { data: Record<string, never>; reply: boolean };
 }
+
+/** What the panel's microphone heard. */
+export type Heard =
+  | { kind: 'said'; text: string; lang: string }
+  | { kind: 'refused' }
+  | { kind: 'nothing' };
 
 /** The panel's answer: which way it went, and what came back. */
 export type PanelAnswer =
@@ -127,7 +139,7 @@ export async function sendMessage<K extends Named>(
   return answered.ok;
 }
 
-const handlers = new Map<Named, (data: unknown) => Promise<unknown>>();
+const handlers = new Map<Named, (data: unknown, tab?: number) => Promise<unknown>>();
 let listening = false;
 
 /**
@@ -139,16 +151,20 @@ let listening = false;
  */
 export function onMessage<K extends Named>(
   name: K,
-  handle: (message: { data: HostProtocol[K]['data'] }) => Promise<HostProtocol[K]['reply']>
+  handle: (message: {
+    data: HostProtocol[K]['data'];
+    /** The tab that asked, where a page did. */
+    tab?: number;
+  }) => Promise<HostProtocol[K]['reply']>
 ): void {
-  handlers.set(name, (data) => handle({ data: data as HostProtocol[K]['data'] }));
+  handlers.set(name, (data, tab) => handle({ data: data as HostProtocol[K]['data'], tab }));
   if (listening) return;
   listening = true;
-  browser.runtime.onMessage.addListener((message, _sender, respond) => {
+  browser.runtime.onMessage.addListener((message, sender, respond) => {
     if (!isAsked(message)) return false;
     const handler = handlers.get(message.phonetix);
     if (!handler) return false;
-    handler(message.data)
+    handler(message.data, sender.tab?.id)
       .then((ok) => respond({ ok }))
       .catch((e) => respond({ failed: String(e) }));
     // The reply comes later, and a listener that does not say so has its channel closed

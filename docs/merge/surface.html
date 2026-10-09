@@ -872,6 +872,20 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .ask-field { display: flex; align-items: center; min-height: 48px; margin-top: var(--space-3); padding: 0 18px; border-radius: 24px; background: var(--color-page-bg); }
 .ask-field input { flex: 1 1 auto; min-width: 0; padding: 10px 0; border: none; outline: none; background: none; color: var(--color-ink); font: inherit; font-size: var(--font-size-body); }
 .ask-field input::placeholder { color: var(--color-ink-faint); }
+/* The microphone, at the end of the field the way the phone draws it: faint while it waits, the
+ * accent while it is being allowed, the accent with a ring going out while it hears, turning while
+ * it writes down what it heard. */
+.ask-mic { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; margin-right: -10px; padding: 0; border: none; border-radius: 50%; background: none; color: var(--color-ink-muted); cursor: pointer; }
+.ask-mic svg { width: 20px; height: 20px; }
+.ask-mic:hover { color: var(--color-accent); }
+.ask-mic.listening { background: var(--color-accent); color: var(--color-accent-ink); animation: ask-hearing 1.4s ease-out infinite; }
+.ask-mic.asking, .ask-mic.thinking { color: var(--color-accent); }
+.ask-mic.thinking svg { animation: ask-turning 0.9s linear infinite; }
+.ask-mic.refused { color: var(--color-ink-faint); }
+/* The model arriving, the first time: how much of it is here, as a ring filling round the button. */
+.ask-mic[style*="--arrived"]::before { content: ""; position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(var(--color-accent) var(--arrived), var(--color-chip-bg) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); }
+@keyframes ask-hearing { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 60%, transparent); } to { box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-accent) 0%, transparent); } }
+@keyframes ask-turning { to { transform: rotate(360deg); } }
 /* The list of languages opens inside the panel, between the bar and the field, and takes only
  * the room it needs. */
 .ask .sheet { position: static; z-index: auto; background: none; margin-top: var(--space-3); }

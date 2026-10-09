@@ -14,6 +14,7 @@ import { voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
 import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
+import { hear, stopHearing } from './speech';
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
@@ -250,6 +251,19 @@ export function host(): void {
     const voiced: Record<string, string> = await ipa(voiceOf(to, ''), words).catch(() => ({}));
     const sounds = words.map((w) => voiced[w]).filter(Boolean).join(' ');
     return { forward, kind: 'line' as const, line, ipa: sounds };
+  });
+
+  // What is said to the panel rather than typed into it: recorded and written down here, and
+  // then asked like anything typed.
+  onMessage('listen', ({ data, tab }) =>
+    hear(data.langs, tab).catch((e) => {
+      console.warn('[Phonetix] Nothing was heard:', e);
+      throw e;
+    }),
+  );
+  onMessage('stopListening', async () => {
+    await stopHearing();
+    return true;
   });
 
   onMessage('lookUp', async ({ data }) => {

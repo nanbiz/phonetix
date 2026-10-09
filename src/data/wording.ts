@@ -166,6 +166,7 @@ export const SAYS: Record<string, string> = {
   "simple-example": "/tɒp/",
   "site-following": "following the main switch (currently: %s)",
   "site-off": "always off here",
+  "speak": "Say it",
   "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
   "touch-on": "A swipe that starts on a word will not scroll the page.",
   "turn": "Answer the other way round",

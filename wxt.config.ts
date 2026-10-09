@@ -43,6 +43,7 @@ export default defineConfig({
       'assets/**',
       'public/espeak/**',
       'public/core/**',
+      'public/whisper/**',
       'android/**',
       'docs/**',
       'scripts/proofread/**',

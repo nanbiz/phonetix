@@ -35,8 +35,10 @@ function offscreen(): Promise<void> {
       try {
         await chrome.offscreen.createDocument({
           url: CHROMIUM_OFFSCREEN,
-          reasons: [chrome.offscreen.Reason.AUDIO_PLAYBACK],
-          justification: 'Synthesise the pronunciation of a word',
+          // And record: the translator panel's microphone records here, under the extension's
+          // own permission, rather than in the page being read under that site's.
+          reasons: [chrome.offscreen.Reason.AUDIO_PLAYBACK, chrome.offscreen.Reason.USER_MEDIA],
+          justification: 'Synthesise the pronunciation of a word, and hear one said',
         });
       } catch (e) {
         // Two callers can ask at once and only one document may exist; the loser is not a
@@ -63,8 +65,8 @@ function offscreen(): Promise<void> {
  * dictionary holds reads as a word nobody wrote an entry for. So a question that reaches
  * nobody is asked again, once, against a document made fresh.
  */
-async function ask<T>(
-  voice: 'ipa' | 'audio' | 'translate' | 'pairs',
+export async function ask<T>(
+  voice: 'ipa' | 'audio' | 'translate' | 'pairs' | 'listen' | 'stop-listening' | 'microphone',
   lang: string,
   words: string[],
   into?: string,
