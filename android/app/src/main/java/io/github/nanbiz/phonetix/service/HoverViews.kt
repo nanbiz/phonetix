@@ -449,3 +449,131 @@ class DropTargetView(context: Context) : View(context) {
         const val SWALLOW_MS = 260L
     }
 }
+
+/**
+ * What the card would do with the word the circle has stayed on, offered round the finger: say
+ * it, and open its page. The finger slides onto one and lifts to do it; lifted anywhere else,
+ * nothing is done.
+ *
+ * Drawn in the layer that covers the screen and takes no touch: the finger is still on the
+ * mark, which follows it, and which one it is over is worked out from where it is.
+ */
+class ActionsView(context: Context) : View(context) {
+
+    private val density = context.resources.displayMetrics.density
+
+    private fun dp(value: Float): Float = value * density
+
+    private val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+        Configuration.UI_MODE_NIGHT_YES
+    private val palette = Tokens.palette(themeNamed(SettingsStore.current.theme), dark)
+
+    private val disc = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val rim = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = dp(1f)
+    }
+    private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+        color = Color.argb(60, 0, 0, 0)
+        maskFilter = android.graphics.BlurMaskFilter(dp(8f), android.graphics.BlurMaskFilter.Blur.NORMAL)
+    }
+
+    init {
+        // The shadow is blurred, which only a software layer draws.
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+    }
+
+    private val icons = listOf(
+        ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.drawable.ic_play),
+        ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.drawable.ic_wiktionary),
+    )
+
+    /** Where each action is, in the order of [ACTIONS], or nothing while none is offered. */
+    private var spots: List<android.graphics.PointF> = emptyList()
+    private var chosen = -1
+    private var presence = 0f
+    private var rising: ValueAnimator? = null
+
+    /** Whether the actions are up. */
+    val open: Boolean get() = spots.isNotEmpty()
+
+    /** Put the actions up at these places, one for each of [ACTIONS]. */
+    fun offer(at: List<android.graphics.PointF>) {
+        spots = at
+        chosen = -1
+        rising?.cancel()
+        rising = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = RISE_MS
+            interpolator = android.view.animation.OvershootInterpolator(1.4f)
+            addUpdateListener {
+                presence = it.animatedValue as Float
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    /** Take them down. */
+    fun close() {
+        rising?.cancel()
+        spots = emptyList()
+        chosen = -1
+        presence = 0f
+        invalidate()
+    }
+
+    /** The action the finger at ([x], [y]) is on, or -1; told so it can be drawn chosen. */
+    fun choose(x: Float, y: Float): Int {
+        var best = -1
+        var nearest = dp(TAKES_DP)
+        for ((i, spot) in spots.withIndex()) {
+            val off = kotlin.math.hypot(spot.x - x, spot.y - y)
+            if (off <= nearest) {
+                nearest = off
+                best = i
+            }
+        }
+        if (best != chosen) {
+            chosen = best
+            invalidate()
+        }
+        return best
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        if (spots.isEmpty() || presence <= 0f) return
+        val radius = dp(SIZE_DP) / 2f
+        for ((i, spot) in spots.withIndex()) {
+            val on = i == chosen
+            val r = radius * presence.coerceAtMost(1.2f) * (if (on) 1.18f else 1f)
+            canvas.drawCircle(spot.x, spot.y + dp(2f), r, shadow)
+            disc.color = (if (on) palette.accent else palette.surface).toInt()
+            canvas.drawCircle(spot.x, spot.y, r, disc)
+            rim.color = (if (on) palette.accent else palette.border).toInt()
+            canvas.drawCircle(spot.x, spot.y, r, rim)
+            val icon = icons.getOrNull(i) ?: continue
+            val half = (dp(ICON_DP) / 2f * presence.coerceAtMost(1f)).toInt()
+            icon.setBounds(
+                (spot.x - half).toInt(), (spot.y - half).toInt(),
+                (spot.x + half).toInt(), (spot.y + half).toInt(),
+            )
+            icon.setTint((if (on) palette.accentInk else palette.ink).toInt())
+            icon.draw(canvas)
+        }
+    }
+
+    companion object {
+        /** What is offered, in the order it is drawn. */
+        val ACTIONS = listOf("play", "article")
+
+        /** How far from the finger the actions open, how big each is and its icon, and how
+         *  near the finger has to come to one to have chosen it, in dp. */
+        const val REACH_DP = 76f
+        const val SIZE_DP = 52f
+        const val ICON_DP = 24f
+        const val TAKES_DP = 40f
+
+        const val RISE_MS = 160L
+    }
+}

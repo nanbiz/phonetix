@@ -365,6 +365,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // switch in the app, the tile and the accessibility button all put it away, and
             // brought back by any of them.
             onPutAway = { SettingsStore.setEnabled(false) },
+            // Kept on a word and lifted on one of the actions round the finger.
+            onAction = { action, box -> main.post { tooltip.act(action, box) } },
+            cardRect = { tooltip.cardRect() },
             // Held without moving: the app's own settings.
             onHold = {
                 main.post { tooltip.hide() }

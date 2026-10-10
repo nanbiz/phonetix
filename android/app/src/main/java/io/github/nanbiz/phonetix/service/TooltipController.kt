@@ -21,6 +21,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.core.Answer
+import io.github.nanbiz.phonetix.ui.wiktionary
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Packs
 import io.github.nanbiz.phonetix.core.Reading
@@ -368,7 +369,40 @@ class TooltipController(
         placed.clear()
     }
 
+    /** What the card on screen says, for the actions offered round the finger. */
+    private var answered: Pair<WordBox, Answer>? = null
+
+    /** Where the card is on the screen, or nothing while none is up. */
+    fun cardRect(): android.graphics.Rect? {
+        val card = view ?: return null
+        val at = IntArray(2)
+        card.getLocationOnScreen(at)
+        if (card.width <= 0) return null
+        return android.graphics.Rect(at[0], at[1], at[0] + card.width, at[1] + card.height)
+    }
+
+    /**
+     * Do one of the card's actions for [box]'s word, chosen round the finger after the card has
+     * gone: "play" says it in the accent the reader reads its language in, "article" opens its
+     * Wiktionary page at the section for that language, the same page the extension opens.
+     */
+    fun act(action: String, box: WordBox) {
+        val answer = answered?.takeIf { it.first.word == box.word }?.second
+        val source = answer?.source?.ifEmpty { null } ?: box.language.ifEmpty { Language.OURS }
+        if (BuildConfig.DEBUG) {
+            android.util.Log.d("Phonetix", "ACTED $action ${answer?.spelling ?: box.word} in $source")
+        }
+        when (action) {
+            "play" -> speaker.say(
+                answer?.spelling ?: box.word,
+                Accents.voiceOf(source, SettingsStore.current.accentFor(source)),
+            )
+            "article" -> open(wiktionary(answer ?: Answer.ofTranscription(box.word, "", source)))
+        }
+    }
+
     private fun render(box: WordBox, answer: Answer) {
+        answered = box to answer
         takeDown()
         val card = build(box, answer) ?: return
         card.accessibilityDelegate = mute

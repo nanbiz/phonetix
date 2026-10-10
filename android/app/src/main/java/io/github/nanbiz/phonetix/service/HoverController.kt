@@ -84,6 +84,13 @@ class HoverController(
      * reader putting Phonetix away until they turn it on again.
      */
     private val onPutAway: () -> Unit = {},
+    /**
+     * One of the actions offered round the finger once the circle has stayed on a word, chosen
+     * by lifting on it: "play" or "article", for that word.
+     */
+    private val onAction: (String, WordBox) -> Unit = { _, _ -> },
+    /** Where the card is on the screen, which the actions keep clear of; nothing with none. */
+    private val cardRect: () -> Rect? = { null },
 ) {
 
     private val wm = context.getSystemService(WindowManager::class.java)
@@ -94,6 +101,12 @@ class HoverController(
     private var layer: FrameLayout? = null
     private var highlight: HoverHighlightView? = null
     private var mist: MistView? = null
+    private var actions: ActionsView? = null
+
+    /** When the circle came onto the word it is on, which is how long it has stayed there,
+     *  and that word. */
+    private var hoveredSince = 0L
+    private var dwellingOn: WordBox? = null
 
     /** The target the mark is put away on, up only while a drag is near the foot of the
      *  screen. */
@@ -425,13 +438,16 @@ class HoverController(
         val container = FrameLayout(context)
         val marks = HoverHighlightView(context)
         val flow = MistView(context).apply { onLight = mark?.onLight == true }
+        val offered = ActionsView(context)
         container.addView(marks, FrameLayout.LayoutParams(MATCH, MATCH))
         container.addView(flow, FrameLayout.LayoutParams(MATCH, MATCH))
+        container.addView(offered, FrameLayout.LayoutParams(MATCH, MATCH))
         runCatching { wm.addView(container, layerParams()) }
             .onSuccess {
                 layer = container
                 highlight = marks
                 mist = flow
+                actions = offered
             }
             .onFailure { android.util.Log.w("Phonetix", "the thread did not go up", it) }
     }
@@ -441,6 +457,7 @@ class HoverController(
         layer = null
         highlight = null
         mist = null
+        actions = null
     }
 
     /** The target's window: the full width of the screen and as tall as its shade, at the
@@ -524,6 +541,15 @@ class HoverController(
             return
         }
         hovered = found
+        // Counted from the circle coming onto another word: a frame over the gap at the word's
+        // edge, which a resting hand makes as often as not, is still staying on it.
+        val stayedOn = dwellingOn
+        if (found != null && (stayedOn == null || stayedOn.word != found.word ||
+                !RectF.intersects(stayedOn.rect, found.rect))
+        ) {
+            dwellingOn = found
+            hoveredSince = android.os.SystemClock.uptimeMillis()
+        }
         highlight?.mark(found?.rect?.let {
             Rect(it.left.toInt(), it.top.toInt(), it.right.toInt(), it.bottom.toInt())
         })
@@ -665,7 +691,19 @@ class HoverController(
             asked = !asked
             // Nothing is asked about while the target holds the mark: the reader is putting
             // it away, and a card opening over the foot of the page is in the way.
-            if (asked && drop?.holding != true) hoverAt(ballX.roundToInt(), ballY.roundToInt())
+            // Nor once the actions are open, which are about the word the circle stayed on.
+            val offering = actions?.open == true
+            if (asked && drop?.holding != true && !offering) {
+                hoverAt(ballX.roundToInt(), ballY.roundToInt())
+            }
+            // Stayed on one word long enough, in a drag rather than a sweep: what the card
+            // would do with it, round the finger.
+            val on = hovered
+            if (!offering && dragging && !sweeping && on != null && drop?.holding != true &&
+                android.os.SystemClock.uptimeMillis() - hoveredSince >= DWELL_MS
+            ) {
+                offer(on)
+            }
             settleRing(dt, radius)
             mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius)
             if (asked && io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
@@ -725,6 +763,7 @@ class HoverController(
                     held = false
                     sweeping = false
                     swept.clear()
+                    dwellingOn = null
                     val waits = restingAt(view.width)
                     homeX = waits.x + view.width / 2f
                     homeY = waits.y + view.width / 2f
@@ -769,6 +808,12 @@ class HoverController(
                     holding = false
                     active = false
                     view.active = false
+                    // Lifted on one of the actions: that one is done, once the card is down.
+                    val picked = offeredFor?.takeIf { actions?.open == true && chosen >= 0 }
+                        ?.let { ActionsView.ACTIONS[chosen] to it }
+                    actions?.close()
+                    offeredFor = null
+                    chosen = -1
                     main.removeCallbacks(hold)
                     Choreographer.getInstance().removeFrameCallback(swing)
                     highlight?.mark(null)
@@ -783,6 +828,12 @@ class HoverController(
                     // No hand on the screen any more: a card opened by a press after this
                     // would otherwise still be dodging a finger that had gone.
                     onHand(0, 0)
+                    picked?.let { (action, word) ->
+                        if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                            android.util.Log.d("Phonetix", "LENSACTION $action ${word.word}")
+                        }
+                        onAction(action, word)
+                    }
                     // A drag that passed over nothing is the fault a reader reports as "it
                     // does nothing", and what would explain it - which words this believed
                     // were on screen, and where - is gone by the time anyone can be asked. So
@@ -846,6 +897,9 @@ class HoverController(
         }
 
         private fun cancelled() {
+            actions?.close()
+            offeredFor = null
+            chosen = -1
             holding = false
             active = false
             view.active = false
@@ -964,8 +1018,66 @@ class HoverController(
             }
         }
 
+        /** The word the actions are offered for, and which of them the finger is on. */
+        private var offeredFor: WordBox? = null
+        private var chosen = -1
+
+        /**
+         * Open the actions round the finger, on whichever side of it has room and is clear of
+         * the card: either side of it, both on one side by an edge, both below, both above.
+         */
+        private fun offer(word: WordBox) {
+            val shown = actions ?: return
+            val edges = screen()
+            val reach = dp(ActionsView.REACH_DP)
+            val half = dp(ActionsView.SIZE_DP) / 2f
+            val margin = dp(EDGE_DP)
+            val card = cardRect()
+            fun at(degrees: Float) = android.graphics.PointF(
+                fingerX + kotlin.math.cos(Math.toRadians(degrees.toDouble())).toFloat() * reach,
+                fingerY + kotlin.math.sin(Math.toRadians(degrees.toDouble())).toFloat() * reach,
+            )
+            fun fits(p: android.graphics.PointF) = p.x - half >= margin &&
+                p.x + half <= edges.width() - margin && p.y - half >= margin &&
+                p.y + half <= edges.height() - margin
+            fun under(p: android.graphics.PointF): Float {
+                val c = card ?: return 0f
+                val w = minOf(p.x + half, c.right.toFloat()) - maxOf(p.x - half, c.left.toFloat())
+                val h = minOf(p.y + half, c.bottom.toFloat()) - maxOf(p.y - half, c.top.toFloat())
+                return if (w > 0f && h > 0f) w * h else 0f
+            }
+            val fans = listOf(
+                180f to 0f, 205f to 155f, -25f to 25f, 125f to 55f, -125f to -55f,
+                150f to 30f, -150f to -30f,
+            ).map { (a, b) -> listOf(at(a), at(b)) }
+            fun cost(pair: List<android.graphics.PointF>) =
+                pair.sumOf { (under(it) + if (fits(it)) 0f else half * half * 16f).toDouble() }
+            val fan = fans.firstOrNull { cost(it) == 0.0 } ?: fans.minBy { cost(it) }
+            offeredFor = word
+            chosen = -1
+            shown.offer(fan)
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                android.util.Log.d(
+                    "Phonetix",
+                    "LENSACTIONS ${word.word} " + fan.joinToString(" ") {
+                        "${it.x.roundToInt()},${it.y.roundToInt()}"
+                    },
+                )
+            }
+        }
+
         private fun follow(event: MotionEvent) {
             val size = view.width
+            // The actions are open: what is worked out is which of them the finger is on. The
+            // leash still follows the hand, and the ring stays on the word they are about,
+            // since nothing asks what is under the circle while they are up.
+            val offering = actions?.open == true
+            if (offering) {
+                val now = actions?.choose(event.rawX, event.rawY) ?: -1
+                if (now != chosen && now >= 0) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                chosen = now
+            }
             val covered = event.touchMajor.takeIf { it > 1f }
                 ?: (FINGER_INCHES * context.resources.displayMetrics.ydpi)
             val radius = size / 2f
@@ -1004,7 +1116,7 @@ class HoverController(
             wantY = wantY.coerceIn(0f, edges.height().toFloat())
             fingerX = event.rawX
             fingerY = event.rawY
-            nearTheFoot(event, size)
+            if (!offering) nearTheFoot(event, size)
             onHand(event.rawX.roundToInt(), event.rawY.roundToInt())
             if (!formed) {
                 formed = true
@@ -1126,6 +1238,10 @@ class HoverController(
          *  how far it has to go again to be let go, in dp. */
         const val TAKE_DP = 64f
         const val LEAVE_DP = 88f
+
+        /** How long the circle stays on one word before what the card would do with it is
+         *  offered round the finger. */
+        const val DWELL_MS = 1000L
 
         /** How long a swept run has to stop growing before it is asked about. */
         const val RUN_SETTLES_MS = 250L

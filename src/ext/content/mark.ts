@@ -338,8 +338,10 @@ const hold = {
   ringRadius: MARK / 2,
   hovered: null as MarkWord | null,
   swept: [] as MarkWord[],
-  /** When the circle came onto the word it is on, for the actions round the finger. */
+  /** When the circle came onto the word it is on, and which word, for the actions round the
+   *  finger. */
   since: 0,
+  dwelling: '',
   /** The actions round the finger, once they are open, and which is under it. */
   menuAt: null as { x: number; y: number }[] | null,
   menuWord: null as MarkWord | null,
@@ -470,7 +472,12 @@ function hoverAt(x: number, y: number, now: number): void {
     return;
   }
   hold.hovered = found;
-  hold.since = now;
+  // Counted from the circle coming onto another word: a frame over the gap at the word's edge,
+  // which a resting hand makes as often as not, is still staying on it.
+  if (found && found.key !== hold.dwelling) {
+    hold.dwelling = found.key;
+    hold.since = now;
+  }
   markWord(found?.rect ?? null, now);
   if (found) {
     tick();
@@ -859,6 +866,7 @@ function pressed(event: PointerEvent): void {
   hold.held = false;
   hold.sweeping = false;
   hold.swept = [];
+  hold.dwelling = '';
   hold.downX = event.clientX;
   hold.downY = event.clientY;
   hold.covered = event.height >= 20 ? event.height : FINGER;
