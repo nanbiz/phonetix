@@ -59,13 +59,21 @@ fn order_of(category: &str) -> Vec<&'static str> {
 pub type Place = Vec<(String, &'static str)>;
 
 /// The places a label says a form fills, each with only the tags that name a grammatical value.
+///
+/// A cell naming two values of one category is the form for both, and so says nothing about
+/// that category: Spanish "grandes" is "feminine masculine plural", and is neither one.
 pub fn places(label: &str) -> Vec<Place> {
     label
         .split("; ")
         .map(|place| {
-            place
+            let named: Place = place
                 .split(' ')
                 .filter_map(|tag| category_of(tag).map(|category| (tag.to_string(), category)))
+                .collect();
+            named
+                .iter()
+                .filter(|(_, category)| named.iter().filter(|(_, c)| c == category).count() == 1)
+                .cloned()
                 .collect::<Place>()
         })
         .filter(|place| !place.is_empty())
@@ -148,9 +156,83 @@ pub struct Other {
     pub said: Option<String>,
 }
 
+/// The categories a determiner and the word it goes with agree in.
+const AGREES: [&str; 3] = ["case", "gender", "number"];
+
+/// Whether a place agrees with one a determiner fills: no category both name differs, and an
+/// adjective is declined the way that determiner declines it - weak after a definite article,
+/// mixed after an indefinite one.
+fn agrees(place: &Place, determiner: &Place) -> bool {
+    let declined = match value_in(determiner, "definiteness") {
+        Some("definite") => Some("weak"),
+        Some("indefinite") => Some("mixed"),
+        _ => None,
+    };
+    let declension = match (value_in(place, "declension"), declined) {
+        (Some(one), Some(other)) => one == other,
+        _ => true,
+    };
+    declension
+        && AGREES.iter().all(|category| {
+            match (value_in(place, category), value_in(determiner, category)) {
+                (Some(one), Some(other)) => one == other,
+                _ => true,
+            }
+        })
+}
+
+/// Whether every value of one place is a value of another: the same cell listed with less said.
+fn within(one: &Place, other: &Place) -> bool {
+    one.len() < other.len() && one.iter().all(|value| other.contains(value))
+}
+
+/// The places a determiner spelled [spelling] can fill, from the entries the pack has for it:
+/// the cells of its table spelled so, and the lemma's own where it is the lemma. German "den"
+/// is the accusative masculine singular and the dative plural of "der".
+pub fn determiner_places(spelling: &str, entries: &[Entry]) -> Vec<Place> {
+    let lowered = spelling.to_lowercase();
+    let mut out = Vec::new();
+    for entry in entries {
+        if !matches!(entry.pos.as_str(), "det" | "article") {
+            continue;
+        }
+        for row in &entry.forms {
+            if row.spelling.to_lowercase() == lowered {
+                out.extend(places(&row.label));
+            }
+        }
+    }
+    // The lemma is the cell its table does not list, a determiner's nominative masculine
+    // singular, and is taken to be only where no table lists the spelling at all: German "den"
+    // has an entry of its own whose lemma is "den", and it is never a nominative.
+    if out.is_empty()
+        && entries.iter().any(|entry| {
+            matches!(entry.pos.as_str(), "det" | "article")
+                && entry.lemma.to_lowercase() == lowered
+                && !entry.forms.is_empty()
+        })
+    {
+        out.extend(places("nominative masculine singular"));
+    }
+    out.retain(|place| {
+        AGREES
+            .iter()
+            .any(|category| value_in(place, category).is_some())
+    });
+    out
+}
+
 /// The form [spelling] is of [entry], where its table lists it: its place, its ending, and the
-/// other places along each category.
-pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
+/// other places along each category. [agreeing] is every place the determiner before it can
+/// fill, where there is one.
+///
+/// A noun, an adjective or a determiner is often listed in several places spelled alike, and
+/// which of them the page means is decided by what it goes with: "größten" after "den" is the
+/// accusative masculine singular or the dative plural, and never the genitive its table lists
+/// first. So the places that disagree with the determiner are dropped, and what is named is only
+/// what every place left says: a reading that names a case the word cannot be in is a wrong
+/// answer, where one naming less is a true one.
+pub fn form(spelling: &str, entry: &Entry, agreeing: &[Place]) -> Option<Form> {
     let lowered = spelling.to_lowercase();
     let row = entry
         .forms
@@ -164,13 +246,20 @@ pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
         .map(|place| without_idle_declension(place, entry))
         .filter(|place| !place.is_empty())
         .collect();
+    let nominal = matches!(
+        entry.pos.as_str(),
+        "noun" | "adj" | "det" | "pron" | "article" | "num"
+    );
+    if nominal {
+        return nominal_form(spelling, entry, row, &all, agreeing);
+    }
     let most = all.iter().map(Vec::len).max()?;
-    // Among those, the third person, which running text is mostly written in: "ging" read on a
-    // page is far more often "er ging" than "ich ging".
     let candidates: Vec<Place> = all
         .into_iter()
         .filter(|place| place.len() == most)
         .collect();
+    // Among those, the third person, which running text is mostly written in: "ging" read on a
+    // page is far more often "er ging" than "ich ging".
     let place = sorted(
         candidates
             .iter()
@@ -179,6 +268,86 @@ pub fn form(spelling: &str, entry: &Entry) -> Option<Form> {
             .clone(),
     );
     Some(form_at(spelling, place, entry))
+}
+
+/// What every one of [places] says, each listing that is only a less full copy of another
+/// left out: German "Herausforderungen" is listed as "plural" and as "dative plural", which is
+/// one cell.
+fn shared(places: &[&Place]) -> Place {
+    let fuller: Vec<&Place> = places
+        .iter()
+        .filter(|place| !places.iter().any(|other| within(place, other)))
+        .copied()
+        .collect();
+    let Some(first) = fuller.first() else {
+        return Vec::new();
+    };
+    first
+        .iter()
+        .filter(|(tag, category)| {
+            fuller
+                .iter()
+                .all(|place| value_in(place, category) == Some(tag.as_str()))
+        })
+        .cloned()
+        .collect()
+}
+
+/// The form a noun, an adjective or a determiner is, read by the determiner before it.
+///
+/// It agrees with that determiner in case, gender and number, so only the cells that agree are
+/// kept, and the cells the dictionary says are used with no article at all are not. What is
+/// named is what every cell left says. Where the dictionary lists no cell that agrees - its
+/// German adjective tables leave out the weak column - the word is in the determiner's own case,
+/// gender and number, as far as every place the determiner can fill agrees on them. Which
+/// declension a word after an article takes is not named: the dictionary does not file it by
+/// the article, and calls "ein großer" strong.
+fn nominal_form(
+    spelling: &str,
+    entry: &Entry,
+    row: &lexpack::Form,
+    all: &[Place],
+    agreeing: &[Place],
+) -> Option<Form> {
+    let mut named =
+        if agreeing.is_empty() {
+            shared(&all.iter().collect::<Vec<_>>())
+        } else {
+            // Each cell by its own listing: "großer" is listed as the masculine nominative
+            // singular with no article and again as the same cell after "ein", and only the
+            // first is ruled out after an article.
+            let cells: Vec<Place> = row
+                .label
+                .split("; ")
+                .filter(|cell| !cell.split(' ').any(|tag| tag == "without-article"))
+                .flat_map(places)
+                .map(|place| without_idle_declension(place, entry))
+                .filter(|place| !place.is_empty())
+                .collect();
+            let fitting: Vec<&Place> = cells
+                .iter()
+                .filter(|place| agreeing.iter().any(|determiner| agrees(place, determiner)))
+                .collect();
+            if fitting.is_empty() {
+                let mut its: Place = shared(&agreeing.iter().collect::<Vec<_>>())
+                    .into_iter()
+                    .filter(|(_, category)| AGREES.contains(category))
+                    .collect();
+                its.extend(shared(&all.iter().collect::<Vec<_>>()).into_iter().filter(
+                    |(_, category)| !AGREES.contains(category) && *category != "declension",
+                ));
+                its
+            } else {
+                shared(&fitting)
+            }
+        };
+    if !agreeing.is_empty() {
+        named.retain(|(_, category)| *category != "declension" && *category != "definiteness");
+    }
+    if named.is_empty() {
+        return None;
+    }
+    Some(form_at(spelling, named, entry))
 }
 
 /// The form [spelling] is of [entry] in [place], a place its own entry names rather than its
@@ -471,6 +640,11 @@ fn shared_start(spelling: &str, lemma: &str) -> usize {
 
 #[cfg(test)]
 mod tests {
+    /// A form read with no determiner before it.
+    fn form_alone(spelling: &str, entry: &Entry) -> Option<Form> {
+        form(spelling, entry, &[])
+    }
+
     use super::*;
     use lexpack::Form as Row;
 
@@ -513,18 +687,18 @@ mod tests {
 
     #[test]
     fn a_form_is_named_by_its_categories_and_its_ending() {
-        let found = form("anduvo", &andar()).unwrap();
+        let found = form_alone("anduvo", &andar()).unwrap();
         assert_eq!(
             values(&found.place),
             ["preterite", "indicative", "third-person", "singular"]
         );
         assert_eq!(found.ending_at, 3, "and|uvo");
-        assert_eq!(form("anda", &andar()).unwrap().ending_at, 3, "and|a");
+        assert_eq!(form_alone("anda", &andar()).unwrap().ending_at, 3, "and|a");
     }
 
     #[test]
     fn along_tense_keeps_the_person_and_the_mood() {
-        let found = form("anduvo", &andar()).unwrap();
+        let found = form_alone("anduvo", &andar()).unwrap();
         let tense = found.along.iter().find(|a| a.category == "tense").unwrap();
         let words: Vec<&str> = tense.forms.iter().map(|o| o.spelling.as_str()).collect();
         assert_eq!(words, ["anda", "andaba", "anduvo", "andará", "andaría"]);
@@ -540,7 +714,7 @@ mod tests {
 
     #[test]
     fn along_mood_keeps_the_tense_and_the_person() {
-        let found = form("anda", &andar()).unwrap();
+        let found = form_alone("anda", &andar()).unwrap();
         let mood = found.along.iter().find(|a| a.category == "mood").unwrap();
         let words: Vec<&str> = mood.forms.iter().map(|o| o.spelling.as_str()).collect();
         assert_eq!(
@@ -552,7 +726,7 @@ mod tests {
 
     #[test]
     fn along_person_is_the_grid_of_who_and_how_many() {
-        let found = form("anduvo", &andar()).unwrap();
+        let found = form_alone("anduvo", &andar()).unwrap();
         let person = found.along.iter().find(|a| a.category == "person").unwrap();
         let words: Vec<&str> = person.forms.iter().map(|o| o.spelling.as_str()).collect();
         assert_eq!(
@@ -587,7 +761,7 @@ mod tests {
 
     #[test]
     fn a_preterite_has_no_command_and_says_its_subjunctive_in_the_imperfect() {
-        let found = form("anduvo", &andar()).unwrap();
+        let found = form_alone("anduvo", &andar()).unwrap();
         assert_eq!(along(&found, "mood"), ["anduvo", "anduviera"]);
     }
 
@@ -605,7 +779,7 @@ mod tests {
                 ("geht", "present singular third-person"),
             ],
         );
-        let found = form("ging", &gehen).unwrap();
+        let found = form_alone("ging", &gehen).unwrap();
         assert_eq!(
             values(&found.place),
             ["preterite", "third-person", "singular"]
@@ -630,8 +804,9 @@ mod tests {
                 ("Hunden", "dative plural definite"),
             ],
         );
-        let found = form("Hunde", &hund).unwrap();
-        assert_eq!(values(&found.place), ["nominative", "plural"]);
+        let found = form_alone("Hunde", &hund).unwrap();
+        // Nominative or accusative, which nothing around it says: only what both are.
+        assert_eq!(values(&found.place), ["plural"]);
         assert_eq!(along(&found, "number"), ["Hund", "Hunde"]);
     }
 
@@ -643,13 +818,74 @@ mod tests {
             &[("bonita", "feminine"), ("bonitos", "masculine plural")],
         );
         assert_eq!(
-            along(&form("bonita", &bonito).unwrap(), "gender"),
+            along(&form_alone("bonita", &bonito).unwrap(), "gender"),
             ["bonito", "bonita"]
         );
     }
 
     #[test]
+    fn a_form_spelled_alike_in_several_cases_is_read_by_its_determiner() {
+        let gross = entry(
+            "groß",
+            "adj",
+            &[(
+                "größten",
+                "superlative strong genitive masculine singular; \
+                 superlative weak accusative masculine singular; \
+                 superlative weak dative plural; superlative strong dative plural",
+            )],
+        );
+        let der = entry(
+            "der",
+            "article",
+            &[("den", "accusative masculine singular; dative plural")],
+        );
+        let den = determiner_places("den", &[der]);
+        let found = form("größten", &gross, &den).unwrap();
+        // The genitive is gone; accusative singular and dative plural are both still possible,
+        // so neither is named.
+        assert!(values(&found.place).contains(&"superlative"));
+        assert!(!values(&found.place).contains(&"genitive"));
+        assert!(!values(&found.place).contains(&"singular"));
+        let alone = form_alone("größten", &gross).unwrap();
+        assert!(!values(&alone.place).contains(&"genitive"));
+    }
+
+    #[test]
+    fn a_nouns_case_comes_from_its_article() {
+        let frage = entry(
+            "Herausforderung",
+            "noun",
+            &[(
+                "Herausforderungen",
+                "nominative plural; genitive plural; dative plural; accusative plural",
+            )],
+        );
+        let der = entry(
+            "der",
+            "article",
+            &[("den", "accusative masculine singular; dative plural")],
+        );
+        let found = form(
+            "Herausforderungen",
+            &frage,
+            &determiner_places("den", &[der]),
+        )
+        .unwrap();
+        assert_eq!(values(&found.place), ["dative", "plural"]);
+    }
+
+    #[test]
+    fn a_cell_for_both_genders_names_neither() {
+        let grande = entry("grande", "adj", &[("grandes", "feminine masculine plural")]);
+        assert_eq!(
+            values(&form_alone("grandes", &grande).unwrap().place),
+            ["plural"]
+        );
+    }
+
+    #[test]
     fn a_word_its_table_does_not_list_has_no_form() {
-        assert_eq!(form("andar", &andar()), None);
+        assert_eq!(form_alone("andar", &andar()), None);
     }
 }

@@ -1312,6 +1312,7 @@ pub fn read_in_context<D: AsRef<[u8]>>(
                 pack,
                 open.target,
                 open.said,
+                before,
             )
         })
         .collect();
@@ -1780,7 +1781,17 @@ fn sense_in_line<D: AsRef<[u8]>>(
                     senses: vec![sense.clone()],
                     ..entry.clone()
                 };
-                resolve_one(spelling, &alone, source, target, pack, open.target, None).says
+                resolve_one(
+                    spelling,
+                    &alone,
+                    source,
+                    target,
+                    pack,
+                    open.target,
+                    None,
+                    None,
+                )
+                .says
             };
             meant_words(&says, Some(entry.pos.as_str()), target, pack, open)
         })
@@ -2095,6 +2106,7 @@ impl HasReading for Reading {
 }
 
 /// One of the words a spelling is, resolved on its own.
+#[allow(clippy::too_many_arguments)]
 fn resolve_one<D: AsRef<[u8]>>(
     spelling: &str,
     entry: &Entry,
@@ -2103,7 +2115,12 @@ fn resolve_one<D: AsRef<[u8]>>(
     pack: &Pack<D>,
     other: Option<&Pack<D>>,
     said: Option<&str>,
+    before: Option<&str>,
 ) -> Answer {
+    // What the determiner before the word can be, which says which of its places it is in.
+    let agreeing = before
+        .map(|word| crate::paradigm::determiner_places(word, &lookup_either_case(pack, word)))
+        .unwrap_or_default();
     // A spelling that is not the lemma got here through the forms index, and the reader is
     // owed the connection: they tapped "perros" and the answer is about "perro".
     let inflected = !same_word(&entry.lemma, spelling);
@@ -2131,6 +2148,7 @@ fn resolve_one<D: AsRef<[u8]>>(
             pack,
             source,
             target,
+            &agreeing,
         );
     }
 
@@ -2147,6 +2165,7 @@ fn resolve_one<D: AsRef<[u8]>>(
             pack,
             source,
             target,
+            &agreeing,
         );
     };
 
@@ -2181,7 +2200,7 @@ fn resolve_one<D: AsRef<[u8]>>(
                 AnswerState::Entry
             };
             return finish(
-                state, spelling, entry, found, glosses, example, pack, source, target,
+                state, spelling, entry, found, glosses, example, pack, source, target, &agreeing,
             );
         }
     }
@@ -2263,7 +2282,7 @@ fn resolve_one<D: AsRef<[u8]>>(
     };
     let lemma_said = (says.len() == 1).then(|| says[0].clone());
     let mut answer = finish(
-        state, spelling, entry, says, glosses, example, pack, source, target,
+        state, spelling, entry, says, glosses, example, pack, source, target, &agreeing,
     );
     // Said in the reader's German in the form the word has: "anduvo" is "er ging", from the
     // German dictionary's own table of "gehen".
@@ -2292,6 +2311,7 @@ fn finish<D: AsRef<[u8]>>(
     pack: &Pack<D>,
     source: &Lang,
     target: &Lang,
+    agreeing: &[crate::paradigm::Place],
 ) -> Answer {
     // How the lemma is said is not how its forms are: "dependiendo" reached through
     // "depender" is not said /depenˈdeɾ/. A form with a pronunciation of its own is an entry of
@@ -2304,7 +2324,7 @@ fn finish<D: AsRef<[u8]>>(
     };
     // The form, and its meaning said in it where the reader reads English: the dictionary's
     // meaning of "andar" is "to walk", and "anduvo" means "he walked".
-    let paradigm = crate::paradigm::form(spelling, entry).map(|mut form| {
+    let paradigm = crate::paradigm::form(spelling, entry, agreeing).map(|mut form| {
         if target.0 == "en" {
             if let Some(meaning) = glosses
                 .iter()

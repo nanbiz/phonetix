@@ -11,7 +11,9 @@ marked dialectal, obsolete, archaic, nonstandard or colloquial left out.
   uv run python tools/english_verbs.py [.cache/kaikki/en.jsonl.gz] [data/english-verbs.tsv]
 
 Nouns the same way: data/english-nouns.tsv holds every noun whose plural is not what the rule
-makes ("children", "mice"), so "Kinder" is "children" and not "childs".
+makes ("children", "mice"), so "Kinder" is "children" and not "childs". And adjectives:
+data/english-adjectives.tsv holds every adjective whose comparative or superlative is not what
+the rule makes ("better", "best"; "more famous"), so "größten" is "biggest".
 
 The rule here is the one in core/src/inflect.rs; the two have to agree, since a verb the rule
 gets right is left out of the file.
@@ -59,6 +61,34 @@ def past(verb):
     return verb + "ed"
 
 
+def syllables(word):
+    """How many syllables a word has, by its runs of vowels, a silent final e not counted."""
+    runs, before = 0, False
+    for at, c in enumerate(word):
+        vowel = c in VOWELS or (c == "y" and at > 0)
+        if vowel and not before:
+            runs += 1
+        before = vowel
+    if word.endswith("e") and not word.endswith(("le", "ee", "ye")) and runs > 1:
+        runs -= 1
+    return max(runs, 1)
+
+
+def degrees(adjective):
+    """The comparative and superlative the rule makes: one syllable, or two ending in a y after a
+    consonant, take -er and -est; the rest take "more" and "most"."""
+    a = adjective
+    if a.endswith("y") and len(a) > 1 and a[-2] not in VOWELS and syllables(a) <= 2:
+        return a[:-1] + "ier", a[:-1] + "iest"
+    if syllables(a) > 1:
+        return "more " + a, "most " + a
+    if a.endswith("e"):
+        return a + "r", a + "st"
+    if doubles(a):
+        return a + a[-1] + "er", a + a[-1] + "est"
+    return a + "er", a + "est"
+
+
 def first(forms, wanted, unwanted=()):
     for spelling, tags in forms:
         tags = set(tags)
@@ -72,6 +102,7 @@ def main():
     into = sys.argv[2] if len(sys.argv) > 2 else "data/english-verbs.tsv"
     rows = {}
     plurals = {}
+    adjectives = {}
     with gzip.open(source, "rt") as lines:
         for line in lines:
             if '"pos": "noun"' in line:
@@ -82,6 +113,16 @@ def main():
                     plural = first(forms, {"plural"})
                     if plural and plural != third(noun):
                         plurals[noun] = plural
+                continue
+            if '"pos": "adj"' in line:
+                entry = json.loads(line)
+                adjective = entry.get("word", "")
+                if (entry.get("pos") == "adj" and adjective.isalpha() and adjective.islower()
+                        and adjective not in adjectives):
+                    forms = [(f.get("form", ""), f.get("tags", [])) for f in entry.get("forms", [])]
+                    said = (first(forms, {"comparative"}), first(forms, {"superlative"}))
+                    if all(said) and said != degrees(adjective):
+                        adjectives[adjective] = said
                 continue
             if '"pos": "verb"' not in line:
                 continue
@@ -110,7 +151,13 @@ def main():
         out.write("# noun\tplural\n")
         for noun in sorted(plurals):
             out.write(f"{noun}\t{plurals[noun]}\n")
-    print(f"{len(rows)} English verbs and {len(plurals)} nouns no rule makes, written to {into} and {nouns}")
+    graded = into.replace("verbs", "adjectives")
+    with open(graded, "w") as out:
+        out.write("# adjective\tcomparative\tsuperlative\n")
+        for adjective in sorted(adjectives):
+            out.write("\t".join((adjective,) + adjectives[adjective]) + "\n")
+    print(f"{len(rows)} English verbs, {len(plurals)} nouns and {len(adjectives)} adjectives no rule"
+          f" makes, written to {into}, {nouns} and {graded}")
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ use crate::paradigm::Place;
 
 const VERBS: &str = include_str!("../../data/english-verbs.tsv");
 const NOUNS: &str = include_str!("../../data/english-nouns.tsv");
+const ADJECTIVES: &str = include_str!("../../data/english-adjectives.tsv");
 
 const VOWELS: [char; 5] = ['a', 'e', 'i', 'o', 'u'];
 
@@ -113,6 +114,61 @@ fn plural(noun: &str) -> String {
         .unwrap_or_else(|| third_by_rule(noun))
 }
 
+/// How many syllables a word has, by its runs of vowels, a silent final e not counted. The
+/// same count as tools/english_verbs.py, which leaves out of data/english-adjectives.tsv every
+/// adjective this gets right.
+fn syllables(word: &str) -> usize {
+    let mut runs = 0;
+    let mut before = false;
+    for (at, c) in word.chars().enumerate() {
+        let vowel = VOWELS.contains(&c) || (c == 'y' && at > 0);
+        if vowel && !before {
+            runs += 1;
+        }
+        before = vowel;
+    }
+    if word.ends_with('e')
+        && !word.ends_with("le")
+        && !word.ends_with("ee")
+        && !word.ends_with("ye")
+        && runs > 1
+    {
+        runs -= 1;
+    }
+    runs.max(1)
+}
+
+/// An adjective's comparative and superlative: as the English Wiktionary lists them where no
+/// rule makes them ("better", "best"), and otherwise by the rule - one syllable, or two ending
+/// in a y after a consonant, take -er and -est, and the rest "more" and "most".
+fn degrees(adjective: &str) -> (String, String) {
+    if let Some((more, most)) = ADJECTIVES.lines().find_map(|line| {
+        let mut parts = line.split('\t');
+        (parts.next()? == adjective)
+            .then(|| Some((parts.next()?.to_string(), parts.next()?.to_string())))?
+    }) {
+        return (more, most);
+    }
+    let a = adjective;
+    let chars: Vec<char> = a.chars().collect();
+    let n = chars.len();
+    if a.ends_with('y') && n > 1 && !VOWELS.contains(&chars[n - 2]) && syllables(a) <= 2 {
+        let stem: String = chars[..n - 1].iter().collect();
+        return (format!("{stem}ier"), format!("{stem}iest"));
+    }
+    if syllables(a) > 1 {
+        return (format!("more {a}"), format!("most {a}"));
+    }
+    if a.ends_with('e') {
+        return (format!("{a}r"), format!("{a}st"));
+    }
+    if doubles(a) {
+        let last = chars[n - 1];
+        return (format!("{a}{last}er"), format!("{a}{last}est"));
+    }
+    (format!("{a}er"), format!("{a}est"))
+}
+
 /// The value a place has in one category.
 fn value<'a>(place: &'a Place, category: &str) -> Option<&'a str> {
     place
@@ -186,6 +242,12 @@ fn english_with(meaning: &str, pos: &str, place: &Place, subject: bool) -> Optio
         "noun" => match value(place, "number") {
             Some("plural") => Some(format!("{}{rest}", plural(&word))),
             Some("singular") => Some(format!("{word}{rest}")),
+            _ => None,
+        },
+        // The degree an adjective is in; its case and number English does not show.
+        "adj" => match value(place, "degree") {
+            Some("comparative") => Some(format!("{}{rest}", degrees(&word).0)),
+            Some("superlative") => Some(format!("{}{rest}", degrees(&word).1)),
             _ => None,
         },
         _ => None,
@@ -449,6 +511,31 @@ fn cell(entry: &lexpack::Entry, wanted: &[(&str, &str)]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn an_adjective_is_said_in_its_degree() {
+        let place = |tag: &str| vec![(tag.to_string(), "degree")];
+        assert_eq!(
+            super::english("big, large", "adj", &place("superlative")).as_deref(),
+            Some("biggest")
+        );
+        assert_eq!(
+            super::english("good", "adj", &place("comparative")).as_deref(),
+            Some("better")
+        );
+        assert_eq!(
+            super::english("famous", "adj", &place("superlative")).as_deref(),
+            Some("most famous")
+        );
+        assert_eq!(
+            super::english("happy", "adj", &place("comparative")).as_deref(),
+            Some("happier")
+        );
+        assert_eq!(
+            super::english("large", "adj", &place("superlative")).as_deref(),
+            Some("largest")
+        );
+    }
+
     use super::*;
 
     fn place(tags: &[&str]) -> Place {

@@ -796,6 +796,9 @@ pub fn about_grammar(part: &str) -> bool {
         "masculine",
         "feminine",
         "neuter",
+        // Which degree of an adjective this is: "superlative degree of groß".
+        "comparative",
+        "superlative",
         // A note that only says which word this is a shape of: "apocopic form of mío, my",
         // "clipping of bicicleta", "short for Señor".
         "form of",
