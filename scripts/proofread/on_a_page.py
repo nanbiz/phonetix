@@ -320,6 +320,9 @@ class ChromeHand:
             }, session=self.session)
 
 
+# Whether a card is open on the page.
+CARD_OPEN_JS = """!!(document.getElementById('phonetix-card-host') || {}).shadowRoot?.querySelector('.card')"""
+
 EMBER_JS = """
   (() => {
     const host = document.getElementById('phonetix-card-host-ember');
@@ -367,6 +370,35 @@ def ember_checks(hand, engine, failures, off):
             failures.append(f"{engine}: the word under the pointer was not lit: {on_word}")
         if on_word and "in" not in on_word["ball"].split():
             failures.append(f"{engine}: the ember did not go into the word: {on_word}")
+        # A pointer aimed at a word lands in the gap under it or beside it as often as on it,
+        # and the tip sits under the word it means: a few pixels below, it is still the word.
+        hand.move(where["word"]["x"], box["bottom"] + 5)
+        hand.move(where["word"]["x"] + 1, box["bottom"] + 6)
+        time.sleep(0.5)
+        under_it = hand.ask(EMBER_JS)
+        print(f"  {engine}, the ember just under a word: {under_it}")
+        if not (under_it or {}).get("lit"):
+            failures.append(f"{engine}: a pointer just under a word did not reach it: {under_it}")
+        # Beside it, a card opens for it; and leaving for nothing takes the card down at once,
+        # rather than leaving it over the line the reader went on to.
+        hand.move(box["right"] + 4, where["word"]["y"])
+        hand.move(box["right"] + 5, where["word"]["y"])
+        opened = False
+        for _ in range(20):
+            time.sleep(0.25)
+            opened = hand.ask(CARD_OPEN_JS)
+            if opened:
+                break
+        print(f"  {engine}, a card for the word the pointer is just beside: {opened}")
+        if not opened:
+            failures.append(f"{engine}: no card for a word the pointer was just beside")
+        else:
+            hand.move(where["empty"]["x"], where["empty"]["y"])
+            time.sleep(0.05)
+            still = hand.ask(CARD_OPEN_JS)
+            print(f"  {engine}, the card 50 ms after the pointer left: {'open' if still else 'gone'}")
+            if still:
+                failures.append(f"{engine}: the card stayed after the pointer left its word")
     off(True)
     hand.move(where["empty"]["x"] + 4, where["empty"]["y"])
     time.sleep(0.6)

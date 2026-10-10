@@ -11,7 +11,7 @@ import {
   accentFor, allowed, current, DEFAULTS, set, setAccent, translates, watch, type Settings,
 } from '@/settings';
 import {
-  hide, inside, moveTo, paintedIn as cardPaintedIn, passedOver, show, showing,
+  hide, inside, moveTo, onTheWayIn, paintedIn as cardPaintedIn, passedOver, show, showing,
   type CardActions,
 } from './card';
 import { open as openAsk } from './ask';
@@ -456,10 +456,7 @@ function onElement(element: HTMLElement): Anchor {
   return {
     box: () => now().getBoundingClientRect(),
     alive: () => now().isConnected,
-    holds: (x, y) => {
-      const at = document.elementFromPoint(x, y);
-      return at !== null && now().contains(at);
-    },
+    holds: (x, y) => near([...now().getClientRects()], x, y),
     seen: () => showsAt(now().getBoundingClientRect(), now()),
   };
 }
@@ -468,7 +465,7 @@ function onRange(range: Range): Anchor {
   return {
     box: () => range.getBoundingClientRect(),
     alive: () => range.startContainer.isConnected,
-    holds: (x, y) => within(range, x, y),
+    holds: (x, y) => near([...range.getClientRects()], x, y),
     seen: () => showsAt(range.getBoundingClientRect(), range.startContainer.parentElement),
   };
 }
@@ -585,6 +582,49 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
       }
     }
     if (isWord(part, text)) before = part.segment;
+  }
+  return null;
+}
+
+/** How far above the pointer's tip a word is looked for first, in pixels: a reader puts the
+ *  tip of the arrow just under the word they mean, so the arrow does not cover it. */
+const LIFT = 4;
+/** How far around that point a word still counts as pointed at, in pixels: the gaps between
+ *  words and between lines are where a pointer aimed at a word lands as often as on it. */
+const REACH = 6;
+/** The points looked at, nearest first, around the one just above the tip. */
+const PROBES: [number, number][] = [
+  [0, 0], [0, -REACH], [0, REACH], [-REACH, 0], [REACH, 0],
+  [-REACH, -REACH], [REACH, -REACH], [-REACH, REACH], [REACH, REACH],
+];
+
+/** Whether the pointer at ([x], [y]) is on one of these boxes, as [wordNear] reaches. */
+function near(boxes: DOMRect[], x: number, y: number): boolean {
+  const py = y - LIFT;
+  return boxes.some((box) => x >= box.left - REACH && x <= box.right + REACH &&
+    py >= box.top - REACH && py <= box.bottom + REACH);
+}
+
+/** A word near the pointer: one Phonetix drew, or one of the page's own. */
+type Near =
+  | { drawn: NonNullable<ReturnType<typeof wordAt>>; rect: DOMRect }
+  | { page: { range: Range; asked: Asked }; rect: DOMRect };
+
+/**
+ * The word the reader is pointing at from ([x], [y]): the nearest to a point just above the
+ * tip, within a few pixels of it, so the ember and the card answer the word the reader is
+ * aiming at rather than only one the tip is exactly on. Nothing over anything of ours.
+ */
+function wordNear(x: number, y: number): Near | null {
+  for (const [dx, dy] of PROBES) {
+    const px = x + dx;
+    const py = y - LIFT + dy;
+    const at = document.elementFromPoint(px, py);
+    if (!at || inside(at)) return null;
+    const drawn = wordAt(at);
+    if (drawn) return { drawn, rect: drawn.element.getBoundingClientRect() };
+    const page = wordUnder(px, py);
+    if (page) return { page, rect: page.range.getBoundingClientRect() };
   }
   return null;
 }
@@ -796,20 +836,10 @@ async function selected(): Promise<void> {
 /** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
 const PHRASE_LIMIT = 240;
 
-/**
- * How long a card stays after the cursor leaves its word for the open page.
- *
- * The way into the card is its arrow, whose point is narrower than most words, so a pointer
- * leaving the word near the arrow's side crosses a few pixels of page before it is on the
- * arrow. A pointer that comes onto the card anywhere else takes it down at once.
- */
-const GRACE = 220;
-
 /** The word the card on screen is about, so it can be put back where that word is now. */
 let anchored: Anchor | null = null;
 /** The wait for the pointer to come to rest over the page's own text. */
 let resting: ReturnType<typeof setTimeout> | null = null;
-let closing: ReturnType<typeof setTimeout> | null = null;
 /**
  * Whether the reader has taken hold of the card.
  *
@@ -837,28 +867,21 @@ function under(): Element | null {
   return document.elementFromPoint(pointer.x, pointer.y);
 }
 
-/** Stop the card from closing, because the cursor is somewhere that keeps it. */
-function keep(): void {
-  if (closing) clearTimeout(closing);
-  closing = null;
-}
-
-/** Close it after the grace period, unless something keeps it first. */
+/**
+ * Take the card down the moment the pointer is neither on its word nor on the card.
+ *
+ * A card that lingers after the pointer has moved on covers the line the reader went on to.
+ * What is left open is the strip between the word and the card's arrow, which the pointer
+ * crosses on its way in; and where the pointer is now decides, rather than how it got there,
+ * since a page that scrolls under a still cursor reports the word leaving it.
+ */
 function letGo(): void {
-  keep();
   if (grabbed) return;
-  closing = setTimeout(() => {
-    closing = null;
-    if (grabbed) return;
-    // Where the pointer is now, rather than what it was doing when the timer started: a page
-    // that scrolled under a still cursor reports the word leaving, and the reader is looking
-    // at exactly what they were looking at.
-    const at = under();
-    if (at && (inside(at) || wordAt(at))) return;
-    if (anchored?.holds(pointer.x, pointer.y)) return;
-    hide();
-    anchored = null;
-  }, GRACE);
+  const at = under();
+  if (at && inside(at)) return;
+  if (anchored?.holds(pointer.x, pointer.y) || onTheWayIn(pointer)) return;
+  hide();
+  anchored = null;
 }
 
 /** The frame the ember is next put where the pointer is, while one is asked for. */
@@ -881,11 +904,7 @@ function followWithEmber(): void {
     emberAway();
     return;
   }
-  const drawn = wordAt(at);
-  const word = drawn
-    ? drawn.element.getBoundingClientRect()
-    : (wordUnder(pointer.x, pointer.y)?.range.getBoundingClientRect() ?? null);
-  emberAt(pointer.x, pointer.y, word);
+  emberAt(pointer.x, pointer.y, wordNear(pointer.x, pointer.y)?.rect ?? null);
 }
 
 function gestures(): void {
@@ -923,7 +942,6 @@ function gestures(): void {
       // On the card without having come in by its arrow: the reader is moving on to what the
       // card covers, which the card lets the pointer through to and must not hide.
       if (moved && passedOver(was, pointer) && !anchored?.holds(pointer.x, pointer.y)) {
-        keep();
         grabbed = false;
         hide();
         anchored = null;
@@ -937,10 +955,15 @@ function gestures(): void {
         resting = null;
         if (anchored?.holds(pointer.x, pointer.y)) return;
         // Any word, in any language: a word in one the reader reads has a card that says it.
-        const found = wordUnder(pointer.x, pointer.y);
+        const found = wordNear(pointer.x, pointer.y);
         if (!found) return;
-        anchored = onRange(found.range);
-        void open(anchored, found.asked);
+        if ('drawn' in found) {
+          anchored = onElement(found.drawn.element);
+          void open(anchored, askedOf(found.drawn.token, found.drawn.before));
+        } else {
+          anchored = onRange(found.page.range);
+          void open(anchored, found.page.asked);
+        }
       }, Math.max(0, settings.delay));
     },
     { passive: true }
@@ -959,17 +982,13 @@ function gestures(): void {
   });
 
   document.addEventListener('mouseover', (event) => {
-    if (inside(event.target)) {
-      keep();
-      return;
-    }
+    if (inside(event.target)) return;
     const found = wordAt(event.target);
     if (!found) return;
     if (touched || !settings.cards) return;
     // The word stays as it is drawn: the card names what the page wrote, and flipping each
     // word back to its spelling as the pointer crossed it set the line jumping under a reader
     // moving across it.
-    keep();
     if (opening) clearTimeout(opening);
     opening = setTimeout(() => {
       anchored = onElement(found.element);
@@ -981,11 +1000,13 @@ function gestures(): void {
     if (!wordAt(event.target)) return;
     if (opening) clearTimeout(opening);
     unreveal();
-    // Not straight away: the pointer may be on its way onto the arrow, which is narrower at
-    // its point than the word it leaves. And not at all where the word left a still cursor,
-    // which is a scroll: the browser reports the way out before the move that causes it, so a
-    // reader leaving is reported from somewhere other than where the pointer last was.
-    if (showing() && (event.clientX !== pointer.x || event.clientY !== pointer.y)) letGo();
+    // Not where the word left a still cursor, which is a scroll: the browser reports the way
+    // out before the move that causes it, so a reader leaving is reported from somewhere other
+    // than where the pointer last was. Where it is now is where the reader left it for.
+    if (showing() && (event.clientX !== pointer.x || event.clientY !== pointer.y)) {
+      pointer = { x: event.clientX, y: event.clientY };
+      letGo();
+    }
   });
 
   // A touch opens it outright: there is no resting on a phone, and the annotation is small

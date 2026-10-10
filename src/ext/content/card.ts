@@ -336,6 +336,23 @@ export function passedOver(from: Point, to: Point): boolean {
   return true;
 }
 
+/**
+ * Whether a point is on the way from the word into the card: over the arrow, a little either
+ * side of it, or in the gap between it and the word. A card that closes the moment the pointer
+ * leaves its word has to let the pointer cross that gap.
+ */
+export function onTheWayIn(to: Point): boolean {
+  if (!drawn || !frame) return false;
+  const card = frame.querySelector('.card');
+  const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
+  if (!card || !arrow) return false;
+  const slack = 8;
+  const above = card.classList.contains('above');
+  const top = above ? arrow.top : arrow.top - slack;
+  const bottom = above ? arrow.bottom + slack : arrow.bottom;
+  return to.x >= arrow.left - slack && to.x <= arrow.right + slack && to.y >= top && to.y <= bottom;
+}
+
 /** A place in the window, in the coordinates pointer events report. */
 export interface Point {
   x: number;
