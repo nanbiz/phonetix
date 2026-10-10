@@ -1078,6 +1078,8 @@ function ours(node: Node): boolean {
  */
 function follow(): void {
   let soon: ReturnType<typeof setTimeout> | null = null;
+  /** When the changes waiting to be drawn began arriving. */
+  let since = 0;
   watcher = new MutationObserver((changes) => {
     // Text the page brought, not text we drew. An annotation is an element of ours holding
     // the word it annotates, so a change inside one is our own work coming back to us.
@@ -1089,8 +1091,17 @@ function follow(): void {
       }
     }
     if (arrived.size === 0) return;
-    if (soon) clearTimeout(soon);
-    soon = setTimeout(() => void pump(), 300);
+    // Drawn once the page has been still for a moment, and at least every second while it is
+    // not: a page that writes more often than the moment - a chat streaming an answer - is
+    // never still, and waiting for it drew none of its lines until the answer ended.
+    const now = performance.now();
+    if (!soon) since = now;
+    else if (now - since >= 1000) return;
+    else clearTimeout(soon);
+    soon = setTimeout(() => {
+      soon = null;
+      void pump();
+    }, 300);
   });
   watcher.observe(document.body, { childList: true, subtree: true });
 }

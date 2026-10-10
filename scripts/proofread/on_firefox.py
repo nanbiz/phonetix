@@ -28,7 +28,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, serve, walk
+from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, serve, stream_draws, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -382,6 +382,10 @@ def main():
         driver.send("WebDriver:Navigate", {"url": f"{base}/chat.html"})
         time.sleep(2)
         chat_follows(FirefoxHand(driver), "firefox", failures)
+
+        # And a chat that is never still, streaming an answer.
+        driver.send("WebDriver:Navigate", {"url": f"{base}/stream.html"})
+        stream_draws(FirefoxHand(driver), "firefox", failures)
 
         driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
         time.sleep(2)

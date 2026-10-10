@@ -61,6 +61,21 @@ CHAT = (
     "<div style='height:900px'></div></div></body></html>"
 ).encode()
 
+# A chat streaming an answer: a few words every 50 ms into its last line, and a new line every
+# two seconds, for as long as the page is open. The page is never still, and the lines it has
+# finished are drawn all the same while it writes the next.
+STREAM = (
+    "<!doctype html><html lang='es'><meta charset='utf-8'><body style='margin:40px'>"
+    "<div id='log'></div><script>"
+    "const words = " + json.dumps(SENTENCE.split()) + ";"
+    "let n = 0; let line = null;"
+    "setInterval(() => {"
+    "  if (n % 40 === 0) { line = document.createElement('p'); document.getElementById('log').appendChild(line); }"
+    "  line.textContent += (line.textContent ? ' ' : '') + words[n++ % words.length];"
+    "}, 50);"
+    "</script></body></html>"
+).encode()
+
 # A heading, because a page's headings are where its capitals are, and a heading is written
 # in title case whatever the language does. The words in it are ordinary dictionary words
 # wearing a capital they got from the page.
@@ -171,6 +186,7 @@ def serve():
                 else MIXED if self.path.startswith("/mixed")
                 else GERMAN if self.path.startswith("/german")
                 else CHAT if self.path.startswith("/chat")
+                else STREAM if self.path.startswith("/stream")
                 else PAGE
             )
             self.send_response(200)
@@ -359,6 +375,24 @@ def ember_checks(hand, engine, failures, off):
     if gone and "on" in gone["ball"].split():
         failures.append(f"{engine}: the ember stayed with Phonetix off: {gone}")
     off(False)
+
+
+def stream_draws(hand, engine, failures):
+    """Lines a streaming page has finished are drawn while it writes the next: every one but
+    the newest, which may have ended since the last draw (at most a second and a little ago).
+    Asked of the stream page, already open in the hand's tab."""
+    time.sleep(5)
+    drawn = hand.ask("""
+        (() => {
+          const lines = [...document.querySelectorAll('#log p')].slice(0, -1);
+          return {lines: lines.length,
+                  drawn: lines.filter(p => p.querySelector('.px-w')).length};
+        })()
+    """)
+    print(f"  {engine}: streaming page, finished lines drawn: {drawn}")
+    if not drawn or drawn["lines"] < 2 or drawn["drawn"] < drawn["lines"] - 1:
+        failures.append(f"{engine}: a streaming page had finished lines left undrawn "
+                        f"while it went on writing ({drawn})")
 
 
 def chat_follows(hand, engine, failures):
@@ -1047,6 +1081,15 @@ def main():
         cdp.send("Target.activateTarget", {"targetId": chat_target})
         chat_follows(ChromeHand(cdp, chat), "chrome", failures)
         cdp.send("Target.closeTarget", {"targetId": chat_target})
+
+        # And a chat that is never still, streaming an answer.
+        stream_target = cdp.send("Target.createTarget", {"url": f"{base}/stream.html"})["targetId"]
+        stream = cdp.send("Target.attachToTarget",
+                          {"targetId": stream_target, "flatten": True})["sessionId"]
+        cdp.send("Runtime.enable", session=stream)
+        cdp.send("Target.activateTarget", {"targetId": stream_target})
+        stream_draws(ChromeHand(cdp, stream), "chrome", failures)
+        cdp.send("Target.closeTarget", {"targetId": stream_target})
 
         # A word no pack holds still gets a transcription, from the voice rather than from a
         # dictionary, and the annotation says which by its own state. Asked in the mode that
