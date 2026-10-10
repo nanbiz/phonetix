@@ -6,3 +6,5 @@ not json at all
 {"word":"nada","pos":"pron","lang_code":"es","senses":[{"tags":["form-of"]}]}
 {"word":"banco","pos":"noun","lang_code":"es","senses":[{"glosses":["bench"]},{"glosses":["a financial institution"]}],"sounds":[{"ipa":"/ˈbaŋ.ko/"}],"forms":[{"form":"bancos","tags":["plural"]}]}
 {"word":"banco","pos":"verb","lang_code":"es","senses":[{"glosses":["to bank"]}],"sounds":[{"ipa":"/ˈbaŋ.ko/"}]}
+{"word":"buenos días","pos":"intj","lang_code":"es","senses":[{"glosses":["good morning"]},{"glosses":["good day"]}],"sounds":[{"ipa":"/ˈbwe.nos ˈdi.as/"}]}
+{"word":"por favor","pos":"intj","lang_code":"es","senses":[{"glosses":["please"]},{"glosses":["you're welcome"]}],"sounds":[{"ipa":"/poɾ faˈβoɾ/"}]}

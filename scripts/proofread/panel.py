@@ -426,6 +426,29 @@ def check(engine):
         if not got.get("ipa"):
             failures.append(f"the translation {got.get('line')!r} came without how it is said")
 
+        # A phrase the dictionary holds as an entry of its own: the engine's line, and under it
+        # what the dictionary says the phrase means, which is not what its words mean one by one.
+        click("[data-does=turn]")
+        got = wait("(root) => root.querySelector('[data-ask]').dataset.from",
+                   lambda got: got == "es", tries=40)
+        click(".ask-field input")
+        clear()
+        typed("buenos días")
+        got = wait("(root) => { const e = root.querySelector('[data-said=entry]');"
+                   " if (!e) return null;"
+                   " const [line, ...rest] = [...e.querySelectorAll('.m-word')].map(w => w.textContent);"
+                   " return {line, entry: rest}; }",
+                   lambda got: bool(got) and bool(got.get("entry")), tries=120, gap=0.5) or {}
+        print(f"  {engine}: a phrase that is an entry: {got} {shot('entry')}")
+        said = [got.get("line", "").lower()] + [w.lower() for w in got.get("entry", [])]
+        if not got.get("entry"):
+            failures.append(f"'buenos días' came back without the dictionary's entry: {got}")
+        elif "good morning" not in said:
+            failures.append(f"'buenos días' is not good morning anywhere in {said}")
+        click("[data-does=turn]")
+        wait("(root) => root.querySelector('[data-ask]').dataset.from",
+             lambda got: got == "en", tries=40)
+
         # Another language, from a list that is searched by typing.
         click("[data-lang=learning]")
         where = focused()

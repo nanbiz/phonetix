@@ -24,6 +24,7 @@ import io.github.nanbiz.phonetix.core.Settings
 import io.github.nanbiz.phonetix.core.SettingsStore
 import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Wording
+import io.github.nanbiz.phonetix.ui.Meant
 import io.github.nanbiz.phonetix.ui.Tokens
 import io.github.nanbiz.phonetix.ui.themeNamed
 import io.github.nanbiz.phonetix.core.Answer
@@ -3348,6 +3349,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     return@post
                 }
             }
+            // A phrase short enough to be an entry of its own: what the dictionary says it means,
+            // shown with the engine's line. Wiktionary files "buenos días" and "echar de menos"
+            // as words, and they do not mean what their words mean one by one.
+            val entry = if (!single && text.split(Regex("\\s+")).size <= PHRASE_ENTRY_WORDS) {
+                runCatching { Reading.meanings(text, from, to) }.getOrDefault(emptyList())
+            } else {
+                emptyList()
+            }
             askStage = "translating $from to $to"
             val here = Packs.models(this)
             if (!Translator.ready(here, from, to)) {
@@ -3372,6 +3381,11 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 "machine"
             }
             val line = local ?: kotlinx.coroutines.runBlocking { Machine.said(text, from, to) }
+            if (line.isNullOrBlank() && entry.isNotEmpty()) {
+                askStage = "answered with the dictionary's ${entry.size} meanings"
+                main.post { if (asking === panel && turn == asks) panel.showMeanings(entry) }
+                return@post
+            }
             if (line.isNullOrBlank()) {
                 askStage = "nothing came back"
                 main.post {
@@ -3398,6 +3412,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     "ASKED $text $from->$to: '$line' $engine in " +
                         "${android.os.SystemClock.uptimeMillis() - began}ms",
                 )
+            }
+            // The dictionary's entry besides the line, the line first and the same meaning not
+            // again, drawn as one list.
+            val besides = entry.filter { !it.word.equals(line, ignoreCase = true) }
+            if (besides.isNotEmpty()) {
+                askStage = "answered with a line and the dictionary's ${besides.size} meanings"
+                val listed = listOf(Meant(line, "", "", ipa)) + besides
+                main.post { if (asking === panel && turn == asks) panel.showMeanings(listed) }
+                return@post
             }
             askStage = "answered with a line"
             main.post { if (asking === panel && turn == asks) panel.showLine(line, ipa) }
@@ -3867,6 +3890,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
     }
 
     companion object {
+        /** How many words a phrase can have and still be looked for as a dictionary entry of
+         *  its own: "echar de menos", "auf jeden Fall", "un día sí y otro no". */
+        const val PHRASE_ENTRY_WORDS = 5
+
         /** The wait between passes while a page moves, left settable so it can be measured
          *  against photographs of the screen rather than argued about. */
         @Volatile

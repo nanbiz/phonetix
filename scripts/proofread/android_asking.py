@@ -172,18 +172,23 @@ def main():
     # And from the engine on this phone, not from the machine in another app: that is what
     # makes it milliseconds rather than a download.
     # Asked again, with the model now here: this is the wait a reader actually lives with.
+    # A phrase no dictionary holds, so it is the engine's to answer: "dogs" alone is a word the
+    # real Spanish dictionary answers by itself.
     dev.clear_log()
-    shell("input", "text", "s")
+    shell("input", "text", "%srun")
     time.sleep(0.5)
     began = time.time()
     shell("input", "keyevent", "66")
     while time.time() - began < 30:
         told = (believed().get("ask") or {})
-        if (told.get("stage") or "").startswith(("answered", "nothing came back")):
+        # This question's answer, not the stage the last one left.
+        if told.get("asked") == "dog run" and \
+                (told.get("stage") or "").startswith(("answered", "nothing came back")):
             break
         time.sleep(0.3)
     again = time.time() - began
-    said = re.findall(r"ASKED \S+ \S+->\S+: (.*)", dev.log())
+    # Asked of the device line by line: the bounded tail drops the line under a busy overlay.
+    said = re.findall(r"ASKED .+? \S+->\S+: (.*)", dev.lines("ASKED "))
     print(f"  asked again with the model here: {again:.1f}s {said[-1:] or ''}")
     # Judged on the part that is the app's: the engine's own time, which the app measures and
     # logs. The rest is a keystroke going through the device and this script polling it, and
@@ -203,6 +208,26 @@ def main():
     print(f"  directions opened for the second question: {opened or 'none'}")
     if opened:
         failures.append(f"a second question opened {opened}, which is a model load per question")
+
+    # A phrase the dictionary holds as an entry of its own: answered with what the dictionary
+    # says it means, the engine's line first where there is one.
+    shell("input", "keyevent", *["67"] * 12)
+    shell("input", "text", "por%sfavor")
+    time.sleep(0.5)
+    began = time.time()
+    shell("input", "keyevent", "66")
+    stage = ""
+    while time.time() - began < 60:
+        told = believed().get("ask") or {}
+        stage = told.get("stage") or ""
+        if told.get("asked") == "por favor" and stage.startswith(("answered", "nothing came back")):
+            break
+        time.sleep(0.5)
+    asked_line = re.findall(r"ASKED por favor .*", dev.lines("ASKED por"))
+    print(f"  asked 'por favor': {stage} {asked_line[-1:] or ''} "
+          f"field {(believed().get('ask') or {}).get('asked')!r}")
+    if "dictionary" not in stage:
+        failures.append(f"'por favor' was answered without the dictionary's entry: {stage!r}")
 
     if failures:
         print("\nFAIL")

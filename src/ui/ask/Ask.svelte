@@ -9,6 +9,7 @@
   // round where it was worked out wrong. Each language opens a list to choose another. A word is
   // answered with everything it can mean, the commonest first; a phrase with its translation.
   import type { Heard, PanelAnswer } from '@/host/messages';
+  import type { Meant } from '@/core';
   import type { Listening } from '@/host/speech';
   import { LANGUAGES, named as nameOf } from '@/data/languages';
   import { SAYS, ROWS } from '@/data/wording';
@@ -305,9 +306,9 @@
     {/if}
   </div>
 
-  {#if said && said.kind === 'meanings'}
-    <div class="ask-said ask-means" data-said="meanings">
-      {#each said.meanings as meant, at (at)}
+  {#snippet listed(meanings: Meant[], kind: string)}
+    <div class="ask-said ask-means" data-said={kind}>
+      {#each meanings as meant, at (at)}
         <div class="ask-mean">
           <div>
             <span class="m-word">{meant.word}</span>{#if meant.ipa}<span class="m-ipa"
@@ -320,6 +321,16 @@
         </div>
       {/each}
     </div>
+  {/snippet}
+  {#if said && said.kind === 'meanings'}
+    {@render listed(said.meanings, 'meanings')}
+  {:else if said && said.kind === 'line' && said.meanings?.length}
+    <!-- A phrase the dictionary holds as an entry: the engine's line first, then what else the
+         dictionary says it means, one list drawn alike. -->
+    {@render listed(
+      [{ word: said.line, ipa: said.ipa || null, pos: '', hint: '' }, ...said.meanings],
+      'entry'
+    )}
   {:else if said && said.kind === 'line'}
     <div class="ask-said ask-line" data-said="line">
       {said.line}{#if said.ipa}<span class="l-ipa">/{said.ipa}/</span>{/if}

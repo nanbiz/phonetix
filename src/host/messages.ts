@@ -108,7 +108,9 @@ export type Heard =
 /** The panel's answer: which way it went, and what came back. */
 export type PanelAnswer =
   | { forward: boolean; kind: 'meanings'; meanings: Meant[] }
-  | { forward: boolean; kind: 'line'; line: string; ipa: string }
+  // A phrase: the engine's line, and where the dictionary holds the whole phrase as an entry
+  // of its own ("buenos días", "auf jeden Fall"), what it says that phrase means besides.
+  | { forward: boolean; kind: 'line'; line: string; ipa: string; meanings?: Meant[] }
   | { forward: boolean; kind: 'nothing' };
 
 type Named = keyof HostProtocol;

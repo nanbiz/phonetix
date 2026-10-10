@@ -226,6 +226,10 @@ export function host(): void {
     return { answer, missing: false };
   });
 
+  /** How many words a phrase can have and still be looked for as a dictionary entry of its own:
+   *  "echar de menos", "auf jeden Fall", "un día sí y otro no". */
+  const PHRASE_ENTRY_WORDS = 5;
+
   onMessage('ask', async ({ data }) => {
     // Typed in either language and answered in the other, the way the phone's panel answers:
     // the core works out which it was typed in, and the reader's arrow overrides it.
@@ -239,30 +243,38 @@ export function host(): void {
     await Promise.all([openReadInto(mine), openReadInto(learning)]);
     const forward = data.turned ?? (await typedInMine(text, mine, learning));
     const [from, to] = forward ? [mine, learning] : [learning, mine];
-    if (!/\s/.test(text)) {
-      const found = await meanings(text, from, to).catch(() => []);
-      if (found.length > 0) {
-        // How each is said where no dictionary of that language is here to say it: by the
-        // voice, as the page says such a word.
-        const unsaid = found.filter((m) => !m.ipa).map((m) => m.word);
-        const voiced: Record<string, string> = unsaid.length
-          ? await ipa(voiceOf(to, ''), unsaid).catch(() => ({}))
-          : {};
-        const said = found.map((m) => ({ ...m, ipa: m.ipa ?? voiced[m.word] ?? null }));
-        return { forward, kind: 'meanings' as const, meanings: said };
-      }
-    }
+    // What the dictionary says, for a word and for a phrase short enough to be an entry of its
+    // own: Wiktionary files "buenos días" and "echar de menos" as words, and what they mean is
+    // not what their words mean one by one.
+    const phrase = /\s/.test(text);
+    const asWords = !phrase || text.split(/\s+/).length <= PHRASE_ENTRY_WORDS;
+    const found = asWords ? await meanings(text, from, to).catch(() => []) : [];
+    // How each is said where no dictionary of that language is here to say it: by the voice,
+    // as the page says such a word.
+    const unsaid = found.filter((m) => !m.ipa).map((m) => m.word);
+    const voicedMeanings: Record<string, string> = unsaid.length
+      ? await ipa(voiceOf(to, ''), unsaid).catch(() => ({}))
+      : {};
+    const meant = found.map((m) => ({ ...m, ipa: m.ipa ?? voicedMeanings[m.word] ?? null }));
+    if (!phrase && meant.length > 0) return { forward, kind: 'meanings' as const, meanings: meant };
     const [said] = await guessed(from, to, [text]).catch(() => []);
     const line = (said ?? '').trim();
     if (!line || line.toLowerCase() === text.toLowerCase()) {
-      return { forward, kind: 'nothing' as const };
+      return meant.length > 0
+        ? { forward, kind: 'meanings' as const, meanings: meant }
+        : { forward, kind: 'nothing' as const };
     }
     // How the answer is said, word by word, as the page says a word the dictionaries lack.
     const words = line.split(/\s+/).map((w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
       .filter(Boolean);
     const voiced: Record<string, string> = await ipa(voiceOf(to, ''), words).catch(() => ({}));
     const sounds = words.map((w) => voiced[w]).filter(Boolean).join(' ');
-    return { forward, kind: 'line' as const, line, ipa: sounds };
+    // The dictionary's meanings besides the line, the line itself not again.
+    const besides = meant.filter((m) => m.word.toLowerCase() !== line.toLowerCase());
+    return {
+      forward, kind: 'line' as const, line, ipa: sounds,
+      ...(besides.length > 0 ? { meanings: besides } : {}),
+    };
   });
 
   // What is said to the panel rather than typed into it: recorded and written down here, and
