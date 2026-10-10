@@ -160,7 +160,10 @@ fn pronunciations(value: &Value) -> (Vec<String>, Option<usize>) {
         .into_iter()
         .flatten()
     {
-        if let Some(written) = sound.get("ipa").and_then(|v| v.as_str()) {
+        // Two variants written as one, "[ˈtɹʷænˌskɹʷɪpt] ~ [ˈt̠ɹ̠ʷænˌskɹʷɪpt]", are two
+        // transcriptions, each with its own delimiters, and a card lays out one at a time.
+        let written = sound.get("ipa").and_then(|v| v.as_str()).unwrap_or("");
+        for written in written.split('~').filter(|part| !part.trim().is_empty()) {
             let bracketed = written.trim().starts_with('[');
             let ipa = written
                 .trim()
@@ -480,6 +483,24 @@ mod tests {
         );
         let dog = read_line(PERRO, "es", &mut skipped).unwrap().entry;
         assert_eq!(lexcore::resolve::narrow_of(&dog), None);
+    }
+
+    /// Two variants Wiktionary writes in one field, joined by a tilde, are two transcriptions.
+    #[test]
+    fn variants_joined_by_a_tilde_are_two_transcriptions() {
+        let mut skipped = Skipped::default();
+        let transcript = r#"{"word":"transcript","pos":"noun","lang_code":"en",
+          "senses":[{"glosses":["A written copy."]}],
+          "sounds":[{"ipa":"/ˈtɹænˌskɹɪpt/"},{"ipa":"[ˈtɹ̝̊ʷænˌskɹʷɪpt] ~ [ˈt̠ɹ̠̊˔ʷænˌskɹʷɪpt]"}]}"#;
+        let read = read_line(transcript, "en", &mut skipped).unwrap().entry;
+        assert_eq!(
+            read.ipa,
+            vec!["ˈtɹænˌskɹɪpt", "ˈtɹ̝̊ʷænˌskɹʷɪpt", "ˈt̠ɹ̠̊˔ʷænˌskɹʷɪpt"]
+        );
+        assert_eq!(
+            lexcore::resolve::narrow_of(&read).as_deref(),
+            Some("ˈtɹ̝̊ʷænˌskɹʷɪpt")
+        );
     }
 
     /// An entry that only names what it is a form of, with no sound of its own, is a bare

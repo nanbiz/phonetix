@@ -1496,7 +1496,9 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
         return answer;
     };
     let mut form = crate::paradigm::form_at(&answer.spelling, place, &entry);
-    if answer.target.0 == "en" {
+    // Only a translation is said in the form: an English word's meaning is a definition, and
+    // "To provide a list of references for" said as a participle is no meaning at all.
+    if answer.target.0 == "en" && answer.source != answer.target {
         if let Some(meaning) = entry
             .senses
             .iter()
@@ -2323,9 +2325,10 @@ fn finish<D: AsRef<[u8]>>(
         (Vec::new(), None)
     };
     // The form, and its meaning said in it where the reader reads English: the dictionary's
-    // meaning of "andar" is "to walk", and "anduvo" means "he walked".
+    // meaning of "andar" is "to walk", and "anduvo" means "he walked". Only a translation: an
+    // English word's meaning is a definition, which said in a form is no meaning at all.
     let paradigm = crate::paradigm::form(spelling, entry, agreeing).map(|mut form| {
-        if target.0 == "en" {
+        if target.0 == "en" && source != target {
             if let Some(meaning) = glosses
                 .iter()
                 .find(|gloss| !crate::annotate::about_grammar(gloss))

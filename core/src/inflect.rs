@@ -183,7 +183,10 @@ fn head(meaning: &str) -> Option<(String, String)> {
     // A sense written under a heading - "Used as a copula. to be" - means what follows it.
     let meaning = meaning
         .split(". ")
-        .find(|part| part.trim_start().starts_with("to "))
+        .find(|part| {
+            let part = part.trim_start();
+            part.starts_with("to ") || part.starts_with("To ")
+        })
         .unwrap_or(meaning);
     // A label in parentheses before the meaning - "(intransitive) to run" - is not the meaning.
     let mut meaning = meaning.trim();
@@ -205,7 +208,11 @@ fn head(meaning: &str) -> Option<(String, String)> {
         }
     }
     let first = unbracketed.split([',', ';', '(']).next()?.trim();
-    let first = first.strip_prefix("to ").unwrap_or(first).trim();
+    let first = first
+        .strip_prefix("to ")
+        .or_else(|| first.strip_prefix("To "))
+        .unwrap_or(first)
+        .trim();
     let first = first.split_whitespace().collect::<Vec<_>>().join(" ");
     let first = first.as_str();
     if first.is_empty()
@@ -533,6 +540,20 @@ mod tests {
         assert_eq!(
             super::english("large", "adj", &place("superlative")).as_deref(),
             Some("largest")
+        );
+    }
+
+    /// A meaning written as a sentence, with a capital, is read the same as one without.
+    #[test]
+    fn a_capital_to_is_still_to() {
+        let place = vec![
+            ("third-person".to_string(), "person"),
+            ("singular".to_string(), "number"),
+            ("present".to_string(), "tense"),
+        ];
+        assert_eq!(
+            super::english("To tend to do", "verb", &place).as_deref(),
+            Some("he tends to do")
         );
     }
 
