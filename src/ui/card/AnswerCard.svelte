@@ -189,6 +189,20 @@
         : `form of ${answer.lemma}`
   );
   let nothing = $derived(lead === null && answer.ipa.length === 0 && !phrase);
+  // Whether anything goes under the strip: a word read in a language the reader knows can have
+  // nothing more to say than how it is said, and an empty band under it read as a card that
+  // failed to load.
+  let bodied = $derived(
+    whole ||
+      nothing ||
+      (!!lead && lead !== answer.spelling) ||
+      phrase ||
+      (!!answer.paradigm && answer.paradigm.place.length > 0) ||
+      !!form ||
+      arriving !== null ||
+      others.length > 0 ||
+      (!!opened && answer.ipa.length > 0)
+  );
   let missing = $derived(
     answer.state === 'NoPack'
       ? `No dictionary for ${named(answer.source)} yet`
@@ -304,64 +318,66 @@
       {/if}
     </div>
   {/if}
-  <header class="card-head">
-    {#if whole}
-      <Entry entry={answer} />
-    {:else if nothing}
-      <p class="note">{missing}</p>
-    {:else}
-      {#if lead && lead !== answer.spelling}
-        <div class="headline">
-          <span class="tr">{lead}</span>
-          {#if answer.pos && !phrase}<span class="chip">{answer.pos}</span>{/if}
-          {#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}
-          {#if guessed}
-            <span class="badge guess" title={engine ? `Translated by ${engine}` : 'Translated by a machine'}
-              >guess</span>
-          {:else if anchored}
-            <span class="badge">in English</span>
-          {/if}
-        </div>
+  {#if bodied}
+    <header class="card-head">
+      {#if whole}
+        <Entry entry={answer} />
+      {:else if nothing}
+        <p class="note">{missing}</p>
+      {:else}
+        {#if lead && lead !== answer.spelling}
+          <div class="headline">
+            <span class="tr">{lead}</span>
+            {#if answer.pos && !phrase}<span class="chip">{answer.pos}</span>{/if}
+            {#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}
+            {#if guessed}
+              <span class="badge guess" title={engine ? `Translated by ${engine}` : 'Translated by a machine'}
+                >guess</span>
+            {:else if anchored}
+              <span class="badge">in English</span>
+            {/if}
+          </div>
+        {/if}
+
+        {#if phrase}
+          <!-- What was selected, under what it means, so a reader sees which of it was answered. -->
+          <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
+        {/if}
+
+        {#if answer.paradigm && answer.paradigm.place.length > 0 && !phrase}
+          <FormLine
+            paradigm={answer.paradigm}
+            spelling={answer.spelling}
+            lemma={answer.lemma}
+            {onLemma}
+            {onForm}
+          />
+        {:else if form}
+          <div class="gram" data-form><span class="one-line">{form}</span></div>
+        {/if}
+
+        {#if arriving !== null}
+          <!-- Until the dictionary is here the word is only said, and a card with no meaning on
+               it says why and how long. -->
+          <div class="gram" data-arriving>
+            <span class="one-line"
+              >Getting the {named(answer.source)} dictionary · {Math.round(arriving * 100)}%</span>
+          </div>
+        {/if}
+
+        {#if others.length > 0}
+          <div class="gram" data-others>
+            <span>or</span><span class="lemma one-line">{others.join(' · ')}</span>
+          </div>
+        {/if}
       {/if}
 
-      {#if phrase}
-        <!-- What was selected, under what it means, so a reader sees which of it was answered. -->
-        <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
+      {#if opened && answer.ipa.length > 0 && !phrase}
+        <!-- Last, so the line a sound adds moves nothing the reader is already reading. -->
+        <SoundLine about={opened} {diagram} onPlay={onPlaySymbol} {onOpen} />
       {/if}
-
-      {#if answer.paradigm && answer.paradigm.place.length > 0 && !phrase}
-        <FormLine
-          paradigm={answer.paradigm}
-          spelling={answer.spelling}
-          lemma={answer.lemma}
-          {onLemma}
-          {onForm}
-        />
-      {:else if form}
-        <div class="gram" data-form><span class="one-line">{form}</span></div>
-      {/if}
-
-      {#if arriving !== null}
-        <!-- Until the dictionary is here the word is only said, and a card with no meaning on
-             it says why and how long. -->
-        <div class="gram" data-arriving>
-          <span class="one-line"
-            >Getting the {named(answer.source)} dictionary · {Math.round(arriving * 100)}%</span>
-        </div>
-      {/if}
-
-      {#if others.length > 0}
-        <div class="gram" data-others>
-          <span>or</span><span class="lemma one-line">{others.join(' · ')}</span>
-        </div>
-      {/if}
-    {/if}
-
-    {#if opened && answer.ipa.length > 0 && !phrase}
-      <!-- Last, so the line a sound adds moves nothing the reader is already reading. -->
-      <SoundLine about={opened} {diagram} onPlay={onPlaySymbol} {onOpen} />
-    {/if}
-  </header>
+    </header>
+  {/if}
   {#if points}
     <!-- The way in from the word: a wedge whose fill is what takes the pointer, and whose two
          slanted edges carry the card's border, so the base it shares with the card stays open.

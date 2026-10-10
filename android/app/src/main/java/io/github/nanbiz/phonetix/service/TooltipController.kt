@@ -668,6 +668,7 @@ class TooltipController(
                 meaning = meaning,
                 report = if (BuildConfig.DEBUG) laidOut else null,
                 narrow = settings.narrow,
+                hideStress = settings.hideStress,
             )
         }
         return fresh.view

@@ -179,13 +179,30 @@ export function ofTranscription(spelling: string, ipa: string, source: string): 
 }
 
 /** The answer at the detail the reader asked for: led by the dictionary's narrow transcription
- *  where they asked for narrow ones and it gives one, and by the broad one otherwise. */
-export function atDetail(answer: Answer, narrow: boolean): Answer {
-  if (!narrow || !answer.narrow) return { ...answer, detail: 'broad' };
+ *  where they asked for narrow ones and it gives one, and by the broad one otherwise, and
+ *  without stress marks where they turned them off. */
+export function atDetail(answer: Answer, narrow: boolean, hideStress = false): Answer {
+  const detailed: Answer =
+    !narrow || !answer.narrow
+      ? { ...answer, detail: 'broad' }
+      : {
+          ...answer,
+          ipa: [answer.narrow, ...answer.ipa.filter((ipa) => ipa !== answer.narrow)],
+          symbols: answer.narrowSymbols ?? [],
+          detail: 'narrow',
+        };
+  if (!hideStress) return detailed;
+  // Without the marks where the reader turned them off, as over the page: a stress mark is a
+  // symbol of its own, so it goes from the list of symbols as well as from the line.
+  const bare = (ipa: string) => ipa.replace(STRESS, '');
   return {
-    ...answer,
-    ipa: [answer.narrow, ...answer.ipa.filter((ipa) => ipa !== answer.narrow)],
-    symbols: answer.narrowSymbols ?? [],
-    detail: 'narrow',
+    ...detailed,
+    ipa: detailed.ipa.map(bare),
+    symbols: detailed.symbols
+      .map((symbol) => ({ ...symbol, token: bare(symbol.token) }))
+      .filter((symbol) => symbol.token !== ''),
   };
 }
+
+/** The primary and secondary stress marks. */
+const STRESS = /[ˈˌ]/g;

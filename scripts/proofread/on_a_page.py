@@ -371,29 +371,56 @@ class ChromeHand:
 # Whether a card is open on the page.
 CARD_OPEN_JS = """!!(document.getElementById('phonetix-card-host') || {}).shadowRoot?.querySelector('.card')"""
 
+# Settings written as the extension's own pages write them, a key given null taken out.
+STORE_JS = """(async (values) => {
+  const gone = Object.keys(values).filter((key) => values[key] === null);
+  await chrome.storage.local.remove(gone);
+  await chrome.storage.local.set(Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== null)));
+  return 'ok';
+})(%s)"""
+
+QUIET_CARD_JS = """
+  (() => {
+    const card = (document.getElementById('phonetix-card-host') || {}).shadowRoot?.querySelector('.card');
+    return card && {head: !!card.querySelector('.card-head'),
+                    ipa: card.querySelector('.card-strip .ipa')?.textContent ?? ''};
+  })()
+"""
+
 EMBER_JS = """
   (() => {
     const host = document.getElementById('phonetix-card-host-ember');
     if (!host) return null;
     const root = host.shadowRoot;
     const ball = root.querySelector('.ember'), light = root.querySelector('.ember-word');
+    const at = ball.getBoundingClientRect();
     return {ball: ball.className, word: light.className,
+            at: [at.left + at.width / 2, at.top + at.height / 2],
+            burning: [...ball.children].map((flame) => getComputedStyle(flame).animationName),
             lit: light.classList.contains('on') ? light.getBoundingClientRect().toJSON() : null};
   })()
 """
 
 
-def ember_checks(hand, engine, failures, off):
-    """The ember goes with the pointer while Phonetix is on: just under it over nothing, into
-    the word it is on, which lights, and nowhere at all once Phonetix is off. [off] switches it
-    off and on again. Asked of a page with a paragraph #prose, open in the hand's tab."""
+def ember_checks(hand, engine, failures, store):
+    """The ember goes with the pointer while Phonetix is on: burning at its tip over nothing,
+    into the word it is on, which lights, and nowhere at all once Phonetix is off. A card for a
+    word in a language the reader reads is the strip alone, without stress marks where they
+    are off. [store] writes settings, a key given None taking it out. Asked of a page with a
+    paragraph #prose, open in the hand's tab."""
     where = hand.ask("""
         (() => {
           const prose = document.getElementById('prose').getBoundingClientRect();
           const word = [...document.querySelectorAll('#prose .px-w')][0];
           const box = word ? word.getBoundingClientRect() : null;
           // Over nothing: the window's far corner, away from any card still open.
+          // The widest word, which is said with a stress to show or leave off.
+          const long = [...document.querySelectorAll('#prose .px-w')]
+            .map((w) => w.getBoundingClientRect())
+            .sort((a, b) => b.width - a.width)[0];
           return {empty: {x: innerWidth - 40, y: innerHeight - 40},
+                  long: long ? {x: long.left + long.width / 2, y: long.top + long.height / 2} : null,
                   word: box ? {x: box.left + box.width / 2, y: box.top + box.height / 2,
                                box: box.toJSON()} : null};
         })()
@@ -407,6 +434,11 @@ def ember_checks(hand, engine, failures, off):
         failures.append(f"{engine}: no ember under the pointer over nothing: {empty}")
     elif empty["lit"]:
         failures.append(f"{engine}: a word was lit with the pointer on none: {empty}")
+    # At the tip itself, and burning: a still ember is one the reader's settings never turned on.
+    elif abs(empty["at"][0] - where["empty"]["x"]) > 1.5 or abs(empty["at"][1] - where["empty"]["y"]) > 1.5:
+        failures.append(f"{engine}: the ember is not at the pointer's tip: {empty}")
+    elif "none" in empty["burning"]:
+        failures.append(f"{engine}: the ember does not move: {empty}")
     if where["word"]:
         hand.move(where["word"]["x"] - 3, where["word"]["y"])
         hand.move(where["word"]["x"], where["word"]["y"])
@@ -447,14 +479,38 @@ def ember_checks(hand, engine, failures, off):
             print(f"  {engine}, the card 50 ms after the pointer left: {'open' if still else 'gone'}")
             if still:
                 failures.append(f"{engine}: the card stayed after the pointer left its word")
-    off(True)
+    if where["long"]:
+        # A word in a language the reader reads: how it is said and nothing under it, and with
+        # stress marks off, none in it.
+        store({"knownLanguages": ["es"], "hideStress": True})
+        hand.move(where["empty"]["x"], where["empty"]["y"])
+        time.sleep(0.3)
+        long = where["long"]
+        hand.move(long["x"] - 3, long["y"])
+        hand.move(long["x"], long["y"])
+        quiet = None
+        for _ in range(20):
+            time.sleep(0.25)
+            quiet = hand.ask(QUIET_CARD_JS)
+            if quiet:
+                break
+        print(f"  {engine}, a card for a word in a language the reader reads: {quiet}")
+        if not quiet:
+            failures.append(f"{engine}: no card for a word in a language the reader reads")
+        else:
+            if quiet["head"]:
+                failures.append(f"{engine}: a card with nothing to say under its strip has a body: {quiet}")
+            if any(mark in quiet["ipa"] for mark in "ˈˌ"):
+                failures.append(f"{engine}: the card shows stress marks with them off: {quiet}")
+        store({"knownLanguages": None, "hideStress": None})
+    store({"on": False})
     hand.move(where["empty"]["x"] + 4, where["empty"]["y"])
     time.sleep(0.6)
     gone = hand.ask(EMBER_JS)
     print(f"  {engine}, the ember with Phonetix off: {gone}")
     if gone and "on" in gone["ball"].split():
         failures.append(f"{engine}: the ember stayed with Phonetix off: {gone}")
-    off(False)
+    store({"on": True})
 
 
 MARK_JS = """
@@ -563,7 +619,16 @@ def mark_checks(hand, engine, failures, turn_on=None):
         """Where the button is now, which is where the last gesture left it, and the way from
         there to camino."""
         nonlocal home, goal, path
-        now = hand.ask(MARK_JS) or button
+        # Once it has come to rest: it glides back to the side, and a finger put down where it
+        # was a frame ago misses it.
+        now = hand.ask(MARK_JS)
+        for _ in range(20):
+            time.sleep(0.1)
+            later = hand.ask(MARK_JS)
+            if later == now:
+                break
+            now = later
+        now = now or button
         home = (now["x"], now["y"])
         goal = finger_for(home, (word["x"], word["y"]), size)
         path = [(home[0] + (goal[0] - home[0]) * k / 12, home[1] + (goal[1] - home[1]) * k / 12)
@@ -578,6 +643,16 @@ def mark_checks(hand, engine, failures, turn_on=None):
             got = hand.ask(expression)
             if test(got):
                 break
+        return got
+
+    def settled(expression, got):
+        """[got] once it stops moving: the actions spring out past their place and back."""
+        for _ in range(10):
+            time.sleep(0.1)
+            later = hand.ask(expression)
+            if later == got:
+                break
+            got = later
         return got
 
     # Dragged onto the word: the card while the finger is down, gone once it lifts.
@@ -613,7 +688,7 @@ def mark_checks(hand, engine, failures, turn_on=None):
     hand.finger_down(*home)
     hand.finger_move(path)
     wait_for(CARD_AT_JS, lambda c: c and c.get("word") == "camino")
-    menu = wait_for(MENU_JS, lambda m: m, tries=12)
+    menu = settled(MENU_JS, wait_for(MENU_JS, lambda m: m, tries=12))
     print(f"  {engine}, kept on camino: actions {menu}")
     article = next((a for a in menu or [] if a["does"] == "article"), None)
     if not menu or {a["does"] for a in menu} != {"play", "article"}:
@@ -835,6 +910,13 @@ def arrow_checks(hand, name, painted, low, failures):
         for _ in range(24):
             seen = card()
             if seen["open"] and same_word(seen["word"], word["text"]):
+                # Where it settles: it eases in, and measured on the way it is off its word.
+                for _ in range(10):
+                    time.sleep(0.1)
+                    later = card()
+                    if later == seen:
+                        break
+                    seen = later
                 return seen
             time.sleep(0.25)
         return None
@@ -1384,9 +1466,8 @@ def main():
         # the word with nothing the window hears, and the card goes with it all the same; the
         # box scrolled past the word takes the card down rather than leaving it pointing at
         # whatever came there.
-        ember_checks(ChromeHand(cdp, page), "chrome", failures, lambda off: (
-            evaluate(cdp, settings, f"chrome.storage.local.set({{on: {'false' if off else 'true'}}})"),
-            time.sleep(1.5)))
+        ember_checks(ChromeHand(cdp, page), "chrome", failures, lambda values: (
+            evaluate(cdp, settings, STORE_JS % json.dumps(values)), time.sleep(1.5)))
         chat_target = cdp.send("Target.createTarget", {"url": f"{base}/chat.html"})["targetId"]
         chat = cdp.send("Target.attachToTarget",
                         {"targetId": chat_target, "flatten": True})["sessionId"]

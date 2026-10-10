@@ -116,7 +116,7 @@ export const DEFAULTS: Settings = {
   accents: {},
   delay: 200,
   cards: true,
-  animations: false,
+  animations: true,
   host: '',
   theme: 'phonetix',
   dark: 'system',

@@ -29,7 +29,7 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, serve, stream_draws, walk
+from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, serve, stream_draws, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -423,9 +423,9 @@ def main():
             driver.send("WebDriver:CloseWindow")
             driver.send("WebDriver:SwitchToWindow", {"handle": here})
 
-        # The ember, on the page as it is; switched off from a tab of the extension's own,
+        # The ember, on the page as it is, with settings written from a tab of the extension's own,
         # since the page cannot reach the settings.
-        def switched(off):
+        def switched(values):
             here = driver.send("WebDriver:GetWindowHandle")
             here = here["value"] if isinstance(here, dict) else here
             fresh = driver.send("WebDriver:NewWindow", {"type": "tab", "focus": False})
@@ -433,8 +433,8 @@ def main():
             driver.send("WebDriver:Navigate", {"url": f"{view}/viewbook.html"})
             time.sleep(1)
             driver.script("const done = arguments[0];"
-                          f"browser.storage.local.set({{on: {'false' if off else 'true'}}})"
-                          ".then(() => done('ok'));")
+                          + STORE_JS.replace("chrome.", "browser.") % json.dumps(values)
+                          + ".then(done);")
             driver.send("WebDriver:CloseWindow")
             driver.send("WebDriver:SwitchToWindow", {"handle": here})
             time.sleep(1.5)

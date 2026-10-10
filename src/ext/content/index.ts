@@ -743,6 +743,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     accent: accentFor(settings, source),
     eased: settings.animations,
     narrow: settings.narrow,
+    hideStress: settings.hideStress,
     entered: tapped,
     onPlay: () => {
       const context = warmAudio();
@@ -936,7 +937,7 @@ let emberFrame = 0;
 
 /**
  * Put the ember where the pointer is: under the word it is on, the page's own or one drawn
- * over it, or just below the pointer where it is on no word. Away where no card would open -
+ * over it, or at the pointer's tip where it is on no word. Away where no card would open -
  * Phonetix off here, cards off, a finger rather than a pointer, a button held down for a
  * selection - and over anything of ours.
  */

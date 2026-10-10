@@ -459,6 +459,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    its shape, since the arrow has to stand out of it, and a square strip showed its corners
    past the card's rounded ones. */
 .card-strip { border-radius: calc(var(--radius-card) - var(--border-width)) calc(var(--radius-card) - var(--border-width)) 0 0; }
+/* A card with nothing under the strip is the strip: rounded all round, and the arrow on either
+   side takes its fill. */
+.card:not(:has(> .card-head)) > .card-strip { border-radius: calc(var(--radius-card) - var(--border-width)); border-bottom: 0; }
+.card.points:not(:has(> .card-head)) .card-arrow polygon { fill: var(--strip-bg); }
 .card-strip { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--strip-bg); border-bottom: var(--border-width) solid var(--color-border); }
 /* The arrow on the card's top edge comes out of the strip, and is the strip's shade. */
 .card.points.below:has(> .card-strip) .card-arrow polygon { fill: var(--strip-bg); }

@@ -4,7 +4,7 @@
 A card over "corre" used to lead with "to run", the meaning of "correr", over a word that means
 "he runs". It now says the meaning in the form the word has, names the form in grammar's own
 terms and which word it is a form of ("present · indicative · 3rd singular of correr"), and
-sets the word's own ending apart. This holds the side button on such words of the Spanish page
+sets the word's own ending apart, with no stress marks while they are off. This holds the side button on such words of the Spanish page
 and reads the card while it is held.
 
 The dictionary is the real one, as the release publishes it: fixture packs are written for the
@@ -61,6 +61,9 @@ def main():
             failures.append(f"the card for {word} does not say {meaning!r}: {texts}")
         if plain(form) not in [plain(text) for text in texts]:
             failures.append(f"the card for {word} does not name its form as {form!r}: {texts}")
+        # Stress marks are off unless the reader turns them on, on the card as over the page.
+        if any(mark in joined for mark in "ˈˌ"):
+            failures.append(f"the card for {word} shows stress marks with them off: {texts}")
     if failures:
         print("\nFAIL")
         for line in failures:
