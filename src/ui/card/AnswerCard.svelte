@@ -43,7 +43,7 @@
     points?: 'above' | 'below' | null;
     /** A sound the reader asked about. */
     onSymbol?: (symbol: string) => void;
-    onPlay?: () => void;
+    onPlay?: () => Promise<void> | void;
     /** Read the word's language in another accent from now on. Without it the accent is named
      *  and not chosen here. */
     onAccent?: (accent: string) => void;

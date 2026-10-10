@@ -491,6 +491,25 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); margin-left: 2px; }
 .audio svg path { fill: currentColor; }
 .audio[disabled] { background: var(--color-chip-bg); color: var(--color-ink-faint); }
+/* The play button moves where the reader asked for movement: it breathes like the ember while
+   it waits, gives under the pointer, and while a sound plays shows it - its bars moving and
+   rings going out from it - until the sound has been heard. Still everywhere else. */
+.audio { position: relative; }
+.audio.playing svg { margin-left: 0; }
+.audio.playing svg path { fill: none; }
+.card.eased .audio { transition: transform 140ms ease-out; }
+.card.eased .audio:hover { transform: scale(1.08); }
+.card.eased .audio:active { transform: scale(0.94); }
+.card.eased .audio:not(.playing) { animation: audio-breathe 2.6s ease-in-out infinite; }
+.card.eased .audio.playing::before, .card.eased .audio.playing::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--color-accent); pointer-events: none; animation: audio-ring 1.1s ease-out infinite; }
+.card.eased .audio.playing::after { animation-delay: 0.55s; }
+.card.eased .audio.playing svg path { transform-box: fill-box; transform-origin: center; animation: audio-bar 0.6s ease-in-out infinite alternate; }
+.card.eased .audio.playing svg path:nth-child(2n) { animation-delay: -0.3s; }
+.card.eased .audio.playing svg path:nth-child(3n) { animation-delay: -0.15s; }
+@keyframes audio-breathe { 0%, 100% { box-shadow: 0 0 4px 0 color-mix(in srgb, var(--color-accent) 25%, transparent); } 50% { box-shadow: 0 0 12px 3px color-mix(in srgb, var(--color-accent) 50%, transparent); } }
+@keyframes audio-ring { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes audio-bar { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
+@media (prefers-reduced-motion: reduce) { .card.eased .audio, .card.eased .audio.playing::before, .card.eased .audio.playing::after, .card.eased .audio.playing svg path { animation: none; transition: none; } }
 /* The pronunciation, drawn large because it is what the card is for, and each symbol is a
    button: a reader who does not know a sound is one tap from what it is. */
 .ipa-row { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; font-family: var(--font-ipa); font-size: var(--font-size-ipa-large); color: var(--color-ipa); }

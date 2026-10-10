@@ -393,7 +393,8 @@ async function speak(word: string, lang: string): Promise<void> {
   await play(await sendMessage('speak', { word, lang, accent: accentFor(settings, lang) }));
 }
 
-/** Play bytes through Web Audio, which is what a page's media policy cannot refuse. */
+/** Play bytes through Web Audio, which is what a page's media policy cannot refuse, and
+ *  resolve once they have been heard, which is how long the play button shows it playing. */
 async function play(bytes: number[]): Promise<void> {
   if (bytes.length === 0) return;
   const context = new AudioContext();
@@ -401,7 +402,14 @@ async function play(bytes: number[]): Promise<void> {
   const source = context.createBufferSource();
   source.buffer = sound;
   source.connect(context.destination);
+  // Its length and a moment more at most: a context the browser keeps suspended never ends.
+  const ended = new Promise<void>((resolve) => {
+    source.onended = () => resolve();
+    setTimeout(resolve, sound.duration * 1000 + 1000);
+  });
   source.start();
+  await ended;
+  void context.close();
 }
 
 /**
@@ -711,12 +719,12 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     eased: settings.animations,
     narrow: settings.narrow,
     entered: tapped,
-    onPlay: () => {
-      if (recording) void recorded(commons(recording));
-      // The accent's own voice where the reader chose one, since a synthesised word is
-      // said by whichever voice is asked for.
-      else void speak(word.spelling, source);
-    },
+    onPlay: () =>
+      recording
+        ? recorded(commons(recording))
+        // The accent's own voice where the reader chose one, since a synthesised word is
+        // said by whichever voice is asked for.
+        : speak(word.spelling, source),
     // The lemma's entry and the word's other forms, asked the way the word itself was, with
     // nothing before them: they are not words of the page's sentence.
     lookUp: async (other) => {

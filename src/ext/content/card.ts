@@ -184,7 +184,8 @@ export interface CardActions {
   /** Whether the reader asked for narrow transcriptions. */
   narrow?: boolean;
   /** Say the word the card is about. */
-  onPlay?: () => void;
+  /** Play the word; resolves once it has been heard. */
+  onPlay?: () => Promise<void> | void;
   /** Read the word's language in another accent from now on. */
   onAccent?: (accent: string) => void;
   /** Play a recording of one sound, which is a file rather than a synthesised voice. */
