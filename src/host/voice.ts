@@ -4,17 +4,19 @@
 // else is synthesised: this is the port the core's misses are filled from, and the voice the
 // play button on the card plays.
 //
-// Where the engine runs is the one thing the two browsers disagree about. A Chromium service
+// Where the engine runs is the one thing the browsers disagree about. A Chromium service
 // worker has no document and cannot import a module from a URL, so the engine lives in an
-// offscreen page and is asked through a message; a Firefox background page has a document, so
-// the same engine is simply called. Neither difference reaches anything above this file.
+// offscreen page and is asked through a message; the background page of a Manifest V2 build,
+// Firefox's and Safari's, has a document, so the same engine is simply called. Neither
+// difference reaches anything above this file.
 
 import { host } from './packs';
 import type { Hosts } from '@/engines/whisper';
 
 const CHROMIUM_OFFSCREEN = 'offscreen.html';
 
-const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
+/** Whether the background is a page with a document, as it is in a Manifest V2 build. */
+const IN_A_PAGE = import.meta.env.MANIFEST_VERSION === 2;
 
 let ready: Promise<void> | null = null;
 
@@ -106,7 +108,7 @@ export async function ask<T>(
  */
 export async function ipa(lang: string, words: string[]): Promise<Record<string, string>> {
   if (words.length === 0) return {};
-  if (IS_FIREFOX) {
+  if (IN_A_PAGE) {
     const { phonemizeBatch } = await import('@/engines/espeak');
     return phonemizeBatch(words, lang);
   }
@@ -124,7 +126,7 @@ export async function guessed(from: string, to: string, words: string[]): Promis
   // Read here, where the setting can be read at all, and carried to the engine.
   const base = (await host()) ?? '';
   if (!base) return [];
-  if (IS_FIREFOX) {
+  if (IN_A_PAGE) {
     const { translate } = await import('@/engines/bergamot');
     return translate(base, from, to, words);
   }
@@ -135,7 +137,7 @@ export async function guessed(from: string, to: string, words: string[]): Promis
 export async function translatable(): Promise<{ from: string; to: string }[]> {
   const base = (await host()) ?? '';
   if (!base) return [];
-  if (IS_FIREFOX) {
+  if (IN_A_PAGE) {
     const { pairs } = await import('@/engines/bergamot');
     return pairs(base);
   }
@@ -150,7 +152,7 @@ export async function translatable(): Promise<{ from: string; to: string }[]> {
  * page's own media policy can block an audio element loading a URL and cannot block that.
  */
 export async function audio(lang: string, word: string): Promise<number[]> {
-  if (IS_FIREFOX) {
+  if (IN_A_PAGE) {
     const { synthesizeWav } = await import('@/engines/espeak');
     return Array.from(await synthesizeWav(word, lang));
   }

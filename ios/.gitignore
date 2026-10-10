@@ -1,0 +1,8 @@
+# Written by build.sh from the Safari build.
+Extension/
+xtool.yml
+Support/Icon.png
+.build/
+.sourcekit-lsp/
+xtool/
+.bsp/

@@ -104,7 +104,7 @@ export default defineConfig({
     // server for the translation models refuses a request that names Chrome as its browser
     // (406) and serves the same file to Firefox, so the extension names Firefox to that
     // server alone. Firefox needs nothing.
-    permissions: browser === 'firefox'
+    permissions: browser === 'firefox' || browser === 'safari'
       ? ['storage', 'tabs']
       : ['storage', 'tabs', 'offscreen', 'declarativeNetRequest'],
     host_permissions: ['<all_urls>'],
@@ -144,7 +144,9 @@ export default defineConfig({
     // about:addons, which is the consent Mozilla's policy requires. The inline
     // transcription itself is fully offline (bundled dictionaries + espeak); only the
     // hover tooltip's enrichment leaves the browser.
-    ...(browser === 'firefox'
+    // Safari's build is the iPhone's, wrapped in an app (ios/): none of either block, since
+    // its store and its app carry what the others put here.
+    ...(browser === 'safari' ? {} : browser === 'firefox'
       ? {
           browser_specific_settings: {
             gecko: {

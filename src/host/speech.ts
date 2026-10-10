@@ -15,7 +15,9 @@ import { allowed, resample } from '@/engines/listen';
 import { ENCODER_URL, MODEL_HOST, type Hosts } from '@/engines/whisper';
 import type { Heard } from './messages';
 
-const IS_FIREFOX = import.meta.env.BROWSER === 'firefox';
+/** Whether this build records the way Firefox does: a Manifest V2 build, Firefox's or Safari's,
+ *  whose background page has no offscreen page to record in. */
+const IS_FIREFOX = import.meta.env.MANIFEST_VERSION === 2;
 
 /** What the panel shows while a question is under way: recording or writing it down, and how
  *  much of the model has arrived where it is still arriving. */
