@@ -275,7 +275,7 @@ CARD_JS = """
   const sym = card.querySelector('.sym');
   return {
     open: true,
-    word: (card.querySelector('.card-top .word') || {}).textContent || '',
+    word: card.dataset.word || '',
     way: card.classList.contains('above') ? 'above' : 'below',
     card: box(card),
     arrow: arrow ? box(arrow) : null,

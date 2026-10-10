@@ -111,7 +111,15 @@ def point_at(cdp, page, word, within="prose"):
     for dx in (0, 1):
         cdp.send("Input.dispatchMouseEvent",
                  {"type": "mouseMoved", "x": where["x"] + dx, "y": where["y"]}, session=page)
-    return wait_for(cdp, page, shadow_text("phonetix-card-host"), lambda v: bool(v), tries=10)
+    # The word the card answers, which its face does not print, then everything it says.
+    return wait_for(cdp, page, """
+        (() => {
+          const host = document.getElementById('phonetix-card-host');
+          const card = host && host.shadowRoot && host.shadowRoot.querySelector('.card');
+          if (!card) return '';
+          return (card.dataset.word || '') + ' | ' + card.textContent.replace(/\\s+/g, ' ').trim();
+        })()
+    """, lambda v: bool(v), tries=10)
 
 
 def main():
@@ -391,7 +399,7 @@ def main():
                 failures.append(f"the card offers {offered['offered']!r}")
             spain = wait_for(cdp, page, """
               (() => {
-                const card = document.getElementById('phonetix-card-host').shadowRoot.querySelector('.card-top .ipa');
+                const card = document.getElementById('phonetix-card-host').shadowRoot.querySelector('.card-strip .ipa');
                 const box = [...document.querySelectorAll('.px-w')]
                   .find(w => (w.querySelector('.px-was') || {}).textContent === 'calle');
                 const page = box ? ((box.querySelector('.px-ph') || {}).textContent || '') : '';

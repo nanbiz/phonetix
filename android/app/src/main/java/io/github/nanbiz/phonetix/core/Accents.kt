@@ -9,6 +9,8 @@ package io.github.nanbiz.phonetix.core
 data class Accent(
     val id: String,
     val name: String,
+    /** The name cut to what a chip beside a transcription holds: the region's code. */
+    val short: String,
     /** The espeak voice, which is what says a word nothing has a recording of. */
     val voice: String,
     /** Whether the core rewrites a standard transcription into this accent. */
@@ -18,12 +20,12 @@ data class Accent(
 object Accents {
 
     val all: Map<String, List<Accent>> = mapOf(
-        "de" to listOf(Accent("de", "Germany", "de", false), Accent("de-ch", "Switzerland", "de", true), Accent("de-at", "Austria", "de", true)),
-        "en" to listOf(Accent("en-gb", "British", "en-gb-x-rp", true), Accent("en-us", "American", "en-us", true), Accent("en-gb-scotland", "Scottish", "en-gb-scotland", false), Accent("en-au", "Australian", "en-au", false), Accent("en-029", "Caribbean", "en-029", false), Accent("en-ca", "Canadian", "en-us", true)),
-        "es" to listOf(Accent("es", "Spain", "es", false), Accent("es-419", "Latin America", "es-419", true), Accent("es-ar", "Rioplatense", "es-419", true)),
-        "fr" to listOf(Accent("fr", "France", "fr", false), Accent("fr-ca", "Canada", "fr-ca", false)),
-        "pt" to listOf(Accent("pt-pt", "Portugal", "pt", false), Accent("pt-br", "Brazil", "pt-br", false)),
-        "vi" to listOf(Accent("vi", "Northern", "vi", false), Accent("vi-vn-x-central", "Central", "vi-vn-x-central", false)),
+        "de" to listOf(Accent("de", "Germany", "DE", "de", false), Accent("de-ch", "Switzerland", "CH", "de", true), Accent("de-at", "Austria", "AT", "de", true)),
+        "en" to listOf(Accent("en-gb", "British", "GB", "en-gb-x-rp", true), Accent("en-us", "American", "US", "en-us", true), Accent("en-gb-scotland", "Scottish", "SCOT", "en-gb-scotland", false), Accent("en-au", "Australian", "AU", "en-au", false), Accent("en-029", "Caribbean", "CARIB", "en-029", false), Accent("en-ca", "Canadian", "CA", "en-us", true)),
+        "es" to listOf(Accent("es", "Spain", "ES", "es", false), Accent("es-419", "Latin America", "LATAM", "es-419", true), Accent("es-ar", "Rioplatense", "AR", "es-419", true)),
+        "fr" to listOf(Accent("fr", "France", "FR", "fr", false), Accent("fr-ca", "Canada", "CA", "fr-ca", false)),
+        "pt" to listOf(Accent("pt-pt", "Portugal", "PT", "pt", false), Accent("pt-br", "Brazil", "BR", "pt-br", false)),
+        "vi" to listOf(Accent("vi", "Northern", "North", "vi", false), Accent("vi-vn-x-central", "Central", "Central", "vi-vn-x-central", false)),
     )
 
     /** What a language offers, which is nothing for most of them. */

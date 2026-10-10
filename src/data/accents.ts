@@ -7,6 +7,8 @@
 export interface Accent {
   id: string;
   name: string;
+  /** The name cut to what a chip beside a transcription holds: the region's code. */
+  short: string;
   /** The espeak voice, which is what says a word nothing has a recording of. */
   voice: string;
   /** Whether the core rewrites a standard transcription into this accent. */
@@ -18,12 +20,12 @@ export interface Accent {
 }
 
 export const ACCENTS: Record<string, Accent[]> = {
-  de: [{ id: "de", name: "Germany", voice: "de", rule: false, whole: true }, { id: "de-ch", name: "Switzerland", voice: "de", rule: true, whole: true }, { id: "de-at", name: "Austria", voice: "de", rule: true, whole: true }],
-  en: [{ id: "en-gb", name: "British", voice: "en-gb-x-rp", rule: true, whole: true }, { id: "en-us", name: "American", voice: "en-us", rule: true, whole: true }, { id: "en-gb-scotland", name: "Scottish", voice: "en-gb-scotland", rule: false, whole: false }, { id: "en-au", name: "Australian", voice: "en-au", rule: false, whole: false }, { id: "en-029", name: "Caribbean", voice: "en-029", rule: false, whole: false }, { id: "en-ca", name: "Canadian", voice: "en-us", rule: true, whole: true }],
-  es: [{ id: "es", name: "Spain", voice: "es", rule: false, whole: true }, { id: "es-419", name: "Latin America", voice: "es-419", rule: true, whole: true }, { id: "es-ar", name: "Rioplatense", voice: "es-419", rule: true, whole: true }],
-  fr: [{ id: "fr", name: "France", voice: "fr", rule: false, whole: true }, { id: "fr-ca", name: "Canada", voice: "fr-ca", rule: false, whole: false }],
-  pt: [{ id: "pt-pt", name: "Portugal", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", voice: "pt-br", rule: false, whole: true }],
-  vi: [{ id: "vi", name: "Northern", voice: "vi", rule: false, whole: true }, { id: "vi-vn-x-central", name: "Central", voice: "vi-vn-x-central", rule: false, whole: true }],
+  de: [{ id: "de", name: "Germany", short: "DE", voice: "de", rule: false, whole: true }, { id: "de-ch", name: "Switzerland", short: "CH", voice: "de", rule: true, whole: true }, { id: "de-at", name: "Austria", short: "AT", voice: "de", rule: true, whole: true }],
+  en: [{ id: "en-gb", name: "British", short: "GB", voice: "en-gb-x-rp", rule: true, whole: true }, { id: "en-us", name: "American", short: "US", voice: "en-us", rule: true, whole: true }, { id: "en-gb-scotland", name: "Scottish", short: "SCOT", voice: "en-gb-scotland", rule: false, whole: false }, { id: "en-au", name: "Australian", short: "AU", voice: "en-au", rule: false, whole: false }, { id: "en-029", name: "Caribbean", short: "CARIB", voice: "en-029", rule: false, whole: false }, { id: "en-ca", name: "Canadian", short: "CA", voice: "en-us", rule: true, whole: true }],
+  es: [{ id: "es", name: "Spain", short: "ES", voice: "es", rule: false, whole: true }, { id: "es-419", name: "Latin America", short: "LATAM", voice: "es-419", rule: true, whole: true }, { id: "es-ar", name: "Rioplatense", short: "AR", voice: "es-419", rule: true, whole: true }],
+  fr: [{ id: "fr", name: "France", short: "FR", voice: "fr", rule: false, whole: true }, { id: "fr-ca", name: "Canada", short: "CA", voice: "fr-ca", rule: false, whole: false }],
+  pt: [{ id: "pt-pt", name: "Portugal", short: "PT", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", short: "BR", voice: "pt-br", rule: false, whole: true }],
+  vi: [{ id: "vi", name: "Northern", short: "North", voice: "vi", rule: false, whole: true }, { id: "vi-vn-x-central", name: "Central", short: "Central", voice: "vi-vn-x-central", rule: false, whole: true }],
 };
 
 /** What a language offers, which is nothing for most of them. */

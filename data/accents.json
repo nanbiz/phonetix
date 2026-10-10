@@ -5,6 +5,7 @@
       {
         "id": "en-gb",
         "name": "British",
+        "short": "GB",
         "voice": "en-gb-x-rp",
         "rule": true,
         "words": 4533,
@@ -17,6 +18,7 @@
       {
         "id": "en-us",
         "name": "American",
+        "short": "US",
         "voice": "en-us",
         "rule": true,
         "words": 23474,
@@ -29,6 +31,7 @@
       {
         "id": "en-gb-scotland",
         "name": "Scottish",
+        "short": "SCOT",
         "voice": "en-gb-scotland",
         "words": 2362,
         "tags": [
@@ -38,6 +41,7 @@
       {
         "id": "en-au",
         "name": "Australian",
+        "short": "AU",
         "voice": "en-au",
         "words": 3982,
         "tags": [
@@ -47,11 +51,13 @@
       {
         "id": "en-029",
         "name": "Caribbean",
+        "short": "CARIB",
         "voice": "en-029"
       },
       {
         "id": "en-ca",
         "name": "Canadian",
+        "short": "CA",
         "voice": "en-us",
         "rule": true,
         "words": 2626,
@@ -64,18 +70,21 @@
       {
         "id": "es",
         "name": "Spain",
+        "short": "ES",
         "voice": "es",
         "default": true
       },
       {
         "id": "es-419",
         "name": "Latin America",
+        "short": "LATAM",
         "voice": "es-419",
         "rule": true
       },
       {
         "id": "es-ar",
         "name": "Rioplatense",
+        "short": "AR",
         "voice": "es-419",
         "rule": true
       }
@@ -84,12 +93,14 @@
       {
         "id": "de",
         "name": "Germany",
+        "short": "DE",
         "voice": "de",
         "default": true
       },
       {
         "id": "de-ch",
         "name": "Switzerland",
+        "short": "CH",
         "voice": "de",
         "rule": true,
         "words": 420
@@ -97,6 +108,7 @@
       {
         "id": "de-at",
         "name": "Austria",
+        "short": "AT",
         "voice": "de",
         "rule": true,
         "words": 1007
@@ -106,6 +118,7 @@
       {
         "id": "pt-pt",
         "name": "Portugal",
+        "short": "PT",
         "voice": "pt",
         "words": 54270,
         "tags": [
@@ -115,6 +128,7 @@
       {
         "id": "pt-br",
         "name": "Brazil",
+        "short": "BR",
         "voice": "pt-br",
         "default": true,
         "tags": [
@@ -129,12 +143,14 @@
       {
         "id": "fr",
         "name": "France",
+        "short": "FR",
         "voice": "fr",
         "default": true
       },
       {
         "id": "fr-ca",
         "name": "Canada",
+        "short": "CA",
         "voice": "fr-ca"
       }
     ],
@@ -142,12 +158,14 @@
       {
         "id": "vi",
         "name": "Northern",
+        "short": "North",
         "voice": "vi",
         "default": true
       },
       {
         "id": "vi-vn-x-central",
         "name": "Central",
+        "short": "Central",
         "voice": "vi-vn-x-central",
         "words": 27237,
         "tags": [

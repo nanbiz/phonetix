@@ -854,6 +854,8 @@ def accents_kt():
         "data class Accent(",
         "    val id: String,",
         "    val name: String,",
+        "    /** The name cut to what a chip beside a transcription holds: the region's code. */",
+        "    val short: String,",
         "    /** The espeak voice, which is what says a word nothing has a recording of. */",
         "    val voice: String,",
         "    /** Whether the core rewrites a standard transcription into this accent. */",
@@ -866,10 +868,11 @@ def accents_kt():
     ]
     for lang in sorted(table):
         rows = ", ".join(
-            'Accent(%s, %s, %s, %s)'
+            'Accent(%s, %s, %s, %s, %s)'
             % (
                 json.dumps(row["id"]),
                 json.dumps(row["name"], ensure_ascii=False),
+                json.dumps(row["short"], ensure_ascii=False),
                 json.dumps(row["voice"]),
                 "true" if row.get("rule") else "false",
             )
@@ -937,6 +940,8 @@ def accents_ts():
         "export interface Accent {",
         "  id: string;",
         "  name: string;",
+        "  /** The name cut to what a chip beside a transcription holds: the region's code. */",
+        "  short: string;",
         "  /** The espeak voice, which is what says a word nothing has a recording of. */",
         "  voice: string;",
         "  /** Whether the core rewrites a standard transcription into this accent. */",
@@ -951,10 +956,11 @@ def accents_ts():
     ]
     for lang in sorted(table):
         rows = ", ".join(
-            "{ id: %s, name: %s, voice: %s, rule: %s, whole: %s }"
+            "{ id: %s, name: %s, short: %s, voice: %s, rule: %s, whole: %s }"
             % (
                 json.dumps(row["id"]),
                 json.dumps(row["name"], ensure_ascii=False),
+                json.dumps(row["short"], ensure_ascii=False),
                 json.dumps(row["voice"]),
                 "true" if row.get("rule") else "false",
                 "true" if whole(lang, row) else "false",

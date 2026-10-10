@@ -126,7 +126,7 @@ CARD_JS = r"""
   const sheet = card.querySelector('.form-sheet');
   // Every element whose text runs past its own box: cut off, or wrapped onto a second line.
   const clipped = [];
-  for (const e of card.querySelectorAll('.form-sheet td, .sheet-grid > *, .card-top > *, .forms')) {
+  for (const e of card.querySelectorAll('.form-sheet td, .sheet-grid > *, .card-strip > *, .forms')) {
     if (e.scrollWidth > e.clientWidth + 1) clipped.push(text(e));
   }
   const words = [];
@@ -139,11 +139,14 @@ CARD_JS = r"""
     card: box(card),
     head: box(head),
     lines: lines.map(e => e.className),
-    word: text(card.querySelector('.card-top .word')),
-    ending: text(card.querySelector('.card-top .word .ending')),
-    ipaOnTop: !!card.querySelector('.card-top .ipa'),
-    top: box(card.querySelector('.card-top')),
-    wordBox: box(card.querySelector('.card-top .word')),
+    // The word the card answers, which its face prints only for a form the page does not have.
+    word: card.dataset.word || '',
+    printed: text(card.querySelector('.card-strip .word')),
+    ending: text(card.querySelector('.card-strip .word .ending')),
+    ipaOnTop: !!card.querySelector('.card-strip .ipa'),
+    playOnTop: !!card.querySelector('.card-strip .audio'),
+    top: box(card.querySelector('.card-strip')),
+    textBox: box(card.querySelector('.headline .tr')),
     headline: text(card.querySelector('.headline .tr')),
     form: text(card.querySelector('[data-form]')),
     terms: [...card.querySelectorAll('[data-term]')].map(t => ({
@@ -232,7 +235,7 @@ class Run:
         if abs(gap - 8) > 0.6:
             self.fail(f"{where}: sheet {gap:.1f}px from the card, not 8")
         inset = sheet["catBox"]["left"] - sheet["box"]["left"]
-        card_inset = seen["wordBox"]["left"] - card["left"]
+        card_inset = seen["textBox"]["left"] - card["left"]
         if abs(inset - card_inset) > 0.6:
             self.fail(f"{where}: sheet text inset {inset:.1f}, card text inset {card_inset:.1f}")
         heights = sorted({round(row["box"]["height"]) for row in sheet["rows"]})
@@ -285,14 +288,15 @@ class Run:
         if not rest["open"] or rest["word"] != "anduvo":
             self.fail(f"no card on anduvo: {rest.get('word')!r}")
             return
-        print(f"  {self.name}: at rest {rest['lines']}: {rest['word']!r} "
-              f"(ending {rest['ending']!r}) / {rest['headline']!r} / {rest['form']!r}")
-        if rest["lines"] != ["card-top", "headline", "forms"]:
-            self.fail(f"the card at rest is {rest['lines']}, not three lines")
-        if rest["ending"] != "uvo":
-            self.fail(f"the ending lit is {rest['ending']!r}, not 'uvo'")
-        if not rest["ipaOnTop"]:
-            self.fail("the transcription is not on the word's line")
+        print(f"  {self.name}: at rest, strip {bool(rest['top'])} then {rest['lines']}: "
+              f"{rest['headline']!r} / {rest['form']!r}")
+        if not rest["top"] or rest["lines"] != ["headline", "forms"]:
+            self.fail(f"the card at rest is strip {bool(rest['top'])} and {rest['lines']}, "
+                      "not the strip, the meaning and the form")
+        if rest["printed"]:
+            self.fail(f"the card prints {rest['printed']!r}, which the page already shows")
+        if not rest["ipaOnTop"] or not rest["playOnTop"]:
+            self.fail("the transcription and its play button are not on the strip")
         if rest["headline"] != "he walked":
             self.fail(f"the card says {rest['headline']!r}, not 'he walked'")
         if not rest["form"].endswith("of andar") or "indicative" not in rest["form"]:
@@ -301,8 +305,8 @@ class Run:
             self.fail(f"the terms are {[t['label'] for t in rest['terms']]}")
         if rest["form"].count("anduvo") or rest["words"].count("anduvo") > 1:
             self.fail("the card names anduvo twice")
-        if abs((rest["wordBox"]["left"] - rest["card"]["left"]) - 17) > 0.6:
-            self.fail(f"text inset {rest['wordBox']['left'] - rest['card']['left']:.1f}, not 16 "
+        if abs((rest["textBox"]["left"] - rest["card"]["left"]) - 17) > 0.6:
+            self.fail(f"text inset {rest['textBox']['left'] - rest['card']['left']:.1f}, not 16 "
                       "inside the border")
         self.words_ok(rest, "at rest")
         self.shoot("rest", rest["card"])
@@ -382,7 +386,7 @@ class Run:
             walk(hand, (term["x"], term["y"]), (row["box"]["x"], row["box"]["y"]), step=4)
             time.sleep(0.3)
             hand.click(row["box"]["x"], row["box"]["y"])
-            picked = self.wait(lambda c: c["word"] == "anduviera" and c["top"] and c["back"])
+            picked = self.wait(lambda c: c["printed"] == "anduviera" and c["top"] and c["back"])
             print(f"  {self.name}: picked: {picked.get('word')!r} (ending "
                   f"{picked.get('ending')!r}) / {picked.get('headline')!r} / "
                   f"{picked.get('form')!r} / back {picked.get('back')!r}")

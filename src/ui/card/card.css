@@ -44,21 +44,25 @@
    contents ran out put the buttons and the accent somewhere different on every word. The
    transcription has the whole width, and the accent goes under it only where the two do not
    fit; the transcription itself breaks only where it is wider than the card. */
-.card-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); }
-.card-top > .word { grid-column: 1; grid-row: 1; justify-self: start; }
-.card-top > .card-actions { grid-column: 2; grid-row: 1; justify-self: end; }
-.card-sound { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-.card-sound > .pill { margin-left: auto; }
-/* The word is never cut: where the line is short of room, the transcription behind it wraps. */
-/* Whole however long: a compound wider than its column breaks rather than losing its end, which
-   is the part a reader is reading it for. */
-.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+/* The strip across the card's top: the button that says the word, how it is said and in
+   which accent, and its Wiktionary page at the far end. The word itself is on the page under
+   the card and is not said again; what it means is the card's body, set apart below the strip
+   by its shade and a rule. The accent is glued to the transcription's closing mark, so the two
+   wrap as one and never apart. */
+.card { --strip-bg: color-mix(in srgb, var(--color-surface) 78%, black); }
+.mode-light .card { --strip-bg: color-mix(in srgb, var(--color-surface) 93%, black); }
+.card-strip { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--strip-bg); border-bottom: var(--border-width) solid var(--color-border); }
+/* The arrow on the card's top edge comes out of the strip, and is the strip's shade. */
+.card.points:not(.above):has(> .card-strip) .card-arrow polygon { fill: var(--strip-bg); }
+.card-strip .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
+.card-strip .glue { display: inline-flex; align-items: center; white-space: nowrap; }
+.card-strip .glue > .accent-pick, .card-strip .glue > .pill { margin-left: var(--space-2); }
+.card-strip .spacer { flex: 1 1 auto; }
+/* The word, only where the card reads one the page does not have: another form of it. */
+.card-strip .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; }
 /* What makes the word the form it is, in the accent, against the stem it shares with its lemma. */
-.card-top .word .ending { color: var(--color-accent); }
-.card-sound .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
-.card-top .spacer { flex: 1 1 auto; }
-.card-top .icon-btn, .card-top .audio { align-self: center; }
-.card-top .card-actions { display: inline-flex; align-items: center; gap: var(--space-2); }
+.card-strip .word .ending { color: var(--color-accent); }
+.card-strip .icon-btn, .card-strip .audio { flex: 0 0 auto; align-self: center; }
 /* The way back to the word on the page, where the card is reading as another form of it or as
    its lemma's entry. */
 .card-back { font: inherit; font-size: var(--font-size-small); color: var(--color-accent); background: none; border: none; padding: 0 var(--space-1); border-radius: var(--radius-button); cursor: pointer; white-space: nowrap; align-self: center; }

@@ -993,10 +993,13 @@ function gestures(): void {
     if (inside(event.target)) return;
     const found = wordAt(event.target);
     if (!found) return;
-    if (touched || !settings.cards) return;
-    // The word stays as it is drawn: the card names what the page wrote, and flipping each
-    // word back to its spelling as the pointer crossed it set the line jumping under a reader
-    // moving across it.
+    if (touched) return;
+    // What the page wrote, over what was drawn in its place, while the pointer is on it: the
+    // card does not print the word, since it is on the page, and a word Phonetix replaced is
+    // shown there. Laid over the drawn box rather than put back into the line, which would
+    // set the line jumping under a reader moving across it.
+    reveal(found.element);
+    if (!settings.cards) return;
     if (opening) clearTimeout(opening);
     opening = setTimeout(() => {
       anchored = onElement(found.element);

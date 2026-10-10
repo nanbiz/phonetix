@@ -443,21 +443,25 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    contents ran out put the buttons and the accent somewhere different on every word. The
    transcription has the whole width, and the accent goes under it only where the two do not
    fit; the transcription itself breaks only where it is wider than the card. */
-.card-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-1) var(--space-2); }
-.card-top > .word { grid-column: 1; grid-row: 1; justify-self: start; }
-.card-top > .card-actions { grid-column: 2; grid-row: 1; justify-self: end; }
-.card-sound { grid-column: 1 / -1; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
-.card-sound > .pill { margin-left: auto; }
-/* The word is never cut: where the line is short of room, the transcription behind it wraps. */
-/* Whole however long: a compound wider than its column breaks rather than losing its end, which
-   is the part a reader is reading it for. */
-.card-top .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; max-width: 100%; }
+/* The strip across the card's top: the button that says the word, how it is said and in
+   which accent, and its Wiktionary page at the far end. The word itself is on the page under
+   the card and is not said again; what it means is the card's body, set apart below the strip
+   by its shade and a rule. The accent is glued to the transcription's closing mark, so the two
+   wrap as one and never apart. */
+.card { --strip-bg: color-mix(in srgb, var(--color-surface) 78%, black); }
+.mode-light .card { --strip-bg: color-mix(in srgb, var(--color-surface) 93%, black); }
+.card-strip { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--strip-bg); border-bottom: var(--border-width) solid var(--color-border); }
+/* The arrow on the card's top edge comes out of the strip, and is the strip's shade. */
+.card.points:not(.above):has(> .card-strip) .card-arrow polygon { fill: var(--strip-bg); }
+.card-strip .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
+.card-strip .glue { display: inline-flex; align-items: center; white-space: nowrap; }
+.card-strip .glue > .accent-pick, .card-strip .glue > .pill { margin-left: var(--space-2); }
+.card-strip .spacer { flex: 1 1 auto; }
+/* The word, only where the card reads one the page does not have: another form of it. */
+.card-strip .word { font-size: var(--font-size-lemma); font-weight: var(--weight-bold); color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; }
 /* What makes the word the form it is, in the accent, against the stem it shares with its lemma. */
-.card-top .word .ending { color: var(--color-accent); }
-.card-sound .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
-.card-top .spacer { flex: 1 1 auto; }
-.card-top .icon-btn, .card-top .audio { align-self: center; }
-.card-top .card-actions { display: inline-flex; align-items: center; gap: var(--space-2); }
+.card-strip .word .ending { color: var(--color-accent); }
+.card-strip .icon-btn, .card-strip .audio { flex: 0 0 auto; align-self: center; }
 /* The way back to the word on the page, where the card is reading as another form of it or as
    its lemma's entry. */
 .card-back { font: inherit; font-size: var(--font-size-small); color: var(--color-accent); background: none; border: none; padding: 0 var(--space-1); border-radius: var(--radius-button); cursor: pointer; white-space: nowrap; align-self: center; }
@@ -1057,8 +1061,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-ENTRY</b> Card entry</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">reading room</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">a</button><button class="sym o">ː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
           <div class="detail"><span class="d-sym">l</span><span class="d-text"><span class="d-name">voiced alveolar lateral approximant</span><span class="d-eg">"l" in lay</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1075,8 +1079,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-VIA-ENGLISH</b> Card via English</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">czytelnia</span><span class="badge guess">guess</span></div>
           <div class="anchor-en"><span class="anchor-label">in English</span><span class="anchor-gl">reading room</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
@@ -1094,8 +1098,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-FORM</b> Card form</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">went</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
           <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1113,8 +1117,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-HOMOGRAPH</b> Card homograph</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">modern</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Two readings, choose one</span></div>
         </header>
         <div class="card-body">
@@ -1131,8 +1135,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-READING-DECIDED</b> Card reading decided</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">modern</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">modern, contemporary</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">m</button><button class="sym v">o</button><button class="sym c">d</button><button class="sym v">ɛ</button><button class="sym c">ʁ</button><button class="sym c">n</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg></div>
           <div class="detail"><span class="d-sym">ʁ</span><span class="d-text"><span class="d-name">voiced uvular fricative</span><span class="d-eg">"r" in rot</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1150,8 +1154,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-MONO</b> Card mono</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">EN</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">serendipity</span><span class="pill">EN</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr def">An unsought, unexpected but fortunate discovery.</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">s</button><button class="sym v">ɛ</button><button class="sym c">ɹ</button><button class="sym v">ə</button><button class="sym c">n</button><button class="sym c">d</button><button class="sym v">ɪ</button><button class="sym c">p</button><button class="sym v">ɪ</button><button class="sym c">t</button><button class="sym v">i</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="recording of a speaker" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 16v3"/></svg><span class="ipa-note">General American</span></div>
           <div class="detail"><span class="d-sym">ɹ</span><span class="d-text"><span class="d-name">voiced alveolar approximant</span><span class="d-eg">"r" in red</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1169,8 +1173,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-GUESS</b> Card guess</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">Bibliotheksausweisverlängerung</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">library card renewal</span><span class="badge guess">guess</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><button class="sym c">s</button><button class="sym v">a</button><button class="sym v">ʊ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">v</button><button class="sym v">a</button><button class="sym v">ɪ</button><button class="sym c">̯</button><button class="sym c">s</button><button class="sym c">f</button><button class="sym v">ɛ</button><button class="sym v">ɐ</button><button class="sym c">l</button><button class="sym v">ɛ</button><button class="sym c">ŋ</button><button class="sym v">ə</button><button class="sym c">ʁ</button><button class="sym v">ʊ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
           <div class="detail"><span class="d-sym">aʊ̯</span><span class="d-text"><span class="d-name">diphthong</span><span class="d-eg">"au" in Haus</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1188,8 +1192,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-PHRASE</b> Card phrase</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">erst gegen Mittag</span><span class="pill">DE</span><span class="pill from-machine">Bergamot</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr">not until around noon</span><span class="badge guess">guess</span></div>
           <div class="gram"><span class="lemma">erst gegen Mittag</span><span class="g-sub">machine translation of the selection</span></div>
         </header>
@@ -1205,8 +1209,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-IPA-ONLY</b> Card IPA only</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="pill from-machine">espeak</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">Bibliothek</span><span class="pill">DE</span><span class="pill from-machine">espeak</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">No German pack here yet</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">b</button><button class="sym v">i</button><button class="sym c">b</button><button class="sym c">l</button><button class="sym v">i</button><button class="sym v">o</button><button class="sym c">t</button><button class="sym v">e</button><button class="sym o">ː</button><button class="sym c">k</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg><span class="ipa-note">ipa-de</span></div>
           <div class="detail"><span class="d-sym">b</span><span class="d-text"><span class="d-name">voiced bilabial plosive</span><span class="d-eg">"b" in bee</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1222,8 +1226,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-NONE</b> Card none</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">grmpf</span><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Nothing found for this word</span></div>
           <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym c">ʁ</button><button class="sym c">m</button><button class="sym c">p</button><button class="sym c">f</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
         </header>
@@ -1238,8 +1242,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-NO-PACK</b> Card no pack</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">PT</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">biblioteca</span><span class="pill">PT</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">No Portuguese pack on this device</span></div>
           <div class="gram"><span class="g-sub">Portuguese → Polish will be a <b>machine</b> pair: few Spanish glosses join the Polish pack, so translation is a guess throughout; IPA and English glosses come from the pack</span></div>
         </header>
@@ -1254,8 +1258,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-UNKNOWN-LANG</b> Card unknown language</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">?</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">biblioteca</span><span class="pill">?</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="headline"><span class="tr quiet">Which language is this block?</span></div>
           <div class="gram"><span class="g-sub">not recognised; the choice is remembered for this site</span></div>
         </header>
@@ -1270,8 +1274,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-LOADING</b> Card loading</div>
       <article class="card">
         <div class="card-handle"></div>
+        <div class="card-strip"><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
         <header class="card-head">
-          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <div class="skeleton" style="width: 55%; height: calc(var(--skeleton-height) * 1.6)"></div>
           <div class="skeleton" style="width: 40%"></div>
           <div class="skeleton" style="width: 30%"></div>
@@ -1288,8 +1292,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-TIER-FULL</b> Card tier full</div>
       <div class="space" data-space="360 × 420" style="width: 360px; height: 420px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
+          <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <header class="card-head">
-          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
           <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1309,8 +1313,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-TIER-COMPACT</b> Card tier compact</div>
       <div class="space" data-space="360 × 260" style="width: 360px; height: 260px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
+          <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <header class="card-head">
-          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
           <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1330,8 +1334,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-CARD-TIER-STRIP</b> Card tier strip</div>
       <div class="space" data-space="360 × 140" style="width: 360px; height: 140px; max-width: calc(100% - 2 * var(--space-2))">
         <article class="card">
+          <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <header class="card-head">
-          <div class="card-top"><span class="word">ging</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="headline"><span class="tr">went</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">ɡ</button><button class="sym v">ɪ</button><button class="sym c">ŋ</button><span class="delim">]</span></span><button class="audio" aria-label="Play"><svg viewBox="0 0 20 20"><path d="M4 2l14 8-14 8z"/></svg></button><svg class="ipa-mark" viewBox="0 0 20 20" role="img" aria-label="synthesised voice"><path d="M10 1c1 4 5 8 9 9-4 1-8 5-9 9-1-4-5-8-9-9 4-1 8-5 9-9z"/></svg></div>
           <div class="detail"><span class="d-sym">ŋ</span><span class="d-text"><span class="d-name">voiced velar nasal</span><span class="d-eg">"ng" in sing</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
@@ -1379,8 +1383,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
       <div class="label"><b>STATE-LENS-OVER-WORD</b> Lens over word</div>
       <div class="screen tall">
         <article class="card moving">
+          <div class="card-strip"><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
           <header class="card-head">
-          <div class="card-top"><span class="word">Lesesaal</span><span class="pill">DE</span><span class="pill from-dictionary">dictionary</span><span class="spacer"></span><a class="icon-btn" href="#" aria-label="open this word on Wiktionary" title="Wiktionary"><span class="mark-slot" aria-hidden="true" title="Wikipedia W letterform, asset pinned in data/marks.json">W</span></a></div>
             <div class="headline"><span class="tr">reading room</span></div>
             <div class="ipa-row"><span class="ipa"><span class="delim">[</span><button class="sym c">l</button><button class="sym v">eː</button><button class="sym c">z</button><button class="sym v">ə</button><button class="sym c">z</button><button class="sym v">aː</button><button class="sym c">l</button><span class="delim">]</span></span></div>
           <div class="detail"><span class="d-sym">l</span><span class="d-text"><span class="d-name">voiced alveolar lateral approximant</span><span class="d-eg">"l" in lay</span></span><button class="icon-btn" aria-label="play a recording of this sound"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button><a class="icon-btn" href="#" aria-label="read about this sound"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></a></div>
