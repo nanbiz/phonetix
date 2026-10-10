@@ -2,8 +2,9 @@
 # Build the Safari extension and the iPhone app that carries it, and install it on the iPhone
 # plugged in over USB.
 #
-#   ios/build.sh          build and install on the phone
-#   ios/build.sh --only   build the .ipa and stop (xtool dev build)
+#   ios/build.sh                  build and install on the device plugged in
+#   ios/build.sh --udid <udid>    on this one, where several are (xtool devices lists them)
+#   ios/build.sh --only           build the app and stop (xtool dev build)
 #
 # Safari wants the extension's files at the root of the app extension's bundle, and xtool puts
 # each path listed under an extension's resources there, so xtool.yml is written here from
@@ -37,5 +38,5 @@ cd "$here"
 if [[ "${1:-}" == "--only" ]]; then
   xtool dev build
 else
-  xtool dev
+  xtool dev run "$@"
 fi

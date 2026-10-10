@@ -13,6 +13,12 @@ let package = Package(
     ],
     targets: [
         .target(name: "Phonetix"),
-        .target(name: "PhonetixSafari"),
+        // Safari finds the handler by its name in Info.plist and nothing in the code refers to
+        // it, so without -ObjC the linker leaves it out, and the extension is a binary with no
+        // code that Safari cannot start (and that the signer refuses).
+        .target(
+            name: "PhonetixSafari",
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-ObjC"])]
+        ),
     ]
 )
