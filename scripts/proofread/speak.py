@@ -315,8 +315,14 @@ def check(engine, said, wav, microphone, again=True, by_key=False):
         # site is asked nothing. The microphone's key has pressed it already.
         if not by_key:
             press_mic()
-        time.sleep(3)
-        found = allow_button(engine, shot("asked"))
+        # Looked for until it is drawn: a browser busy with the rest of a run takes longer to
+        # put its prompt up than one doing nothing else.
+        found = None
+        for _ in range(12):
+            time.sleep(1)
+            found = allow_button(engine, shot("asked"))
+            if found:
+                break
         if not found:
             return failures + ["no prompt to allow the microphone was drawn"]
         if in_panel(state) != "asking":

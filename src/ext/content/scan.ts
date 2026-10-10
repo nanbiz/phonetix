@@ -46,8 +46,11 @@ const FURNITURE =
 /** Text that is not language: a URL, an address, a hash, a timestamp. */
 const TECHNICAL = /(:\/\/|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|\d{4}-\d{2}-\d{2}T|\w+\.\w{2,}[/?#])/;
 
-/** Our own windows, which must never be scanned into the page they are drawn over. */
+/** Our own windows, which must never be scanned into the page they are drawn over: the card,
+ *  and beside it the ember, the translator and the mark, each named after it. */
 export const OURS = 'phonetix-card-host';
+/** Any of them, as a selector: one of ours over a word is not the page hiding it. */
+export const OURS_ANY = `[id^="${OURS}"]`;
 
 /** What a painted word is wrapped in: the inline layer's own name for it, repeated here so the
  *  scan can leave what was drawn alone without importing the code that draws it. */
@@ -56,7 +59,7 @@ const DRAWN = 'px-w';
 /** Whether this element's subtree holds text a reader is reading. */
 export function readable(element: Element): boolean {
   if (NOT_PROSE.has(element.tagName)) return false;
-  if (element.id === OURS) return false;
+  if (element.matches(OURS_ANY)) return false;
   if ((element as HTMLElement).isContentEditable) return false;
   if (element.closest(FURNITURE)) return false;
   const style = getComputedStyle(element);

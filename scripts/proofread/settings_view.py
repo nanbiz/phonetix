@@ -128,7 +128,9 @@ def main():
     base = f"http://127.0.0.1:{PORT}"
     failures = []
 
-    cdp = PipeCDP(extra_args=[OFFLINE])
+    # A desktop with a mouse: headless Chromium has no pointer at all, and a popup that asks
+    # whether one hovers hides the keys a keyboard would press.
+    cdp = PipeCDP(extra_args=[OFFLINE, "--blink-settings=availableHoverTypes=2,primaryHoverType=2"])
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     try:
@@ -608,8 +610,34 @@ def main():
                 failures.append(f"pressing the {does} keys opened no page to change them on")
             else:
                 cdp.send("Target.closeTarget", {"targetId": opened["targetId"]})
+
     finally:
         cdp.close()
+
+    # On a touch screen with no keyboard there are no keys to press, and none is shown: the
+    # translator opens from its button. A browser with no pointer that hovers, as a phone has.
+    touch = PipeCDP(extra_args=[OFFLINE])
+    try:
+        touch.send("Target.setDiscoverTargets", {"discover": True})
+        extid = touch.ensure_extension()
+        tab = touch.send("Target.createTarget", {"url": f"chrome-extension://{extid}/popup.html"})["targetId"]
+        tapped = touch.send("Target.attachToTarget", {"targetId": tab, "flatten": True})["sessionId"]
+        shown = wait_for(touch, tapped, """
+            document.querySelector('[data-row=on]') && JSON.stringify({
+              hover: matchMedia('(any-hover: hover)').matches,
+              keys: document.querySelectorAll('.keys').length,
+              open: !!document.querySelector('[data-does=open-panel]')})
+        """, lambda v: bool(v))
+        print(f"  the popup on a touch screen: {shown}")
+        got = json.loads(shown) if shown else {}
+        if got.get("hover") is not False:
+            failures.append(f"the touch browser has a hovering pointer, so nothing was checked: {got}")
+        elif got.get("keys"):
+            failures.append(f"the popup on a touch screen shows {got['keys']} keys nobody can press")
+        if got and not got.get("open"):
+            failures.append("the popup on a touch screen has no way to open the translator")
+    finally:
+        touch.close()
 
     if failures:
         print("\nFAIL")

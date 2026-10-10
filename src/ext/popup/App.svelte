@@ -37,6 +37,10 @@
   let tabId = $state<number | undefined>(undefined);
   /** The keys that open the translate panel, as the browser has them bound. */
   let shortcut = $state('');
+  /** Whether there is a keyboard to press the keys on, as far as a page can tell: a pointer that
+   *  hovers comes with one - a desktop, or an iPad with its keyboard and trackpad - where a
+   *  touch screen alone has no keys, and keys shown there are keys nobody can press. */
+  const keyboard = matchMedia('(any-hover: hover)').matches;
   /** And the keys that switch Phonetix on or off. */
   let switching = $state('');
   /** And the keys that open the translator hearing what to translate. */
@@ -168,13 +172,15 @@
       <img class="mark" src={icon} alt="" />
       <h1 class="title">Phonetix{#if version}<span class="version-tag">v{version}</span>{/if}</h1>
       <span class="top-on" data-row="on">
-        <button class="keys" data-does="shortcut-on-off" onclick={shortcuts}>
-          {#if switching}
-            {#each switching.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-          {:else}
-            {SAYS['set-key']}
-          {/if}
-        </button>
+        {#if keyboard}
+          <button class="keys" data-does="shortcut-on-off" onclick={shortcuts}>
+            {#if switching}
+              {#each switching.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+            {:else}
+              {SAYS['set-key']}
+            {/if}
+          </button>
+        {/if}
         <Switch on={settings.on} label={ROWS.on.name} change={(on) => change('on', on)} />
       </span>
     </header>
@@ -262,6 +268,7 @@
         <div class="item" data-row="translator">
           <span class="item-text">
             <span class="item-name" data-name>{ROWS.translator.name}</span>
+            {#if keyboard}
             <span class="key-pair">
               <button class="keys" data-does="shortcut" onclick={shortcuts}>
                 {#if shortcut}
@@ -280,6 +287,7 @@
                 {/if}
               </button>
             </span>
+            {/if}
           </span>
           <button
             class="button"

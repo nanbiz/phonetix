@@ -20,6 +20,11 @@
 .card.points { position: relative; overflow: visible; }
 .card-arrow { position: absolute; left: var(--arrow-at, 50%); bottom: 100%; width: var(--space-6); height: var(--space-3); transform: translateX(-50%); display: block; }
 .card.points.above .card-arrow { bottom: auto; top: 100%; transform: translateX(-50%) scaleY(-1); }
+/* Beside its word the arrow comes out of the card's side, turned a quarter towards the word,
+   with --arrow-at measured down the card's edge instead of along it. */
+.card.points.left .card-arrow, .card.points.right .card-arrow { bottom: auto; top: var(--arrow-at, 50%); transform-origin: 0 0; }
+.card.points.left .card-arrow { left: 100%; transform: translate(var(--space-3), calc(var(--space-6) / -2)) rotate(90deg); }
+.card.points.right .card-arrow { left: auto; right: 100%; transform: translate(calc(var(--space-6) - var(--space-3)), calc(var(--space-6) / 2)) rotate(-90deg); }
 .card-arrow svg { display: block; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .card-arrow polygon { fill: var(--color-surface); pointer-events: visiblePainted; }
 .card-arrow polyline { fill: none; stroke: var(--color-border); stroke-width: var(--border-width); stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
@@ -51,9 +56,13 @@
    wrap as one and never apart. */
 .card { --strip-bg: color-mix(in srgb, var(--color-surface) 78%, black); }
 .mode-light .card { --strip-bg: color-mix(in srgb, var(--color-surface) 93%, black); }
+/* Rounded like the card's own top corners: a card with an arrow cannot clip what it holds to
+   its shape, since the arrow has to stand out of it, and a square strip showed its corners
+   past the card's rounded ones. */
+.card-strip { border-radius: calc(var(--radius-card) - var(--border-width)) calc(var(--radius-card) - var(--border-width)) 0 0; }
 .card-strip { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--strip-bg); border-bottom: var(--border-width) solid var(--color-border); }
 /* The arrow on the card's top edge comes out of the strip, and is the strip's shade. */
-.card.points:not(.above):has(> .card-strip) .card-arrow polygon { fill: var(--strip-bg); }
+.card.points.below:has(> .card-strip) .card-arrow polygon { fill: var(--strip-bg); }
 .card-strip .ipa { font-family: var(--font-ipa); font-size: var(--font-size-ipa); color: var(--color-ipa); flex: 0 1 auto; min-width: 0; }
 .card-strip .glue { display: inline-flex; align-items: center; white-space: nowrap; }
 .card-strip .glue > .accent-pick, .card-strip .glue > .pill { margin-left: var(--space-2); }
@@ -175,7 +184,9 @@
    lemma. */
 .forms { display: flex; flex-wrap: wrap; align-items: baseline; font-size: var(--font-size-sense); line-height: 1.4; color: var(--color-ink-muted); }
 .form-term { color: var(--color-ink); border-bottom: 1.5px dotted var(--color-ink-faint); cursor: help; }
-.form-term:hover, .form-term.on { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+/* A term with nothing more to say is only its name. */
+.form-term.still { border-bottom: none; cursor: auto; }
+.form-term:not(.still):hover, .form-term.on { color: var(--color-accent); border-bottom-color: var(--color-accent); }
 .form-term:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .form-dot { margin: 0 2px; white-space: pre; color: var(--color-ink-faint); }
 .form-of { white-space: pre; }

@@ -95,6 +95,8 @@ export interface HostProtocol {
   listen: { data: { lang: string }; reply: Heard };
   /** End what the panel is recording now. */
   stopListening: { data: Record<string, never>; reply: boolean };
+  /** The settings, opened from a page: the side button held and let go where it started. */
+  openSettings: { data: Record<string, never>; reply: boolean };
 }
 
 /** What the panel's microphone heard. */

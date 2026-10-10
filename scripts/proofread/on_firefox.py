@@ -25,10 +25,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, serve, stream_draws, walk
+from on_a_page import CARD_JS, PORT, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, serve, stream_draws, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -127,6 +128,69 @@ class FirefoxHand:
             {"type": "pointerDown", "button": 0},
             {"type": "pointerUp", "button": 0},
         ])
+
+    def touch(self, points):
+        """A finger down at the first point, along the rest, and up at the last."""
+        (x, y), rest = points[0], points[1:]
+        steps = [{"type": "pointerMove", "duration": 0, "origin": "viewport",
+                  "x": round(x), "y": round(y)}, {"type": "pointerDown", "button": 0}]
+        for px, py in rest:
+            steps.append({"type": "pointerMove", "duration": 40, "origin": "viewport",
+                          "x": round(px), "y": round(py)})
+        steps.append({"type": "pointerUp", "button": 0})
+        self.driver.send("WebDriver:PerformActions", {"actions": [{
+            "type": "pointer", "id": "finger", "parameters": {"pointerType": "touch"},
+            "actions": steps,
+        }]})
+        self.driver.send("WebDriver:ReleaseActions", {})
+
+    def _finger(self, steps):
+        self.driver.send("WebDriver:PerformActions", {"actions": [{
+            "type": "pointer", "id": "finger", "parameters": {"pointerType": "touch"},
+            "actions": steps,
+        }]})
+
+    def finger_down(self, x, y):
+        """A finger put down, and left there: WebDriver keeps it down between calls."""
+        self._finger([{"type": "pointerMove", "duration": 0, "origin": "viewport",
+                       "x": round(x), "y": round(y)}, {"type": "pointerDown", "button": 0}])
+
+    def finger_move(self, points):
+        """The finger that is down moved through these points, and still down."""
+        self._finger([{"type": "pointerMove", "duration": 40, "origin": "viewport",
+                       "x": round(x), "y": round(y)} for x, y in points])
+
+    def finger_up(self):
+        self._finger([{"type": "pointerUp", "button": 0}])
+        self.driver.send("WebDriver:ReleaseActions", {})
+
+    def tabs(self):
+        """The tabs open, by handle."""
+        got = self.driver.send("WebDriver:GetWindowHandles")
+        return list(got.get("value", got) if isinstance(got, dict) else got)
+
+    def close_tabs(self, keep):
+        """Close every tab opened since [keep] was taken, and say what each was showing."""
+        home = self.driver.send("WebDriver:GetWindowHandle")
+        home = home.get("value", home) if isinstance(home, dict) else home
+        shown = []
+        for handle in self.tabs():
+            if handle in keep:
+                continue
+            self.driver.send("WebDriver:SwitchToWindow", {"handle": handle})
+            # A tab just opened is about:blank until its page starts to arrive, and with no
+            # network here that is an error page naming the address it was asked for.
+            url = "about:blank"
+            for _ in range(20):
+                got = self.driver.send("WebDriver:GetCurrentURL")
+                url = urllib.parse.unquote(got.get("value", got) if isinstance(got, dict) else got)
+                if url != "about:blank":
+                    break
+                time.sleep(0.25)
+            shown.append(url)
+            self.driver.send("WebDriver:CloseWindow")
+        self.driver.send("WebDriver:SwitchToWindow", {"handle": home})
+        return shown
 
 
 def profile(into):
@@ -315,13 +379,14 @@ def main():
                     walk(hand, (arrow["x"], inside), (play["x"], play["y"]))
                     time.sleep(0.3)
                     hand.click(play["x"], play["y"])
-                    for _ in range(20):
+                    pressed = time.time()
+                    for _ in range(80):
                         time.sleep(0.25)
                         if sounding():
-                            sounded = True
+                            sounded = time.time() - pressed
                             break
                 print(f"  the card's play button: quiet before {quiet_before}, "
-                      f"{'sound' if sounded else 'silence'} after (button {bool(play)})")
+                      f"{f'sound after {sounded:.1f}s' if sounded else 'silence'} (button {bool(play)})")
                 if not quiet_before:
                     failures.append("the tab was already making sound before play was pressed")
                 elif not sounded:
@@ -386,6 +451,11 @@ def main():
         # And a chat that is never still, streaming an answer.
         driver.send("WebDriver:Navigate", {"url": f"{base}/stream.html"})
         stream_draws(FirefoxHand(driver), "firefox", failures)
+
+        # A finger, which has the mark to ask with.
+        driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
+        time.sleep(3)
+        mark_checks(FirefoxHand(driver), "firefox", failures, turn_on=lambda: switched(False))
 
         driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
         time.sleep(2)

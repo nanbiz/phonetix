@@ -86,51 +86,161 @@ function build(): { shadow: ShadowRoot; frame: HTMLElement } {
   return { shadow, frame };
 }
 
+/** The sides of its word a card can stand on, named for where the card is. */
+type Side = 'below' | 'above' | 'left' | 'right';
+const SIDES: Side[] = ['below', 'above', 'left', 'right'];
+
+/** Where a finger is on the screen while it holds the side button, or nothing with no finger
+ *  down: a card put under the hand that is asking is a card nobody can read. */
+let hand: Point | null = null;
+
+/** How far round a finger is kept clear, and how far round a word the ring drawn on it
+ *  reaches, as the phone has them. */
+const HAND = 36;
+const RING = 30;
+
 /**
- * Put the card where it fits: under the word, or over it when there is no room below.
+ * The part of the page the reader can see, in the coordinates a fixed box is placed in: the
+ * visual viewport, which is the window less a keyboard and, zoomed in, a part of it.
+ */
+export function seen(): DOMRect {
+  const v = window.visualViewport;
+  return v
+    ? new DOMRect(v.offsetLeft, v.offsetTop, v.width, v.height)
+    : new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+}
+
+/** Where the card is, for the side button's actions to keep clear of; nothing with no card. */
+export function cardBox(): DOMRect | null {
+  return drawn && frame ? frame.getBoundingClientRect() : null;
+}
+
+/** Say where the finger holding the side button is, or that there is none. A card the finger
+ *  has come onto moves out from under it; one it is clear of stays where it is, since a card
+ *  that shifted with every movement of the hand could not be read. */
+export function handAt(at: Point | null): void {
+  hand = at;
+  if (!at || !drawn || !frame) return;
+  const box = frame.getBoundingClientRect();
+  if (covers(box, new DOMRect(at.x - HAND, at.y - HAND, HAND * 2, HAND * 2)) > 0) place(anchor);
+}
+
+/** The side of its word the card is on now. */
+function sideOf(card: Element | null): Side {
+  return SIDES.find((side) => card?.classList.contains(side)) ?? 'below';
+}
+
+/** How much of one box lies over another, as an area. */
+function covers(a: DOMRect, b: DOMRect | null): number {
+  if (!b) return 0;
+  const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+  const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+/**
+ * Put the card beside its word, the way the phone does: on the side away from the hand first,
+ * then the other side, then to the left or the right of the word; the first of those that is
+ * inside the window and covers neither the word nor the finger. With no finger down the word's
+ * place in the window decides instead, a word low in it answered above. Where none is clear,
+ * the one that covers least, the word counting four times the finger.
  *
  * Measured after it is drawn rather than guessed, because how tall it is depends on what the
  * word turned out to be.
  */
 function place(at: DOMRect): void {
   if (!frame) return;
+  // No wider than what the reader can see, which on a phone is less than the page is wide.
+  frame.style.maxWidth = `${Math.round(Math.min(PAGE_CARD_WIDTH, seen().width - MARGIN * 2))}px`;
   const box = frame.getBoundingClientRect();
+  const w = box.width;
+  const h = box.height;
   // The gap between the word and the card is the arrow's to span, point at the word and base
   // on the card, so the card stands off from its word by exactly as far as the arrow reaches
   // out of it: further and the pointer would have open page to cross on its way in, nearer and
   // the arrow would cover the word.
   const arrow = arrowSize();
-  const below = at.bottom + arrow.reach;
-  const above = at.top - arrow.reach - box.height;
-  const under = below + box.height <= window.innerHeight;
-  const top = under ? below : Math.max(MARGIN, above);
-  const middle = at.left + at.width / 2 - box.width / 2;
-  const left = Math.min(Math.max(MARGIN, middle), window.innerWidth - box.width - MARGIN);
-  const placed = Math.round(left);
-  frame.style.top = `${Math.round(top)}px`;
-  frame.style.left = `${placed}px`;
-  // Where the word is along the card's own width, so the arrow points at it rather than at
-  // wherever the middle of the card happened to land: a card pushed against the side of the
-  // window is nowhere near the word it belongs to. Never so near a side that the arrow would
-  // hang off the card's rounded corner. Measured from inside the card's border, which is
-  // where the arrow is positioned from, and not rounded, so its point is on the word's middle
-  // rather than a pixel to one side.
-  const card = frame.querySelector('.card');
-  const border = card?.clientLeft ?? 0;
-  const inset = arrow.width / 2 + MARGIN;
-  const pointsAt = Math.min(
-    Math.max(inset, at.left + at.width / 2 - placed - border),
-    Math.max(inset, box.width - inset)
-  );
-  frame.style.setProperty('--arrow-at', `${pointsAt.toFixed(1)}px`);
-  if (card) {
-    card.classList.toggle('below', under);
-    card.classList.toggle('above', !under);
+  const gap = arrow.reach;
+  // Under a finger the word has the ring drawn round it, which is wider than a short word.
+  const cx = at.left + at.width / 2;
+  const cy = at.top + at.height / 2;
+  const word = hand
+    ? new DOMRect(
+        cx - Math.max(at.width / 2, RING), cy - Math.max(at.height / 2, RING),
+        Math.max(at.width, RING * 2), Math.max(at.height, RING * 2))
+    : at;
+  const palm = hand ? new DOMRect(hand.x - HAND, hand.y - HAND, HAND * 2, HAND * 2) : null;
+  const view = seen();
+  const lo = view.left + MARGIN;
+  const hi = view.right - w - MARGIN;
+  const top = view.top + MARGIN;
+  const centred = Math.min(Math.max(lo, cx - w / 2), Math.max(lo, hi));
+  const middle = Math.max(top, cy - h / 2);
+  const spots: Record<Side, DOMRect> = {
+    below: new DOMRect(centred, word.bottom + gap, w, h),
+    above: new DOMRect(centred, word.top - gap - h, w, h),
+    left: new DOMRect(word.left - gap - w, middle, w, h),
+    right: new DOMRect(word.right + gap, middle, w, h),
+  };
+  const handBelow = palm !== null && palm.top + HAND > cy;
+  const order: Side[] = handBelow || (palm === null && cy > view.top + view.height / 2)
+    ? ['above', 'below', 'left', 'right']
+    : ['below', 'above', 'left', 'right'];
+  const inside = (r: DOMRect) => r.left >= lo && r.top >= top &&
+    r.right <= view.right - MARGIN && r.bottom <= view.bottom - MARGIN;
+  let side = order.find((s) => inside(spots[s]) && covers(spots[s], word) === 0 &&
+    covers(spots[s], palm) === 0);
+  let spot = side ? spots[side] : null;
+  if (!side && palm) {
+    // Nothing beside the word is clear of the hand: past the hand, on the side of it away from
+    // the word, where the card is in sight and the thumb is not on it.
+    const past: Side = handBelow ? 'below' : 'above';
+    const there = new DOMRect(
+      centred, handBelow ? palm.bottom + gap : palm.top - gap - h, w, h);
+    if (inside(there) && covers(there, word) === 0) {
+      side = past;
+      spot = there;
+    }
   }
+  if (!side || !spot) {
+    // Nothing is clear: kept in the window, covering as little as can be had.
+    let least = Infinity;
+    for (const s of order) {
+      const r = spots[s];
+      const kept = new DOMRect(
+        Math.min(Math.max(lo, r.left), Math.max(lo, hi)),
+        Math.min(Math.max(top, r.top), Math.max(top, view.bottom - h - MARGIN)), w, h);
+      const cost = covers(kept, word) * 4 + covers(kept, palm);
+      if (cost < least) {
+        least = cost;
+        side = s;
+        spot = kept;
+      }
+    }
+  }
+  const placedLeft = Math.round(spot!.left);
+  const placedTop = Math.round(spot!.top);
+  frame.style.top = `${placedTop}px`;
+  frame.style.left = `${placedLeft}px`;
+  // Where the word is along the card's edge, so the arrow points at it rather than at wherever
+  // the middle of the card happened to land: a card pushed against the side of the window is
+  // nowhere near the word it belongs to. Never so near a corner that the arrow would hang off
+  // the card's rounded corner. Measured from inside the card's border, which is where the
+  // arrow is positioned from, and not rounded, so its point is on the word's middle rather than
+  // a pixel to one side.
+  const card = frame.querySelector('.card');
+  const across = side === 'left' || side === 'right';
+  const border = across ? card?.clientTop ?? 0 : card?.clientLeft ?? 0;
+  const length = across ? h : w;
+  const inset = arrow.width / 2 + MARGIN;
+  const wanted = across ? cy - placedTop - border : cx - placedLeft - border;
+  const pointsAt = Math.min(Math.max(inset, wanted), Math.max(inset, length - inset));
+  frame.style.setProperty('--arrow-at', `${pointsAt.toFixed(1)}px`);
+  if (card) for (const s of SIDES) card.classList.toggle(s, s === side);
 }
 
 /**
- * How wide the arrow is, and how far it reaches out of the card.
+ * How wide the arrow is along the card's edge, and how far it reaches out of the card.
  *
  * Measured rather than repeated here, because the stylesheet decides its size and lays its base
  * over the card's border; whichever side of the card it is on, what lies outside the card is
@@ -142,32 +252,31 @@ function arrowSize(): { width: number; reach: number } {
   if (!arrow || !card) return { width: 0, reach: MARGIN };
   const wedge = arrow.getBoundingClientRect();
   const body = card.getBoundingClientRect();
-  const overlap = Math.max(
-    0,
-    Math.min(wedge.bottom, body.bottom) - Math.max(wedge.top, body.top)
-  );
-  return { width: wedge.width, reach: wedge.height - overlap };
+  const out = Math.max(body.top - wedge.top, wedge.bottom - body.bottom,
+    body.left - wedge.left, wedge.right - body.right, 0);
+  return { width: Math.max(wedge.width, wedge.height), reach: out };
 }
 
 /** Lift the card just enough to keep its bottom edge inside the window. */
 function keepInWindow(): void {
   if (!frame) return;
   const box = frame.getBoundingClientRect();
-  const over = box.bottom - (window.innerHeight - MARGIN);
-  if (over > 0) frame.style.top = `${Math.round(Math.max(MARGIN, box.top - over))}px`;
+  const view = seen();
+  const over = box.bottom - (view.bottom - MARGIN);
+  if (over > 0) frame.style.top = `${Math.round(Math.max(view.top + MARGIN, box.top - over))}px`;
 }
 
 /**
  * Keep a card that changed height on its side of its word: one over the word keeps its bottom
- * edge where it was and grows upward, one under it grows downward; either stays in the window.
+ * edge where it was and grows upward, one under it or beside it grows downward; either stays in
+ * the window.
  */
 function regrow(): void {
   if (!frame) return;
-  const card = frame.querySelector('.card');
-  if (card?.classList.contains('above')) {
+  if (sideOf(frame.querySelector('.card')) === 'above') {
     const box = frame.getBoundingClientRect();
     const reach = arrowSize().reach;
-    frame.style.top = `${Math.round(Math.max(MARGIN, anchor.top - reach - box.height))}px`;
+    frame.style.top = `${Math.round(Math.max(seen().top + MARGIN, anchor.top - reach - box.height))}px`;
     return;
   }
   keepInWindow();
@@ -326,12 +435,24 @@ export function passedOver(from: Point, to: Point): boolean {
   // card having crossed the arrow without ever being reported on it. Where the straight line
   // between the two reports crosses the card's edge says which way it came in.
   const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
-  const edge = card.classList.contains('above') ? box.bottom : box.top;
-  if (arrow && from.y !== to.y && (from.y - edge) * (to.y - edge) <= 0) {
-    const x = from.x + ((to.x - from.x) * (edge - from.y)) / (to.y - from.y);
-    if (x >= arrow.left && x <= arrow.right) {
-      enter();
-      return false;
+  const side = sideOf(card);
+  if (arrow && (side === 'above' || side === 'below')) {
+    const edge = side === 'above' ? box.bottom : box.top;
+    if (from.y !== to.y && (from.y - edge) * (to.y - edge) <= 0) {
+      const x = from.x + ((to.x - from.x) * (edge - from.y)) / (to.y - from.y);
+      if (x >= arrow.left && x <= arrow.right) {
+        enter();
+        return false;
+      }
+    }
+  } else if (arrow) {
+    const edge = side === 'left' ? box.right : box.left;
+    if (from.x !== to.x && (from.x - edge) * (to.x - edge) <= 0) {
+      const y = from.y + ((to.y - from.y) * (edge - from.x)) / (to.x - from.x);
+      if (y >= arrow.top && y <= arrow.bottom) {
+        enter();
+        return false;
+      }
     }
   }
   return true;
@@ -348,10 +469,13 @@ export function onTheWayIn(to: Point): boolean {
   const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
   if (!card || !arrow) return false;
   const slack = 8;
-  const above = card.classList.contains('above');
-  const top = above ? arrow.top : arrow.top - slack;
-  const bottom = above ? arrow.bottom + slack : arrow.bottom;
-  return to.x >= arrow.left - slack && to.x <= arrow.right + slack && to.y >= top && to.y <= bottom;
+  // The slack runs towards the word only, which is the side of the arrow away from the card.
+  const side = sideOf(card);
+  const top = arrow.top - (side === 'below' ? slack : side === 'above' ? 0 : slack);
+  const bottom = arrow.bottom + (side === 'above' ? slack : side === 'below' ? 0 : slack);
+  const left = arrow.left - (side === 'right' ? slack : side === 'left' ? 0 : slack);
+  const right = arrow.right + (side === 'left' ? slack : side === 'right' ? 0 : slack);
+  return to.x >= left && to.x <= right && to.y >= top && to.y <= bottom;
 }
 
 /** A place in the window, in the coordinates pointer events report. */

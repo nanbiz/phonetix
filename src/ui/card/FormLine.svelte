@@ -145,6 +145,14 @@
   let pinned = $state(false);
   let asked = $derived(hovering || pinned);
 
+  /** Whether a term has a sheet with anything in it: the word in its other values, or what
+   *  the term means where a reader would need telling. One with neither opened a sheet that
+   *  only named itself. */
+  function opens(it: Term): boolean {
+    return paradigm.along.some((other) => other.category === it.category) ||
+      explained(it).length > 0;
+  }
+
   /** What the sheet's term and its category are, each by itself, where Wiktionary says and a
    *  reader would need telling. */
   function explained(of: Term): { name: string; text: string }[] {
@@ -170,7 +178,9 @@
   <span class="form-terms"
     >{#each terms as it, i (it.category)}{#if i > 0}<span class="form-dot" aria-hidden="true"
           >{' · '}</span
-        >{/if}<span
+        >{/if}{#if !opens(it)}<span class="form-term still" data-term={it.category}
+          >{it.label}</span
+        >{:else}<span
         class="form-term{open === it.category ? ' on' : ''}"
         role="button"
         tabindex="0"
@@ -179,7 +189,7 @@
         onpointerleave={leave}
         onclick={() => point(it.category)}
         onkeydown={(event) => event.key === 'Enter' && toggle(it.category)}>{it.label}</span
-      >{/each}</span
+      >{/if}{/each}</span
   >{#if ofLemma}<span class="form-of"
       ><span class="form-of-word">{' of '}</span
       >{#if onLemma}<button class="form-lemma" data-lemma onclick={() => onLemma?.()}

@@ -11,6 +11,7 @@ page restored approximately is a page quietly rewritten.
 """
 import http.server
 import json
+import math
 import os
 import subprocess
 import sys
@@ -319,6 +320,53 @@ class ChromeHand:
                 "type": kind, "x": round(x), "y": round(y), "button": "left", "clickCount": 1,
             }, session=self.session)
 
+    def touch(self, points):
+        """A finger down at the first point, along the rest, and up at the last."""
+        def at(kind, x, y):
+            self.cdp.send("Input.dispatchTouchEvent", {
+                "type": kind, "touchPoints": [] if kind == "touchEnd" else
+                [{"x": round(x), "y": round(y), "id": 1}],
+            }, session=self.session)
+        at("touchStart", *points[0])
+        for x, y in points[1:]:
+            time.sleep(0.04)
+            at("touchMove", x, y)
+        time.sleep(0.04)
+        at("touchEnd", *points[-1])
+
+    def _finger(self, kind, x=0, y=0):
+        self.cdp.send("Input.dispatchTouchEvent", {
+            "type": kind, "touchPoints": [] if kind == "touchEnd" else
+            [{"x": round(x), "y": round(y), "id": 1}],
+        }, session=self.session)
+
+    def finger_down(self, x, y):
+        """A finger put down, and left there."""
+        self._finger("touchStart", x, y)
+
+    def finger_move(self, points):
+        """The finger that is down moved through these points, and still down."""
+        for x, y in points:
+            time.sleep(0.04)
+            self._finger("touchMove", x, y)
+
+    def finger_up(self):
+        self._finger("touchEnd")
+
+    def tabs(self):
+        """The tabs open, by id."""
+        return [t["targetId"] for t in self.cdp.send("Target.getTargets")["targetInfos"]
+                if t["type"] == "page"]
+
+    def close_tabs(self, keep):
+        """Close every tab opened since [keep] was taken, and say what each was showing."""
+        shown = []
+        for t in self.cdp.send("Target.getTargets")["targetInfos"]:
+            if t["type"] == "page" and t["targetId"] not in keep:
+                shown.append(t["url"])
+                self.cdp.send("Target.closeTarget", {"targetId": t["targetId"]})
+        return shown
+
 
 # Whether a card is open on the page.
 CARD_OPEN_JS = """!!(document.getElementById('phonetix-card-host') || {}).shadowRoot?.querySelector('.card')"""
@@ -407,6 +455,242 @@ def ember_checks(hand, engine, failures, off):
     if gone and "on" in gone["ball"].split():
         failures.append(f"{engine}: the ember stayed with Phonetix off: {gone}")
     off(False)
+
+
+MARK_JS = """
+  (() => {
+    const host = document.getElementById('phonetix-card-host-mark');
+    const ring = host && host.style.display !== 'none' && host.shadowRoot.querySelector('.mark');
+    if (!ring) return null;
+    const r = ring.getBoundingClientRect();
+    return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+  })()
+"""
+
+
+MENU_JS = """
+  (() => {
+    const host = document.getElementById('phonetix-card-host-mark');
+    const menu = host && host.shadowRoot.querySelector('.mark-menu');
+    if (!menu || !menu.classList.contains('open')) return null;
+    return [...menu.children].map(a => {
+      const r = a.getBoundingClientRect();
+      return {does: a.dataset.does, x: r.left + r.width / 2, y: r.top + r.height / 2};
+    });
+  })()
+"""
+
+# The card's side of its word and where it is, or nothing with no card up.
+CARD_AT_JS = """
+  (() => {
+    const h = document.getElementById('phonetix-card-host');
+    const c = h && h.shadowRoot && h.shadowRoot.querySelector('.card');
+    if (!c) return null;
+    const r = c.getBoundingClientRect();
+    return {word: c.dataset.word, left: r.left, top: r.top, right: r.right, bottom: r.bottom,
+            side: ['below', 'above', 'left', 'right'].find(s => c.classList.contains(s)) || ''};
+  })()
+"""
+
+# Where 'camino' is in #prose, drawn by Phonetix or the page's own text.
+CAMINO_JS = """
+  (() => {
+    const prose = document.getElementById('prose');
+    const drawn = [...prose.querySelectorAll('.px-w')]
+      .find(w => (w.querySelector('.px-was') || {}).textContent === 'camino');
+    let r;
+    if (drawn) r = drawn.getBoundingClientRect();
+    else {
+      const walker = document.createTreeWalker(prose, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+        const i = n.nodeValue.indexOf('camino');
+        if (i < 0) continue;
+        const range = document.createRange();
+        range.setStart(n, i); range.setEnd(n, i + 6);
+        r = range.getBoundingClientRect();
+        break;
+      }
+    }
+    return r ? {x: r.left + r.width / 2, y: r.top + r.height / 2,
+                left: r.left, top: r.top, right: r.right, bottom: r.bottom} : null;
+  })()
+"""
+
+
+def finger_for(home, word, size):
+    """Where the finger goes for the circle to be on [word]: the circle is carried out along
+    the line from where the button waits, by a fingertip and a button and more (96 pixels),
+    growing to that over a fifth of the window, and hangs a few pixels low on its leash."""
+    lift, grows = 96, 0.2 * min(size["w"], size["h"])
+    dx, dy = word[0] - home[0], word[1] - home[1]
+    d = math.hypot(dx, dy)
+    t = d - lift if d - lift >= grows else d / (1 + lift / grows)
+    return (home[0] + dx / d * t, home[1] + dy / d * t - 3)
+
+
+def overlaps(a, b):
+    return (min(a["right"], b["right"]) - max(a["left"], b["left"]) > 0 and
+            min(a["bottom"], b["bottom"]) - max(a["top"], b["top"]) > 0)
+
+
+def mark_checks(hand, engine, failures, turn_on=None):
+    """On a touch screen the finger asks with the side button, as on the phone. It appears once
+    a finger touches the page. Dragged onto a word, the card answers it while the finger is
+    down, clear of the word and the finger, and goes when it lifts, the button going back to its
+    side. Kept on the word a second, play and the article open round the finger: lifted on the
+    article, its page opens; lifted anywhere else, nothing does. Held and let go where it
+    started, the settings open; tapped, the translator; let go on the target at the foot,
+    Phonetix is put away, and [turn_on] brings it back. Asked of a page with a paragraph #prose
+    holding 'camino'."""
+    # What the reader sees, which on a phone is less than the page is wide.
+    size = hand.ask("({w: visualViewport.width, h: visualViewport.height})")
+    hand.touch([(size["w"] / 2, 12)])
+    time.sleep(0.6)
+    button = hand.ask(MARK_JS)
+    print(f"  {engine}, the side button after a finger touched the page: {button}")
+    if not button:
+        failures.append(f"{engine}: no side button appeared once a finger touched the page")
+        return
+    if button["x"] < size["w"] / 2:
+        failures.append(f"{engine}: the side button waits on the left: {button}")
+    word = hand.ask(CAMINO_JS)
+    if not word:
+        failures.append(f"{engine}: no camino on the page to drag the button onto")
+        return
+    home = goal = path = None
+
+    def from_button():
+        """Where the button is now, which is where the last gesture left it, and the way from
+        there to camino."""
+        nonlocal home, goal, path
+        now = hand.ask(MARK_JS) or button
+        home = (now["x"], now["y"])
+        goal = finger_for(home, (word["x"], word["y"]), size)
+        path = [(home[0] + (goal[0] - home[0]) * k / 12, home[1] + (goal[1] - home[1]) * k / 12)
+                for k in range(1, 13)]
+
+    from_button()
+
+    def wait_for(expression, test, tries=16):
+        got = None
+        for _ in range(tries):
+            time.sleep(0.25)
+            got = hand.ask(expression)
+            if test(got):
+                break
+        return got
+
+    # Dragged onto the word: the card while the finger is down, gone once it lifts.
+    hand.finger_down(*home)
+    hand.finger_move(path)
+    card = wait_for(CARD_AT_JS, lambda c: c and c.get("word") == "camino")
+    held = card
+    hand.finger_up()
+    gone = wait_for(CARD_AT_JS, lambda c: c is None, tries=8)
+    back = wait_for(MARK_JS, lambda b: b and abs(b["x"] - home[0]) <= 2, tries=8)
+    print(f"  {engine}, the button dragged onto camino: card {held}, after lifting {gone}, "
+          f"button back at {back}")
+    if not held or held.get("word") != "camino":
+        failures.append(f"{engine}: dragging the button onto camino opened a card for {held!r}")
+    else:
+        # The fingertip itself: where nothing round the word is clear of the whole hand, the
+        # card takes the place covering least of it, as the phone's does.
+        palm = {"left": goal[0] - 16, "right": goal[0] + 16, "top": goal[1] - 16, "bottom": goal[1] + 16}
+        if overlaps(held, word):
+            failures.append(f"{engine}: the card covers the word it is about: {held} over {word}")
+        if overlaps(held, palm):
+            failures.append(f"{engine}: the card is under the finger: {held} over {palm}")
+        if held["left"] < 0 or held["top"] < 0 or held["right"] > size["w"] or held["bottom"] > size["h"]:
+            failures.append(f"{engine}: the card is off the window: {held}")
+    if gone is not None:
+        failures.append(f"{engine}: the card stayed after the finger lifted: {gone}")
+    if not back or abs(back["x"] - home[0]) > 2:
+        failures.append(f"{engine}: the button did not go back to its side: {back} vs {button}")
+
+    # Kept on the word, the actions open round the finger; lifted on the article, its page.
+    from_button()
+    before = hand.tabs()
+    hand.finger_down(*home)
+    hand.finger_move(path)
+    wait_for(CARD_AT_JS, lambda c: c and c.get("word") == "camino")
+    menu = wait_for(MENU_JS, lambda m: m, tries=12)
+    print(f"  {engine}, kept on camino: actions {menu}")
+    article = next((a for a in menu or [] if a["does"] == "article"), None)
+    if not menu or {a["does"] for a in menu} != {"play", "article"}:
+        failures.append(f"{engine}: keeping the button on a word opened no play and article: {menu}")
+    else:
+        for a in menu:
+            off = math.hypot(a["x"] - goal[0], a["y"] - goal[1])
+            if abs(off - 76) > 6:
+                failures.append(f"{engine}: the {a['does']} action is {off:.0f}px from the finger")
+            if not (0 <= a["x"] <= size["w"] and 0 <= a["y"] <= size["h"]):
+                failures.append(f"{engine}: the {a['does']} action is off the window: {a}")
+    if article:
+        steps = [(goal[0] + (article["x"] - goal[0]) * k / 6, goal[1] + (article["y"] - goal[1]) * k / 6)
+                 for k in range(1, 7)]
+        hand.finger_move(steps)
+    hand.finger_up()
+    time.sleep(1.5)
+    opened = hand.close_tabs(before)
+    print(f"  {engine}, lifted on the article: {opened}")
+    if article and not any("wiktionary.org" in u and "camino" in u for u in opened):
+        failures.append(f"{engine}: lifting on the article opened {opened}, not camino's page")
+
+    # Kept on the word and lifted away from both actions: nothing at all.
+    from_button()
+    before = hand.tabs()
+    hand.finger_down(*home)
+    hand.finger_move(path)
+    menu = wait_for(MENU_JS, lambda m: m, tries=16)
+    hand.finger_up()
+    time.sleep(1)
+    opened = hand.close_tabs(before)
+    after = hand.ask(MENU_JS)
+    print(f"  {engine}, lifted beside the actions: opened {opened}, actions {after}")
+    if not menu:
+        failures.append(f"{engine}: the actions did not open a second time")
+    if opened:
+        failures.append(f"{engine}: lifting beside the actions opened {opened}")
+    if after:
+        failures.append(f"{engine}: the actions stayed open after the finger lifted")
+
+    # Held and let go where it started: the settings.
+    from_button()
+    before = hand.tabs()
+    hand.finger_down(*home)
+    time.sleep(0.9)
+    hand.finger_up()
+    time.sleep(1.5)
+    opened = hand.close_tabs(before)
+    print(f"  {engine}, the button held: {opened}")
+    if not any("popup.html" in u for u in opened):
+        failures.append(f"{engine}: holding the button opened {opened}, not the settings")
+
+    # Tapped: the translator.
+    from_button()
+    hand.touch([home])
+    panel = wait_for("!!document.getElementById('phonetix-card-host-ask')", lambda v: v, tries=12)
+    print(f"  {engine}, the button tapped: translator {'open' if panel else 'not open'}")
+    if not panel:
+        failures.append(f"{engine}: tapping the button did not open the translator")
+    hand.touch([(size["w"] / 2, 12)])
+    time.sleep(0.5)
+
+    # Let go on the target at the foot: put away.
+    from_button()
+    foot = (size["w"] / 2, size["h"] - 24 - 36 - 28)
+    hand.finger_down(*home)
+    hand.finger_move([(home[0] + (foot[0] - home[0]) * k / 10, home[1] + (foot[1] - home[1]) * k / 10)
+                      for k in range(1, 11)])
+    time.sleep(0.4)
+    hand.finger_up()
+    away = wait_for(MARK_JS, lambda b: b is None, tries=12)
+    print(f"  {engine}, let go on the target: button {'gone' if away is None else away}")
+    if away is not None:
+        failures.append(f"{engine}: letting go on the target left the button up: {away}")
+    if turn_on:
+        turn_on()
+        time.sleep(1)
 
 
 def stream_draws(hand, engine, failures):
@@ -1122,6 +1406,18 @@ def main():
         cdp.send("Target.activateTarget", {"targetId": stream_target})
         stream_draws(ChromeHand(cdp, stream), "chrome", failures)
         cdp.send("Target.closeTarget", {"targetId": stream_target})
+
+        # A finger, which has the mark to ask with: in a tab of its own, since a page a finger
+        # has touched keeps the mark.
+        touch_target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})["targetId"]
+        touched = cdp.send("Target.attachToTarget",
+                           {"targetId": touch_target, "flatten": True})["sessionId"]
+        cdp.send("Runtime.enable", session=touched)
+        cdp.send("Target.activateTarget", {"targetId": touch_target})
+        time.sleep(3)
+        mark_checks(ChromeHand(cdp, touched), "chrome", failures,
+                    turn_on=lambda: evaluate(cdp, settings, "chrome.storage.local.set({on: true})"))
+        cdp.send("Target.closeTarget", {"targetId": touch_target})
 
         # A word no pack holds still gets a transcription, from the voice rather than from a
         # dictionary, and the annotation says which by its own state. Asked in the mode that

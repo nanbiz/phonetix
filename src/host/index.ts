@@ -38,6 +38,13 @@ export function host(): void {
 
   onMessage('languages', async () => openLanguages());
 
+  // In a tab of their own: a page cannot open the toolbar's popup, and a touch screen has no
+  // toolbar button within reach of the hand holding the side button anyway.
+  onMessage('openSettings', async () => {
+    await browser.tabs.create({ url: browser.runtime.getURL('/popup.html') });
+    return true;
+  });
+
   onMessage('annotate', async ({ data }) => {
     // Both packs, because a translation is a join between them: with only the source open
     // every word would come back with its English gloss, which is the anchor rather than the

@@ -11,8 +11,8 @@ import {
   accentFor, allowed, current, DEFAULTS, set, setAccent, translates, watch, type Settings,
 } from '@/settings';
 import {
-  hide, inside, moveTo, onTheWayIn, paintedIn as cardPaintedIn, passedOver, show, showing,
-  type CardActions,
+  handAt, hide, inside, moveTo, onTheWayIn, paintedIn as cardPaintedIn, passedOver, show,
+  showing, type CardActions,
 } from './card';
 import { open as openAsk } from './ask';
 import {
@@ -32,8 +32,10 @@ import {
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { emberAt, emberAway, emberPaintedIn } from './ember';
-import { OURS, readable, scan, type ScannedRun } from './scan';
-import { commons } from '@/data/links';
+import { markHidden, markPaintedIn, markShown, type MarkWord } from './mark';
+import { OURS_ANY, readable, scan, type ScannedRun } from './scan';
+import { commons, wiktionary } from '@/data/links';
+import { named } from '@/data/languages';
 
 /**
  * What takes the place of the words of a page: how each is said, or what it means.
@@ -377,9 +379,9 @@ const DIAGRAM_WIDTH = 192;
 
 /** Play a sound somebody recorded, fetched by the host for the same reason as everything
  *  else that comes from the network. */
-async function recorded(url: string): Promise<void> {
+async function recorded(url: string, context: AudioContext): Promise<void> {
   const bytes = await sendMessage('fetch', { url }).catch(() => [] as number[]);
-  await play(bytes);
+  await play(bytes, context);
 }
 
 /**
@@ -389,15 +391,32 @@ async function recorded(url: string): Promise<void> {
  * page: a page's own media policy can refuse an element loading a sound and cannot refuse
  * Web Audio playing bytes it was handed.
  */
-async function speak(word: string, lang: string): Promise<void> {
-  await play(await sendMessage('speak', { word, lang, accent: accentFor(settings, lang) }));
+async function speak(word: string, lang: string, context: AudioContext): Promise<void> {
+  await play(await sendMessage('speak', { word, lang, accent: accentFor(settings, lang) }), context);
 }
 
-/** Play bytes through Web Audio, which is what a page's media policy cannot refuse, and
- *  resolve once they have been heard, which is how long the play button shows it playing. */
-async function play(bytes: number[]): Promise<void> {
+/** The page's one context for sounds, started inside the press that asked for one. */
+let audio: AudioContext | null = null;
+
+/**
+ * Start the sound context, inside the reader's press and before anything is awaited.
+ *
+ * Gecko resumes a context only while a gesture is live, and keeps one made or resumed after
+ * the host has answered silent: the sound played on some presses and not on others, by whether
+ * a context from an earlier press happened to be running still. The resume is fired here and
+ * never awaited, since off a gesture it never settles.
+ */
+function warmAudio(): AudioContext {
+  if (!audio || audio.state === 'closed') audio = new AudioContext();
+  void audio.resume().catch(() => undefined);
+  return audio;
+}
+
+/** Play bytes through Web Audio, which is what a page's media policy cannot refuse, in the
+ *  context the press started, and resolve once they have been heard, which is how long the
+ *  play button shows it playing. */
+async function play(bytes: number[], context: AudioContext): Promise<void> {
   if (bytes.length === 0) return;
-  const context = new AudioContext();
   const sound = await context.decodeAudioData(new Uint8Array(bytes).buffer);
   const source = context.createBufferSource();
   source.buffer = sound;
@@ -407,9 +426,11 @@ async function play(bytes: number[]): Promise<void> {
     source.onended = () => resolve();
     setTimeout(resolve, sound.duration * 1000 + 1000);
   });
+  // Started whether or not the resume has landed: a source started on a suspended context
+  // plays once it runs.
+  void context.resume().catch(() => undefined);
   source.start();
   await ended;
-  void context.close();
 }
 
 /**
@@ -562,7 +583,7 @@ function wordUnder(x: number, y: number): { range: Range; asked: Asked } | null 
   const parent = node.parentElement;
   // The text between painted words is the page's own and is asked about like any other; a
   // painted word answers through its own box.
-  if (!parent || parent.closest(`.${WORD}, #${OURS}`) || !readable(parent)) return null;
+  if (!parent || parent.closest(`.${WORD}, ${OURS_ANY}`) || !readable(parent)) return null;
   const text = node.nodeValue ?? '';
   const lang = languageOf(node);
   const origin = originOf(node);
@@ -663,6 +684,10 @@ function languageOf(node: Text): string {
   return pageLanguage();
 }
 
+/** What the card last opened does, for the actions the side button offers round the finger:
+ *  say the word, and where its page is. */
+let offered: { say: (context: AudioContext) => Promise<void>; page: () => string } | null = null;
+
 /** How far each dictionary on its way has got, as the host last said. */
 let coming: Record<string, number> = {};
 /** What the card on screen does when that changes. */
@@ -719,12 +744,14 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     eased: settings.animations,
     narrow: settings.narrow,
     entered: tapped,
-    onPlay: () =>
-      recording
-        ? recorded(commons(recording))
+    onPlay: () => {
+      const context = warmAudio();
+      return recording
+        ? recorded(commons(recording), context)
         // The accent's own voice where the reader chose one, since a synthesised word is
         // said by whichever voice is asked for.
-        : speak(word.spelling, source),
+        : speak(word.spelling, source, context);
+    },
     // The lemma's entry and the word's other forms, asked the way the word itself was, with
     // nothing before them: they are not words of the page's sentence.
     lookUp: async (other) => {
@@ -735,7 +762,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     },
     // A recording of one sound is a file somebody made, not a voice: it is fetched by the
     // host, because the page's own policy would refuse the load.
-    onPlayUrl: (url) => void recorded(url),
+    onPlayUrl: (url) => void recorded(url, warmAudio()),
     // Chosen on the card, for every word of the language from now on: the page redraws itself
     // when the setting changes, and the card is asked again in the accent chosen.
     onAccent: (accent) => {
@@ -756,6 +783,13 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
       });
     },
     diagram: (file) => sendMessage('diagram', { file, width: DIAGRAM_WIDTH }),
+  };
+  // What the side button's actions do with this word: the card's own play and its page.
+  offered = {
+    say: (context) => recording
+      ? recorded(commons(recording), context)
+      : speak(word.spelling, source, context),
+    page: () => wiktionary(shown.lemma ?? shown.spelling, named(shown.source)),
   };
   // Up with what the dictionary said, at once. What the network and the engine add arrives
   // after and fills the same card: a card that waited on Wiktionary waited a second or more
@@ -819,12 +853,17 @@ async function selected(): Promise<void> {
   const selection = document.getSelection();
   const text = selection?.toString().trim() ?? '';
   if (!selection || selection.isCollapsed || text.split(/\s+/).length < 2) return;
-  if (text.length > PHRASE_LIMIT) return;
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
-  // What the selection itself is in, where it says enough to tell: a page tagged German
-  // around an English answer is English where the reader selected it, and asking the engine
-  // to translate it as German handed the same English back as a guess.
+  await askPhrase(text, at, selection.getRangeAt(0).getBoundingClientRect());
+}
+
+/** Several words of the page, answered as one card at [box]: by the engine, marked as its. */
+async function askPhrase(text: string, at: Node | null, box: DOMRect, entered = true): Promise<void> {
+  if (text.length > PHRASE_LIMIT) return;
+  // What the text itself is in, where it says enough to tell: a page tagged German around an
+  // English answer is English where the reader selected it, and asking the engine to translate
+  // it as German handed the same English back as a guess.
   const guess = await sendMessage('detect', { text }).catch(() => null);
   const source = guess?.reliable && guess.language
     ? guess.language
@@ -836,9 +875,9 @@ async function selected(): Promise<void> {
   // The text handed back unchanged is the engine saying it has nothing.
   const translated = answer.says[0]?.trim().toLowerCase() ?? '';
   if (!translated || translated === text.toLowerCase()) return;
-  const range = selection.getRangeAt(0).getBoundingClientRect();
-  // Asked for by selecting, so there is no word to come in from and nothing to pass through.
-  show(answer, range, { recorded: false, entered: true });
+  // Asked for by selecting, so there is no word to come in from and nothing to pass through;
+  // swept with the side button, it is read while the finger is down and touched by nothing.
+  show(answer, box, { recorded: false, entered });
 }
 
 /** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
@@ -915,11 +954,138 @@ function followWithEmber(): void {
   emberAt(pointer.x, pointer.y, wordNear(pointer.x, pointer.y)?.rect ?? null);
 }
 
+/** Whether this screen is touched: one with no pointer that hovers, or one a finger has just
+ *  pressed, which is how an iPad with a trackpad says the reader put the trackpad down. */
+let fingers = matchMedia('(hover: none)').matches;
+
+/** A word the side button's circle is over, with what the page has there. */
+interface Touched extends MarkWord {
+  found: Near;
+}
+
+/** Numbers for the nodes the side button has been over, so a word has a name to compare. */
+const nodeNames = new WeakMap<Node, number>();
+let nodesNamed = 0;
+
+function nameOf(node: Node): number {
+  let name = nodeNames.get(node);
+  if (name === undefined) {
+    name = ++nodesNamed;
+    nodeNames.set(node, name);
+  }
+  return name;
+}
+
+/** The stretch of the page a word is, whichever kind of word it is. */
+function rangeOf(found: Near): Range {
+  if ('page' in found) return found.page.range;
+  const range = document.createRange();
+  range.selectNode(found.drawn.element);
+  return range;
+}
+
+/** The key of the word the card is open for, when the side button opened it. */
+let touchedKey = '';
+
+/**
+ * The run of the page a sweep went over, from its first word to its last in the page's order,
+ * with the words between that carry nothing of ours, and as the page wrote it rather than as
+ * Phonetix drew it.
+ */
+function sweptText(words: Touched[]): { text: string; at: Node | null; box: DOMRect } | null {
+  const ranges = words.map((w) => rangeOf(w.found));
+  let first = ranges[0];
+  let last = ranges[0];
+  for (const range of ranges) {
+    if (range.compareBoundaryPoints(Range.START_TO_START, first) < 0) first = range;
+    if (range.compareBoundaryPoints(Range.END_TO_END, last) > 0) last = range;
+  }
+  const run = document.createRange();
+  run.setStart(first.startContainer, first.startOffset);
+  run.setEnd(last.endContainer, last.endOffset);
+  const copy = run.cloneContents();
+  // What a drawn word shows is ours; what it covers is the page's.
+  for (const drawn of copy.querySelectorAll('.px-rep')) drawn.remove();
+  const text = (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+  if (text.split(' ').length < 2) return null;
+  return { text, at: first.startContainer, box: run.getBoundingClientRect() };
+}
+
+/**
+ * Show the side button where a finger asks, and Phonetix answers here, with cards; put it away
+ * anywhere else. On a touch screen it is the way to ask about any word.
+ */
+function markWhereTouched(): void {
+  if (!fingers || !allowed(settings, location.hostname) || !settings.cards) {
+    markHidden();
+    return;
+  }
+  markShown({
+    wordAt: (x, y, current) => {
+      const found = wordNear(x, y + LIFT);
+      if (!found) {
+        // Kept until the circle is plainly elsewhere: a word is left by moving off it, not by
+        // a hand trembling at its edge.
+        return current && near([current.rect], x, y + LIFT) ? current : null;
+      }
+      const key = 'drawn' in found
+        ? `e${nameOf(found.drawn.element)}`
+        : `t${nameOf(found.page.range.startContainer)}:${found.page.range.startOffset}`;
+      return { rect: found.rect, key, found } satisfies Touched;
+    },
+    onWord: (word) => {
+      if (!word) {
+        touchedKey = '';
+        hide();
+        anchored = null;
+        return;
+      }
+      const { found, key } = word as Touched;
+      if (key === touchedKey && showing()) return;
+      touchedKey = key;
+      // Read while the finger is down and touched by nothing, like the phone's.
+      if ('drawn' in found) {
+        anchored = onElement(found.drawn.element);
+        void open(anchored, askedOf(found.drawn.token, found.drawn.before));
+      } else {
+        anchored = onRange(found.page.range);
+        void open(anchored, found.page.asked);
+      }
+    },
+    onHand: (at) => handAt(at),
+    onRun: (words) => {
+      const run = sweptText(words as Touched[]);
+      if (!run) return;
+      touchedKey = '';
+      anchored = null;
+      void askPhrase(run.text, run.at, run.box, false);
+    },
+    tapped: () => askedForAWord(false),
+    held: () => void sendMessage('openSettings', {}).catch(() => undefined),
+    putAway: () => void set('on', false),
+    chose: (action) => {
+      const actions = offered;
+      if (!actions) return;
+      if (action === 'play') {
+        // Started here, inside the finger lifting, which is the gesture a touch browser lets
+        // a sound start in.
+        void actions.say(warmAudio());
+      } else {
+        window.open(actions.page(), '_blank', 'noopener');
+      }
+    },
+  }, { side: settings.side, pin: settings.pin, restY: settings.restY });
+}
+
 function gestures(): void {
   document.addEventListener(
     'pointerdown',
     (event) => {
       touched = event.pointerType === 'touch';
+      if (touched && !fingers) {
+        fingers = true;
+        markWhereTouched();
+      }
       // Pressing inside the card is taking hold of it: selecting a translation out of a card
       // that closes when the pointer wanders is a card that cannot be copied from.
       grabbed = inside(event.target);
@@ -933,12 +1099,26 @@ function gestures(): void {
     setTimeout(() => void selected(), 0);
   });
 
+  // A real mouse moving is a mouse again, after a finger: a pointer event says which it is,
+  // where the mouse events a browser makes up after a touch do not.
+  document.addEventListener(
+    'pointermove',
+    (event) => {
+      if (event.pointerType === 'mouse') touched = false;
+    },
+    { capture: true, passive: true }
+  );
+
   // A rest rather than a hover: the cursor crosses a dozen words on its way anywhere, and a
   // card for each of them is a page nobody can read. How long a rest is is the reader's.
   // Where the reader has the pointer, which is what decides whether a card is still wanted.
   document.addEventListener(
     'mousemove',
     (event) => {
+      // The move a browser makes up where a finger let go - Firefox does, at the end of a drag
+      // of the mark - is no pointer: taken for one, it landed on the card the drag had just
+      // opened, from no arrow, and took it down again.
+      if (touched) return;
       const was = pointer;
       pointer = { x: event.clientX, y: event.clientY };
       if (resting) clearTimeout(resting);
@@ -1099,7 +1279,7 @@ function keepWithWord(): void {
 function ours(node: Node): boolean {
   if (drewIt(node)) return true;
   const element = node instanceof Element ? node : node.parentElement;
-  return element !== null && element.closest(`#${OURS}`) !== null;
+  return element !== null && element.closest(OURS_ANY) !== null;
 }
 
 /**
@@ -1170,14 +1350,18 @@ export async function session(): Promise<void> {
   paintedIn(settings.theme, settings.dark);
   cardPaintedIn(settings.theme, settings.dark);
   emberPaintedIn(settings.theme, settings.animations);
+  markPaintedIn(settings.theme, settings.animations);
   answerAsked();
   gestures();
+  markWhereTouched();
   follow();
   watch((fresh) => {
     const was = settings;
     settings = fresh;
     emberPaintedIn(fresh.theme, fresh.animations);
+    markPaintedIn(fresh.theme, fresh.animations);
     if (!allowed(fresh, location.hostname) || !fresh.cards) emberAway();
+    markWhereTouched();
     // Only what changes the page redraws it: a reader dragging the frequency bar changes it
     // on every step, and a redraw per step is a page rebuilt fifty times.
     if (
