@@ -596,17 +596,23 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .form-lemma { font: inherit; font-weight: var(--weight-bold); color: var(--color-accent); background: none; border: none; border-bottom: 1.5px solid var(--color-accent); border-radius: 0; padding: 0; cursor: pointer; }
 .form-lemma:hover { background: var(--color-accent-bg); }
 .form-lemma.still { color: var(--color-ink); border-bottom: none; cursor: default; }
-/* A card with a form line is as wide as a card gets, because the sheets its terms open are as
-   wide as the card and a row of a sheet is one line. A sheet hangs off the card, so the card
-   lets it out. */
-.card:has(.forms) { width: var(--card-width); max-width: 100%; }
+/* A card with a sheet open is as wide as a card gets, because the sheet is as wide as the card
+   and a row of a sheet is one line. At rest it is as wide as what it says. A sheet hangs off
+   the card, so the card lets it out. */
+.card:has(.form-sheet) { width: var(--card-width); max-width: 100%; }
 .card:has(.form-sheet) { position: relative; overflow: visible; }
 /* The sheet a term opens: the category it is a value of, what the category and the value are,
    and the word in every value of that category with everything else kept, the word's own row
    lit. Exactly as wide as the card and one gap from it, under the card or over it, whichever
    side the word is not on. Its text keeps the card's inset and its rows are one line each. */
-.form-sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: calc(100% + var(--space-2) + var(--border-width)); background: var(--color-surface-raised); border: var(--border-width) solid var(--color-accent); border-radius: var(--radius-card); box-shadow: var(--shadow-lifted); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
-.form-sheet.over { top: auto; bottom: calc(100% + var(--space-2) + var(--border-width)); }
+.form-sheet { --sheet-name-width: calc(var(--space-6) * 3); position: absolute; z-index: 3; left: calc(-1 * var(--border-width)); right: calc(-1 * var(--border-width)); top: 100%; background: var(--color-surface-raised); border: var(--border-width) solid var(--color-border); border-top: none; border-radius: 0 0 var(--radius-card) var(--radius-card); box-shadow: var(--shadow-card); padding: var(--space-4) 0 var(--space-2); font-size: var(--font-size-small); line-height: 1.4; color: var(--color-ink); text-align: left; cursor: default; }
+.form-sheet.over { top: auto; bottom: 100%; border-top: var(--border-width) solid var(--color-border); border-bottom: none; border-radius: var(--radius-card) var(--radius-card) 0 0; }
+/* The sheet is the card going on: one window, its edge the card's, with no gap for a pointer
+   on its way from a term to its sheet to fall through and close both. The card's corners on
+   that side are where the sheet carries on. */
+.card:has(> .card-head .form-sheet:not(.over)) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.card:has(> .card-head .form-sheet.over) { border-top-left-radius: 0; border-top-right-radius: 0; }
+.card:has(> .card-head .form-sheet.over) > .card-strip { border-top-left-radius: 0; border-top-right-radius: 0; }
 .sheet-cat { padding: 0 var(--space-4); margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
 /* The "?" a term that needs explaining carries in its sheet's heading; the explanation shows
    while it is pointed at or once it is pressed. */

@@ -389,15 +389,17 @@ QUIET_CARD_JS = """
 """
 
 EMBER_JS = """
-  (() => {
+  (async () => {
     const host = document.getElementById('phonetix-card-host-ember');
     if (!host) return null;
     const root = host.shadowRoot;
     const ball = root.querySelector('.ember'), light = root.querySelector('.ember-word');
-    const at = ball.getBoundingClientRect();
+    // Frames drawn over a tenth of a second: a fire that burns keeps drawing.
+    const before = Number(ball.dataset.drawn);
+    await new Promise((done) => setTimeout(done, 100));
     return {ball: ball.className, word: light.className,
-            at: [at.left + at.width / 2, at.top + at.height / 2],
-            burning: [...ball.children].map((flame) => getComputedStyle(flame).animationName),
+            at: (ball.dataset.at || '0,0').split(',').map(Number),
+            burning: Number(ball.dataset.drawn) - before,
             lit: light.classList.contains('on') ? light.getBoundingClientRect().toJSON() : null};
   })()
 """
@@ -437,8 +439,8 @@ def ember_checks(hand, engine, failures, store):
     # At the tip itself, and burning: a still ember is one the reader's settings never turned on.
     elif abs(empty["at"][0] - where["empty"]["x"]) > 1.5 or abs(empty["at"][1] - where["empty"]["y"]) > 1.5:
         failures.append(f"{engine}: the ember is not at the pointer's tip: {empty}")
-    elif "none" in empty["burning"]:
-        failures.append(f"{engine}: the ember does not move: {empty}")
+    elif empty["burning"] < 3:
+        failures.append(f"{engine}: the ember does not burn: {empty}")
     if where["word"]:
         hand.move(where["word"]["x"] - 3, where["word"]["y"])
         hand.move(where["word"]["x"], where["word"]["y"])

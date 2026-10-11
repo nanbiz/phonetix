@@ -232,8 +232,10 @@ class Run:
                       f"{card['left']:.1f}")
         gap = (card["top"] - sheet["box"]["bottom"]) if sheet["over"] else (
             sheet["box"]["top"] - card["bottom"])
-        if abs(gap - 8) > 0.6:
-            self.fail(f"{where}: sheet {gap:.1f}px from the card, not 8")
+        # On the card's own edge, as one window: its border is the line between them, and a
+        # gap is where a pointer on its way to the sheet falls through and closes both.
+        if not -1.6 <= gap <= 0.1:
+            self.fail(f"{where}: sheet {gap:.1f}px from the card, not on its edge")
         inset = sheet["catBox"]["left"] - sheet["box"]["left"]
         card_inset = seen["textBox"]["left"] - card["left"]
         if abs(inset - card_inset) > 0.6:
