@@ -329,9 +329,18 @@ fn nominal_form(
                 .filter(|place| agreeing.iter().any(|determiner| agrees(place, determiner)))
                 .collect();
             if fitting.is_empty() {
+                // Only what the word's own table varies in: English "the English" has an article
+                // in front, and "English" no case or gender for it to agree in.
+                let varies: Vec<&str> = entry
+                    .forms
+                    .iter()
+                    .flat_map(|form| places(&form.label))
+                    .flatten()
+                    .map(|(_, category)| category)
+                    .collect();
                 let mut its: Place = shared(&agreeing.iter().collect::<Vec<_>>())
                     .into_iter()
-                    .filter(|(_, category)| AGREES.contains(category))
+                    .filter(|(_, category)| AGREES.contains(category) && varies.contains(category))
                     .collect();
                 its.extend(shared(&all.iter().collect::<Vec<_>>()).into_iter().filter(
                     |(_, category)| !AGREES.contains(category) && *category != "declension",
@@ -427,6 +436,18 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
         entry.pos.as_str(),
         "noun" | "adj" | "det" | "pron" | "article"
     );
+    // A table that names persons cell by cell, rather than only in the one form English marks,
+    // its present third singular.
+    let personal_table = entry
+        .forms
+        .iter()
+        .filter(|row| {
+            places(&row.label)
+                .iter()
+                .any(|place| value_in(place, "person").is_some())
+        })
+        .count()
+        > 1;
     // First, so that where it fits as well as a listed cell it is the one taken.
     let rows: Vec<&lexpack::Form> = nominal
         .then_some(&lemma_row)
@@ -458,10 +479,18 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
                         .find(|(_, of)| of == category)
                         .is_none_or(|(had, _)| had == tag || counterpart(had, tag, &place, moving))
             });
+            // In a table that does not name persons cell by cell, a cell naming no person and no
+            // number is the form for every one of them: English "explained" is the past whoever
+            // did it. A table that does has a cell for each, and its bare "past" is a heading's
+            // copy of one.
+            let everyone = !personal_table
+                && value_in(&place, "person").is_none()
+                && value_in(&place, "number").is_none();
             let leaves_out_only = fixed.iter().all(|(tag, category)| {
                 value_in(&place, category).is_some()
                     || *category == "mood"
                     || *category == "declension"
+                    || (everyone && (*category == "person" || *category == "number"))
                     || (*category == "tense"
                         && tag == "present"
                         && value_in(&place, "mood") == Some("imperative"))
@@ -732,6 +761,53 @@ mod tests {
         assert_eq!(
             words,
             ["anduve", "anduviste", "anduvo", "anduvimos", "anduvieron"]
+        );
+    }
+
+    /// English names a person in one form only, and its past is the past whoever did it.
+    #[test]
+    fn an_english_past_is_everyones() {
+        let explain = entry(
+            "explain",
+            "verb",
+            &[
+                ("explains", "present singular third-person"),
+                ("explaining", "participle present"),
+                ("explained", "participle past; past"),
+            ],
+        );
+        let found = form_alone("explains", &explain).unwrap();
+        assert_eq!(along(&found, "tense"), ["explains", "explained"]);
+    }
+
+    /// A table that names each person keeps its own cells, and a bare "past" is not one more.
+    #[test]
+    fn a_table_with_persons_keeps_its_own_cells() {
+        let gehen = entry(
+            "gehen",
+            "verb",
+            &[
+                (
+                    "ging",
+                    "past; first-person preterite singular; third-person preterite singular",
+                ),
+                ("geht", "third-person present singular"),
+                ("gehe", "first-person present singular"),
+            ],
+        );
+        let found = form_alone("ging", &gehen).unwrap();
+        assert_eq!(along(&found, "tense"), ["geht", "ging"]);
+    }
+
+    /// A word with no case or gender of its own takes none from the article before it.
+    #[test]
+    fn an_article_lends_only_what_the_word_varies_in() {
+        let english = entry("English", "noun", &[("Englishes", "plural")]);
+        let the = places("nominative masculine singular");
+        let found = form("English", &english, &the);
+        assert!(
+            found.is_none_or(|form| !values(&form.place).contains(&"nominative")),
+            "English has no case"
         );
     }
 

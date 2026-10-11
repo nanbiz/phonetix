@@ -275,6 +275,40 @@ fn narrow_detail(c: char) -> bool {
     )
 }
 
+/// Whether [narrow] is [broad] written in more detail: once every mark that shades a sound,
+/// every length and stress mark and every break is set aside, the same consonants in the same
+/// order and as many vowels, each of which a narrow transcription may write more exactly.
+/// "cause" /kɔːz/ is narrowed by [kʰo̞ːz̥], its vowel written closer; "ranked" /ɹæŋkt/ is not by
+/// [ɹeɪŋkt], whose one vowel is two, another accent's, the dictionary's own transcription of a
+/// speaker of it.
+pub fn narrows(broad: &str, narrow: &str) -> bool {
+    fn letters(text: &str) -> String {
+        decomposed(text)
+            .into_iter()
+            .filter(|c| {
+                let code = *c as u32;
+                // Combining marks and the modifier letters (ʰ ʷ ʲ ː ˈ), and what breaks a
+                // transcription up rather than saying a sound.
+                !(0x0300..=0x036F).contains(&code)
+                    && !(0x02B0..=0x02FF).contains(&code)
+                    && !matches!(c, '.' | ' ' | '‿' | '(' | ')' | '-')
+            })
+            .flat_map(char::to_lowercase)
+            .collect()
+    }
+    const VOWELS: &str = "iyɨʉɯuɪʏʊeøɘɵɤoəɛœɜɞʌɔæɐaɶɑɒɚɝᵻᵿ";
+    let shape = |text: &str| -> (String, usize) {
+        let letters = letters(text);
+        let vowels = letters.chars().filter(|c| VOWELS.contains(*c)).count();
+        (
+            letters.chars().filter(|c| !VOWELS.contains(*c)).collect(),
+            vowels,
+        )
+    };
+    let (broad, narrow) = (shape(broad), shape(narrow));
+    broad.1 > 0 && broad == narrow
+}
+
 fn stress(c: char) -> bool {
     c == 'ˈ' || c == 'ˌ'
 }
@@ -381,6 +415,30 @@ fn recomposed(base: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    /// A narrow transcription writes the same word in more detail; one with other sounds is
+    /// another accent's.
+    #[test]
+    fn a_narrow_transcription_is_the_broad_one_in_more_detail() {
+        assert!(
+            super::narrows("kɔːz", "kʰo̞ːz̥"),
+            "cause, its vowel written closer"
+        );
+        assert!(super::narrows("ˈɹæŋk", "ˈɹʷæŋk"), "rank, its r rounded");
+        assert!(super::narrows("ˈtɛpɪç", "ˈtʰɛ.pʰɪç"), "Teppich, aspirated");
+        assert!(
+            super::narrows("ˈtɹænˌskɹɪpt", "ˈtɹ̝̊ʷænˌskɹʷɪpt"),
+            "transcript"
+        );
+        assert!(
+            !super::narrows("ɹæŋkt", "ɹeɪŋkt"),
+            "ranked: another accent's vowel"
+        );
+        assert!(
+            !super::narrows("ˈwɔːtə", "ˈwɔɾɚ"),
+            "water: another accent's t and r"
+        );
+    }
+
     use super::*;
 
     #[test]

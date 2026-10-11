@@ -596,12 +596,19 @@ pub fn typed_in_mine<D: AsRef<[u8]>>(
 /// An entry's narrow transcription, where its dictionary gave one beside the broad: the pack
 /// records which of its transcriptions that is as a `narrow:<index>` tag.
 pub fn narrow_of(entry: &Entry) -> Option<String> {
-    entry
+    let at = entry
         .tags
         .iter()
         .find_map(|tag| tag.strip_prefix("narrow:"))
-        .and_then(|at| at.parse::<usize>().ok())
-        .and_then(|at| entry.ipa.get(at).cloned())
+        .and_then(|at| at.parse::<usize>().ok())?;
+    let narrow = entry.ipa.get(at)?;
+    // Only a narrowing of a broad transcription before it: one that says other sounds is a
+    // variant, in whichever accent its writer speaks, and shown to a reader who chose another
+    // it was that accent's word.
+    entry.ipa[..at]
+        .iter()
+        .any(|broad| crate::symbols::narrows(broad, narrow))
+        .then(|| narrow.clone())
 }
 
 impl Answer {
@@ -1422,6 +1429,15 @@ pub fn read_in_context<D: AsRef<[u8]>>(
                 .then(|| commonest_answer(&all, open))
                 .flatten()
         })
+        // An English spelling that is both a word and a form of another is the form where the
+        // other word is met far more in English itself: "landed" is "land" in the past far
+        // more often than it is the adjective, while "left" stays open, since the direction is
+        // met nearly as often as the rest of "leave".
+        .or_else(|| {
+            (source.0 == "en")
+                .then(|| form_met_more(&all, open))
+                .flatten()
+        })
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
         // the article, not the adverb of "the more the merrier".
@@ -1686,6 +1702,32 @@ fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<us
         }
     }
     (*most > 0 && *most >= second.saturating_mul(COMMONER_BY)).then_some(first_with_it)
+}
+
+/// The reading that is a form of another word, where that word's other forms are met at least
+/// [COMMONER_BY] times as often in the source language as the spelling alone, which is all the
+/// spelling's own word can be met as.
+fn form_met_more<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<usize> {
+    let source = open.source?;
+    let own = all.iter().find(|answer| answer.lemma.is_none())?;
+    let met = |word: &str, fewest: bool| -> u64 {
+        let counts = source
+            .lookup(word)
+            .into_iter()
+            .filter(|entry| same_word(&entry.lemma, word))
+            .filter_map(|entry| how_often(&entry));
+        if fewest { counts.min() } else { counts.max() }.unwrap_or(0)
+    };
+    // The spelling's own share is the count of its barest entry, which is the spelling alone.
+    let alone = met(&own.spelling, true);
+    if alone == 0 {
+        return None;
+    }
+    all.iter().position(|answer| {
+        answer.lemma.as_deref().is_some_and(|lemma| {
+            met(lemma, false).saturating_sub(alone) >= alone.saturating_mul(COMMONER_BY)
+        })
+    })
 }
 
 /// How many times as often one reading's answer has to be met as any other's to be drawn first.
