@@ -68,6 +68,8 @@ if [[ "$what" == all || "$what" == core ]]; then
 fi
 
 if [[ "$what" == all || "$what" == browser ]]; then
+  step "a reader hears a speaker of the accent they chose" \
+    node --experimental-strip-types --no-warnings scripts/proofread/recordings.ts
   step "the core, compiled for the browser" node scripts/build-core-wasm.mjs
   step "the extension typechecks" pnpm check
   step "the extension's lint" node_modules/.bin/eslint src

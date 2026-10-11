@@ -316,6 +316,8 @@ export interface Said {
   ipa: string[];
   /** Commons file names. */
   audio: string[];
+  /** Where each recording's speaker is from, as the page labels it, or empty. */
+  heard: string[];
 }
 
 /** Read a page the host fetched. */

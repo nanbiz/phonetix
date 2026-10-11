@@ -200,10 +200,11 @@ pub fn screen(screen: &crate::detect::Screen) -> String {
 /// What a Wiktionary page says about a word in one language.
 pub fn said(said: &crate::wiktionary::Said) -> String {
     format!(
-        "{{\"lang\":{},\"ipa\":{},\"audio\":{}}}",
+        "{{\"lang\":{},\"ipa\":{},\"audio\":{},\"heard\":{}}}",
         quoted(&said.lang),
         strings(&said.ipa),
-        strings(&said.audio)
+        strings(&said.audio),
+        strings(&said.heard)
     )
 }
 

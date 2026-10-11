@@ -17,20 +17,48 @@ export interface Accent {
    *  holds for every word, or readings of its own for most words a page uses. An accent
    *  with a few thousand words of its own reads the rest the way the dictionary does. */
   whole: boolean;
+  /** What a recording's speaker in this accent is labelled, lowercased with hyphens as
+   *  spaces: its tags, the further labels recordings carry, its short name and its
+   *  region's code, which a file named en-us-word.ogg carries in its name. */
+  heard: string[];
 }
 
 export const ACCENTS: Record<string, Accent[]> = {
-  de: [{ id: "de", name: "Germany", short: "DE", voice: "de", rule: false, whole: true }, { id: "de-ch", name: "Switzerland", short: "CH", voice: "de", rule: true, whole: true }, { id: "de-at", name: "Austria", short: "AT", voice: "de", rule: true, whole: true }],
-  en: [{ id: "en-gb", name: "British", short: "GB", voice: "en-gb-x-rp", rule: true, whole: true }, { id: "en-us", name: "American", short: "US", voice: "en-us", rule: true, whole: true }, { id: "en-gb-scotland", name: "Scottish", short: "SCOT", voice: "en-gb-scotland", rule: false, whole: false }, { id: "en-au", name: "Australian", short: "AU", voice: "en-au", rule: false, whole: false }, { id: "en-029", name: "Caribbean", short: "CARIB", voice: "en-029", rule: false, whole: false }, { id: "en-ca", name: "Canadian", short: "CA", voice: "en-us", rule: true, whole: true }],
-  es: [{ id: "es", name: "Spain", short: "ES", voice: "es", rule: false, whole: true }, { id: "es-419", name: "Latin America", short: "LATAM", voice: "es-419", rule: true, whole: true }, { id: "es-ar", name: "Rioplatense", short: "AR", voice: "es-419", rule: true, whole: true }],
-  fr: [{ id: "fr", name: "France", short: "FR", voice: "fr", rule: false, whole: true }, { id: "fr-ca", name: "Canada", short: "CA", voice: "fr-ca", rule: false, whole: false }],
-  pt: [{ id: "pt-pt", name: "Portugal", short: "PT", voice: "pt", rule: false, whole: true }, { id: "pt-br", name: "Brazil", short: "BR", voice: "pt-br", rule: false, whole: true }],
-  vi: [{ id: "vi", name: "Northern", short: "North", voice: "vi", rule: false, whole: true }, { id: "vi-vn-x-central", name: "Central", short: "Central", voice: "vi-vn-x-central", rule: false, whole: true }],
+  de: [{ id: "de", name: "Germany", short: "DE", voice: "de", rule: false, whole: true, heard: ["germany", "berlin", "northern germany", "de"] }, { id: "de-ch", name: "Switzerland", short: "CH", voice: "de", rule: true, whole: true, heard: ["switzerland", "zurich", "bern", "ch"] }, { id: "de-at", name: "Austria", short: "AT", voice: "de", rule: true, whole: true, heard: ["austria", "vienna", "at"] }],
+  en: [{ id: "en-gb", name: "British", short: "GB", voice: "en-gb-x-rp", rule: true, whole: true, heard: ["received pronunciation", "british", "uk", "rp", "england", "southern england", "london", "northern england", "gb"] }, { id: "en-us", name: "American", short: "US", voice: "en-us", rule: true, whole: true, heard: ["general american", "us", "ga", "american", "california", "new york", "midwest", "texas", "inland north"] }, { id: "en-gb-scotland", name: "Scottish", short: "SCOT", voice: "en-gb-scotland", rule: false, whole: false, heard: ["scotland", "scottish", "edinburgh", "glasgow", "scot"] }, { id: "en-au", name: "Australian", short: "AU", voice: "en-au", rule: false, whole: false, heard: ["australian", "au", "australia", "queensland", "new south wales", "victoria", "sydney", "melbourne"] }, { id: "en-029", name: "Caribbean", short: "CARIB", voice: "en-029", rule: false, whole: false, heard: ["carib"] }, { id: "en-ca", name: "Canadian", short: "CA", voice: "en-us", rule: true, whole: true, heard: ["canada", "canadian", "toronto", "ontario", "ca"] }],
+  es: [{ id: "es", name: "Spain", short: "ES", voice: "es", rule: false, whole: true, heard: ["spain", "madrid", "castile", "northern spain", "es"] }, { id: "es-419", name: "Latin America", short: "LATAM", voice: "es-419", rule: true, whole: true, heard: ["latin america", "mexico", "colombia", "chile", "peru", "venezuela", "ecuador", "cuba", "latam"] }, { id: "es-ar", name: "Rioplatense", short: "AR", voice: "es-419", rule: true, whole: true, heard: ["argentina", "buenos aires", "uruguay", "rioplatense", "ar"] }],
+  fr: [{ id: "fr", name: "France", short: "FR", voice: "fr", rule: false, whole: true, heard: ["france", "paris", "fr"] }, { id: "fr-ca", name: "Canada", short: "CA", voice: "fr-ca", rule: false, whole: false, heard: ["canada", "quebec", "montreal", "ca"] }],
+  pt: [{ id: "pt-pt", name: "Portugal", short: "PT", voice: "pt", rule: false, whole: true, heard: ["portugal", "lisbon", "porto", "pt"] }, { id: "pt-br", name: "Brazil", short: "BR", voice: "pt-br", rule: false, whole: true, heard: ["brazil", "southern brazil", "são paulo", "rio de janeiro", "br"] }],
+  vi: [{ id: "vi", name: "Northern", short: "North", voice: "vi", rule: false, whole: true, heard: ["hanoi", "northern vietnam", "north"] }, { id: "vi-vn-x-central", name: "Central", short: "Central", voice: "vi-vn-x-central", rule: false, whole: true, heard: ["huế", "central vietnam", "central"] }],
 };
 
 /** What a language offers, which is nothing for most of them. */
 export function accentsOf(lang: string): Accent[] {
   return ACCENTS[lang] ?? [];
+}
+
+/**
+ * Which of a word's recordings a reader reading [lang] in [accent] hears: one whose
+ * speaker is labelled as of that accent, or by the region in its file's name; failing
+ * that one labelled as of nowhere the language offers; failing that none, so the voice
+ * says it in the accent chosen rather than a speaker saying it in another.
+ */
+export function recordingIn(
+  lang: string, accent: string, files: string[], labels: string[]
+): string {
+  const rows = accentsOf(lang);
+  if (rows.length < 2) return files[0] ?? '';
+  const of = (index: number) => {
+    const region = /^[a-z]{2,3}-([a-z]{2})-/i.exec(files[index])?.[1] ?? '';
+    const said = (labels[index] ?? '').split(/[,()]/).concat(region)
+      .map((part) => part.trim().toLowerCase().replace(/[-_]/g, ' ')).filter(Boolean);
+    return rows.find((row) => said.some((part) => row.heard.includes(part)))?.id ?? '';
+  };
+  const speakers = files.map((_, index) => of(index));
+  const mine = speakers.indexOf(accent);
+  if (mine >= 0) return files[mine];
+  const nowhere = speakers.indexOf('');
+  return nowhere >= 0 ? files[nowhere] : '';
 }
 
 /** The voice that says a word in this accent, or the language's own. */

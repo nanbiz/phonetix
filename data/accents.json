@@ -1,5 +1,5 @@
 {
-  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent can have both, and the good ones do: the pack answers the words it holds and the rule answers everything else, which is most of a vocabulary. The cascade keeps them apart, so a word the pack spelled out is never shifted again. 'default' is the accent a language is read in until the reader picks another: there is always one, since a reading in no accent in particular is a mix of them. 'tags' are the labels Wiktionary gives this accent's pronunciations, best first, which tools/build_accent_overlays.py reads its words from.",
+  "note": "The accents the interface offers. 'voice' is the espeak voice, verified to exist; 'rule' means the core rewrites a standard transcription into this accent, which is what covers the words no dictionary lists; 'words' is how many words this accent has a reading of its own for, which arrive as a pack. An accent can have both, and the good ones do: the pack answers the words it holds and the rule answers everything else, which is most of a vocabulary. The cascade keeps them apart, so a word the pack spelled out is never shifted again. 'default' is the accent a language is read in until the reader picks another: there is always one, since a reading in no accent in particular is a mix of them. 'tags' are the labels Wiktionary gives this accent's pronunciations, best first, which tools/build_accent_overlays.py reads its words from. 'heard' are the further labels Wiktionary puts on a recording's speaker in this accent (\"a=Southern England\"), which with the tags, the short name and the file's own region (en-us-word.ogg) pick the recording a reader who chose this accent hears.",
   "accents": {
     "en": [
       {
@@ -13,6 +13,13 @@
           "Received-Pronunciation",
           "British",
           "UK"
+        ],
+        "heard": [
+          "RP",
+          "England",
+          "Southern England",
+          "London",
+          "Northern England"
         ]
       },
       {
@@ -26,6 +33,15 @@
         "tags": [
           "General-American",
           "US"
+        ],
+        "heard": [
+          "GA",
+          "American",
+          "California",
+          "New York",
+          "Midwest",
+          "Texas",
+          "Inland North"
         ]
       },
       {
@@ -36,6 +52,11 @@
         "words": 2362,
         "tags": [
           "Scotland"
+        ],
+        "heard": [
+          "Scottish",
+          "Edinburgh",
+          "Glasgow"
         ]
       },
       {
@@ -46,6 +67,15 @@
         "words": 3982,
         "tags": [
           "Australian"
+        ],
+        "heard": [
+          "AU",
+          "Australia",
+          "Queensland",
+          "New South Wales",
+          "Victoria",
+          "Sydney",
+          "Melbourne"
         ]
       },
       {
@@ -63,6 +93,11 @@
         "words": 2626,
         "tags": [
           "Canada"
+        ],
+        "heard": [
+          "Canadian",
+          "Toronto",
+          "Ontario"
         ]
       }
     ],
@@ -72,21 +107,43 @@
         "name": "Spain",
         "short": "ES",
         "voice": "es",
-        "default": true
+        "default": true,
+        "heard": [
+          "Spain",
+          "Madrid",
+          "Castile",
+          "Northern Spain"
+        ]
       },
       {
         "id": "es-419",
         "name": "Latin America",
         "short": "LATAM",
         "voice": "es-419",
-        "rule": true
+        "rule": true,
+        "heard": [
+          "Latin America",
+          "Mexico",
+          "Colombia",
+          "Chile",
+          "Peru",
+          "Venezuela",
+          "Ecuador",
+          "Cuba"
+        ]
       },
       {
         "id": "es-ar",
         "name": "Rioplatense",
         "short": "AR",
         "voice": "es-419",
-        "rule": true
+        "rule": true,
+        "heard": [
+          "Argentina",
+          "Buenos Aires",
+          "Uruguay",
+          "Rioplatense"
+        ]
       }
     ],
     "de": [
@@ -95,7 +152,12 @@
         "name": "Germany",
         "short": "DE",
         "voice": "de",
-        "default": true
+        "default": true,
+        "heard": [
+          "Germany",
+          "Berlin",
+          "Northern Germany"
+        ]
       },
       {
         "id": "de-ch",
@@ -103,7 +165,12 @@
         "short": "CH",
         "voice": "de",
         "rule": true,
-        "words": 420
+        "words": 420,
+        "heard": [
+          "Switzerland",
+          "Zurich",
+          "Bern"
+        ]
       },
       {
         "id": "de-at",
@@ -111,7 +178,11 @@
         "short": "AT",
         "voice": "de",
         "rule": true,
-        "words": 1007
+        "words": 1007,
+        "heard": [
+          "Austria",
+          "Vienna"
+        ]
       }
     ],
     "pt": [
@@ -123,6 +194,10 @@
         "words": 54270,
         "tags": [
           "Portugal"
+        ],
+        "heard": [
+          "Lisbon",
+          "Porto"
         ]
       },
       {
@@ -136,6 +211,9 @@
           "Southern-Brazil",
           "São-Paulo",
           "Rio-de-Janeiro"
+        ],
+        "heard": [
+          "Rio de Janeiro"
         ]
       }
     ],
@@ -145,13 +223,22 @@
         "name": "France",
         "short": "FR",
         "voice": "fr",
-        "default": true
+        "default": true,
+        "heard": [
+          "France",
+          "Paris"
+        ]
       },
       {
         "id": "fr-ca",
         "name": "Canada",
         "short": "CA",
-        "voice": "fr-ca"
+        "voice": "fr-ca",
+        "heard": [
+          "Canada",
+          "Quebec",
+          "Montreal"
+        ]
       }
     ],
     "vi": [
@@ -160,7 +247,11 @@
         "name": "Northern",
         "short": "North",
         "voice": "vi",
-        "default": true
+        "default": true,
+        "heard": [
+          "Hanoi",
+          "Northern Vietnam"
+        ]
       },
       {
         "id": "vi-vn-x-central",
@@ -170,6 +261,9 @@
         "words": 27237,
         "tags": [
           "Huế"
+        ],
+        "heard": [
+          "Central Vietnam"
         ]
       }
     ]

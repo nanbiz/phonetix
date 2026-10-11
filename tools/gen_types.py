@@ -926,6 +926,21 @@ def whole(lang, row):
             or row.get("words", 0) >= WHOLE_WORDS)
 
 
+def heard_as(row):
+    """What a recording's speaker in this accent can be labelled, as recordingIn compares it."""
+    parts = row["id"].split("-")
+    region = parts[1] if len(parts) == 2 and len(parts[1]) == 2 else ""
+    names = row.get("tags", []) + row.get("heard", []) + [row["short"], region]
+    if region == "gb":
+        names.append("uk")
+    out = []
+    for name in names:
+        name = name.strip().lower().replace("-", " ").replace("_", " ")
+        if name and name not in out:
+            out.append(name)
+    return out
+
+
 def accents_ts():
     """The accents each language offers, for the view that lets a reader pick one."""
     with open(ACCENTS) as f:
@@ -950,13 +965,17 @@ def accents_ts():
         "   *  holds for every word, or readings of its own for most words a page uses. An accent",
         "   *  with a few thousand words of its own reads the rest the way the dictionary does. */",
         "  whole: boolean;",
+        "  /** What a recording's speaker in this accent is labelled, lowercased with hyphens as",
+        "   *  spaces: its tags, the further labels recordings carry, its short name and its",
+        "   *  region's code, which a file named en-us-word.ogg carries in its name. */",
+        "  heard: string[];",
         "}",
         "",
         "export const ACCENTS: Record<string, Accent[]> = {",
     ]
     for lang in sorted(table):
         rows = ", ".join(
-            "{ id: %s, name: %s, short: %s, voice: %s, rule: %s, whole: %s }"
+            "{ id: %s, name: %s, short: %s, voice: %s, rule: %s, whole: %s, heard: %s }"
             % (
                 json.dumps(row["id"]),
                 json.dumps(row["name"], ensure_ascii=False),
@@ -964,6 +983,7 @@ def accents_ts():
                 json.dumps(row["voice"]),
                 "true" if row.get("rule") else "false",
                 "true" if whole(lang, row) else "false",
+                json.dumps(heard_as(row), ensure_ascii=False),
             )
             for row in table[lang]
         )
@@ -974,6 +994,30 @@ def accents_ts():
         "/** What a language offers, which is nothing for most of them. */",
         "export function accentsOf(lang: string): Accent[] {",
         "  return ACCENTS[lang] ?? [];",
+        "}",
+        "",
+        "/**",
+        " * Which of a word's recordings a reader reading [lang] in [accent] hears: one whose",
+        " * speaker is labelled as of that accent, or by the region in its file's name; failing",
+        " * that one labelled as of nowhere the language offers; failing that none, so the voice",
+        " * says it in the accent chosen rather than a speaker saying it in another.",
+        " */",
+        "export function recordingIn(",
+        "  lang: string, accent: string, files: string[], labels: string[]",
+        "): string {",
+        "  const rows = accentsOf(lang);",
+        "  if (rows.length < 2) return files[0] ?? '';",
+        "  const of = (index: number) => {",
+        "    const region = /^[a-z]{2,3}-([a-z]{2})-/i.exec(files[index])?.[1] ?? '';",
+        "    const said = (labels[index] ?? '').split(/[,()]/).concat(region)",
+        "      .map((part) => part.trim().toLowerCase().replace(/[-_]/g, ' ')).filter(Boolean);",
+        "    return rows.find((row) => said.some((part) => row.heard.includes(part)))?.id ?? '';",
+        "  };",
+        "  const speakers = files.map((_, index) => of(index));",
+        "  const mine = speakers.indexOf(accent);",
+        "  if (mine >= 0) return files[mine];",
+        "  const nowhere = speakers.indexOf('');",
+        "  return nowhere >= 0 ? files[nowhere] : '';",
         "}",
         "",
         "/** The voice that says a word in this accent, or the language's own. */",

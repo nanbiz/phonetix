@@ -21,6 +21,10 @@ pub struct Said {
     /// Recordings, as Commons file names. A person saying the word, which is worth more than
     /// anything synthesised.
     pub audio: Vec<String>,
+    /// Where each recording's speaker is from, as the page labels it ("US", "Southern
+    /// England", "Brazil (São Paulo)"), and empty where it does not: one per recording, in the
+    /// same order. A reader who chose an accent hears a speaker of it.
+    pub heard: Vec<String>,
 }
 
 /// Read what a page says about a word in one language.
@@ -108,20 +112,27 @@ fn read(lang: &str, body: &str) -> Said {
         // A recording is named either by the audio template or inside a language's own
         // pronunciation template, which writes it as "audio:File.wav". Spanish and Italian
         // use the second and would otherwise come back with no recording at all.
-        for file in sounds(template) {
+        for (file, heard) in sounds(template) {
             if !said.audio.contains(&file) {
                 said.audio.push(file);
+                said.heard.push(heard);
             }
         }
     }
     said
 }
 
-/// Every sound file named anywhere in a template.
+/// Every sound file named anywhere in a template, with where its speaker is from.
 ///
 /// A file is recognised by its own name rather than by where it sits, because the parameter
-/// it sits in differs per language and the name does not.
-fn sounds(template: &str) -> Vec<String> {
+/// it sits in differs per language and the name does not. Where the speaker is from is the
+/// audio template's "a=" or, inside a language's own template, the "<a:...>" right after the
+/// file.
+fn sounds(template: &str) -> Vec<(String, String)> {
+    let labelled = template
+        .split('|')
+        .find_map(|part| part.trim().strip_prefix("a="))
+        .unwrap_or("");
     let mut out = Vec::new();
     for part in template.split(['|', '<', '>', '=']) {
         let file = part.trim().trim_start_matches("audio:").trim();
@@ -130,7 +141,16 @@ fn sounds(template: &str) -> Vec<String> {
             .iter()
             .any(|end| lower.ends_with(end))
         {
-            out.push(file.to_string());
+            let after = template
+                .find(file)
+                .map(|at| &template[at + file.len()..])
+                .unwrap_or("");
+            let heard = after
+                .strip_prefix("<a:")
+                .and_then(|rest| rest.split('>').next())
+                .unwrap_or(labelled);
+            let heard = heard.replace("<<", "").replace(">>", "");
+            out.push((file.to_string(), heard.trim().to_string()));
         }
     }
     out
@@ -218,7 +238,21 @@ mod tests {
         let page = "==Spanish==\n{{es-pr|+<audio:LL-Q1321 (spa)-Millars-perro.wav<a:Spain>>}}\n";
         let said = parse(page, Some("es")).expect("the page has Spanish");
         assert_eq!(said.audio, ["LL-Q1321 (spa)-Millars-perro.wav"]);
+        assert_eq!(said.heard, ["Spain"]);
         assert!(said.ipa.is_empty(), "the wikitext states none");
+    }
+
+    #[test]
+    fn each_recording_says_where_its_speaker_is_from() {
+        let page = "==English==\n** {{audio|en|en-uk-tomato.ogg|a=UK|IPA=[tʰə̥ˈmɑːtʰəʉ̯]}}\n\
+            ** {{audio|en|en-us-tomato.ogg|a=California}}\n\
+            ** {{audio|en|LL-Q1860 (eng)-Nail123Real-water.wav|a=US,non-cot-caught}}\n\
+            ** {{audio|en|En-uk-update.ogg}}\n";
+        let said = parse(page, Some("en")).expect("the page has English");
+        assert_eq!(said.heard, ["UK", "California", "US,non-cot-caught", ""]);
+        let page = "==Portuguese==\n* {{audio|pt|LL-Q5146 (por)-JnpoJuwan-fazer.wav|a=<<Brazil>> (<<São Paulo>>)}}\n";
+        let said = parse(page, Some("pt")).expect("the page has Portuguese");
+        assert_eq!(said.heard, ["Brazil (São Paulo)"]);
     }
 
     #[test]

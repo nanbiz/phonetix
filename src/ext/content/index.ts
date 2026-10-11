@@ -32,6 +32,7 @@ import {
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { emberAt, emberAway, emberPaintedIn } from './ember';
+import { recordingIn } from '@/data/accents';
 import { markHidden, markPaintedIn, markShown, type MarkWord } from './mark';
 import { OURS_ANY, readable, scan, type ScannedRun } from './scan';
 import { commons, wiktionary } from '@/data/links';
@@ -812,7 +813,8 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
   const enriched = sendMessage('enrich', { word: word.spelling, lang: source })
     .then(async (found) => {
       if (!found || !current()) return;
-      recording = found.audio[0] ?? '';
+      // A speaker of the accent the reader chose: one of another says it the other way.
+      recording = recordingIn(source, accentFor(settings, source), found.audio, found.heard ?? []);
       actions.recorded = Boolean(recording);
       // A transcription a person wrote, where the pack had none.
       if (shown.ipa.length === 0 && found.ipa.length > 0) {
