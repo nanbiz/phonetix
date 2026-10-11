@@ -182,8 +182,10 @@ function place(at: DOMRect): void {
     left: new DOMRect(word.left - gap - w, middle, w, h),
     right: new DOMRect(word.right + gap, middle, w, h),
   };
+  // Above the word under a pointer, since a page is read downwards and a card under its word
+  // covers the line read next; under a finger, on the side away from the hand, as the phone's.
   const handBelow = palm !== null && palm.top + HAND > cy;
-  const order: Side[] = handBelow || (palm === null && cy > view.top + view.height / 2)
+  const order: Side[] = palm === null || handBelow
     ? ['above', 'below', 'left', 'right']
     : ['below', 'above', 'left', 'right'];
   const inside = (r: DOMRect) => r.left >= lo && r.top >= top &&
@@ -423,9 +425,9 @@ function enter(): void {
 /**
  * Whether a point is on a card the reader has not come into.
  *
- * A pointer there got past the word some other way than through the arrow, so it is on its
- * way to whatever the card covers rather than into the card, and the card should be gone
- * before it hides that from the reader.
+ * A pointer there got onto the card some other way than across the gap between it and its
+ * word, from beside it, so it is on its way to whatever the card covers rather than into the
+ * card, and the card should be gone before it hides that from the reader.
  */
 export function passedOver(from: Point, to: Point): boolean {
   if (!drawn || entered || !frame) return false;
@@ -433,16 +435,16 @@ export function passedOver(from: Point, to: Point): boolean {
   if (!card) return false;
   const box = card.getBoundingClientRect();
   if (to.x < box.left || to.x > box.right || to.y < box.top || to.y > box.bottom) return false;
-  // A quick hand moves further between two reports than the arrow is tall, and lands in the
-  // card having crossed the arrow without ever being reported on it. Where the straight line
-  // between the two reports crosses the card's edge says which way it came in.
+  // A quick hand moves further between two reports than the gap is tall, and lands in the card
+  // having crossed the gap without ever being reported in it. Where the straight line between
+  // the two reports crosses the card's edge facing the word says which way it came in.
   const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
   const side = sideOf(card);
   if (arrow && (side === 'above' || side === 'below')) {
     const edge = side === 'above' ? box.bottom : box.top;
     if (from.y !== to.y && (from.y - edge) * (to.y - edge) <= 0) {
       const x = from.x + ((to.x - from.x) * (edge - from.y)) / (to.y - from.y);
-      if (x >= arrow.left && x <= arrow.right) {
+      if (x >= box.left && x <= box.right) {
         enter();
         return false;
       }
@@ -451,7 +453,7 @@ export function passedOver(from: Point, to: Point): boolean {
     const edge = side === 'left' ? box.right : box.left;
     if (from.x !== to.x && (from.x - edge) * (to.x - edge) <= 0) {
       const y = from.y + ((to.y - from.y) * (edge - from.x)) / (to.x - from.x);
-      if (y >= arrow.top && y <= arrow.bottom) {
+      if (y >= box.top && y <= box.bottom) {
         enter();
         return false;
       }
@@ -461,22 +463,27 @@ export function passedOver(from: Point, to: Point): boolean {
 }
 
 /**
- * Whether a point is on the way from the word into the card: over the arrow, a little either
- * side of it, or in the gap between it and the word. A card that closes the moment the pointer
- * leaves its word has to let the pointer cross that gap.
+ * Whether a point is on the way from the word into the card: anywhere in the gap between the
+ * word and the card, the whole width of the card, a little towards the word. A card that
+ * closes the moment the pointer leaves its word has to let the pointer cross that gap, and a
+ * reader heading into the card does not aim for its arrow; one moving on past the card leaves
+ * the gap to the side.
  */
 export function onTheWayIn(to: Point): boolean {
   if (!drawn || !frame) return false;
-  const card = frame.querySelector('.card');
+  const element = frame.querySelector('.card');
   const arrow = frame.querySelector('.card-arrow')?.getBoundingClientRect();
-  if (!card || !arrow) return false;
+  if (!element || !arrow) return false;
+  const card = element.getBoundingClientRect();
   const slack = 8;
-  // The slack runs towards the word only, which is the side of the arrow away from the card.
-  const side = sideOf(card);
-  const top = arrow.top - (side === 'below' ? slack : side === 'above' ? 0 : slack);
-  const bottom = arrow.bottom + (side === 'above' ? slack : side === 'below' ? 0 : slack);
-  const left = arrow.left - (side === 'right' ? slack : side === 'left' ? 0 : slack);
-  const right = arrow.right + (side === 'left' ? slack : side === 'right' ? 0 : slack);
+  // The arrow spans the gap, so it says how deep the gap is; the card says how wide. The slack
+  // runs towards the word only, which is the side of the arrow away from the card.
+  const side = sideOf(element);
+  const across = side === 'above' || side === 'below';
+  const top = across ? arrow.top - (side === 'below' ? slack : 0) : card.top;
+  const bottom = across ? arrow.bottom + (side === 'above' ? slack : 0) : card.bottom;
+  const left = across ? card.left : arrow.left - (side === 'right' ? slack : 0);
+  const right = across ? card.right : arrow.right + (side === 'left' ? slack : 0);
   return to.x >= left && to.x <= right && to.y >= top && to.y <= bottom;
 }
 

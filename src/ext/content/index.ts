@@ -893,8 +893,8 @@ let resting: ReturnType<typeof setTimeout> | null = null;
 /**
  * Whether the reader has taken hold of the card.
  *
- * A card is a thing to read and select out of, and the moment a reader presses inside one it
- * stops being something the pointer leaving a word may take away.
+ * A card is a thing to read and select out of, and while a reader presses inside one - dragging
+ * a selection across it - it is not something the pointer leaving a word may take away.
  */
 let grabbed = false;
 /** Whether the last press was a finger. On a touch screen a tap fires a hover, and treating
@@ -1098,6 +1098,10 @@ function gestures(): void {
 
   // A drag across several words asks about all of them at once.
   document.addEventListener('mouseup', () => {
+    // Let go of: a card is held only while a press inside it lasts, for a selection being
+    // dragged out of it. Held past that, a card whose play button was pressed stayed over the
+    // page wherever the pointer went.
+    grabbed = false;
     // After the browser has settled the selection, which it has not when mouseup fires.
     setTimeout(() => void selected(), 0);
   });

@@ -886,14 +886,15 @@ def same_word(said, written):
 
 
 def arrow_checks(hand, name, painted, low, failures):
-    """The card is entered through its arrow and nowhere else.
+    """The card is entered across the gap between it and its word, and from nowhere else.
 
-    A reader moving from a word to the line next to it crosses the card that word opened. A card
-    that took the pointer anywhere along its edge caught that reader and kept the next line out
-    of reach, so the card keeps a gap from its word, the arrow spans the gap, and only the arrow
-    lets the pointer in. Asked of a word near the top of the window, whose card opens under it,
-    and of one near the bottom, whose card opens over it; of a painted word and of the page's
-    own text.
+    A page is read downwards, so a card opens above its word where there is room, under it
+    where there is not. The card keeps a gap from its word, the arrow spans it, and the pointer
+    anywhere in that gap, the card's whole width, is on its way in: crossing onto the card from
+    there enters it. A reader moving on past the card leaves the gap to the side, and coming
+    onto the card from there is passing over it, which takes it down so the page under it can
+    be reached. Asked of a word near the top of the window and one near the bottom; of a
+    painted word and of the page's own text.
     """
     def fail(message):
         failures.append(f"{name}: {message}")
@@ -937,11 +938,10 @@ def arrow_checks(hand, name, painted, low, failures):
     if len(lines) < 4:
         fail(f"the paragraph is {len(lines)} lines deep, too few to cross")
         return
-    # The word the card opens on: a second line from the top or from the bottom, so there is a
-    # line on either side of it, and wide enough that a pointer can leave it beside the arrow.
-    at = len(lines) - 2 if low else 1
-    wanted = "above" if low else "below"
-    toward = -1 if low else 1
+    # The word the card opens on: the third line from the top or the second from the bottom, so
+    # there are lines on either side of it for the card, which opens above it, to cover, and
+    # wide enough that a pointer can leave it beside the arrow.
+    at = len(lines) - 2 if low else 2
     candidates = sorted(lines[at], key=lambda w: -(w["right"] - w["left"]))
     word = next((w for w in candidates if w["right"] - w["left"] >= 52), None)
     if not word:
@@ -953,13 +953,18 @@ def arrow_checks(hand, name, painted, low, failures):
         fail(f"no card opened on {word['text']!r}")
         return
     arrow, body = shown["arrow"], shown["card"]
+    # Above, unless the window has no room for it there.
+    room = word["top"] - (body["bottom"] - body["top"]) - 12 >= 8
+    wanted = "above" if room else "below"
     if shown["way"] != wanted or not arrow:
         fail(f"the card opened {shown['way']} its word, wanted {wanted}, arrow {arrow}")
         return
+    up = wanted == "above"
+    toward = -1 if up else 1
     # The arrow points at the word, reaches it, and is the whole of the gap.
-    tip = arrow["top"] if not low else arrow["bottom"]
-    edge = word["bottom"] if not low else word["top"]
-    gap = (body["top"] - word["bottom"]) if not low else (word["top"] - body["bottom"])
+    tip = arrow["top"] if not up else arrow["bottom"]
+    edge = word["bottom"] if not up else word["top"]
+    gap = (body["top"] - word["bottom"]) if not up else (word["top"] - body["bottom"])
     print(f"  {name}: card {wanted} {word['text']!r}, arrow {arrow['width']:.0f}x"
           f"{arrow['height']:.0f} at {arrow['x'] - word['x']:+.1f}px from the word's middle, "
           f"tip {tip - edge:+.1f}px from the word, gap {gap:.1f}px, takes {shown['takes']}")
@@ -991,7 +996,7 @@ def arrow_checks(hand, name, painted, low, failures):
         fail(f"the card catches the pointer over {covered['text']!r}, which it covers")
 
     # 1. Through the arrow: the card stays, takes the pointer, and a symbol on it is pressed.
-    inside_card = body["top"] + 24 if not low else body["bottom"] - 24
+    inside_card = body["top"] + 24 if not up else body["bottom"] - 24
     walk(hand, (word["x"], word["y"]), (word["x"], inside_card))
     time.sleep(0.6)
     after = card()
@@ -1026,11 +1031,20 @@ def arrow_checks(hand, name, painted, low, failures):
                   f"described {pressed.get('detail')}")
             if not pressed["open"] or not pressed.get("detail"):
                 fail("a symbol on the card could not be pressed")
+            # Pressed and let go of, the card is not held: the pointer leaving it for the open
+            # page takes it down, as it would have before the press.
+            # The window's far corner, clear of the card wherever it was put and of the text.
+            corner = hand.ask("[innerWidth - 20, innerHeight - 20]")
+            walk(hand, (sym["x"], sym["y"]), (corner[0], corner[1]))
+            time.sleep(0.6)
+            print(f"  {name}: out on the open page after a press: open {card()['open']}")
+            if card()["open"]:
+                fail("the card stayed after a press in it, with the pointer out on the open page")
         else:
             fail("the card has no symbol to press")
 
-    # 2. Beside the arrow: the card is gone by the time the pointer is on it, and the word the
-    # pointer goes on to opens a card of its own.
+    # 2. Beside the arrow, across the gap: the card stays, and coming onto it from there is
+    # coming into it.
     shown = open_on(word)
     if not shown:
         fail(f"no card opened on {word['text']!r} a second time")
@@ -1043,37 +1057,42 @@ def arrow_checks(hand, name, painted, low, failures):
         fail(f"{word['text']!r} is too narrow to leave beside the arrow")
         return
     walk(hand, (word["x"], word["y"]), (beside, word["y"]))
-    closed = {"depth": None}
+    deep = body["top"] + 30 if not up else body["bottom"] - 30
+    walk(hand, (beside, word["y"]), (beside, deep))
+    time.sleep(0.4)
+    entered = card()
+    print(f"  {name}: in beside the arrow: open {entered['open']}, takes {entered.get('takes')}")
+    if not entered["open"] or not same_word(entered["word"], word["text"]):
+        fail("the card closed when the pointer came onto it across the gap beside the arrow")
+    elif entered["takes"] != "auto":
+        fail(f"the card entered beside its arrow does not take the pointer ({entered['takes']})")
 
-    def watch(point):
-        depth = (point[1] - body["top"]) if not low else (body["bottom"] - point[1])
-        if depth >= 4:
-            closed["depth"] = depth if not card()["open"] else None
-            return True
-        return False
-
-    deep = body["top"] + 30 if not low else body["bottom"] - 30
-    stop = walk(hand, (beside, word["y"]), (beside, deep), each=watch)
-    print(f"  {name}: out beside the arrow: closed "
-          f"{'at ' + format(closed['depth'], '.0f') + 'px into the card' if closed['depth'] else 'NOT'}")
-    if closed["depth"] is None:
-        fail("the card stayed when the pointer came onto it beside the arrow")
-    walk(hand, stop, (covered["x"], covered["y"]))
+    # And from the side: the card is passing over, gone by the time the pointer is on it, and
+    # the word it covered opens a card of its own.
+    shown = open_on(word)
+    if not shown:
+        fail(f"no card opened on {word['text']!r} a third time")
+        return
+    body = shown["card"]
+    outside = body["left"] - 14 if body["left"] - 14 > found["left"] - 40 else body["right"] + 14
+    walk(hand, (word["x"], word["y"]), (outside, word["y"]))
+    walk(hand, (outside, word["y"]), (outside, covered["y"]))
+    walk(hand, (outside, covered["y"]), (covered["x"], covered["y"]))
     reached = None
     for _ in range(16):
         reached = card()
         if reached["open"] and same_word(reached["word"], covered["text"]):
             break
         time.sleep(0.25)
-    print(f"  {name}: the word it covered, {covered['text']!r}, opened "
-          f"{reached.get('word')!r}")
+    print(f"  {name}: from the side onto {covered['text']!r}, which the card covered: card "
+          f"about {reached.get('word')!r}")
     if not reached["open"] or not same_word(reached["word"], covered["text"]):
         fail(f"{covered['text']!r}, which the card covered, did not get a card of its own")
 
     # 3. The other way, onto the line on the far side of the word: that word's card, and the
     # first one gone.
     if not open_on(word):
-        fail(f"no card opened on {word['text']!r} a third time")
+        fail(f"no card opened on {word['text']!r} a fourth time")
         return
     other = min(lines[at - toward], key=lambda w: abs(w["x"] - word["x"]))
     walk(hand, (word["x"], word["y"]), (other["x"], other["y"]))
@@ -1371,7 +1390,7 @@ def main():
                 time.sleep(1.5)
                 arrow_checks(ChromeHand(cdp, at),
                              f"chrome, {'painted words' if painted else 'page text'}, "
-                             f"card {'above' if low else 'below'}",
+                             f"word near the {'bottom' if low else 'top'}",
                              painted, low, failures)
                 cdp.send("Target.closeTarget", {"targetId": lined["targetId"]})
         evaluate(cdp, settings, "chrome.storage.local.set({density:1})")

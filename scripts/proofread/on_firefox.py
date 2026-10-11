@@ -309,7 +309,7 @@ def main():
                 time.sleep(1.5)
                 arrow_checks(hand,
                              f"firefox, {'painted words' if painted else 'page text'}, "
-                             f"card {'above' if low else 'below'}",
+                             f"word near the {'bottom' if low else 'top'}",
                              painted, low, failures)
         # The card's Wiktionary link, reached the way a reader reaches it: rest on a word until
         # its card opens, in through the arrow, along to the link, and pressed.
