@@ -439,7 +439,9 @@ def ember_checks(hand, engine, failures, store):
     # At the tip itself, and burning: a still ember is one the reader's settings never turned on.
     elif abs(empty["at"][0] - where["empty"]["x"]) > 1.5 or abs(empty["at"][1] - where["empty"]["y"]) > 1.5:
         failures.append(f"{engine}: the ember is not at the pointer's tip: {empty}")
-    elif empty["burning"] < 3:
+    # At rest it is drawn thirty times a second, three frames in the tenth of a second asked
+    # about, and a fire that does not burn draws none.
+    elif empty["burning"] < 2:
         failures.append(f"{engine}: the ember does not burn: {empty}")
     if where["word"]:
         hand.move(where["word"]["x"] - 3, where["word"]["y"])

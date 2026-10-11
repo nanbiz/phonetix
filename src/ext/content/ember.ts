@@ -26,14 +26,18 @@ import { OURS } from './scan';
  *  a lag. */
 const EASE = 0.35;
 /** How many sparks a second the fire gives off while it burns at the pointer. */
-const SPARKS_PER_SECOND = 110;
+const SPARKS_PER_SECOND = 40;
 /** How many sparks carry the fire into a word, and back out of it. */
-const CARRIED = 34;
+const CARRIED = 18;
 /** How long the core takes to empty into a word or fill back up, in seconds. */
 const CORE_S = 0.16;
 /** How long after the fire leaves for a word the word's light comes up, in milliseconds: as
  *  the first sparks arrive rather than before any have left. */
 const LIGHT_AFTER_MS = 70;
+/** How long the pointer stays still before the fire is drawn at the slower rate. */
+const REST_MS = 200;
+/** How often a fire at rest is drawn, in milliseconds: thirty times a second. */
+const RESTING_FRAME_MS = 30;
 
 const CSS = `
   .ember-frame { position: fixed; inset: 0; pointer-events: none; }
@@ -94,6 +98,8 @@ let sparks: Spark[] = [];
 let owed = 0;
 let frameAsked = 0;
 let last = 0;
+/** When the pointer last moved. */
+let moved = 0;
 /** Frames drawn, which the checks read to tell a fire that moves from one that does not. */
 let drawn = 0;
 /** The word it last lit, so the same word is not lit again every frame. */
@@ -177,6 +183,7 @@ export function emberPaintedIn(chosen: string, moving: boolean): void {
  */
 export function emberAt(x: number, y: number, word: DOMRect | null): void {
   build();
+  if (!goal || goal.x !== x || goal.y !== y) moved = performance.now();
   goal = { x, y };
   if (!at || where === 'away') at = { x, y };
   const was = where;
@@ -238,7 +245,7 @@ function carryInto(word: DOMRect): void {
     const from = { x: at.x + spread(4), y: at.y + spread(4) };
     sparks.push({
       ...from, vx: 0, vy: 0, age: 0, life: 0.2 + Math.random() * 0.16,
-      size: 3 + Math.random() * 3, from,
+      size: 1.8 + Math.random() * 1.8, from,
       to: { x: word.left + Math.random() * word.width, y: word.top + Math.random() * word.height },
     });
   }
@@ -250,7 +257,7 @@ function carryOutOf(word: DOMRect): void {
     const from = { x: word.left + Math.random() * word.width, y: word.top + Math.random() * word.height };
     sparks.push({
       ...from, vx: 0, vy: 0, age: 0, life: 0.2 + Math.random() * 0.14,
-      size: 2.5 + Math.random() * 3, from, to: 'pointer', late: Math.random() * 0.06,
+      size: 1.5 + Math.random() * 1.8, from, to: 'pointer', late: Math.random() * 0.06,
     });
   }
 }
@@ -286,6 +293,14 @@ function heat(h: number): [number, number, number] {
 function step(now: number): void {
   frameAsked = 0;
   if (!canvas || !pen || !goal) return;
+  // A fire left burning where the pointer rests is drawn every other frame: it changes as
+  // much to the eye, and costs half. Following the pointer, or carrying fire to or from a
+  // word, every frame.
+  const resting = where === 'pointer' && now - moved > REST_MS && !sparks.some((spark) => spark.to);
+  if (resting && last && now - last < RESTING_FRAME_MS) {
+    frameAsked = requestAnimationFrame(step);
+    return;
+  }
   const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
   last = now;
   const t = now / 1000;
@@ -308,7 +323,7 @@ function step(now: number): void {
       sparks.push({
         x: at.x + spread(3), y: at.y + spread(3),
         vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 14,
-        age: 0, life: 0.28 + Math.random() * 0.42, size: 2 + Math.random() * 3.2,
+        age: 0, life: 0.28 + Math.random() * 0.42, size: 1.2 + Math.random() * 1.9,
       });
     }
   }
@@ -345,7 +360,7 @@ function step(now: number): void {
     right = Math.max(right, x + reach);
     bottom = Math.max(bottom, y + reach);
   };
-  if (at && core > 0.01) take(at.x, at.y, 28);
+  if (at && core > 0.01) take(at.x, at.y, 18);
   for (const spark of sparks) take(spark.x, spark.y, spark.size * 2 + 2);
   if (left === Infinity) uncover();
   else cover(left, top, right, bottom, !sparks.some((spark) => spark.to));
@@ -355,7 +370,7 @@ function step(now: number): void {
   // little cooler; and white-hot does not show on white, so a light page is shown it cooler
   // still.
   const cooler = dark ? 0.85 : 0.72;
-  const gain = dark ? 0.5 : 1;
+  const gain = dark ? 0.3 : 0.6;
   for (const spark of sparks) {
     const k = Math.min(1, spark.age / spark.life);
     const carried = Boolean(spark.to);
@@ -366,14 +381,14 @@ function step(now: number): void {
   // The core: a few soft blobs, each wandering round the middle and swelling on its own, so
   // their sum has no outline that holds.
   if (at && core > 0.01) {
-    const blobs: [number, number, number][] = [[0.15, 9, 1.4], [0.4, 7, 2.6], [0.7, 5.5, 3.9], [1, 3.6, 5.3]];
+    const blobs: [number, number, number][] = [[0.15, 5.4, 1.4], [0.4, 4.2, 2.6], [0.7, 3.3, 3.9], [1, 2.2, 5.3]];
     for (const [hot, radius, seed] of blobs) {
-      const reach = still ? 0 : 2.4;
+      const reach = still ? 0 : 1.5;
       const x = at.x + wander(t * 2.2, seed) * reach;
       const y = at.y + wander(t * 2.6, seed + 11) * reach - (1 - hot) * 1.5;
       const swell = still ? 1 : 0.85 + 0.3 * (wander(t * 3.1, seed + 23) * 0.5 + 0.5);
       stamp(x, y, radius * swell * (0.4 + 0.6 * core), hot * (dark ? 0.92 : 1),
-        0.95 * core * (dark ? 0.7 : 1));
+        0.6 * core * (dark ? 0.7 : 1));
     }
   }
   pen.globalCompositeOperation = 'source-over';
