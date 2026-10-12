@@ -316,6 +316,37 @@ def read_daisy():
             colour = palette.get(of)
             if colour and surface:
                 palette[role] = blend(colour, surface, 0.85)
+        # The rest of what every surface is drawn with, which these themes do not state
+        # either, and which left unset fell through to nothing: the page behind a dark theme's
+        # cards was white, with its title in light ink on it. The page a step past the
+        # border's shade, away from the surface; a machine's guess in the theme's warning
+        # colour; a transcription's vowels and consonants in its accent and info colours, and
+        # the rest in the faintest ink; the ruby's hue that of its info colour.
+        dark = mode == "dark"
+        border = palette.get("--p-border")
+        if border and surface:
+            palette["--p-page-bg"] = (blend(border, "#000000", 0.25) if dark
+                                      else blend(border, surface, 0.5))
+        warning = from_oklch(declared.get("--color-warning", ""))
+        if warning and surface:
+            # Light themes state a warning pale enough to fill with, not to write in.
+            palette["--p-guess"] = warning if dark else blend(warning, "#000000", 0.45)
+            palette["--p-guess-bg"] = blend(warning, surface, 0.85)
+        for role, theirs in (("--p-ipa-vowel", "--color-accent"),
+                             ("--p-ipa-consonant", "--color-info")):
+            colour = from_oklch(declared.get(theirs, ""))
+            if colour:
+                palette[role] = colour
+        if palette.get("--p-ink-faint"):
+            palette["--p-ipa-other"] = palette["--p-ink-faint"]
+        hue = re.fullmatch(r"oklch\(\s*[\d.]+%?\s+[\d.]+\s+([\d.]+)\s*\)",
+                           declared.get("--color-info", "").strip())
+        if hue:
+            palette["--p-ruby-hue"] = str(round(float(hue.group(1))))
+        palette["--p-scrim"] = "rgba(255, 255, 255, 0.05)" if dark else "rgba(0, 0, 0, 0.05)"
+        palette["--p-shadow"] = "rgba(0, 0, 0, 0.6)" if dark else "rgba(0, 0, 0, 0.18)"
+        if palette.get("--p-chip-bg"):
+            palette["--p-skeleton"] = palette["--p-chip-bg"]
         if palette:
             palettes[f"{name}-{mode}"] = palette
     return palettes
