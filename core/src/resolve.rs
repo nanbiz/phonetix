@@ -1475,7 +1475,7 @@ fn read_found<D: AsRef<[u8]>>(
         // The dictionary's own reading is its language's default accent's, so only another
         // accent, with no rule and without the word, has no reading of it.
         let missing = (said.is_none()
-            && !crate::accent::has_rule(open.accent)
+            && !crate::accent::is_a_rule(open.accent)
             && crate::accent_defaults::default_of(&source.0) != Some(open.accent))
         .then(|| open.accent.to_string());
         for answer in answers.iter_mut() {
