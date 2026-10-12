@@ -2550,6 +2550,102 @@ fn an_english_form_is_carried_into_the_other_language() {
 }
 
 #[test]
+fn a_plural_with_a_slang_noun_of_its_own_is_still_the_plural() {
+    let form = |spelling: &str, label: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: label.to_string(),
+    };
+    let marked = |mut entry: Entry, marks: &[&str]| {
+        for sense in entry.senses.iter_mut() {
+            sense.marks = marks.iter().map(|it| it.to_string()).collect();
+        }
+        entry
+    };
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    let mut dog = word("dog", "noun", "dɒɡ", &["A domesticated canine."]);
+    dog.forms.push(form("dogs", "plural"));
+    english.add::<&str>(dog, &[]).unwrap();
+    english
+        .add::<&str>(
+            marked(
+                word("dogs", "noun", "dɒɡz", &["plural of dog"]),
+                &["form-of", "plural"],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            {
+                // As the dictionary marks it: the first sense slang, the racing not.
+                let mut dogs = marked(
+                    word("dogs", "noun", "dɒɡz", &["Feet.", "Greyhound racing."]),
+                    &["plural-only"],
+                );
+                dogs.senses[0].marks.push("slang".to_string());
+                dogs
+            },
+            &[],
+        )
+        .unwrap();
+    let mut glass = word("glass", "noun", "ɡlɑːs", &["A transparent solid."]);
+    glass.forms.push(form("glasses", "plural"));
+    english.add::<&str>(glass, &[]).unwrap();
+    english
+        .add::<&str>(
+            marked(
+                word("glasses", "noun", "ˈɡlɑːsɪz", &["plural of glass"]),
+                &["form-of", "plural"],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            marked(
+                word("glasses", "noun", "ˈɡlɑːsɪz", &["Spectacles."]),
+                &["plural-only"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut perro = word("perro", "noun", "ˈpe.ro", &["dog"]);
+    perro.forms.push(form("perros", "plural"));
+    let perro = spanish.add::<&str>(perro, &[]).unwrap();
+    let perreria = spanish
+        .add::<&str>(
+            word("perrería", "noun", "pe.reˈɾi.a", &["pack of dogs"]),
+            &[],
+        )
+        .unwrap();
+    let mut cristal = word("cristal", "noun", "kɾisˈtal", &["glass"]);
+    cristal.forms.push(form("cristales", "plural"));
+    let cristal = spanish.add::<&str>(cristal, &[]).unwrap();
+    let anteojos = spanish
+        .add::<&str>(
+            word("anteojos", "noun", "an.teˈo.xos", &["glasses, spectacles"]),
+            &[],
+        )
+        .unwrap();
+    spanish.translated("dog", "noun", &[(perro, 0)]);
+    spanish.translated("dogs", "noun", &[(perreria, 0)]);
+    spanish.translated("glass", "noun", &[(cristal, 0)]);
+    spanish.translated("glasses", "noun", &[(anteojos, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("en"), &lang("es"), &open).says;
+    // "dogs" the slang for feet is not what "dogs" means first; "glasses", spectacles, is.
+    assert_eq!(says("dogs"), ["perros"]);
+    assert_eq!(says("glasses"), ["anteojos"]);
+}
+
+#[test]
 fn an_english_word_is_what_its_translation_table_says() {
     let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
     english

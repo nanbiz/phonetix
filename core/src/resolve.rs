@@ -1808,6 +1808,17 @@ fn read_found<D: AsRef<[u8]>>(
             .collect(),
         _ => Vec::new(),
     };
+    // The words the spelling's own entries say it is a form of: "dogs" is "plural of dog".
+    let noted: Vec<String> = found
+        .iter()
+        .filter(|entry| same_word(&entry.lemma, spelling))
+        .flat_map(|entry| {
+            entry
+                .senses
+                .iter()
+                .filter_map(|sense| form_of_word(&sense.gloss))
+        })
+        .collect();
     let decided = chosen_by_translation(&meant, &verbs, &fits, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
@@ -1830,6 +1841,9 @@ fn read_found<D: AsRef<[u8]>>(
                 .then(|| form_met_more(&all, open))
                 .flatten()
         })
+        // A noun only ever plural that is first of all slang is what a plural also means
+        // rather than the plural itself: "dogs", feet, beside "plural of dog".
+        .or_else(|| plural_of_its_own(&all, &noted))
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
         // the article, not the adverb of "the more the merrier".
@@ -1852,7 +1866,16 @@ fn read_found<D: AsRef<[u8]>>(
         .filter(|answer| answer.lemma.is_none() && !crate::annotate::only_grammar(&answer.glosses))
         .map(|answer| answer.pos.clone())
         .collect();
-    all.retain(|answer| answer.lemma.is_none() || !own.contains(&answer.pos));
+    // Except the word the spelling's own entry says it is a form of: beside a plural-only noun
+    // of its own, the slang for feet, "dogs" dropped as table talk made every dog "perrería".
+    all.retain(|answer| {
+        answer.lemma.is_none()
+            || !own.contains(&answer.pos)
+            || answer
+                .lemma
+                .as_deref()
+                .is_some_and(|lemma| noted.iter().any(|word| same_word(word, lemma)))
+    });
     first.readings = std::iter::once(&first)
         .chain(all.iter())
         .map(|answer| Reading {
@@ -1874,6 +1897,33 @@ fn read_found<D: AsRef<[u8]>>(
         first.state = AnswerState::Homograph;
     }
     with_noted_form(first, pack, open)
+}
+
+/// The reading that is the word a plural-only noun's spelling is the plural of, where that
+/// noun leads with a sense nobody means in ordinary text.
+fn plural_of_its_own(all: &[Answer], noted: &[String]) -> Option<usize> {
+    let first = all.first()?;
+    let only_plural = first.lemma.is_none()
+        && !first.marks.is_empty()
+        && first
+            .marks
+            .iter()
+            .all(|marks| marks.iter().any(|mark| mark == "plural-only"))
+        // And what it means first is slang or the like. "glasses", spectacles, is a plural
+        // noun of its own met as often as the plural of glass, and stays first.
+        && first.marks[0]
+            .iter()
+            .any(|mark| UNUSUAL.contains(&mark.as_str()));
+    if !only_plural {
+        return None;
+    }
+    all.iter().position(|answer| {
+        answer.pos == first.pos
+            && answer
+                .lemma
+                .as_deref()
+                .is_some_and(|lemma| noted.iter().any(|word| same_word(word, lemma)))
+    })
 }
 
 /// [answer] with the form its own note names, where it is only a note and its lemma's table
