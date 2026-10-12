@@ -13,6 +13,7 @@
   import Apps from './screens/Apps.svelte';
   import Packs from './screens/Packs.svelte';
   import Accents from './screens/Accents.svelte';
+  import Languages from './screens/Languages.svelte';
   import Appearance from './screens/Appearance.svelte';
 
   let settings = $state<Settings | null>(null);
@@ -34,6 +35,7 @@
   const TITLES: Record<string, string> = {
     apps: ROWS.apps.name,
     packs: ROWS.dictionaries.name,
+    languages: ROWS['group-languages'].name,
     accents: ROWS.accents.name,
     appearance: ROWS.appearance.name,
   };
@@ -160,6 +162,8 @@
         />
       {:else if view === 'packs'}
         <Packs held={packs.held} offered={packs.offered} {fetching} {get} {forget} />
+      {:else if view === 'languages'}
+        <Languages {settings} {change} />
       {:else if view === 'accents'}
         <Accents {settings} {change} />
       {:else if view === 'appearance'}

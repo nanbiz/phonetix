@@ -345,7 +345,11 @@
       "about": ""
     },
     "cards": {
-      "name": "Card on a word you point at",
+      "name": "Look up",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Mine",
       "about": ""
     }
   },
@@ -422,6 +426,11 @@
     "simple-example": "/tɒp/",
     "detailed-example": "[tʰɒp]",
     "nothing-else": "nothing else",
-    "learn-none": "none"
+    "learn-none": "none",
+    "add-language": "Add a language",
+    "learn-language": "Learn a language",
+    "make-main": "Make it my language",
+    "main-language": "My language",
+    "learning-it": "learning %s"
   }
 }

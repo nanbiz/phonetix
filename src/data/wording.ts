@@ -60,7 +60,7 @@ export const ROWS: Record<string, Words> = {
   "animations": { name: "Animations", about: "" },
   "appearance": { name: "Appearance", about: "" },
   "apps": { name: "Apps", about: "" },
-  "cards": { name: "Card on a word you point at", about: "" },
+  "cards": { name: "Look up", about: "" },
   "dark": { name: "Light or dark", about: "" },
   "delay": { name: "Rest before a card opens", about: "" },
   "density": { name: "How often", about: "" },
@@ -79,6 +79,7 @@ export const ROWS: Record<string, Words> = {
   "lens-tap": { name: "Tap it", about: "Ask for the word for something, in the middle of what you are reading; tap it again to put the card away" },
   "meanings": { name: "To see what a word means", about: "" },
   "mine": { name: "My language", about: "" },
+  "mine-group": { name: "Mine", about: "" },
   "narrow": { name: "Transcriptions", about: "" },
   "on": { name: "Annotate what I read", about: "" },
   "position": { name: "Position", about: "" },
@@ -111,6 +112,7 @@ export const ENDS: Record<string, [string, string]> = {
 
 /** Phrases both surfaces use, so neither invents its own wording. */
 export const SAYS: Record<string, string> = {
+  "add-language": "Add a language",
   "allow": "Allow",
   "allow-overlay": "Allow overlay",
   "already-in": "This page is already in %s",
@@ -126,8 +128,12 @@ export const SAYS: Record<string, string> = {
   "every-app": "Every app",
   "every-word": "every word",
   "get": "Get",
+  "learn-language": "Learn a language",
   "learn-none": "none",
+  "learning-it": "learning %s",
   "loading-dictionary": "Loading the dictionary…",
+  "main-language": "My language",
+  "make-main": "Make it my language",
   "master-idle": "Nothing is drawn over your apps",
   "master-off": "Paused",
   "master-on": "Reading",

@@ -1,18 +1,16 @@
 <script lang="ts">
   // The first screen: whether the button is out, how its card writes a sound, the languages
   // the reader knows, where the button waits, and the way to everything set once and left.
-  import { LANGUAGES, named } from '@/data/languages';
-  import { accentFor } from '@/settings/shape';
-  import { accentsOf } from '@/data/accents';
+  import { named } from '@/data/languages';
   import { THEME } from '@/ui/theme';
   import { DARK_CHOICES, DETAIL_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
   import Check from 'virtual:icons/lucide/check';
+  import LanguagesIcon from 'virtual:icons/lucide/languages';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
   import Switch from '../parts/Switch.svelte';
   import Segments from '../parts/Segments.svelte';
-  import ListSheet from '../parts/ListSheet.svelte';
   import Board from '../parts/Board.svelte';
 
   interface Props {
@@ -43,40 +41,21 @@
   }: Props = $props();
 
   let ready = $derived(permissions.reading && permissions.overlay);
-  /** Which language list is open over the screen, if one is. */
-  let choosing = $state<'' | 'target' | 'known' | 'learn'>('');
-
-  /** The languages left as they are besides the reader's own, by name. */
-  let knownNames = $derived(
-    settings.known.filter((lang) => lang !== settings.target).map(named).join(', ')
-  );
-
-  /** Tick a language the reader reads as it is, or put it back among the translated ones. */
-  function toggleKnown(lang: string) {
-    const known = settings.known.includes(lang)
-      ? settings.known.filter((it) => it !== lang)
-      : [...settings.known, lang];
-    change('known', known);
-  }
-
-  const everyLanguage = Object.entries(LANGUAGES)
-    .map(([code, it]) => ({
-      value: code,
-      label: it.english,
-      about: it.native !== it.english ? it.native : undefined,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+  /** The languages the reader reads, their own first, and the one they learn. */
+  let languageNames = $derived.by(() => {
+    const reading = [settings.target, ...settings.known]
+      .filter((lang, at, all) => lang && lang !== settings.learn && all.indexOf(lang) === at)
+      .map(named)
+      .join(' · ');
+    const learning = settings.learn ? SAYS['learning-it'].replace('%s', named(settings.learn)) : '';
+    return [reading, learning].filter(Boolean).join(', ');
+  });
 
   /** The reader's screen, so the board is drawn its shape. */
   const across = globalThis.screen?.width || 9;
   const down = globalThis.screen?.height || 19.5;
 
 
-  let accentName = $derived.by(() => {
-    const lang = settings.learning;
-    const id = accentFor(settings, lang);
-    return accentsOf(lang).find((it) => it.id === id)?.name ?? '';
-  });
   let themeName = $derived(
     (settings.theme || THEME).charAt(0).toUpperCase() + (settings.theme || THEME).slice(1)
   );
@@ -137,29 +116,18 @@
     </Item>
   </Group>
 
-  <!-- The languages the reader knows: the one everything else is translated into, and the
-       others read as they are; and the one they are learning, which a card for a word of the
-       others says it in. Which language a page is in is the page's business, and the one a
-       word is asked for in is chosen in the panel that asks, so neither is set here. -->
-  <Group name={ROWS.translate.name}>
+  <!-- The languages the reader has, which the card follows: a screen of their own. Which
+       language a page is in is the page's business, and the one a word is asked for in is
+       chosen in the panel that asks, so neither is set here. -->
+  <Group>
     <Item
-      name={ROWS.mine.name}
-      row="mine"
-      value={settings.target ? named(settings.target) : SAYS['choose-language']}
-      open={() => (choosing = 'target')}
-    />
-    <Item
-      name={ROWS.known.name}
-      row="known"
-      value={knownNames || SAYS['nothing-else']}
-      open={() => (choosing = 'known')}
-    />
-    <Item
-      name={ROWS.learn.name}
-      row="learn"
-      value={settings.learn ? named(settings.learn) : SAYS['learn-none']}
-      open={() => (choosing = 'learn')}
-    />
+      name={ROWS['group-languages'].name}
+      row="languages"
+      value={languageNames || SAYS['choose-language']}
+      open={() => open('languages')}
+    >
+      {#snippet glyph()}<LanguagesIcon class="row-icon" />{/snippet}
+    </Item>
   </Group>
 
   <Group name={ROWS['group-button'].name}>
@@ -211,7 +179,7 @@
         open={() => open('packs')}
       />
     {/if}
-    <Item name={ROWS.accents.name} row="accent" value={accentName} open={() => open('accents')} />
+    <Item name={ROWS.accents.name} row="accent" open={() => open('accents')} />
     <Item
       name={ROWS.appearance.name}
       row="theme"
@@ -223,33 +191,3 @@
 
 {#if version}<p class="version">v{version}</p>{/if}
 
-{#if choosing === 'target'}
-  <ListSheet
-    title={ROWS.mine.name}
-    options={everyLanguage}
-    chosen={settings.target}
-    change={(value) => change('target', value)}
-    close={() => (choosing = '')}
-  />
-{:else if choosing === 'known'}
-  <ListSheet
-    title={ROWS.known.name}
-    options={everyLanguage.filter((it) => it.value !== settings.target)}
-    chosen={settings.known}
-    change={toggleKnown}
-    close={() => (choosing = '')}
-  />
-{:else if choosing === 'learn'}
-  <ListSheet
-    title={ROWS.learn.name}
-    options={[
-      { value: '', label: SAYS['learn-none'] },
-      ...everyLanguage.filter(
-        (it) => it.value !== settings.target && !settings.known.includes(it.value)
-      ),
-    ]}
-    chosen={settings.learn}
-    change={(value) => change('learn', value)}
-    close={() => (choosing = '')}
-  />
-{/if}

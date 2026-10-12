@@ -46,7 +46,7 @@ object Wording {
         "animations" to Words("Animations", ""),
         "appearance" to Words("Appearance", ""),
         "apps" to Words("Apps", ""),
-        "cards" to Words("Card on a word you point at", ""),
+        "cards" to Words("Look up", ""),
         "dark" to Words("Light or dark", ""),
         "delay" to Words("Rest before a card opens", ""),
         "density" to Words("How often", ""),
@@ -65,6 +65,7 @@ object Wording {
         "lens-tap" to Words("Tap it", "Ask for the word for something, in the middle of what you are reading; tap it again to put the card away"),
         "meanings" to Words("To see what a word means", ""),
         "mine" to Words("My language", ""),
+        "mine-group" to Words("Mine", ""),
         "narrow" to Words("Transcriptions", ""),
         "on" to Words("Annotate what I read", ""),
         "position" to Words("Position", ""),
@@ -97,6 +98,7 @@ object Wording {
 
     /** Phrases both surfaces use, so neither invents its own wording. */
     val says = mapOf(
+        "add-language" to "Add a language",
         "allow" to "Allow",
         "allow-overlay" to "Allow overlay",
         "already-in" to "This page is already in %s",
@@ -112,8 +114,12 @@ object Wording {
         "every-app" to "Every app",
         "every-word" to "every word",
         "get" to "Get",
+        "learn-language" to "Learn a language",
         "learn-none" to "none",
+        "learning-it" to "learning %s",
         "loading-dictionary" to "Loading the dictionary…",
+        "main-language" to "My language",
+        "make-main" to "Make it my language",
         "master-idle" to "Nothing is drawn over your apps",
         "master-off" to "Paused",
         "master-on" to "Reading",

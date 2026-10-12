@@ -495,3 +495,72 @@ button.item:disabled:active {
   height: 20px;
   color: var(--color-accent);
 }
+
+/* A language on the Languages screen: its name and accent, which opens the accents where it
+   has more than one, then what can be done to it. The buttons at its end are not the row's. */
+.item.language {
+  gap: 4px;
+  padding: 0 4px 0 0;
+  cursor: default;
+}
+
+.language-open {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  padding: 10px 8px 10px 16px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.language-open:active {
+  background: var(--color-scrim);
+}
+
+.language .icon-button {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  color: var(--color-ink-faint);
+}
+
+/* Their own language, marked and not pressed. */
+.language .icon-button.main {
+  color: var(--color-accent);
+  cursor: default;
+}
+
+.language .icon-button.main path {
+  fill: currentColor;
+}
+
+/* Where a row has nothing to take off, the place stays, so every star is in one column. */
+.language .icon-room {
+  flex: 0 0 auto;
+  width: 40px;
+}
+
+/* A row that adds a language to its list: the accent's colour, a plus where a name starts. */
+.item.adding {
+  color: var(--color-accent);
+}
+
+.item.adding .item-name {
+  color: var(--color-accent);
+}
+
+/* The picture on the name's line of a row that names a screen or a feature. */
+.row-icon {
+  width: 1.25em;
+  height: 1.25em;
+  margin-right: 8px;
+  vertical-align: -0.25em;
+  color: var(--color-accent);
+}

@@ -3,8 +3,9 @@
   // language is read in.
   //
   // One screen that fits the popup without scrolling. The detail is shown by example rather than
-  // described: the same word written both ways says what the difference is. Each language a
-  // reader uses has its accent on one row, and every other language is one row behind those.
+  // described: the same word written both ways says what the difference is. The accents of the
+  // reader's own languages are set beside them on the Languages screen; every other language's
+  // are one row behind this one.
   import { ACCENTS } from '@/data/accents';
   import { named } from '@/data/languages';
   import { ROWS, SAYS } from '@/data/wording';
@@ -35,12 +36,8 @@
 
   /** The languages with more than one accent to choose between. */
   const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 0);
-  /** The reader's own two, each on a row of its own. */
-  let mine = $derived(
-    [settings.target, ...(settings.known ?? [])].filter(
-      (lang, at, all) => lang && offering.includes(lang) && all.indexOf(lang) === at
-    )
-  );
+  /** The reader's own languages, whose accents the Languages screen sets. */
+  let mine = $derived([settings.target, ...(settings.known ?? []), settings.learn]);
   let others = $derived(
     offering
       .filter((lang) => !mine.includes(lang))
@@ -79,23 +76,15 @@
   </Item>
 </Group>
 
-<Group name={ROWS.accents.name}>
-  {#each mine as lang (lang)}
-    <Item
-      name={named(lang)}
-      row="accent"
-      value={accentName(lang)}
-      open={() => (choosing = lang)}
-    />
-  {/each}
-  {#if others.length > 0}
+{#if others.length > 0}
+  <Group name={ROWS.accents.name}>
     <Item
       name={SAYS['other-languages']}
       row="accent-elsewhere"
       open={() => (choosing = 'others')}
     />
-  {/if}
-</Group>
+  </Group>
+{/if}
 
 {#if choosing === 'others'}
   <ListSheet

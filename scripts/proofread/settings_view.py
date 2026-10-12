@@ -181,7 +181,7 @@ def main():
                 rows: [...document.querySelectorAll('[data-row]')].map(r => r.dataset.row),
                 on: document.querySelector('[data-row=on] input').checked,
                 site: (document.querySelector('[data-row=site] [data-about]') || {}).textContent,
-                mine: (document.querySelector('[data-row=target] [data-about]') || {}).textContent,
+                mine: (document.querySelector('[data-row=languages] [data-about]') || {}).textContent,
               });
             })()
         """, lambda v: v is not None)
@@ -190,7 +190,7 @@ def main():
             sys.exit(1)
         panel = json.loads(drawn)
         print(f"  rows: {panel['rows']}")
-        for row in ("on", "site", "inline", "density", "target", "known", "cards",
+        for row in ("on", "site", "inline", "density", "languages", "cards",
                     "translator", "pronunciation", "theme"):
             if row not in panel["rows"]:
                 failures.append(f"the popup has no {row} row")
@@ -278,9 +278,33 @@ def main():
             failures.append(f"translation in place of words drew {kinds[0]} translations and {kinds[1]} transcriptions")
         control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
 
-        # My language: the card says what a word means in it.
-        control(cdp, view, "document.querySelector('[data-row=target]').click()", settle=1)
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=de]').click()")
+        # The Languages screen holds every language the reader has, a row each: their own
+        # marked, the others they read each with a way to make it theirs or take it off.
+        def languages(script):
+            control(cdp, view, "document.querySelector('[data-row=languages]').click()", settle=1)
+            told = control(cdp, view, script, settle=1)
+            control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+            return told
+
+        def add(lang):
+            return ("document.querySelector('[data-does=add-language]').click();"
+                    "await new Promise(r => setTimeout(r, 300));"
+                    f"document.querySelector('[data-sheet] [data-choice={lang}]').click();"
+                    "await new Promise(r => setTimeout(r, 300));")
+
+        def listed():
+            return ("[...document.querySelectorAll('[data-row=language]')].map(r => r.dataset.lang"
+                    " + (r.querySelector('.main') ? '*' : '')).join(' ')")
+
+        # German made their own: the card says what a word means in it, and English, their own
+        # before, is one they read.
+        rows = languages("(async () => {" + add("de") +
+                         "document.querySelector('[data-row=language][data-lang=de] [data-does=make-main]').click();"
+                         "await new Promise(r => setTimeout(r, 300));"
+                         "return " + listed() + "; })()")
+        print(f"  German made my language: the rows read {rows!r}")
+        if not (rows or "").startswith("de* en"):
+            failures.append(f"making German my language left the rows as {rows!r}")
         card = point_at(cdp, page, "camino")
         print(f"  my language German, pointing at camino: {(card or '')[:80]!r}")
         if not card or "Weg" not in card:
@@ -288,18 +312,15 @@ def main():
 
         # A language the reader reads as it is: a word of it pointed at, replaced or not,
         # opens a card that says it and does not translate it.
-        control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
-        control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
-        known = evaluate(cdp, view, "document.querySelector('[data-row=known] [data-about]').textContent")
+        known = languages("(async () => {" + add("es") + "return " + listed() + "; })()")
         # Every word is replaced at this end of the bar, so the plain word is pointed at with
         # replacing off.
         control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
         plain = point_at(cdp, page, "por")
         control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=sound]').click()")
-        print(f"  never translate {known!r}: pointing at por: {(plain or '')[:60]!r}")
-        if (known or "").strip() != "Spanish":
-            failures.append(f"the never-translate row says {known!r} after choosing Spanish")
+        print(f"  Spanish read as it is ({known!r}): pointing at por: {(plain or '')[:60]!r}")
+        if "es" not in (known or "").split():
+            failures.append(f"adding Spanish left the rows as {known!r}")
         if not plain or "por" not in plain:
             failures.append(f"a word in a language never translated opened no card: {plain!r}")
         elif "durch" in plain or "für" in plain:
@@ -310,9 +331,12 @@ def main():
             failures.append(f"a replaced word in a language never translated opened no card: {replaced!r}")
         elif "Weg" in replaced:
             failures.append(f"a word in a language never translated was translated: {replaced!r}")
-        control(cdp, view, "document.querySelector('[data-row=known]').click()", settle=1)
-        control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()")
-        control(cdp, view, "document.querySelector('[data-sheet] .icon-button').click()", settle=1)
+        gone = languages("(async () => {"
+                         "document.querySelector('[data-row=language][data-lang=es] [data-does=remove]').click();"
+                         "await new Promise(r => setTimeout(r, 300));"
+                         "return " + listed() + "; })()")
+        if "es" in (gone or "").split():
+            failures.append(f"taking Spanish off left the rows as {gone!r}")
 
         # Cards switched off: resting on a word opens none, replaced or not; on, they come back.
         control(cdp, view, "document.querySelector('[data-row=cards] [role=switch], [data-row=cards] input').click()")

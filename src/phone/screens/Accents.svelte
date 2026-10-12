@@ -1,13 +1,11 @@
 <script lang="ts">
-  // Which accent each language is read in. The two languages the button works between are
-  // laid out in full; every other language that offers a choice is a row of its own.
+  // Which accent each language is read in, for the languages that are not the reader's own:
+  // theirs are set beside them on the Languages screen.
   import { ACCENTS } from '@/data/accents';
   import { named } from '@/data/languages';
-  import { SAYS } from '@/data/wording';
   import { accentFor, setAccent, type Settings } from '@/settings/shape';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
-  import Options from '../parts/Options.svelte';
   import ListSheet from '../parts/ListSheet.svelte';
 
   interface Props {
@@ -25,11 +23,7 @@
   }
 
   let offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 1);
-  let mine = $derived(
-    [settings.learning, settings.target].filter(
-      (lang, at, all) => lang && offering.includes(lang) && all.indexOf(lang) === at
-    )
-  );
+  let mine = $derived([settings.target, ...settings.known, settings.learn]);
   let others = $derived(
     offering.filter((lang) => !mine.includes(lang)).sort((a, b) => named(a).localeCompare(named(b)))
   );
@@ -40,14 +34,8 @@
   }
 </script>
 
-{#each mine as lang (lang)}
-  <Group name={named(lang)}>
-    <Options options={optionsOf(lang)} chosen={accentFor(settings, lang)} change={(value) => pick(lang, value)} />
-  </Group>
-{/each}
-
 {#if others.length > 0}
-  <Group name={mine.length > 0 ? SAYS['other-languages'] : ''}>
+  <Group>
     {#each others as lang (lang)}
       <Item
         name={named(lang)}

@@ -448,3 +448,12 @@ kbd {
   width: 16px;
   height: 16px;
 }
+
+.language-open {
+  padding: 8px 8px 8px 14px;
+  gap: 12px;
+}
+
+button.language-open:hover {
+  background: var(--color-scrim);
+}

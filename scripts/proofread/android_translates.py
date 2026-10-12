@@ -86,8 +86,8 @@ def serve():
 
 
 def set_on_the_screen(dev):
-    """The reader ticks a language under Never translate on the app's own screen, and the
-    service is told; the row then names it."""
+    """The reader adds a language they read on the app's Languages screen, and the service is
+    told; the screen then lists it, and the home row names it without wrapping."""
     from webview import View
     import state as State
     failures = []
@@ -100,36 +100,37 @@ def set_on_the_screen(dev):
             break
     with View() as view:
         for _ in range(20):
-            if view.evaluate("Boolean(document.querySelector('[data-row=known]'))"):
+            if view.evaluate("Boolean(document.querySelector('[data-row=languages]'))"):
                 break
             time.sleep(1)
-        before = view.evaluate("document.querySelector('[data-row=known] [data-about]')?.textContent?.trim()")
-        # The languages the reader knows are all there is to set: which one a page is in is the
+        # The languages the reader has are all there is to set: which one a page is in is the
         # page's, and the card says both how a word sounds and what it means.
-        extra = view.evaluate("[...document.querySelectorAll('[data-row=learning], [data-row=ipa], [data-row=translate]')].map(r => r.dataset.row)")
-        view.evaluate("document.querySelector('[data-row=known]').click()")
+        extra = view.evaluate("[...document.querySelectorAll('[data-row=learning], [data-row=ipa], [data-row=translate], [data-row=known], [data-row=mine]')].map(r => r.dataset.row)")
+        view.evaluate("document.querySelector('[data-row=languages]').click()")
+        time.sleep(1)
+        view.evaluate("document.querySelector('[data-does=add-language]').click()")
         time.sleep(1)
         view.evaluate("document.querySelector('[data-sheet] [data-choice=fr]')?.click()")
-        time.sleep(0.5)
-        still = view.evaluate("Boolean(document.querySelector('[data-sheet]'))")
-        view.evaluate("document.querySelector('[data-sheet] .sheet-top button').click()")
         time.sleep(1)
-        after = view.evaluate("document.querySelector('[data-row=known] [data-about]')?.textContent?.trim()")
-        wraps = view.evaluate("""(() => { const r = document.querySelector('[data-row=known] [data-about]');
+        listed = view.evaluate("[...document.querySelectorAll('[data-row=language]')].map(r => r.dataset.lang).join(' ')")
+        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+        time.sleep(1)
+        after = view.evaluate("document.querySelector('[data-row=languages] [data-about]')?.textContent?.trim()")
+        wraps = view.evaluate("""(() => { const r = document.querySelector('[data-row=languages] [data-about]');
             const h = parseFloat(getComputedStyle(r).lineHeight) || 20; return r.getBoundingClientRect().height > h * 1.5 })()""")
     known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known")
-    print(f"  never translate on the screen: {before!r} -> {after!r}, sheet stayed open {still}, "
+    print(f"  French added on the screen: listed {listed!r}, home row {after!r}, "
           f"service knows {known}")
     if extra:
         failures.append(f"the screen still offers {extra}")
-    if not still:
-        failures.append("picking one language closed the Never translate list")
+    if "fr" not in (listed or "").split():
+        failures.append(f"the Languages screen does not list French once added: {listed!r}")
     if "French" not in (after or ""):
-        failures.append(f"the Never translate row does not name French once ticked: {after!r}")
+        failures.append(f"the Languages row does not name French once added: {after!r}")
     if wraps:
-        failures.append("the Never translate row's value wraps")
+        failures.append("the Languages row's value wraps")
     if "fr" not in (known or []):
-        failures.append(f"the service was not told French is never translated: {known}")
+        failures.append(f"the service was not told French is read: {known}")
     return failures
 
 
