@@ -5,6 +5,7 @@
   // and a card that needs a dictionary open before it can be seen is a card nobody can check
   // until everything else works.
   import Opened from '@/ui/card/Opened.svelte';
+  import AnswerCard from '@/ui/card/AnswerCard.svelte';
   import { themeOf } from '@/ui/theme';
   import { sendMessage } from '@/host/messages';
   import type { Answer } from '@/core/answer';
@@ -69,7 +70,7 @@
     ],
   });
 
-  const states: { uid: string; answer: Answer; parts?: CardParts }[] = [
+  const states: { uid: string; answer: Answer; parts?: CardParts; whole?: boolean }[] = [
     { uid: 'entry', answer: answer({ example: 'El perro ladra.' }) },
     { uid: 'form', answer: answer({ state: 'Form', spelling: 'perros', lemma: 'perro' }) },
     {
@@ -146,6 +147,25 @@
     { uid: 'no-grammar', answer: dogs, parts: { ...EVERY_PART, grammar: false } },
     { uid: 'no-others', answer: dogs, parts: { ...EVERY_PART, others: false } },
     { uid: 'no-sound', answer: dogs, parts: { ...EVERY_PART, sound: false } },
+    // A lemma's whole entry read into Spanish: the reading Spanish has no word for and no
+    // description of yet is left out, never listed in English.
+    {
+      uid: 'whole-entry',
+      whole: true,
+      answer: english({
+        state: 'Homograph',
+        spelling: 'choose',
+        ipa: ['t͡ʃuːz'],
+        says: ['escoger'],
+        glosses: ['To pick; to make the choice of; to select.'],
+        examples: ['I chose the red one.'],
+        readings: [
+          { pos: 'verb', ipa: ['t͡ʃuːz'], says: ['escoger', 'elegir'], glosses: ['To pick.', 'To elect.'],
+            examples: ['I chose the red one.', null] },
+          { pos: 'conj', ipa: ['t͡ʃuːz'], says: [], glosses: ['The binomial coefficient of the previous and following number.'] },
+        ],
+      }),
+    },
     {
       uid: 'sound-only',
       answer: dogs,
@@ -181,7 +201,11 @@
       {#each drawn as state (state.uid)}
         <div class="slot" data-uid={state.uid}>
           <div class="label">{state.uid}</div>
-          <Opened answer={state.answer} parts={state.parts} />
+          {#if state.whole}
+            <AnswerCard answer={state.answer} entry />
+          {:else}
+            <Opened answer={state.answer} parts={state.parts} />
+          {/if}
         </div>
       {/each}
     </section>

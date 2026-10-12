@@ -56,6 +56,8 @@ WANT = {
     "no-others": {"headline": "perros", "readings": [], "chips": ["noun"], "strip": True},
     "no-sound": {"headline": "perros", "strip": False, "play": 0, "wiki": 1},
     "sound-only": {"headline": "", "strip": True, "readings": [], "chips": []},
+    # A lemma's entry read into Spanish lists what Spanish has, and nothing in English.
+    "whole-entry": {"entry": ["escoger", "elegir"]},
 }
 
 
@@ -106,6 +108,7 @@ def main():
                       description: (card.querySelector('.described') || {}).textContent?.trim() || '',
                       chips: [...card.querySelectorAll('.card-head .chip:not(.mark)')].map(c => c.textContent.trim()),
                       strip: Boolean(card.querySelector('.card-strip')),
+                      entry: [...card.querySelectorAll('[data-entry] li')].map(li => li.textContent.trim()),
                       wiki: card.querySelectorAll('a[href*="wiktionary"], [aria-label="Wiktionary"]').length,
                       width: Math.round(box.width),
                       height: Math.round(box.height),

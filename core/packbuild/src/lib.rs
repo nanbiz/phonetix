@@ -275,10 +275,29 @@ fn senses(value: &Value) -> Vec<Sense> {
                 .and_then(|first| first.get("text"))
                 .and_then(|v| v.as_str())
                 .map(|text| text.trim().to_string())
-                .filter(|text| !text.is_empty()),
+                .filter(|text| !text.is_empty() && !has_markup(text)),
         });
     }
     out
+}
+
+/// Whether an example still carries the markup of a formula the dump could not render: "the
+/// number of subsets of size k is tbinom nk" is what a reader of "choose" was shown.
+fn has_markup(text: &str) -> bool {
+    const COMMANDS: [&str; 8] = [
+        "tbinom",
+        "dbinom",
+        "frac",
+        "sqrt",
+        "mathbb",
+        "mathrm",
+        "displaystyle",
+        "operatorname",
+    ];
+    text.contains('\\')
+        || text
+            .split(|c: char| !c.is_alphanumeric())
+            .any(|word| COMMANDS.contains(&word))
 }
 
 /// The word a sense says its entry is a form of, where it says one.
@@ -523,6 +542,14 @@ mod tests {
     /// Each transcription keeps the accents Wiktionary labels it with: night's first reading
     /// is Southern Standard British, named British by a weaker label than Received
     /// Pronunciation; its second is General American too; its third is an accent not offered.
+    #[test]
+    fn an_example_with_a_formulas_markup_is_left_out() {
+        assert!(has_markup(
+            "The number of subsets of size k is tbinom nk or n choose k."
+        ));
+        assert!(!has_markup("I chose the red one."));
+    }
+
     #[test]
     fn each_transcription_keeps_the_accent_it_is_said_in() {
         let mut skipped = Skipped::default();

@@ -15,7 +15,11 @@
   let { entry }: Props = $props();
 
   /** The senses of each word the spelling is, in the reader's language where the dictionary
-   *  reached it and in English otherwise, each with its marks where the core sent them. */
+   *  reached it, each with its marks where the core sent them. Where it reached no word, what
+   *  the word is said in the reader's language, and the dictionary's own English only for a
+   *  reader of English: English definitions under Spanish words are two languages in one
+   *  list. */
+  let translating = $derived(entry.source !== entry.target && entry.target !== 'en');
   let groups = $derived(
     (() => {
       const readings =
@@ -23,11 +27,19 @@
           ? entry.readings
           : [{
               pos: entry.pos, ipa: entry.ipa, says: entry.says, glosses: entry.glosses,
-              marks: entry.marks, examples: entry.examples,
+              marks: entry.marks, examples: entry.examples, described: entry.described,
             }];
       return readings
-        .map((reading) => {
-          const senses = reading.says.length > 0 ? reading.says : reading.glosses;
+        .map((reading, at) => {
+          const described = reading.described ?? (at === 0 ? entry.described : null);
+          const senses =
+            reading.says.length > 0
+              ? reading.says
+              : described
+                ? [described]
+                : translating
+                  ? []
+                  : reading.glosses;
           // Marks and examples are the glosses', sense by sense, so they go with the senses
           // where those are the glosses or one word for each of them.
           const bySense = senses.length === reading.glosses.length;
@@ -38,7 +50,8 @@
               marks: bySense
                 ? (reading.marks?.[i] ?? []).map((mark) => mark.replaceAll('-', ' '))
                 : [],
-              example: bySense ? (reading.examples?.[i] ?? null) : null,
+              // The dictionary's examples are English sentences.
+              example: bySense && !translating ? (reading.examples?.[i] ?? null) : null,
             })),
           };
         })
