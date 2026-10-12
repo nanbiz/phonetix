@@ -52,7 +52,7 @@ fn main() {
         );
         if std::env::var("READINGS").is_ok() {
             for reading in &answer.readings {
-                println!("            {:?}: {:?}", reading.pos, reading.glosses);
+                println!("            {:?} says {:?}: {:?}", reading.pos, reading.says, reading.glosses);
             }
             println!(
                 "            form={:?} lemma={:?} spelling_of={:?}",
