@@ -2486,6 +2486,79 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// An English capital is a sentence's: "It" starting one is the pronoun, not the noun "it" of
+/// the game of tag. And a form's note that goes on to say what it means is that meaning:
+/// "people" is "plural of person: a body of persons", ahead of the verb "to people".
+#[test]
+fn an_english_capital_is_a_sentences_and_a_note_with_a_meaning_is_one() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(word("it", "pron", "ɪt", &["The thing spoken of."]), &[])
+        .unwrap();
+    english
+        .add::<&str>(
+            word(
+                "it",
+                "noun",
+                "ɪt",
+                &["The player who chases the others in tag."],
+            ),
+            &[],
+        )
+        .unwrap();
+    let mut people = word(
+        "people",
+        "noun",
+        "ˈpiːpəl",
+        &["plural of person: a body of persons considered generally"],
+    );
+    people.senses[0].marks = vec!["form-of".to_string(), "plural".to_string()];
+    english.add::<&str>(people, &[]).unwrap();
+    // After the noun, as the dictionary lists them.
+    english
+        .add::<&str>(word("people", "verb", "ˈpiːpəl", &["To populate."]), &[])
+        .unwrap();
+    // As the dictionary has it: a noun spelled with the capital, the force Groddeck named.
+    english
+        .add::<&str>(
+            word(
+                "It",
+                "noun",
+                "ɪt",
+                &["A biological force that inhabits living beings."],
+            ),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let ello = spanish
+        .add::<&str>(word("ello", "pron", "ˈe.ʎo", &["it"]), &[])
+        .unwrap();
+    let cogida = spanish
+        .add::<&str>(word("cogida", "noun", "koˈxi.da", &["it (in tag)"]), &[])
+        .unwrap();
+    let poblar = spanish
+        .add::<&str>(word("poblar", "verb", "poˈβlaɾ", &["to populate"]), &[])
+        .unwrap();
+    let gente = spanish
+        .add::<&str>(word("gente", "noun", "ˈxen.te", &["people"]), &[])
+        .unwrap();
+    spanish.translated("it", "pron", &[(ello, 0)]);
+    spanish.translated("it", "noun", &[(cogida, 0)]);
+    spanish.translated("people", "verb", &[(poblar, 0)]);
+    spanish.translated("people", "noun", &[(gente, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("en"), &lang("es"), &open).says;
+    assert_eq!(says("It")[0], "ello");
+    assert_eq!(says("people")[0], "gente");
+}
+
 /// A reading the line says by a word none of the readings' own words reach: the engine wrote
 /// "fundamental", whose dictionary calls it "essential", and only the adjective "core" is
 /// "essential" too.

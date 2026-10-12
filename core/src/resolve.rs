@@ -267,14 +267,22 @@ pub fn keeps_its_capital(lang: &str, capital: &[Entry], small: &[Entry]) -> bool
 
 /// Where an entry stands among the ones a spelling reaches: the word itself, then what it is
 /// an inflection of, then entries that are only notes pointing elsewhere.
-fn rank_of(entry: &Entry, spelling: &str) -> u8 {
+fn rank_of(entry: &Entry, spelling: &str, lang: &str) -> u8 {
     // "form-of" for an inflection, "alt-of" for a spelling of another word: either way the
     // sense is a pointer, not a meaning.
+    // Not one that goes on to say what it means: "people" is filed as "plural of person: a
+    // body of persons considered generally", and read as a pointer it ranked below the verb
+    // "to people", so every people on a page was "poblarse".
     let pointing = |sense: &lexpack::Sense| {
-        sense
-            .marks
-            .iter()
-            .any(|mark| mark == "form-of" || mark == "alt-of")
+        let defines = sense
+            .gloss
+            .split_once(": ")
+            .is_some_and(|(_, then)| then.split_whitespace().count() > 3);
+        !defines
+            && sense
+                .marks
+                .iter()
+                .any(|mark| mark == "form-of" || mark == "alt-of")
     };
     let kind = by_kind(&entry.pos);
     // A letter of the alphabet is an entry under every one-letter spelling and under its
@@ -305,9 +313,12 @@ fn rank_of(entry: &Entry, spelling: &str) -> u8 {
     // Only a noun is capitalised for being what it is; any other word written with a capital is
     // more likely starting a sentence, and the word in small letters is the one meant - German
     // "Er" at the start of a line is "er", "he", not the old polite "Er", "you".
+    // Only where the language capitalises nouns: in English a capital is a sentence's, and
+    // "It" starting one was the noun "it" of the game of tag, "cogida", and "A" the year.
     let capital = spelling.chars().next().is_some_and(char::is_uppercase);
     let as_written = entry.lemma == spelling && entry.pos != "name";
-    let level = if as_written && leads_with_meaning && (!capital || entry.pos == "noun") {
+    let noun_by_capital = entry.pos == "noun" && capitalises_nouns(lang);
+    let level = if as_written && leads_with_meaning && (!capital || noun_by_capital) {
         0
     } else if same_word(&entry.lemma, spelling) && leads_with_meaning {
         1
@@ -817,7 +828,7 @@ pub fn word_for<D: AsRef<[u8]>>(
             return Vec::new();
         };
         let mut found = lookup_either_case(pack, text);
-        found.sort_by_key(|entry| rank_of(entry, text));
+        found.sort_by_key(|entry| rank_of(entry, text, pack.lang()));
         let Some(entry) = found.into_iter().next() else {
             return Vec::new();
         };
@@ -1074,7 +1085,7 @@ pub fn meanings<D: AsRef<[u8]>>(
         return out;
     };
     let mut entries = lookup_either_case(pack, text);
-    entries.sort_by_key(|entry| rank_of(entry, text));
+    entries.sort_by_key(|entry| rank_of(entry, text, pack.lang()));
     let entries: Vec<Entry> = if entries.iter().any(|entry| !is_minor(entry)) {
         entries
             .into_iter()
@@ -1633,23 +1644,25 @@ fn read_found<D: AsRef<[u8]>>(
                         && !sense.marks.iter().any(|mark| mark == "form-of")
                 })
         })
-        .map(|entry| rank_of(entry, spelling))
+        .map(|entry| rank_of(entry, spelling, pack.lang()))
         .min();
     // With the kind of word each note is: "popup" is filed as a noun, "alternative form of
     // pop-up", and pop-up is an adjective first. The spelling met is the noun.
     let named: Vec<(String, u8, String)> = found
         .iter()
         .filter(|entry| same_word(&entry.lemma, spelling))
-        .filter(|entry| meaning_rank.is_none_or(|meaning| rank_of(entry, spelling) < meaning))
+        .filter(|entry| {
+            meaning_rank.is_none_or(|meaning| rank_of(entry, spelling, pack.lang()) < meaning)
+        })
         .flat_map(|entry| {
-            let rank = rank_of(entry, spelling);
+            let rank = rank_of(entry, spelling, pack.lang());
             entry.senses.iter().filter_map(move |sense| {
                 form_of_word(&sense.gloss).map(|word| (word, rank, entry.pos.clone()))
             })
         })
         .collect();
     found.sort_by_key(|entry| {
-        let own = rank_of(entry, spelling);
+        let own = rank_of(entry, spelling, pack.lang());
         let standing_for: Vec<&(String, u8, String)> = named
             .iter()
             .filter(|(word, _, _)| same_word(word, &entry.lemma))
