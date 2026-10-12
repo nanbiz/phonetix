@@ -25,7 +25,6 @@
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
   import Segments from '@/phone/parts/Segments.svelte';
-  import ListSheet from '@/phone/parts/ListSheet.svelte';
   import Pronunciation from './Pronunciation.svelte';
   import Appearance from '@/phone/screens/Appearance.svelte';
   import Density from './Density.svelte';

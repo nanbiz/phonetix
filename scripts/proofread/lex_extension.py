@@ -251,8 +251,9 @@ def main():
             # key order is not something either promises.
             there = json.loads(want[word])
             # Where the core has no transcription, the host has the voice say the word, and
-            # marks it as the voice's: that is the one thing the extension adds to the core's
-            # answer, and the rest has to be the core's own.
+            # marks it as the voice's and names the accent the voice speaks: those are the
+            # things the extension adds to the core's answer, and the rest has to be the core's
+            # own.
             if not there["ipa"] and here.get("ipa"):
                 if (here.get("provenance") or {}).get("kind") != "synthesised" and there["provenance"] is None:
                     failures.append(f"{word}: the voice's transcription is not marked as the voice's")
@@ -262,6 +263,7 @@ def main():
                     "symbols": [],
                     "state": there["state"] if here["state"] == "IpaOnly" else here["state"],
                     "provenance": there["provenance"],
+                    "saidIn": there.get("saidIn"),
                 }
                 print(f"  {word:12} said by the voice")
             if here != there:
