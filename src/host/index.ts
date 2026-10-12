@@ -312,8 +312,12 @@ export function host(): void {
       // Wiktionary, held beside its pack; fetched the first time like any pack.
       data.target === data.source ? open(`def-${data.source}`).catch(() => null) : null,
     ]);
+    // The sentence, translated, where nothing on the page decided the word already: the
+    // engine read the whole sentence, which says which word and which sense this is. Waited for
+    // only briefly; one that comes later is kept for the next card on the line.
+    const drawn = data.drawn || (data.line ? await lineSaid(data.source, data.target, data.line) : '');
     const answer = await lookUp(
-      data.word, data.source, data.target, data.accent ?? '', data.before ?? '', data.drawn ?? ''
+      data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn
     );
     if (answer.ipa.length > 0 || answer.state === 'Phrase') return answer;
     // No dictionary here says how this word is said: one still on its way, a form the
@@ -431,6 +435,26 @@ async function translateWaiting(): Promise<void> {
   if (arrived > 0) {
     await browser.storage.local.set({ linesTranslated: Date.now() }).catch(() => undefined);
   }
+}
+
+/** How long a card waits for its sentence to be translated before answering without it. */
+const LINE_WAIT_MS = 1200;
+
+/** A sentence translated, from what has been translated already or by the engine now. */
+async function lineSaid(from: string, to: string, line: string): Promise<string> {
+  if (!line || !to || from === to) return '';
+  const key = lineKey(from, to, line);
+  const held = translatedLine(key);
+  if (held) return held;
+  const asked = guessed(from, to, [line])
+    .then((answers) => {
+      const said = answers[0] ?? '';
+      if (said) translatedLines.set(key, said);
+      return said;
+    })
+    .catch(() => '');
+  const late = new Promise<string>((done) => setTimeout(() => done(''), LINE_WAIT_MS));
+  return Promise.race([asked, late]);
 }
 
 /**

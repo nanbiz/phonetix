@@ -455,6 +455,31 @@ interface Anchor {
   /** Whether the word can be seen where it is: not scrolled out of a box of the page's that
    *  clips it, which leaves it on the screen by its coordinates and hidden all the same. */
   seen(): boolean;
+  /** Where the word is in the page, so the sentence it is in can be read. */
+  node(): Node | null;
+}
+
+/**
+ * The sentence a word is in, as the page wrote it: what the card hands the translator, whose
+ * translation of the whole sentence says which of a spelling's words and senses this is.
+ * Words the page has replaced are read as what they replaced.
+ */
+function sentenceOf(anchor: Anchor, spelling: string): string {
+  const node = anchor.node();
+  const block = (node instanceof Element ? node : node?.parentElement)?.closest(
+    'p, li, td, th, dd, dt, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div'
+  );
+  if (!block) return '';
+  const copy = block.cloneNode(true) as Element;
+  for (const word of copy.querySelectorAll(`.${WORD}`)) {
+    word.replaceWith(word.querySelector('.px-was')?.textContent ?? '');
+  }
+  const text = (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
+  const wanted = spelling.toLowerCase();
+  const sentence = text
+    .split(/(?<=[.!?…])\s+/)
+    .find((part) => part.toLowerCase().split(/[^\p{L}\p{N}'-]+/u).includes(wanted));
+  return (sentence ?? '').slice(0, 400);
 }
 
 /** Whether what is at the middle of a box is the word, or something of ours over it. */
@@ -496,6 +521,7 @@ function onElement(element: HTMLElement): Anchor {
     alive: () => now().isConnected,
     holds: (x, y) => near([...now().getClientRects()], x, y),
     seen: () => showsAt(now().getBoundingClientRect(), now()),
+    node: () => now(),
   };
 }
 
@@ -505,6 +531,7 @@ function onRange(range: Range): Anchor {
     alive: () => range.startContainer.isConnected,
     holds: (x, y) => near([...range.getClientRects()], x, y),
     seen: () => showsAt(range.getBoundingClientRect(), range.startContainer.parentElement),
+    node: () => range.startContainer,
   };
 }
 
@@ -744,6 +771,9 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // one before it, and the card must not ask a question the page has answered.
     before: word.before,
     drawn: '',
+    // And the sentence it is in, which the host has translated to say which word and which
+    // sense it is: "bank" by a river, "core" of a test.
+    line: target === source ? '' : sentenceOf(anchor, word.spelling),
   });
   // Shown as the page writes it, whichever way it was read.
   const written = { ...looked, spelling: word.written };

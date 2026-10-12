@@ -1,7 +1,7 @@
 //! What a card says about one word with real packs:
 //! `cargo run --example card -- <source pack> <target pack> <source> <target> [before:]word...`,
 //! with `DEFINES=<def pack>` for a word read in its own language, and `ACCENT=<id>` with
-//! `ACCENT_PACK=<pack>` for a reader who chose an accent.
+//! `ACCENT_PACK=<pack>` for a reader who chose an accent, and `SAID=<translated line>`.
 use lexcore::answer::Lang;
 use lexcore::resolve::{read_in_context, Open};
 
@@ -14,6 +14,8 @@ fn main() {
         .ok()
         .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let accent = std::env::var("ACCENT").unwrap_or_default();
+    // The line the word is in, translated, as a host hands it in (SAID=...).
+    let said = std::env::var("SAID").ok();
     let accent_pack = std::env::var("ACCENT_PACK")
         .ok()
         .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
@@ -23,6 +25,7 @@ fn main() {
         defines: defines.as_ref(),
         accent: &accent,
         accent_pack: accent_pack.as_ref(),
+        said: said.as_deref(),
         ..Open::default()
     };
     // "a:paragraph" asks about "paragraph" with "a" before it.

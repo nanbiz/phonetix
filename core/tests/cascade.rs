@@ -2417,6 +2417,75 @@ fn a_word_heard_a_letter_wrong_becomes_the_word_the_dictionary_holds() {
 /// of the join on glosses: "file" joined that way reached "fila", a row, whose gloss happens
 /// to be "file"; the table says "archivo". And the line, where the host translated it, picks
 /// which of the table's words it uses.
+/// Of the readings a translated line reaches through the same word, the one whose definitions
+/// fit that word's own leads, with the sense that fits: every noun "bank" has "orilla" in its
+/// table, and "orilla" is a river's edge, so the line about a river is the bank of a river.
+#[test]
+fn the_reading_that_fits_the_lines_word_leads() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(
+            word(
+                "bank",
+                "noun",
+                "bæŋk",
+                &[
+                    "An institution where one can place and borrow money.",
+                    "A branch office of such an institution.",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            word(
+                "bank",
+                "noun",
+                "bæŋk",
+                &[
+                    "An elevation under the sea.",
+                    "An edge of river, lake, or other watercourse.",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let banco = spanish
+        .add::<&str>(
+            word(
+                "banco",
+                "noun",
+                "ˈbaŋ.ko",
+                &["bank (financial institution)"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let orilla = spanish
+        .add::<&str>(
+            word("orilla", "noun", "oˈɾi.ʎa", &["shore, edge of a river"]),
+            &[],
+        )
+        .unwrap();
+    spanish.translated("bank", "noun", &[(banco, 0), (orilla, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        said: Some("Se sentó en la orilla del río."),
+        ..Open::default()
+    };
+    let answer = read_in_context("bank", Some("the"), &lang("en"), &lang("es"), &open);
+    assert_eq!(answer.says, ["orilla"]);
+    assert_eq!(
+        answer.glosses[0],
+        "An edge of river, lake, or other watercourse."
+    );
+}
+
 /// An English word in a form another language has too is its word put into that form, from
 /// that word's own table: "houses" is "casas", "published" is "publicado", never the bare
 /// "casa" or "publicar". A dialect's label is no form a reader met: "went" is filed as a

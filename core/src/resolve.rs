@@ -1797,7 +1797,18 @@ fn read_found<D: AsRef<[u8]>>(
         .iter()
         .map(|answer| answer.pos.as_deref() == Some("verb"))
         .collect();
-    let decided = chosen_by_translation(&meant, &verbs, open.said)
+    // How well each reading's definitions fit what its word in the line is defined as, for
+    // readings the line reached through the same word: every noun of "bank" reaches "orilla",
+    // which its own dictionary calls a river's edge, and the bank of a river is the one.
+    // Each reading leads with its sense that fits best.
+    let fits: Vec<usize> = match (open.said, open.target) {
+        (Some(said), Some(other)) if !said.trim().is_empty() && !meant.is_empty() => all
+            .iter_mut()
+            .map(|answer| lead_with_fitting_sense(answer, other, spelling))
+            .collect(),
+        _ => Vec::new(),
+    };
+    let decided = chosen_by_translation(&meant, &verbs, &fits, open.said)
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
         // it: "from someone" is a preposition before a pronoun, and read as one before a noun
@@ -2152,6 +2163,7 @@ const COMMONER_BY: u64 = 4;
 fn chosen_by_translation(
     meant: &[Vec<Vec<String>>],
     verbs: &[bool],
+    fits: &[usize],
     said: Option<&str>,
 ) -> Option<usize> {
     let said = said?;
@@ -2177,7 +2189,8 @@ fn chosen_by_translation(
             // verb, and read as the verb "notas" under a line about notes was "to note".
             Some((first_at, first)) if *first == matched => {
                 let verb = |at: usize| verbs.get(at).copied().unwrap_or(false);
-                if verb(*first_at) && !verb(at) {
+                let fit = |at: usize| fits.get(at).copied().unwrap_or(0);
+                if (verb(*first_at) && !verb(at)) || fit(at) > fit(*first_at) {
                     found = Some((at, matched));
                 }
             }
@@ -2188,6 +2201,90 @@ fn chosen_by_translation(
         }
     }
     found.map(|(at, _)| at)
+}
+
+/// The words of a definition that say something: not the little words every definition has,
+/// and not the word being defined.
+fn telling_words(text: &str, spelling: &str) -> std::collections::HashSet<String> {
+    const LITTLE: [&str; 24] = [
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "which",
+        "where",
+        "when",
+        "into",
+        "used",
+        "such",
+        "other",
+        "some",
+        "something",
+        "someone",
+        "being",
+        "having",
+        "made",
+        "part",
+        "kind",
+        "form",
+        "thing",
+    ];
+    let spelling = spelling.to_lowercase();
+    text.to_lowercase()
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| word.len() >= 4 && !LITTLE.contains(word) && *word != spelling)
+        .map(|word| word.trim_end_matches('s').to_string())
+        .collect()
+}
+
+/// How well a reading fits the word the line said for it, by the words its definitions share
+/// with that word's own: its best sense is put first and how many words it shares returned.
+fn lead_with_fitting_sense<D: AsRef<[u8]>>(
+    answer: &mut Answer,
+    other: &Pack<D>,
+    spelling: &str,
+) -> usize {
+    let Some(word) = answer.says.first() else {
+        return 0;
+    };
+    let defined: std::collections::HashSet<String> = lookup_either_case(other, word)
+        .iter()
+        .filter(|entry| same_word(&entry.lemma, word))
+        .flat_map(|entry| entry.senses.iter().map(|sense| sense.gloss.clone()))
+        .flat_map(|gloss| telling_words(&gloss, spelling))
+        .collect();
+    if defined.is_empty() {
+        return 0;
+    }
+    let shared: Vec<usize> = answer
+        .glosses
+        .iter()
+        .map(|gloss| {
+            telling_words(gloss, spelling)
+                .intersection(&defined)
+                .count()
+        })
+        .collect();
+    let Some((best, &score)) = shared
+        .iter()
+        .enumerate()
+        .max_by_key(|(at, n)| (**n, std::cmp::Reverse(*at)))
+    else {
+        return 0;
+    };
+    if best > 0 && score > shared[0] {
+        answer.glosses.swap(0, best);
+        if answer.marks.len() > best {
+            answer.marks.swap(0, best);
+        }
+        if answer.examples.len() > best {
+            answer.examples.swap(0, best);
+        }
+    }
+    score
 }
 
 /// An entry with the sense its translated line is about put first.
@@ -2239,7 +2336,7 @@ fn sense_in_line<D: AsRef<[u8]>>(
             meant_words(&says, Some(entry.pos.as_str()), target, pack, open)
         })
         .collect();
-    match chosen_by_translation(&meant, &[], Some(said)) {
+    match chosen_by_translation(&meant, &[], &[], Some(said)) {
         Some(at) if at > 0 => {
             let mut entry = entry;
             let sense = entry.senses.remove(at);

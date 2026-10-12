@@ -29,6 +29,8 @@ export interface HostProtocol {
       /** What the page drew over it, where it had decided which word it is: the card opens on
        *  that reading rather than asking what the page already answered. */
       drawn?: string;
+      /** The sentence it is in, as the page wrote it, for the host to translate. */
+      line?: string;
     };
     reply: Answer;
   };
