@@ -6,7 +6,8 @@ import { DEFAULTS, type Settings } from './shape';
 import { LANGUAGES } from '@/data/languages';
 
 export {
-  DEFAULTS, accentFor, allowed, darkSide, setAccent, translates, type Settings,
+  DEFAULTS, accentFor, allowed, darkSide, reads, replacedInto, setAccent, translates,
+  type Settings,
 } from './shape';
 
 /** Where each setting lives, as the storage key it is watched under. */
@@ -17,6 +18,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   target: 'local:targetLanguage',
   source: 'local:sourceLanguage',
   known: 'local:knownLanguages',
+  learn: 'local:learn',
   learning: 'local:learning',
   recent: 'local:recentLanguages',
   accents: 'local:accents',

@@ -61,6 +61,9 @@
     onLemma?: () => void;
     /** Read the card as another form of the word. */
     onForm?: (form: ParadigmForm) => void;
+    /** Whether the card also says what the word is in its own language, under what it means
+     *  in the one the reader is learning. */
+    defined?: boolean;
   }
 
   let {
@@ -82,6 +85,7 @@
     entry: whole = false,
     onLemma,
     onForm,
+    defined = false,
   }: Props = $props();
 
   /** Which rule a symbol takes: the four kinds the table names are drawn apart. */
@@ -196,6 +200,11 @@
         : `form of ${answer.lemma}`
   );
   let nothing = $derived(lead === null && answer.ipa.length === 0 && !phrase);
+  // The dictionary's own definition, which is English: for an English word read in English
+  // and translated for practice, what it is beside what it is in the language being learnt.
+  let definition = $derived(
+    defined && !defining && !phrase ? (answer.glosses[0] ?? null) : null
+  );
   // Whether anything goes under the strip: a word read in a language the reader knows can have
   // nothing more to say than how it is said, and an empty band under it read as a card that
   // failed to load.
@@ -203,6 +212,7 @@
     whole ||
       nothing ||
       (!!lead && lead !== answer.spelling) ||
+      !!definition ||
       phrase ||
       (!!answer.paradigm && answer.paradigm.place.length > 0) ||
       !!form ||
@@ -344,6 +354,10 @@
               <span class="badge">in English</span>
             {/if}
           </div>
+        {/if}
+
+        {#if definition}
+          <div class="gram" data-defined><span>{definition}</span></div>
         {/if}
 
         {#if phrase}

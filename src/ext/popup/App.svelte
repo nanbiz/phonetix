@@ -49,7 +49,7 @@
   let view = $state<'main' | 'accents' | 'appearance'>('main');
   /** The dictionaries on their way and how far each has got, as the host tells it. */
   let arriving = $state<Record<string, number>>({});
-  let choosing = $state<'' | 'target' | 'known'>('');
+  let choosing = $state<'' | 'target' | 'known' | 'learn'>('');
 
   const icon = browser.runtime.getURL('/icon/48.png');
   const version = browser.runtime.getManifest().version;
@@ -266,6 +266,17 @@
             <Chevron class="item-chevron" />
           </button>
         </div>
+        <!-- The language being learnt, which the pages in the reader's own languages are
+             replaced into and their cards say a word in. -->
+        <button class="item" data-row="learn" onclick={() => (choosing = 'learn')}>
+          <span class="item-text">
+            <span class="item-name" data-name>{ROWS.learn.name}</span>
+            <span class="item-value" data-about
+              >{settings.learn ? named(settings.learn) : SAYS['learn-none']}</span
+            >
+          </span>
+          <Chevron class="item-chevron" />
+        </button>
         <div class="item" data-row="translator">
           <span class="item-text">
             <span class="item-name" data-name>{ROWS.translator.name}</span>
@@ -354,6 +365,19 @@
       options={everyLanguage.filter((it) => it.value !== settings?.target)}
       chosen={settings.known}
       change={toggleKnown}
+      close={() => (choosing = '')}
+    />
+  {:else if choosing === 'learn'}
+    <ListSheet
+      title={ROWS.learn.name}
+      options={[
+        { value: '', label: SAYS['learn-none'] },
+        ...everyLanguage.filter(
+          (it) => it.value !== settings?.target && !settings?.known.includes(it.value)
+        ),
+      ]}
+      chosen={settings.learn}
+      change={(value) => change('learn', value)}
       close={() => (choosing = '')}
     />
   {/if}

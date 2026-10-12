@@ -32,8 +32,15 @@ export interface Settings {
    */
   known: string[];
   /**
-   * The language the reader is learning, which is what a word they are looking for comes
-   * back in.
+   * The language the reader is learning, which is neither their own nor one they read: the
+   * words of a page they read are replaced by it, and a card for such a word says it in it.
+   * Empty where they learn none. Their choice in settings, which the translator's last
+   * language never changes: asking one question in French does not turn their pages French.
+   */
+  learn: string;
+  /**
+   * The language last asked in in the translator, which is what a word they are looking for
+   * comes back in.
    *
    * Set where it is asked - in the panel the mark opens, and on the say screen - because that
    * is the one place a reader is thinking about it. Empty until they say, and then it is the
@@ -109,6 +116,7 @@ export const DEFAULTS: Settings = {
   target: '',
   source: '',
   known: [],
+  learn: '',
   learning: '',
   recent: [],
   narrow: false,
@@ -134,6 +142,24 @@ export const DEFAULTS: Settings = {
  *  and the ones they read as they are. A language nobody could tell is not translated either. */
 export function translates(settings: Settings, lang: string): boolean {
   return Boolean(lang) && lang !== settings.target && !(settings.known ?? []).includes(lang);
+}
+
+/** Whether the reader reads this language as it is: their own, or one of the others they read. */
+export function reads(settings: Settings, lang: string): boolean {
+  return Boolean(lang) && (lang === settings.target || (settings.known ?? []).includes(lang));
+}
+
+/**
+ * The language a word in [lang] is replaced by on the page, or nothing where it is left alone.
+ *
+ * A word in a language the reader reads is practice: replaced by the language they are
+ * learning, where they learn one. Any other word - in the language they are learning, or one
+ * they do not read at all - is help: replaced by their own.
+ */
+export function replacedInto(settings: Settings, lang: string): string {
+  if (!lang) return '';
+  if (reads(settings, lang)) return settings.learn && settings.learn !== lang ? settings.learn : '';
+  return settings.target;
 }
 
 /** Whether the dark side of the palette is the one to draw, given what the device says. */

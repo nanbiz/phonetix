@@ -658,7 +658,9 @@ class TooltipController(
         // The card says how a word sounds and what it means, except that a word in a language
         // the reader reads is not translated: it is only said.
         val lang = answer.source.ifEmpty { box.language }
-        val meaning = settings.translates(lang)
+        // Into the reader's own language, or for a word of one they read into the one they
+        // are learning, which is practice.
+        val meaning = settings.intoFor(lang).isNotEmpty()
         if (!glanceHasSomething(answer, meaning)) return null
         val fresh = OverlayHost(context)
         host = fresh
@@ -671,8 +673,9 @@ class TooltipController(
                 narrow = settings.narrow,
                 hideStress = settings.hideStress,
                 // The dictionaries define every word in English, so an English word the reader
-                // reads gets its definition, where any other is only said.
-                defining = !meaning && lang == "en",
+                // reads gets its definition, under what it is in the language they learn where
+                // they learn one; any other word of a language they read is only said.
+                defining = settings.reads(lang) && lang == "en",
             )
         }
         return fresh.view

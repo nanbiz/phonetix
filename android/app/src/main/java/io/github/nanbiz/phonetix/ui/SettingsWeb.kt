@@ -354,6 +354,7 @@ private class Bridge(
         .put("on", settings.enabled)
         .put("density", settings.density)
         .put("target", settings.target)
+        .put("learn", settings.learn)
         .put("learning", settings.learning)
         .put("known", JSONArray(settings.untranslated.toList()))
         .put("source", "")
@@ -380,6 +381,7 @@ private class Bridge(
             "on" -> SettingsStore.setEnabled(value == true)
             "density" -> SettingsStore.setDensity((value as? Number)?.toInt() ?: return)
             "target" -> SettingsStore.setTarget(value?.toString().orEmpty())
+            "learn" -> SettingsStore.setLearn(value?.toString().orEmpty())
             "known" -> {
                 val said = value as? JSONArray ?: return
                 SettingsStore.setKnown((0 until said.length()).map { said.optString(it) }.toSet())

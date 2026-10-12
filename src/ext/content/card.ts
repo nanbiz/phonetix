@@ -296,6 +296,9 @@ export interface CardActions {
   narrow?: boolean;
   /** Whether the reader turned stress marks off. */
   hideStress?: boolean;
+  /** Whether the card also says what the word is in its own language: a word of a language
+   *  the reader reads, translated for practice, whose English definition they can read. */
+  defined?: boolean;
   /** Say the word the card is about. */
   /** Play the word; resolves once it has been heard. */
   onPlay?: () => Promise<void> | void;
@@ -346,6 +349,7 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     onOpen: actions.onOpen ?? ((url: string) => window.open(url, '_blank', 'noopener')),
     arriving: actions.arriving ?? null,
     lookUp: actions.lookUp,
+    defined: actions.defined ?? false,
   };
   if (filling && props) {
     // Filled in where it is, keeping what the reader has open on it, on the side of its word

@@ -37,8 +37,14 @@ data class Settings(
      * one of these is only said. Nothing until they choose, and then [untranslated] answers.
      */
     val known: Set<String>? = null,
-    /** The language the reader is learning, which is what a word they are looking for comes
-     *  back in. Set in the panel that asks for one. */
+    /**
+     * The language the reader is learning, which is neither their own nor one they read: a
+     * card for a word of a language they read says what it is in it. Empty where they learn
+     * none. Their choice in settings, which the panel's last language never changes.
+     */
+    val learn: String = "",
+    /** The language last asked in in the panel, which is what a word they are looking for
+     *  comes back in. */
     val learning: String = "",
     /** The languages they have asked in, most recent first: a reader asks in two or three,
      *  and a list of fifty in alphabetical order makes them hunt for one of them every time. */
@@ -104,8 +110,19 @@ data class Settings(
     fun translates(lang: String): Boolean =
         lang.isNotEmpty() && lang != target && lang !in untranslated
 
-    /** The language a word in [lang] is read into: nothing where it is not translated. */
-    fun intoFor(lang: String): String = if (translates(lang)) target else ""
+    /** Whether the reader reads [lang] as it is: their own, or one of the others they read. */
+    fun reads(lang: String): Boolean = lang.isNotEmpty() && !translates(lang)
+
+    /**
+     * The language a word in [lang] is read into: the reader's own for one they do not read,
+     * the one they are learning for one they do, which is practice, and nothing where they
+     * read it and learn nothing.
+     */
+    fun intoFor(lang: String): String = when {
+        translates(lang) -> target
+        reads(lang) && learn.isNotEmpty() && learn != lang -> learn
+        else -> ""
+    }
 
     /**
      * Whether nothing is painted over the page, which is always: the words of a screen are
@@ -131,6 +148,7 @@ object SettingsStore {
     private const val K_ALL = "all_apps"
     private const val K_TOUCH = "touch_words"
     private const val K_TARGET = "target"
+    private const val K_LEARN = "learn"
     private const val K_LEARNING = "learning"
     private const val K_KNOWN = "known"
     private const val K_RECENT = "recent"
@@ -161,6 +179,7 @@ object SettingsStore {
             allApps = p.getBoolean(K_ALL, true),
             touchWords = p.getBoolean(K_TOUCH, true),
             target = p.getString(K_TARGET, "") ?: "",
+            learn = p.getString(K_LEARN, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
             known = p.getStringSet(K_KNOWN, null)?.toSet(),
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
@@ -193,6 +212,7 @@ object SettingsStore {
             ?.putBoolean(K_ALL, next.allApps)
             ?.putBoolean(K_TOUCH, next.touchWords)
             ?.putString(K_TARGET, next.target)
+            ?.putString(K_LEARN, next.learn)
             ?.putString(K_LEARNING, next.learning)
             ?.putStringSet(K_KNOWN, next.known)
             ?.putString(K_RECENT, next.recent.joinToString(","))
@@ -228,6 +248,9 @@ object SettingsStore {
                 .take(RECENT),
         )
     }
+
+    /** The language being learnt, or nothing. */
+    fun setLearn(v: String) = update { it.copy(learn = v) }
 
     fun setLearning(v: String) = update {
         it.copy(

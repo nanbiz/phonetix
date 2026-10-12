@@ -35,6 +35,8 @@
     lookUp?: (word: string) => Promise<Answer | null>;
     /** Told when the card changes what it reads as, so a host can keep it in the window. */
     onGrow?: () => void;
+    /** Whether the card also says what the word is in its own language. */
+    defined?: boolean;
   }
 
   let {
@@ -52,6 +54,7 @@
     arriving = null,
     lookUp,
     onGrow,
+    defined = false,
   }: Props = $props();
 
   /** The form the card reads as instead of the page's word, where the reader picked one. */
@@ -196,4 +199,5 @@
   entry={lemma !== null}
   onLemma={lookUp ? openLemma : undefined}
   onForm={pick}
+  defined={defined && shown === answer}
 />

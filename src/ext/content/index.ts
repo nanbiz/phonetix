@@ -8,7 +8,8 @@ import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import {
-  accentFor, allowed, current, DEFAULTS, set, setAccent, translates, watch, type Settings,
+  accentFor, allowed, current, DEFAULTS, replacedInto, set, setAccent, translates, watch,
+  type Settings,
 } from '@/settings';
 import {
   handAt, hide, inside, moveTo, onTheWayIn, paintedIn as cardPaintedIn, passedOver, show,
@@ -302,11 +303,14 @@ function pageSeed(): number {
 
 async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> {
   const source = pageLanguage();
+  // What a word on this page is replaced by: the language the reader is learning on a page in
+  // one they read, their own on any other.
+  const into = replacedInto(settings, source);
   for (const piece of pieces(runs)) {
     const batch = await sendMessage('annotate', {
       runs: piece.map((run) => ({ id: run.id, text: run.text, lang: run.lang })),
       source,
-      target: settings.target || source,
+      target: into || settings.target || source,
       options: {
         mode: inline(),
         density: settings.density,
@@ -334,11 +338,15 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
     for (const run of piece) {
       const tokens = byRun.get(run.id) ?? [];
       read.set(run.node, tokens);
-      // A word in a language the reader reads is left as it is where words are replaced by
-      // what they mean: translating it is translating what they never asked to have translated.
+      // Where words are replaced by what they mean, only a word whose language goes into the
+      // language this page was read into: a word in a language the reader reads is replaced
+      // only by the one they learn, and an English quotation on a German page read for
+      // practice is left as it is rather than handed the page's translation.
       const shown = inline() === 'meaning'
         ? tokens.map((token) =>
-          translates(settings, token.lang || run.lang || source) ? token : { ...token, inline: false })
+          into && replacedInto(settings, token.lang || run.lang || source) === into
+            ? token
+            : { ...token, inline: false })
         : tokens;
       paint(run, shown, inline());
       drewWords += shown.filter((token) => token.inline).length;
@@ -717,12 +725,15 @@ function said(answer: Answer): Answer {
 /** Open the card for a word the reader stopped at, or tapped, which is asking for it outright. */
 async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> {
   const source = word.lang || pageLanguage();
-  // Into the reader's own language, unless this is one they read as it is: then the card says
-  // how the word is said and nothing else, since what it means is the one thing they did not
-  // ask for. A dictionary's English definition of a German word is a translation all the same;
-  // of an English word it is a definition in the word's own language, which the card keeps.
-  const translating = translates(settings, source);
-  const target = translating ? settings.target : source;
+  // Into the reader's own language, unless this is one they read as it is. Then into the one
+  // they are learning, where they learn one, which is practice: what the word is in it, and
+  // for an English word its definition under that. Learning none, the card says how the word
+  // is said and nothing else, since what it means is the one thing they did not ask for. A
+  // dictionary's English definition of a German word is a translation all the same; of an
+  // English word it is a definition in the word's own language, which the card keeps.
+  const practising = !translates(settings, source) && replacedInto(settings, source) !== '';
+  const translating = translates(settings, source) || practising;
+  const target = practising ? settings.learn : translating ? settings.target : source;
   const defining = !translating && source === DEFINED_IN;
   const looked = await sendMessage('lookUp', {
     word: word.spelling,
@@ -751,6 +762,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     eased: settings.animations,
     narrow: settings.narrow,
     hideStress: settings.hideStress,
+    defined: practising && source === DEFINED_IN,
     entered: tapped,
     onPlay: () => {
       const context = warmAudio();
@@ -1409,6 +1421,8 @@ export async function session(): Promise<void> {
       was.layer !== fresh.layer ||
       was.density !== fresh.density ||
       was.target !== fresh.target ||
+      was.learn !== fresh.learn ||
+      was.known.join() !== fresh.known.join() ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||
       JSON.stringify(was.accents) !== JSON.stringify(fresh.accents) ||

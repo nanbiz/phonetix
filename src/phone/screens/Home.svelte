@@ -44,7 +44,7 @@
 
   let ready = $derived(permissions.reading && permissions.overlay);
   /** Which language list is open over the screen, if one is. */
-  let choosing = $state<'' | 'target' | 'known'>('');
+  let choosing = $state<'' | 'target' | 'known' | 'learn'>('');
 
   /** The languages left as they are besides the reader's own, by name. */
   let knownNames = $derived(
@@ -138,8 +138,9 @@
   </Group>
 
   <!-- The languages the reader knows: the one everything else is translated into, and the
-       others read as they are. Which language a page is in is the page's business, and the
-       one a word is asked for in is chosen in the panel that asks, so neither is set here. -->
+       others read as they are; and the one they are learning, which a card for a word of the
+       others says it in. Which language a page is in is the page's business, and the one a
+       word is asked for in is chosen in the panel that asks, so neither is set here. -->
   <Group name={ROWS.translate.name}>
     <Item
       name={ROWS.mine.name}
@@ -152,6 +153,12 @@
       row="known"
       value={knownNames || SAYS['nothing-else']}
       open={() => (choosing = 'known')}
+    />
+    <Item
+      name={ROWS.learn.name}
+      row="learn"
+      value={settings.learn ? named(settings.learn) : SAYS['learn-none']}
+      open={() => (choosing = 'learn')}
     />
   </Group>
 
@@ -230,6 +237,19 @@
     options={everyLanguage.filter((it) => it.value !== settings.target)}
     chosen={settings.known}
     change={toggleKnown}
+    close={() => (choosing = '')}
+  />
+{:else if choosing === 'learn'}
+  <ListSheet
+    title={ROWS.learn.name}
+    options={[
+      { value: '', label: SAYS['learn-none'] },
+      ...everyLanguage.filter(
+        (it) => it.value !== settings.target && !settings.known.includes(it.value)
+      ),
+    ]}
+    chosen={settings.learn}
+    change={(value) => change('learn', value)}
     close={() => (choosing = '')}
   />
 {/if}

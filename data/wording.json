@@ -340,6 +340,10 @@
       "name": "Never translate",
       "about": ""
     },
+    "learn": {
+      "name": "Learning",
+      "about": ""
+    },
     "cards": {
       "name": "Card on a word you point at",
       "about": ""
@@ -417,6 +421,7 @@
     "detailed": "Detailed",
     "simple-example": "/tɒp/",
     "detailed-example": "[tʰɒp]",
-    "nothing-else": "nothing else"
+    "nothing-else": "nothing else",
+    "learn-none": "none"
   }
 }

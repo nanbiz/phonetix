@@ -86,12 +86,15 @@ export async function open(page = '', listen = false): Promise<void> {
   shadow.appendChild(frame);
 
   const mine = settings.target;
-  // The language chosen before, and otherwise the one the page is in, where that is not the
-  // reader's own: a reader on a Spanish page asking for a word is asking for it in Spanish.
+  // The language last asked in, then the one the reader is learning, and otherwise the one the
+  // page is in, where that is not the reader's own: a reader on a Spanish page asking for a
+  // word is asking for it in Spanish.
   // Only one the panel can name and offer: a page in a language it has no name for would
   // head the panel with a bare code the reader could not pick again from its list.
   const learning =
-    [settings.learning, page, ...packs.held].find((lang) => lang && lang !== mine && LANGUAGES[lang]) ??
+    [settings.learning, settings.learn, page, ...packs.held].find(
+      (lang) => lang && lang !== mine && LANGUAGES[lang]
+    ) ??
     '';
   let recent = settings.recent;
   drawn = mount(Ask, {

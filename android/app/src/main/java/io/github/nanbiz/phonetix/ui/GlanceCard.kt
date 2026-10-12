@@ -70,9 +70,13 @@ fun GlanceCard(
         .take(ALSO)
     val definition = answer.glosses.firstOrNull()?.takeIf { it.isNotBlank() }
     // Whole, since a definition is a sentence and cutting it at its first bracket or semicolon
-    // leaves half of one.
-    val defined = if (!defining) null else (answer.says.firstOrNull() ?: definition)
-        ?.takeIf { it.isNotBlank() }
+    // leaves half of one. Read in English it is what the dictionary says; translated for
+    // practice it is the English sense under the translation.
+    val defined = when {
+        !defining -> null
+        meaning -> definition
+        else -> answer.says.firstOrNull() ?: definition
+    }?.takeIf { it.isNotBlank() }
     // The readings said differently from each other, where the page left it open which one.
     val spoken = if (answer.state != Answer.State.Homograph) emptyList() else answer.readings
         .filter { it.ipa.firstOrNull()?.isNotBlank() == true }
@@ -132,6 +136,18 @@ fun GlanceCard(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.reported(says, report),
                 )
+                // What the word is in its own language, under what it is in the one being
+                // learnt: an English word read for practice.
+                if (defined != null) {
+                    Text(
+                        text = defined,
+                        color = Color(palette.inkMuted),
+                        fontSize = Tokens.Scale.fontSizeSmall.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.reported(defined, report),
+                    )
+                }
                 // Which form of which word it is, where it is a form - "preterite · indicative ·
                 // 3rd singular of andar" - and otherwise the kind of word and what else it can be.
                 val form = paradigm?.named()?.takeIf { it.isNotEmpty() }
