@@ -290,10 +290,12 @@ def check(engine):
         bound = {c["name"]: c.get("shortcut", "") for c in bound}
         print(f"  {engine}: the keyboard: {bound}")
         for name, command in browser.manifest.get("commands", {}).items():
-            want = command["suggested_key"]["default"]
+            # A command without a key of its own is one the page hears instead.
+            want = (command.get("suggested_key") or {}).get("default", "")
             if bound.get(name, "").replace(" ", "") != want:
                 failures.append(f"{name} is bound to {bound.get(name)!r}, not {want}")
-        open_key = browser.manifest["commands"]["translator"]["suggested_key"]["default"].lower()
+        # The translator's key, which the page hears rather than the browser (content/index.ts).
+        open_key = "alt+shift+t"
         switch_key = browser.manifest["commands"]["switch-on-off"]["suggested_key"]["default"].lower()
 
         opened = browser.ext(

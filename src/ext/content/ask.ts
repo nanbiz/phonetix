@@ -11,6 +11,7 @@ import cardCss from '@/ui/card/card.css?inline';
 import tokenCss from '@/ui/tokens.css?inline';
 import { current, set } from '@/settings';
 import { asked } from '@/settings/shape';
+import { LANGUAGES } from '@/data/languages';
 import { sendMessage } from '@/host/messages';
 import type { Listening } from '@/host/speech';
 import { darkHere } from './inline';
@@ -87,8 +88,11 @@ export async function open(page = '', listen = false): Promise<void> {
   const mine = settings.target;
   // The language chosen before, and otherwise the one the page is in, where that is not the
   // reader's own: a reader on a Spanish page asking for a word is asking for it in Spanish.
+  // Only one the panel can name and offer: a page in a language it has no name for would
+  // head the panel with a bare code the reader could not pick again from its list.
   const learning =
-    [settings.learning, page, ...packs.held].find((lang) => lang && lang !== mine) ?? '';
+    [settings.learning, page, ...packs.held].find((lang) => lang && lang !== mine && LANGUAGES[lang]) ??
+    '';
   let recent = settings.recent;
   drawn = mount(Ask, {
     target: frame,

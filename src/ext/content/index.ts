@@ -694,6 +694,10 @@ let coming: Record<string, number> = {};
 /** What the card on screen does when that changes. */
 let following: (() => void) | null = null;
 
+/** The language every pack's definitions are written in: the dictionaries are the English
+ *  Wiktionary's. */
+const DEFINED_IN = 'en';
+
 /** What is known about a word with what it means left off: how it is said, and which form of
  *  which word it is. */
 function said(answer: Answer): Answer {
@@ -715,9 +719,11 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
   const source = word.lang || pageLanguage();
   // Into the reader's own language, unless this is one they read as it is: then the card says
   // how the word is said and nothing else, since what it means is the one thing they did not
-  // ask for. A dictionary's English definition of a German word is a translation all the same.
+  // ask for. A dictionary's English definition of a German word is a translation all the same;
+  // of an English word it is a definition in the word's own language, which the card keeps.
   const translating = translates(settings, source);
   const target = translating ? settings.target : source;
+  const defining = !translating && source === DEFINED_IN;
   const looked = await sendMessage('lookUp', {
     word: word.spelling,
     source,
@@ -730,7 +736,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
   });
   // Shown as the page writes it, whichever way it was read.
   const written = { ...looked, spelling: word.written };
-  const answer = translating ? written : said(written);
+  const answer = translating || defining ? written : said(written);
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
   const current = () => anchor.alive() && anchored === anchor;
@@ -1351,6 +1357,24 @@ function askedForAWord(listen: boolean): void {
   void openAsk(pageLanguage(), listen);
 }
 
+/**
+ * Alt+Shift+T opens the translator, and takes it down again. Heard by the page rather than
+ * bound as the browser's own shortcut: Chromium will not hand an extension Alt+Shift+T, which
+ * it keeps for its toolbar, and Firefox on Linux binds it and then gives the key to its Tools
+ * menu; a page is handed the key in both. Taken in the capture phase, ahead of the page and of
+ * the panel's own field, and by the key's place rather than its letter, which Alt turns into
+ * another character on some layouts.
+ */
+function translatorKey(): void {
+  window.addEventListener('keydown', (event) => {
+    if (!event.altKey || !event.shiftKey || event.ctrlKey || event.metaKey) return;
+    if (event.code !== 'KeyT' || event.repeat) return;
+    event.preventDefault();
+    event.stopPropagation();
+    askedForAWord(false);
+  }, true);
+}
+
 /** Start reading this document. */
 export async function session(): Promise<void> {
   settings = await current();
@@ -1359,6 +1383,7 @@ export async function session(): Promise<void> {
   emberPaintedIn(settings.theme, settings.animations);
   markPaintedIn(settings.theme, settings.animations);
   answerAsked();
+  translatorKey();
   gestures();
   markWhereTouched();
   follow();

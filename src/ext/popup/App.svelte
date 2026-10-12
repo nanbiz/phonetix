@@ -86,7 +86,8 @@
       tabId = tab.id;
     }
     const commands = await browser.commands.getAll().catch(() => []);
-    shortcut = commands.find((it) => it.name === 'translator')?.shortcut ?? '';
+    // Alt+Shift+T where the reader bound nothing else: the page hears it (content/index.ts).
+    shortcut = commands.find((it) => it.name === 'translator')?.shortcut || 'Alt+Shift+T';
     switching = commands.find((it) => it.name === 'switch-on-off')?.shortcut ?? '';
     speaking = commands.find((it) => it.name === 'speak')?.shortcut ?? '';
     curve = await curving;

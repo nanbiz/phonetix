@@ -112,16 +112,16 @@ export default defineConfig({
     // the keyboard: Phonetix on or off, and the translator, the same panel the phone's mark
     // opens. Alt+Shift rather than Ctrl or Command, which every page and every site has
     // already taken, and on letters each browser hands an extension: Chromium leaves
-    // Alt+Shift+P unassigned whatever asks for it and keeps A, B, I and T for itself, and on
-    // Linux Firefox gives Alt+T to its Tools menu. A reader who binds T by hand on Chromium's
-    // shortcuts page has it. And the microphone: the translator opened hearing.
+    // Alt+Shift+P unassigned whatever asks for it. The translator is Alt+Shift+T, which the
+    // page hears (content/index.ts) because neither browser hands it to an extension, so its
+    // command here has no key of its own and is there for a reader to bind one. And the
+    // microphone: the translator opened hearing.
     commands: {
       'switch-on-off': {
         suggested_key: { default: 'Alt+Shift+O' },
         description: 'Switch Phonetix on or off',
       },
       translator: {
-        suggested_key: { default: 'Alt+Shift+L' },
         description: 'Open the translator',
       },
       speak: {

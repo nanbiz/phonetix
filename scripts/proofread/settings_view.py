@@ -520,6 +520,8 @@ def main():
                                         ".map(k => k.textContent).join('+')")
             bound = evaluate(cdp, view, "chrome.commands.getAll().then(c => (c.find(x => x.name =="
                                         f" '{command}') || {{}}).shortcut || '')")
+            # The translator's own key, which the page hears, where the browser binds none.
+            bound = bound or ("Alt+Shift+T" if command == "translator" else "")
             print(f"  the keys for {command}: shown {shown!r}, bound {bound!r}")
             if not shown or shown != bound:
                 failures.append(f"the popup shows {command} on {shown!r}, the browser binds {bound!r}")

@@ -299,7 +299,10 @@ def check(engine, said, wav, microphone, again=True, by_key=False):
         field = "(root) => root.querySelector('.ask-field input').value"
 
         command = "speak" if by_key else "translator"
-        key = browser.manifest["commands"][command]["suggested_key"]["default"].lower()
+        # The translator's key is heard by the page (content/index.ts), the microphone's is the
+        # browser's own.
+        key = "alt+shift+t" if command == "translator" else \
+            browser.manifest["commands"][command]["suggested_key"]["default"].lower()
         keys(key)
         if wait("(root) => !!root.querySelector('[data-ask]')", lambda got: got is True) is not True:
             return [f"the panel did not open from {key}"]
