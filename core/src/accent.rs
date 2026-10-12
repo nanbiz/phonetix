@@ -110,6 +110,12 @@ pub fn is_a_rule(accent: &str) -> bool {
 
 /// Rewrite a standard transcription into the accent's own. Unchanged for an accent that has
 /// no rule, which is every accent that has data instead.
+/// Whether this accent is a rule, which reaches every word; without one it reads only the
+/// words its own pack holds.
+pub fn has_rule(accent: &str) -> bool {
+    !rules(accent).is_empty()
+}
+
 pub fn apply(ipa: &str, accent: &str, word: &str) -> String {
     let rules = rules(accent);
     if rules.is_empty() || ipa.is_empty() {

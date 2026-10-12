@@ -7,6 +7,7 @@
 //! what to draw is here, where neither platform can reach the pack bytes any other way.
 
 pub mod accent;
+pub mod accent_defaults;
 pub mod annotate;
 pub mod answer;
 pub mod detect;

@@ -22,7 +22,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
-\"paradigm\":{}}}",
+\"paradigm\":{},\"accentMissing\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -58,6 +58,9 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         // Which form of its lemma the word is, and the word in every other value of each of
         // its categories, for a card to name and to move through.
         paradigm(&answer.paradigm),
+        // The accent the reader chose where it has no reading of the word, so a card says what
+        // the transcription is rather than naming an accent it is not in.
+        maybe(&answer.accent_missing),
     )
 }
 
@@ -337,6 +340,7 @@ mod tests {
             source: Lang("es".into()),
             target: Lang("de".into()),
             paradigm: None,
+            accent_missing: None,
         }
     }
 

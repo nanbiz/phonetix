@@ -94,6 +94,9 @@ export interface Answer {
   /** Which form of its lemma the word is, by grammatical category, and the word in every other
    *  value of each of those categories. Absent for a word the pack has no table for. */
   paradigm?: Paradigm | null;
+  /** The accent the reader chose where it has no reading of this word, so the transcription
+   *  is the dictionary's own: nothing recorded it in that accent. */
+  accentMissing?: string | null;
 }
 
 /** One grammatical value of a place in a table: "preterite" of the category "tense". */

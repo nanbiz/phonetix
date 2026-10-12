@@ -63,6 +63,10 @@ pub struct Answer {
     /// Which form of its lemma the spelling is, by grammatical category, with the meaning said
     /// in that form and the word in every other value of each category: see [crate::paradigm].
     pub paradigm: Option<crate::paradigm::Form>,
+    /// The accent the reader chose where it has no reading of this word: its own pack does not
+    /// hold it and no rule shifts every word into it, so the transcription is the dictionary's
+    /// own. A card that named the chosen accent over it would claim what nobody recorded.
+    pub accent_missing: Option<String>,
 }
 
 /// One of the words a spelling is.
@@ -101,6 +105,7 @@ impl Answer {
             source: source.clone(),
             target: target.clone(),
             paradigm: None,
+            accent_missing: None,
         }
     }
 }
@@ -1467,7 +1472,14 @@ fn read_found<D: AsRef<[u8]>>(
             })
             .map(|entry| entry.ipa)
             .filter(|ipa| !ipa.is_empty());
+        // The dictionary's own reading is its language's default accent's, so only another
+        // accent, with no rule and without the word, has no reading of it.
+        let missing = (said.is_none()
+            && !crate::accent::has_rule(open.accent)
+            && crate::accent_defaults::default_of(&source.0) != Some(open.accent))
+        .then(|| open.accent.to_string());
         for answer in answers.iter_mut() {
+            answer.accent_missing = missing.clone();
             answer.ipa = match &said {
                 Some(ipa) => ipa.clone(),
                 None => answer
@@ -2573,5 +2585,6 @@ fn finish<D: AsRef<[u8]>>(
         source: source.clone(),
         target: target.clone(),
         paradigm,
+        accent_missing: None,
     }
 }

@@ -52,6 +52,9 @@ data class Answer(
     /** The dictionary's narrow transcription of the first, where it gives one that differs:
      *  what a reader who asked for narrow transcriptions is shown. */
     val narrow: String? = null,
+    /** The accent the reader chose where it has no reading of this word, so the transcription
+     *  is the dictionary's own: nothing recorded it in that accent. */
+    val accentMissing: String? = null,
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
@@ -197,6 +200,8 @@ data class Answer(
                 glosses = list("glosses"),
                 lead = if (o.isNull("lead")) null else o.optString("lead").ifEmpty { null },
                 narrow = if (o.isNull("narrow")) null else o.optString("narrow").ifEmpty { null },
+                accentMissing = if (o.isNull("accentMissing")) null
+                    else o.optString("accentMissing").ifEmpty { null },
                 paradigm = o.optJSONObject("paradigm")?.let { row ->
                     val place = row.optJSONArray("place") ?: JSONArray()
                     Paradigm(
