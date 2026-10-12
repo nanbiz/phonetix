@@ -2486,6 +2486,57 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// Read in its own language, the sentence as written says which sense a word is: "the bank of
+/// the river" is its edge, and a sentence sharing nothing with any sense leaves the
+/// dictionary's order.
+#[test]
+fn a_words_own_sentence_says_which_sense() {
+    let mut english = Builder::new("en", Kind::Lex, 0);
+    english
+        .add::<&str>(
+            word(
+                "bank",
+                "noun",
+                "bæŋk",
+                &["An institution where one can place and borrow money."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            word(
+                "bank",
+                "noun",
+                "bæŋk",
+                &[
+                    "An elevation under the sea.",
+                    "An edge of river, lake, or other watercourse.",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let read = |said: &'static str| {
+        let open = Open {
+            source: Some(&english),
+            target: Some(&english),
+            said: Some(said),
+            ..Open::default()
+        };
+        read_in_context("bank", Some("the"), &lang("en"), &lang("en"), &open).glosses[0].clone()
+    };
+    assert_eq!(
+        read("We sat on the bank of the river."),
+        "An edge of river, lake, or other watercourse."
+    );
+    assert_eq!(
+        read("I went to the bank today."),
+        "An institution where one can place and borrow money."
+    );
+}
+
 /// The modal "can" and "to can" food share a table, and the word for the modal is the one
 /// whose own dictionary says what the modal says: "poder", "to be able to", not "enlatar",
 /// "to can". A verb English makes a tense with has no word where none gives it back: "would"

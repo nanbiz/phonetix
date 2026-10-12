@@ -1678,6 +1678,20 @@ fn read_found<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) -> Answer {
+    // Read in its own language, the sentence as written is where its senses are looked for
+    // (see [own_line_sense]); what follows looks for answers in another language in a
+    // translated line, and is handed none.
+    let own_line = (source == target).then_some(open.said).flatten();
+    let unsaid;
+    let open: &Open<D> = if own_line.is_some() {
+        unsaid = Open {
+            said: None,
+            ..*open
+        };
+        &unsaid
+    } else {
+        open
+    };
     let Some(pack) = open.source else {
         let state = if open.ipa_only {
             AnswerState::IpaOnly
@@ -1868,6 +1882,15 @@ fn read_found<D: AsRef<[u8]>>(
             .map(|ipa| crate::symbols::explain(ipa))
             .unwrap_or_default();
     }
+    // Read in its own language, the sense its sentence is about, where one alone shares words
+    // with it, leads, and its word with it.
+    let mut own_decided = false;
+    if let Some(line) = own_line {
+        if let Some(at) = own_line_sense(&mut answers, line, spelling) {
+            answers.swap(0, at);
+            own_decided = true;
+        }
+    }
     // The commonest word first, which the dump lists first, so a reader who does not choose
     // still gets the likely one.
     let first = answers.remove(0);
@@ -1937,7 +1960,9 @@ fn read_found<D: AsRef<[u8]>>(
         says.retain(|had| !same_word(had, word));
         says.insert(0, word.clone());
     }
-    let decided = chosen_by_translation(&meant, &verbs, &fits, open.said)
+    let decided = own_decided
+        .then_some(0)
+        .or_else(|| chosen_by_translation(&meant, &verbs, &fits, open.said))
         .or_else(|| by_meaning.as_ref().map(|(at, _)| *at))
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
@@ -2435,6 +2460,51 @@ fn chosen_by_translation(
         }
     }
     found.map(|(at, _)| at)
+}
+
+/// The reading, and the sense of it, that a sentence in the word's own language is about: the
+/// one sense of all the readings' first few that shares the most telling words with the
+/// sentence, where no other shares as many. "We sat on the bank of the river" shares "river"
+/// with "an edge of river, lake, or other watercourse" and nothing with the money. That sense
+/// is put first in its reading, which is returned; nothing where the sentence ties or says
+/// nothing.
+fn own_line_sense(answers: &mut [Answer], line: &str, spelling: &str) -> Option<usize> {
+    let said = telling_words(line, spelling);
+    if said.is_empty() {
+        return None;
+    }
+    let mut best: Option<(usize, usize, usize)> = None;
+    let mut tied = false;
+    for (at, answer) in answers.iter().enumerate() {
+        for (sense, gloss) in answer.glosses.iter().enumerate().take(6) {
+            let shared = telling_words(gloss, spelling).intersection(&said).count();
+            if shared == 0 {
+                continue;
+            }
+            match best {
+                Some((_, _, most)) if shared < most => {}
+                Some((_, _, most)) if shared == most => tied = true,
+                _ => {
+                    best = Some((at, sense, shared));
+                    tied = false;
+                }
+            }
+        }
+    }
+    let (at, sense, _) = best.filter(|_| !tied)?;
+    let answer = &mut answers[at];
+    for list in [&mut answer.glosses, &mut answer.says] {
+        if list.len() > sense {
+            list.swap(0, sense);
+        }
+    }
+    if answer.marks.len() > sense {
+        answer.marks.swap(0, sense);
+    }
+    if answer.examples.len() > sense {
+        answer.examples.swap(0, sense);
+    }
+    Some(at)
 }
 
 /// The reading the translated line means by one of its words, where none of the readings'

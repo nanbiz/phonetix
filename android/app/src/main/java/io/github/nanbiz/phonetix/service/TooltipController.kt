@@ -231,6 +231,15 @@ class TooltipController(
             val settings = SettingsStore.current
             val source = asked.language.ifEmpty { Language.OURS }
             val into = settings.intoFor(source)
+            // Read in its own language, the sentence as written says which sense it is: "bank"
+            // by a river is its edge. Redrawn only where that changes what the card leads with.
+            if (first != null && into.isEmpty() && asked.sentence.isNotBlank()) {
+                val own = runCatching { answerFor(asked, asked.sentence) }.getOrNull()
+                if (own != null && own.glosses.firstOrNull() != first.glosses.firstOrNull()) {
+                    main.post { if (stillOn(asked) && view != null) render(shown!!, own) }
+                }
+                return@execute
+            }
             if (first == null || into.isEmpty()) return@execute
             // A word no dictionary here holds is translated by the engine on this phone, and
             // the card says a machine did it: a card that only said how such a word sounds told

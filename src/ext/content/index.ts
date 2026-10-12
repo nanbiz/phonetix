@@ -772,9 +772,10 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // one before it, and the card must not ask a question the page has answered.
     before: word.before,
     drawn: '',
-    // And the sentence it is in, which the host has translated to say which word and which
-    // sense it is: "bank" by a river, "core" of a test.
-    line: target === source ? '' : sentenceOf(anchor, word.spelling),
+    // And the sentence it is in, which says which word and which sense it is: translated by
+    // the host where the card translates ("bank" by a river is "orilla"), and as written
+    // where it does not, where the word's senses are looked for in it.
+    line: sentenceOf(anchor, word.spelling),
     // Whether the reader wants every word described, not only one their language has no
     // word for: the host asks the translator only for what the card will say.
     describe: settings.showMeaning && settings.describeAll,

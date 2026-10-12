@@ -316,7 +316,15 @@ export function host(): void {
     // The sentence, translated, where nothing on the page decided the word already: the
     // engine read the whole sentence, which says which word and which sense this is. Waited for
     // only briefly; one that comes later is kept for the next card on the line.
-    const drawn = data.drawn || (data.line ? await lineSaid(data.source, data.target, data.line) : '');
+    // Read in its own language, the sentence as written is that line: the core looks for the
+    // word's senses in it rather than for answers.
+    const drawn =
+      data.drawn ||
+      (data.line
+        ? data.source === data.target
+          ? data.line
+          : await lineSaid(data.source, data.target, data.line)
+        : '');
     const looked = await lookUp(
       data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn
     );
