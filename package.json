@@ -2,7 +2,7 @@
   "name": "phonetix",
   "description": "Browser extension that shows IPA pronunciations on web pages",
   "private": true,
-  "version": "0.53.6",
+  "version": "0.53.7",
   "type": "module",
   "scripts": {
     "dev": "wxt",
