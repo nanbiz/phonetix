@@ -2486,6 +2486,51 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// A reading is found in the line by its answer's forms as the kind of word the reading is:
+/// the archaic noun "were", "a man", answers "Er", and looked for as every form of the pronoun
+/// "er" it was found in any line with "es" in it.
+#[test]
+fn a_nouns_answer_is_not_found_by_a_pronouns_forms() {
+    let form = |spelling: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: String::new(),
+    };
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(
+            word(
+                "were",
+                "verb",
+                "wɜː",
+                &["Second-person singular simple past of be."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(word("were", "noun", "wɪə", &["A man; a male."]), &[])
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut sein = word("sein", "verb", "zaɪ̯n", &["to be"]);
+    sein.forms.extend([form("waren"), form("war")]);
+    let sein = german.add::<&str>(sein, &[]).unwrap();
+    let mut er = word("er", "pron", "eːɐ̯", &["he"]);
+    er.forms.extend([form("es"), form("sie")]);
+    let er = german.add::<&str>(er, &[]).unwrap();
+    german.translated("were", "verb", &[(sein, 0)]);
+    german.translated("were", "noun", &[(er, 0)]);
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&german),
+        said: Some("Es gab weltweit Proteste."),
+        ..Open::default()
+    };
+    let says = read_in_context("were", Some("There"), &lang("en"), &lang("de"), &open).says;
+    assert_eq!(says.first().map(String::as_str), Some("sein"), "{says:?}");
+}
+
 /// A table can list a piece of a word, and a reader is never handed one: "to" marking an
 /// infinitive is listed in Spanish as the ending "-ar", and its card said "-ar".
 #[test]

@@ -1217,28 +1217,58 @@ fn in_line<D: AsRef<[u8]>>(
         glossed_as(glosses, None, wanted, LOOKED_FOR_IN_LINE),
         wanted,
         said,
+        None,
     )
 }
 
 /// Which of [words], in [wanted]'s language and likeliest first, the translated line uses, in
-/// the form the line has it.
-fn in_line_of<D: AsRef<[u8]>>(words: Vec<String>, wanted: &Pack<D>, said: &str) -> Option<String> {
+/// the form the line has it, each looked for in its forms as [pos] where that is known.
+fn in_line_of<D: AsRef<[u8]>>(
+    words: Vec<String>,
+    wanted: &Pack<D>,
+    said: &str,
+    pos: Option<&str>,
+) -> Option<String> {
     let sentence = normalised(said);
     if sentence.is_empty() {
         return None;
     }
     words.into_iter().find_map(|word| {
-        // As the pack spells them, since the case is the word's own: a German noun.
-        let mut forms = vec![word.clone()];
-        for entry in wanted.lookup(&word) {
-            if same_word(&entry.lemma, &word) {
-                forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
-            }
-        }
-        forms
+        forms_as(wanted, &word, pos)
             .into_iter()
             .find(|form| holds(&sentence, &normalised(form)))
     })
+}
+
+/// A word of [wanted]'s language and its forms, as the pack spells them (the case is the
+/// word's own: a German noun), as the kind of word [pos] is where the pack has the word as
+/// that kind. Where it has it only as a word of grammar and [pos] is not one, the word alone:
+/// the archaic noun "were", "a man", answers "Er", and looked for as every form of the
+/// pronoun "er" it was found in any line with an "es" or a "sie" in it, so every "were" was
+/// "Er".
+fn forms_as<D: AsRef<[u8]>>(wanted: &Pack<D>, word: &str, pos: Option<&str>) -> Vec<String> {
+    let mut forms = vec![word.to_string()];
+    let entries: Vec<Entry> = wanted
+        .lookup(word)
+        .into_iter()
+        .filter(|entry| same_word(&entry.lemma, word))
+        .collect();
+    let pos = pos.filter(|pos| !pos.is_empty());
+    if let Some(pos) = pos {
+        let grammar_only =
+            !entries.is_empty() && entries.iter().all(|entry| by_kind(&entry.pos) <= 1);
+        if by_kind(pos) >= 2 && grammar_only {
+            return forms;
+        }
+    }
+    let as_kind = pos.is_some_and(|pos| entries.iter().any(|it| same_part(&it.pos, pos)));
+    for entry in &entries {
+        if as_kind && !pos.is_some_and(|pos| same_part(&entry.pos, pos)) {
+            continue;
+        }
+        forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
+    }
+    forms
 }
 
 /// The words an English word's translation table gives in [wanted]'s language, in the order
@@ -2634,11 +2664,12 @@ fn meant_words<D: AsRef<[u8]>>(
             let lemma = pieces.join(" ");
             let mut forms = vec![lemma.clone()];
             if let Some(theirs) = open.target {
-                for entry in theirs.lookup(&lemma) {
-                    if same_word(&entry.lemma, &lemma) {
-                        forms.extend(entry.forms.iter().map(|form| form.spelling.to_lowercase()));
-                    }
-                }
+                forms.extend(
+                    forms_as(theirs, &lemma, pos)
+                        .into_iter()
+                        .skip(1)
+                        .map(|form| form.to_lowercase()),
+                );
             }
             pieces.clear();
             forms
@@ -3022,7 +3053,8 @@ fn resolve_one<D: AsRef<[u8]>>(
             // joined is "pelaje", an animal's.
             let found = said
                 .and_then(|said| {
-                    in_line_of(words.clone(), other, said).or_else(|| in_line(&asked, other, said))
+                    in_line_of(words.clone(), other, said, Some(&entry.pos))
+                        .or_else(|| in_line(&asked, other, said))
                 })
                 .or_else(|| {
                     table
