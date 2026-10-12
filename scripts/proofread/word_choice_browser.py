@@ -51,4 +51,10 @@ for with_line in (False, True):
     answered = [r for r in rows if r["lead"]]
     good = [r for r in answered if agrees(r["lead"], pairs[r["at"]][1])]
     print(f"{lang} {'machine line' if with_line else 'alone'}: {len(answered)} answered, {len(good)} agree ({100*len(good)/max(1,len(answered)):.1f}%) in {time.time()-t0:.0f}s")
+    # MISSES=<file> writes every miss with the line, for grouping by word.
+    if with_line and os.environ.get("MISSES"):
+        with open(os.environ["MISSES"], "w", encoding="utf-8") as f:
+            for r in answered:
+                if r not in good:
+                    f.write(f"{r['word']}\t{r['lead']}\t{pairs[r['at']][1]}\n")
 cdp.close()

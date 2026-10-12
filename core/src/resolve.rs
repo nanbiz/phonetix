@@ -935,6 +935,9 @@ fn ranked_senses<D: AsRef<[u8]>>(
                     continue;
                 }
             }
+            if is_affix(&entry) {
+                continue;
+            }
             let kind = by_kind(&entry.pos);
             // An entry that only points at another word is not the word - except a function
             // word, which a dictionary describes by its grammar: "el" is "masculine singular
@@ -1249,7 +1252,7 @@ fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec
     let mut words: Vec<(String, u8)> = Vec::new();
     for (which, _) in wanted.translations(english, pos) {
         if let Some(found) = wanted.entry(which) {
-            if words.iter().any(|(had, _)| *had == found.lemma) {
+            if words.iter().any(|(had, _)| *had == found.lemma) || is_affix(&found) {
                 continue;
             }
             // How plainly its own dictionary gives the English back: as the whole of a sense
@@ -1461,6 +1464,18 @@ fn same_part(one: &str, other: &str) -> bool {
         }
     }
     kind(one) == kind(other)
+}
+
+/// Whether an entry is a piece of a word rather than a word: an ending or a beginning, which
+/// a table can list and a reader can never be handed. "to" marking an infinitive is listed
+/// in Spanish as the endings "-ar", "-er" and "-ir", and was "-a" on a hundred and thirty-nine
+/// of a thousand lines.
+fn is_affix(entry: &Entry) -> bool {
+    matches!(
+        entry.pos.as_str(),
+        "suffix" | "prefix" | "affix" | "infix" | "interfix" | "circumfix"
+    ) || entry.lemma.starts_with('-')
+        || (entry.lemma.ends_with('-') && entry.lemma.chars().count() > 1)
 }
 
 /// Whether an entry is a reading nobody means in ordinary text: a letter or a symbol, only a

@@ -2486,6 +2486,44 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// A table can list a piece of a word, and a reader is never handed one: "to" marking an
+/// infinitive is listed in Spanish as the ending "-ar", and its card said "-ar".
+#[test]
+fn an_ending_is_no_answer() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(
+            word(
+                "to",
+                "particle",
+                "tuː",
+                &["Marks the following verb as an infinitive."],
+            ),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let ending = spanish
+        .add::<&str>(
+            word("-ar", "suffix", "aɾ", &["forms infinitives of verbs"]),
+            &[],
+        )
+        .unwrap();
+    let que = spanish
+        .add::<&str>(word("que", "conj", "ke", &["that"]), &[])
+        .unwrap();
+    spanish.translated("to", "particle", &[(ending, 0), (que, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = read_in_context("to", None, &lang("en"), &lang("es"), &open).says;
+    assert!(!says.iter().any(|word| word.starts_with('-')), "{says:?}");
+}
+
 /// An English capital is a sentence's: "It" starting one is the pronoun, not the noun "it" of
 /// the game of tag. And a form's note that goes on to say what it means is that meaning:
 /// "people" is "plural of person: a body of persons", ahead of the verb "to people".
