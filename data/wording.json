@@ -431,6 +431,7 @@
     "learn-language": "Learn a language",
     "make-main": "Make it my language",
     "main-language": "My language",
-    "learning-it": "learning %s"
+    "learning-it": "learning %s",
+    "dictate": "Dictate"
   }
 }

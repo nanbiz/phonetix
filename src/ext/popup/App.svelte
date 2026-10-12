@@ -260,8 +260,9 @@
     <Group>
       <div class="item" data-row="translator">
         <span class="item-text">
-          <!-- The key that opens it beside its name; the one that opens it hearing under. -->
-          <span class="name-line">
+          <!-- Its two ways in, each with its key, the keys in one column: the panel, and the
+               panel opened hearing what to translate. -->
+          <span class="ways">
             <span class="item-name" data-name><TranslatorIcon class="row-icon" />{ROWS.translator.name}</span>
             {#if keyboard}
             <button class="keys" data-does="shortcut" onclick={shortcuts}>
@@ -271,18 +272,16 @@
                 {SAYS['set-key']}
               {/if}
             </button>
+            <span class="way"><Mic class="row-icon" />{SAYS['dictate']}</span>
+            <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
+              {#if speaking}
+                {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+              {:else}
+                {SAYS['set-key']}
+              {/if}
+            </button>
             {/if}
           </span>
-          {#if keyboard}
-          <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
-            <Mic class="keys-icon" />
-            {#if speaking}
-              {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-            {:else}
-              {SAYS['set-key']}
-            {/if}
-          </button>
-          {/if}
         </span>
         <button
           class="button"

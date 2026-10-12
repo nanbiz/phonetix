@@ -73,8 +73,8 @@ body {
 }
 
 .item {
-  min-height: 48px;
-  padding: 8px 14px;
+  min-height: 46px;
+  padding: 7px 14px;
   gap: 12px;
 }
 
@@ -164,17 +164,25 @@ label.item:hover {
   border-color: var(--color-accent);
 }
 
-/* A row's name with the keys that do what it names, on one line. */
-.name-line {
-  display: flex;
+/* The translator's ways in, each beside its key, the keys in one column. */
+.ways {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: start;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 4px;
 }
 
-.name-line .keys {
+.ways .keys {
   align-self: center;
   margin: 0;
+}
+
+/* The second way in, named under the first and quieter than it. */
+.way {
+  font-size: 14px;
+  color: var(--color-ink-muted);
 }
 
 .keys .keys-icon {
