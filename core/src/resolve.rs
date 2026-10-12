@@ -1280,9 +1280,21 @@ fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec
     // whose table lists several words that each are exactly it, in the order its editors put
     // them: "you" is "tú" before "vos".
     let ordered = by_kind(pos) > 1;
-    let (plain, rest): (Vec<_>, Vec<_>) = words
+    let (mut plain, rest): (Vec<_>, Vec<_>) = words
         .into_iter()
         .partition(|(_, back)| ordered && *back == 2);
+    // Among words that each are just the English word, the one the reader's language says
+    // most: "last" is "postrero" and "último" alike, and "postrero" is a word of old books.
+    let met = |word: &str| -> u64 {
+        wanted
+            .lookup(word)
+            .iter()
+            .filter(|entry| same_word(&entry.lemma, word))
+            .filter_map(how_often)
+            .max()
+            .unwrap_or(0)
+    };
+    plain.sort_by_cached_key(|(word, _)| std::cmp::Reverse(met(word)));
     plain
         .into_iter()
         .chain(rest)
@@ -1853,12 +1865,27 @@ fn read_found<D: AsRef<[u8]>>(
                 .then(|| commonest_answer(&all, open))
                 .flatten()
         })
+        // Between an English spelling's little words, though, it does: those are on every
+        // line in both languages, and "but" the conjunction is "pero", met far more than
+        // "excepto", the preposition the dictionary lists first; "yet" is "aún" far more
+        // than "no obstante".
+        .or_else(|| {
+            (source.0 == "en")
+                .then(|| commonest_little_word(&all, open))
+                .flatten()
+        })
         // An English spelling that is both a word and a form of another is the form where the
         // other word is met far more in English itself: "landed" is "land" in the past far
         // more often than it is the adjective, while "left" stays open, since the direction is
         // met nearly as often as the rest of "leave".
+        // Not a word of grammar, though: "as" is also the plural of the letter "a", which is
+        // met far more than "as", and read as that the conjunction was "A".
         .or_else(|| {
-            (source.0 == "en")
+            let little = all
+                .first()
+                .and_then(|first| first.pos.as_deref())
+                .is_some_and(|pos| by_kind(pos) == 0);
+            (source.0 == "en" && !little)
                 .then(|| form_met_more(&all, open))
                 .flatten()
         })
@@ -1867,12 +1894,21 @@ fn read_found<D: AsRef<[u8]>>(
         .or_else(|| plural_of_its_own(&all, &noted))
         .or_else(|| chosen_by_neighbour(&all, before, pack))
         // With nothing else to go on, a word that is a word of grammar is that word: "the" is
-        // the article, not the adverb of "the more the merrier".
+        // the article, not the adverb of "the more the merrier". Not one the reader's language
+        // has no word for, beside a reading it has one for: a word of grammar is on every line
+        // and every language says it, while "choose" filed as a conjunction is the
+        // mathematician's "n choose k", and led every card on the verb.
         .or_else(|| {
-            all.first()
-                .and_then(|first| first.pos.as_deref())
-                .is_some_and(|pos| by_kind(pos) == 0)
-                .then_some(0)
+            let first = all.first()?;
+            let grammar = first.pos.as_deref().is_some_and(|pos| by_kind(pos) == 0);
+            if !grammar {
+                return None;
+            }
+            let translating = open.target.is_some() && target.0 != source.0;
+            if translating && first.says.is_empty() {
+                return all.iter().position(|answer| !answer.says.is_empty());
+            }
+            Some(0)
         });
     if let Some(at) = decided {
         all.swap(0, at);
@@ -2209,6 +2245,47 @@ fn form_met_more<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<usize
             met(lemma, false).saturating_sub(alone) >= alone.saturating_mul(COMMONER_BY)
         })
     })
+}
+
+/// Of the readings that are little words - a word of grammar, or an adverb, which a page
+/// uses the same way - the one whose answer the reader's language meets [COMMONER_BY] times as
+/// often as any other's, where the first reading is one of them.
+fn commonest_little_word<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<usize> {
+    let pack = open.target?;
+    let little = |answer: &Answer| {
+        answer
+            .pos
+            .as_deref()
+            .is_some_and(|pos| by_kind(pos) == 0 || pos == "adv")
+    };
+    if !all.first().is_some_and(little) {
+        return None;
+    }
+    let met = |answer: &Answer| -> u64 {
+        let Some(word) = answer.says.first() else {
+            return 0;
+        };
+        pack.lookup(word)
+            .iter()
+            .filter(|entry| same_word(&entry.lemma, word))
+            .filter_map(how_often)
+            .max()
+            .unwrap_or(0)
+    };
+    let counts: Vec<(usize, u64)> = all
+        .iter()
+        .enumerate()
+        .filter(|(_, answer)| little(answer))
+        .map(|(at, answer)| (at, met(answer)))
+        .collect();
+    let (best, most) = *counts.iter().max_by_key(|(_, count)| *count)?;
+    let second = counts
+        .iter()
+        .filter(|(at, _)| *at != best && all[*at].says.first() != all[best].says.first())
+        .map(|(_, count)| *count)
+        .max()
+        .unwrap_or(0);
+    (most > 0 && most >= second.saturating_mul(COMMONER_BY)).then_some(best)
 }
 
 /// How many times as often one reading's answer has to be met as any other's to be drawn first.
