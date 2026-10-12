@@ -939,7 +939,11 @@ mod tests {
     #[test]
     fn an_article_that_does_not_inflect_says_nothing_of_its_noun() {
         let image = entry("image", "noun", &[("images", "plural")]);
-        let the = entry("the", "article", &[("teh", "alternative"), ("ye", "alternative")]);
+        let the = entry(
+            "the",
+            "article",
+            &[("teh", "alternative"), ("ye", "alternative")],
+        );
         let found = form("images", &image, &determiner_places("the", &[the])).unwrap();
         assert_eq!(values(&found.place), ["plural"]);
     }
