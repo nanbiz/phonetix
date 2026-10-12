@@ -79,7 +79,7 @@ def main():
         cdp.send("Runtime.enable", session=session)
 
         drawn = None
-        for _ in range(15):
+        for _ in range(30):
             drawn = read(cdp, session, """
                 (() => {
                   const light = document.querySelector('[data-mode="light"]');
@@ -116,7 +116,9 @@ def main():
                   return JSON.stringify(out);
                 })()
             """)
-            if drawn:
+            # Drawn, and with the sounds of each transcription in: those come from the host,
+            # which on a busy machine answers after the cards are first drawn without them.
+            if drawn and json.loads(drawn).get("entry", {}).get("symbols"):
                 break
             time.sleep(1)
         if not drawn:
