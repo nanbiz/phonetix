@@ -940,6 +940,9 @@ function letGo(): void {
   anchored = null;
 }
 
+/** What holds another document, whose words and pointer this page knows nothing of. */
+const EMBEDDED = new Set(['IFRAME', 'FRAME', 'EMBED', 'OBJECT']);
+
 /** The frame the ember is next put where the pointer is, while one is asked for. */
 let emberFrame = 0;
 
@@ -956,7 +959,7 @@ function followWithEmber(): void {
     return;
   }
   const at = document.elementFromPoint(pointer.x, pointer.y);
-  if (!at || inside(at)) {
+  if (!at || inside(at) || EMBEDDED.has(at.tagName)) {
     emberAway();
     return;
   }
@@ -1177,9 +1180,14 @@ function gestures(): void {
   };
   document.addEventListener('mousemove', followSoon, { passive: true });
   window.addEventListener('scroll', followSoon, { capture: true, passive: true });
-  // Off the window, the pointer is nowhere on the page.
+  // Off the window, or into a frame of the page, whose moves this page never hears, the
+  // pointer is nowhere on the page: where it last was is forgotten, or a scroll afterwards put
+  // the fire back there and it burnt on where nothing was.
   document.addEventListener('mouseout', (event) => {
-    if (!event.relatedTarget) emberAway();
+    const to = event.relatedTarget;
+    if (to && !(to instanceof Element && EMBEDDED.has(to.tagName))) return;
+    pointer = { x: -1, y: -1 };
+    emberAway();
   });
 
   document.addEventListener('mouseover', (event) => {

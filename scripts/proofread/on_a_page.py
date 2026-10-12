@@ -520,6 +520,46 @@ def ember_checks(hand, engine, failures, store):
             if any(mark in quiet["ipa"] for mark in "ˈˌ"):
                 failures.append(f"{engine}: the card shows stress marks with them off: {quiet}")
         store({"knownLanguages": None, "hideStress": None})
+    # Into a frame of the page, whose moves the page never hears: no fire left at its edge,
+    # and none put back where the pointer last was when the page scrolls afterwards.
+    framed = hand.ask("""
+        (() => {
+          const frame = document.createElement('iframe');
+          frame.id = 'ember-frame-check';
+          frame.srcdoc = '<p>inside</p>';
+          frame.style.cssText = 'position:fixed;left:20px;bottom:20px;width:240px;height:120px;border:0';
+          document.body.appendChild(frame);
+          const tall = document.createElement('div');
+          tall.id = 'ember-frame-tall';
+          tall.style.height = '3000px';
+          document.body.appendChild(tall);
+          const r = frame.getBoundingClientRect();
+          return {x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, top: r.top};
+        })()
+    """)
+    time.sleep(0.5)
+    for k in range(6):
+        hand.move(framed["left"] + 300 - 50 * k, framed["y"])
+        time.sleep(0.03)
+    hand.move(framed["x"], framed["y"])
+    time.sleep(0.4)
+    in_frame = hand.ask(EMBER_JS)
+    hand.ask("window.scrollBy(0, 200)")
+    time.sleep(0.4)
+    scrolled = hand.ask(EMBER_JS)
+    # Out of the frame before it goes: a frame taken away from under the pointer leaves the
+    # browser sending what the pointer does next to a document that is gone.
+    hand.ask("window.scrollTo(0, 0)")
+    hand.move(where["empty"]["x"], where["empty"]["y"])
+    time.sleep(0.3)
+    hand.ask("(() => { document.getElementById('ember-frame-check').remove();"
+             " document.getElementById('ember-frame-tall').remove(); return true; })()")
+    print(f"  {engine}, the ember with the pointer in a frame: {in_frame}; after a scroll: {scrolled}")
+    for seen, when in ((in_frame, "in a frame"), (scrolled, "in a frame, after a scroll")):
+        if seen and "on" in seen["ball"].split():
+            failures.append(f"{engine}: the ember burns with the pointer {when}: {seen}")
+    hand.move(where["empty"]["x"], where["empty"]["y"])
+    time.sleep(0.3)
     store({"on": False})
     hand.move(where["empty"]["x"] + 4, where["empty"]["y"])
     time.sleep(0.6)
