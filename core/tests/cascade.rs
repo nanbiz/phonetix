@@ -2486,6 +2486,67 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// A reading the line says by a word none of the readings' own words reach: the engine wrote
+/// "fundamental", whose dictionary calls it "essential", and only the adjective "core" is
+/// "essential" too.
+#[test]
+fn the_lines_word_says_which_reading_by_what_it_means() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(
+            word(
+                "core",
+                "noun",
+                "kɔɹ",
+                &["The central part of a fruit, holding the seeds."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            word("core", "adj", "kɔɹ", &["Forming the most essential part."]),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let corazon = spanish
+        .add::<&str>(word("corazón", "noun", "ko.ɾaˈθon", &["heart, core"]), &[])
+        .unwrap();
+    let troncal = spanish
+        .add::<&str>(
+            word("troncal", "adj", "tɾonˈkal", &["trunk (main line)"]),
+            &[],
+        )
+        .unwrap();
+    let mut fundamental = word(
+        "fundamental",
+        "adj",
+        "fun.da.menˈtal",
+        &["essential, basic"],
+    );
+    fundamental.forms.push(lexpack::Form {
+        spelling: "fundamentales".to_string(),
+        label: "plural".to_string(),
+    });
+    spanish.add::<&str>(fundamental, &[]).unwrap();
+    spanish.translated("core", "noun", &[(corazon, 0)]);
+    spanish.translated("core", "adj", &[(troncal, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = |said: &'static str| Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        said: Some(said),
+        ..Open::default()
+    };
+    let read =
+        |said| read_in_context("core", Some("a"), &lang("en"), &lang("es"), &open(said)).says;
+    assert_eq!(read("Una prueba fundamental.")[0], "fundamental");
+    // A line holding a reading's own word is that reading's, as it was.
+    assert_eq!(read("El corazón de la manzana.")[0], "corazón");
+}
+
 /// An English word in a form another language has too is its word put into that form, from
 /// that word's own table: "houses" is "casas", "published" is "publicado", never the bare
 /// "casa" or "publicar". A dialect's label is no form a reader met: "went" is filed as a

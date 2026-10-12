@@ -1819,7 +1819,28 @@ fn read_found<D: AsRef<[u8]>>(
                 .filter_map(|sense| form_of_word(&sense.gloss))
         })
         .collect();
+    // Where no reading's own words are in the line, the line's words by what they mean: the
+    // one reading whose definitions share words with one of them, and that word its answer.
+    let by_meaning = match (open.said, open.target) {
+        (Some(said), Some(other))
+            if !said.trim().is_empty()
+                && !meant.is_empty()
+                && !meant
+                    .iter()
+                    .flatten()
+                    .any(|words| holds(&normalised(said), words)) =>
+        {
+            chosen_by_line_meaning(&all, other, said, spelling)
+        }
+        _ => None,
+    };
+    if let Some((at, word)) = &by_meaning {
+        let says = &mut all[*at].says;
+        says.retain(|had| !same_word(had, word));
+        says.insert(0, word.clone());
+    }
     let decided = chosen_by_translation(&meant, &verbs, &fits, open.said)
+        .or_else(|| by_meaning.as_ref().map(|(at, _)| *at))
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
         // it: "from someone" is a preposition before a pronoun, and read as one before a noun
@@ -2251,6 +2272,69 @@ fn chosen_by_translation(
         }
     }
     found.map(|(at, _)| at)
+}
+
+/// The reading the translated line means by one of its words, where none of the readings'
+/// own words is in it: the engine said the thing its own way, with a word no table or join of
+/// this spelling reaches, and what that word's dictionary says it is can still be what one
+/// reading is and no other. Each word of the line, by its lemma in the reader's pack, against
+/// each reading's first definitions, the two of the same kind of word: the reading sharing
+/// telling words with one of them, where it alone shares any, and that line word's lemma as its
+/// answer. Measured through the extension with its engine's lines against people's
+/// translations of 100 Tatoeba sentences: Spanish 61.8% to 64.2%, German 64.0% to 65.9%.
+fn chosen_by_line_meaning<D: AsRef<[u8]>>(
+    all: &[Answer],
+    other: &Pack<D>,
+    said: &str,
+    spelling: &str,
+) -> Option<(usize, String)> {
+    let readings: Vec<std::collections::HashSet<String>> = all
+        .iter()
+        .map(|answer| {
+            answer
+                .glosses
+                .iter()
+                .take(3)
+                .flat_map(|gloss| telling_words(gloss, spelling))
+                .collect()
+        })
+        .collect();
+    // For each reading, its best line word and how many words they share.
+    let mut best: Vec<(usize, Option<String>)> = vec![(0, None); all.len()];
+    for word in normalised(said) {
+        if word.chars().count() < 4 {
+            continue;
+        }
+        for entry in lookup_either_case(other, &word) {
+            if is_minor(&entry) {
+                continue;
+            }
+            let defined: std::collections::HashSet<String> = entry
+                .senses
+                .iter()
+                .take(3)
+                .flat_map(|sense| telling_words(&sense.gloss, &entry.lemma))
+                .collect();
+            for (at, reading) in readings.iter().enumerate() {
+                if all[at]
+                    .pos
+                    .as_deref()
+                    .is_some_and(|pos| !same_part(pos, &entry.pos))
+                {
+                    continue;
+                }
+                let shared = reading.intersection(&defined).count();
+                if shared > best[at].0 {
+                    best[at] = (shared, Some(entry.lemma.clone()));
+                }
+            }
+        }
+    }
+    let reached: Vec<usize> = (0..best.len()).filter(|at| best[*at].0 > 0).collect();
+    match reached.as_slice() {
+        [only] => best[*only].1.clone().map(|word| (*only, word)),
+        _ => None,
+    }
 }
 
 /// The words of a definition that say something: not the little words every definition has,
