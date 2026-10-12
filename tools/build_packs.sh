@@ -8,7 +8,9 @@
 # 3. the English entries' translation tables, split by the language they translate into;
 # 4. one pack per language, with packbuild, and its manifest row beside it, carrying what the
 #    tables say each English word is in it;
-# 5. the listing of translation models, pinned to what Mozilla publishes now.
+# 5. what each language's words mean in that language, from the Wiktionary written in it, for
+#    every edition kaikki.org extracts: a pack "def-<language>" held beside the language's own;
+# 6. the listing of translation models, pinned to what Mozilla publishes now.
 #
 # Then `node scripts/publish-packs.mjs <work dir>/release` puts them where the app fetches.
 set -euo pipefail
@@ -104,6 +106,24 @@ for lang in "${!filed[@]}"; do
   cat $files > "$work/$lang.filed.jsonl.gz"
   pack "$lang" "$work/$lang.filed.jsonl.gz" "$codes"
   rm -f "$work/$lang.filed.jsonl.gz"
+done
+
+# The editions of Wiktionary written in another language than English, as kaikki.org extracts
+# them, each defining its own language's words in it.
+editions="$work/editions"
+mkdir -p "$editions"
+for lang in cs de el es fr id it ja ko ku ms nl pl pt ru th tr vi zh; do
+  file="$editions/$lang-extract.jsonl.gz"
+  if [[ ! -s "$file" ]]; then
+    curl -fsSL -C - -o "$file" "https://kaikki.org/dictionary/downloads/$lang/$lang-extract.jsonl.gz" \
+      || { rm -f "$file"; echo "def-$lang: no edition" >&2; continue; }
+  fi
+  if "$build" define "$lang" "$file" "$out/def-$lang.pack" > "$out/def-$lang.pack.json"; then
+    printf '%s %s\n' "def-$lang" "$(head -c 200 "$out/def-$lang.pack.json")"
+  else
+    echo "def-$lang: no pack" >&2
+    rm -f "$out/def-$lang.pack" "$out/def-$lang.pack.json"
+  fi
 done
 
 uv run python tools/models_manifest.py "$out/models.json"

@@ -94,9 +94,12 @@ export function host(): void {
   // health check becomes the thing that breaks the health it reports on.
   onMessage('health', () => Promise.resolve({ trouble: recent() }));
 
+  // A language's own definitions are a pack held beside its dictionary, not a language: the
+  // lists a reader chooses from leave them out.
+  const languages = (all: string[]) => all.filter((lang) => !lang.startsWith('def-'));
   onMessage('packs', async () => ({
-    held: await held(),
-    open: await openLanguages(),
+    held: languages(await held()),
+    open: languages(await openLanguages()),
     // What is on offer is asked for rather than remembered: a reader who changed where their
     // dictionaries come from means it from that moment.
     offered: await offered().then(
@@ -105,7 +108,7 @@ export function host(): void {
         // the reader who set that host is still told.
         if (ownHostAnswered()) answered('the dictionary host');
         else noted('the dictionary host', 'cannot be reached');
-        return list;
+        return list.filter((pack) => !pack.lang.startsWith('def-'));
       },
       (e) => {
         console.warn('[Phonetix] No list of packs:', e);
@@ -305,6 +308,9 @@ export function host(): void {
       // The accent's own words, where that accent is one that has them.
       data.accent ? open(data.accent).catch(() => null) : null,
       openHomographs(data.source).catch(() => 0),
+      // A word read in its own language is defined in it, from that language's own
+      // Wiktionary, held beside its pack; fetched the first time like any pack.
+      data.target === data.source ? open(`def-${data.source}`).catch(() => null) : null,
     ]);
     const answer = await lookUp(
       data.word, data.source, data.target, data.accent ?? '', data.before ?? '', data.drawn ?? ''

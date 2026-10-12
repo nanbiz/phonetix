@@ -88,6 +88,7 @@ fn a_lemma_that_joins_is_an_entry() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -122,6 +123,7 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Form);
@@ -152,6 +154,7 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
     assert_eq!(
@@ -185,6 +188,7 @@ fn two_words_reached_equally_well_are_answered_with_one_of_them() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -214,6 +218,7 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(got.state, AnswerState::Mono);
@@ -239,6 +244,7 @@ fn a_reader_of_english_needs_no_join_at_all() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -259,6 +265,7 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::None);
@@ -277,6 +284,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
@@ -291,6 +299,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
@@ -322,6 +331,7 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
     // The entry is here and the reader's own pack is open; what is missing is a join between
@@ -364,6 +374,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.example.as_deref(), Some("El perro ladra."));
@@ -382,6 +393,7 @@ fn a_sense_with_no_example_invents_none() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("en"), &open).example,
@@ -415,6 +427,7 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Homograph);
@@ -438,6 +451,7 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         said: None,
         classifier: None,
         others: None,
+        defines: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert!(got.readings.is_empty(), "nothing to choose between");
@@ -502,6 +516,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         },
     );
     assert_eq!(standard.ipa, ["ˈʃɛdjuːl"]);
@@ -519,6 +534,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         },
     );
     assert_eq!(said.ipa, ["ˈskɛdʒuːl"]);
@@ -539,6 +555,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         },
     );
     assert_eq!(cut.ipa, ["kɐt"]);
@@ -586,6 +603,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         },
     );
     assert_eq!(said.ipa, ["ˈwɔːtɚ"]);
@@ -906,6 +924,7 @@ fn the_sentences_own_translation_says_which_word_it_is() {
             said,
             classifier: None,
             others: None,
+            defines: None,
         };
         look_up("banco", &lang("es"), &lang("en"), &open)
     };
@@ -1786,6 +1805,7 @@ fn a_line_in_another_language_is_read_in_that_language_s_accent() {
     let open = Open {
         source: held.get("en"),
         others: Some(&held),
+        defines: None,
         ..Open::default()
     };
     let mut accents = std::collections::HashMap::new();
@@ -1838,6 +1858,7 @@ fn a_language_in_its_own_accent_keeps_every_reading() {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         };
         look_up("modern", &lang("de"), &lang("en"), &open)
     };
@@ -2279,7 +2300,7 @@ fn an_english_word_is_what_its_translation_table_says() {
         .unwrap();
     let archivo = spanish
         .add(
-            word("archivo", "noun", "aɾˈt͡ʃi.βo", &["archive"]),
+            word("archivo", "noun", "aɾˈt͡ʃi.βo", &["archive, file"]),
             &["archivos"],
         )
         .unwrap();
@@ -2305,4 +2326,30 @@ fn an_english_word_is_what_its_translation_table_says() {
     };
     let in_line = read_in_context("files", None, &lang("en"), &lang("es"), &with_line);
     assert_eq!(in_line.says, ["ficheros"]);
+}
+
+/// A word read in its own language is defined in it, where the language's own Wiktionary is
+/// held beside its pack: a reader of Spanish is told what "perros" is in Spanish, not handed
+/// its English gloss, which is a translation they did not ask for.
+#[test]
+fn a_word_read_in_its_own_language_is_defined_in_it() {
+    let spanish = Pack::open(spanish()).unwrap();
+    let mut own = Builder::new("def-es", Kind::Lex, 0).without_joins();
+    own.add::<&str>(
+        word("perro", "noun", "", &["Mamífero doméstico de la familia de los cánidos."]),
+        &[],
+    )
+    .unwrap();
+    let own = Pack::open(own.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&spanish),
+        target: Some(&spanish),
+        defines: Some(&own),
+        ..Open::default()
+    };
+    let read = read_in_context("perros", None, &lang("es"), &lang("es"), &open);
+    assert_eq!(read.says, ["Mamífero doméstico de la familia de los cánidos."]);
+    // Read into English it is still the English.
+    let english = read_in_context("perros", None, &lang("es"), &lang("en"), &open);
+    assert_ne!(english.says, read.says);
 }

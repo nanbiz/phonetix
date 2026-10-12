@@ -3479,6 +3479,14 @@ class PhonetixAccessibilityService : AccessibilityService() {
         }
         if (target.isEmpty() || source == target) {
             missingDirection = null
+            // A screen in a language the reader reads: its words are defined in it, from that
+            // language's own Wiktionary, held beside its dictionary. English is defined in
+            // English by its dictionary already.
+            if (source != "en") {
+                Fetch.pack(this, "def-$source") { arrived ->
+                    if (arrived) io.post { Packs.openHeld(this) }
+                }
+            }
             return
         }
         // And the dictionary of the language read into, which is what another language's

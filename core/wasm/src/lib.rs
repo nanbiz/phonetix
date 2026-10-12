@@ -293,6 +293,8 @@ impl Core {
             said: Some(drawn).filter(|it| !it.is_empty()),
             classifier: self.classifiers.get(source),
             others: None,
+            // What the language's own Wiktionary says, where its pack is held beside it.
+            defines: self.packs.get(&format!("def-{source}")),
         };
         let answer = lexcore::resolve::read_in_context(
             spelling,
@@ -361,6 +363,7 @@ impl Core {
             said: None,
             classifier: self.classifiers.get(source),
             others: Some(&self.packs),
+            defines: None,
         };
         let options = AnnotateOptions {
             mode: match mode {
@@ -439,6 +442,7 @@ impl Core {
             said: None,
             classifier: self.classifiers.get(source),
             others: Some(&self.packs),
+            defines: None,
         };
         complete(
             &mut tokens,

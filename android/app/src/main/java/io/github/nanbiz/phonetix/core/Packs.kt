@@ -35,8 +35,9 @@ object Packs {
     private fun file(context: Context, lang: String) =
         File(context.applicationContext.filesDir, "lex-$lang.pack")
 
-    /** Which dictionaries this phone holds. */
-    fun held(context: Context): List<String> =
+    /** Every pack this phone holds: the languages' dictionaries, and beside some of them what
+     *  that language's own Wiktionary says its words mean ("def-es"). */
+    private fun files(context: Context): List<String> =
         context.applicationContext.filesDir.listFiles()
             ?.mapNotNull { file ->
                 file.name.takeIf { it.startsWith("lex-") && it.endsWith(".pack") }
@@ -45,10 +46,17 @@ object Packs {
             ?.sorted()
             ?: emptyList()
 
+    /** Which languages this phone holds a dictionary for. A language's own definitions are a
+     *  pack held beside its dictionary, not a language a word can be looked up in. */
+    fun held(context: Context): List<String> = files(context).filterNot { it.startsWith("def-") }
+
+    /** Whether this phone holds the pack named [lang], a dictionary or definitions. */
+    fun holds(context: Context, lang: String): Boolean = lang in files(context)
+
     /** Open everything this phone holds, so the cascade can answer with it. */
     fun openHeld(context: Context) {
         if (Reading.core == 0L) return
-        for (lang in held(context)) {
+        for (lang in files(context)) {
             if (lang in open) continue
             val opened = runCatching { Lex.openPack(Reading.core, file(context, lang).path) }
                 .getOrNull()

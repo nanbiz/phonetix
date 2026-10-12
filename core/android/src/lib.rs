@@ -322,6 +322,8 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         said: Some(drawn.as_str()).filter(|it| !it.is_empty()),
         classifier: None,
         others: None,
+        // What the language's own Wiktionary says, where its pack is held beside it.
+        defines: core.packs.get(&format!("def-{source}")),
     };
     let answer = lexcore::resolve::read_in_context(
         &spelling,
@@ -584,6 +586,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         said: None,
         classifier: held.classifiers.get(&source),
         others: Some(&held.packs),
+        defines: None,
     };
     let options = lexcore::answer::AnnotateOptions {
         mode: match mode.as_str() {
@@ -720,6 +723,7 @@ pub unsafe extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_complete<'
         said: None,
         classifier: held.classifiers.get(&source),
         others: Some(&held.packs),
+        defines: None,
     };
     lexcore::annotate::complete(
         drawn,

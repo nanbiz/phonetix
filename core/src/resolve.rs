@@ -134,6 +134,10 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// Every pack the host holds, by language, for a line in another language than the one
     /// the screen is read in: an English notice on a German page is looked up in English.
     pub others: Option<&'a std::collections::HashMap<String, Pack<D>>>,
+    /// What the language's words mean in that language, from the Wiktionary written in it,
+    /// where the host holds it (packbuild define, "def-<language>"): a word read in its own
+    /// language is defined in it, where its English glosses would be a translation.
+    pub defines: Option<&'a Pack<D>>,
 }
 
 impl<'a, D: AsRef<[u8]>> Open<'a, D> {
@@ -174,6 +178,7 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
             said: None,
             classifier: None,
             others: None,
+            defines: None,
         }
     }
 }
@@ -1232,6 +1237,69 @@ pub fn look_up<D: AsRef<[u8]>>(
 /// quietly; where it does not, the reader is asked, because a wrong word wearing a
 /// dictionary's authority is what the whole cascade is shaped to avoid.
 pub fn read_in_context<D: AsRef<[u8]>>(
+    spelling: &str,
+    before: Option<&str>,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Answer {
+    let answer = read_found(spelling, before, source, target, open);
+    in_its_own_words(answer, source, target, open)
+}
+
+/// A word read in its own language, defined in it where the host holds what its Wiktionary
+/// says ([Open::defines]): "pensó", read by a reader of Spanish, is what "pensar" is in
+/// Spanish, rather than its English gloss, which is a translation they did not ask for.
+fn in_its_own_words<D: AsRef<[u8]>>(
+    mut answer: Answer,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Answer {
+    let Some(defines) = open.defines else {
+        return answer;
+    };
+    if source != target {
+        return answer;
+    }
+    let lemma = answer
+        .lemma
+        .clone()
+        .unwrap_or_else(|| answer.spelling.clone());
+    let own = own_words(defines, &lemma, answer.pos.as_deref().unwrap_or(""));
+    if !own.is_empty() {
+        answer.says = own;
+    }
+    // And each other word the spelling can be, which the card names by what it means.
+    for reading in &mut answer.readings {
+        let own = own_words(defines, &lemma, reading.pos.as_deref().unwrap_or(""));
+        if !own.is_empty() {
+            reading.says = own;
+        }
+    }
+    answer
+}
+
+/// What [defines] says [lemma] is, as the kind of word [pos] is where it has that one.
+fn own_words<D: AsRef<[u8]>>(defines: &Pack<D>, lemma: &str, pos: &str) -> Vec<String> {
+    let mut entries = defines.lookup(lemma);
+    if entries.is_empty() {
+        entries = defines.lookup(&lemma.to_lowercase());
+    }
+    let same: Vec<&Entry> = entries.iter().filter(|entry| entry.pos == pos).collect();
+    let chosen: Vec<&Entry> = if same.is_empty() {
+        entries.iter().collect()
+    } else {
+        same
+    };
+    chosen
+        .iter()
+        .flat_map(|entry| entry.senses.iter().map(|sense| sense.gloss.clone()))
+        .collect()
+}
+
+/// What [read_in_context] reads, before a word read in its own language is put in its words.
+fn read_found<D: AsRef<[u8]>>(
     spelling: &str,
     before: Option<&str>,
     source: &Lang,

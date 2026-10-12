@@ -42,7 +42,7 @@ object Fetch {
      * on a metered connection waits for one that is not: see [connectionFreed].
      */
     fun pack(context: Context, lang: String, then: (Boolean) -> Unit = {}) {
-        if (lang.isBlank() || lang in Packs.held(context)) return
+        if (lang.isBlank() || Packs.holds(context, lang)) return
         start("pack $lang", then) {
             val host = SettingsStore.current.packHost
             val listed = Packs.offered(host).firstOrNull { it.lang == lang }
@@ -77,7 +77,7 @@ object Fetch {
 
     /** The same thing, waited for: the panel is answering from it. */
     fun packNow(context: Context, lang: String): Boolean {
-        if (lang.isBlank() || lang in Packs.held(context)) return true
+        if (lang.isBlank() || Packs.holds(context, lang)) return true
         val key = "pack $lang"
         if (!mayTry(key) || !running.add(key)) return false
         return try {
