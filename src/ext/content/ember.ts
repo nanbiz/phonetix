@@ -22,9 +22,6 @@ import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 
-/** How much of the way to the pointer the fire covers in a sixtieth of a second: a trail, not
- *  a lag. */
-const EASE = 0.35;
 /** How many sparks a second the fire gives off while it burns at the pointer. */
 const SPARKS_PER_SECOND = 40;
 /** How many sparks carry the fire into a word, and back out of it. */
@@ -61,8 +58,10 @@ const CSS = `
   }
 `;
 
-/** One spark: where it is, how it moves, how long it has lived and will live. One that
- *  carries fire flies from where it started to a point, rather than drifting. */
+/** One spark: where it is, how it moves, how long it has lived and will live. A spark of the
+ *  fire at the pointer is placed from the fire's middle and goes where the fire goes, so a
+ *  moving pointer leaves no trail of sparks behind it; one that carries fire flies in the
+ *  window from where it started to a point, rather than drifting. */
 interface Spark {
   x: number;
   y: number;
@@ -102,6 +101,9 @@ let last = 0;
 let moved = 0;
 /** Frames drawn, which the checks read to tell a fire that moves from one that does not. */
 let drawn = 0;
+/** How far from the fire's middle the furthest thing drawn this frame reaches, which the
+ *  checks read to tell a fire from a trail of one. */
+let reach = 0;
 /** The word it last lit, so the same word is not lit again every frame. */
 let lit: DOMRect | null = null;
 let lighting = 0;
@@ -212,6 +214,7 @@ function report(): void {
   canvas.className = where === 'away' ? 'ember' : where === 'word' ? 'ember on in' : 'ember on';
   canvas.dataset.at = at ? `${at.x.toFixed(1)},${at.y.toFixed(1)}` : '';
   canvas.dataset.drawn = String(drawn);
+  canvas.dataset.reach = reach.toFixed(0);
 }
 
 function lightWord(word: DOMRect | null, after: boolean): void {
@@ -304,11 +307,8 @@ function step(now: number): void {
   const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
   last = now;
   const t = now / 1000;
-  // The fire trails the pointer, eased by how long the frame took rather than per frame.
-  if (at && where === 'pointer') {
-    const k = still ? 1 : 1 - Math.pow(1 - EASE, dt * 60);
-    at = { x: at.x + (goal.x - at.x) * k, y: at.y + (goal.y - at.y) * k };
-  }
+  // The fire burns at the tip itself, never behind it.
+  if (where === 'pointer') at = { ...goal };
   // The core empties while its fire is in a word, and fills as it comes back.
   const full = where === 'pointer' ? 1 : 0;
   const filling = sparks.some((spark) => spark.to === 'pointer');
@@ -321,7 +321,7 @@ function step(now: number): void {
       const angle = Math.random() * Math.PI * 2;
       const speed = 6 + Math.random() * 18;
       sparks.push({
-        x: at.x + spread(3), y: at.y + spread(3),
+        x: spread(3), y: spread(3),
         vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 14,
         age: 0, life: 0.28 + Math.random() * 0.42, size: 1.2 + Math.random() * 1.9,
       });
@@ -361,7 +361,13 @@ function step(now: number): void {
     bottom = Math.max(bottom, y + reach);
   };
   if (at && core > 0.01) take(at.x, at.y, 18);
-  for (const spark of sparks) take(spark.x, spark.y, spark.size * 2 + 2);
+  const ox = at?.x ?? 0;
+  const oy = at?.y ?? 0;
+  for (const spark of sparks) {
+    take(spark.to ? spark.x : ox + spark.x, spark.to ? spark.y : oy + spark.y, spark.size * 2 + 2);
+  }
+  reach = at && left !== Infinity
+    ? Math.max(at.x - left, right - at.x, at.y - top, bottom - at.y) : 0;
   if (left === Infinity) uncover();
   else cover(left, top, right, bottom, !sparks.some((spark) => spark.to));
   // Light on a dark page adds up the way fire does; on a light one it would add up to white.
@@ -376,7 +382,7 @@ function step(now: number): void {
     const carried = Boolean(spark.to);
     const hot = (carried ? 0.85 - k * 0.35 : 1 - k) * cooler;
     const alpha = carried ? 0.9 * (spark.to === 'pointer' ? 1 - k * 0.5 : 1 - k * k) : (1 - k) * 0.85;
-    stamp(spark.x, spark.y, spark.size * (carried ? 1 : 1 - k * 0.5), hot, alpha * gain);
+    stamp(carried ? spark.x : ox + spark.x, carried ? spark.y : oy + spark.y, spark.size * (carried ? 1 : 1 - k * 0.5), hot, alpha * gain);
   }
   // The core: a few soft blobs, each wandering round the middle and swelling on its own, so
   // their sum has no outline that holds.

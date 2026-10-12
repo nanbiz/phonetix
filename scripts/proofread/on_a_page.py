@@ -400,6 +400,7 @@ EMBER_JS = """
     return {ball: ball.className, word: light.className,
             at: (ball.dataset.at || '0,0').split(',').map(Number),
             burning: Number(ball.dataset.drawn) - before,
+            reach: Number(ball.dataset.reach || 0),
             lit: light.classList.contains('on') ? light.getBoundingClientRect().toJSON() : null};
   })()
 """
@@ -443,6 +444,18 @@ def ember_checks(hand, engine, failures, store):
     # about, and a fire that does not burn draws none.
     elif empty["burning"] < 2:
         failures.append(f"{engine}: the ember does not burn: {empty}")
+    # Swept across the window, the fire goes with the tip and leaves nothing behind it: what
+    # is drawn stays within the fire's own glow of the tip.
+    sweep = [(where["empty"]["x"] - 400 + 40 * k, where["empty"]["y"] - 20) for k in range(11)]
+    for x, y in sweep:
+        hand.move(x, y)
+        time.sleep(0.016)
+    swept = hand.ask(EMBER_JS)
+    print(f"  {engine}, the ember right after a sweep: {swept}")
+    if not swept or swept["reach"] > 40:
+        failures.append(f"{engine}: the ember leaves a trail behind the pointer: {swept}")
+    elif abs(swept["at"][0] - sweep[-1][0]) > 1.5:
+        failures.append(f"{engine}: the ember lags behind the pointer: {swept}")
     if where["word"]:
         hand.move(where["word"]["x"] - 3, where["word"]["y"])
         hand.move(where["word"]["x"], where["word"]["y"])
