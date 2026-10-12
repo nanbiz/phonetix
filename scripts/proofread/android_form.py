@@ -27,7 +27,12 @@ EN_PACK = os.environ.get("PHONETIX_EN_PACK", os.path.join(ROOT, ".cache", "relea
 
 # An English word for a reader who reads English, and the dictionary's first sense of it, which
 # the card gives whole under how it is said: a definition, where a translation would be none.
-DEFINED = ("commissions", "A sending or mission (to do or accomplish something).")
+# Read in English it takes the sense its sentence is about, "affiliate commissions when readers
+# buy" in a paragraph about product reviews; translated for a learner it keeps the dictionary's
+# first sense under the Spanish word.
+DEFINED = ("commissions", "A bonus in pay awarded to a salesperson for selling a particular, "
+           "secretly sponsored product, for which the sponsor will reimburse the employer.")
+PRACTISE_DEFINED = "A sending or mission (to do or accomplish something)."
 # What its table says it is in Spanish, in the form the card can give it.
 PRACTISED = ("comisión", "comisiones", "encargo", "encargos", "misión", "misiones")
 
@@ -87,7 +92,7 @@ def main():
     print(f"  {word}, learning Spanish: {' | '.join(texts)}")
     if not any(text in texts for text in PRACTISED):
         failures.append(f"the card for {word}, learning Spanish, says no Spanish word: {texts}")
-    if sense not in texts:
+    if PRACTISE_DEFINED not in texts:
         failures.append(f"the card for {word}, learning Spanish, lost its definition: {texts}")
     dev.surface(mode="prose", target="en", known="none", learn="none", enable=1, density=1)
     if failures:

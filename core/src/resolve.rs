@@ -3238,7 +3238,26 @@ fn resolve_one<D: AsRef<[u8]>>(
     // reader met.
     let mut says: Vec<String> = Vec::new();
     let mut tied = false;
-    for gloss in &glosses {
+    // Not through a sense nobody means in ordinary text, where the word has another: "glass"
+    // the verb is also the colloquial "to strike someone with a drinking glass", and joined
+    // through its "strike" it was "atentar".
+    let usual: Vec<&String> = entry
+        .senses
+        .iter()
+        .filter(|sense| {
+            !sense
+                .marks
+                .iter()
+                .any(|mark| UNUSUAL.contains(&mark.as_str()))
+        })
+        .map(|sense| &sense.gloss)
+        .collect();
+    let joined: Vec<&String> = if usual.is_empty() {
+        glosses.iter().collect()
+    } else {
+        usual
+    };
+    for gloss in joined.iter().copied() {
         // Each word reached, and how many of the gloss's terms reached it. A word reached
         // through two terms of "way, route" is a better answer than one reached through one,
         // and that is the whole of what separates Weg from Weise.
@@ -3283,7 +3302,7 @@ fn resolve_one<D: AsRef<[u8]>>(
     // senses are glossed as, ranked the way a word typed into the panel is: "für" is glossed
     // "for", which Spanish glosses "para" and "por" alike, and leaving it unanswered drew the
     // English gloss over a page being read in Spanish.
-    let asked: Vec<(String, Option<String>)> = glosses
+    let asked: Vec<(String, Option<String>)> = joined
         .iter()
         .filter_map(|gloss| meaning_of(gloss))
         .take(3)
