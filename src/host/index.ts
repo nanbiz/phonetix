@@ -463,7 +463,7 @@ async function described(answer: Answer, every: boolean): Promise<Answer> {
     }
   });
   if (asked.length === 0) return answer;
-  const said = await Promise.all(asked.map(({ text }) => lineSaid('en', into, text, DESCRIBE_WAIT_MS)));
+  const said = await Promise.all(asked.map(({ text }) => describedIn(into, text)));
   const readings = answer.readings.map((reading) => ({ ...reading }));
   let out: Answer = { ...answer, readings };
   asked.forEach(({ at }, n) => {
@@ -475,10 +475,36 @@ async function described(answer: Answer, every: boolean): Promise<Answer> {
   return out;
 }
 
-/** A definition's first sentence, which is what it says the thing is; the rest qualifies it. */
+/**
+ * A definition put into [into]. A verb's is asked as what a word means, "Meaning: to eat
+ * brunch.", and the label cut off what comes back: asked as it is, the translator read its "to"
+ * as a purpose ("Para comer brunch.", in order to eat it), and without the "to" as an order
+ * ("Come el brunch."). Labelled, every language it was tried in gave the infinitive.
+ */
+async function describedIn(into: string, text: string): Promise<string> {
+  const verb = /^to\s/i.test(text);
+  const asked = verb ? `Meaning: ${text.charAt(0).toLowerCase()}${text.slice(1)}` : text;
+  let said = await lineSaid('en', into, asked, DESCRIBE_WAIT_MS);
+  if (verb && said) {
+    const at = said.indexOf(':');
+    said = (at >= 0 ? said.slice(at + 1) : said).trim();
+    said = `${said.charAt(0).toUpperCase()}${said.slice(1)}`;
+  }
+  return said;
+}
+
+/**
+ * What a definition says the thing is, as the translator is to read it: its first sentence,
+ * without what qualifies it, a bracket or a clause after "often" or "especially".
+ */
 function sentenceOfGloss(gloss: string): string {
-  const end = gloss.search(/[.;](\s|$)/);
-  return (end > 0 ? gloss.slice(0, end + 1) : gloss).trim();
+  let text = gloss.replace(/\s*\([^()]*\)/g, '');
+  const end = text.search(/[.;](\s|$)/);
+  if (end > 0) text = text.slice(0, end);
+  const hedge = text.search(/,\s+(often|especially|usually|typically|generally|chiefly|mainly|sometimes)\b/i);
+  if (hedge > 0) text = text.slice(0, hedge);
+  text = text.trim();
+  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}.` : '';
 }
 
 /** How long a card waits for what its word is to be translated. Asked for outright, so longer

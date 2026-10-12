@@ -286,7 +286,7 @@ class TooltipController(
         if (answer.state == Answer.State.Phrase || answer.state == Answer.State.Guess) return answer
         fun said(glosses: List<String>): String? = glosses.firstOrNull()
             ?.let(::sentenceOfGloss)?.takeIf { it.isNotBlank() }
-            ?.let { Reading.lineSaid(it, "en", into) }
+            ?.let { describedIn(into, it) }
         val lead = answer.says.firstOrNull().orEmpty()
         val wanted = every || lead.isBlank() || lead.equals(answer.spelling, ignoreCase = true)
         val described = if (wanted) said(answer.glosses) else null
@@ -300,10 +300,31 @@ class TooltipController(
         return if (!changed) answer else answer.copy(described = described, readings = readings)
     }
 
-    /** A definition's first sentence, which is what it says the thing is. */
+    /**
+     * A definition put into [into], as the extension's host asks it: a verb's as what a word
+     * means, "Meaning: to eat brunch.", with the label cut off what comes back. Asked as it is,
+     * the engine read its "to" as a purpose ("Para comer brunch."), and without it as an order.
+     */
+    private fun describedIn(into: String, text: String): String? {
+        val verb = Regex("^to\\s", RegexOption.IGNORE_CASE).containsMatchIn(text)
+        val asked = if (verb) "Meaning: " + text.replaceFirstChar { it.lowercase() } else text
+        val said = Reading.lineSaid(asked, "en", into) ?: return null
+        if (!verb) return said
+        val at = said.indexOf(':')
+        return (if (at >= 0) said.substring(at + 1) else said).trim().replaceFirstChar { it.uppercase() }
+    }
+
+    /**
+     * What a definition says the thing is, as the engine is to read it, as the extension's host
+     * cuts it: its first sentence, without a bracket or a clause after "often" or "especially".
+     */
     private fun sentenceOfGloss(gloss: String): String {
-        val end = Regex("[.;](\\s|$)").find(gloss)?.range?.first ?: -1
-        return (if (end > 0) gloss.substring(0, end + 1) else gloss).trim()
+        var text = gloss.replace(Regex("\\s*\\([^()]*\\)"), "")
+        Regex("[.;](\\s|$)").find(text)?.range?.first?.takeIf { it > 0 }?.let { text = text.substring(0, it) }
+        Regex(",\\s+(often|especially|usually|typically|generally|chiefly|mainly|sometimes)\\b", RegexOption.IGNORE_CASE)
+            .find(text)?.range?.first?.takeIf { it > 0 }?.let { text = text.substring(0, it) }
+        text = text.trim()
+        return if (text.isEmpty()) "" else text.replaceFirstChar { it.uppercase() } + "."
     }
 
     /**

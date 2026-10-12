@@ -2614,11 +2614,8 @@ fn a_plural_with_a_slang_noun_of_its_own_is_still_the_plural() {
     let mut perro = word("perro", "noun", "ˈpe.ro", &["dog"]);
     perro.forms.push(form("perros", "plural"));
     let perro = spanish.add::<&str>(perro, &[]).unwrap();
-    let perreria = spanish
-        .add::<&str>(
-            word("perrería", "noun", "pe.reˈɾi.a", &["pack of dogs"]),
-            &[],
-        )
+    spanish
+        .add::<&str>(word("perrería", "noun", "pe.reˈɾi.a", &["dogs"]), &[])
         .unwrap();
     let mut cristal = word("cristal", "noun", "kɾisˈtal", &["glass"]);
     cristal.forms.push(form("cristales", "plural"));
@@ -2630,7 +2627,6 @@ fn a_plural_with_a_slang_noun_of_its_own_is_still_the_plural() {
         )
         .unwrap();
     spanish.translated("dog", "noun", &[(perro, 0)]);
-    spanish.translated("dogs", "noun", &[(perreria, 0)]);
     spanish.translated("glass", "noun", &[(cristal, 0)]);
     spanish.translated("glasses", "noun", &[(anteojos, 0)]);
     let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
@@ -2643,6 +2639,20 @@ fn a_plural_with_a_slang_noun_of_its_own_is_still_the_plural() {
     // "dogs" the slang for feet is not what "dogs" means first; "glasses", spectacles, is.
     assert_eq!(says("dogs"), ["perros"]);
     assert_eq!(says("glasses"), ["anteojos"]);
+    // And the slang noun has no Spanish word: Spanish glosses "perrería" as "dogs", which is
+    // what the plural of dog is, not feet.
+    let dogs = read_in_context("dogs", None, &lang("en"), &lang("es"), &open);
+    let slang = dogs
+        .readings
+        .iter()
+        .find(|reading| {
+            reading
+                .glosses
+                .first()
+                .is_some_and(|gloss| gloss == "Feet.")
+        })
+        .expect("the slang reading is offered");
+    assert!(slang.says.is_empty(), "{:?}", slang.says);
 }
 
 #[test]

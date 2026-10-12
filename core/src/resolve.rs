@@ -2766,7 +2766,31 @@ fn resolve_one<D: AsRef<[u8]>>(
     if source.0 == "en" {
         // The word itself first, then what its first senses say it is where that is a word or
         // two: "mistake" is "An error.", and Spanish glosses "error" as "error" alone.
-        let asked: Vec<(String, Option<String>)> = std::iter::once(entry.lemma.clone())
+        // Not the word itself where it is a noun only ever plural, slang first, and the
+        // dictionary also files the spelling as another word's plural: "dogs" the slang for feet, joined on "dogs",
+        // reached "perrería", a pack of dogs, which is what the plural of dog means.
+        let only_plural = !entry.senses.is_empty()
+            && entry
+                .senses
+                .iter()
+                .all(|sense| sense.marks.iter().any(|mark| mark == "plural-only"))
+            // And what it means first is slang or the like: "glasses", spectacles, joined on
+            // "glasses" is "anteojos".
+            && entry.senses[0]
+                .marks
+                .iter()
+                .any(|mark| UNUSUAL.contains(&mark.as_str()))
+            && lookup_either_case(pack, spelling).iter().any(|other| {
+                same_word(&other.lemma, spelling)
+                    && other.pos == entry.pos
+                    && other
+                        .senses
+                        .iter()
+                        .any(|sense| form_of_word(&sense.gloss).is_some())
+            });
+        let asked: Vec<(String, Option<String>)> = (!only_plural)
+            .then(|| entry.lemma.clone())
+            .into_iter()
             .chain(
                 entry
                     .senses
