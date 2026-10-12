@@ -2486,6 +2486,96 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// The modal "can" and "to can" food share a table, and the word for the modal is the one
+/// whose own dictionary says what the modal says: "poder", "to be able to", not "enlatar",
+/// "to can". A verb English makes a tense with has no word where none gives it back: "would"
+/// is nothing, never "por favor". And a card leads with no word a definition only mentions:
+/// "will" "with an implication of volition" was "volición".
+#[test]
+fn a_modal_is_its_own_sense_and_a_tense_marker_no_word() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add::<&str>(
+            word("can", "verb", "kæn", &["To know how to.", "To be able to."]),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(word("can", "verb", "kæn", &["To seal in a can."]), &[])
+        .unwrap();
+    english
+        .add::<&str>(
+            word(
+                "would",
+                "verb",
+                "wʊd",
+                &["Used to form the future in the past."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            word(
+                "will",
+                "verb",
+                "wɪl",
+                &["Used to express the future tense, sometimes with an implication of volition."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(
+            word("volition", "noun", "vəˈlɪʃən", &["A conscious choice."]),
+            &[],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let poder = spanish
+        .add::<&str>(
+            word("poder", "verb", "poˈdeɾ", &["to be able to, can"]),
+            &[],
+        )
+        .unwrap();
+    let enlatar = spanish
+        .add::<&str>(
+            word(
+                "enlatar",
+                "verb",
+                "en.laˈtaɾ",
+                &["to can (to seal in a can)"],
+            ),
+            &[],
+        )
+        .unwrap();
+    spanish
+        .add::<&str>(
+            word("por favor", "adv", "poɾ faˈβoɾ", &["please; would you"]),
+            &[],
+        )
+        .unwrap();
+    let volicion = spanish
+        .add::<&str>(word("volición", "noun", "bo.liˈθjon", &["volition"]), &[])
+        .unwrap();
+    spanish.translated("can", "verb", &[(poder, 0), (enlatar, 0)]);
+    spanish.translated("volition", "noun", &[(volicion, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let read = |word: &str| read_in_context(word, None, &lang("en"), &lang("es"), &open);
+    assert_eq!(read("can").says.first().map(String::as_str), Some("poder"));
+    assert!(read("would").says.is_empty(), "{:?}", read("would").says);
+    assert_ne!(
+        lexcore::annotate::lead(&read("will"), &open).as_deref(),
+        Some("volición")
+    );
+}
+
 /// A reading is found in the line by its answer's forms as the kind of word the reading is:
 /// the archaic noun "were", "a man", answers "Er", and looked for as every form of the pronoun
 /// "er" it was found in any line with "es" in it.

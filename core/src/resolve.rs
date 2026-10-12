@@ -375,6 +375,9 @@ pub fn holds_together(answer: &Answer, spelling: &str, lang: &Lang) -> bool {
     AUXILIARIES.contains(&lemma.as_str())
 }
 
+/// The verbs English makes a tense or a mood with that other languages make with an ending.
+const TENSE_MARKERS: &[&str] = &["will", "would", "shall"];
+
 /// The verbs English makes its tenses, questions and moods with.
 const AUXILIARIES: &[&str] = &[
     "be", "have", "do", "will", "would", "shall", "should", "can", "could", "may", "might", "must",
@@ -1277,8 +1280,28 @@ fn forms_as<D: AsRef<[u8]>>(wanted: &Pack<D>, word: &str, pos: Option<&str>) -> 
 /// Each with whether the word's own dictionary gives the English word back, in a word of one
 /// of its glosses ("abrigo" is an "overcoat"), which is how a word filed under the wrong sense
 /// is told from one filed rightly.
-fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec<(String, bool)> {
+fn translated<D: AsRef<[u8]>>(
+    english: &str,
+    pos: &str,
+    wanted: &Pack<D>,
+    entry: &Entry,
+) -> Vec<(String, bool)> {
     let lower = english.to_lowercase();
+    // The English word's own senses, each as a head: a word whose own dictionary says one of
+    // them is as plainly this word as one that says the word itself. "poder" is "to be able
+    // to, can", and "can" is "to be able to"; weighed only by the word, "enlatar", "to can",
+    // was the plainer answer to the modal.
+    let own: Vec<String> = entry
+        .senses
+        .iter()
+        .take(3)
+        .map(|sense| {
+            lexpack::gloss_head(&sense.gloss)
+                .trim_end_matches('.')
+                .to_string()
+        })
+        .filter(|head| head.split_whitespace().count() >= 2)
+        .collect();
     let mut words: Vec<(String, u8)> = Vec::new();
     for (which, _) in wanted.translations(english, pos) {
         if let Some(found) = wanted.entry(which) {
@@ -1304,7 +1327,7 @@ fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec
                         .trim_start_matches("to ")
                         .trim()
                         .to_string();
-                    if head == lower {
+                    if head == lower || own.contains(&head) {
                         2
                     } else if gloss
                         .split(|c: char| !c.is_alphanumeric())
@@ -1536,11 +1559,16 @@ fn is_minor(entry: &Entry) -> bool {
 
 /// The word a note about a form says it is a form of: "nominative/accusative plural of mein" is
 /// "mein". Only for a note that is nothing but that, since "of" in a meaning is any "of".
-fn form_of_word(gloss: &str) -> Option<String> {
+pub(crate) fn form_of_word(gloss: &str) -> Option<String> {
     if gloss.contains(':') || !crate::annotate::about_grammar(gloss) {
         return None;
     }
-    let (_, word) = gloss.rsplit_once(" of ")?;
+    let (label, word) = gloss.rsplit_once(" of ")?;
+    // The label is a few names of a form, never a sentence: "used to express the future
+    // tense, sometimes with an implication of volition" is a definition.
+    if label.contains(',') || label.split_whitespace().count() > 6 {
+        return None;
+    }
     let word = word.trim().trim_end_matches('.');
     (!word.is_empty() && !word.contains(' ')).then(|| word.to_string())
 }
@@ -3036,10 +3064,39 @@ fn resolve_one<D: AsRef<[u8]>>(
         } else {
             (spelling, entry.lemma.as_str())
         };
-        let mut table = translated(first, &entry.pos, other);
-        for (word, back) in translated(second, &entry.pos, other) {
+        let mut table = translated(first, &entry.pos, other, entry);
+        for (word, back) in translated(second, &entry.pos, other, entry) {
             if !table.iter().any(|(had, _)| *had == word) {
                 table.push((word, back));
+            }
+        }
+        // A verb English makes a tense with, read as that tense, is no word in a language that
+        // makes it with an ending: "will" is listed as "desear", to wish, and "would" joined to
+        // "por favor". Only a word that gives the English back answers it; otherwise nothing,
+        // and the card says what it is.
+        let marker = entry.pos == "verb"
+            && TENSE_MARKERS.contains(&entry.lemma.to_lowercase().as_str())
+            && entry.senses.first().is_some_and(|sense| {
+                let gloss = sense.gloss.to_lowercase();
+                ["tense", "future", "conditional", "mood"]
+                    .iter()
+                    .any(|it| gloss.contains(it))
+            });
+        if marker {
+            table.retain(|(_, back)| *back);
+            if table.is_empty() {
+                return finish(
+                    AnswerState::ViaEn,
+                    spelling,
+                    entry,
+                    Vec::new(),
+                    glosses,
+                    example,
+                    pack,
+                    source,
+                    target,
+                    &agreeing,
+                );
             }
         }
         if !table.is_empty() {

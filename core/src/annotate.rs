@@ -645,8 +645,10 @@ fn drawn_as<D: AsRef<[u8]>>(
         }
         // Only a note about grammar points at another word: "To be able to" is a definition,
         // and the "of" in one led "can" to "a" and drew it as "un".
+        // And only a note that is nothing but that: "will" is "used to express the future
+        // tense, sometimes with an implication of volition", and its "of" drew it "volición".
         let first = answer.glosses.first().filter(|gloss| about_grammar(gloss));
-        if let Some(pointed) = first.and_then(|gloss| points_at(gloss.as_str())) {
+        if let Some(pointed) = first.and_then(|gloss| crate::resolve::form_of_word(gloss)) {
             let there = crate::resolve::read_in_context(&pointed, None, lang, target, open);
             if let Some(word) = there.says.first() {
                 return Some(word.clone());
