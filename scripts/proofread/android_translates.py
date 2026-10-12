@@ -134,6 +134,63 @@ def set_on_the_screen(dev):
     return failures
 
 
+def parts_on_the_screen(dev, base):
+    """The reader turns parts of the card off on the Look up screen, and the card held over a
+    word says only what is left: no kind of word with Grammar off, no transcription with
+    Pronunciation off, and the meaning still there."""
+    from webview import View
+    failures = []
+    dev.surface(mode="spanish", packHost=base, target="de", known="none", enable=1, density=1)
+    for _ in range(6):
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+              "--activity-reorder-to-front")
+        time.sleep(2.0)
+        if "MainActivity" in dev.top_activity():
+            break
+
+    def switch(view, row):
+        view.evaluate(f"document.querySelector('[data-row={row}] input').click()")
+        time.sleep(0.5)
+
+    with View() as view:
+        for _ in range(20):
+            if view.evaluate("Boolean(document.querySelector('[data-row=cards]'))"):
+                break
+            time.sleep(1)
+        view.evaluate("document.querySelector('[data-row=cards]').click()")
+        time.sleep(1)
+        rows = view.evaluate("[...document.querySelectorAll('[data-view=lookup] [data-row]')].map(r => r.dataset.row).join(' ')")
+        switch(view, "show-grammar")
+        switch(view, "show-sound")
+        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+    dev.surface(mode="spanish", packHost=base, target="de", known="none", enable=1, density=1)
+    time.sleep(4)
+    texts, _ = card_while_held(dev, "perro")
+    print(f"  Look up screen rows {rows!r}; grammar and pronunciation off, perro says {texts}")
+    joined = " ".join(texts or [])
+    if rows != "show-sound show-meaning show-grammar show-others describe-all":
+        failures.append(f"the Look up screen has the rows {rows!r}")
+    if "Hund" not in joined:
+        failures.append(f"with grammar and pronunciation off the card lost the meaning: {texts}")
+    for gone in ("noun", "/pe.ro/"):
+        if gone in joined:
+            failures.append(f"with grammar and pronunciation off the card still says {gone!r}: {texts}")
+    # Back as they were, for the checks after this one.
+    for _ in range(6):
+        shell("am", "start", "-n", "io.github.nanbiz.phonetix/.MainActivity",
+              "--activity-reorder-to-front")
+        time.sleep(2.0)
+        if "MainActivity" in dev.top_activity():
+            break
+    with View() as view:
+        view.evaluate("document.querySelector('[data-row=cards]').click()")
+        time.sleep(1)
+        switch(view, "show-grammar")
+        switch(view, "show-sound")
+        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+    return failures
+
+
 def learning_is_translated(dev):
     """Until the reader chooses, the phone's own languages are left as they are, but never the
     one they are learning: this emulator is set to English, and English is what is learned."""
@@ -197,6 +254,7 @@ def main():
         if not closed:
             failures.append(f"never translating {known}, the card stayed up after the button was let go")
 
+    failures += parts_on_the_screen(dev, base)
     failures += set_on_the_screen(dev)
     failures += learning_is_translated(dev)
 
