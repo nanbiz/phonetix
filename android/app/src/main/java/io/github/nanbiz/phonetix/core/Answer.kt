@@ -57,6 +57,10 @@ data class Answer(
     val saidIn: String? = null,
     /** The word this spelling is another way of writing, where it is only that. */
     val spellingOf: String? = null,
+    /** What the word is, said in the reader's language: its English definition put into it by
+     *  the translator, where their language has no word for it or says the same word, or under
+     *  every word where they asked for that. Added by the service, never by the core. */
+    val described: String? = null,
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
@@ -102,6 +106,8 @@ data class Answer(
         val ipa: List<String>,
         val says: List<String>,
         val glosses: List<String>,
+        /** What this reading is, said in the reader's language, as [Answer.described]. */
+        val described: String? = null,
     ) {
         /** What this reading answers with, or its English meaning where it answered nothing. */
         val headline: String?

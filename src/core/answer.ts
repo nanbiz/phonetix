@@ -46,6 +46,8 @@ export interface Reading {
   marks?: string[][];
   /** Each sense's example, where the dictionary keeps one, in the order of the glosses. */
   examples?: (string | null)[];
+  /** What this reading is, said in the reader's language, as [Answer.described]. */
+  described?: string | null;
 }
 
 export interface Answer {
@@ -101,6 +103,10 @@ export interface Answer {
   /** The word this spelling is another way of writing, where it is only that: "popup" is
    *  pop-up without its hyphen. */
   spellingOf?: string | null;
+  /** What the word is, said in the reader's language: its English definition put into it by
+   *  the translator, where their language has no word for it or says the same word, or where
+   *  they asked for a description under every word. Added by the host, never by the core. */
+  described?: string | null;
 }
 
 /** One grammatical value of a place in a table: "preterite" of the category "tense". */

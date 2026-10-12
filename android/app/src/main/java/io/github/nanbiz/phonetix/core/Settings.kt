@@ -85,6 +85,17 @@ data class Settings(
     val narrow: Boolean = false,
     /** Leave the stress marks off the line over a word. The card always shows them. */
     val hideStress: Boolean = true,
+    /**
+     * What a card says, part by part, the extension's same switches: how the word is said, what
+     * it means, and with the meaning, which form it is and the other words its spelling can be.
+     */
+    val showSound: Boolean = true,
+    val showMeaning: Boolean = true,
+    val showGrammar: Boolean = true,
+    val showOthers: Boolean = true,
+    /** A description in the reader's language under every word, not only under those their
+     *  language has no word for or says the same way. */
+    val describeAll: Boolean = false,
 ) {
     /** Which accent this language is read in: the reader's choice, or the language's default,
      *  since a reading in no accent in particular is a mix of them. */
@@ -161,6 +172,11 @@ object SettingsStore {
     private const val K_STRESS = "hide_stress"
     private const val K_THEME = "theme"
     private const val K_DARK = "dark"
+    private const val K_SOUND = "show_sound"
+    private const val K_MEANING = "show_meaning"
+    private const val K_GRAMMAR = "show_grammar"
+    private const val K_OTHERS = "show_others"
+    private const val K_DESCRIBE = "describe_all"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -199,6 +215,11 @@ object SettingsStore {
                 .toMap(),
             narrow = p.getBoolean(K_NARROW, false),
             hideStress = p.getBoolean(K_STRESS, true),
+            showSound = p.getBoolean(K_SOUND, true),
+            showMeaning = p.getBoolean(K_MEANING, true),
+            showGrammar = p.getBoolean(K_GRAMMAR, true),
+            showOthers = p.getBoolean(K_OTHERS, true),
+            describeAll = p.getBoolean(K_DESCRIBE, false),
         )
     }
 
@@ -225,6 +246,11 @@ object SettingsStore {
             ?.putBoolean(K_STRESS, next.hideStress)
             ?.putString(K_THEME, next.theme)
             ?.putString(K_DARK, next.dark)
+            ?.putBoolean(K_SOUND, next.showSound)
+            ?.putBoolean(K_MEANING, next.showMeaning)
+            ?.putBoolean(K_GRAMMAR, next.showGrammar)
+            ?.putBoolean(K_OTHERS, next.showOthers)
+            ?.putBoolean(K_DESCRIBE, next.describeAll)
             ?.apply()
     }
 
@@ -232,6 +258,11 @@ object SettingsStore {
     fun setDensity(v: Int) = update { it.copy(density = v.coerceIn(Frequency.DMIN, Frequency.DMAX)) }
     fun setAllApps(v: Boolean) = update { it.copy(allApps = v) }
     fun setTouchWords(v: Boolean) = update { it.copy(touchWords = v) }
+    fun setShowSound(v: Boolean) = update { it.copy(showSound = v) }
+    fun setShowMeaning(v: Boolean) = update { it.copy(showMeaning = v) }
+    fun setShowGrammar(v: Boolean) = update { it.copy(showGrammar = v) }
+    fun setShowOthers(v: Boolean) = update { it.copy(showOthers = v) }
+    fun setDescribeAll(v: Boolean) = update { it.copy(describeAll = v) }
 
     /** Put the overlay down, or pick it up again: the press held on the button. */
     fun setTarget(v: String) = update { it.copy(target = v) }

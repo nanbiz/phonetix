@@ -3,6 +3,7 @@
 // It lives in a shadow root of its own so that a page's stylesheet cannot reach it and its
 // own cannot reach the page. What it draws is the same component the viewbook draws, from the
 // same Answer the phone's card is drawn from.
+import { EVERY_PART, type CardParts } from '@/ui/card/parts';
 import { flushSync, mount, unmount, type ComponentProps } from 'svelte';
 
 import Opened from '@/ui/card/Opened.svelte';
@@ -299,6 +300,8 @@ export interface CardActions {
   /** Whether the card also says what the word is in its own language: a word of a language
    *  the reader reads, translated for practice, whose English definition they can read. */
   defined?: boolean;
+  /** Which parts the reader asked the card to say. */
+  parts?: CardParts;
   /** Say the word the card is about. */
   /** Play the word; resolves once it has been heard. */
   onPlay?: () => Promise<void> | void;
@@ -330,6 +333,8 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     answer.spelling, answer.state, answer.ipa[0], answer.says[0], actions.recorded ?? false,
     actions.accent ?? '', actions.eased ?? false,
     actions.arriving == null ? null : Math.round(actions.arriving * 100),
+    answer.described ?? null, answer.readings.map((reading) => reading.described ?? null),
+    actions.parts ?? null,
   ]);
   if (drawn && about === key) {
     place(at);
@@ -350,6 +355,7 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     arriving: actions.arriving ?? null,
     lookUp: actions.lookUp,
     defined: actions.defined ?? false,
+    parts: actions.parts ?? EVERY_PART,
   };
   if (filling && props) {
     // Filled in where it is, keeping what the reader has open on it, on the side of its word

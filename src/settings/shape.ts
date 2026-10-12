@@ -75,6 +75,21 @@ export interface Settings {
   /** Whether a card opens on any word the pointer rests on, in every language, while the
    *  extension is on. Off, a card opens only for a word pressed. The extension's. */
   cards: boolean;
+  /**
+   * What a card says, part by part: how the word is said, what it means, which form of which
+   * word it is, and the other words its spelling can be. Grammar and the other words are about
+   * the meaning and go with it: a card that says "noun" and nothing else says nothing.
+   */
+  showSound: boolean;
+  showMeaning: boolean;
+  showGrammar: boolean;
+  showOthers: boolean;
+  /**
+   * A description in the reader's language under every word, not only under those their
+   * language has no word for or says the same way: for a learner who wants both "perros" and
+   * what a dog is.
+   */
+  describeAll: boolean;
   /** Whether the card eases in and the reveal fades. Off is instant, which is what a reader
    *  who finds movement distracting wants and what a slow machine wants. */
   animations: boolean;
@@ -124,6 +139,11 @@ export const DEFAULTS: Settings = {
   accents: {},
   delay: 200,
   cards: true,
+  showSound: true,
+  showMeaning: true,
+  showGrammar: true,
+  showOthers: true,
+  describeAll: false,
   animations: true,
   host: '',
   theme: 'phonetix',

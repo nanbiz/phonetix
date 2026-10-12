@@ -4,6 +4,7 @@
 // reader stops at a word. Every decision about what a word means or whether it is annotated
 // belongs to the core; what is here is a document, its events, and the settings the reader
 // chose.
+import { partsOf } from '@/ui/card/parts';
 import { sendMessage } from '@/host/messages';
 import type { Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
@@ -774,6 +775,9 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // And the sentence it is in, which the host has translated to say which word and which
     // sense it is: "bank" by a river, "core" of a test.
     line: target === source ? '' : sentenceOf(anchor, word.spelling),
+    // Whether the reader wants every word described, not only one their language has no
+    // word for: the host asks the translator only for what the card will say.
+    describe: settings.showMeaning && settings.describeAll,
   });
   // Shown as the page writes it, whichever way it was read.
   const written = { ...looked, spelling: word.written };
@@ -793,6 +797,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     narrow: settings.narrow,
     hideStress: settings.hideStress,
     defined: practising && source === DEFINED_IN,
+    parts: partsOf(settings),
     entered: tapped,
     onPlay: () => {
       const context = warmAudio();

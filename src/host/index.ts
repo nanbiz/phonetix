@@ -9,6 +9,7 @@ import {
   heard as heardIn,
 } from '@/core';
 import type { Batch, TextRun } from '@/core/tokens';
+import type { Answer } from '@/core/answer';
 import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { spokenIn, voiceOf } from '@/data/accents';
@@ -316,9 +317,10 @@ export function host(): void {
     // engine read the whole sentence, which says which word and which sense this is. Waited for
     // only briefly; one that comes later is kept for the next card on the line.
     const drawn = data.drawn || (data.line ? await lineSaid(data.source, data.target, data.line) : '');
-    const answer = await lookUp(
+    const looked = await lookUp(
       data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn
     );
+    const answer = await described(looked, data.describe ?? false);
     if (answer.ipa.length > 0 || answer.state === 'Phrase') return answer;
     // No dictionary here says how this word is said: one still on its way, a form the
     // dictionary lists only under its lemma, a language nobody built one for. The voice says
@@ -437,11 +439,59 @@ async function translateWaiting(): Promise<void> {
   }
 }
 
+/**
+ * The answer with what its word is, said in the reader's language, where the card is to say
+ * it: in place of a word their language has none for ("sophomore"), under one it says the
+ * same way ("brunch" is "brunch" in Spanish too), and under every word and every other
+ * reading where they asked for that. The dictionary's definitions are English whatever the
+ * word's language, so each is put into theirs by the translator; one it cannot translate, or
+ * not in time, is left out and the card says what it did before.
+ */
+async function described(answer: Answer, every: boolean): Promise<Answer> {
+  const into = answer.target;
+  if (!into || into === 'en' || answer.source === into || answer.state === 'Phrase') return answer;
+  const first = (glosses: string[]) => sentenceOfGloss(glosses[0] ?? '');
+  const lead = answer.says[0] ?? '';
+  const wanted =
+    every || !lead || lead.toLowerCase() === answer.spelling.toLowerCase();
+  const asked: { at: number; text: string }[] = [];
+  if (wanted && first(answer.glosses)) asked.push({ at: -1, text: first(answer.glosses) });
+  answer.readings.forEach((reading, at) => {
+    if (at === 0) return;
+    if ((every || reading.says.length === 0) && first(reading.glosses)) {
+      asked.push({ at, text: first(reading.glosses) });
+    }
+  });
+  if (asked.length === 0) return answer;
+  const said = await Promise.all(asked.map(({ text }) => lineSaid('en', into, text, DESCRIBE_WAIT_MS)));
+  const readings = answer.readings.map((reading) => ({ ...reading }));
+  let out: Answer = { ...answer, readings };
+  asked.forEach(({ at }, n) => {
+    const text = said[n];
+    if (!text) return;
+    if (at === -1) out = { ...out, described: text };
+    else readings[at].described = text;
+  });
+  return out;
+}
+
+/** A definition's first sentence, which is what it says the thing is; the rest qualifies it. */
+function sentenceOfGloss(gloss: string): string {
+  const end = gloss.search(/[.;](\s|$)/);
+  return (end > 0 ? gloss.slice(0, end + 1) : gloss).trim();
+}
+
+/** How long a card waits for what its word is to be translated. Asked for outright, so longer
+ *  than a line, and kept for the next card where it comes later. */
+const DESCRIBE_WAIT_MS = 2500;
+
 /** How long a card waits for its sentence to be translated before answering without it. */
 const LINE_WAIT_MS = 1200;
 
 /** A sentence translated, from what has been translated already or by the engine now. */
-async function lineSaid(from: string, to: string, line: string): Promise<string> {
+async function lineSaid(
+  from: string, to: string, line: string, wait: number = LINE_WAIT_MS
+): Promise<string> {
   if (!line || !to || from === to) return '';
   const key = lineKey(from, to, line);
   const held = translatedLine(key);
@@ -453,7 +503,7 @@ async function lineSaid(from: string, to: string, line: string): Promise<string>
       return said;
     })
     .catch(() => '');
-  const late = new Promise<string>((done) => setTimeout(() => done(''), LINE_WAIT_MS));
+  const late = new Promise<string>((done) => setTimeout(() => done(''), wait));
   return Promise.race([asked, late]);
 }
 

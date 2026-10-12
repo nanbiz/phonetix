@@ -21,6 +21,7 @@ import base64
 import http.server
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -240,13 +241,14 @@ def real_popup(cdp, extid):
             f"the toolbar popup runs {size['tall'] - size['height']}px past its window")
     # And every screen behind it, each as it opens in the same window: one that wraps or runs
     # past the window is as broken as the first.
-    for row, name in (("pronunciation", "pronunciation"), ("theme", "appearance")):
+    for row, name in (("pronunciation", "pronunciation"), ("theme", "appearance"),
+                      ("cards] [data-does=open", "look up")):
         evaluate(cdp, session, f"document.querySelector('[data-row={row}]').click()")
         time.sleep(1)
         failures += wrapped(cdp, session, f"the {name} screen")
         inner = json.loads(evaluate(cdp, session, """JSON.stringify({
             tall: document.documentElement.scrollHeight, height: window.innerHeight})"""))
-        shot(cdp, session, f"toolbar-{name}")
+        shot(cdp, session, f"toolbar-{name.replace(' ', '-')}")
         # No higher than the first screen's window could be made: a browser gives a popup
         # at most 600px less its own frame.
         if inner["tall"] > inner["height"] or inner["tall"] > 520:
@@ -272,6 +274,48 @@ def real_popup(cdp, extid):
     if size["tall"] > size["height"] or size["tall"] > 560:
         failures.append(
             f"the toolbar popup's first screen is {size['tall']}px in a {size['height']}px window")
+    return failures
+
+
+def contrast(one, other):
+    """The WCAG contrast of two rgb() colours as getComputedStyle writes them."""
+    def lum(text):
+        parts = [float(x) for x in text[text.index("(") + 1:text.index(")")].split(",")[:3]]
+        lin = [(c / 255) / 12.92 if c / 255 <= 0.03928 else ((c / 255 + 0.055) / 1.055) ** 2.4
+               for c in parts]
+        return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    a, b = sorted((lum(one), lum(other)), reverse=True)
+    return (a + 0.05) / (b + 0.05)
+
+
+def every_palette(cdp, session):
+    """Every palette on both of its sides paints the page the view sits on, and its title
+    reads on it. The palettes a library gives us state no page colour, and the page behind a
+    dark one's cards fell through to white, with the title in light ink on it."""
+    failures = []
+    with open(os.path.join(ROOT, "src", "ui", "theme.ts")) as f:
+        names = re.findall(r"^  '([a-z]+)',$", f.read(), re.M)
+    for name in names:
+        for side in ("light", "dark"):
+            evaluate(cdp, session, f"chrome.storage.local.set({{theme: '{name}', dark: '{side}'}})"
+                                   ".then(() => 1)")
+            cdp.send("Page.reload", session=session)
+            time.sleep(1.2)
+            seen = json.loads(evaluate(cdp, session, """JSON.stringify({
+                page: getComputedStyle(document.documentElement).getPropertyValue('--color-page-bg').trim(),
+                bg: getComputedStyle(document.body).backgroundColor,
+                root: getComputedStyle(document.documentElement).backgroundColor,
+                ink: getComputedStyle(document.querySelector('.title')).color})"""))
+            ground = seen["bg"] if "0, 0, 0, 0" not in seen["bg"] else seen["root"]
+            if not seen["page"] or "0, 0, 0, 0" in ground:
+                failures.append(f"{name} {side}: the page under the view is not painted ({seen})")
+            elif contrast(seen["ink"], ground) < 4.5:
+                failures.append(f"{name} {side}: the title is {seen['ink']} on {ground}, "
+                                f"{contrast(seen['ink'], ground):.1f}:1")
+    print(f"  {len(names) * 2} palettes and sides checked for a painted page")
+    evaluate(cdp, session, "chrome.storage.local.remove(['theme', 'dark']).then(() => 1)")
+    cdp.send("Page.reload", session=session)
+    time.sleep(1.2)
     return failures
 
 
@@ -326,6 +370,8 @@ def main():
         if share < 0.9:
             failures.append(
                 f"the edges of the view are not one colour: {ranked[:4]}")
+
+        failures += every_palette(cdp, session)
 
         # A control is a control: the things a reader presses are buttons and inputs, not text.
         # A segmented control made of spans reports itself here as nothing at all.

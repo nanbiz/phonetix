@@ -78,6 +78,16 @@ body {
   gap: 12px;
 }
 
+.item-open {
+  gap: 12px;
+  margin: -7px 0 -7px -14px;
+  padding: 7px 0 7px 14px;
+}
+
+.item.sub {
+  padding-left: 36px;
+}
+
 .item-name {
   font-size: 15px;
 }

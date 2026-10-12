@@ -8,6 +8,7 @@
   import { themeOf } from '@/ui/theme';
   import { sendMessage } from '@/host/messages';
   import type { Answer } from '@/core/answer';
+  import { EVERY_PART, type CardParts } from '@/ui/card/parts';
   import '@/ui/tokens.css';
   import '@/ui/card/card.css';
 
@@ -32,7 +33,43 @@
     };
   }
 
-  const states: { uid: string; answer: Answer }[] = [
+  // What a word is, said in the reader's language, as the host has the translator say the
+  // dictionary's English definition: the lookups are real (en and es packs), the Spanish is
+  // written here in place of the translator.
+  const english = (over: Partial<Answer>): Answer =>
+    answer({ source: 'en', target: 'es', marks: [], provenance: { kind: 'dictionary', pack: 'lex-en' }, ...over });
+  const sophomore = english({
+    state: 'Homograph',
+    spelling: 'sophomore',
+    ipa: ['ˈsɑf.mɔɹ'],
+    says: [],
+    glosses: ['A second-year undergraduate student in a college or university.'],
+    described: 'Estudiante de segundo año en una universidad.',
+    readings: [
+      { pos: 'noun', ipa: ['ˈsɑf.mɔɹ'], says: [], glosses: ['A second-year undergraduate student.'] },
+      {
+        pos: 'adj', ipa: ['ˈsɑf.mɔɹ'], says: [], glosses: ['The second in a series.'],
+        described: 'Segundo de una serie.',
+      },
+    ],
+  });
+  const dogs = english({
+    state: 'Homograph',
+    spelling: 'dogs',
+    ipa: ['dɑɡz'],
+    says: ['perros'],
+    glosses: ['The species Canis familiaris.'],
+    described: 'La especie Canis familiaris.',
+    readings: [
+      { pos: 'noun', ipa: ['dɑɡz'], says: ['perros'], glosses: ['The species Canis familiaris.'] },
+      {
+        pos: 'verb', ipa: ['dɑɡz'], says: ['perseguir'], glosses: ['To pursue with the intent to catch.'],
+        described: 'Seguir con la intención de atrapar.',
+      },
+    ],
+  });
+
+  const states: { uid: string; answer: Answer; parts?: CardParts }[] = [
     { uid: 'entry', answer: answer({ example: 'El perro ladra.' }) },
     { uid: 'form', answer: answer({ state: 'Form', spelling: 'perros', lemma: 'perro' }) },
     {
@@ -94,6 +131,26 @@
         provenance: { kind: 'guess', engine: 'Bergamot' },
       }),
     },
+    { uid: 'described', answer: sophomore },
+    {
+      uid: 'same-word',
+      answer: english({
+        spelling: 'brunch',
+        ipa: ['bɹʌnt͡ʃ'],
+        says: ['brunch'],
+        glosses: ['A meal eaten later in the day than breakfast and earlier than lunch.'],
+        described: 'Comida que se toma más tarde que el desayuno y antes del almuerzo.',
+      }),
+    },
+    { uid: 'describe-every', answer: dogs, parts: { ...EVERY_PART, describe: true } },
+    { uid: 'no-grammar', answer: dogs, parts: { ...EVERY_PART, grammar: false } },
+    { uid: 'no-others', answer: dogs, parts: { ...EVERY_PART, others: false } },
+    { uid: 'no-sound', answer: dogs, parts: { ...EVERY_PART, sound: false } },
+    {
+      uid: 'sound-only',
+      answer: dogs,
+      parts: { ...EVERY_PART, meaning: false, grammar: false, others: false },
+    },
   ];
 
   const modes = ['light', 'dark'] as const;
@@ -124,7 +181,7 @@
       {#each drawn as state (state.uid)}
         <div class="slot" data-uid={state.uid}>
           <div class="label">{state.uid}</div>
-          <Opened answer={state.answer} />
+          <Opened answer={state.answer} parts={state.parts} />
         </div>
       {/each}
     </section>

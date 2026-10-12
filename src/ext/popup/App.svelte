@@ -29,6 +29,7 @@
   import Appearance from '@/phone/screens/Appearance.svelte';
   import Density from './Density.svelte';
   import Languages from '@/phone/screens/Languages.svelte';
+  import LookUpParts from '@/phone/screens/LookUp.svelte';
 
   let settings = $state<Settings | null>(null);
   /** What each position of the density bar means, from the core. */
@@ -48,7 +49,7 @@
   /** And the keys that open the translator hearing what to translate. */
   let speaking = $state('');
   /** Which screen is showing. */
-  let view = $state<'main' | 'accents' | 'appearance' | 'languages'>('main');
+  let view = $state<'main' | 'accents' | 'appearance' | 'languages' | 'lookup'>('main');
   /** The dictionaries on their way and how far each has got, as the host tells it. */
   let arriving = $state<Record<string, number>>({});
 
@@ -218,7 +219,11 @@
     <div class:resting={!settings.on || !here && site !== ''}>
       <!-- Pointing at a word opens a card on it. -->
       <Group>
-        <Item name={ROWS.cards.name} row="cards">
+        <Item
+          name={ROWS.cards.name}
+          row="cards"
+          open={() => (view = 'lookup')}
+        >
           {#snippet glyph()}<LookUp class="row-icon" />{/snippet}
           {#snippet control()}
             <Switch
@@ -325,12 +330,16 @@
           ? ROWS.ipa.name
           : view === 'languages'
             ? ROWS['group-languages'].name
-            : ROWS.appearance.name}</h1
+            : view === 'lookup'
+              ? ROWS.cards.name
+              : ROWS.appearance.name}</h1
       >
     </header>
     <div data-view={view}>
       {#if view === 'languages'}
         <Languages {settings} {change} />
+      {:else if view === 'lookup'}
+        <LookUpParts {settings} {change} />
       {:else if view === 'accents'}
         <Pronunciation {settings} {change} />
       {:else}

@@ -1206,6 +1206,12 @@ def choices_ts():
         "  return choices.find((row) => row.value === value)?.about ?? '';",
         "}",
         "",
+        "/** A kind of word by its whole name, where the dictionary files it by a short code: a",
+        " *  reader is told \"pronoun\", not \"pron\". */",
+        "export function posName(pos: string): string {",
+        "  return SAYS[`pos-${pos}`] ?? pos.replace(/_/g, ' ');",
+        "}",
+        "",
     ]
     return "\n".join(lines)
 
@@ -1298,6 +1304,10 @@ def choices_kotlin():
         "    /** What one choice does, for a row that explains itself. */",
         "    fun aboutOf(choices: List<Choice>, value: String): String =",
         "        choices.firstOrNull { it.value == value }?.about ?: \"\"",
+        "",
+        "    /** A kind of word by its whole name, where the dictionary files it by a short code: a",
+        "     *  reader is told \"pronoun\", not \"pron\". */",
+        "    fun posName(pos: String): String = says[\"pos-$pos\"] ?: pos.replace('_', ' ')",
         "}",
         "",
     ]

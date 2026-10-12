@@ -509,6 +509,14 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .headline .tr { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.2; flex: 0 1 auto; min-width: 0; }
 .headline .tr.def { font-size: var(--font-size-ipa); font-weight: var(--weight-medium); }
 .headline .tr.quiet { font-size: var(--font-size-body); font-weight: var(--weight-medium); color: var(--color-ink); }
+/* A word its reader's language has no word for leads with what it is, its kind in front as every other reading has it. */
+.headline > .chip:first-child { margin-left: 0; margin-right: var(--space-2); }
+/* What the word is, in the reader's language, under the word: smaller than the word and set as a sentence. */
+.described { font-size: var(--font-size-sense); line-height: 1.45; color: var(--color-ink); }
+/* The word's page, where no strip holds it: in the corner the strip would have it, beside the answer rather than on a line of its own. */
+.card-head:has(.wiki-alone) { position: relative; }
+.wiki-alone { position: absolute; top: var(--space-3); right: var(--space-3); }
+.card-head:has(.wiki-alone) .headline { padding-right: calc(var(--icon-size) + var(--space-2)); }
 .audio { flex: 0 0 auto; width: var(--audio-size); height: var(--audio-size); border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-accent-ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; align-self: center; }
 .audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); margin-left: 2px; }
 .audio svg path { fill: currentColor; }
@@ -973,14 +981,16 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .ask .choice { min-height: 44px; padding: var(--space-2) var(--space-4); border: none; border-radius: 12px; font-size: var(--font-size-body); }
 .ask .choice:hover { background: var(--color-chip-bg); }
 .ask .choice.on { background: var(--color-accent-bg); }
-/* What a word means, one line each, the commonest first and largest: the word, how it is
- * said, and which meaning it is in small type under it. */
+/* What a word means, the commonest first and largest: the word, how it is said, and which
+ * meaning it is in small type under it. */
 .ask-said { margin-top: 14px; max-height: 40vh; overflow-y: auto; }
 .ask-means { display: flex; flex-direction: column; gap: var(--space-2); }
 .ask-mean .m-word { font-size: var(--font-size-lemma); font-weight: 600; color: var(--color-ink); }
 .ask-mean:first-child .m-word { font-size: var(--font-size-headline); }
 .ask-mean .m-ipa { margin-left: var(--space-2); font-family: var(--font-ipa); font-size: var(--font-size-sense); color: var(--color-ipa); }
-.ask-mean .m-about { font-size: var(--font-size-small); color: var(--color-ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ask-mean .m-about { font-size: var(--font-size-small); line-height: 1.45; color: var(--color-ink-muted); margin-top: 2px; }
+/* Its kind in front, as the card's other readings have theirs, and which meaning it is after it, whole: one cut at the panel's edge said nothing. */
+.ask-mean .m-about .chip { margin-right: var(--space-2); vertical-align: 0.1em; }
 /* A phrase, translated, and how it is said under it. */
 .ask-line { font-size: var(--font-size-headline); font-weight: 600; line-height: 1.3; color: var(--color-ink); }
 .ask-line .l-ipa { display: block; margin-top: 2px; font-family: var(--font-ipa); font-size: var(--font-size-sense); font-weight: var(--weight-regular); color: var(--color-ipa); }

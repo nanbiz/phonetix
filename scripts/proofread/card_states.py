@@ -41,6 +41,21 @@ WANT = {
     # it answers is said once, whole, under it, never again cut short above it.
     "phrase": {"headline": "der Hund läuft den Weg entlang", "badges": ["guess"], "symbols": 0,
                "asked": 1},
+    # A word the reader's language has no word for leads with what it is, said in theirs, its
+    # kind in front, and an other reading with no word is said the same way; nothing English.
+    "described": {"headline": "Estudiante de segundo año en una universidad.", "badges": [],
+                  "readings": ["Segundo de una serie."], "chips": ["noun", "adjective"]},
+    # A word the reader's language says the same way is said, then what it is.
+    "same-word": {"headline": "brunch", "description": "Comida que se toma más tarde que el "
+                  "desayuno y antes del almuerzo.", "badges": []},
+    # Asked for under every word: under the word, and beside each other reading's word.
+    "describe-every": {"headline": "perros", "description": "La especie Canis familiaris.",
+                       "readings": ["perseguir: Seguir con la intención de atrapar."]},
+    # Each part the reader turned off is gone, and nothing else with it.
+    "no-grammar": {"headline": "perros", "chips": [], "readings": ["perseguir"], "strip": True},
+    "no-others": {"headline": "perros", "readings": [], "chips": ["noun"], "strip": True},
+    "no-sound": {"headline": "perros", "strip": False, "play": 0, "wiki": 1},
+    "sound-only": {"headline": "", "strip": True, "readings": [], "chips": []},
 }
 
 
@@ -88,6 +103,10 @@ def main():
                       more: (card.querySelector('.btn-text') || {}).textContent || '',
                       example: (card.querySelector('.ex') || {}).textContent || '',
                       described: Boolean(card.querySelector('.detail')),
+                      description: (card.querySelector('.described') || {}).textContent?.trim() || '',
+                      chips: [...card.querySelectorAll('.card-head .chip:not(.mark)')].map(c => c.textContent.trim()),
+                      strip: Boolean(card.querySelector('.card-strip')),
+                      wiki: card.querySelectorAll('a[href*="wiktionary"], [aria-label="Wiktionary"]').length,
                       width: Math.round(box.width),
                       height: Math.round(box.height),
                       surface: style.backgroundColor,
@@ -116,6 +135,8 @@ def main():
                         failures.append(
                             f"{uid}: {len(card['symbols'])} symbols, expected {expected}")
                 elif field in ("readings", "others"):
+                    if not expected and card[field]:
+                        failures.append(f"{uid}: {field} {card[field]}, expected none")
                     for item in expected:
                         if item not in card[field]:
                             failures.append(f"{uid}: {item!r} missing from {card[field]}")

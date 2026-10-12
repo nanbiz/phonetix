@@ -13,6 +13,7 @@
   // The markup is the surface page's own and the stylesheet is generated from it.
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
+  import { posName } from '@/data/wording';
   import { wiktionary } from '@/data/links';
   import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
@@ -25,6 +26,7 @@
   import Entry from './Entry.svelte';
   import { cut } from './grammar';
   import type { ParadigmForm } from '@/core/answer';
+  import { EVERY_PART, type CardParts } from './parts';
 
   interface Props {
     answer: Answer;
@@ -64,6 +66,8 @@
     /** Whether the card also says what the word is in its own language, under what it means
      *  in the one the reader is learning. */
     defined?: boolean;
+    /** Which parts the reader asked the card to say. */
+    parts?: CardParts;
   }
 
   let {
@@ -86,6 +90,7 @@
     onLemma,
     onForm,
     defined = false,
+    parts: show = EVERY_PART,
   }: Props = $props();
 
   /** Which rule a symbol takes: the four kinds the table names are drawn apart. */
@@ -153,16 +158,22 @@
   // however long: read in its own language a reading is a definition, and one cut at the
   // card's edge said nothing.
   let others = $derived(
-    answer.state === 'Homograph'
+    answer.state === 'Homograph' && show.meaning && show.others
       ? answer.readings
           .slice(1)
           // What it is in the language the card answers in, or nothing: an English definition
           // under a Spanish answer is two languages on one card. The dictionary's definitions
           // are English, so they stand in only for an English word read in English.
+          // Where the reader's language has no word for it, what it is, said in theirs; and
+          // with the word, where they asked for both.
           .map((reading) => ({
-            pos: reading.pos ?? '',
+            pos: show.grammar ? (reading.pos ?? '') : '',
             said:
+              (reading.says[0] && reading.described && show.describe
+                ? `${reading.says[0]}: ${reading.described}`
+                : undefined) ??
               reading.says[0] ??
+              reading.described ??
               (answer.source === 'en' && answer.target === 'en' ? reading.glosses[0] : undefined) ??
               '',
           }))
@@ -178,8 +189,24 @@
   // An English definition standing in for a word in the reader's language, where the join did
   // not reach one: unmarked, it reads as the translation rather than as the anchor it is.
   let anchored = $derived(
-    !guessed && answer.says.length === 0 && answer.glosses.length > 0 && answer.target !== 'en'
+    !guessed && answer.says.length === 0 && answer.glosses.length > 0 && answer.target !== 'en' &&
+      !answer.described
   );
+  // A word read into another language whose answer is the word itself: "brunch" is "brunch"
+  // in Spanish too. Said, since that is worth knowing, and then what it is.
+  let same = $derived(
+    !defining && !phrase && answer.source !== answer.target && !!lead &&
+      lead.toLowerCase() === answer.spelling.toLowerCase()
+  );
+  // What the word is, in the reader's language: where theirs has no word for it, in its
+  // place; where it says the same word, or where they asked for both, under the word.
+  let described = $derived(
+    show.meaning && !defining && !phrase && answer.described
+      ? answer.described
+      : null
+  );
+  let wordless = $derived(!!described && answer.says.length === 0);
+  let describedUnder = $derived(!!described && !wordless && (same || show.describe));
   // What is being read, and in which accent where the reader chose one: one fact, one pill.
   /**
    * The accents the word's language can be read in throughout, to choose between on the card:
@@ -206,7 +233,7 @@
   // Which form of which word this is, as one line: "plural of Tier". A form the dump did not
   // name is still a form of its lemma.
   let form = $derived(
-    phrase || !answer.lemma || answer.spellingOf
+    phrase || !answer.lemma || answer.spellingOf || !show.grammar
       ? ''
       : answer.form
         ? `${answer.form} of ${answer.lemma}`
@@ -216,7 +243,14 @@
   // The dictionary's own definition, which is English: for an English word read in English
   // and translated for practice, what it is beside what it is in the language being learnt.
   let definition = $derived(
-    defined && !defining && !phrase ? (answer.glosses[0] ?? null) : null
+    defined && show.meaning && !defining && !phrase ? (answer.glosses[0] ?? null) : null
+  );
+  /** Whether the meaning's headline is drawn, and what it says. */
+  let headed = $derived(
+    show.meaning && (wordless || (!!lead && (lead !== answer.spelling || same)))
+  );
+  let paradigmed = $derived(
+    show.grammar && !!answer.paradigm && answer.paradigm.place.length > 0 && !phrase
   );
   // Whether anything goes under the strip: a word read in a language the reader knows can have
   // nothing more to say than how it is said, and an empty band under it read as a card that
@@ -224,10 +258,10 @@
   let bodied = $derived(
     whole ||
       nothing ||
-      (!!lead && lead !== answer.spelling) ||
+      headed ||
       !!definition ||
       phrase ||
-      (!!answer.paradigm && answer.paradigm.place.length > 0) ||
+      paradigmed ||
       !!form ||
       arriving !== null ||
       others.length > 0 ||
@@ -300,7 +334,7 @@
   aria-label={answer.spelling}
 >
   <div class="card-handle"></div>
-  {#if !phrase}
+  {#if !phrase && (show.sound || back || !bodied)}
     <!-- How the word is said, with the button that says it before it and its Wiktionary page at
          the far end. The word itself is on the page under the card, so the card does not say it
          again; what it means is the card's body, set apart below. The accent is glued to the
@@ -362,11 +396,24 @@
       {:else if nothing}
         <p class="note">{missing}</p>
       {:else}
-        {#if lead && lead !== answer.spelling}
+        {#if !(show.sound || back) && !whole && !nothing}
+          <!-- Its page, where the strip that holds it is not drawn. -->
+          <span class="wiki-alone">
+            <IconLink icon={WIKTIONARY} label="Wiktionary" url={entry(answer)} name="Wiktionary" open={onOpen} />
+          </span>
+        {/if}
+        {#if headed && wordless}
+          <!-- Its language has no word for it: what it is, a sentence, its kind in front the way
+               the other readings have theirs. -->
+          <div class="headline" data-described>
+            {#if answer.pos && show.grammar}<span class="chip">{posName(answer.pos)}</span>{/if}
+            <span class="tr def">{described}</span>
+          </div>
+        {:else if headed}
           <div class="headline">
             <span class="tr{defining ? ' def' : ''}">{lead}</span>
-            {#if answer.pos && !phrase}<span class="chip">{answer.pos}</span>{/if}
-            {#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}
+            {#if answer.pos && !phrase && show.grammar}<span class="chip">{posName(answer.pos)}</span>{/if}
+            {#if show.grammar}{#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}{/if}
             {#if guessed}
               <span class="badge guess" title={engine ? `Translated by ${engine}` : 'Translated by a machine'}
                 >guess</span>
@@ -374,6 +421,10 @@
               <span class="badge">in English</span>
             {/if}
           </div>
+        {/if}
+
+        {#if describedUnder}
+          <div class="described" data-described>{described}</div>
         {/if}
 
         {#if definition}
@@ -385,7 +436,7 @@
           <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
         {/if}
 
-        {#if answer.paradigm && answer.paradigm.place.length > 0 && !phrase}
+        {#if paradigmed && answer.paradigm}
           <FormLine
             paradigm={answer.paradigm}
             spelling={answer.spelling}
@@ -408,7 +459,7 @@
 
         {#each others as other, at (at)}
           <div class="gram other" data-other>
-            {#if other.pos}<span class="chip">{other.pos}</span>{/if}<span class="lemma">{other.said}</span>
+            {#if other.pos}<span class="chip">{posName(other.pos)}</span>{/if}<span class="lemma">{other.said}</span>
           </div>
         {/each}
       {/if}

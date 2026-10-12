@@ -31,6 +31,9 @@ export interface HostProtocol {
       drawn?: string;
       /** The sentence it is in, as the page wrote it, for the host to translate. */
       line?: string;
+      /** Whether the card says what every word is in the reader's language, not only a word
+       *  theirs has no word for or says the same way. */
+      describe?: boolean;
     };
     reply: Answer;
   };

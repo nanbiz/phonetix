@@ -109,6 +109,14 @@
 .headline .tr { font-size: var(--font-size-headline); font-weight: var(--weight-bold); line-height: 1.2; flex: 0 1 auto; min-width: 0; }
 .headline .tr.def { font-size: var(--font-size-ipa); font-weight: var(--weight-medium); }
 .headline .tr.quiet { font-size: var(--font-size-body); font-weight: var(--weight-medium); color: var(--color-ink); }
+/* A word its reader's language has no word for leads with what it is, its kind in front as every other reading has it. */
+.headline > .chip:first-child { margin-left: 0; margin-right: var(--space-2); }
+/* What the word is, in the reader's language, under the word: smaller than the word and set as a sentence. */
+.described { font-size: var(--font-size-sense); line-height: 1.45; color: var(--color-ink); }
+/* The word's page, where no strip holds it: in the corner the strip would have it, beside the answer rather than on a line of its own. */
+.card-head:has(.wiki-alone) { position: relative; }
+.wiki-alone { position: absolute; top: var(--space-3); right: var(--space-3); }
+.card-head:has(.wiki-alone) .headline { padding-right: calc(var(--icon-size) + var(--space-2)); }
 .audio { flex: 0 0 auto; width: var(--audio-size); height: var(--audio-size); border-radius: 50%; border: none; background: var(--color-accent); color: var(--color-accent-ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; align-self: center; }
 .audio svg { width: calc(var(--icon-size) * 0.6); height: calc(var(--icon-size) * 0.6); margin-left: 2px; }
 .audio svg path { fill: currentColor; }

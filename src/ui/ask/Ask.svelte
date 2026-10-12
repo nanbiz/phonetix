@@ -12,7 +12,7 @@
   import type { Meant } from '@/core';
   import type { Listening } from '@/host/speech';
   import { LANGUAGES, named as nameOf } from '@/data/languages';
-  import { SAYS, ROWS } from '@/data/wording';
+  import { SAYS, ROWS, posName } from '@/data/wording';
   import { offering } from '@/settings/shape';
   import Arrow from 'virtual:icons/lucide/arrow-right';
   import Mic from 'virtual:icons/lucide/mic';
@@ -316,7 +316,7 @@
               >{/if}
           </div>
           {#if meant.pos || meant.hint}
-            <div class="m-about">{[meant.pos, meant.hint].filter(Boolean).join(' · ')}</div>
+            <div class="m-about">{#if meant.pos}<span class="chip">{posName(meant.pos)}</span>{/if}{meant.hint}</div>
           {/if}
         </div>
       {/each}

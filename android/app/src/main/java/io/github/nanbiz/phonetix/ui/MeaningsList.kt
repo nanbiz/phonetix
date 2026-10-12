@@ -1,6 +1,10 @@
 package io.github.nanbiz.phonetix.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import io.github.nanbiz.phonetix.core.Wording
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,19 +58,47 @@ fun MeaningsList(meanings: List<Meant>, palette: Tokens.Palette) {
                         )
                     }
                 }
-                val about = listOf(meant.pos, meant.hint).filter { it.isNotBlank() }
-                if (about.isNotEmpty()) {
-                    Text(
-                        text = about.joinToString(" · "),
-                        color = Color(palette.inkMuted),
-                        fontSize = Tokens.Scale.fontSizeSmall.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                // Its kind in front, by its whole name, as the card's other readings have theirs,
+                // and which meaning it is after it, whole: one cut at the edge said nothing.
+                if (meant.pos.isNotBlank() || meant.hint.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.padding(top = 2.dp),
+                    ) {
+                        if (meant.pos.isNotBlank()) {
+                            Chip(Wording.posName(meant.pos), palette)
+                        }
+                        if (meant.hint.isNotBlank()) {
+                            Text(
+                                text = meant.hint,
+                                color = Color(palette.inkMuted),
+                                fontSize = Tokens.Scale.fontSizeSmall.sp,
+                                modifier = Modifier.padding(
+                                    start = if (meant.pos.isNotBlank()) Tokens.Scale.space2.dp else 0.dp,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+/** A kind of word, as a chip: the card's own. */
+@Composable
+fun Chip(text: String, palette: Tokens.Palette) {
+    Text(
+        text = text,
+        color = Color(palette.chipInk),
+        fontSize = Tokens.Scale.fontSizeLabel.sp,
+        fontWeight = FontWeight.Medium,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(Tokens.Scale.radiusChip.dp))
+            .background(Color(palette.chipBg))
+            .padding(horizontal = Tokens.Scale.space2.dp, vertical = 1.dp),
+    )
 }
 
 /** A phrase or a sentence, translated, and how it is said where that is asked for. */

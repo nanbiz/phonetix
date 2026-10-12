@@ -4,6 +4,7 @@
   //
   // Opened from the lemma on a form line, so a reader who met "anduvo" can read everything
   // "andar" means without leaving the page.
+  import { posName } from '@/data/wording';
   import type { Answer } from '@/core/answer';
   import { valueText } from './grammar';
 
@@ -48,7 +49,7 @@
 
 <div class="entry" data-entry>
   {#each groups as group, g (g)}
-    {#if group.pos}<div class="entry-pos">{group.pos}</div>{/if}
+    {#if group.pos}<div class="entry-pos">{posName(group.pos)}</div>{/if}
     <ol>
       {#each group.senses as it, i (i)}
         <li>

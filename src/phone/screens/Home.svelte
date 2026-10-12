@@ -7,6 +7,7 @@
   import type { Settings } from '@/settings/shape';
   import Check from 'virtual:icons/lucide/check';
   import LanguagesIcon from 'virtual:icons/lucide/languages';
+  import LookUpIcon from 'virtual:icons/lucide/pointer';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
   import Switch from '../parts/Switch.svelte';
@@ -127,6 +128,14 @@
       open={() => open('languages')}
     >
       {#snippet glyph()}<LanguagesIcon class="row-icon" />{/snippet}
+    </Item>
+    <!-- What the card a word opens says, part by part. -->
+    <Item
+      name={ROWS.cards.name}
+      row="cards"
+      open={() => open('lookup')}
+    >
+      {#snippet glyph()}<LookUpIcon class="row-icon" />{/snippet}
     </Item>
   </Group>
 

@@ -64,6 +64,7 @@ export const ROWS: Record<string, Words> = {
   "dark": { name: "Light or dark", about: "" },
   "delay": { name: "Rest before a card opens", about: "" },
   "density": { name: "How often", about: "" },
+  "describe-all": { name: "Describe every word", about: "" },
   "dictionaries": { name: "Dictionaries", about: "" },
   "group-button": { name: "Side button", about: "" },
   "group-languages": { name: "Languages", about: "" },
@@ -90,6 +91,10 @@ export const ROWS: Record<string, Words> = {
   "setup": { name: "Setup", about: "" },
   "setup-overlay": { name: "Drawing over apps", about: "" },
   "setup-reading": { name: "Reading the screen", about: "" },
+  "show-grammar": { name: "Grammar", about: "" },
+  "show-meaning": { name: "Meaning", about: "" },
+  "show-others": { name: "Other meanings", about: "" },
+  "show-sound": { name: "Pronunciation", about: "" },
   "side": { name: "Which side", about: "" },
   "site": { name: "On this site", about: "" },
   "source": { name: "This page is in", about: "" },
@@ -156,6 +161,39 @@ export const SAYS: Record<string, string> = {
   "packs-held": "%s downloaded",
   "packs-here": "On this phone",
   "packs-more": "Available",
+  "pos-abbrev": "abbreviation",
+  "pos-adj": "adjective",
+  "pos-adv": "adverb",
+  "pos-affix": "affix",
+  "pos-article": "article",
+  "pos-character": "character",
+  "pos-circumfix": "circumfix",
+  "pos-classifier": "classifier",
+  "pos-combining_form": "combining form",
+  "pos-conj": "conjunction",
+  "pos-contraction": "contraction",
+  "pos-counter": "counter",
+  "pos-det": "determiner",
+  "pos-infix": "infix",
+  "pos-interfix": "interfix",
+  "pos-intj": "interjection",
+  "pos-letter": "letter",
+  "pos-name": "name",
+  "pos-noun": "noun",
+  "pos-num": "number",
+  "pos-particle": "particle",
+  "pos-phrase": "phrase",
+  "pos-postp": "postposition",
+  "pos-prefix": "prefix",
+  "pos-prep": "preposition",
+  "pos-prep_phrase": "prepositional phrase",
+  "pos-pron": "pronoun",
+  "pos-proverb": "proverb",
+  "pos-punct": "punctuation",
+  "pos-root": "root",
+  "pos-suffix": "suffix",
+  "pos-symbol": "symbol",
+  "pos-verb": "verb",
   "preview": "Preview",
   "preview-about": "the words on a page this would answer",
   "remove": "Remove",
@@ -191,4 +229,10 @@ export function labelOf(choices: Choice[], value: string): string {
 /** What one of them does, for a row that explains itself. */
 export function aboutOf(choices: Choice[], value: string): string {
   return choices.find((row) => row.value === value)?.about ?? '';
+}
+
+/** A kind of word by its whole name, where the dictionary files it by a short code: a
+ *  reader is told "pronoun", not "pron". */
+export function posName(pos: string): string {
+  return SAYS[`pos-${pos}`] ?? pos.replace(/_/g, ' ');
 }

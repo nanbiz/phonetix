@@ -6,6 +6,7 @@
   // The sound is described on a line under the transcription that is there only once a sound
   // has been asked about: the card grows downward from the word it is under, so the line it
   // adds moves nothing the reader is looking at.
+  import { EVERY_PART, type CardParts } from './parts';
   import type { Answer, ParadigmForm } from '@/core/answer';
   import AnswerCard from './AnswerCard.svelte';
   import { samePlace, sharedStart } from './grammar';
@@ -37,6 +38,7 @@
     onGrow?: () => void;
     /** Whether the card also says what the word is in its own language. */
     defined?: boolean;
+    parts?: CardParts;
   }
 
   let {
@@ -55,6 +57,7 @@
     lookUp,
     onGrow,
     defined = false,
+    parts = EVERY_PART,
   }: Props = $props();
 
   /** The form the card reads as instead of the page's word, where the reader picked one. */
@@ -200,4 +203,5 @@
   onLemma={lookUp ? openLemma : undefined}
   onForm={pick}
   defined={defined && shown === answer}
+  {parts}
 />

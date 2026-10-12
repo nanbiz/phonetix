@@ -250,19 +250,60 @@ class TooltipController(
                 }
                 return@execute
             }
-            if (asked.sentence.isBlank()) return@execute
+            // What the word is, said in the reader's language, where the card is to say it.
+            val every = settings.showMeaning && settings.describeAll
+            fun describe(answer: Answer) {
+                if (!settings.showMeaning) return
+                val told = describedFor(answer, into, every)
+                if (told !== answer) main.post { if (stillOn(asked) && view != null) render(shown!!, told) }
+            }
+            if (asked.sentence.isBlank()) return@execute describe(first)
             val said = Reading.lineSaid(asked.sentence, source, into)
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "TOOLTIP line ${asked.sentence.take(60)} => $said")
             }
-            if (said == null) return@execute
-            val better = runCatching { answerFor(asked, said) }.getOrNull() ?: return@execute
-            if (better.says == first.says && better.pos == first.pos) return@execute
+            if (said == null) return@execute describe(first)
+            val better = runCatching { answerFor(asked, said) }.getOrNull()
+                ?: return@execute describe(first)
+            if (better.says == first.says && better.pos == first.pos) return@execute describe(first)
             if (BuildConfig.DEBUG) {
                 android.util.Log.d("Phonetix", "TOOLTIP line says ${better.says} for ${asked.word}")
             }
             main.post { if (stillOn(asked) && view != null) render(shown!!, better) }
+            describe(better)
         }
+    }
+
+    /**
+     * [answer] with what its word is, said in [into]: in place of a word that language has none
+     * for ("sophomore"), under one it says the same way ("brunch" is "brunch" in Spanish too),
+     * and under every word and every other reading where [every]. The dictionary's definitions
+     * are English whatever the word's language, so each is put into [into] by the engine on
+     * this phone; one it cannot translate is left out. The same answer where nothing changed.
+     */
+    private fun describedFor(answer: Answer, into: String, every: Boolean): Answer {
+        if (into.isEmpty() || into == "en" || answer.source == into) return answer
+        if (answer.state == Answer.State.Phrase || answer.state == Answer.State.Guess) return answer
+        fun said(glosses: List<String>): String? = glosses.firstOrNull()
+            ?.let(::sentenceOfGloss)?.takeIf { it.isNotBlank() }
+            ?.let { Reading.lineSaid(it, "en", into) }
+        val lead = answer.says.firstOrNull().orEmpty()
+        val wanted = every || lead.isBlank() || lead.equals(answer.spelling, ignoreCase = true)
+        val described = if (wanted) said(answer.glosses) else null
+        var changed = described != null
+        val readings = answer.readings.mapIndexed { at, reading ->
+            if (at == 0 || !(every || reading.says.isEmpty())) return@mapIndexed reading
+            val told = said(reading.glosses) ?: return@mapIndexed reading
+            changed = true
+            reading.copy(described = told)
+        }
+        return if (!changed) answer else answer.copy(described = described, readings = readings)
+    }
+
+    /** A definition's first sentence, which is what it says the thing is. */
+    private fun sentenceOfGloss(gloss: String): String {
+        val end = Regex("[.;](\\s|$)").find(gloss)?.range?.first ?: -1
+        return (if (end > 0) gloss.substring(0, end + 1) else gloss).trim()
     }
 
     /**
@@ -660,8 +701,9 @@ class TooltipController(
         val lang = answer.source.ifEmpty { box.language }
         // Into the reader's own language, or for a word of one they read into the one they
         // are learning, which is practice.
-        val meaning = settings.intoFor(lang).isNotEmpty()
-        if (!glanceHasSomething(answer, meaning)) return null
+        // What the card means as well as how it is said, where the reader left the meaning on.
+        val meaning = settings.intoFor(lang).isNotEmpty() && settings.showMeaning
+        if (!glanceHasSomething(answer, meaning, settings.showSound)) return null
         val fresh = OverlayHost(context)
         host = fresh
         fresh.view.setContent {
@@ -672,10 +714,13 @@ class TooltipController(
                 report = if (BuildConfig.DEBUG) laidOut else null,
                 narrow = settings.narrow,
                 hideStress = settings.hideStress,
+                sound = settings.showSound,
+                grammar = settings.showMeaning && settings.showGrammar,
+                others = settings.showMeaning && settings.showOthers,
                 // The dictionaries define every word in English, so an English word the reader
                 // reads gets its definition, under what it is in the language they learn where
                 // they learn one; any other word of a language they read is only said.
-                defining = settings.reads(lang) && lang == "en",
+                defining = settings.reads(lang) && lang == "en" && settings.showMeaning,
             )
         }
         return fresh.view

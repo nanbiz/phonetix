@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Answer
+import io.github.nanbiz.phonetix.core.Wording
 
 /**
  * What the side button shows about the word it is over, read at a glance while the finger
@@ -44,6 +45,11 @@ fun GlanceCard(
     /** Whether the word is read in the language its dictionary defines it in, so that what the
      *  dictionary says is a definition rather than a translation, and goes under how it is said. */
     defining: Boolean = false,
+    /** The parts the reader asked the card to say, under Look up: how the word is said, which
+     *  kind and form of word it is, and the other words its spelling can be. */
+    sound: Boolean = true,
+    grammar: Boolean = true,
+    others: Boolean = true,
 ) {
     // At the detail the reader asked for: the dictionary's narrow transcription, between
     // brackets, where they asked for narrow ones and it gives one; the broad one otherwise.
@@ -51,20 +57,25 @@ fun GlanceCard(
     val detailed = narrow && !answer.narrow.isNullOrBlank()
     val ipa = (if (detailed) answer.narrow else answer.ipa.firstOrNull())
         ?.let { if (hideStress) it.replace(STRESS, "") else it }
-        ?.takeIf { it.isNotBlank() }
+        ?.takeIf { it.isNotBlank() && sound }
     val written = ipa?.let { if (detailed) "[$it]" else "/$it/" }
     // What the word is led by: the word the core picks, which is the reader's word for it or,
     // read into English, the first gloss that is a meaning rather than a note about grammar.
     // A form leads with its meaning said in that form: "anduvo" is "he walked", where the
     // dictionary's meaning is the infinitive's, "to walk".
     val paradigm = answer.paradigm
-    val says = (paradigm?.said ?: answer.lead ?: answer.says.firstOrNull())
-        ?.let(::plainly)?.takeIf { it.isNotBlank() }
+    // Where the reader's language has no word for it, what it is, said in theirs, in its place.
+    val wordless = answer.says.isEmpty() && !answer.described.isNullOrBlank()
+    val says = (if (wordless) answer.described else
+        (paradigm?.said ?: answer.lead ?: answer.says.firstOrNull())?.let(::plainly))
+        ?.takeIf { it.isNotBlank() }
+    // And under a word their language says the same way, or under every word where they asked.
+    val describedUnder = answer.described?.takeIf { !wordless && it.isNotBlank() }
     // The other words the spelling can be, where the dictionary could not tell which one the
     // page means. Decided, the rest are other words entirely: "Reifen", tyres, is also the verb
     // "reifen", to ripen, and naming it beside the tyres answered a question nobody asked.
-    val also = if (answer.state != Answer.State.Homograph) emptyList() else answer.readings
-        .mapNotNull { it.says.firstOrNull()?.let(::plainly) }
+    val also = if (answer.state != Answer.State.Homograph || !others) emptyList() else answer.readings
+        .mapNotNull { reading -> reading.says.firstOrNull()?.let(::plainly) ?: reading.described }
         .filter { it != says }
         .distinct()
         .take(ALSO)
@@ -129,13 +140,24 @@ fun GlanceCard(
                 Text(
                     text = says,
                     color = Color(if (guessed) palette.inkMuted else palette.ink),
-                    fontSize = Tokens.Scale.fontSizeHeadline.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    // A description is a sentence, set like the extension's: smaller than a word.
+                    fontSize = (if (wordless) Tokens.Scale.fontSizeIpa else Tokens.Scale.fontSizeHeadline).sp,
+                    fontWeight = if (wordless) FontWeight.Medium else FontWeight.SemiBold,
                     fontStyle = if (guessed) FontStyle.Italic else FontStyle.Normal,
-                    maxLines = 2,
+                    maxLines = if (wordless) 4 else 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.reported(says, report),
                 )
+                if (describedUnder != null) {
+                    Text(
+                        text = describedUnder,
+                        color = Color(palette.ink),
+                        fontSize = Tokens.Scale.fontSizeSense.sp,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.reported(describedUnder, report),
+                    )
+                }
                 // What the word is in its own language, under what it is in the one being
                 // learnt: an English word read for practice.
                 if (defined != null) {
@@ -150,11 +172,11 @@ fun GlanceCard(
                 }
                 // Which form of which word it is, where it is a form - "preterite · indicative ·
                 // 3rd singular of andar" - and otherwise the kind of word and what else it can be.
-                val form = paradigm?.named()?.takeIf { it.isNotEmpty() }
+                val form = paradigm?.named()?.takeIf { it.isNotEmpty() && grammar }
                 val kind = if (form != null) {
                     listOf(form.joinToString(" · ") + (answer.lemma?.let { " of $it" } ?: ""))
                 } else {
-                    listOfNotNull(answer.pos) + also
+                    listOfNotNull(answer.pos?.takeIf { grammar }?.let(Wording::posName)) + also
                 }
                 if (kind.isNotEmpty()) {
                     // The word it is a form of set apart from the names of the form: it is the
@@ -199,7 +221,7 @@ fun GlanceCard(
                         modifier = Modifier.reported(way, report),
                     )
                     val what = listOfNotNull(
-                        reading.pos,
+                        reading.pos?.let(Wording::posName),
                         reading.glosses.firstOrNull()?.takeIf { it.isNotBlank() },
                     ).joinToString(" · ")
                     if (what.isNotEmpty()) {
@@ -248,9 +270,10 @@ fun GlanceCard(
 
 /** Whether the card has anything to say about [answer]: a card that would only repeat the
  *  word is not opened at all. */
-fun glanceHasSomething(answer: Answer, meaning: Boolean): Boolean {
-    val ipa = answer.ipa.any { it.isNotBlank() }
-    val says = !answer.lead.isNullOrBlank() || answer.says.any { it.isNotBlank() }
+fun glanceHasSomething(answer: Answer, meaning: Boolean, sound: Boolean = true): Boolean {
+    val ipa = sound && answer.ipa.any { it.isNotBlank() }
+    val says = !answer.lead.isNullOrBlank() || answer.says.any { it.isNotBlank() } ||
+        !answer.described.isNullOrBlank()
     val definition = answer.glosses.any { it.isNotBlank() }
     return (meaning && says) || ipa || definition
 }

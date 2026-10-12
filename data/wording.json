@@ -348,6 +348,26 @@
       "name": "Look up",
       "about": ""
     },
+    "show-sound": {
+      "name": "Pronunciation",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Meaning",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Grammar",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Other meanings",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Describe every word",
+      "about": ""
+    },
     "mine-group": {
       "name": "Mine",
       "about": ""
@@ -432,6 +452,39 @@
     "make-main": "Make it my language",
     "main-language": "My language",
     "learning-it": "learning %s",
-    "dictate": "Dictate"
+    "dictate": "Dictate",
+    "pos-adj": "adjective",
+    "pos-adv": "adverb",
+    "pos-article": "article",
+    "pos-character": "character",
+    "pos-conj": "conjunction",
+    "pos-contraction": "contraction",
+    "pos-det": "determiner",
+    "pos-intj": "interjection",
+    "pos-name": "name",
+    "pos-noun": "noun",
+    "pos-num": "number",
+    "pos-particle": "particle",
+    "pos-phrase": "phrase",
+    "pos-postp": "postposition",
+    "pos-prefix": "prefix",
+    "pos-prep": "preposition",
+    "pos-prep_phrase": "prepositional phrase",
+    "pos-pron": "pronoun",
+    "pos-proverb": "proverb",
+    "pos-punct": "punctuation",
+    "pos-suffix": "suffix",
+    "pos-symbol": "symbol",
+    "pos-verb": "verb",
+    "pos-abbrev": "abbreviation",
+    "pos-affix": "affix",
+    "pos-infix": "infix",
+    "pos-interfix": "interfix",
+    "pos-circumfix": "circumfix",
+    "pos-root": "root",
+    "pos-combining_form": "combining form",
+    "pos-classifier": "classifier",
+    "pos-counter": "counter",
+    "pos-letter": "letter"
   }
 }
