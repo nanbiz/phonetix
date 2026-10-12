@@ -52,7 +52,7 @@ PAGE = (
 ENGLISH = (
     "<!doctype html><html lang='en'><meta charset='utf-8'><body style='margin:0'>"
     "<p id='prose' style='margin:80px 0 0 120px;width:520px;font-size:18px;line-height:1.6'>"
-    "She kept pulling the rope until the knot came loose.</p>"
+    "She kept pulling the ropes until the knot came loose.</p>"
     "</body></html>"
 ).encode()
 
@@ -311,6 +311,19 @@ class Run:
         self.sheet_ok(opened, "english participle sheet")
         self.words_ok(opened, "english participle sheet")
         self.shoot("english-sheet", opened["card"], sheet["box"])
+
+        # A plural after "the", which goes with either number: still the plural.
+        ropes = hand.ask(word_js("ropes"))
+        hand.click(2, 2)
+        hand.move(2, 2)
+        time.sleep(0.6)
+        for step in (0, 1):
+            hand.move(ropes["x"] + step, ropes["y"])
+            time.sleep(0.05)
+        seen = self.wait(lambda c: c["open"] and c["word"] == "ropes" and c["form"])
+        print(f"  {self.name}: english: the ropes: {seen.get('form')!r}")
+        if seen.get("form") != "plural of rope":
+            self.fail(f"english: 'the ropes' reads {seen.get('form')!r}, not 'plural of rope'")
 
     def check_low(self, word):
         """A card over its word: its sheets open over the card, the same width and gap."""

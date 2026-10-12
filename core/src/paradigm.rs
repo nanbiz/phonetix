@@ -204,12 +204,21 @@ pub fn determiner_places(spelling: &str, entries: &[Entry]) -> Vec<Place> {
     }
     // The lemma is the cell its table does not list, a determiner's nominative masculine
     // singular, and is taken to be only where no table lists the spelling at all: German "den"
-    // has an entry of its own whose lemma is "den", and it is never a nominative.
+    // has an entry of its own whose lemma is "den", and it is never a nominative. Only for a
+    // determiner whose table varies by what it agrees with: English "the" lists nothing but
+    // other spellings of itself, goes with a plural as well as a singular, and read as a
+    // singular it named "images" the singular of "image".
     if out.is_empty()
         && entries.iter().any(|entry| {
             matches!(entry.pos.as_str(), "det" | "article")
                 && entry.lemma.to_lowercase() == lowered
-                && !entry.forms.is_empty()
+                && entry.forms.iter().any(|row| {
+                    places(&row.label).iter().any(|place| {
+                        AGREES
+                            .iter()
+                            .any(|category| value_in(place, category).is_some())
+                    })
+                })
         })
     {
         out.extend(places("nominative masculine singular"));
@@ -925,6 +934,14 @@ mod tests {
         assert!(!values(&found.place).contains(&"singular"));
         let alone = form_alone("größten", &gross).unwrap();
         assert!(!values(&alone.place).contains(&"genitive"));
+    }
+
+    #[test]
+    fn an_article_that_does_not_inflect_says_nothing_of_its_noun() {
+        let image = entry("image", "noun", &[("images", "plural")]);
+        let the = entry("the", "article", &[("teh", "alternative"), ("ye", "alternative")]);
+        let found = form("images", &image, &determiner_places("the", &[the])).unwrap();
+        assert_eq!(values(&found.place), ["plural"]);
     }
 
     #[test]
