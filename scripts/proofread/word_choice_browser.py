@@ -6,7 +6,9 @@ this asks the extension's host for each word the way a card does, with the sente
 engine to translate, so what is measured is what a reader gets. Every word of a sentence is
 asked, the little ones too, so its shares run below word_choice.py's.
 
-  uv run python scripts/proofread/word_choice_browser.py spa es 100
+  uv run python scripts/proofread/word_choice_browser.py spa es 400
+
+The sentences are word_choice.py's: FLORES-200's dev split unless SPLIT or SOURCE say otherwise.
 """
 import os
 import sys, time, json, threading, http.server, functools  # noqa: E401

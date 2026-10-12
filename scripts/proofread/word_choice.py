@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """How often the card's answer for a word is the word people used translating it.
 
-Sentences from Tatoeba with their human translations (CC BY 2.0 FR), 400 per language in
+Sentences from FLORES-200 (CC BY-SA 4.0): a thousand sentences of Wikipedia-like articles,
+news, travel and science, each translated by professional translators, which is what the
+pages a reader reads look like. Its dev split tunes; its devtest split (SPLIT=devtest) is kept
+for reporting a change, so a rule is not fitted to the sentences that judge it. SOURCE=tatoeba
+reads 400 of Tatoeba's short crowd-written sentences per language instead, in
 .cache/eval/<lang>.tsv. For each word the card would answer, the answer counts as agreeing when
 the translation uses it: the same word, or one sharing its stem ("publicar" and "publicado").
 A translation says a thing its own way, so no score reaches 100%; what matters is whether a
 change moves the share, measured on the same sentences, and what the misses are.
 
   uv run python scripts/proofread/word_choice.py [spa|deu] [line]
+  SPLIT=devtest uv run python scripts/proofread/word_choice.py spa
 
 With "line" each sentence's translation is handed to the core as the translated line, which is
 what the card has when its host translates the line it was opened on.
@@ -24,7 +29,30 @@ RELEASE = os.path.join(ROOT, ".cache", "release")
 LANGS = {"spa": "es", "deu": "de"}
 
 
+FLORES = "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz"
+
+
 def pairs_for(lang):
+    """The English sentences and their translations into [lang], from FLORES-200 unless
+    SOURCE=tatoeba."""
+    if os.environ.get("SOURCE") == "tatoeba":
+        return tatoeba_pairs(lang)
+    split = os.environ.get("SPLIT", "dev")
+    where = os.path.join(ROOT, ".cache", "eval", "flores200_dataset", split)
+    if not os.path.isdir(where):
+        import tarfile
+        import urllib.request
+        into = os.path.join(ROOT, ".cache", "eval")
+        os.makedirs(into, exist_ok=True)
+        archive = os.path.join(into, "flores200.tar.gz")
+        urllib.request.urlretrieve(FLORES, archive)
+        with tarfile.open(archive) as tar:
+            tar.extractall(into, filter="data")
+    read = lambda code: open(os.path.join(where, f"{code}_Latn.{split}"), encoding="utf-8").read().splitlines()
+    return [list(pair) for pair in zip(read("eng"), read(lang))]
+
+
+def tatoeba_pairs(lang):
     """400 sentences of 7 to 16 English words with their human translation, sampled once from
     Tatoeba's own exports and kept in .cache/eval."""
     path = os.path.join(ROOT, ".cache", "eval", f"{lang}.tsv")
