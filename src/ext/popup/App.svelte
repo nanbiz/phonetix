@@ -20,6 +20,7 @@
   import LanguagesIcon from 'virtual:icons/lucide/languages';
   import LookUp from 'virtual:icons/lucide/mouse-pointer-2';
   import ReplaceIcon from 'virtual:icons/lucide/sparkles';
+  import TranslatorIcon from 'virtual:icons/lucide/message-square-text';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
@@ -216,7 +217,7 @@
     </Group>
 
     <div class:resting={!settings.on || !here && site !== ''}>
-      <!-- Pointing at a word opens a card on it; a key opens the panel that translates. -->
+      <!-- Pointing at a word opens a card on it. -->
       <Group>
         <Item name={ROWS.cards.name} row="cards">
           {#snippet glyph()}<LookUp class="row-icon" />{/snippet}
@@ -228,37 +229,6 @@
             />
           {/snippet}
         </Item>
-        <div class="item" data-row="translator">
-          <span class="item-text">
-            <span class="item-name" data-name>{ROWS.translator.name}</span>
-            {#if keyboard}
-            <span class="key-pair">
-              <button class="keys" data-does="shortcut" onclick={shortcuts}>
-                {#if shortcut}
-                  {#each shortcut.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-                {:else}
-                  {SAYS['set-key']}
-                {/if}
-              </button>
-              <!-- The same panel, opened hearing what to translate. -->
-              <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
-                <Mic class="keys-icon" />
-                {#if speaking}
-                  {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-                {:else}
-                  {SAYS['set-key']}
-                {/if}
-              </button>
-            </span>
-            {/if}
-          </span>
-          <button
-            class="button"
-            data-does="open-panel"
-            disabled={tabId === undefined}
-            onclick={openPanel}>{SAYS['open-panel']}</button
-          >
-        </div>
       </Group>
 
       <Group>
@@ -284,6 +254,42 @@
         {/if}
       </Group>
     </div>
+
+    <!-- The translator answers whatever is asked of it, with Phonetix off or this site switched
+         off too, so it sits outside what dims when they are. -->
+    <Group>
+      <div class="item" data-row="translator">
+        <span class="item-text">
+          <span class="item-name" data-name><TranslatorIcon class="row-icon" />{ROWS.translator.name}</span>
+          {#if keyboard}
+          <span class="key-pair">
+            <button class="keys" data-does="shortcut" onclick={shortcuts}>
+              {#if shortcut}
+                {#each shortcut.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+              {:else}
+                {SAYS['set-key']}
+              {/if}
+            </button>
+            <!-- The same panel, opened hearing what to translate. -->
+            <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
+              <Mic class="keys-icon" />
+              {#if speaking}
+                {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+              {:else}
+                {SAYS['set-key']}
+              {/if}
+            </button>
+          </span>
+          {/if}
+        </span>
+        <button
+          class="button"
+          data-does="open-panel"
+          disabled={tabId === undefined}
+          onclick={openPanel}>{SAYS['open-panel']}</button
+        >
+      </div>
+    </Group>
 
     <!-- Everything set once and left, side by side: two screens a reader opens rarely. -->
     <Group>
