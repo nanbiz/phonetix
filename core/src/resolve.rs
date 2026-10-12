@@ -1322,7 +1322,7 @@ fn english_place(entry: &Entry, spelling: &str) -> Option<&'static [&'static str
 
 /// Labels that make a form one a reader is not owed: a dialect's, another age's, a joke's, or
 /// a word made smaller or bigger, which is another word.
-const ODD_FORMS: [&str; 11] = [
+pub(crate) const ODD_FORMS: [&str; 11] = [
     "dialectal",
     "dialect",
     "humorous",
