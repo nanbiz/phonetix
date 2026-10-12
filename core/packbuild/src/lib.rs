@@ -78,7 +78,7 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
         return None;
     }
 
-    let (ipa, narrow) = pronunciations(&value);
+    let (ipa, narrow, said_in) = pronunciations(&value, codes);
     let senses = senses(&value);
     if senses.is_empty() && ipa.is_empty() {
         skipped.empty += 1;
@@ -92,6 +92,7 @@ pub fn read_line_filed_as(line: &str, codes: &[&str], skipped: &mut Skipped) -> 
             tags: strings(value.get("tags"))
                 .into_iter()
                 .chain(narrow.map(|at| format!("narrow:{at}")))
+                .chain(said_in)
                 .collect(),
             ipa,
             senses,
@@ -151,9 +152,16 @@ pub fn is_bare_form(entry: &Entry) -> bool {
 /// phonetic one between brackets ([ˈtʰɛ.pʰɪç]). The delimiters go, since every surface draws
 /// its own, and which one was narrow is kept as an index so a reader who asked for narrow
 /// transcriptions is shown the narrow one rather than the broad one with nothing to strip.
-fn pronunciations(value: &Value) -> (Vec<String>, Option<usize>) {
+///
+/// Which accent each transcription is said in, where Wiktionary labels it with one this
+/// product offers, is kept as an `accent:<index>:<id>:<rank>` tag, the rank being how good a
+/// name for the accent its label is (0 its own); a reading labelled only otherwise is
+/// `accent:<index>:?`: a card names the accent of what it
+/// shows, and without the label every reading looked like whichever accent the reader chose.
+fn pronunciations(value: &Value, codes: &[&str]) -> (Vec<String>, Option<usize>, Vec<String>) {
     let mut out = Vec::new();
     let mut narrow = None;
+    let mut said_in = Vec::new();
     for sound in value
         .get("sounds")
         .and_then(|v| v.as_array())
@@ -163,6 +171,25 @@ fn pronunciations(value: &Value) -> (Vec<String>, Option<usize>) {
         // Two variants written as one, "[ˈtɹʷænˌskɹʷɪpt] ~ [ˈt̠ɹ̠ʷænˌskɹʷɪpt]", are two
         // transcriptions, each with its own delimiters, and a card lays out one at a time.
         let written = sound.get("ipa").and_then(|v| v.as_str()).unwrap_or("");
+        // Wiktionary labels an accent as a tag ("General-American"), a raw tag, or a note
+        // ("Australian, Broad"), and the extract keeps whichever it was written as.
+        let mut labels: Vec<&str> = ["tags", "raw_tags"]
+            .iter()
+            .filter_map(|field| sound.get(*field).and_then(|v| v.as_array()))
+            .flatten()
+            .filter_map(|label| label.as_str())
+            .collect();
+        if let Some(note) = sound.get("note").and_then(|v| v.as_str()) {
+            labels.extend(note.split(',').map(str::trim).filter(|it| !it.is_empty()));
+        }
+        let accents: Vec<(&str, usize)> = codes
+            .iter()
+            .flat_map(|code| lexcore::accent_table::tagged(code, &labels))
+            .collect();
+        // A reading labelled only with accents this product does not offer - Northern
+        // England, Dublin, a merger - is still not the general one, and is told apart from
+        // a reading nobody labelled.
+        let other = accents.is_empty() && !labels.is_empty();
         for written in written.split('~').filter(|part| !part.trim().is_empty()) {
             let bracketed = written.trim().starts_with('[');
             let ipa = written
@@ -177,10 +204,18 @@ fn pronunciations(value: &Value) -> (Vec<String>, Option<usize>) {
             if bracketed && narrow.is_none() && !out.is_empty() {
                 narrow = Some(out.len());
             }
+            said_in.extend(
+                accents
+                    .iter()
+                    .map(|(accent, rank)| format!("accent:{}:{accent}:{rank}", out.len())),
+            );
+            if other {
+                said_in.push(format!("accent:{}:?", out.len()));
+            }
             out.push(ipa.to_string());
         }
     }
-    (out, narrow)
+    (out, narrow, said_in)
 }
 
 /// How many of an entry's senses keep their example: as many as a translated line picks a
@@ -483,6 +518,36 @@ mod tests {
         );
         let dog = read_line(PERRO, "es", &mut skipped).unwrap().entry;
         assert_eq!(lexcore::resolve::narrow_of(&dog), None);
+    }
+
+    /// Each transcription keeps the accents Wiktionary labels it with: night's first reading
+    /// is Southern Standard British, named British by a weaker label than Received
+    /// Pronunciation; its second is General American too; its third is an accent not offered.
+    #[test]
+    fn each_transcription_keeps_the_accent_it_is_said_in() {
+        let mut skipped = Skipped::default();
+        let night = r#"{"word":"night","pos":"noun","lang_code":"en",
+          "senses":[{"glosses":["The time when the Sun is below the horizon."]}],
+          "sounds":[{"ipa":"/ˈnɑjt/","tags":["British","Southern","Standard"]},
+                    {"ipa":"/naɪ̯t/","tags":["General-American","Received-Pronunciation"]},
+                    {"ipa":"/nʌɪt/","tags":["Northumbria"]}]}"#;
+        let read = read_line(night, "en", &mut skipped).unwrap().entry;
+        assert_eq!(read.ipa, vec!["ˈnɑjt", "naɪ̯t", "nʌɪt"]);
+        let said: Vec<&str> = read
+            .tags
+            .iter()
+            .filter(|tag| tag.starts_with("accent:"))
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            said,
+            [
+                "accent:0:en-gb:1",
+                "accent:1:en-gb:0",
+                "accent:1:en-us:0",
+                "accent:2:?"
+            ]
+        );
     }
 
     /// Two variants Wiktionary writes in one field, joined by a tilde, are two transcriptions.

@@ -22,7 +22,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
-\"paradigm\":{},\"accentMissing\":{}}}",
+\"paradigm\":{},\"saidIn\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -58,9 +58,9 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         // Which form of its lemma the word is, and the word in every other value of each of
         // its categories, for a card to name and to move through.
         paradigm(&answer.paradigm),
-        // The accent the reader chose where it has no reading of the word, so a card says what
-        // the transcription is rather than naming an accent it is not in.
-        maybe(&answer.accent_missing),
+        // The accent the transcription shown is said in, which a card names rather than the
+        // one the reader chose: nothing where nobody labelled it.
+        maybe(&answer.said_in),
     )
 }
 
@@ -340,7 +340,8 @@ mod tests {
             source: Lang("es".into()),
             target: Lang("de".into()),
             paradigm: None,
-            accent_missing: None,
+            said_in: None,
+            ipa_said_in: Vec::new(),
         }
     }
 

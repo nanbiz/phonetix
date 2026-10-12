@@ -68,6 +68,20 @@ export function voiceOf(lang: string, accent: string): string {
   return accentsOf(lang).find((row) => row.id === accent)?.voice ?? lang;
 }
 
+/** The accent a voice really speaks in: the one it is named for, or failing that the
+ *  accent asked for where that is spoken by it, or the first that is. espeak has no
+ *  Rioplatense or Canadian voice, so what it says for them is Latin American or
+ *  American, and a card names that rather than the accent asked for. */
+export function spokenIn(lang: string, voice: string, asked: string): string {
+  const speaking = accentsOf(lang).filter((row) => row.voice === voice);
+  return (
+    speaking.find((row) => row.id === voice)?.id ??
+    speaking.find((row) => row.id === asked)?.id ??
+    speaking[0]?.id ??
+    ''
+  );
+}
+
 /** The accents a page in this language can be read in throughout. */
 export function wholeAccentsOf(lang: string): Accent[] {
   return accentsOf(lang).filter((row) => row.whole);

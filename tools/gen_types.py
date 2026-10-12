@@ -41,7 +41,7 @@ ACCENTS_KT = os.path.join(
 )
 SYMBOLS_RS = os.path.join(ROOT, "core", "src", "symbols", "table.rs")
 LANGUAGES_RS = os.path.join(ROOT, "core", "src", "languages.rs")
-ACCENTS_RS = os.path.join(ROOT, "core", "src", "accent_defaults.rs")
+ACCENTS_RS = os.path.join(ROOT, "core", "src", "accent_table.rs")
 GRAMMAR = os.path.join(ROOT, "data", "grammar.json")
 GRAMMAR_RS = os.path.join(ROOT, "core", "src", "grammar_tags.rs")
 NEIGHBOURS = os.path.join(ROOT, "data", "neighbours.json")
@@ -1044,6 +1044,20 @@ def accents_ts():
         "  return accentsOf(lang).find((row) => row.id === accent)?.voice ?? lang;",
         "}",
         "",
+        "/** The accent a voice really speaks in: the one it is named for, or failing that the",
+        " *  accent asked for where that is spoken by it, or the first that is. espeak has no",
+        " *  Rioplatense or Canadian voice, so what it says for them is Latin American or",
+        " *  American, and a card names that rather than the accent asked for. */",
+        "export function spokenIn(lang: string, voice: string, asked: string): string {",
+        "  const speaking = accentsOf(lang).filter((row) => row.voice === voice);",
+        "  return (",
+        "    speaking.find((row) => row.id === voice)?.id ??",
+        "    speaking.find((row) => row.id === asked)?.id ??",
+        "    speaking[0]?.id ??",
+        "    ''",
+        "  );",
+        "}",
+        "",
         "/** The accents a page in this language can be read in throughout. */",
         "export function wholeAccentsOf(lang: string): Accent[] {",
         "  return accentsOf(lang).filter((row) => row.whole);",
@@ -1298,8 +1312,9 @@ def languages_ts():
 
 
 def accents_rust():
-    """Each language's default accent, for the core: the dictionary's own reading is that
-    accent's, so a word read in it is never one the accent has no reading of."""
+    """Each language's accents for the core: its default, whose reading the dictionary's own
+    is, and the labels Wiktionary puts on a transcription said in each accent, so a pack can
+    keep which accent each of a word's readings is in."""
     with open(ACCENTS) as f:
         table = json.load(f)["accents"]
     lines = [
@@ -1311,7 +1326,37 @@ def accents_rust():
     ]
     for lang, rows in table.items():
         lines.append(f'        "{lang}" => Some("{default_of(rows)}"),')
-    lines += ["        _ => None,", "    }", "}", ""]
+    lines += [
+        "        _ => None,",
+        "    }",
+        "}",
+        "",
+        "/// Each accent with the labels Wiktionary gives a transcription said in it, best first.",
+        "#[rustfmt::skip]",
+        "pub const TAGS: &[(&str, &str, &[&str])] = &[",
+    ]
+    for lang, rows in table.items():
+        for row in rows:
+            if row.get("tags"):
+                tags = ", ".join(json.dumps(tag, ensure_ascii=False) for tag in row["tags"])
+                lines.append(f'    ("{lang}", "{row["id"]}", &[{tags}]),')
+    lines += [
+        "];",
+        "",
+        "/// The accents of this language a transcription carrying these labels is said in, each",
+        "/// with the place of the best label that says so: 0 for the accent's own name.",
+        "pub fn tagged(lang: &str, labels: &[&str]) -> Vec<(&'static str, usize)> {",
+        "    TAGS.iter()",
+        "        .filter(|(of, _, _)| *of == lang)",
+        "        .filter_map(|(_, id, tags)| {",
+        "            tags.iter()",
+        "                .position(|tag| labels.contains(tag))",
+        "                .map(|rank| (*id, rank))",
+        "        })",
+        "        .collect()",
+        "}",
+        "",
+    ]
     return "\n".join(lines)
 
 

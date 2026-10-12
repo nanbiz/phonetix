@@ -626,37 +626,53 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
     assert_eq!(ruled.ipa, ["ˈwɔːtɚ"]);
 }
 
-/// An accent with no rule reads only the words its own pack holds, and says so for the rest.
+/// The card names the accent of the transcription it shows, never just the one chosen.
 ///
-/// Scottish English is a few thousand words a dictionary tagged and no rule. Every other word
-/// is the dictionary's own reading, and a card that named Scottish over it would claim a
-/// reading nobody recorded; the answer carries the accent it has no reading in instead. An
-/// accent that is a rule reaches every word, and the language's default accent is the
-/// dictionary's own, so neither is ever missing.
+/// Scottish English is a few thousand words a dictionary tagged and no rule. Night is not one
+/// of them: its readings are labelled British (Southern Standard), General American and
+/// Received Pronunciation together, and one is labelled nothing. A Scottish reader is shown the
+/// best labelled one, named by the language's default accent, which it also is; never the
+/// unlabelled one, which is not the general reading just because nobody named it. A word with
+/// no labelled reading at all is the dictionary's own: shifted by a rule where the accent has
+/// one, and otherwise named by no accent.
 #[test]
-fn an_accent_without_the_word_or_a_rule_says_it_has_no_reading() {
-    let entry = |lemma: &str, ipa: &str| Entry {
+fn the_accent_named_is_the_one_the_reading_is_in() {
+    let entry = |lemma: &str, ipa: &[&str], tags: &[&str]| Entry {
         lemma: lemma.into(),
         pos: String::new(),
-        ipa: vec![ipa.into()],
-        tags: Vec::new(),
+        ipa: ipa.iter().map(|it| it.to_string()).collect(),
+        tags: tags.iter().map(|it| it.to_string()).collect(),
         senses: Vec::new(),
         forms: Vec::new(),
     };
     let mut base = Builder::new("en", Kind::Ipa, 0);
-    base.add::<&str>(entry("night", "naɪt"), &[])
-        .expect("the pack takes it");
-    base.add::<&str>(entry("water", "ˈwɔːtɐ"), &[])
-        .expect("the pack takes it");
+    base.add::<&str>(
+        entry(
+            "night",
+            &["ˈnɑjt", "naɪ̯t", "ˈnɐɪ̯t"],
+            &["accent:0:en-gb:1", "accent:1:en-gb:0", "accent:1:en-us:0"],
+        ),
+        &[],
+    )
+    .expect("the pack takes it");
+    base.add::<&str>(
+        entry(
+            "water",
+            &["ˈwɔːtɐ", "ˈwɔː.tə"],
+            &["accent:0:?", "accent:1:en-gb:0"],
+        ),
+        &[],
+    )
+    .expect("the pack takes it");
     let base = Pack::open(base.finish().expect("written")).expect("opens");
     let mut scottish = Builder::new("en-gb-scotland", Kind::Ipa, 0);
     scottish
-        .add::<&str>(entry("water", "ˈwɔ.təɾ"), &[])
+        .add::<&str>(entry("water", &["ˈwɔ.təɾ"], &[]), &[])
         .expect("the pack takes it");
     let scottish = Pack::open(scottish.finish().expect("written")).expect("opens");
 
     let read = |word: &str, accent: &str, pack: Option<&Pack<Vec<u8>>>| {
-        look_up(
+        let answer = look_up(
             word,
             &Lang("en".into()),
             &Lang("en".into()),
@@ -667,18 +683,35 @@ fn an_accent_without_the_word_or_a_rule_says_it_has_no_reading() {
                 accent_pack: pack,
                 ..Default::default()
             },
-        )
+        );
+        (answer.ipa[0].clone(), answer.said_in)
     };
-    let night = read("night", "en-gb-scotland", Some(&scottish));
-    assert_eq!(night.ipa, ["naɪt"]);
-    assert_eq!(night.accent_missing.as_deref(), Some("en-gb-scotland"));
-    let water = read("water", "en-gb-scotland", Some(&scottish));
-    assert_eq!(water.ipa, ["ˈwɔ.təɾ"]);
-    assert_eq!(water.accent_missing, None);
-    // A rule reaches every word.
-    assert_eq!(read("night", "en-gb", None).accent_missing, None);
-    // And the default accent is the dictionary's own reading, rule or none.
-    assert_eq!(read("night", "en-us", None).accent_missing, None);
+    let some = |it: &str| Some(it.to_string());
+    // Its own pack holds water.
+    assert_eq!(
+        read("water", "en-gb-scotland", Some(&scottish)),
+        ("ˈwɔ.təɾ".into(), some("en-gb-scotland"))
+    );
+    // Night it does not: the reading labelled both General American and Received
+    // Pronunciation, named American.
+    assert_eq!(
+        read("night", "en-gb-scotland", Some(&scottish)),
+        ("naɪ̯t".into(), some("en-us"))
+    );
+    // A British reader gets it by its best British label rather than the weaker one, and an
+    // American reader by the American one.
+    assert_eq!(read("night", "en-gb", None), ("naɪ̯t".into(), some("en-gb")));
+    assert_eq!(read("night", "en-us", None), ("naɪ̯t".into(), some("en-us")));
+    // Water's lead reading carries only a note: American shifts it by its rule, while
+    // Australian has none and is shown the British reading, named British.
+    assert_eq!(
+        read("water", "en-us", None),
+        ("ˈwɔːtɚ".into(), some("en-us"))
+    );
+    assert_eq!(
+        read("water", "en-au", None),
+        ("ˈwɔː.tə".into(), some("en-gb"))
+    );
 }
 
 /// A word capitalised by the page is still the word the dictionary holds.

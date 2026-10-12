@@ -63,10 +63,15 @@ pub struct Answer {
     /// Which form of its lemma the spelling is, by grammatical category, with the meaning said
     /// in that form and the word in every other value of each category: see [crate::paradigm].
     pub paradigm: Option<crate::paradigm::Form>,
-    /// The accent the reader chose where it has no reading of this word: its own pack does not
-    /// hold it and no rule shifts every word into it, so the transcription is the dictionary's
-    /// own. A card that named the chosen accent over it would claim what nobody recorded.
-    pub accent_missing: Option<String>,
+    /// The accent the first transcription is said in: the reader's where its own pack holds
+    /// the word, the dictionary labels a reading with it, or a rule shifts every word into it;
+    /// otherwise whichever accent the dictionary labels the reading shown with. Nothing where
+    /// nobody labelled it, which a card names by its language alone rather than claim an
+    /// accent for it.
+    pub said_in: Option<String>,
+    /// The labels the dictionary gives each transcription, in the order of [ipa]: an accent
+    /// with how good a name for it the label was (`en-gb:0`), or `?` for one not offered.
+    pub ipa_said_in: Vec<Vec<String>>,
 }
 
 /// One of the words a spelling is.
@@ -105,7 +110,8 @@ impl Answer {
             source: source.clone(),
             target: target.clone(),
             paradigm: None,
-            accent_missing: None,
+            said_in: None,
+            ipa_said_in: Vec::new(),
         }
     }
 }
@@ -619,6 +625,125 @@ pub fn narrow_of(entry: &Entry) -> Option<String> {
         .iter()
         .any(|broad| crate::symbols::narrows(broad, narrow))
         .then(|| narrow.clone())
+}
+
+/// Put first the reading that is said in the accent the reader wants, shift it by that
+/// accent's rule where it has one, and say which accent the reading shown is in.
+///
+/// One the dictionary labels with that accent first, by the best of its labels. Failing that,
+/// one it labels with another accent this product offers, named as that accent's: a rule
+/// written for unlabelled readings would make another accent's half one thing. Failing that,
+/// one nobody labelled, which the rule shifts and which is the default accent's own where the
+/// language reads a dictionary's reading in it. A reading labelled only with accents not
+/// offered is shown last of all, and named by its language.
+fn in_accent(
+    answer: &mut Answer,
+    wanted: &str,
+    lang: &str,
+    default: Option<&str>,
+    spelling: &str,
+) -> Option<String> {
+    let count = answer.ipa.len();
+    let mut said_in = answer.ipa_said_in.clone();
+    said_in.resize(count, Vec::new());
+    let rank = |labels: &[String], accent: &str| {
+        labels
+            .iter()
+            .filter_map(|label| label.split_once(':'))
+            .filter(|(id, _)| *id == accent)
+            .filter_map(|(_, rank)| rank.parse::<usize>().ok())
+            .min()
+    };
+    let offered = |labels: &[String]| -> Option<(usize, String)> {
+        let best = labels
+            .iter()
+            .filter_map(|label| label.split_once(':'))
+            .filter_map(|(id, rank)| rank.parse::<usize>().ok().map(|rank| (rank, id)))
+            .min_by_key(|(rank, _)| *rank)?;
+        // Named as the language's default where that is one of its accents: a reading both
+        // General American and Received Pronunciation is the one an English reader expects.
+        let id = default
+            .filter(|it| rank(labels, it) == Some(best.0))
+            .unwrap_or(best.1);
+        Some((best.0, id.to_string()))
+    };
+    let best = |score: &dyn Fn(&[String]) -> Option<usize>| {
+        (0..count)
+            .filter_map(|at| score(&said_in[at]).map(|score| (score, at)))
+            .min()
+            .map(|(_, at)| at)
+    };
+    let labelled = (!wanted.is_empty())
+        .then(|| best(&|labels| rank(labels, wanted)))
+        .flatten();
+    let other = best(&|labels| offered(labels).map(|(rank, _)| rank));
+    // Nobody labelled it with an accent offered here: no label at all, or, for the reading the
+    // dictionary leads with, labels that are no accent this product names. Wiktionary writes
+    // General American's "water" with only a note, "without the cot-caught merger".
+    let unlabelled = (0..count).find(|at| {
+        said_in[*at].is_empty() || (*at == 0 && said_in[0].iter().all(|label| label == "?"))
+    });
+    // An accent that is a rule, or the language's own, makes an unlabelled reading its own;
+    // any other has none to make, and another accent's labelled reading is the truer answer.
+    let own = wanted == lang || default == Some(wanted);
+    let shifts = !wanted.is_empty() && (own || crate::accent::is_a_rule(wanted));
+    let at = if shifts {
+        labelled.or(unlabelled).or(other)
+    } else {
+        labelled.or(other).or(unlabelled)
+    }
+    .unwrap_or(0);
+    if at != 0 {
+        answer.ipa.swap(0, at);
+        said_in.swap(0, at);
+        // The narrow form is of the reading that led; it stays only if it narrows this one.
+        if let Some(narrow) = &answer.narrow {
+            if !crate::symbols::narrows(&answer.ipa[0], narrow) {
+                answer.narrow = None;
+            }
+        }
+    }
+    answer.ipa_said_in = said_in;
+    if labelled.is_some() {
+        return Some(wanted.to_string());
+    }
+    if let Some((_, id)) = offered(&answer.ipa_said_in[0]) {
+        return Some(id);
+    }
+    if Some(at) != unlabelled {
+        return None;
+    }
+    if wanted.is_empty() {
+        return None;
+    }
+    if crate::accent::is_a_rule(wanted) {
+        answer.ipa[0] = crate::accent::apply(&answer.ipa[0], wanted, spelling);
+        answer.narrow = answer
+            .narrow
+            .as_deref()
+            .map(|ipa| crate::accent::apply(ipa, wanted, spelling));
+        return Some(wanted.to_string());
+    }
+    own.then(|| wanted.to_string())
+}
+
+/// The labels the dictionary gives each of an entry's transcriptions, in their order: the pack
+/// keeps them as `accent:<index>:<id>:<rank>` tags, and `accent:<index>:?` for a reading
+/// labelled only with an accent not offered, here `<id>:<rank>` and `?`.
+pub fn said_in_of(entry: &Entry) -> Vec<Vec<String>> {
+    let mut out = vec![Vec::new(); entry.ipa.len()];
+    for tag in &entry.tags {
+        let Some((at, label)) = tag
+            .strip_prefix("accent:")
+            .and_then(|rest| rest.split_once(':'))
+        else {
+            continue;
+        };
+        if let Some(said) = at.parse::<usize>().ok().and_then(|at| out.get_mut(at)) {
+            said.push(label.to_string());
+        }
+    }
+    out
 }
 
 impl Answer {
@@ -1441,6 +1566,7 @@ fn read_found<D: AsRef<[u8]>>(
     {
         for answer in answers.iter_mut().filter(|answer| answer.ipa.is_empty()) {
             answer.ipa = own.ipa.clone();
+            answer.ipa_said_in = said_in_of(own);
             answer.narrow = narrow_of(own);
             answer.symbols = crate::symbols::explain(&own.ipa[0]);
         }
@@ -1457,52 +1583,44 @@ fn read_found<D: AsRef<[u8]>>(
     //
     // A language's own accent is its dictionary's reading, which is already what was answered:
     // read as an accent, its pack would put its first entry's sound on every reading of a word.
-    if !open.accent.is_empty() && open.accent != source.0 {
-        let said = open
-            .accent_pack
-            .and_then(|pack| {
-                lookup_either_case(pack, spelling)
-                    .into_iter()
-                    .next()
-                    .or_else(|| {
-                        lookup_either_case(pack, &answers[0].lemma.clone().unwrap_or_default())
-                            .into_iter()
-                            .next()
-                    })
-            })
-            .map(|entry| entry.ipa)
-            .filter(|ipa| !ipa.is_empty());
-        // The dictionary's own reading is its language's default accent's, so only another
-        // accent, with no rule and without the word, has no reading of it.
-        let missing = (said.is_none()
-            && !crate::accent::is_a_rule(open.accent)
-            && crate::accent_defaults::default_of(&source.0) != Some(open.accent))
-        .then(|| open.accent.to_string());
-        for answer in answers.iter_mut() {
-            answer.accent_missing = missing.clone();
-            answer.ipa = match &said {
-                Some(ipa) => ipa.clone(),
-                None => answer
-                    .ipa
-                    .iter()
-                    .map(|ipa| crate::accent::apply(ipa, open.accent, spelling))
-                    .collect(),
-            };
-            // The accent's own pack says nothing of detail; a rule shifts the narrow form the
-            // way it shifts the broad one.
-            answer.narrow = match &said {
-                Some(_) => None,
-                None => answer
-                    .narrow
-                    .as_deref()
-                    .map(|ipa| crate::accent::apply(ipa, open.accent, spelling)),
-            };
-            answer.symbols = answer
-                .ipa
-                .first()
-                .map(|ipa| crate::symbols::explain(ipa))
-                .unwrap_or_default();
+    //
+    // And the card names the accent of what it shows, never just the one the reader chose: a
+    // reading the dictionary labels with another accent is shown as that accent's, and one
+    // nobody labelled, with no rule to shift it, is named by its language alone.
+    let wanted = open.accent;
+    let default = crate::accent_table::default_of(&source.0);
+    let said = (!wanted.is_empty() && wanted != source.0)
+        .then_some(open.accent_pack)
+        .flatten()
+        .and_then(|pack| {
+            lookup_either_case(pack, spelling)
+                .into_iter()
+                .next()
+                .or_else(|| {
+                    lookup_either_case(pack, &answers[0].lemma.clone().unwrap_or_default())
+                        .into_iter()
+                        .next()
+                })
+        })
+        .map(|entry| entry.ipa)
+        .filter(|ipa| !ipa.is_empty());
+    for answer in answers.iter_mut() {
+        if answer.ipa.is_empty() {
+            continue;
         }
+        if let Some(ipa) = &said {
+            answer.ipa = ipa.clone();
+            answer.ipa_said_in = vec![vec![format!("{wanted}:0")]; ipa.len()];
+            answer.narrow = None;
+            answer.said_in = Some(wanted.to_string());
+        } else {
+            answer.said_in = in_accent(answer, wanted, &source.0, default, spelling);
+        }
+        answer.symbols = answer
+            .ipa
+            .first()
+            .map(|ipa| crate::symbols::explain(ipa))
+            .unwrap_or_default();
     }
     // The commonest word first, which the dump lists first, so a reader who does not choose
     // still gets the likely one.
@@ -2527,10 +2645,10 @@ fn finish<D: AsRef<[u8]>>(
     // "depender" is not said /depenˈdeɾ/. A form with a pronunciation of its own is an entry of
     // its own and never comes through here, so a form that did has none, and is left for the
     // voice to say rather than given its lemma's.
-    let (said_as, narrow) = if same_word(&entry.lemma, spelling) {
-        (entry.ipa.clone(), narrow_of(entry))
+    let (said_as, narrow, ipa_said_in) = if same_word(&entry.lemma, spelling) {
+        (entry.ipa.clone(), narrow_of(entry), said_in_of(entry))
     } else {
-        (Vec::new(), None)
+        (Vec::new(), None, Vec::new())
     };
     // The form, and its meaning said in it where the reader reads English: the dictionary's
     // meaning of "andar" is "to walk", and "anduvo" means "he walked". Only a translation: an
@@ -2585,6 +2703,7 @@ fn finish<D: AsRef<[u8]>>(
         source: source.clone(),
         target: target.clone(),
         paradigm,
-        accent_missing: None,
+        said_in: None,
+        ipa_said_in,
     }
 }

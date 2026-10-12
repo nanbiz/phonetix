@@ -23,6 +23,9 @@ struct Rule {
     spelled: Option<&'static str>,
     /// Only at the end of the transcription.
     at_end: bool,
+    /// Not where one of these follows: [ɐ] is RP's final schwa in "water" and the start of a
+    /// diphthong in a raised "night", which no rule for the one may touch in the other.
+    unless_before: &'static [&'static str],
 }
 
 const fn plain(from: &'static str, to: &'static str) -> Rule {
@@ -31,8 +34,26 @@ const fn plain(from: &'static str, to: &'static str) -> Rule {
         to,
         spelled: None,
         at_end: false,
+        unless_before: &[],
     }
 }
+
+const fn alone(
+    from: &'static str,
+    to: &'static str,
+    unless_before: &'static [&'static str],
+) -> Rule {
+    Rule {
+        from,
+        to,
+        spelled: None,
+        at_end: false,
+        unless_before,
+    }
+}
+
+/// What makes a vowel the first half of a diphthong rather than a vowel of its own.
+const GLIDES: &[&str] = &["ɪ", "ʊ", "ʉ", "i", "u", "j", "w", "y", "ʏ"];
 
 const fn ending(from: &'static str, to: &'static str, spelled: &'static str) -> Rule {
     Rule {
@@ -40,6 +61,7 @@ const fn ending(from: &'static str, to: &'static str, spelled: &'static str) -> 
         to,
         spelled: Some(spelled),
         at_end: true,
+        unless_before: &[],
     }
 }
 
@@ -49,7 +71,7 @@ static EN_US: [Rule; 5] = [
     plain("(ɹ)", "ɹ"),
     plain("(r)", "ɹ"),
     plain("əʊ", "oʊ"),
-    plain("ɐ", "ɚ"),
+    alone("ɐ", "ɚ", GLIDES),
     plain("ɒ", "ɑ"),
 ];
 static EN_GB: [Rule; 7] = [
@@ -127,8 +149,20 @@ pub fn apply(ipa: &str, accent: &str, word: &str) -> String {
                 Some(head) => format!("{head}{}", rule.to),
                 None => out,
             }
-        } else {
+        } else if rule.unless_before.is_empty() {
             out.replace(rule.from, rule.to)
+        } else {
+            let mut shifted = String::with_capacity(out.len());
+            let mut rest = out.as_str();
+            while let Some(at) = rest.find(rule.from) {
+                let after = &rest[at + rule.from.len()..];
+                let glided = rule.unless_before.iter().any(|it| after.starts_with(it));
+                shifted.push_str(&rest[..at]);
+                shifted.push_str(if glided { rule.from } else { rule.to });
+                rest = after;
+            }
+            shifted.push_str(rest);
+            shifted
         };
     }
     out
@@ -137,6 +171,13 @@ pub fn apply(ipa: &str, accent: &str, word: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vowel_that_starts_a_diphthong_is_not_a_schwa() {
+        assert_eq!(apply("ˈnɐɪ̯t", "en-us", "night"), "ˈnɐɪ̯t");
+        assert_eq!(apply("əˈbɐʊ̯t", "en-us", "about"), "əˈbɐʊ̯t");
+        assert_eq!(apply("ˈwɔːtɐ", "en-us", "water"), "ˈwɔːtɚ");
+    }
 
     #[test]
     fn an_accent_with_no_rule_changes_nothing() {

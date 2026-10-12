@@ -11,7 +11,7 @@ import {
 import type { Batch, TextRun } from '@/core/tokens';
 import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
-import { voiceOf } from '@/data/accents';
+import { spokenIn, voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
 import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
@@ -319,7 +319,8 @@ export function host(): void {
     // No dictionary here says how this word is said: one still on its way, a form the
     // dictionary lists only under its lemma, a language nobody built one for. The voice says
     // it, as it does for the same word on the page, and the card marks it as the voice's.
-    const spoken = await ipa(voiceOf(data.source, data.accent ?? ''), [data.word])
+    const voice = voiceOf(data.source, data.accent ?? '');
+    const spoken = await ipa(voice, [data.word])
       .then((said) => said[data.word] ?? '')
       .catch(() => '');
     if (!spoken) return answer;
@@ -329,6 +330,8 @@ export function host(): void {
       ipa: [spoken],
       symbols: await symbolsOf(spoken).catch(() => []),
       provenance: answer.provenance ?? { kind: 'synthesised' },
+      // Named by the accent the voice really speaks, which is not always the one asked for.
+      saidIn: spokenIn(data.source, voice, data.accent ?? '') || null,
     };
   });
 }

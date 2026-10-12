@@ -12,3 +12,29 @@ pub fn default_of(lang: &str) -> Option<&'static str> {
         _ => None,
     }
 }
+
+/// Each accent with the labels Wiktionary gives a transcription said in it, best first.
+#[rustfmt::skip]
+pub const TAGS: &[(&str, &str, &[&str])] = &[
+    ("en", "en-gb", &["Received-Pronunciation", "British", "UK"]),
+    ("en", "en-us", &["General-American", "US"]),
+    ("en", "en-gb-scotland", &["Scotland"]),
+    ("en", "en-au", &["Australian"]),
+    ("en", "en-ca", &["Canada"]),
+    ("pt", "pt-pt", &["Portugal"]),
+    ("pt", "pt-br", &["Brazil", "Southern-Brazil", "São-Paulo", "Rio-de-Janeiro"]),
+    ("vi", "vi-vn-x-central", &["Huế"]),
+];
+
+/// The accents of this language a transcription carrying these labels is said in, each
+/// with the place of the best label that says so: 0 for the accent's own name.
+pub fn tagged(lang: &str, labels: &[&str]) -> Vec<(&'static str, usize)> {
+    TAGS.iter()
+        .filter(|(of, _, _)| *of == lang)
+        .filter_map(|(_, id, tags)| {
+            tags.iter()
+                .position(|tag| labels.contains(tag))
+                .map(|rank| (*id, rank))
+        })
+        .collect()
+}

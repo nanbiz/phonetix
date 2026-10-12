@@ -184,9 +184,11 @@
   let chosen = $derived(accent || defaultAccentOf(answer.source));
   /** Whether the list of accents is open. */
   let picking = $state(false);
+  /** The accent the transcription shown is really in, which the pill names whatever the reader
+   *  chose: a reading nobody labelled is named by its language alone. */
   let readAs = $derived(
     (() => {
-      const row = accentsOf(answer.source).find((it) => it.id === accent);
+      const row = accentsOf(answer.source).find((it) => it.id === answer.saidIn);
       return { label: row?.short ?? answer.source.toUpperCase(), name: row?.name ?? '' };
     })()
   );
@@ -241,7 +243,9 @@
         data-does="accent"
         aria-haspopup="listbox"
         aria-expanded={picking}
-        title="{choosable.find((row) => row.id === chosen)?.name ?? ''}: the accent {named(answer.source)} is read in"
+        title={readAs.name
+          ? `Read as ${named(answer.source)}, ${readAs.name} accent`
+          : `Read as ${named(answer.source)}`}
         onclick={() => (picking = !picking)}
         onkeydown={(event) => {
           if (event.key === 'Escape' && picking) {
@@ -249,7 +253,7 @@
             picking = false;
           }
         }}
-        >{choosable.find((row) => row.id === chosen)?.short ?? answer.source.toUpperCase()}<CHOOSE
+        >{readAs.label}<CHOOSE
         /></button
       >
       {#if picking}

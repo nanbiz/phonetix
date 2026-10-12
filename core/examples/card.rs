@@ -1,6 +1,7 @@
 //! What a card says about one word with real packs:
 //! `cargo run --example card -- <source pack> <target pack> <source> <target> [before:]word...`,
-//! with `DEFINES=<def pack>` for a word read in its own language.
+//! with `DEFINES=<def pack>` for a word read in its own language, and `ACCENT=<id>` with
+//! `ACCENT_PACK=<pack>` for a reader who chose an accent.
 use lexcore::answer::Lang;
 use lexcore::resolve::{read_in_context, Open};
 
@@ -12,10 +13,16 @@ fn main() {
     let defines = std::env::var("DEFINES")
         .ok()
         .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
+    let accent = std::env::var("ACCENT").unwrap_or_default();
+    let accent_pack = std::env::var("ACCENT_PACK")
+        .ok()
+        .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let open = Open {
         source: Some(&source),
         target: Some(&target),
         defines: defines.as_ref(),
+        accent: &accent,
+        accent_pack: accent_pack.as_ref(),
         ..Open::default()
     };
     // "a:paragraph" asks about "paragraph" with "a" before it.
@@ -32,9 +39,10 @@ fn main() {
             &open,
         );
         println!(
-            "{word:>10}  {:?} ipa={:?} lead={:?} says={:?} readings={}",
+            "{word:>10}  {:?} ipa={:?} in={:?} lead={:?} says={:?} readings={}",
             answer.state,
             answer.ipa,
+            answer.said_in,
             lexcore::annotate::lead(&answer, &open),
             answer.says,
             answer.readings.len()
