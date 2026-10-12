@@ -47,6 +47,15 @@ fn main() {
             answer.says,
             answer.readings.len()
         );
+        if std::env::var("READINGS").is_ok() {
+            for reading in &answer.readings {
+                println!("            {:?}: {:?}", reading.pos, reading.glosses);
+            }
+            println!(
+                "            form={:?} lemma={:?}",
+                answer.form, answer.lemma
+            );
+        }
         if let Some(form) = &answer.paradigm {
             let place: Vec<&str> = form.place.iter().map(|(tag, _)| tag.as_str()).collect();
             println!(

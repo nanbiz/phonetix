@@ -1477,28 +1477,30 @@ fn read_found<D: AsRef<[u8]>>(
         })
         .map(|entry| rank_of(entry, spelling))
         .min();
-    let named: Vec<(String, u8)> = found
+    // With the kind of word each note is: "popup" is filed as a noun, "alternative form of
+    // pop-up", and pop-up is an adjective first. The spelling met is the noun.
+    let named: Vec<(String, u8, String)> = found
         .iter()
         .filter(|entry| same_word(&entry.lemma, spelling))
         .filter(|entry| meaning_rank.is_none_or(|meaning| rank_of(entry, spelling) < meaning))
         .flat_map(|entry| {
             let rank = rank_of(entry, spelling);
-            entry
-                .senses
-                .iter()
-                .filter_map(move |sense| form_of_word(&sense.gloss).map(|word| (word, rank)))
+            entry.senses.iter().filter_map(move |sense| {
+                form_of_word(&sense.gloss).map(|word| (word, rank, entry.pos.clone()))
+            })
         })
         .collect();
     found.sort_by_key(|entry| {
         let own = rank_of(entry, spelling);
-        let standing_for = named
+        let standing_for: Vec<&(String, u8, String)> = named
             .iter()
-            .filter(|(word, _)| same_word(word, &entry.lemma))
-            .map(|(_, rank)| *rank)
-            .min();
-        match standing_for {
-            Some(rank) => (own.min(rank), false),
-            None => (own, true),
+            .filter(|(word, _, _)| same_word(word, &entry.lemma))
+            .collect();
+        let rank = standing_for.iter().map(|(_, rank, _)| *rank).min();
+        let kind_differs = !standing_for.iter().any(|(_, _, pos)| *pos == entry.pos);
+        match rank {
+            Some(rank) => (own.min(rank), false, kind_differs),
+            None => (own, true, false),
         }
     });
 

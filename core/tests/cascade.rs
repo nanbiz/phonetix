@@ -714,6 +714,59 @@ fn the_accent_named_is_the_one_the_reading_is_in() {
     );
 }
 
+/// A spelling filed as another word's alternative form is that word in the kind the note is.
+///
+/// "popup" is a noun in the dictionary, "alternative form of pop-up", and pop-up is an
+/// adjective first: the card on "popup" leads with pop-up the noun.
+#[test]
+fn an_alternative_form_is_the_word_in_its_own_kind() {
+    let entry = |lemma: &str, pos: &str, gloss: &str, marks: &[&str]| Entry {
+        lemma: lemma.into(),
+        pos: pos.into(),
+        ipa: Vec::new(),
+        tags: Vec::new(),
+        senses: vec![lexpack::Sense {
+            gloss: gloss.into(),
+            marks: marks.iter().map(|it| it.to_string()).collect(),
+            ..Default::default()
+        }],
+        forms: Vec::new(),
+    };
+    let mut en = Builder::new("en", Kind::Ipa, 0);
+    en.add::<&str>(
+        entry("popup", "noun", "Alternative form of pop-up.", &["alt-of"]),
+        &[],
+    )
+    .expect("the pack takes it");
+    en.add::<&str>(
+        entry(
+            "pop-up",
+            "adj",
+            "Coming into view suddenly from a concealed position.",
+            &[],
+        ),
+        &["popup"],
+    )
+    .expect("the pack takes it");
+    en.add::<&str>(
+        entry("pop-up", "noun", "A pop-up advertisement.", &[]),
+        &["popup"],
+    )
+    .expect("the pack takes it");
+    let en = Pack::open(en.finish().expect("written")).expect("opens");
+    let answer = look_up(
+        "popup",
+        &Lang("en".into()),
+        &Lang("en".into()),
+        &Open {
+            source: Some(&en),
+            target: Some(&en),
+            ..Default::default()
+        },
+    );
+    assert_eq!(answer.pos.as_deref(), Some("noun"));
+}
+
 /// A word capitalised by the page is still the word the dictionary holds.
 ///
 /// A page capitalises for reasons of its own: the first word of a sentence, every word of a
