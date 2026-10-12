@@ -117,10 +117,15 @@ pub fn annotate<D: AsRef<[u8]>>(
             let answer =
                 crate::resolve::read_in_context(&reading, before.as_deref(), &lang, target, open);
             before = Some(spelling.clone());
-            // Only the words worth learning, short of every word: see [holds_together].
+            // Only the words worth learning, short of every word: see [holds_together]. Every
+            // word means every word only where the page is said rather than translated: a word
+            // that holds a sentence together, translated by itself, agrees with nothing around
+            // it ("la idioma", "beside ella"), so no setting replaces it with a translation.
+            let every = options.density <= crate::sprinkle::DENSITY_MIN
+                && options.mode == InlineMode::Sound;
             let inline = inline
                 && (asked_about
-                    || options.density <= crate::sprinkle::DENSITY_MIN
+                    || every
                     || !crate::resolve::holds_together(&answer, &reading, &lang));
             // Only what is drawn is looked up further: a word nothing will draw costs the
             // reader nothing to leave unanswered, and a page is thousands of words.

@@ -1996,8 +1996,10 @@ fn a_capital_counts_only_where_it_is_not_the_start_of_a_sentence() {
             )
         })
         .collect();
+    // A pronoun is never handed out as a translation, every word or not: alone it agrees with
+    // nothing around it.
     assert!(
-        drawn.contains(&("Er".to_string(), "he".to_string())),
+        !drawn.iter().any(|(spelling, _)| spelling == "Er"),
         "{drawn:?}"
     );
     assert!(

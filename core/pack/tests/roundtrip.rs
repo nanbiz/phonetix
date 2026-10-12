@@ -294,6 +294,19 @@ fn a_nested_parenthesis_is_not_part_of_the_term() {
     );
 }
 
+/// A list inside a parenthesis qualifies a term and is not terms of its own.
+#[test]
+fn a_list_inside_a_parenthesis_is_not_the_glosss_list() {
+    assert_eq!(
+        lexpack::gloss_terms("long wound done with a bladed weapon (knife, machete, etc); a slash"),
+        ["long wound done with a bladed weapon", "slash"]
+    );
+    assert_eq!(
+        lexpack::gloss_terms("An other, another (person, etc), more often rendered as another."),
+        ["other", "another", "more often rendered as another."]
+    );
+}
+
 #[test]
 fn an_auxiliary_listed_under_every_verb_answers_only_as_itself() {
     // German "haben" is listed among the forms of every verb that takes it, which in the real

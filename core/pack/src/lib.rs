@@ -103,6 +103,29 @@ fn trailing_parenthesis(text: &str) -> Option<usize> {
     None
 }
 
+/// The terms of a gloss's own list, split at the commas and semicolons outside any
+/// parenthesis. Split inside one too, "(person, etc)" came apart into "another (person" and
+/// "etc)", and every sense that ended a parenthetical list with "etc" was a sense of every
+/// other such: "other" reached "chajazo", a knife wound.
+fn listed(text: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut depth = 0i32;
+    let mut from = 0;
+    for (at, c) in text.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth = (depth - 1).max(0),
+            ',' | ';' if depth == 0 => {
+                out.push(&text[from..at]);
+                from = at + 1;
+            }
+            _ => {}
+        }
+    }
+    out.push(&text[from..]);
+    out
+}
+
 /// The head phrase of an English gloss, as both sides of a join have to spell it.
 ///
 /// Two packs are joined on glosses written by the same community in the same register, so what
@@ -120,12 +143,12 @@ pub fn gloss_head(gloss: &str) -> String {
         text = text[..open].trim_end();
     }
     // The first term of a list is the head; the rest narrow it and are indexed separately by
-    // the caller.
-    if let Some(comma) = text.find(',') {
-        text = text[..comma].trim_end();
-    }
-    if let Some(semi) = text.find(';') {
-        text = text[..semi].trim_end();
+    // the caller. A list inside a parenthesis is not the gloss's own: "long wound done with a
+    // bladed weapon (knife, machete, etc); a slash" is headed by the wound, and the
+    // parenthesis that qualifies the first term goes the way a trailing one does.
+    text = listed(text).first().copied().unwrap_or("").trim_end();
+    if let Some(open) = trailing_parenthesis(text) {
+        text = text[..open].trim_end();
     }
     let lower = text.trim().to_lowercase();
     for lead in ["to ", "the ", "a ", "an "] {
@@ -152,7 +175,7 @@ pub fn gloss_terms(gloss: &str) -> Vec<String> {
         Some(open) => body[..open].trim_end(),
         None => body,
     };
-    for part in body.split([',', ';']).skip(1) {
+    for part in listed(body).into_iter().skip(1) {
         let term = gloss_head(part);
         if !term.is_empty() && !out.contains(&term) {
             out.push(term);
