@@ -18,7 +18,8 @@
   import Chevron from 'virtual:icons/lucide/chevron-right';
   import Mic from 'virtual:icons/lucide/mic';
   import LanguagesIcon from 'virtual:icons/lucide/languages';
-  import LookUp from 'virtual:icons/lucide/text-search';
+  import LookUp from 'virtual:icons/lucide/mouse-pointer-2';
+  import ReplaceIcon from 'virtual:icons/lucide/sparkles';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
@@ -260,9 +261,16 @@
         </div>
       </Group>
 
-      <Group name={ROWS.inline.name}>
-        <!-- One thing takes a word's place, so the page reads as running text: how the word
-             is said, or what it means. The card over a word says both either way. -->
+      <Group>
+        <!-- Named like Look up, on a row of its own with its icon: the two things the
+             extension does over a page. One thing takes a word's place, so the page reads as
+             running text: how the word is said, or what it means. The card over a word says
+             both either way. -->
+        <div class="item" data-row="inline-name">
+          <span class="item-text">
+            <span class="item-name" data-name><ReplaceIcon class="row-icon" />{ROWS.inline.name}</span>
+          </span>
+        </div>
         <div class="item wide" data-row="inline">
           <Segments
             choices={replacing}
