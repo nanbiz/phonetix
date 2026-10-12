@@ -98,6 +98,9 @@ export interface Answer {
    *  reader chose: theirs where it has the word or a rule for it, otherwise whichever the
    *  dictionary labels the reading with. Nothing where nobody labelled it. */
   saidIn?: string | null;
+  /** The word this spelling is another way of writing, where it is only that: "popup" is
+   *  pop-up without its hyphen. */
+  spellingOf?: string | null;
 }
 
 /** One grammatical value of a place in a table: "preterite" of the category "tense". */

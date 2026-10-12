@@ -781,6 +781,12 @@ def mark_checks(hand, engine, failures, turn_on=None):
     hand.finger_move(path)
     card = wait_for(CARD_AT_JS, lambda c: c and c.get("word") == "camino")
     held = card
+    # Nothing on a card a finger holds can be pressed, so it offers no accent to choose: it
+    # names the one it reads in.
+    offers = hand.ask("(() => { const h = document.getElementById('phonetix-card-host');"
+                      " return Boolean(h && h.shadowRoot.querySelector('[data-does=accent]')); })()")
+    if offers:
+        failures.append(f"{engine}: the card under a finger offers accents to choose")
     hand.finger_up()
     gone = wait_for(CARD_AT_JS, lambda c: c is None, tries=8)
     back = wait_for(MARK_JS, lambda b: b and abs(b["x"] - home[0]) <= 2, tries=8)

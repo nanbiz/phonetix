@@ -149,14 +149,16 @@
     phrase ? [] : [...new Set((answer.marks[0] ?? []).filter((mark) => WORTH.has(mark)))]
   );
   // The other words the spelling could be, where nothing decided between them: each by what it
-  // means, on one line, so the card still leads with an answer rather than with a question.
+  // means, under the answer the card leads with, with the kind of word it is in front. Whole,
+  // however long: read in its own language a reading is a definition, and one cut at the
+  // card's edge said nothing.
   let others = $derived(
     answer.state === 'Homograph'
       ? answer.readings
           .slice(1)
-          .map((reading) => reading.says[0] ?? reading.glosses[0] ?? '')
-          .filter((said) => said && said !== lead)
-          .slice(0, 2)
+          .map((reading) => ({ pos: reading.pos ?? '', said: reading.says[0] ?? reading.glosses[0] ?? '' }))
+          .filter((other) => other.said && other.said !== lead)
+          .slice(0, 3)
       : []
   );
   // A machine's answer is labelled one: unmarked, it reads as the dictionary's.
@@ -195,7 +197,7 @@
   // Which form of which word this is, as one line: "plural of Tier". A form the dump did not
   // name is still a form of its lemma.
   let form = $derived(
-    phrase || !answer.lemma
+    phrase || !answer.lemma || answer.spellingOf
       ? ''
       : answer.form
         ? `${answer.form} of ${answer.lemma}`
@@ -327,6 +329,11 @@
       {:else}
         {@render accentChip()}
       {/if}
+      {#if answer.spellingOf}
+        <!-- The word this spelling is another way of writing: about the word itself, so beside
+             how it is said rather than in a sentence under what it means. -->
+        <span class="spelled" data-spelled>{answer.spellingOf}</span>
+      {/if}
       <span class="spacer"></span>
       {#if !back}
         <IconLink
@@ -390,11 +397,11 @@
           </div>
         {/if}
 
-        {#if others.length > 0}
-          <div class="gram" data-others>
-            <span>or</span><span class="lemma one-line">{others.join(' · ')}</span>
+        {#each others as other, at (at)}
+          <div class="gram other" data-other>
+            {#if other.pos}<span class="chip">{other.pos}</span>{/if}<span class="lemma">{other.said}</span>
           </div>
-        {/if}
+        {/each}
       {/if}
 
       {#if opened && answer.ipa.length > 0 && !phrase}

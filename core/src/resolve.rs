@@ -69,6 +69,9 @@ pub struct Answer {
     /// nobody labelled it, which a card names by its language alone rather than claim an
     /// accent for it.
     pub said_in: Option<String>,
+    /// The word this spelling is another way of writing, where it is only that: "popup" is
+    /// pop-up written without its hyphen, which is no form of it a grammar names.
+    pub spelling_of: Option<String>,
     /// The labels the dictionary gives each transcription, in the order of [ipa]: an accent
     /// with how good a name for it the label was (`en-gb:0`), or `?` for one not offered.
     pub ipa_said_in: Vec<Vec<String>>,
@@ -111,6 +114,7 @@ impl Answer {
             target: target.clone(),
             paradigm: None,
             said_in: None,
+            spelling_of: None,
             ipa_said_in: Vec::new(),
         }
     }
@@ -1807,6 +1811,24 @@ fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
         .map(|label| label.to_string())
 }
 
+/// Whether the dump lists this spelling among an entry's forms only as another way of writing
+/// it: "popup" under pop-up is labelled "alternative" and nothing else.
+fn only_another_spelling(entry: &Entry, spelling: &str) -> bool {
+    let labels: Vec<String> = entry
+        .forms
+        .iter()
+        .filter(|form| same_word(&form.spelling, spelling))
+        .flat_map(|form| {
+            form.label
+                .split("; ")
+                .map(str::to_lowercase)
+                .collect::<Vec<_>>()
+        })
+        .filter(|label| !label.is_empty())
+        .collect();
+    !labels.is_empty() && labels.iter().all(|label| label.contains("alternative"))
+}
+
 /// The readings that are different words to a reader, in order.
 ///
 /// Not every entry a spelling reaches is another word. "ist" reaches "sein" and also its own
@@ -2682,6 +2704,8 @@ fn finish<D: AsRef<[u8]>>(
         },
         // Only for the spelling that was actually met, and only where the dump named it.
         form: form_of(entry, spelling),
+        spelling_of: (!same_word(&entry.lemma, spelling) && only_another_spelling(entry, spelling))
+            .then(|| entry.lemma.clone()),
         pos: if entry.pos.is_empty() {
             None
         } else {

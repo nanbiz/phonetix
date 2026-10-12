@@ -52,8 +52,8 @@ fn main() {
                 println!("            {:?}: {:?}", reading.pos, reading.glosses);
             }
             println!(
-                "            form={:?} lemma={:?}",
-                answer.form, answer.lemma
+                "            form={:?} lemma={:?} spelling_of={:?}",
+                answer.form, answer.lemma, answer.spelling_of
             );
         }
         if let Some(form) = &answer.paradigm {

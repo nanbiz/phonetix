@@ -26,8 +26,8 @@ WANT = {
     # example and its other senses are not on a card under the pointer.
     "entry": {"headline": "Hund", "badges": [], "example": "", "symbols": 6},
     "form": {"headline": "Hund", "badges": [], "form": "form of perro"},
-    # A spelling that is several words leads with the likeliest and names the others on one
-    # line, rather than leading with a sentence about itself.
+    # A spelling that is several words leads with the likeliest and names each of the others
+    # under it, rather than leading with a sentence about itself.
     "homograph": {"headline": "Bank", "readings": ["buchen"]},
     "guess": {"headline": "Regenschauer", "badges": ["guess"], "symbols": 10},
     "anchored": {"headline": "way, route", "badges": ["in English"]},
@@ -83,8 +83,7 @@ def main():
                       marks: [...card.querySelectorAll('.ipa-mark')].map(m => m.getAttribute('aria-label')),
                       play: [...card.querySelectorAll('.audio')].length,
                       form: (card.querySelector('[data-form]') || {}).textContent?.trim() || '',
-                      readings: ((card.querySelector('[data-others] .lemma') || {}).textContent || '')
-                        .split(' · ').filter(Boolean),
+                      readings: [...card.querySelectorAll('[data-other] .lemma')].map(r => r.textContent.trim()),
                       others: [...card.querySelectorAll('.card-body .note')].map(n => n.textContent),
                       more: (card.querySelector('.btn-text') || {}).textContent || '',
                       example: (card.querySelector('.ex') || {}).textContent || '',

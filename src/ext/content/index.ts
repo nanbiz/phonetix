@@ -723,7 +723,7 @@ function said(answer: Answer): Answer {
 }
 
 /** Open the card for a word the reader stopped at, or tapped, which is asking for it outright. */
-async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> {
+async function open(anchor: Anchor, word: Asked, tapped = false, held = false): Promise<void> {
   const source = word.lang || pageLanguage();
   // Into the reader's own language, unless this is one they read as it is. Then into the one
   // they are learning, where they learn one, which is practice: what the word is in it, and
@@ -784,8 +784,9 @@ async function open(anchor: Anchor, word: Asked, tapped = false): Promise<void> 
     // host, because the page's own policy would refuse the load.
     onPlayUrl: (url) => void recorded(url, warmAudio()),
     // Chosen on the card, for every word of the language from now on: the page redraws itself
-    // when the setting changes, and the card is asked again in the accent chosen.
-    onAccent: (accent) => {
+    // when the setting changes, and the card is asked again in the accent chosen. Not on a card
+    // a finger holds, which nothing can press: there the accent is named, never offered.
+    onAccent: held || (tapped && touched) ? undefined : (accent) => {
       // Redrawn here rather than left to the watch, which compares what is stored with what
       // this page last saw and so would find nothing changed.
       const accents = setAccent(settings, source, accent);
@@ -1070,10 +1071,10 @@ function markWhereTouched(): void {
       // Read while the finger is down and touched by nothing, like the phone's.
       if ('drawn' in found) {
         anchored = onElement(found.drawn.element);
-        void open(anchored, askedOf(found.drawn.token, found.drawn.before));
+        void open(anchored, askedOf(found.drawn.token, found.drawn.before), false, true);
       } else {
         anchored = onRange(found.page.range);
-        void open(anchored, found.page.asked);
+        void open(anchored, found.page.asked, false, true);
       }
     },
     onHand: (at) => handAt(at),

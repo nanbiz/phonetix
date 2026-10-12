@@ -22,7 +22,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
-\"paradigm\":{},\"saidIn\":{}}}",
+\"paradigm\":{},\"saidIn\":{},\"spellingOf\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -61,6 +61,8 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         // The accent the transcription shown is said in, which a card names rather than the
         // one the reader chose: nothing where nobody labelled it.
         maybe(&answer.said_in),
+        // The word this spelling is another way of writing, which a card names beside it.
+        maybe(&answer.spelling_of),
     )
 }
 
@@ -341,6 +343,7 @@ mod tests {
             target: Lang("de".into()),
             paradigm: None,
             said_in: None,
+            spelling_of: None,
             ipa_said_in: Vec::new(),
         }
     }
