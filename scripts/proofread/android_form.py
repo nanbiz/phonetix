@@ -28,6 +28,8 @@ EN_PACK = os.environ.get("PHONETIX_EN_PACK", os.path.join(ROOT, ".cache", "relea
 # An English word for a reader who reads English, and the dictionary's first sense of it, which
 # the card gives whole under how it is said: a definition, where a translation would be none.
 DEFINED = ("commissions", "A sending or mission (to do or accomplish something).")
+# What its table says it is in Spanish, in the form the card can give it.
+PRACTISED = ("comisión", "comisiones", "encargo", "encargos", "misión", "misiones")
 
 # Words of the Spanish page that are forms of another word, what the card should say they mean,
 # and how it should name the form.
@@ -71,19 +73,31 @@ def main():
         if any(mark in joined for mark in "ˈˌ"):
             failures.append(f"the card for {word} shows stress marks with them off: {texts}")
     word, sense = DEFINED
-    dev.surface(mode="prose", target="en", known="none", enable=1, density=1)
+    dev.surface(mode="prose", target="en", known="none", learn="none", enable=1, density=1)
     time.sleep(6)
     texts, _ = card_while_held(dev, word)
     print(f"  {word}: {' | '.join(texts)}")
     if sense not in texts:
         failures.append(f"the card for {word}, read in English, does not define it: {texts}")
+    # The same reader learning Spanish: the card says what the word is in Spanish, from the
+    # English Wiktionary's own table for it, with the English sense under it.
+    dev.surface(mode="prose", target="en", known="none", learn="es", enable=1, density=1)
+    time.sleep(6)
+    texts, _ = card_while_held(dev, word)
+    print(f"  {word}, learning Spanish: {' | '.join(texts)}")
+    if not any(text in texts for text in PRACTISED):
+        failures.append(f"the card for {word}, learning Spanish, says no Spanish word: {texts}")
+    if sense not in texts:
+        failures.append(f"the card for {word}, learning Spanish, lost its definition: {texts}")
+    dev.surface(mode="prose", target="en", known="none", learn="none", enable=1, density=1)
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
     print("\nPASS - a form's card says what it means in that form and which form of which word it "
-          "is, and an English word read in English is defined")
+          "is, and an English word read in English is defined, and in Spanish for a reader "
+          "learning it")
 
 
 if __name__ == "__main__":

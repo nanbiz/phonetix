@@ -121,6 +121,11 @@ def push_models():
             adb("push", os.path.join(MODELS, name), f"/data/local/tmp/{name}", timeout=900)
             adb("shell", f"run-as io.github.nanbiz.phonetix sh -c "
                          f"'cat \"/data/local/tmp/{name}\" > \"{into}/{name}\"'", timeout=900)
+            # Checked, since a push that failed leaves the copy an empty file, and an empty
+            # model is one the app must never be handed.
+            size = shell("run-as", "io.github.nanbiz.phonetix", "stat", "-c", "%s", f"{into}/{name}")
+            if size.strip() != str(os.path.getsize(os.path.join(MODELS, name))):
+                raise SystemExit(f"{name} reached the phone as {size.strip()!r} bytes")
 
 
 def main():

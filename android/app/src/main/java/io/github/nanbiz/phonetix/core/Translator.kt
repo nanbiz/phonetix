@@ -68,7 +68,7 @@ object Translator {
 
     /** Whether the files for exactly this direction are here. */
     private fun direct(models: File, from: String, to: String): Boolean {
-        val here = File(models, "$from-$to").listFiles().orEmpty()
+        val here = filesOf(models, "$from-$to")
         return here.any { it.name.startsWith("model") && it.name.endsWith(".bin") } &&
             vocabularies(here) != null
     }
@@ -91,6 +91,14 @@ object Translator {
      * script - Japanese and English - carries one for each, and handing the engine the same
      * one twice makes it read the target language's pieces as the source's.
      */
+    /**
+     * The files a direction has, leaving out any that are empty: the engine aborts the whole
+     * process on an empty model rather than refusing it, and a direction with one is a
+     * direction to fetch again, not one to open.
+     */
+    private fun filesOf(models: File, direction: String): Array<File> =
+        File(models, direction).listFiles().orEmpty().filter { it.length() > 0 }.toTypedArray()
+
     private fun vocabularies(here: Array<out File>): Pair<File, File>? {
         val source = here.firstOrNull { it.name.startsWith("srcvocab") && it.name.endsWith(".spm") }
         val target = here.firstOrNull { it.name.startsWith("trgvocab") && it.name.endsWith(".spm") }
@@ -126,7 +134,7 @@ object Translator {
         if (runCatching { Lex.translateReady(direction) != 0 }.getOrDefault(false)) return true
         // Found by what they are rather than by a name of ours: the files keep the names they
         // are published under, because the engine reads what kind of model it is from them.
-        val here = File(models, direction).listFiles().orEmpty()
+        val here = filesOf(models, direction)
         val model = here.firstOrNull { it.name.startsWith("model") && it.name.endsWith(".bin") }
         val vocabs = vocabularies(here)
         val shortlist = here.firstOrNull { it.name.startsWith("lex") && it.name.endsWith(".bin") }
