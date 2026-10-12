@@ -12,7 +12,9 @@ nouns and verbs - against what they mean.
 The packs are the published ones: tools/build_packs.sh writes them there, or they can be
 downloaded from the release into the directory given.
 """
+import json
 import os
+import re
 import subprocess
 import sys
 
@@ -24,22 +26,35 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 # is of the one the sentence means.
 CASES = {
     "es": ("El perro corre por el camino del banco. La casa es grande y los niños juegan en el parque.",
-           {"El": "the", "perro": "dog", "camino": "way, route", "del": "of the, from the",
-            "casa": "house", "es": "is", "y": "and", "los": "the", "parque": "park"}),
+           {"perro": "dog", "camino": "way, route", "casa": "house", "es": "is", "parque": "park"}),
     "de": ("Er hat die ganze Nacht gearbeitet. Der Hund läuft auf dem Weg zur Bank. Das Haus ist groß. "
            "Meine Kinder spielen mit ihren Freunden.",
-           {"Er": "he", "hat": "has", "die": "the", "Nacht": "night", "Der": "the",
-            "Hund": "dog, hound", "dem": "the", "Weg": "path, trail, track", "zur": "to the",
-            "Das": "the", "Haus": "house", "ist": "is", "Meine": "my"}),
+           {"hat": "has", "Nacht": "night", "Hund": "dog, hound", "Weg": "path, trail, track",
+            "Haus": "house", "ist": "is"}),
     "fr": ("Le chien court sur le chemin de la banque. Les enfants jouent dans le parc.",
-           {"Le": "the", "chien": "dog", "le": "the", "la": "the", "banque": "bank",
-            "Les": "the", "parc": "park"}),
+           {"chien": "dog", "banque": "bank", "parc": "park"}),
     "it": ("Il cane corre sulla strada verso la banca. La casa è grande.",
-           {"Il": "the", "cane": "dog, male dog", "corre": "runs", "sulla": "on the",
-            "la": "the", "banca": "bank", "casa": "house", "è": "is"}),
+           {"cane": "dog, male dog", "corre": "runs", "banca": "bank", "casa": "house", "è": "is"}),
     "pt": ("O cão corre pelo caminho do banco. As crianças brincam no parque e a casa é grande.",
-           {"O": "the", "cão": "dog", "pelo": "by the", "As": "the", "no": "in the, on the",
-            "parque": "park", "a": "the"}),
+           {"cão": "dog", "parque": "park"}),
+}
+
+# The words of those sentences that hold them together: articles, prepositions, conjunctions,
+# pronouns. None is ever drawn, because one translated by itself agrees with nothing around it;
+# what each means is still the card's, asked the way the page asks it, lowercased where it
+# starts a sentence and after the word before it, and has to be the word and not the grammar
+# note it is filed under ("masculine singular definite article; the").
+HELD = {
+    "es": {"El": ("el", "the"), "del": ("camino:del", "of the, from the"), "y": ("grande:y", "and"),
+           "los": ("y:los", "the")},
+    "de": {"Er": ("er", "he"), "die": ("hat:die", "the"), "Der": ("der", "the"),
+           "dem": ("auf:dem", "the"), "zur": ("weg:zur", "to the"), "Das": ("das", "the"),
+           "Meine": ("meine", "my")},
+    "fr": {"Le": ("le", "the"), "le": ("sur:le", "the"), "la": ("de:la", "the"),
+           "Les": ("les", "the")},
+    "it": {"Il": ("il", "the"), "sulla": ("corre:sulla", "on the"), "la": ("verso:la", "the")},
+    "pt": {"O": ("o", "the"), "pelo": ("corre:pelo", "by the"), "As": ("as", "the"),
+           "no": ("brincam:no", "in the, on the"), "a": ("e:a", "the")},
 }
 
 # And words the page alone leaves undecided, read again with the line as the engine translated
@@ -51,14 +66,14 @@ CASES = {
 SETTLED = [
     ("fr", "La maison est grande et le chat court dans le parc.",
      "The house is big and the cat runs in the park.",
-     {"est": "is", "court": "runs", "chat": "cat", "le": "the", "dans": "in, inside"}),
+     {"est": "is", "court": "runs", "chat": "cat"}),
     ("fr", "Le chemin est court.", "The path is short.",
      {"est": "is", "court": "short"}),
     # And a word that is decided but has several senses, drawn in the one the line is about.
     ("es", "Me siento en el banco del parque.", "I sit on the park bench.",
      {"banco": "bench", "siento": "sit down"}),
     ("es", "El banco cerró mi cuenta.", "The bank closed my account.",
-     {"banco": "bank", "mi": "my", "cuenta": "account"}),
+     {"banco": "bank", "cuenta": "account"}),
     ("de", "Er sitzt auf der Bank.", "He sits on the bench.", {"Bank": "bench"}),
     ("de", "Die Bank ist geschlossen.", "The bank is closed.", {"Bank": "bank"}),
 ]
@@ -82,6 +97,24 @@ def drawn(pack, lang, text, translated=None):
     return said
 
 
+def led(pack, english, lang, asked):
+    """What the card leads with for each word asked, "before:word" giving the word before it."""
+    out = subprocess.run(
+        ["cargo", "run", "-q", "--release", "--manifest-path", os.path.join(ROOT, "core/Cargo.toml"),
+         "--example", "card", "--", pack, english, lang, "en"] + asked,
+        cwd=os.path.join(ROOT, "core"), capture_output=True, text=True, timeout=600,
+    )
+    if out.returncode != 0:
+        raise SystemExit(f"the core would not read {lang}: {out.stderr[-400:]}")
+    leads = []
+    for line in out.stdout.splitlines():
+        if line.startswith("            "):
+            continue
+        match = re.search(r'lead=(?:Some\((".*?")\)|None)', line)
+        leads.append(json.loads(match.group(1)) if match and match.group(1) else None)
+    return leads
+
+
 def main():
     packs = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, ".cache/release")
     failures = []
@@ -97,6 +130,16 @@ def main():
         print(f"  {lang}: {right} of {len(wanted)}")
         for word, (got, meant) in wrong.items():
             failures.append(f"{lang} {word!r} drawn as {got!r}, which should be {meant!r}")
+        held = HELD.get(lang, {})
+        english = os.path.abspath(os.path.join(packs, "en.pack"))
+        leads = led(os.path.abspath(pack), english, lang, [asked for asked, _ in held.values()])
+        for (word, (asked, meant)), lead in zip(held.items(), leads):
+            if word in said:
+                failures.append(f"{lang} {word!r} drawn as {said[word]!r}, which holds the "
+                                "sentence together and is never drawn")
+            if lead != meant:
+                failures.append(f"{lang} {word!r}: the card leads with {lead!r}, not {meant!r}")
+        print(f"  {lang}: {len(held)} held, on the card as {leads}")
     for lang, text, translated, wanted in SETTLED:
         pack = os.path.join(packs, f"{lang}.pack")
         if not os.path.exists(pack):

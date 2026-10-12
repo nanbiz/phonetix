@@ -26,9 +26,10 @@ fn main() {
             &open,
         );
         println!(
-            "{word:>10}  {:?} ipa={:?} says={:?} readings={}",
+            "{word:>10}  {:?} ipa={:?} lead={:?} says={:?} readings={}",
             answer.state,
             answer.ipa,
+            lexcore::annotate::lead(&answer, &open),
             answer.says,
             answer.readings.len()
         );
