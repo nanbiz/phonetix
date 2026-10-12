@@ -23,6 +23,11 @@ from android_harness import Device, adb, card_while_held, shell  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 PACK = os.environ.get("PHONETIX_ES_PACK", os.path.join(ROOT, ".cache", "release", "es.pack"))
+EN_PACK = os.environ.get("PHONETIX_EN_PACK", os.path.join(ROOT, ".cache", "release", "en.pack"))
+
+# An English word for a reader who reads English, and the dictionary's first sense of it, which
+# the card gives whole under how it is said: a definition, where a translation would be none.
+DEFINED = ("commissions", "A sending or mission (to do or accomplish something).")
 
 # Words of the Spanish page that are forms of another word, what the card should say they mean,
 # and how it should name the form.
@@ -38,9 +43,10 @@ def main():
     dev = Device()
     failures = []
     shell("am", "force-stop", "io.github.nanbiz.phonetix")
-    adb("push", PACK, "/data/local/tmp/lex-es.pack", timeout=300)
-    adb("shell", "run-as io.github.nanbiz.phonetix sh -c "
-                 "'cat /data/local/tmp/lex-es.pack > files/lex-es.pack'", timeout=300)
+    for lang, path in (("es", PACK), ("en", EN_PACK)):
+        adb("push", path, f"/data/local/tmp/lex-{lang}.pack", timeout=300)
+        adb("shell", "run-as io.github.nanbiz.phonetix sh -c "
+                     f"'cat /data/local/tmp/lex-{lang}.pack > files/lex-{lang}.pack'", timeout=300)
     if not dev.enable_service():
         raise SystemExit("the service would not start")
     dev.set_enabled(True)
@@ -64,12 +70,20 @@ def main():
         # Stress marks are off unless the reader turns them on, on the card as over the page.
         if any(mark in joined for mark in "ˈˌ"):
             failures.append(f"the card for {word} shows stress marks with them off: {texts}")
+    word, sense = DEFINED
+    dev.surface(mode="prose", target="en", known="none", enable=1, density=1)
+    time.sleep(6)
+    texts, _ = card_while_held(dev, word)
+    print(f"  {word}: {' | '.join(texts)}")
+    if sense not in texts:
+        failures.append(f"the card for {word}, read in English, does not define it: {texts}")
     if failures:
         print("\nFAIL")
         for line in failures:
             print(f"  {line}")
         sys.exit(1)
-    print("\nPASS - a form's card says what it means in that form and which form of which word it is")
+    print("\nPASS - a form's card says what it means in that form and which form of which word it "
+          "is, and an English word read in English is defined")
 
 
 if __name__ == "__main__":

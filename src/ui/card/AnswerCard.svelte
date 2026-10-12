@@ -112,7 +112,14 @@
   // in the type a headline is set in ran over two lines of a card read in a glance.
   // A form the core could say in the reader's language is said in it: "he walked" for
   // "anduvo", where the lemma's meaning would be "to walk".
-  let lead = $derived(answer.paradigm?.said ?? short(headlineOf(answer)));
+  // A word read in its own language is defined rather than translated, and a definition is a
+  // sentence: whole, brackets and all, where the lead is the sense with its brackets taken out
+  // ("To apply a force to so that it comes toward..."), and set smaller than a translation.
+  let defining = $derived(answer.source === answer.target && answer.state !== 'Phrase');
+  let lead = $derived(
+    answer.paradigm?.said ??
+      (defining ? (answer.says[0] ?? headlineOf(answer)) : short(headlineOf(answer)))
+  );
   // The word cut where its own ending starts: the stem it shares with its lemma in ink, and
   // what makes it this form in the accent. Shown only where the card reads a word the page
   // does not have: another form of it, picked from its terms.
@@ -327,7 +334,7 @@
       {:else}
         {#if lead && lead !== answer.spelling}
           <div class="headline">
-            <span class="tr">{lead}</span>
+            <span class="tr{defining ? ' def' : ''}">{lead}</span>
             {#if answer.pos && !phrase}<span class="chip">{answer.pos}</span>{/if}
             {#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}
             {#if guessed}

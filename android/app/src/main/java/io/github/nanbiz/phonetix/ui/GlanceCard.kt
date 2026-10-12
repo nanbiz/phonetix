@@ -41,6 +41,9 @@ fun GlanceCard(
     report: Reporter? = null,
     narrow: Boolean = false,
     hideStress: Boolean = false,
+    /** Whether the word is read in the language its dictionary defines it in, so that what the
+     *  dictionary says is a definition rather than a translation, and goes under how it is said. */
+    defining: Boolean = false,
 ) {
     // At the detail the reader asked for: the dictionary's narrow transcription, between
     // brackets, where they asked for narrow ones and it gives one; the broad one otherwise.
@@ -66,6 +69,10 @@ fun GlanceCard(
         .distinct()
         .take(ALSO)
     val definition = answer.glosses.firstOrNull()?.takeIf { it.isNotBlank() }
+    // Whole, since a definition is a sentence and cutting it at its first bracket or semicolon
+    // leaves half of one.
+    val defined = if (!defining) null else (answer.says.firstOrNull() ?: definition)
+        ?.takeIf { it.isNotBlank() }
     // The readings said differently from each other, where the page left it open which one.
     val spoken = if (answer.state != Answer.State.Homograph) emptyList() else answer.readings
         .filter { it.ipa.firstOrNull()?.isNotBlank() == true }
@@ -191,14 +198,26 @@ fun GlanceCard(
                     }
                 }
             }
-            written != null -> Text(
-                text = written,
-                color = Color(palette.ipa),
-                fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
-                style = IpaStyle,
-                maxLines = 2,
-                modifier = Modifier.reported(written, report),
-            )
+            written != null -> {
+                Text(
+                    text = written,
+                    color = Color(palette.ipa),
+                    fontSize = Tokens.Scale.fontSizeIpaLarge.sp,
+                    style = IpaStyle,
+                    maxLines = 2,
+                    modifier = Modifier.reported(written, report),
+                )
+                if (defined != null) {
+                    Text(
+                        text = defined,
+                        color = Color(palette.ink),
+                        fontSize = Tokens.Scale.fontSizeBody.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.reported(defined, report),
+                    )
+                }
+            }
             definition != null -> Text(
                 text = definition,
                 color = Color(palette.ink),

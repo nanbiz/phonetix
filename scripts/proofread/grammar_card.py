@@ -38,12 +38,21 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(HERE, "out")
 PACK = os.environ.get("PHONETIX_ES_PACK", os.path.join(ROOT, ".cache", "release", "es.pack"))
+EN_PACK = os.environ.get("PHONETIX_EN_PACK", os.path.join(ROOT, ".cache", "release", "en.pack"))
 PORT = int(os.environ.get("PHONETIX_GRAMMAR_PORT", "8931"))
 
 PAGE = (
     "<!doctype html><html lang='es'><meta charset='utf-8'><body style='margin:0'>"
     "<p id='prose' style='margin:80px 0 0 120px;width:520px;font-size:18px;line-height:1.6'>"
     "Ayer Juan anduvo despacio por la calle hasta la casa de su madre.</p>"
+    "</body></html>"
+).encode()
+
+# An English line for a reader who reads English: its words are defined, not translated.
+ENGLISH = (
+    "<!doctype html><html lang='en'><meta charset='utf-8'><body style='margin:0'>"
+    "<p id='prose' style='margin:80px 0 0 120px;width:520px;font-size:18px;line-height:1.6'>"
+    "She kept pulling the rope until the knot came loose.</p>"
     "</body></html>"
 ).encode()
 
@@ -66,28 +75,31 @@ def serve():
 
         def do_GET(self):
             if self.path == "/packs.json":
-                rows = [{"id": "lex-es", "lang": "es", "built": 0, "entries": 1, "keys": 1,
-                         "glosses": 1, "bytes": os.path.getsize(PACK), "sha256": ""}]
+                rows = [{"id": f"lex-{lang}", "lang": lang, "built": 0, "entries": 1, "keys": 1,
+                         "glosses": 1, "bytes": os.path.getsize(path), "sha256": ""}
+                        for lang, path in (("es", PACK), ("en", EN_PACK))]
                 return self.send(json.dumps(rows).encode(), "application/json")
             if self.path.endswith(".pack"):
-                if os.path.basename(self.path) != "es.pack":
+                path = {"es.pack": PACK, "en.pack": EN_PACK}.get(os.path.basename(self.path))
+                if not path:
                     return self.send_error(404)
-                with open(PACK, "rb") as f:
+                with open(path, "rb") as f:
                     return self.send(f.read(), "application/octet-stream")
-            page = LOW if self.path.startswith("/low") else PAGE
+            page = LOW if self.path.startswith("/low") else (
+                ENGLISH if self.path.startswith("/en") else PAGE)
             return self.send(page, "text/html; charset=utf-8")
 
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
 
-# Where "anduvo" is on the page, painted or not.
-WORD_JS = """
+# Where a word is on the page, painted or not.
+WORD_TEMPLATE = """
 (() => {
   const p = document.getElementById('prose');
   for (const w of p.querySelectorAll('.px-w')) {
     const was = ((w.querySelector('.px-was') || {}).textContent || '').trim();
-    if (was === 'anduvo') {
+    if (was === 'WORD') {
       const r = w.getBoundingClientRect();
       return {x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, top: r.top, bottom: r.bottom};
     }
@@ -95,17 +107,24 @@ WORD_JS = """
   const walk = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
     if (n.parentElement.closest('.px-w')) continue;
-    const at = n.nodeValue.indexOf('anduvo');
+    const at = n.nodeValue.indexOf('WORD');
     if (at < 0) continue;
     const range = document.createRange();
     range.setStart(n, at);
-    range.setEnd(n, at + 6);
+    range.setEnd(n, at + 'WORD'.length);
     const r = range.getBoundingClientRect();
     return {x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, top: r.top, bottom: r.bottom};
   }
   return null;
 })()
 """
+
+
+def word_js(word):
+    return WORD_TEMPLATE.replace("WORD", word)
+
+
+WORD_JS = word_js("anduvo")
 
 # Everything about the card a check asks: its lines, its sheet, its entry, and the boxes of each.
 CARD_JS = r"""
@@ -148,6 +167,7 @@ CARD_JS = r"""
     top: box(card.querySelector('.card-strip')),
     textBox: box(card.querySelector('.headline .tr')),
     headline: text(card.querySelector('.headline .tr')),
+    defined: !!card.querySelector('.headline .tr.def'),
     form: text(card.querySelector('[data-form]')),
     terms: [...card.querySelectorAll('[data-term]')].map(t => ({
       category: t.dataset.term, label: text(t), box: box(t)})),
@@ -245,8 +265,52 @@ class Run:
             self.fail(f"{where}: rows {heights}px high, not 30")
         # Explained only when asked: the sheet is the word's other forms, and a paragraph of
         # definitions over every one of them was a sheet to read rather than a glance.
-        if sheet["def"]:
+        if sheet["def"] and sheet["rows"]:
             self.fail(f"{where}: the sheet explains {sheet['cat']!r} without being asked")
+
+    def check_defined(self, word):
+        """An English word for a reader who reads English: what it means, in the dictionary's
+        own words, and a term with no other forms to list explained as its sheet opens."""
+        hand = self.hand
+        hand.click(2, 2)
+        hand.move(2, 2)
+        time.sleep(0.6)
+        for step in (0, 1):
+            hand.move(word["x"] + step, word["y"])
+            time.sleep(0.05)
+        rest = self.wait(lambda c: c["open"] and c["word"] == "pulling" and c["headline"])
+        print(f"  {self.name}: english: {rest.get('headline', '')[:60]!r} / {rest.get('form')!r}")
+        if not rest["open"] or not rest["headline"]:
+            self.fail(f"english: the card for pulling says nothing it means: {rest.get('lines')}")
+            return
+        if not rest["defined"] or not rest["headline"].startswith("To "):
+            self.fail(f"english: pulling is not defined: {rest['headline']!r}")
+        self.words_ok(rest, "english")
+        self.shoot("english", rest["card"])
+        terms = {t["label"]: t for t in rest["terms"]}
+        if "participle" not in terms:
+            self.fail(f"english: no participle term: {list(terms)}")
+            return
+        below = rest["card"]["top"] > word["y"]
+        inside = rest["card"]["top"] + 20 if below else rest["card"]["bottom"] - 20
+        walk(hand, (word["x"], word["y"]), (word["x"], inside))
+        time.sleep(0.4)
+        term = terms["participle"]
+        walk(hand, (word["x"], inside), (term["box"]["x"], term["box"]["y"]), step=6)
+        opened = self.wait(lambda c: c.get("sheet") and c["sheet"]["category"] == term["category"],
+                           tries=20)
+        sheet = opened.get("sheet")
+        if not sheet:
+            self.fail("english: pointing at participle opened no sheet")
+            return
+        print(f"  {self.name}: english participle sheet {sheet['cat']!r}: {sheet['def'][:60]!r}")
+        # Nothing to list, so what it is, at once: a sheet that names itself and waits for a
+        # "?" is an empty sheet.
+        if not sheet["rows"] and (not sheet["def"] or sheet["ask"]):
+            self.fail(f"english: the participle sheet is empty until asked: {sheet}")
+        self.sheet_ok(opened, "english participle sheet")
+        self.words_ok(opened, "english participle sheet")
+        self.shoot("english-sheet", opened["card"], sheet["box"])
 
     def check_low(self, word):
         """A card over its word: its sheets open over the card, the same width and gap."""
@@ -456,7 +520,8 @@ def chrome(failures):
             "on:true,layer:'sound',density:1})"))
         got = evaluate(cdp, settings,
                        "chrome.runtime.sendMessage({phonetix:'getPack',data:{lang:'es'}})"
-                       ".then(r => JSON.stringify(r))")
+                       ".then(() => chrome.runtime.sendMessage({phonetix:'getPack',"
+                       "data:{lang:'en'}})).then(r => JSON.stringify(r))")
         print(f"  chrome: the pack: {str(got)[:80]}")
         target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})
         page = cdp.send("Target.attachToTarget",
@@ -492,6 +557,9 @@ def chrome(failures):
         cdp.send("Page.navigate", {"url": f"{base}/low.html"}, session=page)
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        cdp.send("Page.navigate", {"url": f"{base}/en.html"}, session=page)
+        time.sleep(4)
+        run.check_defined(hand.ask(word_js("pulling")))
     finally:
         cdp.close()
 
@@ -529,6 +597,7 @@ def firefox(failures):
             f"browser.storage.local.set({{packBaseUrl: '{base}', targetLanguage: 'en',"
             " density: 1, layer: 'sound', on: true})"
             "  .then(() => browser.runtime.sendMessage({phonetix: 'openPack', data: {lang: 'es'}}))"
+            "  .then(() => browser.runtime.sendMessage({phonetix: 'openPack', data: {lang: 'en'}}))"
             "  .then(r => done(JSON.stringify(r)), e => done('failed: ' + e));",
             timeout=180000)
         print(f"  firefox: the pack: {str(told)[:80]}")
@@ -551,6 +620,9 @@ def firefox(failures):
         driver.send("WebDriver:Navigate", {"url": f"{base}/low.html"})
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        driver.send("WebDriver:Navigate", {"url": f"{base}/en.html"})
+        time.sleep(4)
+        run.check_defined(hand.ask(word_js("pulling")))
     finally:
         if driver is not None:
             try:

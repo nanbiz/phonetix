@@ -63,7 +63,7 @@
     },
     "nonfinite": {
       "name": "nonfinite",
-      "text": "Of a verb – lacking grammatical person and number attributes; most nonfinite verbs found in English are infinitives, participles and gerunds.",
+      "text": "Of a verb, lacking grammatical person and number attributes; most nonfinite verbs found in English are infinitives, participles and gerunds.",
       "source": "Appendix:Glossary#nonfinite"
     }
   },
@@ -262,7 +262,7 @@
     },
     "instrumental": {
       "category": "case",
-      "text": "A case used to express means or agency—and is generally indicated in English by \"by\" or \"with\" with the objective.",
+      "text": "A case used to express means or agency, and is generally indicated in English by \"by\" or \"with\" with the objective.",
       "source": "Appendix:Glossary#instrumental_case",
       "rows": 1179536
     },

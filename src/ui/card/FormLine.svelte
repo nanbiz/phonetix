@@ -143,7 +143,9 @@
    *  pressed, until it is pressed again or another sheet opens. */
   let hovering = $state(false);
   let pinned = $state(false);
-  let asked = $derived(hovering || pinned);
+  /** A sheet with no other forms to list is its explanation alone, shown as it opens. */
+  let bare = $derived(along === null);
+  let asked = $derived(hovering || pinned || bare);
 
   /** Whether a term has a sheet with anything in it: the word in its other values, or what
    *  the term means where a reader would need telling. One with neither opened a sheet that
@@ -208,7 +210,7 @@
       onpointerleave={leave}
     >
       <div class="sheet-cat">
-        {categoryName(term.category)} · {term.long}{#if explained(term).length > 0}<button
+        {categoryName(term.category)} · {term.long}{#if explained(term).length > 0 && !bare}<button
             class="sheet-ask{asked ? ' on' : ''}"
             data-ask
             aria-label="What this is"

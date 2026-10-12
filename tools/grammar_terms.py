@@ -418,6 +418,8 @@ def plain(text):
     text = re.sub(r"'{2,}", "", text)
     text = re.sub(r"<[^>]+>", "", text)
     text = text.replace("&nbsp;", " ")
+    # A dash setting a clause off reads as a comma, and the card's text never carries one.
+    text = re.sub(r"\s*[\u2013\u2014]\s*", ", ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
