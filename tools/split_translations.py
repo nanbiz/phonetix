@@ -34,6 +34,12 @@ def cleaned(word):
     return " ".join(word.split()).strip(" ,;")
 
 
+# Senses a reader does not mean in ordinary text, whose rows are left out: "glass" the verb has
+# Spanish only for the colloquial "to strike someone with a drinking glass", "atentar", and
+# that was what every glass as a verb was.
+UNUSUAL = {"slang", "colloquial", "vulgar", "derogatory", "rare", "archaic", "obsolete", "dated",
+           "dialectal", "nonstandard", "humorous", "Internet"}
+
 # Words that say nothing about which sense a label is.
 EMPTY = {"a", "an", "the", "of", "to", "or", "and", "in", "on", "for", "with", "as", "by", "at",
          "be", "is", "that", "which", "who", "one", "something", "someone", "etc", "from"}
@@ -69,6 +75,8 @@ def main():
             pos = entry.get("pos") or ""
             senses = [words(" ".join((sense.get("glosses") or []) + (sense.get("raw_glosses") or [])))
                       for sense in entry.get("senses") or []]
+            unusual = [bool(UNUSUAL & set(sense.get("tags") or []))
+                       for sense in entry.get("senses") or []]
             # Each group by the sense it is about, and a group about none after every sense, in
             # the order the table names them.
             numbered = {}
@@ -82,7 +90,10 @@ def main():
                 if label not in numbered:
                     matched = sense_of(label, senses)
                     numbered[label] = matched if matched is not None else len(senses) + len(numbered)
-                rows.append((numbered[label], len(rows), code, label, word))
+                number = numbered[label]
+                if number < len(unusual) and unusual[number]:
+                    continue
+                rows.append((number, len(rows), code, label, word))
             for number, _, code, label, word in sorted(rows):
                 if code not in files:
                     files[code] = gzip.open(os.path.join(out, f"{code}.tsv.gz"), "wt",
