@@ -793,3 +793,196 @@ mod tests {
         assert_eq!(read.entry.ipa, vec!["ˈpe.ro"]);
     }
 }
+
+/// One row of a translation table, as tools/split_translations.py writes them: an English
+/// word and its part of speech, which of its senses the row translates, and the word in this
+/// pack's language.
+pub struct Translated {
+    pub english: String,
+    pub pos: String,
+    pub sense: u32,
+    pub word: String,
+}
+
+impl Translated {
+    /// A line of the table, tab separated: word, part of speech, sense number, the sense's
+    /// label, the translation.
+    pub fn parse(line: &str) -> Option<Translated> {
+        let mut fields = line.split('\t');
+        let english = fields.next()?.trim().to_string();
+        let pos = fields.next()?.trim().to_string();
+        let sense = fields.next()?.trim().parse().ok()?;
+        let _label = fields.next()?;
+        let word = fields.next()?.trim().to_string();
+        (!english.is_empty() && !word.is_empty()).then_some(Translated {
+            english,
+            pos,
+            sense,
+            word,
+        })
+    }
+}
+
+/// File every row's translation in [pack], under the English word, as
+/// [lexpack::translation_key] says; returns how many rows reached a word the pack has.
+///
+/// The rows of one English word arrive together, in the order the table splitter put them:
+/// the English senses in order, and within a sense its editors' order, which is kept. Counted
+/// instead, a word the counts overrate led ("parent" was "xadre", whose count is that of every
+/// form it lists). A translation the pack has no entry for - a phrase, a spelling the dump
+/// does not hold - is left out: there is nothing to hand over for it but the text, and the
+/// join and the engine still answer the word. [lang] is the pack's language, which says how a
+/// reflexive verb is filed.
+pub fn file_translations(
+    pack: &mut lexpack::Builder,
+    lang: &str,
+    rows: impl Iterator<Item = Translated>,
+) -> usize {
+    let mut reached = 0;
+    let mut word: Option<(String, String)> = None;
+    let mut sense: Vec<(u32, u32)> = Vec::new();
+    let mut at = u32::MAX;
+    let flush = |pack: &mut lexpack::Builder,
+                 word: &Option<(String, String)>,
+                 sense: &mut Vec<(u32, u32)>| {
+        if let Some((english, pos)) = word {
+            pack.translated(english, pos, sense);
+        }
+        sense.clear();
+    };
+    for row in rows {
+        let key = (row.english.clone(), row.pos.clone());
+        if word.as_ref() != Some(&key) || row.sense != at {
+            flush(pack, &word, &mut sense);
+            word = Some(key);
+            at = row.sense;
+        }
+        if let Some(hit) = translation_of(pack, lang, &row) {
+            reached += 1;
+            sense.push(hit);
+        }
+    }
+    flush(pack, &word, &mut sense);
+    reached
+}
+
+/// Which sense of which entry a row's translation is.
+///
+/// The entry whose lemma the word is, of the same kind of word as the English where the pack
+/// has one; and of its senses the one glossed with the English word, or else its first that is
+/// a meaning rather than a pointer to another word. A reflexive verb the pack files under the
+/// plain one is that one: "sentarse" is "sentar".
+fn translation_of(pack: &lexpack::Builder, lang: &str, row: &Translated) -> Option<(u32, u32)> {
+    let mut lower = row.word.to_lowercase();
+    if pack.reaching(&row.word).is_empty() && pack.reaching(&lower).is_empty() && row.pos == "verb"
+    {
+        if let Some(plain) = unreflexive(lang, &lower) {
+            lower = plain;
+        }
+    }
+    let mut reached: Vec<u32> = pack.reaching(&row.word).to_vec();
+    reached.extend_from_slice(pack.reaching(&lower));
+    let entries: Vec<(u32, &Entry)> = reached
+        .iter()
+        .filter_map(|which| pack.entry(*which).map(|entry| (*which, entry)))
+        .filter(|(_, entry)| entry.lemma.to_lowercase() == lower)
+        .collect();
+    let (which, entry) = entries
+        .iter()
+        .find(|(_, entry)| entry.pos == row.pos)
+        .or_else(|| entries.first())
+        .copied()?;
+    let english = row.english.to_lowercase();
+    let sense = entry
+        .senses
+        .iter()
+        .position(|sense| lexpack::gloss_terms(&sense.gloss).contains(&english))
+        .or_else(|| {
+            entry
+                .senses
+                .iter()
+                .position(|sense| !sense.marks.iter().any(|mark| mark == "form-of"))
+        })
+        .unwrap_or(0);
+    Some((which, sense as u32))
+}
+
+/// A reflexive verb as its language writes the plain one: Spanish and Portuguese "sentarse",
+/// "sentar-se" are "sentar", Italian "sedersi" is "sedere", French "s'asseoir" is "asseoir".
+fn unreflexive(lang: &str, verb: &str) -> Option<String> {
+    match lang {
+        "es" => verb.strip_suffix("se").map(str::to_string),
+        "pt" => verb.strip_suffix("-se").map(str::to_string),
+        "it" => verb.strip_suffix("rsi").map(|stem| format!("{stem}re")),
+        "fr" => verb
+            .strip_prefix("se ")
+            .or_else(|| verb.strip_prefix("s'"))
+            .or_else(|| verb.strip_prefix("s’"))
+            .map(str::to_string),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod translation_tests {
+    use super::*;
+
+    fn entry(lemma: &str, pos: &str, count: u64) -> Entry {
+        Entry {
+            lemma: lemma.to_string(),
+            pos: pos.to_string(),
+            tags: vec![format!("count:{count}")],
+            ipa: Vec::new(),
+            senses: vec![Sense {
+                gloss: "bank".to_string(),
+                ..Sense::default()
+            }],
+            forms: Vec::new(),
+        }
+    }
+
+    fn row(sense: u32, word: &str) -> Translated {
+        Translated {
+            english: "bank".to_string(),
+            pos: "noun".to_string(),
+            sense,
+            word: word.to_string(),
+        }
+    }
+
+    /// The table's order, whatever the words are counted at; a phrase the pack has no entry
+    /// for left out; and a reflexive verb found under the plain one.
+    #[test]
+    fn a_tables_words_keep_their_order() {
+        let mut pack = lexpack::Builder::new("es", lexpack::Kind::Lex, 0);
+        let banca = pack.add::<&str>(entry("banca", "noun", 10), &[]).unwrap();
+        let banco = pack.add::<&str>(entry("banco", "noun", 900), &[]).unwrap();
+        let hucha = pack.add::<&str>(entry("hucha", "noun", 5), &[]).unwrap();
+        let sentar = pack.add::<&str>(entry("sentar", "verb", 50), &[]).unwrap();
+        let reached = file_translations(
+            &mut pack,
+            "es",
+            vec![
+                row(0, "banca"),
+                row(0, "banco"),
+                row(0, "casa de cambio"),
+                row(1, "hucha"),
+            ]
+            .into_iter(),
+        );
+        assert_eq!(reached, 3);
+        let sit = Translated {
+            english: "sit".to_string(),
+            pos: "verb".to_string(),
+            sense: 0,
+            word: "sentarse".to_string(),
+        };
+        assert_eq!(file_translations(&mut pack, "es", std::iter::once(sit)), 1);
+        let read = lexpack::Pack::open(pack.finish().unwrap()).unwrap();
+        assert_eq!(
+            read.translations("bank", "noun"),
+            [(banca, 0), (banco, 0), (hucha, 0)]
+        );
+        assert_eq!(read.translations("sit", "verb"), [(sentar, 0)]);
+    }
+}

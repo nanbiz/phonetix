@@ -2250,3 +2250,59 @@ fn a_word_heard_a_letter_wrong_becomes_the_word_the_dictionary_holds() {
     assert_eq!(lexcore::resolve::heard("Bnk", &de), "Bnk");
     assert_eq!(lexcore::resolve::heard("Xylofon", &de), "Xylofon");
 }
+
+/// An English word read into Spanish is what the English Wiktionary's table says it is, ahead
+/// of the join on glosses: "file" joined that way reached "fila", a row, whose gloss happens
+/// to be "file"; the table says "archivo". And the line, where the host translated it, picks
+/// which of the table's words it uses.
+#[test]
+fn an_english_word_is_what_its_translation_table_says() {
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    english
+        .add(
+            word(
+                "file",
+                "noun",
+                "faɪl",
+                &["A collection of papers collated and archived together."],
+            ),
+            &["files"],
+        )
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let fila = spanish
+        .add(
+            word("fila", "noun", "ˈfi.la", &["row, line, file"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let archivo = spanish
+        .add(
+            word("archivo", "noun", "aɾˈt͡ʃi.βo", &["archive"]),
+            &["archivos"],
+        )
+        .unwrap();
+    let mut computer = word("fichero", "noun", "fiˈt͡ʃe.ɾo", &["computer file"]);
+    computer.forms.push(lexpack::Form {
+        spelling: "ficheros".to_string(),
+        label: "plural".to_string(),
+    });
+    let fichero = spanish.add::<&str>(computer, &[]).unwrap();
+    let _ = fila;
+    spanish.translated("file", "noun", &[(archivo, 0), (fichero, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let alone = read_in_context("file", None, &lang("en"), &lang("es"), &open);
+    assert_eq!(alone.says, ["archivo"]);
+    let with_line = Open {
+        said: Some("Guarda los ficheros en la carpeta."),
+        ..open
+    };
+    let in_line = read_in_context("files", None, &lang("en"), &lang("es"), &with_line);
+    assert_eq!(in_line.says, ["ficheros"]);
+}

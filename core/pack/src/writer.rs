@@ -126,6 +126,31 @@ impl Builder {
         Ok(which)
     }
 
+    /// The entries a spelling reaches so far, as [add] filed them.
+    pub fn reaching(&self, spelling: &str) -> &[u32] {
+        self.keys.get(spelling).map_or(&[], Vec::as_slice)
+    }
+
+    /// An entry already added, by number.
+    pub fn entry(&self, which: u32) -> Option<&Entry> {
+        self.entries.get(which as usize)
+    }
+
+    /// File what an English word is in this pack's language: the senses it translates to,
+    /// likeliest first, as [crate::translation_key] says where. Added to what is filed there
+    /// already, in order, without repeating a sense.
+    pub fn translated(&mut self, english: &str, pos: &str, senses: &[(u32, u32)]) {
+        let filed = self
+            .glosses
+            .entry(crate::translation_key(english, pos))
+            .or_default();
+        for sense in senses {
+            if !filed.contains(sense) {
+                filed.push(*sense);
+            }
+        }
+    }
+
     pub fn counts(&self) -> Counts {
         Counts {
             entries: self.entries.len(),

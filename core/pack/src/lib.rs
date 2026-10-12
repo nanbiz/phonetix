@@ -103,6 +103,17 @@ fn trailing_parenthesis(text: &str) -> Option<usize> {
     None
 }
 
+/// Where an English word's translations into a pack's language are filed in its gloss index.
+///
+/// The English Wiktionary's translation tables say, per sense, what an English word is in each
+/// language, written by people who speak both; a pack is built with the rows for its own
+/// language (packbuild --tables) and files each English word's translations under a key no
+/// gloss term can be, its part of speech and the word behind a byte no text holds. Ahead of
+/// the join on glosses, which only guesses: "you" joined that way came out "vuestro".
+pub fn translation_key(english: &str, pos: &str) -> String {
+    format!("\u{1}{pos}\u{1}{}", english.to_lowercase())
+}
+
 /// The terms of a gloss's own list, split at the commas and semicolons outside any
 /// parenthesis. Split inside one too, "(person, etc)" came apart into "another (person" and
 /// "etc)", and every sense that ended a parenthetical list with "etc" was a sense of every

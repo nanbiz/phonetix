@@ -28,6 +28,16 @@ fn main() {
         }
         None => std::collections::HashMap::new(),
     };
+    // The English Wiktionary's translation tables into this language, where they are given:
+    // `--tables=<rows.tsv.gz>[,<more>]`, as tools/split_translations.py writes them.
+    let tables: Vec<String> = match args.iter().position(|arg| arg.starts_with("--tables=")) {
+        Some(at) => args.remove(at)["--tables=".len()..]
+            .split(',')
+            .filter(|path| !path.is_empty())
+            .map(str::to_string)
+            .collect(),
+        None => Vec::new(),
+    };
     if args.len() == 5 && args[1] == "ipa" {
         pronunciations(&args[2], &args[3], &args[4]);
         return;
@@ -115,6 +125,15 @@ fn main() {
             Ok(_) => taken += 1,
             Err(_) => refused += 1,
         }
+    }
+
+    for table in &tables {
+        let rows = BufReader::new(extract(table))
+            .lines()
+            .map_while(Result::ok)
+            .filter_map(|line| packbuild::Translated::parse(&line));
+        let reached = packbuild::file_translations(&mut pack, lang, rows);
+        eprintln!("{reached} translations from {table}");
     }
 
     let counts = pack.counts();

@@ -1060,24 +1060,59 @@ fn in_line<D: AsRef<[u8]>>(
     wanted: &Pack<D>,
     said: &str,
 ) -> Option<String> {
+    in_line_of(
+        glossed_as(glosses, None, wanted, LOOKED_FOR_IN_LINE),
+        wanted,
+        said,
+    )
+}
+
+/// Which of [words], in [wanted]'s language and likeliest first, the translated line uses, in
+/// the form the line has it.
+fn in_line_of<D: AsRef<[u8]>>(words: Vec<String>, wanted: &Pack<D>, said: &str) -> Option<String> {
     let sentence = normalised(said);
     if sentence.is_empty() {
         return None;
     }
-    glossed_as(glosses, None, wanted, LOOKED_FOR_IN_LINE)
-        .into_iter()
-        .find_map(|word| {
-            // As the pack spells them, since the case is the word's own: a German noun.
-            let mut forms = vec![word.clone()];
-            for entry in wanted.lookup(&word) {
-                if same_word(&entry.lemma, &word) {
-                    forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
-                }
+    words.into_iter().find_map(|word| {
+        // As the pack spells them, since the case is the word's own: a German noun.
+        let mut forms = vec![word.clone()];
+        for entry in wanted.lookup(&word) {
+            if same_word(&entry.lemma, &word) {
+                forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
             }
-            forms
-                .into_iter()
-                .find(|form| holds(&sentence, &normalised(form)))
-        })
+        }
+        forms
+            .into_iter()
+            .find(|form| holds(&sentence, &normalised(form)))
+    })
+}
+
+/// The words an English word's translation table gives in [wanted]'s language, in the order
+/// the pack filed them: senses as the page has them, and the likeliest word of each first.
+///
+/// Each with whether the word's own dictionary gives the English word back, in a word of one
+/// of its glosses ("abrigo" is an "overcoat"), which is how a word filed under the wrong sense
+/// is told from one filed rightly.
+fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec<(String, bool)> {
+    let lower = english.to_lowercase();
+    let mut words: Vec<(String, bool)> = Vec::new();
+    for (which, _) in wanted.translations(english, pos) {
+        if let Some(found) = wanted.entry(which) {
+            if words.iter().any(|(had, _)| *had == found.lemma) {
+                continue;
+            }
+            let back = found.senses.iter().any(|sense| {
+                sense
+                    .gloss
+                    .to_lowercase()
+                    .split(|c: char| !c.is_alphanumeric())
+                    .any(|word| word.contains(lower.as_str()))
+            });
+            words.push((found.lemma, back));
+        }
+    }
+    words
 }
 
 /// An English sense that is a word or two rather than a definition - "An error.", "To
@@ -2230,6 +2265,57 @@ fn resolve_one<D: AsRef<[u8]>>(
             )
             .map(|gloss| (gloss, Some(entry.pos.clone())))
             .collect();
+        // What the English Wiktionary's own table says the word is in the reader's language,
+        // where their pack was built with it: written per sense by people who speak both,
+        // the word as written first where it has a table of its own ("them" is "los", where
+        // its lemma "they" is "ellos"), and then its lemma's,
+        // where the join below guesses from glosses alike ("you" came out "vuestro"). The
+        // line, where the host translated it, picks among them; otherwise the first sense's
+        // likeliest word.
+        let mut table = translated(spelling, &entry.pos, other);
+        for (word, back) in translated(&entry.lemma, &entry.pos, other) {
+            if !table.iter().any(|(had, _)| *had == word) {
+                table.push((word, back));
+            }
+        }
+        if !table.is_empty() {
+            let words: Vec<String> = table.iter().map(|(word, _)| word.clone()).collect();
+            let asked: Vec<(String, Option<String>)> =
+                vec![(entry.lemma.clone(), Some(entry.pos.clone()))];
+            // The line first, the table's words and then the join's; then a table word whose
+            // own dictionary gives the English back, since a table also files a word under
+            // the wrong sense ("market" lists "feria", a fair, first); then the table's first
+            // word. Not what the join reaches, which the table is there to overrule: "coat"
+            // joined is "pelaje", an animal's.
+            let found = said
+                .and_then(|said| {
+                    in_line_of(words.clone(), other, said).or_else(|| in_line(&asked, other, said))
+                })
+                .or_else(|| {
+                    table
+                        .iter()
+                        .find(|(_, back)| *back)
+                        .map(|(word, _)| word.clone())
+                })
+                .unwrap_or_else(|| words[0].clone());
+            let state = if inflected {
+                AnswerState::Form
+            } else {
+                AnswerState::Entry
+            };
+            return finish(
+                state,
+                spelling,
+                entry,
+                vec![found],
+                glosses,
+                example,
+                pack,
+                source,
+                target,
+                &agreeing,
+            );
+        }
         // With the line translated, the word the engine wrote for it, where it is one this
         // word can be: "reviews" of products are "reseñas" there, though "review" alone ranks
         // "repaso" first, and "accurate" is "exacto" rather than the verb "acertar".

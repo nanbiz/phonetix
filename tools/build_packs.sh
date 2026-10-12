@@ -5,8 +5,10 @@
 #
 # 1. the English Wiktionary as kaikki.org extracts it, every language in one file (about 3 GB);
 # 2. split into one file per language in a single pass;
-# 3. one pack per language, with packbuild, and its manifest row beside it;
-# 4. the listing of translation models, pinned to what Mozilla publishes now.
+# 3. the English entries' translation tables, split by the language they translate into;
+# 4. one pack per language, with packbuild, and its manifest row beside it, carrying what the
+#    tables say each English word is in it;
+# 5. the listing of translation models, pinned to what Mozilla publishes now.
 #
 # Then `node scripts/publish-packs.mjs <work dir>/release` puts them where the app fetches.
 set -euo pipefail
@@ -27,6 +29,26 @@ if [[ ! -f "$split/.done" ]]; then
   uv run --with orjson python tools/split_kaikki.py "$dump" "$split" sh kmr nn
   touch "$split/.done"
 fi
+
+# What each English word is in every other language, per sense, from the tables on its page.
+tables="$work/tables"
+if [[ ! -f "$tables/.done" ]]; then
+  uv run --with orjson python tools/split_translations.py "$split" "$tables"
+  touch "$tables/.done"
+fi
+
+# The codes a language's translations are filed under, where those are not its own code: the
+# tables write Mandarin as "cmn", and Serbo-Croatian and Norwegian as the dump files them.
+declare -A translated=(
+  [zh]="cmn zh" [hr]="sh" [sr]="sh" [bs]="sh" [no]="nb nn no" [nb]="nb no" [ku]="kmr"
+)
+tabled() {
+  local lang="$1" files=""
+  for code in ${translated[$lang]:-$lang}; do
+    [[ -s "$tables/$code.tsv.gz" ]] && files+="${files:+,}$tables/$code.tsv.gz"
+  done
+  [[ -n "$files" ]] && printf -- '--tables=%s' "$files"
+}
 
 # A language the product names, built from the codes the dump files it under, where those
 # are not its own: Serbo-Croatian is one heading for three languages, Norwegian is written two
@@ -58,7 +80,8 @@ counted() {
 
 pack() {
   local lang="$1" extract="$2" codes="$3"
-  if "$build" "$lang" "$extract" "$out/$lang.pack" $codes $(counted "$lang") > "$out/$lang.pack.json"; then
+  if "$build" "$lang" "$extract" "$out/$lang.pack" $codes $(counted "$lang") $(tabled "$lang") \
+    > "$out/$lang.pack.json"; then
     printf '%s %s\n' "$lang" "$(head -c 200 "$out/$lang.pack.json")"
   else
     echo "$lang: no pack" >&2

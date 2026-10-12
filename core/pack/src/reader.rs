@@ -233,8 +233,18 @@ impl<D: AsRef<[u8]>> Pack<D> {
     /// is the sense: a lemma reached through the wrong sense of a shared gloss is exactly the
     /// confident wrong answer the format is shaped to avoid.
     pub fn senses_glossed(&self, term: &str) -> Vec<(u32, u32)> {
-        let head = crate::gloss_head(term);
-        let Some(at) = self.glosses.get(&head) else {
+        self.filed(&crate::gloss_head(term))
+    }
+
+    /// The senses an English word translates to in this pack's language, likeliest first,
+    /// where the pack was built with its translation tables: see [crate::translation_key].
+    pub fn translations(&self, english: &str, pos: &str) -> Vec<(u32, u32)> {
+        self.filed(&crate::translation_key(english, pos))
+    }
+
+    /// The run of senses the gloss index files under [key], in the order it was written.
+    fn filed(&self, key: &str) -> Vec<(u32, u32)> {
+        let Some(at) = self.glosses.get(key) else {
             return Vec::new();
         };
         let hits = slice(self.bytes.as_ref(), self.header.at(Section::GlossHits));
