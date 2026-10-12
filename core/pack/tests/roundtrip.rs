@@ -308,6 +308,18 @@ fn a_list_inside_a_parenthesis_is_not_the_glosss_list() {
 }
 
 #[test]
+fn a_word_that_only_narrows_or_ties_is_no_term() {
+    assert_eq!(
+        lexpack::gloss_terms("bleary-eyed, especially, having watery eyes"),
+        ["bleary-eyed", "having watery eyes"]
+    );
+    assert_eq!(
+        lexpack::gloss_terms("of, from or relating to Courland"),
+        ["from or relating to courland"]
+    );
+}
+
+#[test]
 fn an_auxiliary_listed_under_every_verb_answers_only_as_itself() {
     // German "haben" is listed among the forms of every verb that takes it, which in the real
     // dictionary is nine thousand of them. None of those is the word a reader met.

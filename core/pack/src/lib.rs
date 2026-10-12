@@ -178,7 +178,7 @@ pub fn gloss_head(gloss: &str) -> String {
 pub fn gloss_terms(gloss: &str) -> Vec<String> {
     let mut out = Vec::new();
     let head = gloss_head(gloss);
-    if !head.is_empty() {
+    if !head.is_empty() && !idle(&head) {
         out.push(head);
     }
     let body = gloss.trim();
@@ -188,11 +188,44 @@ pub fn gloss_terms(gloss: &str) -> Vec<String> {
     };
     for part in listed(body).into_iter().skip(1) {
         let term = gloss_head(part);
-        if !term.is_empty() && !out.contains(&term) {
+        if !term.is_empty() && !out.contains(&term) && !idle(&term) {
             out.push(term);
         }
     }
     out
+}
+
+/// Words a gloss sets between commas to narrow what follows rather than to name anything:
+/// "bleary-eyed, especially, having watery eyes" and "the second in a series, especially, the
+/// second of an artist's albums" share only "especially", and as a term it made "sophomore"
+/// the Salvadoran word for bleary-eyed.
+const HEDGES: [&str; 14] = [
+    "especially",
+    "particularly",
+    "chiefly",
+    "mainly",
+    "mostly",
+    "usually",
+    "often",
+    "generally",
+    "typically",
+    "specifically",
+    "sometimes",
+    "originally",
+    "figuratively",
+    "by extension",
+];
+
+/// Words that only tie others together: a term of nothing but these names nothing. "Of,
+/// relating to, or characteristic of a sophomore" and "of, from or relating to Courland" both
+/// begin with the term "of", and through it "sophomoric" was "curo", a Courlander.
+const TIES: [&str; 14] = [
+    "of", "from", "in", "on", "at", "to", "for", "with", "by", "or", "and", "as", "etc", "etc.",
+];
+
+/// Whether a term of a gloss names nothing to be matched on.
+fn idle(term: &str) -> bool {
+    HEDGES.contains(&term) || term.split_whitespace().all(|word| TIES.contains(&word))
 }
 
 /// The header, which is everything a reader needs before it touches a section.
