@@ -80,6 +80,30 @@ pub fn places(label: &str) -> Vec<Place> {
         .collect()
 }
 
+/// A place without its person and number where every person and number has the same form in
+/// it: English "published" is the past whoever published, one or many, and a card naming "third-person singular" over
+/// it names something the word does not say.
+fn without_idle_person(place: Place, entry: &Entry, spelling: &str) -> Place {
+    if value_in(&place, "person").is_none() && value_in(&place, "number").is_none() {
+        return place;
+    }
+    let everyone = others(&place, &["person", "number"], entry, spelling);
+    let lowered = spelling.to_lowercase();
+    // Three cells at least: German "ging" is the first and the third person both, and the
+    // second is "gingst".
+    let idle = everyone.len() >= 3
+        && everyone
+            .iter()
+            .all(|other| other.spelling.to_lowercase() == lowered);
+    if !idle {
+        return place;
+    }
+    place
+        .into_iter()
+        .filter(|(_, category)| *category != "person" && *category != "number")
+        .collect()
+}
+
 /// A place without "definite" or "indefinite" where the table spells them alike: a German
 /// noun's table is laid out under the article, and "Hunde" is the same word either way, while
 /// Swedish "hus" and "huset" are two forms of the noun itself.
@@ -243,16 +267,31 @@ pub fn determiner_places(spelling: &str, entries: &[Entry]) -> Vec<Place> {
 /// answer, where one naming less is a true one.
 pub fn form(spelling: &str, entry: &Entry, agreeing: &[Place]) -> Option<Form> {
     let lowered = spelling.to_lowercase();
-    let row = entry
+    // Every row the spelling fills: a table lists English "published" once as the past and
+    // again as the past participle.
+    let rows: Vec<&lexpack::Form> = entry
         .forms
         .iter()
-        .find(|form| form.spelling.to_lowercase() == lowered)?;
+        .filter(|form| form.spelling.to_lowercase() == lowered)
+        // Not a row only a dialect or another age fills: "went" is also a dialect's participle.
+        .filter(|form| {
+            !form
+                .label
+                .to_lowercase()
+                .split(|c: char| !c.is_alphanumeric())
+                .any(|word| crate::resolve::ODD_FORMS.contains(&word))
+        })
+        .collect();
+    let row = *rows.first()?;
     // The place that says the most about the word, the first of those where several say as
     // much: German "ging" is listed as "past" and as "first/third-person singular preterite",
-    // and only the second says who.
-    let all: Vec<Place> = places(&row.label)
-        .into_iter()
+    // and only the second says who. A person every person shares says nothing: English
+    // "published" is the past for I, you and she alike, and its participle says more.
+    let all: Vec<Place> = rows
+        .iter()
+        .flat_map(|row| places(&row.label))
         .map(|place| without_idle_declension(place, entry))
+        .map(|place| without_idle_person(place, entry, spelling))
         .filter(|place| !place.is_empty())
         .collect();
     let nominal = matches!(
@@ -721,6 +760,43 @@ mod tests {
 
     fn values(place: &Place) -> Vec<&str> {
         place.iter().map(|(tag, _)| tag.as_str()).collect()
+    }
+
+    /// English "published" is the past for every person and also the past participle; the
+    /// past names nobody, so it is the participle, and a dialect's row is no row: "went" is
+    /// the past, not a dialect's participle.
+    #[test]
+    fn a_person_every_person_shares_names_nobody() {
+        let row = |spelling: &str, label: &str| Row {
+            spelling: spelling.to_string(),
+            label: label.to_string(),
+        };
+        let publish = Entry {
+            lemma: "publish".to_string(),
+            pos: "verb".to_string(),
+            forms: vec![
+                row("publishes", "present singular third-person"),
+                row("published", "past singular third-person"),
+                row("published", "first-person past singular"),
+                row("published", "past second-person singular"),
+                row("published", "past plural"),
+                row("published", "participle past"),
+            ],
+            ..Entry::default()
+        };
+        let place = form_alone("published", &publish).expect("a form").place;
+        assert_eq!(values(&place), ["past", "participle"]);
+        let go = Entry {
+            lemma: "go".to_string(),
+            pos: "verb".to_string(),
+            forms: vec![
+                row("went", "past"),
+                row("went", "dialectal participle past"),
+            ],
+            ..Entry::default()
+        };
+        let place = form_alone("went", &go).expect("a form").place;
+        assert_eq!(values(&place), ["past"]);
     }
 
     #[test]
