@@ -156,7 +156,16 @@
     answer.state === 'Homograph'
       ? answer.readings
           .slice(1)
-          .map((reading) => ({ pos: reading.pos ?? '', said: reading.says[0] ?? reading.glosses[0] ?? '' }))
+          // What it is in the language the card answers in, or nothing: an English definition
+          // under a Spanish answer is two languages on one card. The dictionary's definitions
+          // are English, so they stand in only for an English word read in English.
+          .map((reading) => ({
+            pos: reading.pos ?? '',
+            said:
+              reading.says[0] ??
+              (answer.source === 'en' && answer.target === 'en' ? reading.glosses[0] : undefined) ??
+              '',
+          }))
           .filter((other) => other.said && other.said !== lead)
           .slice(0, 3)
       : []

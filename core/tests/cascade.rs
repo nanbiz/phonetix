@@ -2417,6 +2417,69 @@ fn a_word_heard_a_letter_wrong_becomes_the_word_the_dictionary_holds() {
 /// of the join on glosses: "file" joined that way reached "fila", a row, whose gloss happens
 /// to be "file"; the table says "archivo". And the line, where the host translated it, picks
 /// which of the table's words it uses.
+/// An English word in a form another language has too is its word put into that form, from
+/// that word's own table: "houses" is "casas", "published" is "publicado", never the bare
+/// "casa" or "publicar". A dialect's label is no form a reader met: "went" is filed as a
+/// dialect's past participle too, and is not "ido".
+#[test]
+fn an_english_form_is_carried_into_the_other_language() {
+    let form = |spelling: &str, label: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: label.to_string(),
+    };
+    let mut english = Builder::new("en", Kind::Lex, 0).without_joins();
+    let mut house = word("house", "noun", "haʊs", &["A dwelling."]);
+    house.forms.push(form("houses", "plural"));
+    english.add::<&str>(house, &[]).unwrap();
+    let mut publish = word("publish", "verb", "ˈpʌblɪʃ", &["To issue for sale."]);
+    publish.forms.push(form("published", "participle past"));
+    english.add::<&str>(publish, &[]).unwrap();
+    let mut go = word("go", "verb", "ɡoʊ", &["To move."]);
+    go.forms.push(form("went", "past"));
+    go.forms.push(form("went", "dialectal participle past"));
+    english.add::<&str>(go, &[]).unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut casa = word("casa", "noun", "ˈka.sa", &["house"]);
+    casa.forms.push(form("casas", "plural"));
+    casa.forms.push(form("casitas", "diminutive plural"));
+    let casa = spanish.add::<&str>(casa, &[]).unwrap();
+    let mut publicar = word("publicar", "verb", "pu.βliˈkaɾ", &["to publish"]);
+    publicar
+        .forms
+        .push(form("publicado", "past masculine singular participle"));
+    publicar
+        .forms
+        .push(form("publicadas", "past feminine plural participle"));
+    let publicar = spanish.add::<&str>(publicar, &[]).unwrap();
+    let mut ir = word("ir", "verb", "iɾ", &["to go"]);
+    ir.forms
+        .push(form("ido", "past masculine singular participle"));
+    let ir = spanish.add::<&str>(ir, &[]).unwrap();
+    // A table lists the little house first; the word whose own dictionary says just "house"
+    // is the house.
+    let casinha = spanish
+        .add::<&str>(
+            word("casita", "noun", "kaˈsi.ta", &["cottage, little house"]),
+            &[],
+        )
+        .unwrap();
+    spanish.translated("house", "noun", &[(casinha, 0), (casa, 0)]);
+    spanish.translated("publish", "verb", &[(publicar, 0)]);
+    spanish.translated("go", "verb", &[(ir, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&english),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("en"), &lang("es"), &open).says;
+    assert_eq!(says("house"), ["casa"]);
+    assert_eq!(says("houses"), ["casas"]);
+    assert_eq!(says("published"), ["publicado"]);
+    assert_eq!(says("went"), ["ir"]);
+}
+
 #[test]
 fn an_english_word_is_what_its_translation_table_says() {
     let mut english = Builder::new("en", Kind::Lex, 0).without_joins();

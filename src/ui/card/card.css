@@ -182,6 +182,7 @@
 .gram .g-sub { flex: 1 1 100%; }
 /* Another word the spelling is: its kind first, then what it means, wrapping as far as it needs. */
 .gram.other { display: block; line-height: 1.45; }
+.gram.other .lemma { color: var(--color-ink-muted); font-weight: var(--weight-regular); }
 .gram.other .chip { margin-right: var(--space-2); vertical-align: 0.1em; }
 .chip { display: inline-flex; align-items: center; background: var(--color-chip-bg); color: var(--color-chip-ink); border-radius: var(--radius-chip); padding: 1px var(--space-2); font-size: var(--font-size-label); font-weight: var(--weight-medium); line-height: 1.6; white-space: nowrap; }
 .chip.mark { font-style: italic; font-weight: var(--weight-regular); }

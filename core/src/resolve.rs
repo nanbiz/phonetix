@@ -1235,23 +1235,165 @@ fn in_line_of<D: AsRef<[u8]>>(words: Vec<String>, wanted: &Pack<D>, said: &str) 
 /// is told from one filed rightly.
 fn translated<D: AsRef<[u8]>>(english: &str, pos: &str, wanted: &Pack<D>) -> Vec<(String, bool)> {
     let lower = english.to_lowercase();
-    let mut words: Vec<(String, bool)> = Vec::new();
+    let mut words: Vec<(String, u8)> = Vec::new();
     for (which, _) in wanted.translations(english, pos) {
         if let Some(found) = wanted.entry(which) {
             if words.iter().any(|(had, _)| *had == found.lemma) {
                 continue;
             }
-            let back = found.senses.iter().any(|sense| {
-                sense
-                    .gloss
-                    .to_lowercase()
-                    .split(|c: char| !c.is_alphanumeric())
-                    .any(|word| word.contains(lower.as_str()))
-            });
+            // How plainly its own dictionary gives the English back: as the whole of a sense
+            // ("casa": "house") beats somewhere inside one ("casinha": "cottage, little
+            // house"), which beats not at all.
+            let back = found
+                .senses
+                .iter()
+                .map(|sense| {
+                    let gloss = sense.gloss.to_lowercase();
+                    let head = gloss
+                        .split([',', ';', '('])
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .trim_end_matches('.')
+                        .trim_start_matches("a ")
+                        .trim_start_matches("an ")
+                        .trim_start_matches("to ")
+                        .trim()
+                        .to_string();
+                    if head == lower {
+                        2
+                    } else if gloss
+                        .split(|c: char| !c.is_alphanumeric())
+                        .any(|word| word.contains(lower.as_str()))
+                    {
+                        1
+                    } else {
+                        0
+                    }
+                })
+                .max()
+                .unwrap_or(0);
             words.push((found.lemma, back));
         }
     }
-    words
+    // The plainest first, the table's own order among equals. Not for a word of grammar,
+    // whose table lists several words that each are exactly it, in the order its editors put
+    // them: "you" is "tú" before "vos".
+    let ordered = by_kind(pos) > 1;
+    let (plain, rest): (Vec<_>, Vec<_>) = words
+        .into_iter()
+        .partition(|(_, back)| ordered && *back == 2);
+    plain
+        .into_iter()
+        .chain(rest)
+        .map(|(word, back)| (word, back > 0))
+        .collect()
+}
+
+/// Which form of an English word a spelling is, where another language has the same form to
+/// put its own word into: a noun's plural, a verb's past or present participle. The past
+/// tense and the present's third person are not, since English does not say whose they are
+/// and the other language does.
+fn english_place(entry: &Entry, spelling: &str) -> Option<&'static [&'static str]> {
+    // Not a label only a dialect or another age gives it: "went" is also filed as a dialect's
+    // past participle, and carried that way "went" was "ido", "gone".
+    let labels: Vec<Vec<String>> = entry
+        .forms
+        .iter()
+        .filter(|form| same_word(&form.spelling, spelling))
+        .flat_map(|form| form.label.split("; ").map(words_of).collect::<Vec<_>>())
+        .filter(|label| !label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
+        .collect();
+    let has = |wanted: &[&str]| {
+        labels
+            .iter()
+            .any(|label| wanted.iter().all(|word| label.iter().any(|it| it == word)))
+    };
+    if entry.pos == "verb" && has(&["participle", "past"]) {
+        Some(&["participle", "past"])
+    } else if entry.pos == "verb" && has(&["participle", "present"]) {
+        Some(&["participle", "present"])
+    } else if entry.pos == "noun" && has(&["plural"]) {
+        Some(&["plural"])
+    } else {
+        None
+    }
+}
+
+/// Labels that make a form one a reader is not owed: a dialect's, another age's, a joke's, or
+/// a word made smaller or bigger, which is another word.
+const ODD_FORMS: [&str; 11] = [
+    "dialectal",
+    "dialect",
+    "humorous",
+    "archaic",
+    "obsolete",
+    "rare",
+    "nonstandard",
+    "colloquial",
+    "diminutive",
+    "augmentative",
+    "proscribed",
+];
+
+fn words_of(label: &str) -> Vec<String> {
+    label
+        .to_lowercase()
+        .split(|c: char| !c.is_alphanumeric() && c != '-')
+        .filter(|word| !word.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// A word of the reader's language put into the form the English word is in, from that
+/// word's own table of forms: "publicar" as a past participle is "publicado", "Haus" in the
+/// plural "Häuser". Of several, the plainest: the one whose label says least besides the form
+/// asked for, with the masculine singular and the nominative counted as saying nothing, since
+/// they are the forms a dictionary names a word by.
+fn in_form<D: AsRef<[u8]>>(
+    word: &str,
+    pos: &str,
+    english: &Entry,
+    spelling: &str,
+    pack: &Pack<D>,
+) -> Option<String> {
+    let place = english_place(english, spelling)?;
+    // A language's present participle is its gerund where it has one: "publicando".
+    let wanted: Vec<&[&str]> = if place == ["participle", "present"] {
+        vec![&["gerund"], place]
+    } else {
+        vec![place]
+    };
+    const PLAIN: [&str; 5] = [
+        "masculine",
+        "singular",
+        "nominative",
+        "indefinite",
+        "strong",
+    ];
+    let entry = lookup_either_case(pack, word)
+        .into_iter()
+        .find(|entry| same_word(&entry.lemma, word) && entry.pos == pos)?;
+    wanted.iter().find_map(|wanted| {
+        entry
+            .forms
+            .iter()
+            .flat_map(|form| {
+                form.label
+                    .split("; ")
+                    .map(move |label| (form, words_of(label)))
+            })
+            .filter(|(_, label)| wanted.iter().all(|word| label.iter().any(|it| it == word)))
+            .filter(|(_, label)| !label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
+            .filter(|(form, _)| !form.spelling.contains(' '))
+            .min_by_key(|(_, label)| {
+                label
+                    .iter()
+                    .filter(|it| !wanted.contains(&it.as_str()) && !PLAIN.contains(&it.as_str()))
+                    .count()
+            })
+            .map(|(form, _)| form.spelling.clone())
+    })
 }
 
 /// An English sense that is a word or two rather than a definition - "An error.", "To
@@ -2494,8 +2636,17 @@ fn resolve_one<D: AsRef<[u8]>>(
         // where the join below guesses from glosses alike ("you" came out "vuestro"). The
         // line, where the host translated it, picks among them; otherwise the first sense's
         // likeliest word.
-        let mut table = translated(spelling, &entry.pos, other);
-        for (word, back) in translated(&entry.lemma, &entry.pos, other) {
+        // A form this can say in the reader's language too - a plural, a participle - is
+        // its lemma's word put into that form, so the lemma's table comes first: "dogs" has a
+        // table of its own, which lists "perrería", a pack of dogs.
+        let carried = inflected && english_place(entry, spelling).is_some();
+        let (first, second) = if carried {
+            (entry.lemma.as_str(), spelling)
+        } else {
+            (spelling, entry.lemma.as_str())
+        };
+        let mut table = translated(first, &entry.pos, other);
+        for (word, back) in translated(second, &entry.pos, other) {
             if !table.iter().any(|(had, _)| *had == word) {
                 table.push((word, back));
             }
@@ -2520,6 +2671,12 @@ fn resolve_one<D: AsRef<[u8]>>(
                         .map(|(word, _)| word.clone())
                 })
                 .unwrap_or_else(|| words[0].clone());
+            // In the form the English word is in: "published" is "publicado", not "publicar".
+            let found = if carried {
+                in_form(&found, &entry.pos, entry, spelling, other).unwrap_or(found)
+            } else {
+                found
+            };
             let state = if inflected {
                 AnswerState::Form
             } else {
