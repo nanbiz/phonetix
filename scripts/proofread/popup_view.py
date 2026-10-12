@@ -163,6 +163,11 @@ def real_popup(cdp, extid):
     # Dictionaries from this check's own host, which never finishes sending one.
     evaluate(cdp, session,
              f"chrome.storage.local.set({{packBaseUrl: 'http://127.0.0.1:{PORT}'}}).then(() => 1)")
+    # Settings of the reader's own to open it under, as JSON (PHONETIX_POPUP_STATE), for a
+    # popup a reader saw drawn wrong in theirs.
+    state = os.environ.get("PHONETIX_POPUP_STATE")
+    if state:
+        evaluate(cdp, session, f"chrome.storage.local.set({state}).then(() => 1)")
     # Over a page on a site, which is when the popup is at its tallest: the site's own row.
     page = cdp.send("Target.createTarget", {"url": f"http://127.0.0.1:{PORT}/"})["targetId"]
     cdp.send("Target.activateTarget", {"targetId": page})
@@ -228,6 +233,11 @@ def real_popup(cdp, extid):
         failures.append(
             f"the toolbar popup is {size['width']}px wide, not {26 * size['rem']:.0f}")
     failures += wrapped(cdp, session, "the toolbar popup")
+    # All of it inside the window: a popup grown after the browser sized it is cut off at the
+    # bottom, and nothing scrolls a reader to what is under the edge.
+    if size["tall"] > size["height"] + 1:
+        failures.append(
+            f"the toolbar popup runs {size['tall'] - size['height']}px past its window")
     # And every screen behind it, each as it opens in the same window: one that wraps or runs
     # past the window is as broken as the first.
     for row, name in (("pronunciation", "pronunciation"), ("theme", "appearance")):
@@ -270,7 +280,15 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     # On a screen the size of a desk's: a headless browser's own is small, and it caps a popup
     # at 510px where a browser on any real screen gives it its 600.
-    cdp = PipeCDP(extra_args=[OFFLINE, "--screen-info={1920x1080}"])
+    # Headful under a display of the check's own (PHONETIX_HEADFUL=1 with DISPLAY set to an
+    # Xvfb): only a browser with a pointer that hovers draws the translator's keys, which
+    # make the popup taller.
+    headful = os.environ.get("PHONETIX_HEADFUL") == "1"
+    # PHONETIX_SCALE draws it at a screen's scale, 1.5 on a laptop's, where the window is
+    # sized in device pixels and rounded.
+    scale = os.environ.get("PHONETIX_SCALE")
+    cdp = PipeCDP(extra_args=[OFFLINE, "--screen-info={1920x1080}"]
+                  + ([f"--force-device-scale-factor={scale}"] if scale else []), headless=not headful)
     cdp.send("Target.setDiscoverTargets", {"discover": True})
     extid = cdp.ensure_extension()
     failures = []

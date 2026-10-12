@@ -260,9 +260,10 @@
     <Group>
       <div class="item" data-row="translator">
         <span class="item-text">
-          <span class="item-name" data-name><TranslatorIcon class="row-icon" />{ROWS.translator.name}</span>
-          {#if keyboard}
-          <span class="key-pair">
+          <!-- The key that opens it beside its name; the one that opens it hearing under. -->
+          <span class="name-line">
+            <span class="item-name" data-name><TranslatorIcon class="row-icon" />{ROWS.translator.name}</span>
+            {#if keyboard}
             <button class="keys" data-does="shortcut" onclick={shortcuts}>
               {#if shortcut}
                 {#each shortcut.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
@@ -270,16 +271,17 @@
                 {SAYS['set-key']}
               {/if}
             </button>
-            <!-- The same panel, opened hearing what to translate. -->
-            <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
-              <Mic class="keys-icon" />
-              {#if speaking}
-                {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
-              {:else}
-                {SAYS['set-key']}
-              {/if}
-            </button>
+            {/if}
           </span>
+          {#if keyboard}
+          <button class="keys" data-does="shortcut-speak" aria-label={SAYS['speak']} onclick={shortcuts}>
+            <Mic class="keys-icon" />
+            {#if speaking}
+              {#each speaking.split('+') as key, at (at)}<kbd>{key}</kbd>{/each}
+            {:else}
+              {SAYS['set-key']}
+            {/if}
+          </button>
           {/if}
         </span>
         <button

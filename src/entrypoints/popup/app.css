@@ -164,11 +164,17 @@ label.item:hover {
   border-color: var(--color-accent);
 }
 
-/* The translator's two keys side by side: the panel, and the panel hearing. */
-.key-pair {
+/* A row's name with the keys that do what it names, on one line. */
+.name-line {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.name-line .keys {
+  align-self: center;
+  margin: 0;
 }
 
 .keys .keys-icon {
