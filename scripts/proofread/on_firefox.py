@@ -441,7 +441,8 @@ def main():
 
         driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
         time.sleep(3)
-        ember_checks(FirefoxHand(driver), "firefox", failures, switched)
+        ember_checks(FirefoxHand(driver), "firefox", failures, switched,
+                     {"layer": "sound", "density": 1})
 
         # A chat, which moves its words with nothing the window hears.
         driver.send("WebDriver:Navigate", {"url": f"{base}/chat.html"})

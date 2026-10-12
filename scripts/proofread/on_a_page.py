@@ -388,6 +388,30 @@ QUIET_CARD_JS = """
   })()
 """
 
+# What the card on screen leads with, and the word it is about.
+CARD_SAYS_JS = """
+  (() => {
+    const card = (document.getElementById('phonetix-card-host') || {}).shadowRoot?.querySelector('.card');
+    return card && {word: card.dataset.word || '',
+                    says: card.querySelector('.headline .tr')?.textContent.trim() ?? '',
+                    head: !!card.querySelector('.card-head')};
+  })()
+"""
+
+# Where a word of #prose is, painted or not.
+WORD_AT_JS = """
+  ((wanted) => {
+    for (const w of document.querySelectorAll('#prose .px-w')) {
+      const was = ((w.querySelector('.px-was') || w).textContent || '').trim();
+      if (was === wanted) {
+        const r = w.getBoundingClientRect();
+        return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+      }
+    }
+    return null;
+  })(%r)
+"""
+
 EMBER_JS = """
   (async () => {
     const host = document.getElementById('phonetix-card-host-ember');
@@ -406,12 +430,13 @@ EMBER_JS = """
 """
 
 
-def ember_checks(hand, engine, failures, store):
+def ember_checks(hand, engine, failures, store, put_back):
     """The ember goes with the pointer while Phonetix is on: burning at its tip over nothing,
     into the word it is on, which lights, and nowhere at all once Phonetix is off. A card for a
     word in a language the reader reads is the strip alone, without stress marks where they
-    are off. [store] writes settings, a key given None taking it out. Asked of a page with a
-    paragraph #prose, open in the hand's tab."""
+    are off. [store] writes settings, a key given None taking it out, and [put_back] is the
+    layer and density the run had, which the checks that change them restore. Asked of a page
+    with a paragraph #prose, open in the hand's tab."""
     where = hand.ask("""
         (() => {
           const prose = document.getElementById('prose').getBoundingClientRect();
@@ -519,7 +544,46 @@ def ember_checks(hand, engine, failures, store):
                 failures.append(f"{engine}: a card with nothing to say under its strip has a body: {quiet}")
             if any(mark in quiet["ipa"] for mark in "ˈˌ"):
                 failures.append(f"{engine}: the card shows stress marks with them off: {quiet}")
-        store({"knownLanguages": None, "hideStress": None})
+        # The same reader learning German: a word of a language they read is practice, and its
+        # card says what it is in German. Learning nothing again, it is only said.
+        store({"knownLanguages": ["es"], "learn": "de"})
+        for learning, wanted in (("de", "Hund"), (None, "")):
+            store({"learn": learning})
+            hand.move(where["empty"]["x"], where["empty"]["y"])
+            time.sleep(0.3)
+            perro = hand.ask(WORD_AT_JS % "perro")
+            if not perro:
+                failures.append(f"{engine}: no perro on the page to practise on")
+                break
+            hand.move(perro["x"] - 3, perro["y"])
+            hand.move(perro["x"], perro["y"])
+            seen = None
+            for _ in range(20):
+                time.sleep(0.25)
+                seen = hand.ask(CARD_SAYS_JS)
+                if seen and seen["word"] == "perro" and (seen["says"] or not wanted):
+                    break
+            print(f"  {engine}, perro for a reader of Spanish learning {learning or 'nothing'}: {seen}")
+            if not seen or seen["says"] != wanted:
+                failures.append(f"{engine}: perro, learning {learning or 'nothing'}, says "
+                                f"{(seen or {}).get('says')!r}, not {wanted!r}")
+        # And the page: replaced word by word, a page in a language the reader reads is
+        # replaced by the one they learn, and with none, left as it is.
+        for learning, wanted in (("de", True), (None, False)):
+            store({"layer": "meaning", "density": 1, "learn": learning})
+            drawn = []
+            for _ in range(20):
+                time.sleep(0.3)
+                drawn = hand.ask("""[...document.querySelectorAll('#prose .px-w')]
+                    .map((w) => w.textContent.replace((w.querySelector('.px-was') || {}).textContent || '', '').trim())
+                    .filter(Boolean)""") or []
+                if ("Hund" in drawn) == wanted:
+                    break
+            print(f"  {engine}, the Spanish page replaced for a reader learning {learning or 'nothing'}: {drawn}")
+            if ("Hund" in drawn) != wanted or (not wanted and drawn):
+                failures.append(f"{engine}: learning {learning or 'nothing'}, the page of a language "
+                                f"the reader reads was replaced with {drawn}")
+        store({"knownLanguages": None, "hideStress": None, "learn": None, **put_back})
     # Into a frame of the page, whose moves the page never hears: no fire left at its edge,
     # and none put back where the pointer last was when the page scrolls afterwards.
     framed = hand.ask("""
@@ -1543,7 +1607,8 @@ def main():
         # box scrolled past the word takes the card down rather than leaving it pointing at
         # whatever came there.
         ember_checks(ChromeHand(cdp, page), "chrome", failures, lambda values: (
-            evaluate(cdp, settings, STORE_JS % json.dumps(values)), time.sleep(1.5)))
+            evaluate(cdp, settings, STORE_JS % json.dumps(values)), time.sleep(1.5)),
+            {"layer": "sound", "density": 1})
         chat_target = cdp.send("Target.createTarget", {"url": f"{base}/chat.html"})["targetId"]
         chat = cdp.send("Target.attachToTarget",
                         {"targetId": chat_target, "flatten": True})["sessionId"]

@@ -2336,7 +2336,12 @@ fn a_word_read_in_its_own_language_is_defined_in_it() {
     let spanish = Pack::open(spanish()).unwrap();
     let mut own = Builder::new("def-es", Kind::Lex, 0).without_joins();
     own.add::<&str>(
-        word("perro", "noun", "", &["Mamífero doméstico de la familia de los cánidos."]),
+        word(
+            "perro",
+            "noun",
+            "",
+            &["Mamífero doméstico de la familia de los cánidos."],
+        ),
         &[],
     )
     .unwrap();
@@ -2348,7 +2353,10 @@ fn a_word_read_in_its_own_language_is_defined_in_it() {
         ..Open::default()
     };
     let read = read_in_context("perros", None, &lang("es"), &lang("es"), &open);
-    assert_eq!(read.says, ["Mamífero doméstico de la familia de los cánidos."]);
+    assert_eq!(
+        read.says,
+        ["Mamífero doméstico de la familia de los cánidos."]
+    );
     // Read into English it is still the English.
     let english = read_in_context("perros", None, &lang("es"), &lang("en"), &open);
     assert_ne!(english.says, read.says);
