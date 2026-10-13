@@ -3709,13 +3709,26 @@ fn resolve_one<D: AsRef<[u8]>>(
                 found
             };
             // An article in its gender and number: Italian "la" is "la", not "el", and "i"
-            // "los".
-            let found = if matches!(entry.pos.as_str(), "article" | "det")
-                && !said.is_some_and(|said| holds(&normalised(said), &normalised(&found)))
-            {
-                article_in_kind(entry, spelling, inflected, &source.0, &target.0)
-                    .and_then(|place| in_form(&found, &entry.pos, &place, other))
-                    .unwrap_or(found)
+            // "los". On a line that has that form too, whichever other form of the article the
+            // line has first: "la" on a line with "los" and "la" in it was "los".
+            let found = if matches!(entry.pos.as_str(), "article" | "det") {
+                let base = words
+                    .iter()
+                    .find(|word| {
+                        forms_as(other, word, Some(&entry.pos))
+                            .iter()
+                            .any(|form| same_word(form, &found))
+                    })
+                    .cloned()
+                    .unwrap_or_else(|| found.clone());
+                let kind = article_in_kind(entry, spelling, inflected, &source.0, &target.0)
+                    .and_then(|place| in_form(&base, &entry.pos, &place, other))
+                    .unwrap_or(base);
+                if said.is_none_or(|said| holds(&normalised(said), &normalised(&kind))) {
+                    kind
+                } else {
+                    found
+                }
             } else {
                 found
             };

@@ -3492,6 +3492,10 @@ fn italian_words_of_grammar_read_as_spanish_writes_them() {
         &["masculine singular definite article; the"],
     );
     el.forms.push(lexpack::Form {
+        spelling: "los".to_string(),
+        label: "plural".to_string(),
+    });
+    el.forms.push(lexpack::Form {
         spelling: "la".to_string(),
         label: "feminine".to_string(),
     });
@@ -3539,6 +3543,16 @@ fn italian_words_of_grammar_read_as_spanish_writes_them() {
     // And no word of its own on its card: "of the" is "del", which is not "della".
     let della = read_in_context("della", None, &lang("it"), &lang("es"), &open);
     assert!(della.says.is_empty(), "{:?}", della.says);
+    // On a line with another form of the article in it first, still its own.
+    let on_line = Open {
+        said: Some("Según los responsables de la investigación."),
+        ..open
+    };
+    let la = read_in_context("la", None, &lang("it"), &lang("es"), &on_line);
+    assert_eq!(
+        lexcore::annotate::lead(&la, &on_line).as_deref(),
+        Some("la")
+    );
 }
 
 /// Among words of grammar under one spelling, a contraction that names its parts first: French
