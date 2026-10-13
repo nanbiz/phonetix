@@ -2559,6 +2559,101 @@ fn a_word_with_no_table_is_read_through_english() {
     assert_eq!(says("du").first().map(String::as_str), Some("tú"));
 }
 
+/// Through English, a term with no table still answers where the reader's dictionary defines
+/// a word as exactly that, first: French "déclarer" is "to declare", which has no table, and is
+/// "declarar", not a later term's table word. A meaning set after a sentence about the word is
+/// a term too: Italian "a" is "Indicates the indirect object. to". And a letter's name is no
+/// reading of a word: French "a" is "has", never the letter, whose Spanish "a" is the
+/// commonest preposition.
+#[test]
+fn terms_without_tables_sentences_and_letters() {
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    french
+        .add::<&str>(
+            word(
+                "déclarer",
+                "verb",
+                "de.kla.ʁe",
+                &["to declare", "to come out"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let mut avoir = word("avoir", "verb", "a.vwaʁ", &["to have"]);
+    avoir.forms.push(lexpack::Form {
+        spelling: "a".to_string(),
+        label: "third-person singular present indicative".to_string(),
+    });
+    french.add::<&str>(avoir, &[]).unwrap();
+    french
+        .add::<&str>(
+            word(
+                "a",
+                "noun",
+                "a",
+                &["a, the name of the Latin-script letter A"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    italian
+        .add::<&str>(
+            word("a", "prep", "a", &["Indicates the indirect object. to"]),
+            &[],
+        )
+        .unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    spanish
+        .add::<&str>(
+            word("declarar", "verb", "de.klaˈɾaɾ", &["to declare; to state"]),
+            &[],
+        )
+        .unwrap();
+    let salir = spanish
+        .add::<&str>(word("salir", "verb", "saˈliɾ", &["to leave"]), &[])
+        .unwrap();
+    let mut tener = word("tener", "verb", "teˈneɾ", &["to have"]);
+    tener.forms.push(lexpack::Form {
+        spelling: "tiene".to_string(),
+        label: "indicative present singular third-person".to_string(),
+    });
+    let tener = spanish.add::<&str>(tener, &[]).unwrap();
+    let a = spanish
+        .add::<&str>(word("a", "prep", "a", &["to, at"]), &[])
+        .unwrap();
+    spanish.translated("come out", "verb", &[(salir, 0)]);
+    spanish.translated("have", "verb", &[(tener, 0)]);
+    spanish.translated("to", "prep", &[(a, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let from = |pack| Open {
+        source: Some(pack),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let french_open = from(&french);
+    let italian_open = from(&italian);
+    let says = |word: &str, lang_: &str, open: &Open<Vec<u8>>| {
+        read_in_context(word, None, &lang(lang_), &lang("es"), open).says
+    };
+    assert_eq!(
+        says("déclarer", "fr", &french_open)
+            .first()
+            .map(String::as_str),
+        Some("declarar")
+    );
+    assert_eq!(
+        says("a", "fr", &french_open).first().map(String::as_str),
+        Some("tiene")
+    );
+    assert_eq!(
+        says("a", "it", &italian_open).first().map(String::as_str),
+        Some("a")
+    );
+}
+
 /// A form of a language other than English is carried into the reader's where it has the same
 /// form: German "ist" is "es", "Hunde" is "perros", not "ser" and "perro".
 #[test]
@@ -3269,4 +3364,41 @@ fn a_word_read_in_its_own_language_is_defined_in_it() {
     // Read into English it is still the English.
     let english = read_in_context("perros", None, &lang("es"), &lang("en"), &open);
     assert_ne!(english.says, read.says);
+}
+
+/// A contraction read into Spanish is the words it contracts as Spanish writes them where they
+/// meet: French "au", "à" and "le", is "al", never "a el".
+#[test]
+fn a_contraction_is_written_as_the_reader_writes_its_parts() {
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    french
+        .add::<&str>(
+            word("au", "contraction", "o", &["Contraction of à + le"]),
+            &[],
+        )
+        .unwrap();
+    french
+        .add::<&str>(word("à", "prep", "a", &["to"]), &[])
+        .unwrap();
+    french
+        .add::<&str>(word("le", "article", "lə", &["the"]), &[])
+        .unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let a = spanish
+        .add::<&str>(word("a", "prep", "a", &["to, at"]), &[])
+        .unwrap();
+    let el = spanish
+        .add::<&str>(word("el", "article", "el", &["the"]), &[])
+        .unwrap();
+    spanish.translated("to", "prep", &[(a, 0)]);
+    spanish.translated("the", "article", &[(el, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&french),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let au = read_in_context("au", None, &lang("fr"), &lang("es"), &open);
+    assert_eq!(lexcore::annotate::lead(&au, &open).as_deref(), Some("al"));
 }

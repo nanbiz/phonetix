@@ -598,6 +598,19 @@ pub fn lead<D: AsRef<[u8]>>(answer: &crate::resolve::Answer, open: &Open<D>) -> 
     drawn_as(answer, &answer.source, &answer.target, open)
 }
 
+/// Words a language always writes as one where they meet: Spanish "a el" is "al" and "de el"
+/// "del", and French "au", "to the", read part by part was "a el".
+fn contracted_in(words: &str, lang: &Lang) -> String {
+    match lang.0.as_str() {
+        "es" => match words {
+            "a el" => "al".to_string(),
+            "de el" => "del".to_string(),
+            _ => words.to_string(),
+        },
+        _ => words.to_string(),
+    }
+}
+
 /// What a word is drawn as, looking as far as it takes to find a meaning.
 ///
 /// Its own senses first; then the other words the same spelling is, which the card offers
@@ -636,7 +649,7 @@ fn drawn_as<D: AsRef<[u8]>>(
                     })
                     .collect();
                 if let Some(said) = said {
-                    return Some(said.join(" "));
+                    return Some(contracted_in(&said.join(" "), target));
                 }
             }
         }

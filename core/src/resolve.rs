@@ -1577,8 +1577,14 @@ fn meaning_of(gloss: &str) -> Option<String> {
     if short(head) {
         return Some(head.to_string());
     }
-    let at = gloss.rfind([':', ',', ';'])?;
-    let tail = gloss[at + 1..].trim();
+    // Or the one it ends with, after a colon, a comma or a full stop: Italian "a" is
+    // "Indicates the indirect object. to".
+    let at = gloss
+        .rfind([':', ',', ';'])
+        .into_iter()
+        .chain(gloss.trim_end_matches('.').rfind(". ").map(|at| at + 1))
+        .max()?;
+    let tail = gloss[at + 1..].trim().trim_end_matches('.');
     short(tail).then(|| tail.to_string())
 }
 
@@ -1615,6 +1621,16 @@ fn is_minor(entry: &Entry) -> bool {
     }
     if entry.senses.is_empty() {
         return false;
+    }
+    // A letter's name filed as a noun: French "a" is "a, the name of the Latin-script letter
+    // A", which answers Spanish "a", and how often Spanish says "a", the preposition, made
+    // the letter what "il a" meant.
+    if entry
+        .senses
+        .iter()
+        .all(|sense| names_a_letter(&sense.gloss))
+    {
+        return true;
     }
     let spelled_elsewhere = entry.senses.iter().all(|sense| {
         let gloss = sense.gloss.to_lowercase();
@@ -3369,19 +3385,56 @@ fn resolve_one<D: AsRef<[u8]>>(
             .take(4)
             .filter_map(|sense| meaning_of(&sense.gloss))
             .flat_map(|meant| {
+                // And what follows a sentence about the word: Italian "a" is "Indicates the
+                // indirect object. to".
+                let after = meant
+                    .trim_end_matches('.')
+                    .rsplit_once(". ")
+                    .map(|(_, then)| lexpack::gloss_head(then))
+                    .into_iter();
                 lexpack::gloss_terms(&meant)
                     .into_iter()
+                    .chain(after)
                     .map(move |term| (term, meant.clone()))
+                    .collect::<Vec<_>>()
             })
             .map(|(term, meant)| (term.trim_end_matches(['.', ',', ';']).to_string(), meant))
             .filter(|(term, _)| !term.is_empty() && term.split_whitespace().count() <= 3)
             .filter(|(term, _)| !TENSE_MARKERS.contains(&term.as_str()))
             .collect();
+        // Where no term has a table, the gloss's terms together pick the word, further on:
+        // Spanish "camino" is "way, route", German "Weise" is "way" first and "Weg" holds both.
+        let some_table = english
+            .iter()
+            .any(|(english, _)| !translated(english, &entry.pos, other, &plain, false).is_empty());
         for (english, meant) in &english {
             // In the table's own order: an English word reached this way is a gloss of the
             // word, not the word, and its table's first row is its commonest sense. Reordered
             // by which words give the gloss back, "können", "can", was "enlatar", to can.
-            let table = translated(english, &entry.pos, other, &plain, false);
+            let mut table = translated(english, &entry.pos, other, &plain, false);
+            // With no table, the word the reader's dictionary defines as exactly this, of the
+            // same kind, before a later term's table: "declare" has none into Spanish, and
+            // "déclaré" went on to "come out" and was "salido", where "declarar" is "to
+            // declare".
+            if table.is_empty() && some_table {
+                table = other
+                    .senses_matching(english)
+                    .into_iter()
+                    .filter_map(|((which, sense), _)| {
+                        let found = other.entry(which)?;
+                        let gloss = &found.senses.get(sense as usize)?.gloss;
+                        (same_part(&found.pos, &entry.pos)
+                            && lexpack::gloss_head(gloss) == *english
+                            && !is_affix(&found))
+                        .then_some((sense, found.lemma))
+                    })
+                    // Where it is that word's first sense: "decir" is "to declare" too,
+                    // eighth.
+                    .min_by_key(|(sense, _)| *sense)
+                    .map(|(_, word)| (word, true))
+                    .into_iter()
+                    .collect();
+            }
             if table.is_empty() {
                 continue;
             }
