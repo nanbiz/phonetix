@@ -308,6 +308,14 @@ fn a_list_inside_a_parenthesis_is_not_the_glosss_list() {
 }
 
 #[test]
+fn a_note_in_square_brackets_is_no_part_of_a_term() {
+    assert_eq!(
+        lexpack::gloss_terms("to run [auxiliary essere or avere] (see above)"),
+        ["run"]
+    );
+}
+
+#[test]
 fn a_word_that_only_narrows_or_ties_is_no_term() {
     assert_eq!(
         lexpack::gloss_terms("bleary-eyed, especially, having watery eyes"),

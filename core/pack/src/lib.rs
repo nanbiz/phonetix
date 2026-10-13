@@ -146,7 +146,11 @@ fn listed(text: &str) -> Vec<&str> {
 /// comes out "book", which is also where the noun lands, and the part of speech separates them
 /// at lookup rather than here.
 pub fn gloss_head(gloss: &str) -> String {
-    let mut text = gloss.trim();
+    // A note in square brackets is about how the word is used, never what it means: Italian
+    // "correre" is "to run [auxiliary essere or avere] (see above)", and with the note left
+    // in it met no other language's "run".
+    let unbracketed = without_square_notes(gloss);
+    let mut text = unbracketed.trim();
     // Only a trailing parenthesis, and only when something precedes it: a gloss that is all
     // parenthesis is naming the thing in it. The whole of it, nested ones included:
     // "dog (the species Canis familiaris (sometimes ...))" is "dog".
@@ -168,6 +172,21 @@ pub fn gloss_head(gloss: &str) -> String {
         }
     }
     lower
+}
+
+/// A gloss without its notes in square brackets.
+fn without_square_notes(gloss: &str) -> String {
+    let mut out = String::with_capacity(gloss.len());
+    let mut depth = 0u32;
+    for c in gloss.chars() {
+        match c {
+            '[' => depth += 1,
+            ']' if depth > 0 => depth -= 1,
+            _ if depth == 0 => out.push(c),
+            _ => {}
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Every gloss term a sense should be indexed under: its head, and each further term of a list.

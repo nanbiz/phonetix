@@ -419,8 +419,15 @@ struct Rank {
     /// has one: "enel" is glossed "in the" exactly and nobody writes it, "Uds" is "you", and
     /// "en el" and "tú" are what a speaker says.
     unheard: bool,
-    shared: std::cmp::Reverse<usize>,
+    /// Whether the word shares only some of the terms of the asked gloss and of its own sense
+    /// both. "casi", "almost", is all of itself in "almost; nearly". One that shares all of
+    /// them is as good an answer to a gloss of one term as to a gloss of two, and the earlier
+    /// sense asked about decides between those: Italian "correre" is "to run" first and "to
+    /// hurry, to rush" second, and counted by shared terms alone the second's "apurar" beat the
+    /// first's "correr".
+    partial: bool,
     asked: usize,
+    shared: std::cmp::Reverse<usize>,
     /// Whether what was typed is a later sense of the word rather than its first: "caja" is a
     /// box first and a bank somewhere down its list, "banco" a bank first.
     later: bool,
@@ -926,6 +933,7 @@ fn ranked_senses<D: AsRef<[u8]>>(
 ) -> Vec<(Rank, Entry, u32)> {
     let mut scored: Vec<(Rank, Entry, u32)> = Vec::new();
     for (asked, (gloss, pos)) in glosses.iter().enumerate() {
+        let terms = lexpack::gloss_terms(gloss).len().max(1);
         let mut hits = wanted.senses_matching(gloss);
         hits.sort_by_key(|((which, sense), shared)| (std::cmp::Reverse(*shared), *sense, *which));
         hits.truncate(WEIGHED_AT_MOST);
@@ -985,8 +993,16 @@ fn ranked_senses<D: AsRef<[u8]>>(
                     marked,
                     phrase: entry.lemma.contains(' '),
                     unheard: how_often(&entry).is_none(),
-                    shared: std::cmp::Reverse(shared),
+                    partial: shared
+                        < terms.min(
+                            entry
+                                .senses
+                                .get(sense as usize)
+                                .map(|it| lexpack::gloss_terms(&it.gloss).len().max(1))
+                                .unwrap_or(terms),
+                        ),
                     asked,
+                    shared: std::cmp::Reverse(shared),
                     later: sense > 0,
                     met: std::cmp::Reverse(how_often(&entry).unwrap_or(0)),
                     sense,

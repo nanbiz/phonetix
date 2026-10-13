@@ -26,7 +26,9 @@ import unicodedata
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 RELEASE = os.path.join(ROOT, ".cache", "release")
-LANGS = {"spa": "es", "deu": "de"}
+LANGS = {"eng": "en", "spa": "es", "deu": "de", "ita": "it", "fra": "fr", "por": "pt"}
+# The language read, as FLORES names it: English unless FROM says another (FROM=ita).
+FROM = os.environ.get("FROM", "eng")
 
 
 FLORES = "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz"
@@ -49,7 +51,7 @@ def pairs_for(lang):
         with tarfile.open(archive) as tar:
             tar.extractall(into, filter="data")
     read = lambda code: open(os.path.join(where, f"{code}_Latn.{split}"), encoding="utf-8").read().splitlines()
-    return [list(pair) for pair in zip(read("eng"), read(lang))]
+    return [list(pair) for pair in zip(read(FROM), read(lang))]
 
 
 def tatoeba_pairs(lang):
@@ -121,7 +123,8 @@ def main():
     pairs = pairs_for(lang)
     run = subprocess.run(
         [os.path.join(ROOT, "core", "target", "release", "examples", "word_choice"),
-         os.path.join(RELEASE, "en.pack"), os.path.join(RELEASE, f"{into}.pack"), "en", into]
+         os.path.join(RELEASE, f"{LANGS[FROM]}.pack"), os.path.join(RELEASE, f"{into}.pack"),
+         LANGS[FROM], into]
         + ([mode] if mode else []),
         input="\n".join("\t".join(p) for p in pairs), capture_output=True, text=True, check=True)
     rows = [json.loads(line) for line in run.stdout.splitlines()]

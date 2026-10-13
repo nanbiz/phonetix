@@ -2486,6 +2486,65 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// A gloss matched in full is as good an answer whatever its length, and the earlier sense
+/// decides: Italian "correre" is "to run" before "to hurry, to rush", and is "correr", where
+/// counting shared terms alone made it "apurar". A word all of whose own sense is matched is
+/// matched in full: "casi", "almost", answers German "fast", "almost; nearly", before the
+/// later "hardly".
+#[test]
+fn a_gloss_matched_in_full_and_first_answers() {
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    italian
+        .add::<&str>(
+            word(
+                "correre",
+                "verb",
+                "ˈkor.re.re",
+                &[
+                    "to run [auxiliary essere or avere] (see above)",
+                    "to hurry, to rush",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    italian
+        .add::<&str>(
+            word("fast", "adv", "fast", &["almost; nearly", "hardly"]),
+            &[],
+        )
+        .unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    spanish
+        .add::<&str>(word("correr", "verb", "koˈreɾ", &["to run, to jog"]), &[])
+        .unwrap();
+    spanish
+        .add::<&str>(
+            word("apurar", "verb", "apuˈɾaɾ", &["to hurry, to rush"]),
+            &[],
+        )
+        .unwrap();
+    spanish
+        .add::<&str>(word("casi", "adv", "ˈkasi", &["almost"]), &[])
+        .unwrap();
+    spanish
+        .add::<&str>(
+            word("difícilmente", "adv", "difiθilˈmente", &["hardly"]),
+            &[],
+        )
+        .unwrap();
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&italian),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("it"), &lang("es"), &open).says;
+    assert_eq!(says("correre").first().map(String::as_str), Some("correr"));
+    assert_eq!(says("fast").first().map(String::as_str), Some("casi"));
+}
+
 /// Read in its own language, the sentence as written says which sense a word is: "the bank of
 /// the river" is its edge, and a sentence sharing nothing with any sense leaves the
 /// dictionary's order.
