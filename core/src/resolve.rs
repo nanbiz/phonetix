@@ -2226,7 +2226,12 @@ fn read_found<D: AsRef<[u8]>>(
             // A contraction says the words it contracts, which its card draws part by part:
             // Italian "al" is "a" and "il", where "al" the preposition is "con".
             if translating && first.says.is_empty() && !names_its_parts(first) {
-                return all.iter().position(|answer| !answer.says.is_empty());
+                // Of its own kind first: Italian "gli" the article says nothing of its own, and
+                // the article "i" it is a form of is "los", where the pronoun "gli" is "le".
+                return all
+                    .iter()
+                    .position(|answer| !answer.says.is_empty() && answer.pos == first.pos)
+                    .or_else(|| all.iter().position(|answer| !answer.says.is_empty()));
             }
             Some(0)
         });

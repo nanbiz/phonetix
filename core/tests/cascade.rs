@@ -3795,3 +3795,57 @@ fn words_of_grammar_by_what_their_glosses_say() {
         Some("no")
     );
 }
+
+/// A word of grammar that says nothing of its own is the reading of its own kind that does:
+/// Italian "gli" the article is filed as a form of "i", which is "los", and the pronoun "gli",
+/// "le", led every "gli" on a page.
+#[test]
+fn a_silent_word_of_grammar_is_its_own_kind() {
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    let mut article = word(
+        "gli",
+        "article",
+        "ʎi",
+        &[
+            "form of the article i (“the”) used before a vowel, impure s, gn, pn, ps, sc, x, y, \
+           and z; the of the article i",
+        ],
+    );
+    article.senses[0].marks = vec![
+        "form-of".to_string(),
+        "masculine".to_string(),
+        "plural".to_string(),
+    ];
+    italian.add::<&str>(article, &[]).unwrap();
+    italian
+        .add::<&str>(word("gli", "pron", "ʎi", &["him, to him; it; to it"]), &[])
+        .unwrap();
+    let mut i = word("i", "article", "i", &["the"]);
+    i.senses[0].marks = vec!["masculine".to_string(), "plural".to_string()];
+    i.forms.push(lexpack::Form {
+        spelling: "gli".to_string(),
+        label: "masculine plural".to_string(),
+    });
+    italian.add(i, &["gli"]).unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let le = spanish
+        .add::<&str>(word("le", "pron", "le", &["to him"]), &[])
+        .unwrap();
+    let mut el = word("el", "article", "el", &["the"]);
+    el.forms.push(lexpack::Form {
+        spelling: "los".to_string(),
+        label: "plural".to_string(),
+    });
+    let el = spanish.add::<&str>(el, &[]).unwrap();
+    spanish.translated("him", "pron", &[(le, 0)]);
+    spanish.translated("the", "article", &[(el, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&italian),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let gli = read_in_context("gli", None, &lang("it"), &lang("es"), &open);
+    assert_eq!(lexcore::annotate::lead(&gli, &open).as_deref(), Some("los"));
+}
