@@ -3363,16 +3363,21 @@ fn resolve_one<D: AsRef<[u8]>>(
         // wish.
         // The first four senses: "werden" is the future, the subjunctive and the passive
         // before it is "to become".
-        let english: Vec<String> = ordinary
+        // Each with the sense it came from.
+        let english: Vec<(String, String)> = ordinary
             .iter()
             .take(4)
             .filter_map(|sense| meaning_of(&sense.gloss))
-            .flat_map(|meant| lexpack::gloss_terms(&meant))
-            .map(|term| term.trim_end_matches(['.', ',', ';']).to_string())
-            .filter(|term| !term.is_empty() && term.split_whitespace().count() <= 3)
-            .filter(|term| !TENSE_MARKERS.contains(&term.as_str()))
+            .flat_map(|meant| {
+                lexpack::gloss_terms(&meant)
+                    .into_iter()
+                    .map(move |term| (term, meant.clone()))
+            })
+            .map(|(term, meant)| (term.trim_end_matches(['.', ',', ';']).to_string(), meant))
+            .filter(|(term, _)| !term.is_empty() && term.split_whitespace().count() <= 3)
+            .filter(|(term, _)| !TENSE_MARKERS.contains(&term.as_str()))
             .collect();
-        for english in &english {
+        for (english, meant) in &english {
             // In the table's own order: an English word reached this way is a gloss of the
             // word, not the word, and its table's first row is its commonest sense. Reordered
             // by which words give the gloss back, "können", "can", was "enlatar", to can.
@@ -3421,16 +3426,23 @@ fn resolve_one<D: AsRef<[u8]>>(
                     }
                 })
                 .unwrap_or_else(|| words[0].clone());
-            // Unless the glosses joined reach a word far commoner than the table's: a table can
-            // lack its first sense in a language, and "dog" into German lists only "Rüde", a
-            // male dog, where "Spanish perro" joined on "dog" is "Hund".
+            // Unless the same sense's gloss, joined, reaches a word far commoner than the
+            // table's: a table can lack its first sense in a language, and "dog" into German
+            // lists only "Rüde", a male dog, where Spanish "perro" joined on "dog" is "Hund".
+            // Only that sense's: "werden" joined on its passive, "to be done", was "acabar".
             let found = {
-                let asked: Vec<(String, Option<String>)> = ordinary
-                    .iter()
-                    .filter_map(|sense| meaning_of(&sense.gloss))
-                    .take(3)
-                    .map(|gloss| (gloss, Some(entry.pos.clone())))
-                    .collect();
+                // A word of grammar by its first senses together, where the table's order says
+                // least: "als" is "as", "than" and "when" at once.
+                let asked: Vec<(String, Option<String>)> = if little {
+                    ordinary
+                        .iter()
+                        .filter_map(|sense| meaning_of(&sense.gloss))
+                        .take(3)
+                        .map(|gloss| (gloss, Some(entry.pos.clone())))
+                        .collect()
+                } else {
+                    vec![(meant.clone(), Some(entry.pos.clone()))]
+                };
                 let met = |word: &str| -> u64 {
                     other
                         .lookup(word)
@@ -3441,9 +3453,12 @@ fn resolve_one<D: AsRef<[u8]>>(
                         .unwrap_or(0)
                 };
                 match glossed_as(&asked, None, other, 1).into_iter().next() {
+                    // Not by the word the table's is a reflexive of, which means something else:
+                    // "hacerse", to become, is not "hacer", to make.
                     Some(joined)
                         if !said
                             .is_some_and(|said| holds(&normalised(said), &normalised(&found)))
+                            && !found.to_lowercase().starts_with(&joined.to_lowercase())
                             && met(&joined) >= met(&found).max(1).saturating_mul(COMMONER_BY) =>
                     {
                         joined

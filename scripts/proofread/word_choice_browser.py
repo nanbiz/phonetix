@@ -15,7 +15,7 @@ import sys, time, json, threading, http.server, functools  # noqa: E401
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import PipeCDP
 from on_a_page import evaluate
-from word_choice import agrees, pairs_for
+from word_choice import FROM, LANGS, agrees, pairs_for
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REL = os.path.join(ROOT, ".cache", "release")
 lang, into, n = sys.argv[1], sys.argv[2], int(sys.argv[3])
@@ -33,11 +33,11 @@ evaluate(cdp, s, "chrome.storage.local.set({packBaseUrl:'http://127.0.0.1:8945'}
 JS = """(async () => {
   const pairs = %s; const out = [];
   const ask = (data) => chrome.runtime.sendMessage({phonetix: 'lookUp', data});
-  await ask({word: 'warm', source: 'en', target: '%s', line: 'A warm day.'}).catch(() => null);
+  await ask({word: 'warm', source: '%s', target: '%s', line: 'A warm day.'}).catch(() => null);
   for (let at = 0; at < pairs.length; at++) {
     const words = pairs[at][0].split(/[^\\p{L}\\p{N}'-]+/u).filter(Boolean);
     for (let i = 0; i < words.length; i++) {
-      const got = await ask({word: words[i], source: 'en', target: '%s', before: words[i-1] || '', line: %s ? pairs[at][0] : ''}).catch(e => ({error: String(e)}));
+      const got = await ask({word: words[i], source: '%s', target: '%s', before: words[i-1] || '', line: %s ? pairs[at][0] : ''}).catch(e => ({error: String(e)}));
       const r = got && (got.ok !== undefined ? got.ok : got);
       out.push({at, word: words[i], lead: (r && (r.lead || (r.says||[])[0])) || '', pos: r && r.pos});
     }
@@ -46,7 +46,7 @@ JS = """(async () => {
 })()"""
 for with_line in (False, True):
     t0 = time.time()
-    got = evaluate(cdp, s, JS % (json.dumps(pairs), into, into, "true" if with_line else "false"))
+    got = evaluate(cdp, s, JS % (json.dumps(pairs), LANGS[FROM], into, LANGS[FROM], into, "true" if with_line else "false"))
     rows = json.loads(got)
     answered = [r for r in rows if r["lead"]]
     good = [r for r in answered if agrees(r["lead"], pairs[r["at"]][1])]
