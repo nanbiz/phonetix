@@ -3863,3 +3863,69 @@ fn a_silent_word_of_grammar_is_its_own_kind() {
     let gli = read_in_context("gli", None, &lang("it"), &lang("es"), &open);
     assert_eq!(lexcore::annotate::lead(&gli, &open).as_deref(), Some("los"));
 }
+
+/// An entry that only says which form of another word it is reads as that word in that form:
+/// Italian "stato" is filed as "past participle of essere", which essere's own forms do not
+/// list, and it answered nothing beside the noun, the state; on a line saying "sido" it is
+/// "sido". And a numeral keeps its gender: "una" is "una", not "uno".
+#[test]
+fn a_pointer_is_its_word_in_its_form() {
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    italian
+        .add::<&str>(word("stato", "noun", "ˈsta.to", &["state"]), &[])
+        .unwrap();
+    let mut pointer = word("stato", "verb", "ˈsta.to", &["past participle of essere"]);
+    pointer.senses[0].marks = vec![
+        "form-of".to_string(),
+        "participle".to_string(),
+        "past".to_string(),
+    ];
+    italian.add::<&str>(pointer, &[]).unwrap();
+    italian
+        .add::<&str>(word("essere", "verb", "ˈɛs.se.re", &["to be"]), &[])
+        .unwrap();
+    let mut uno = word("uno", "num", "ˈu.no", &["one"]);
+    uno.forms.push(lexpack::Form {
+        spelling: "una".to_string(),
+        label: "feminine".to_string(),
+    });
+    italian.add(uno, &["una"]).unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let estado = spanish
+        .add::<&str>(word("estado", "noun", "esˈta.do", &["state"]), &[])
+        .unwrap();
+    let mut ser = word("ser", "verb", "seɾ", &["to be"]);
+    ser.forms.push(lexpack::Form {
+        spelling: "sido".to_string(),
+        label: "participle past".to_string(),
+    });
+    let ser = spanish.add(ser, &["sido"]).unwrap();
+    let mut one = word("uno", "num", "ˈu.no", &["one"]);
+    one.forms.push(lexpack::Form {
+        spelling: "una".to_string(),
+        label: "feminine".to_string(),
+    });
+    let one = spanish.add(one, &["una"]).unwrap();
+    spanish.translated("state", "noun", &[(estado, 0)]);
+    spanish.translated("be", "verb", &[(ser, 0)]);
+    spanish.translated("one", "num", &[(one, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&italian),
+        target: Some(&spanish),
+        said: Some("Ha sido una sorpresa."),
+        ..Open::default()
+    };
+    let lead = |word: &str| {
+        let answer = read_in_context(word, None, &lang("it"), &lang("es"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(lead("stato").as_deref(), Some("sido"));
+    let alone = Open { said: None, ..open };
+    let una = read_in_context("una", None, &lang("it"), &lang("es"), &alone);
+    assert_eq!(
+        lexcore::annotate::lead(&una, &alone).as_deref(),
+        Some("una")
+    );
+}

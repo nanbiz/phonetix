@@ -3305,6 +3305,69 @@ fn resolve_one<D: AsRef<[u8]>>(
             &agreeing,
         );
     };
+    // An entry that only says which form of another word it is, read from a language other
+    // than English: that word, in that form, where the reader's language has it. Italian
+    // "stato" is filed as "past participle of essere" and essere does not list it, and with no
+    // meaning of its own it answered nothing beside the noun, the state; it is "sido".
+    if source.0 != "en" && !entry.senses.is_empty() {
+        let pointed: Vec<(String, String)> = entry
+            .senses
+            .iter()
+            .filter_map(|sense| {
+                let word = form_of_word(&sense.gloss)?;
+                let label = sense.gloss.rsplit_once(" of ")?.0.to_string();
+                Some((word, label))
+            })
+            .collect();
+        if pointed.len() == entry.senses.len() {
+            let (word, label) = &pointed[0];
+            let lemma = lookup_either_case(pack, word)
+                .into_iter()
+                .find(|it| same_word(&it.lemma, word) && it.pos == entry.pos)
+                // Where the word lists the spelling, it is reached as its form already, and
+                // a word that is itself only a note is not read through again.
+                .filter(|it| {
+                    !lookup_either_case(pack, spelling)
+                        .iter()
+                        .any(|reached| same_word(&reached.lemma, word))
+                        && it
+                            .senses
+                            .iter()
+                            .any(|sense| form_of_word(&sense.gloss).is_none())
+                });
+            if let Some(lemma) = lemma {
+                let read = resolve_one(word, &lemma, source, target, pack, Some(other), said, None);
+                if let Some(said_as) = read.says.first() {
+                    let as_form = Entry {
+                        lemma: word.clone(),
+                        pos: entry.pos.clone(),
+                        tags: Vec::new(),
+                        ipa: Vec::new(),
+                        senses: Vec::new(),
+                        forms: vec![lexpack::Form {
+                            spelling: spelling.to_string(),
+                            label: label.clone(),
+                        }],
+                    };
+                    let found = place_of(&as_form, spelling)
+                        .and_then(|place| in_form(said_as, &entry.pos, &place, other))
+                        .unwrap_or_else(|| said_as.clone());
+                    return finish(
+                        AnswerState::Form,
+                        spelling,
+                        entry,
+                        vec![found],
+                        glosses,
+                        example,
+                        pack,
+                        source,
+                        target,
+                        &agreeing,
+                    );
+                }
+            }
+        }
+    }
     // A contraction naming its parts is answered by them, each in the reader's language, and
     // no word of its own: Italian "della", "of the", joined as "del", where it is "de la".
     if source.0 != "en"
@@ -3711,7 +3774,7 @@ fn resolve_one<D: AsRef<[u8]>>(
             // An article in its gender and number: Italian "la" is "la", not "el", and "i"
             // "los". On a line that has that form too, whichever other form of the article the
             // line has first: "la" on a line with "los" and "la" in it was "los".
-            let found = if matches!(entry.pos.as_str(), "article" | "det") {
+            let found = if matches!(entry.pos.as_str(), "article" | "det" | "num") {
                 let base = words
                     .iter()
                     .find(|word| {
