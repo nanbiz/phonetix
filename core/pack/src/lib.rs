@@ -197,7 +197,7 @@ fn without_square_notes(gloss: &str) -> String {
 pub fn gloss_terms(gloss: &str) -> Vec<String> {
     let mut out = Vec::new();
     let head = gloss_head(gloss);
-    if !head.is_empty() && !idle(&head) {
+    if !head.is_empty() {
         out.push(head);
     }
     let body = gloss.trim();
@@ -207,9 +207,15 @@ pub fn gloss_terms(gloss: &str) -> Vec<String> {
     };
     for part in listed(body).into_iter().skip(1) {
         let term = gloss_head(part);
-        if !term.is_empty() && !out.contains(&term) && !idle(&term) {
+        if !term.is_empty() && !out.contains(&term) {
             out.push(term);
         }
+    }
+    // The hedges and ties are left out beside a term that names something, and kept where
+    // there is none: a preposition's whole gloss is "with", and without it Spanish "con" was
+    // reached by nothing and German "mit" read as "también".
+    if out.iter().any(|term| !idle(term)) {
+        out.retain(|term| !idle(term));
     }
     out
 }

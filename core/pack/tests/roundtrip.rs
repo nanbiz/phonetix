@@ -325,6 +325,8 @@ fn a_word_that_only_narrows_or_ties_is_no_term() {
         lexpack::gloss_terms("of, from or relating to Courland"),
         ["from or relating to courland"]
     );
+    // Only beside one that names something: a preposition is its tie word.
+    assert_eq!(lexpack::gloss_terms("with"), ["with"]);
 }
 
 #[test]

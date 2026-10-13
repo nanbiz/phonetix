@@ -1301,6 +1301,7 @@ fn translated<D: AsRef<[u8]>>(
     pos: &str,
     wanted: &Pack<D>,
     entry: &Entry,
+    reorder: bool,
 ) -> Vec<(String, bool)> {
     let lower = english.to_lowercase();
     // The English word's own senses, each as a head: a word whose own dictionary says one of
@@ -1362,7 +1363,7 @@ fn translated<D: AsRef<[u8]>>(
     // The plainest first, the table's own order among equals. Not for a word of grammar,
     // whose table lists several words that each are exactly it, in the order its editors put
     // them: "you" is "tú" before "vos".
-    let ordered = by_kind(pos) > 1;
+    let ordered = reorder && by_kind(pos) > 1;
     let (mut plain, rest): (Vec<_>, Vec<_>) = words
         .into_iter()
         .partition(|(_, back)| ordered && *back == 2);
@@ -1515,12 +1516,21 @@ fn meaning_of(gloss: &str) -> Option<String> {
     if !crate::annotate::about_grammar(gloss) {
         return Some(gloss.to_string());
     }
+    let short = |part: &str| {
+        !part.is_empty()
+            && part.split_whitespace().count() <= 3
+            && !crate::annotate::about_grammar(part)
+    };
+    // The one it starts with, where that is a meaning: "él" is "he, him, masculine personal
+    // third person subject and disjunctive pronoun", and read as nothing but grammar it was no
+    // answer to "he", and German "er" was "ella"; "du" is "you (singular familiar), thou".
+    let head = gloss.split([',', ';', '(']).next().unwrap_or("").trim();
+    if short(head) {
+        return Some(head.to_string());
+    }
     let at = gloss.rfind([':', ',', ';'])?;
     let tail = gloss[at + 1..].trim();
-    (!tail.is_empty()
-        && tail.split_whitespace().count() <= 3
-        && !crate::annotate::about_grammar(tail))
-    .then(|| tail.to_string())
+    short(tail).then(|| tail.to_string())
 }
 
 /// Whether two parts of speech are the same kind of word, as two dictionaries file them: one
@@ -1976,8 +1986,30 @@ fn read_found<D: AsRef<[u8]>>(
         says.retain(|had| !same_word(had, word));
         says.insert(0, word.clone());
     }
+    // A capitalised spelling that is also a word of grammar in small letters is that word: in
+    // a language that capitalises nouns, "Es" starting a sentence is "es", "it", and the nouns
+    // spelled so - E-flat, the id - are words of music and psychology. "Es" was "cédula" on
+    // forty-five of a thousand lines, and "Er" "macho".
+    let little_capital = spelling.chars().next().is_some_and(char::is_uppercase)
+        && all.first().and_then(|first| first.pos.as_deref()) == Some("noun")
+        && capitalises_nouns(&source.0);
+    let little_capital = little_capital
+        .then(|| {
+            all.iter().position(|answer| {
+                answer.pos.as_deref().is_some_and(|pos| by_kind(pos) <= 1)
+                    && answer
+                        .lemma
+                        .clone()
+                        .unwrap_or_else(|| answer.spelling.clone())
+                        .chars()
+                        .next()
+                        .is_some_and(char::is_lowercase)
+            })
+        })
+        .flatten();
     let decided = own_decided
         .then_some(0)
+        .or(little_capital)
         .or_else(|| chosen_by_translation(&meant, &verbs, &fits, open.said))
         .or_else(|| by_meaning.as_ref().map(|(at, _)| *at))
         .or_else(|| chosen_by_training(&all, spelling, before, open))
@@ -3150,8 +3182,8 @@ fn resolve_one<D: AsRef<[u8]>>(
         } else {
             (spelling, entry.lemma.as_str())
         };
-        let mut table = translated(first, &entry.pos, other, entry);
-        for (word, back) in translated(second, &entry.pos, other, entry) {
+        let mut table = translated(first, &entry.pos, other, entry, true);
+        for (word, back) in translated(second, &entry.pos, other, entry, true) {
             if !table.iter().any(|(had, _)| *had == word) {
                 table.push((word, back));
             }
@@ -3245,6 +3277,98 @@ fn resolve_one<D: AsRef<[u8]>>(
             };
             return finish(
                 state, spelling, entry, found, glosses, example, pack, source, target, &agreeing,
+            );
+        }
+    }
+
+    // Through English: what the word means, where the dictionary says it in a word or two, is
+    // an English word, and the reader's pack holds the English Wiktionary's own table for that
+    // one. German has no table into Spanish, and joined on glosses "mit", "with", read as
+    // "también", where English "with" is "con"; "haben", "to have", as "poseer". The first of
+    // the word's ordinary senses that has a table answers, in the form the translated line
+    // uses where it uses one.
+    if source.0 != "en" && target.0 != "en" {
+        let plain = Entry {
+            lemma: String::new(),
+            pos: entry.pos.clone(),
+            tags: Vec::new(),
+            ipa: Vec::new(),
+            senses: Vec::new(),
+            forms: Vec::new(),
+        };
+        let ordinary: Vec<&lexpack::Sense> = entry
+            .senses
+            .iter()
+            .filter(|sense| {
+                !sense
+                    .marks
+                    .iter()
+                    .any(|mark| UNUSUAL.contains(&mark.as_str()))
+            })
+            .collect();
+        // Each term a sense lists, in its order: "können" is "to be able (to do or be
+        // something), to have the possibility of, can", and only "can" has a table. Not a word
+        // English makes a tense with: "werden" is "will" first, whose table is "desear", to
+        // wish.
+        // The first four senses: "werden" is the future, the subjunctive and the passive
+        // before it is "to become".
+        let english: Vec<String> = ordinary
+            .iter()
+            .take(4)
+            .filter_map(|sense| meaning_of(&sense.gloss))
+            .flat_map(|meant| lexpack::gloss_terms(&meant))
+            .map(|term| term.trim_end_matches(['.', ',', ';']).to_string())
+            .filter(|term| !term.is_empty() && term.split_whitespace().count() <= 3)
+            .filter(|term| !TENSE_MARKERS.contains(&term.as_str()))
+            .collect();
+        for english in &english {
+            // In the table's own order: an English word reached this way is a gloss of the
+            // word, not the word, and its table's first row is its commonest sense. Reordered
+            // by which words give the gloss back, "können", "can", was "enlatar", to can.
+            let table = translated(english, &entry.pos, other, &plain, false);
+            if table.is_empty() {
+                continue;
+            }
+            let words: Vec<String> = table.iter().map(|(word, _)| word.clone()).collect();
+            // A word of grammar whose own dictionary starts with the English word first, in the
+            // order its table's editors put them: "you" lists "lo, la, le" before "tú", and
+            // only "tú" is "you" before anything else.
+            let little = by_kind(&entry.pos) <= 1;
+            let headed = |word: &String| {
+                other.lookup(word).iter().any(|it| {
+                    same_word(&it.lemma, word)
+                        && it
+                            .senses
+                            .first()
+                            .is_some_and(|sense| lexpack::gloss_head(&sense.gloss) == *english)
+                })
+            };
+            let found = said
+                .and_then(|said| in_line_of(words.clone(), other, said, Some(&entry.pos)))
+                .or_else(|| {
+                    if little {
+                        words.iter().find(|word| headed(word)).cloned()
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_else(|| words[0].clone());
+            let state = if inflected {
+                AnswerState::Form
+            } else {
+                AnswerState::Entry
+            };
+            return finish(
+                state,
+                spelling,
+                entry,
+                vec![found],
+                glosses,
+                example,
+                pack,
+                source,
+                target,
+                &agreeing,
             );
         }
     }

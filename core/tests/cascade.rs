@@ -2486,6 +2486,79 @@ fn the_reading_that_fits_the_lines_word_leads() {
     );
 }
 
+/// A word of a language with no table into the reader's is read through English: German
+/// "mit" is "with", and Spanish holds the English Wiktionary's table for "with", "con", where
+/// joined on glosses it was "también"; "können" is "can" among its terms, and the table's
+/// first word, "poder", not "enlatar", which only gives "can" back more plainly; "du" is "you",
+/// and of that table's words the one whose own dictionary starts with "you", "tú".
+#[test]
+fn a_word_with_no_table_is_read_through_english() {
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add::<&str>(
+            word("mit", "prep", "mɪt", &["with (in the company of)"]),
+            &[],
+        )
+        .unwrap();
+    german
+        .add::<&str>(word("mit", "adv", "mɪt", &["also, too"]), &[])
+        .unwrap();
+    german
+        .add::<&str>(
+            word(
+                "können",
+                "verb",
+                "ˈkœnən",
+                &["to be able (to do something), to have the possibility of, can."],
+            ),
+            &[],
+        )
+        .unwrap();
+    german
+        .add::<&str>(
+            word("du", "pron", "duː", &["you (singular familiar), thou"]),
+            &[],
+        )
+        .unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let con = spanish
+        .add::<&str>(word("con", "prep", "kon", &["with"]), &[])
+        .unwrap();
+    let tambien = spanish
+        .add::<&str>(word("también", "adv", "tamˈbjen", &["also, too"]), &[])
+        .unwrap();
+    let poder = spanish
+        .add::<&str>(
+            word("poder", "verb", "poˈdeɾ", &["to be able to, can"]),
+            &[],
+        )
+        .unwrap();
+    let enlatar = spanish
+        .add::<&str>(word("enlatar", "verb", "en.laˈtaɾ", &["to can"]), &[])
+        .unwrap();
+    let lo = spanish
+        .add::<&str>(word("lo", "pron", "lo", &["him, it, you (formal)"]), &[])
+        .unwrap();
+    let tu = spanish
+        .add::<&str>(word("tú", "pron", "tu", &["you (informal)"]), &[])
+        .unwrap();
+    spanish.translated("with", "prep", &[(con, 0)]);
+    spanish.translated("also", "adv", &[(tambien, 0)]);
+    spanish.translated("can", "verb", &[(poder, 0), (enlatar, 0)]);
+    spanish.translated("you", "pron", &[(lo, 0), (tu, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("de"), &lang("es"), &open).says;
+    assert_eq!(says("mit").first().map(String::as_str), Some("con"));
+    assert_eq!(says("können").first().map(String::as_str), Some("poder"));
+    assert_eq!(says("du").first().map(String::as_str), Some("tú"));
+}
+
 /// A gloss matched in full is as good an answer whatever its length, and the earlier sense
 /// decides: Italian "correre" is "to run" before "to hurry, to rush", and is "correr", where
 /// counting shared terms alone made it "apurar". A word all of whose own sense is matched is
