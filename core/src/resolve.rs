@@ -266,8 +266,30 @@ pub fn keeps_its_capital(lang: &str, capital: &[Entry], small: &[Entry]) -> bool
 }
 
 /// Where an entry stands among the ones a spelling reaches: the word itself, then what it is
-/// an inflection of, then entries that are only notes pointing elsewhere.
+/// an inflection of, then entries that are only notes pointing elsewhere. Among equals a
+/// contraction first: a spelling the dictionary files as one is that contraction on nearly
+/// every line, and the other words of grammar filed under it are uses of it, Italian "al",
+/// "with (an ingredient)", is "al pomodoro", and was "con" for every "al" on a page.
 fn rank_of(entry: &Entry, spelling: &str, lang: &str) -> u8 {
+    let contraction = entry.pos == "contraction"
+        && entry
+            .senses
+            .first()
+            .is_some_and(|sense| crate::annotate::contracted(&sense.gloss).is_some());
+    rank_among(entry, spelling, lang) * 2 + u8::from(!contraction)
+}
+
+/// Whether a reading is a contraction its note names the words of, which a card draws part
+/// by part: Italian "al" is "a + il". Not English "a", "going to", a contraction of nothing.
+fn names_its_parts(answer: &Answer) -> bool {
+    answer.pos.as_deref() == Some("contraction")
+        && answer
+            .glosses
+            .first()
+            .is_some_and(|gloss| crate::annotate::contracted(gloss).is_some())
+}
+
+fn rank_among(entry: &Entry, spelling: &str, lang: &str) -> u8 {
     // "form-of" for an inflection, "alt-of" for a spelling of another word: either way the
     // sense is a pointer, not a meaning.
     // Not one that goes on to say what it means: "people" is filed as "plural of person: a
@@ -1492,6 +1514,43 @@ fn words_of(label: &str) -> Vec<String> {
         .collect()
 }
 
+/// Which gender and number an article is in, as the reader's article would be: its form's
+/// label, or its own entry's marks where the spelling is the entry ("la", "feminine
+/// singular"). Masculine and singular are what a dictionary names an article by, so neither is
+/// asked for. Gender only between languages with two: German "die Sonne" is "el sol".
+fn article_in_kind(
+    entry: &Entry,
+    spelling: &str,
+    inflected: bool,
+    source: &str,
+    target: &str,
+) -> Option<Vec<&'static str>> {
+    const TWO_GENDERS: [&str; 5] = ["es", "fr", "it", "pt", "ca"];
+    let marks: Vec<String> = if inflected {
+        entry
+            .forms
+            .iter()
+            .filter(|form| same_word(&form.spelling, spelling))
+            .flat_map(|form| words_of(&form.label))
+            .collect()
+    } else {
+        entry.senses.first()?.marks.clone()
+    };
+    let has = |word: &str| marks.iter().any(|it| it == word);
+    let mut place = Vec::new();
+    if has("feminine")
+        && !has("masculine")
+        && TWO_GENDERS.contains(&source)
+        && TWO_GENDERS.contains(&target)
+    {
+        place.push("feminine");
+    }
+    if has("plural") && !has("singular") {
+        place.push("plural");
+    }
+    (!place.is_empty()).then_some(place)
+}
+
 /// A word of the reader's language put into the form the English word is in, from that
 /// word's own table of forms: "publicar" as a past participle is "publicado", "Haus" in the
 /// plural "Häuser". Of several, the plainest: the one whose label says least besides the form
@@ -1577,15 +1636,39 @@ fn meaning_of(gloss: &str) -> Option<String> {
     if short(head) {
         return Some(head.to_string());
     }
-    // Or the one it ends with, after a colon, a comma or a full stop: Italian "a" is
-    // "Indicates the indirect object. to".
-    let at = gloss
-        .rfind([':', ',', ';'])
-        .into_iter()
-        .chain(gloss.trim_end_matches('.').rfind(". ").map(|at| at + 1))
-        .max()?;
-    let tail = gloss[at + 1..].trim().trim_end_matches('.');
-    short(tail).then(|| tail.to_string())
+    // Or the first after it that is one, after a colon, a comma or a full stop: Italian "a"
+    // is "Indicates the indirect object. to", and German "sich" "Reflexive pronoun of the
+    // third person singular or plural: herself, himself, itself, ...", which read by its last
+    // part was nothing.
+    gloss
+        .trim_end_matches('.')
+        .split(". ")
+        .flat_map(|part| part.split([':', ',', ';']))
+        .skip(1)
+        .map(|part| part.trim().trim_end_matches('.'))
+        .find(|part| short(part))
+        .map(str::to_string)
+}
+
+/// The English word a definition says the word is translated with: French "pas" is "The most
+/// common adverb of negation in French, typically translating into English as not, don't,
+/// doesn't, etc.", which is "not".
+fn rendered_as(gloss: &str) -> Option<String> {
+    let lowered = gloss.to_lowercase();
+    let at = [
+        "into english as ",
+        "translated as ",
+        "translates as ",
+        "translating as ",
+    ]
+    .iter()
+    .find_map(|marker| lowered.find(marker).map(|at| at + marker.len()))?;
+    let term = lowered[at..]
+        .split([',', ';', '.', '('])
+        .next()?
+        .trim()
+        .trim_matches(['"', '“', '”']);
+    (!term.is_empty() && term.split_whitespace().count() <= 3).then(|| term.to_string())
 }
 
 /// Whether two parts of speech are the same kind of word, as two dictionaries file them: one
@@ -1792,6 +1875,14 @@ fn read_found<D: AsRef<[u8]>>(
         return Answer::nothing(state, spelling, source, target);
     };
     let mut found = lookup_either_case(pack, spelling);
+    // Not a word the spelling is only an old or a dialect's form of, where it is a word of its
+    // own: Italian "con" is "with", and as the obsolete apocope of "come" it was "apenas".
+    if found
+        .iter()
+        .any(|entry| same_word(&entry.lemma, spelling) && !is_minor(entry))
+    {
+        found.retain(|entry| same_word(&entry.lemma, spelling) || !only_odd_forms(entry, spelling));
+    }
     if found.is_empty() {
         // The pack is open and does not hold the word. That is a miss for the engines, not a
         // missing pack, and the card says so differently.
@@ -2084,8 +2175,11 @@ fn read_found<D: AsRef<[u8]>>(
         // apart by the dictionary's own join rather than a word of the reader's: how often
         // German says "anzünden" says nothing about whether "light" is the verb, and ranked
         // that way "can" was "einmachen" and "rock" was "wiegen".
+        // Not past a contraction, which says the words it contracts rather than a word of its
+        // own: Italian "alla" is "a la", and "con" from the preposition "al" was met more.
         .or_else(|| {
-            (source.0 != "en")
+            let contraction = all.first().is_some_and(names_its_parts);
+            (source.0 != "en" && !contraction)
                 .then(|| commonest_answer(&all, open))
                 .flatten()
         })
@@ -2129,7 +2223,9 @@ fn read_found<D: AsRef<[u8]>>(
                 return None;
             }
             let translating = open.target.is_some() && target.0 != source.0;
-            if translating && first.says.is_empty() {
+            // A contraction says the words it contracts, which its card draws part by part:
+            // Italian "al" is "a" and "il", where "al" the preposition is "con".
+            if translating && first.says.is_empty() && !names_its_parts(first) {
                 return all.iter().position(|answer| !answer.says.is_empty());
             }
             Some(0)
@@ -2293,6 +2389,21 @@ fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
         .iter()
         .find(|label| ordinary(label))
         .map(|label| label.to_string())
+}
+
+/// Whether every label an entry gives a spelling is another age's or a dialect's: "con" under
+/// Italian "come" is "alternative apocopic obsolete".
+fn only_odd_forms(entry: &Entry, spelling: &str) -> bool {
+    let labels: Vec<Vec<String>> = entry
+        .forms
+        .iter()
+        .filter(|form| same_word(&form.spelling, spelling))
+        .flat_map(|form| form.label.split("; ").map(words_of).collect::<Vec<_>>())
+        .collect();
+    !labels.is_empty()
+        && labels
+            .iter()
+            .all(|label| label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
 }
 
 /// Whether the dump lists this spelling among an entry's forms only as another way of writing
@@ -3189,6 +3300,28 @@ fn resolve_one<D: AsRef<[u8]>>(
             &agreeing,
         );
     };
+    // A contraction naming its parts is answered by them, each in the reader's language, and
+    // no word of its own: Italian "della", "of the", joined as "del", where it is "de la".
+    if source.0 != "en"
+        && entry.pos == "contraction"
+        && entry
+            .senses
+            .first()
+            .is_some_and(|sense| crate::annotate::contracted(&sense.gloss).is_some())
+    {
+        return finish(
+            AnswerState::ViaEn,
+            spelling,
+            entry,
+            Vec::new(),
+            glosses,
+            example,
+            pack,
+            source,
+            target,
+            &agreeing,
+        );
+    }
 
     // An English word is its own gloss. The English dictionary defines its words rather than
     // translating them - "and" is "used simply to connect two noun phrases" - and no other
@@ -3392,9 +3525,24 @@ fn resolve_one<D: AsRef<[u8]>>(
                     .rsplit_once(". ")
                     .map(|(_, then)| lexpack::gloss_head(then))
                     .into_iter();
-                lexpack::gloss_terms(&meant)
+                // A word of grammar by the word its gloss starts with first, idle or not:
+                // Italian "con" is "with, together", and "with" is what it means.
+                let head = (by_kind(&entry.pos) <= 1)
+                    .then(|| lexpack::gloss_head(&meant))
+                    .into_iter();
+                let mut terms: Vec<String> = Vec::new();
+                for term in rendered_as(&meant)
                     .into_iter()
+                    .chain(head)
+                    .chain(lexpack::gloss_terms(&meant))
                     .chain(after)
+                {
+                    if !terms.contains(&term) {
+                        terms.push(term);
+                    }
+                }
+                terms
+                    .into_iter()
                     .map(move |term| (term, meant.clone()))
                     .collect::<Vec<_>>()
             })
@@ -3407,6 +3555,22 @@ fn resolve_one<D: AsRef<[u8]>>(
         let some_table = english
             .iter()
             .any(|(english, _)| !translated(english, &entry.pos, other, &plain, false).is_empty());
+        // The term whose table has a word in the translated line first: "werden" is "to become"
+        // after its passive, and a line saying "fue" is about the passive, "to be".
+        let mut english = english;
+        if let Some(said) = said {
+            let into_line = english.iter().position(|(english, _)| {
+                let words: Vec<String> = translated(english, &entry.pos, other, &plain, false)
+                    .into_iter()
+                    .map(|(word, _)| word)
+                    .collect();
+                in_line_of(words, other, said, Some(&entry.pos)).is_some()
+            });
+            if let Some(at) = into_line {
+                let term = english.remove(at);
+                english.insert(0, term);
+            }
+        }
         for (english, meant) in &english {
             // In the table's own order: an English word reached this way is a gloss of the
             // word, not the word, and its table's first row is its commonest sense. Reordered
@@ -3456,7 +3620,16 @@ fn resolve_one<D: AsRef<[u8]>>(
                 .and_then(|said| in_line_of(words.clone(), other, said, Some(&entry.pos)))
                 .or_else(|| {
                     if little {
-                        words.iter().find(|word| headed(word)).cloned()
+                        // A word, not a phrase, where the table has one: Italian "di" is "from",
+                        // whose table lists "de parte de", "on behalf of", before "desde".
+                        let single = |word: &&String| !word.contains(' ');
+                        let some_single = words.iter().any(|word| single(&word));
+                        words
+                            .iter()
+                            .filter(|word| !some_single || single(word))
+                            .find(|word| headed(word))
+                            .or_else(|| words.iter().find(single))
+                            .cloned()
                     } else {
                         // Of the first two words its table gives, the one the reader's language says
                         // most: "be" lists "werden" first, for the passive, then "sein"; "dog"
@@ -3525,6 +3698,17 @@ fn resolve_one<D: AsRef<[u8]>>(
                 && !said.is_some_and(|said| holds(&normalised(said), &normalised(&found)))
             {
                 place_of(entry, spelling)
+                    .and_then(|place| in_form(&found, &entry.pos, &place, other))
+                    .unwrap_or(found)
+            } else {
+                found
+            };
+            // An article in its gender and number: Italian "la" is "la", not "el", and "i"
+            // "los".
+            let found = if matches!(entry.pos.as_str(), "article" | "det")
+                && !said.is_some_and(|said| holds(&normalised(said), &normalised(&found)))
+            {
+                article_in_kind(entry, spelling, inflected, &source.0, &target.0)
                     .and_then(|place| in_form(&found, &entry.pos, &place, other))
                     .unwrap_or(found)
             } else {

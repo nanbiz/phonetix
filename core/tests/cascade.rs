@@ -3402,3 +3402,396 @@ fn a_contraction_is_written_as_the_reader_writes_its_parts() {
     let au = read_in_context("au", None, &lang("fr"), &lang("es"), &open);
     assert_eq!(lexcore::annotate::lead(&au, &open).as_deref(), Some("al"));
 }
+
+/// Italian words of grammar read into Spanish as Spanish writes them. A contraction leads over
+/// a word of grammar filed under the same spelling, which is a use of it: "al" is "a" and
+/// "il", "al", where "al" the preposition, "with (an ingredient)", is "al pomodoro". A
+/// contraction's parts may be joined by spaces alone: "della" is "di la", and its article
+/// keeps its gender, "de la". A word of grammar is a word where its table has one: "di" is
+/// "from" too, whose table lists the phrase "de parte de".
+#[test]
+fn italian_words_of_grammar_read_as_spanish_writes_them() {
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    italian
+        .add::<&str>(
+            word(
+                "al",
+                "contraction",
+                "al",
+                &["contraction of a + il, literally “to the, at the”"],
+            ),
+            &[],
+        )
+        .unwrap();
+    // "alla" is also the feminine of the preposition "al", met through "con" far more than
+    // the contraction's parts are.
+    let mut with = word("al", "prep", "al", &["with (an ingredient)"]);
+    with.forms.push(lexpack::Form {
+        spelling: "alla".to_string(),
+        label: "feminine".to_string(),
+    });
+    with.tags.push("count:1476453".to_string());
+    italian.add(with, &["alla"]).unwrap();
+    let mut contracted = word(
+        "alla",
+        "contraction",
+        "ˈal.la",
+        &["contraction of a + la; to the, at the"],
+    );
+    contracted.tags.push("count:469810".to_string());
+    italian.add::<&str>(contracted, &[]).unwrap();
+    let mut styled = word("alla", "prep", "ˈal.la", &["-style, à la"]);
+    styled.tags.push("count:469810".to_string());
+    italian.add::<&str>(styled, &[]).unwrap();
+    italian
+        .add::<&str>(word("a", "prep", "a", &["to"]), &[])
+        .unwrap();
+    italian
+        .add::<&str>(word("il", "article", "il", &["the"]), &[])
+        .unwrap();
+    let mut la = word("la", "article", "la", &["the"]);
+    la.senses[0].marks = vec!["feminine".to_string(), "singular".to_string()];
+    italian.add::<&str>(la, &[]).unwrap();
+    italian
+        .add::<&str>(
+            word(
+                "di",
+                "prep",
+                "di",
+                &[
+                    "used to indicate possession, after the thing owned and before the owner; of; ’s",
+                    "from",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    italian
+        .add::<&str>(
+            word(
+                "della",
+                "contraction",
+                "ˈdel.la",
+                &["contraction of di la; of the, from the"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let a = spanish
+        .add::<&str>(word("a", "prep", "a", &["to, at"]), &[])
+        .unwrap();
+    let mut con = word("con", "prep", "kon", &["with"]);
+    con.tags.push("count:1000000".to_string());
+    let con = spanish.add::<&str>(con, &[]).unwrap();
+    let mut el = word(
+        "el",
+        "article",
+        "el",
+        &["masculine singular definite article; the"],
+    );
+    el.forms.push(lexpack::Form {
+        spelling: "la".to_string(),
+        label: "feminine".to_string(),
+    });
+    let el = spanish.add::<&str>(el, &[]).unwrap();
+    let de = spanish
+        .add::<&str>(
+            word("de", "prep", "de", &["of; 's; used after the thing owned"]),
+            &[],
+        )
+        .unwrap();
+    let on_behalf = spanish
+        .add::<&str>(
+            word(
+                "de parte de",
+                "prep",
+                "de ˈpaɾte de",
+                &["from, on behalf of"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let del = spanish
+        .add::<&str>(word("del", "contraction", "del", &["of the"]), &[])
+        .unwrap();
+    spanish.translated("of the", "contraction", &[(del, 0)]);
+    spanish.translated("to", "prep", &[(a, 0)]);
+    spanish.translated("with", "prep", &[(con, 0)]);
+    spanish.translated("the", "article", &[(el, 0)]);
+    spanish.translated("from", "prep", &[(de, 0), (on_behalf, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&italian),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let lead = |word: &str| {
+        let answer = read_in_context(word, None, &lang("it"), &lang("es"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(lead("al").as_deref(), Some("al"));
+    assert_eq!(lead("alla").as_deref(), Some("a la"));
+    assert_eq!(lead("la").as_deref(), Some("la"));
+    assert_eq!(lead("di").as_deref(), Some("de"));
+    assert_eq!(lead("della").as_deref(), Some("de la"));
+    // And no word of its own on its card: "of the" is "del", which is not "della".
+    let della = read_in_context("della", None, &lang("it"), &lang("es"), &open);
+    assert!(della.says.is_empty(), "{:?}", della.says);
+}
+
+/// Among words of grammar under one spelling, a contraction that names its parts first: French
+/// "des" is "de" and "les" on most lines, and as the plural article filed first it was "unos".
+/// Not a "contraction" naming nothing: English "a" is also "going to", and is still "un".
+#[test]
+fn a_contraction_naming_its_parts_leads_its_spelling() {
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    let mut plural = word(
+        "des",
+        "article",
+        "de",
+        &["plural of un (“some”, the plural indefinite article)"],
+    );
+    plural.senses[0].marks = vec!["form-of".to_string(), "plural".to_string()];
+    french.add::<&str>(plural, &[]).unwrap();
+    french
+        .add::<&str>(
+            word(
+                "des",
+                "contraction",
+                "de",
+                &["contraction of de + les, literally “of the, from the, some”"],
+            ),
+            &[],
+        )
+        .unwrap();
+    french
+        .add::<&str>(word("un", "article", "œ̃", &["an, a"]), &[])
+        .unwrap();
+    french
+        .add::<&str>(word("de", "prep", "də", &["of"]), &[])
+        .unwrap();
+    let mut les = word("les", "article", "le", &["the"]);
+    les.senses[0].marks = vec!["plural".to_string()];
+    french.add::<&str>(les, &[]).unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    let mut english = Builder::new("en", Kind::Lex, 0);
+    english
+        .add::<&str>(
+            word(
+                "a",
+                "contraction",
+                "ə",
+                &["Used to express a future action; going to."],
+            ),
+            &[],
+        )
+        .unwrap();
+    english
+        .add::<&str>(word("a", "article", "ə", &["one"]), &[])
+        .unwrap();
+    let english = Pack::open(english.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut un = word("un", "article", "un", &["a, an"]);
+    un.forms.push(lexpack::Form {
+        spelling: "unos".to_string(),
+        label: "plural".to_string(),
+    });
+    let un = spanish.add::<&str>(un, &[]).unwrap();
+    let de = spanish
+        .add::<&str>(word("de", "prep", "de", &["of"]), &[])
+        .unwrap();
+    let mut el = word("el", "article", "el", &["the"]);
+    el.forms.push(lexpack::Form {
+        spelling: "los".to_string(),
+        label: "plural".to_string(),
+    });
+    let el = spanish.add::<&str>(el, &[]).unwrap();
+    spanish.translated("a", "article", &[(un, 0)]);
+    spanish.translated("an", "article", &[(un, 0)]);
+    spanish.translated("one", "article", &[(un, 0)]);
+    spanish.translated("of", "prep", &[(de, 0)]);
+    spanish.translated("the", "article", &[(el, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let lead = |word: &str, from: &str, pack: &Pack<Vec<u8>>| {
+        let open = Open {
+            source: Some(pack),
+            target: Some(&spanish),
+            ..Open::default()
+        };
+        let answer = read_in_context(word, None, &lang(from), &lang("es"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(lead("des", "fr", &french).as_deref(), Some("de los"));
+    assert_eq!(lead("a", "en", &english).as_deref(), Some("un"));
+}
+
+/// Through English, the term whose table has a word in the translated line: German "wurde"
+/// on a line saying "fue" is the passive, which "get" reaches as "ser", not "to become",
+/// "volverse", the first term with a table.
+#[test]
+fn the_line_picks_the_term_read_through() {
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut werden = word("werden", "verb", "ˈveːɐ̯dn̩", &["to become; to get"]);
+    werden.forms.push(lexpack::Form {
+        spelling: "wurde".to_string(),
+        label: "preterite indicative third-person singular".to_string(),
+    });
+    german.add(werden, &["wurde"]).unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let volverse = spanish
+        .add::<&str>(word("volverse", "verb", "bolˈbeɾse", &["to become"]), &[])
+        .unwrap();
+    let mut ser = word("ser", "verb", "seɾ", &["to be"]);
+    ser.forms.push(lexpack::Form {
+        spelling: "fue".to_string(),
+        label: "preterite indicative third-person singular".to_string(),
+    });
+    let ser = spanish.add(ser, &["fue"]).unwrap();
+    spanish.translated("become", "verb", &[(volverse, 0)]);
+    spanish.translated("get", "verb", &[(ser, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        target: Some(&spanish),
+        said: Some("El hombre fue encontrado."),
+        ..Open::default()
+    };
+    let answer = read_in_context("wurde", None, &lang("de"), &lang("es"), &open);
+    assert_eq!(
+        lexcore::annotate::lead(&answer, &open).as_deref(),
+        Some("fue")
+    );
+}
+
+/// A note about grammar means the first short meaning after it: German "sich" is "Reflexive
+/// pronoun of the third person singular or plural: herself, himself, itself, ...", and by its
+/// last part it meant nothing.
+#[test]
+fn a_note_means_its_first_short_meaning() {
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add::<&str>(
+            word(
+                "sich",
+                "pron",
+                "zɪç",
+                &[
+                    "Reflexive pronoun of the third person singular or plural: herself, himself, \
+                   itself, oneself, themselves (in both dative and accusative) of the third \
+                   person singular or plural",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let se = spanish
+        .add::<&str>(
+            word(
+                "se",
+                "pron",
+                "se",
+                &["reflexive pronoun of the third person"],
+            ),
+            &[],
+        )
+        .unwrap();
+    spanish.translated("herself", "pron", &[(se, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let answer = read_in_context("sich", None, &lang("de"), &lang("es"), &open);
+    assert_eq!(answer.says, vec!["se"]);
+}
+
+/// Italian "con" is "with": not the obsolete apocope of "come", "how", which the dump lists
+/// among come's forms, and by "with" though its gloss goes on to "together", which a word of
+/// grammar's tie word was dropped beside. French "pas" is "not" where a definition says so in a
+/// sentence, "typically translating into English as not", and "no" on a line saying it.
+#[test]
+fn words_of_grammar_by_what_their_glosses_say() {
+    let mut italian = Builder::new("it", Kind::Lex, 0);
+    let mut come = word("come", "adv", "ˈko.me", &["how", "as, like"]);
+    come.tags.push("count:2749856".to_string());
+    come.forms.push(lexpack::Form {
+        spelling: "con".to_string(),
+        label: "alternative apocopic obsolete".to_string(),
+    });
+    italian.add(come, &["con"]).unwrap();
+    let mut con = word("con", "prep", "kon", &["with, together"]);
+    con.tags.push("count:1440540".to_string());
+    italian.add::<&str>(con, &[]).unwrap();
+    let italian = Pack::open(italian.finish().unwrap()).unwrap();
+    let mut french = Builder::new("fr", Kind::Lex, 0);
+    french
+        .add::<&str>(word("pas", "noun", "pa", &["step, pace, footstep"]), &[])
+        .unwrap();
+    french
+        .add::<&str>(
+            word(
+                "pas",
+                "adv",
+                "pa",
+                &[
+                    "The most common adverb of negation in French, typically translating into \
+                   English as not, don't, doesn't, etc.",
+                ],
+            ),
+            &[],
+        )
+        .unwrap();
+    let french = Pack::open(french.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let con = spanish
+        .add::<&str>(word("con", "prep", "kon", &["with"]), &[])
+        .unwrap();
+    let together = spanish
+        .add::<&str>(word("junto", "adv", "ˈxun.to", &["together"]), &[])
+        .unwrap();
+    let mut apenas = word("apenas", "adv", "aˈpe.nas", &["hardly; as soon as"]);
+    apenas.tags.push("count:900000".to_string());
+    let apenas = spanish.add::<&str>(apenas, &[]).unwrap();
+    let no = spanish
+        .add::<&str>(word("no", "adv", "no", &["not"]), &[])
+        .unwrap();
+    let paso = spanish
+        .add::<&str>(word("paso", "noun", "ˈpa.so", &["step"]), &[])
+        .unwrap();
+    spanish.translated("with", "prep", &[(con, 0)]);
+    spanish.translated("together", "prep", &[(together, 0)]);
+    spanish.translated("how", "adv", &[(apenas, 0)]);
+    spanish.translated("not", "adv", &[(no, 0)]);
+    spanish.translated("step", "noun", &[(paso, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = |pack| Open {
+        source: Some(pack),
+        target: Some(&spanish),
+        said: Some("No es fácil."),
+        ..Open::default()
+    };
+    let (italian_open, french_open) = (open(&italian), open(&french));
+    let con = read_in_context("con", None, &lang("it"), &lang("es"), &italian_open);
+    assert_eq!(
+        lexcore::annotate::lead(&con, &italian_open).as_deref(),
+        Some("con")
+    );
+    assert!(
+        con.readings
+            .iter()
+            .all(|reading| reading.pos.as_deref() == Some("prep")),
+        "come's obsolete apocope is no reading of con: {:?}",
+        con.readings
+    );
+    let pas = read_in_context("pas", None, &lang("fr"), &lang("es"), &french_open);
+    assert_eq!(
+        lexcore::annotate::lead(&pas, &french_open).as_deref(),
+        Some("no")
+    );
+}

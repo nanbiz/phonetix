@@ -699,12 +699,13 @@ fn drawn_as<D: AsRef<[u8]>>(
 }
 
 /// The words a contraction is made of, as its note spells them: "contraction of in + dem".
-fn contracted(gloss: &str) -> Option<Vec<String>> {
+pub(crate) fn contracted(gloss: &str) -> Option<Vec<String>> {
     let lowered = gloss.to_lowercase();
     let at = lowered.find("contraction of ")? + "contraction of ".len();
     let rest = gloss[at..].split([';', ',', ':', '(']).next()?;
+    // Joined by "+", or by spaces alone: Italian "della" is "contraction of di la".
     let parts: Vec<String> = rest
-        .split('+')
+        .split(if rest.contains('+') { '+' } else { ' ' })
         .map(|part| part.trim().to_string())
         .filter(|part| !part.is_empty() && !part.contains(' '))
         .collect();
