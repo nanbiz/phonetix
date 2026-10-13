@@ -1416,6 +1416,57 @@ fn english_place(entry: &Entry, spelling: &str) -> Option<&'static [&'static str
     }
 }
 
+/// Which form of its word a spelling of a language other than English is, where the reader's
+/// language has the same form to put its own word into: a noun's plural, a verb's
+/// participles, and its present by person and number. Not a past tense: German has one where
+/// Spanish has two, and nothing in "war" says whether it is "fue" or "era". Where a spelling
+/// is several persons - "sind" is "we are" and "they are" - the third, which is what prose
+/// is mostly written in.
+fn place_of(entry: &Entry, spelling: &str) -> Option<Vec<&'static str>> {
+    let labels: Vec<Vec<String>> = entry
+        .forms
+        .iter()
+        .filter(|form| same_word(&form.spelling, spelling))
+        .flat_map(|form| form.label.split("; ").map(words_of).collect::<Vec<_>>())
+        .filter(|label| !label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
+        .collect();
+    let has = |label: &Vec<String>, word: &str| label.iter().any(|it| it == word);
+    match entry.pos.as_str() {
+        "noun" if labels.iter().any(|label| has(label, "plural")) => Some(vec!["plural"]),
+        "verb" => {
+            if labels
+                .iter()
+                .any(|label| has(label, "participle") && has(label, "past"))
+            {
+                return Some(vec!["participle", "past"]);
+            }
+            const NOT_PLAIN: [&str; 6] = [
+                "subjunctive",
+                "imperative",
+                "conditional",
+                "preterite",
+                "imperfect",
+                "past",
+            ];
+            let present: Vec<&Vec<String>> = labels
+                .iter()
+                .filter(|label| has(label, "present"))
+                .filter(|label| !NOT_PLAIN.iter().any(|it| has(label, it)))
+                .collect();
+            let person = ["third-person", "first-person", "second-person"]
+                .into_iter()
+                .find(|person| present.iter().any(|label| has(label, person)))?;
+            let number = ["singular", "plural"].into_iter().find(|number| {
+                present
+                    .iter()
+                    .any(|label| has(label, person) && has(label, number))
+            })?;
+            Some(vec!["present", person, number, "indicative"])
+        }
+        _ => None,
+    }
+}
+
 /// Labels that make a form one a reader is not owed: a dialect's, another age's, a joke's, or
 /// a word made smaller or bigger, which is another word.
 pub(crate) const ODD_FORMS: [&str; 11] = [
@@ -1449,11 +1500,9 @@ fn words_of(label: &str) -> Vec<String> {
 fn in_form<D: AsRef<[u8]>>(
     word: &str,
     pos: &str,
-    english: &Entry,
-    spelling: &str,
+    place: &[&str],
     pack: &Pack<D>,
 ) -> Option<String> {
-    let place = english_place(english, spelling)?;
     // A language's present participle is its gerund where it has one: "publicando".
     let wanted: Vec<&[&str]> = if place == ["participle", "present"] {
         vec![&["gerund"], place]
@@ -3240,7 +3289,9 @@ fn resolve_one<D: AsRef<[u8]>>(
                 .unwrap_or_else(|| words[0].clone());
             // In the form the English word is in: "published" is "publicado", not "publicar".
             let found = if carried {
-                in_form(&found, &entry.pos, entry, spelling, other).unwrap_or(found)
+                english_place(entry, spelling)
+                    .and_then(|place| in_form(&found, &entry.pos, place, other))
+                    .unwrap_or(found)
             } else {
                 found
             };
@@ -3349,10 +3400,68 @@ fn resolve_one<D: AsRef<[u8]>>(
                     if little {
                         words.iter().find(|word| headed(word)).cloned()
                     } else {
-                        None
+                        // Of the first two words its table gives, the one the reader's language says
+                        // most: "be" lists "werden" first, for the passive, then "sein"; "dog"
+                        // lists "Rüde", a male dog, beside "Hund".
+                        let met = |word: &String| -> u64 {
+                            other
+                                .lookup(word)
+                                .iter()
+                                .filter(|it| same_word(&it.lemma, word))
+                                .filter_map(how_often)
+                                .max()
+                                .unwrap_or(0)
+                        };
+                        words
+                            .iter()
+                            .take(2)
+                            .enumerate()
+                            .max_by_key(|(at, word)| (met(word), std::cmp::Reverse(*at)))
+                            .map(|(_, word)| word.clone())
                     }
                 })
                 .unwrap_or_else(|| words[0].clone());
+            // Unless the glosses joined reach a word far commoner than the table's: a table can
+            // lack its first sense in a language, and "dog" into German lists only "Rüde", a
+            // male dog, where "Spanish perro" joined on "dog" is "Hund".
+            let found = {
+                let asked: Vec<(String, Option<String>)> = ordinary
+                    .iter()
+                    .filter_map(|sense| meaning_of(&sense.gloss))
+                    .take(3)
+                    .map(|gloss| (gloss, Some(entry.pos.clone())))
+                    .collect();
+                let met = |word: &str| -> u64 {
+                    other
+                        .lookup(word)
+                        .iter()
+                        .filter(|it| same_word(&it.lemma, word))
+                        .filter_map(how_often)
+                        .max()
+                        .unwrap_or(0)
+                };
+                match glossed_as(&asked, None, other, 1).into_iter().next() {
+                    Some(joined)
+                        if !said
+                            .is_some_and(|said| holds(&normalised(said), &normalised(&found)))
+                            && met(&joined) >= met(&found).max(1).saturating_mul(COMMONER_BY) =>
+                    {
+                        joined
+                    }
+                    _ => found,
+                }
+            };
+            // In the form the word is in, where the reader's language has it: "ist" is "es",
+            // not "ser". A form the line used is kept as the line has it.
+            let found = if inflected
+                && !said.is_some_and(|said| holds(&normalised(said), &normalised(&found)))
+            {
+                place_of(entry, spelling)
+                    .and_then(|place| in_form(&found, &entry.pos, &place, other))
+                    .unwrap_or(found)
+            } else {
+                found
+            };
             let state = if inflected {
                 AnswerState::Form
             } else {

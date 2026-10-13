@@ -2559,6 +2559,46 @@ fn a_word_with_no_table_is_read_through_english() {
     assert_eq!(says("du").first().map(String::as_str), Some("tú"));
 }
 
+/// A form of a language other than English is carried into the reader's where it has the same
+/// form: German "ist" is "es", "Hunde" is "perros", not "ser" and "perro".
+#[test]
+fn a_form_is_carried_from_any_language() {
+    let form = |spelling: &str, label: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: label.to_string(),
+    };
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut sein = word("sein", "verb", "zaɪ̯n", &["to be"]);
+    sein.forms
+        .push(form("ist", "present singular third-person"));
+    german.add::<&str>(sein, &[]).unwrap();
+    let mut hund = word("Hund", "noun", "hʊnt", &["dog"]);
+    hund.forms.push(form("Hunde", "nominative plural"));
+    german.add::<&str>(hund, &[]).unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut ser = word("ser", "verb", "seɾ", &["to be"]);
+    ser.forms
+        .push(form("es", "indicative present singular third-person"));
+    ser.forms
+        .push(form("sea", "present singular subjunctive third-person"));
+    let ser = spanish.add::<&str>(ser, &[]).unwrap();
+    let mut perro = word("perro", "noun", "ˈpero", &["dog"]);
+    perro.forms.push(form("perros", "plural"));
+    let perro = spanish.add::<&str>(perro, &[]).unwrap();
+    spanish.translated("be", "verb", &[(ser, 0)]);
+    spanish.translated("dog", "noun", &[(perro, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let says = |word: &str| read_in_context(word, None, &lang("de"), &lang("es"), &open).says;
+    assert_eq!(says("ist").first().map(String::as_str), Some("es"));
+    assert_eq!(says("Hunde").first().map(String::as_str), Some("perros"));
+}
+
 /// A gloss matched in full is as good an answer whatever its length, and the earlier sense
 /// decides: Italian "correre" is "to run" before "to hurry, to rush", and is "correr", where
 /// counting shared terms alone made it "apurar". A word all of whose own sense is matched is
