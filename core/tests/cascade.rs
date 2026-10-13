@@ -3929,3 +3929,182 @@ fn a_pointer_is_its_word_in_its_form() {
         Some("una")
     );
 }
+
+/// German pronouns read into Spanish by what each Spanish pronoun means first. "du" is "tú",
+/// whose sense is "second person pronoun in singular tense; you": not "lo" or "te", which are
+/// forms of other pronouns, nor "vos", which is "you" in some countries only. And "es" is no
+/// article: "das" lists "es" only as an informal, poetic spelling, and it was "el".
+#[test]
+fn german_pronouns_by_what_spanish_pronouns_mean() {
+    let marked = |mut entry: Entry, marks: &[&str]| {
+        entry.senses[0].marks = marks.iter().map(|mark| mark.to_string()).collect();
+        entry
+    };
+    let counted = |mut entry: Entry, count: u64| {
+        entry.tags.push(format!("count:{count}"));
+        entry
+    };
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    german
+        .add::<&str>(
+            word("du", "pron", "duː", &["you (singular familiar), thou"]),
+            &[],
+        )
+        .unwrap();
+    german
+        .add::<&str>(
+            counted(
+                word(
+                    "es",
+                    "pron",
+                    "ɛs",
+                    &[
+                        "it, they",
+                        "she (when the grammatical gender of the noun being referred to and \
+                         designating a feminine person, is neuter [das])",
+                    ],
+                ),
+                24_819_593,
+            ),
+            &[],
+        )
+        .unwrap();
+    german
+        .add::<&str>(
+            counted(
+                marked(
+                    word("es", "article", "ɛs", &["alternative form of das"]),
+                    &["alt-of", "alternative", "colloquial", "neuter", "regional"],
+                ),
+                2_303_025,
+            ),
+            &[],
+        )
+        .unwrap();
+    let mut das = word("das", "article", "das", &["the"]);
+    das.tags.push("count:11192437".to_string());
+    das.forms.push(lexpack::Form {
+        spelling: "es".to_string(),
+        label: "alternative informal poetic".to_string(),
+    });
+    german.add(das, &["es"]).unwrap();
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let lo = spanish
+        .add::<&str>(
+            counted(
+                marked(
+                    word(
+                        "lo",
+                        "pron",
+                        "lo",
+                        &["accusative of él and usted; him, you (formal), it"],
+                    ),
+                    &["accusative", "form-of"],
+                ),
+                6_041_793,
+            ),
+            &[],
+        )
+        .unwrap();
+    let te = spanish
+        .add::<&str>(
+            marked(
+                word(
+                    "te",
+                    "pron",
+                    "te",
+                    &["dative of tú and vos: to you, for you"],
+                ),
+                &["dative", "form-of"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let vos = spanish
+        .add::<&str>(
+            counted(
+                marked(
+                    word(
+                        "vos",
+                        "pron",
+                        "bos",
+                        &["you, familiar form of the second-person singular pronoun"],
+                    ),
+                    &["Rioplatense", "Chile"],
+                ),
+                26_194,
+            ),
+            &[],
+        )
+        .unwrap();
+    let tu = spanish
+        .add::<&str>(
+            counted(
+                word(
+                    "tú",
+                    "pron",
+                    "tu",
+                    &["second person pronoun in singular tense; you"],
+                ),
+                906_053,
+            ),
+            &[],
+        )
+        .unwrap();
+    let ello = spanish
+        .add::<&str>(
+            counted(
+                word(
+                    "ello",
+                    "pron",
+                    "ˈeʝo",
+                    &["it, neuter third-person subject and disjunctive pronoun"],
+                ),
+                89_741,
+            ),
+            &[],
+        )
+        .unwrap();
+    let ella = spanish
+        .add::<&str>(
+            counted(
+                word(
+                    "ella",
+                    "pron",
+                    "ˈeʝa",
+                    &["she, her (used subjectively and after prepositions)"],
+                ),
+                2_102_942,
+            ),
+            &[],
+        )
+        .unwrap();
+    // What du's sense joins in the dictionary: no commoner word than the table's.
+    spanish
+        .add::<&str>(
+            counted(word("Uds", "pron", "", &["you (plural)"]), 3_303),
+            &[],
+        )
+        .unwrap();
+    let mut el = word("el", "article", "el", &["the"]);
+    el.tags.push("count:27768886".to_string());
+    let el = spanish.add::<&str>(el, &[]).unwrap();
+    spanish.translated("you", "pron", &[(lo, 0), (te, 0), (vos, 0), (tu, 0)]);
+    spanish.translated("it", "pron", &[(ello, 0), (lo, 0)]);
+    spanish.translated("they", "pron", &[(ella, 0)]);
+    spanish.translated("she", "pron", &[(ella, 0)]);
+    spanish.translated("the", "article", &[(el, 0)]);
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&german),
+        target: Some(&spanish),
+        ..Open::default()
+    };
+    let lead = |word: &str| {
+        let answer = read_in_context(word, None, &lang("de"), &lang("es"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(lead("du").as_deref(), Some("tú"));
+    assert_ne!(lead("es").as_deref(), Some("el"));
+}

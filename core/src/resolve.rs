@@ -2396,8 +2396,9 @@ fn form_of(entry: &Entry, spelling: &str) -> Option<String> {
         .map(|label| label.to_string())
 }
 
-/// Whether every label an entry gives a spelling is another age's or a dialect's: "con" under
-/// Italian "come" is "alternative apocopic obsolete".
+/// Whether every label an entry gives a spelling is another age's, a dialect's or a manner of
+/// speaking's: "con" under Italian "come" is "alternative apocopic obsolete", and "es" under
+/// German "das" "alternative informal poetic".
 fn only_odd_forms(entry: &Entry, spelling: &str) -> bool {
     let labels: Vec<Vec<String>> = entry
         .forms
@@ -2406,9 +2407,11 @@ fn only_odd_forms(entry: &Entry, spelling: &str) -> bool {
         .flat_map(|form| form.label.split("; ").map(words_of).collect::<Vec<_>>())
         .collect();
     !labels.is_empty()
-        && labels
-            .iter()
-            .all(|label| label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
+        && labels.iter().all(|label| {
+            label.iter().any(|it| {
+                ODD_FORMS.contains(&it.as_str()) || matches!(it.as_str(), "informal" | "poetic")
+            })
+        })
 }
 
 /// Whether the dump lists this spelling among an entry's forms only as another way of writing
@@ -3675,13 +3678,24 @@ fn resolve_one<D: AsRef<[u8]>>(
             // order its table's editors put them: "you" lists "lo, la, le" before "tú", and
             // only "tú" is "you" before anything else.
             let little = by_kind(&entry.pos) <= 1;
-            let headed = |word: &String| {
+            // By what its first sense means, where that sense is a note about grammar first:
+            // "tú" is "second person pronoun in singular tense; you". Where its first sense is
+            // a region's, after the words that are everyone's: "vos" is "you" in Argentina.
+            let headed = |word: &String, regional: bool| {
                 other.lookup(word).iter().any(|it| {
                     same_word(&it.lemma, word)
-                        && it
-                            .senses
-                            .first()
-                            .is_some_and(|sense| lexpack::gloss_head(&sense.gloss) == *english)
+                        && it.senses.first().is_some_and(|sense| {
+                            let means = lexpack::gloss_head(&sense.gloss) == *english
+                                || meaning_of(&sense.gloss)
+                                    .is_some_and(|meant| lexpack::gloss_head(&meant) == *english);
+                            let of_a_region = sense
+                                .marks
+                                .iter()
+                                .any(|mark| mark.chars().next().is_some_and(char::is_uppercase));
+                            // Nor a form of another word: "te" is "dative of tú: to you".
+                            let a_form = sense.marks.iter().any(|mark| mark == "form-of");
+                            means && of_a_region == regional && !a_form
+                        })
                 })
             };
             let found = said
@@ -3695,7 +3709,13 @@ fn resolve_one<D: AsRef<[u8]>>(
                         words
                             .iter()
                             .filter(|word| !some_single || single(word))
-                            .find(|word| headed(word))
+                            .find(|word| headed(word, false))
+                            .or_else(|| {
+                                words
+                                    .iter()
+                                    .filter(|word| !some_single || single(word))
+                                    .find(|word| headed(word, true))
+                            })
                             .or_else(|| words.iter().find(single))
                             .cloned()
                     } else {
