@@ -128,6 +128,21 @@
 
 
 
+  /** Every dictionary on its way as one: which, and how far they have got together. A language's
+   *  definitions come as a pack of their own and are named as the language. */
+  let coming = $derived.by(() => {
+    const langs = [...new Set(Object.keys(arriving).map((lang) => lang.replace(/^def-/, '')))];
+    if (langs.length === 0) return null;
+    const shares = Object.values(arriving);
+    return {
+      what:
+        langs.length === 1
+          ? `Getting the ${named(langs[0])} dictionary`
+          : `Getting ${langs.length} dictionaries`,
+      share: shares.reduce((sum, share) => sum + share, 0) / shares.length,
+    };
+  });
+
   let drawing = $derived(settings !== null && settings.layer !== 'off');
   /** What can take a word's place on the page: nothing, or one of the two, never both. */
   const replacing = (['off', 'sound', 'meaning'] as const).map(
@@ -193,15 +208,17 @@
       </Group>
     {/if}
 
-    {#each Object.entries(arriving) as [lang, share] (lang)}
+    {#if coming}
       <!-- Until a language's dictionary is here its words are only said, and on a slow line
-           that is minutes: what is on its way, and how far. -->
+           that is minutes: what is on its way, and how far. One row however many are coming:
+           a row each ran the view past the tallest window a browser gives a popup, which then
+           scrolled and kept a scrollbar's width after they had arrived. -->
       <div class="arriving" data-row="arriving">
-        <span>Getting the {named(lang)} dictionary</span>
-        <progress max="1" value={share}></progress>
-        <span class="arriving-share">{Math.round(share * 100)}%</span>
+        <span>{coming.what}</span>
+        <progress max="1" value={coming.share}></progress>
+        <span class="arriving-share">{Math.round(coming.share * 100)}%</span>
       </div>
-    {/each}
+    {/if}
 
     <!-- The languages the reader has: what the card and the replaced words both follow, so
          above both. -->

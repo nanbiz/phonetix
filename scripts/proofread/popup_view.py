@@ -226,6 +226,28 @@ def real_popup(cdp, extid):
     print(f"  the toolbar popup: {size['width']}x{size['height']}, {picture}")
     if not evaluate(cdp, session, "document.querySelectorAll('[data-row=arriving]').length"):
         failures.append("a dictionary on its way is not shown in the popup")
+    # Several on their way at once, which a first run on a page in a new language is: still one
+    # row, since a row each ran the view past the tallest window a popup gets and it scrolled.
+    worker_session = cdp.send(
+        "Target.attachToTarget", {"targetId": next(
+            t for t in cdp.send("Target.getTargets")["targetInfos"]
+            if t["type"] == "service_worker" and t["url"].startswith(f"chrome-extension://{extid}/")
+        )["targetId"], "flatten": True},
+    )["sessionId"]
+    evaluate(cdp, worker_session, "chrome.storage.local.get('arriving').then(r => "
+             "chrome.storage.local.set({arriving: {...r.arriving, 'def-de': 0.2, fr: 0.5, it: 0.1}}))"
+             ".then(() => 1)")
+    time.sleep(1.5)
+    many = json.loads(evaluate(cdp, session, """JSON.stringify({
+        rows: document.querySelectorAll('[data-row=arriving]').length,
+        says: document.querySelector('[data-row=arriving]')?.textContent ?? '',
+        tall: document.documentElement.scrollHeight, height: window.innerHeight})"""))
+    print(f"  three dictionaries on their way: {many}")
+    if many["rows"] != 1:
+        failures.append(f"three dictionaries on their way take {many['rows']} rows, not one")
+    if many["tall"] > many["height"] + 1:
+        failures.append(f"with three dictionaries on their way the popup runs "
+                        f"{many['tall'] - many['height']}px past its window")
     if not evaluate(cdp, session, "document.querySelectorAll('[data-row=site]').length"):
         failures.append("the popup over a site has no row for that site")
     # The width the stylesheet gives it, 26rem, and as tall as at least its header and a
