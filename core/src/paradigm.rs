@@ -462,14 +462,15 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
         .filter(|(_, category)| !moving.contains(category))
         .collect();
     let mut found: Vec<(Place, String, usize)> = Vec::new();
-    // The lemma is a cell of its own table that the table does not list: a noun's singular.
+    // Each row's places, read once: a verb's table is seventy rows, and this is asked for every
+    // category of every form on a page.
+    let table: Vec<Vec<Place>> = entry.forms.iter().map(|row| places(&row.label)).collect();
     // The lemma is a cell of its own table that the table does not list: a noun's nominative
     // singular, a determiner's or an adjective's masculine one.
-    let cased = entry.forms.iter().any(|row| {
-        places(&row.label)
-            .iter()
-            .any(|place| value_in(place, "case").is_some())
-    });
+    let cased = table
+        .iter()
+        .flatten()
+        .any(|place| value_in(place, "case").is_some());
     let lemma_row = lexpack::Form {
         spelling: entry.lemma.clone(),
         label: match (entry.pos == "noun", cased) {
@@ -486,24 +487,23 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
     );
     // A table that names persons cell by cell, rather than only in the one form English marks,
     // its present third singular.
-    let personal_table = entry
-        .forms
+    let personal_table = table
         .iter()
-        .filter(|row| {
-            places(&row.label)
+        .filter(|places| {
+            places
                 .iter()
                 .any(|place| value_in(place, "person").is_some())
         })
         .count()
         > 1;
     // First, so that where it fits as well as a listed cell it is the one taken.
-    let rows: Vec<&lexpack::Form> = nominal
-        .then_some(&lemma_row)
+    let lemma_places = if nominal { places(&lemma_row.label) } else { Vec::new() };
+    let rows = nominal
+        .then_some((&lemma_row, &lemma_places))
         .into_iter()
-        .chain(entry.forms.iter())
-        .collect();
-    for row in rows {
-        for place in places(&row.label) {
+        .chain(entry.forms.iter().zip(table.iter()));
+    for (row, row_places) in rows {
+        for place in row_places.iter().cloned() {
             // A participle or an infinitive is not a tense of a finite verb.
             if place.iter().any(|(_, category)| *category == "nonfinite")
                 != here.iter().any(|(_, category)| *category == "nonfinite")

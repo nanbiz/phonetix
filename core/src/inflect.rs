@@ -10,11 +10,34 @@
 //! Wiktionary through data/english-verbs.tsv and data/english-nouns.tsv, which
 //! tools/english_verbs.py writes with the same rule, leaving out every word the rule gets right.
 
+use std::collections::HashMap;
+use std::sync::LazyLock;
+
 use crate::paradigm::Place;
 
 const VERBS: &str = include_str!("../../data/english-verbs.tsv");
 const NOUNS: &str = include_str!("../../data/english-nouns.tsv");
 const ADJECTIVES: &str = include_str!("../../data/english-adjectives.tsv");
+
+/// Each table by its first column, the first line for a word winning as it would reading down
+/// the table. Indexed once: a page asks for thousands of forms, and reading eleven thousand
+/// lines for each one took the whole of a page's annotation.
+fn by_word(table: &'static str, columns: usize) -> HashMap<&'static str, Vec<&'static str>> {
+    let mut index = HashMap::new();
+    for line in table.lines() {
+        let mut parts = line.split('\t');
+        let Some(word) = parts.next() else { continue };
+        let rest: Vec<&str> = parts.collect();
+        if rest.len() >= columns {
+            index.entry(word).or_insert(rest);
+        }
+    }
+    index
+}
+
+static VERB_FORMS: LazyLock<HashMap<&str, Vec<&str>>> = LazyLock::new(|| by_word(VERBS, 4));
+static PLURALS: LazyLock<HashMap<&str, Vec<&str>>> = LazyLock::new(|| by_word(NOUNS, 1));
+static DEGREES: LazyLock<HashMap<&str, Vec<&str>>> = LazyLock::new(|| by_word(ADJECTIVES, 2));
 
 const VOWELS: [char; 5] = ['a', 'e', 'i', 'o', 'u'];
 
@@ -82,19 +105,13 @@ fn past_by_rule(verb: &str) -> String {
 
 /// A verb's four forms: third person, present participle, past, past participle.
 fn verb_forms(verb: &str) -> [String; 4] {
-    for line in VERBS.lines() {
-        let mut parts = line.split('\t');
-        if parts.next() == Some(verb) {
-            let rest: Vec<&str> = parts.collect();
-            if rest.len() == 4 {
-                return [
-                    rest[0].to_string(),
-                    rest[1].to_string(),
-                    rest[2].to_string(),
-                    rest[3].to_string(),
-                ];
-            }
-        }
+    if let Some(rest) = VERB_FORMS.get(verb).filter(|rest| rest.len() == 4) {
+        return [
+            rest[0].to_string(),
+            rest[1].to_string(),
+            rest[2].to_string(),
+            rest[3].to_string(),
+        ];
     }
     [
         third_by_rule(verb),
@@ -105,12 +122,9 @@ fn verb_forms(verb: &str) -> [String; 4] {
 }
 
 fn plural(noun: &str) -> String {
-    NOUNS
-        .lines()
-        .find_map(|line| {
-            let (one, many) = line.split_once('\t')?;
-            (one == noun).then(|| many.to_string())
-        })
+    PLURALS
+        .get(noun)
+        .map(|many| many.join("\t"))
         .unwrap_or_else(|| third_by_rule(noun))
 }
 
@@ -142,12 +156,8 @@ fn syllables(word: &str) -> usize {
 /// rule makes them ("better", "best"), and otherwise by the rule - one syllable, or two ending
 /// in a y after a consonant, take -er and -est, and the rest "more" and "most".
 fn degrees(adjective: &str) -> (String, String) {
-    if let Some((more, most)) = ADJECTIVES.lines().find_map(|line| {
-        let mut parts = line.split('\t');
-        (parts.next()? == adjective)
-            .then(|| Some((parts.next()?.to_string(), parts.next()?.to_string())))?
-    }) {
-        return (more, most);
+    if let Some(both) = DEGREES.get(adjective) {
+        return (both[0].to_string(), both[1].to_string());
     }
     let a = adjective;
     let chars: Vec<char> = a.chars().collect();

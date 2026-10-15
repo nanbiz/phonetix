@@ -41,11 +41,13 @@ fn squeeze(plain: &[u8]) -> Result<Vec<u8>, WriteError> {
     // blocks below: the descriptor's exponent 10 is a window of a megabyte.
     out.push(0x00);
     out.push(10 << 3);
+    // Each block stored as it is, which zstd calls a raw block, type 0.
+    const RAW_BLOCK: u32 = 0;
     let mut left = plain;
     loop {
         let take = left.len().min(MOST);
         let last = take == left.len();
-        let header = ((take as u32) << 3) | (0 << 1) | u32::from(last);
+        let header = ((take as u32) << 3) | (RAW_BLOCK << 1) | u32::from(last);
         out.extend_from_slice(&header.to_le_bytes()[..3]);
         out.extend_from_slice(&left[..take]);
         left = &left[take..];
