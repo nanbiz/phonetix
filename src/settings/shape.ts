@@ -48,6 +48,12 @@ export interface Settings {
    */
   learning: string;
   /**
+   * Which of the translator's two languages it last answered in: the way its arrow points when
+   * it opens, and so the language a word said into its microphone is heard in. Empty until it
+   * has answered, and then the reader's own or the one in `learning`.
+   */
+  into: string;
+  /**
    * The languages asked in lately, most recent first.
    *
    * The list a word can be asked for in is every language there is, and a reader asks in two
@@ -133,6 +139,7 @@ export const DEFAULTS: Settings = {
   known: [],
   learn: '',
   learning: '',
+  into: '',
   recent: [],
   narrow: false,
   hideStress: true,

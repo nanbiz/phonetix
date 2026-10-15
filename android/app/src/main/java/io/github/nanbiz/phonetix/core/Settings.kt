@@ -46,6 +46,9 @@ data class Settings(
     /** The language last asked in in the panel, which is what a word they are looking for
      *  comes back in. */
     val learning: String = "",
+    /** Which of the panel's two languages it last answered in: the way its arrow points when it
+     *  opens, and so the language a word said into it is heard in. Empty until it answered. */
+    val into: String = "",
     /** The languages they have asked in, most recent first: a reader asks in two or three,
      *  and a list of fifty in alphabetical order makes them hunt for one of them every time. */
     val recent: List<String> = emptyList(),
@@ -161,6 +164,7 @@ object SettingsStore {
     private const val K_TARGET = "target"
     private const val K_LEARN = "learn"
     private const val K_LEARNING = "learning"
+    private const val K_INTO = "into"
     private const val K_KNOWN = "known"
     private const val K_RECENT = "recent"
     private const val K_HOST = "pack_host"
@@ -197,6 +201,7 @@ object SettingsStore {
             target = p.getString(K_TARGET, "") ?: "",
             learn = p.getString(K_LEARN, "") ?: "",
             learning = p.getString(K_LEARNING, "") ?: "",
+            into = p.getString(K_INTO, "") ?: "",
             known = p.getStringSet(K_KNOWN, null)?.toSet(),
             recent = (p.getString(K_RECENT, "") ?: "").split(',').filter { it.isNotBlank() },
             theme = p.getString(K_THEME, "phonetix") ?: "phonetix",
@@ -235,6 +240,7 @@ object SettingsStore {
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARN, next.learn)
             ?.putString(K_LEARNING, next.learning)
+            ?.putString(K_INTO, next.into)
             ?.putStringSet(K_KNOWN, next.known)
             ?.putString(K_RECENT, next.recent.joinToString(","))
             ?.putString(K_HOST, next.packHost)
@@ -264,11 +270,10 @@ object SettingsStore {
     fun setShowOthers(v: Boolean) = update { it.copy(showOthers = v) }
     fun setDescribeAll(v: Boolean) = update { it.copy(describeAll = v) }
 
-    /** Put the overlay down, or pick it up again: the press held on the button. */
+    /** The reader's own language, which everything foreign is translated into. */
     fun setTarget(v: String) = update { it.copy(target = v) }
     /** The languages left as they are, or nothing to go back to the phone's own. */
     fun setKnown(v: Set<String>?) = update { it.copy(known = v) }
-    /** What they are learning now, and the few they have asked in before it. */
     /** A language asked in where nothing is translated: kept at the top of the recent ones,
      *  and taken as the one being learned only where it is not the reader's own. */
     fun askedIn(v: String) = update {
@@ -283,6 +288,7 @@ object SettingsStore {
     /** The language being learnt, or nothing. */
     fun setLearn(v: String) = update { it.copy(learn = v) }
 
+    /** What they are learning now, and the few they have asked in before it. */
     fun setLearning(v: String) = update {
         it.copy(
             learning = v,
@@ -291,6 +297,8 @@ object SettingsStore {
                 .take(RECENT),
         )
     }
+    /** The language the panel answered in last. */
+    fun setInto(v: String) = update { it.copy(into = v) }
     fun setTheme(v: String) = update { it.copy(theme = v) }
     fun setDark(v: String) = update { it.copy(dark = v) }
     fun setPackHost(v: String) = update { it.copy(packHost = v.trim()) }

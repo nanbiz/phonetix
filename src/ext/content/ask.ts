@@ -104,6 +104,8 @@ export async function open(page = '', listen = false): Promise<void> {
       learning,
       held: packs.held,
       recent,
+      into: settings.into,
+      onInto: (lang: string) => void set('into', lang),
       onMine: (lang: string) => void set('target', lang),
       onLearning: (lang: string) => {
         void set('learning', lang);

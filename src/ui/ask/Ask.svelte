@@ -28,6 +28,10 @@
     held?: string[];
     /** And ahead of those, the ones they have asked in lately. */
     recent?: string[];
+    /** The language it last answered in, which way the arrow points when it opens. */
+    into?: string;
+    /** Told the language each answer is in, to open pointing the same way next time. */
+    onInto?: (lang: string) => void;
     ask: (
       text: string,
       mine: string,
@@ -55,6 +59,8 @@
     learning,
     held = [],
     recent = [],
+    into: lastInto = '',
+    onInto,
     ask,
     onMine,
     onLearning,
@@ -73,8 +79,10 @@
   let wanted = $state('');
   let said = $state<PanelAnswer | null>(null);
   let asking = $state(false);
-  /** Which way the last question was answered: from the reader's language when true. */
-  let forward = $state(true);
+  /** Which way the last question was answered: from the reader's language when true. Opened
+   *  the way the last one was, so a reader asking into their own language is asked into it
+   *  again, and heard in the other. */
+  let forward = $state(untrack(() => lastInto === '' || lastInto !== mine));
   /** The way the reader set by hand with the arrow; a new question is worked out afresh. */
   let turned = $state<boolean | undefined>(undefined);
   let waiting: ReturnType<typeof setTimeout> | null = null;
@@ -157,7 +165,10 @@
     if (turn !== asks) return;
     asking = false;
     said = came;
-    if (came) forward = came.forward;
+    if (came) {
+      forward = came.forward;
+      onInto?.(into);
+    }
   }
 
   /** Asked as it is typed: the question is short and the answer is wanted while it is being
@@ -172,6 +183,7 @@
   function turn() {
     turned = !forward;
     forward = turned;
+    onInto?.(into);
     void answer();
   }
 

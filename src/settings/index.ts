@@ -20,6 +20,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   known: 'local:knownLanguages',
   learn: 'local:learn',
   learning: 'local:learning',
+  into: 'local:askedInto',
   recent: 'local:recentLanguages',
   accents: 'local:accents',
   narrow: 'local:narrow',

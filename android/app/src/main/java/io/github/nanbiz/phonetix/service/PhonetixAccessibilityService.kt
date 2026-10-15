@@ -3175,10 +3175,13 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Which way the question is answered, where the reader turned the arrow: otherwise it
         // is worked out from what is typed.
         var turned: Boolean? = null
+        // Pointing the way the last answer went: a reader asking into their own language is
+        // asked into it again, and heard in the other.
+        panelForward = settings.into.isEmpty() || settings.into != mine
         fun ask() = said(panel, panel.field.text.toString(), mine, learning, turned)
         fun offer() {
             panel.setPair(
-                offered, mine, learning, forward = turned ?: true,
+                offered, mine, learning, forward = turned ?: panelForward,
                 onPick = { isMine, code ->
                     if (isMine) {
                         mine = code
@@ -3218,14 +3221,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 main.post {
                     panel.heard(phrase)
                     panel.listening(false)
-                    said(panel, phrase, mine, learning, turned)
+                    // Answered the way the arrow points, since that is the language it was
+                    // heard in.
+                    said(panel, phrase, mine, learning, turned ?: panelForward)
                 }
             }
             hearing.onState = { on -> main.post { panel.listening(on) } }
             panel.onDictate = {
                 if (hearing.hasPermission()) {
+                    // In the language the arrow comes from: the reader turns it to speak
+                    // the other.
                     hearing.start(
-                        if (turned == false) learning else mine,
+                        if (turned ?: panelForward) mine else learning,
                     )
                 } else {
                     // The app asks, because a runtime permission needs a screen. The panel
@@ -3315,6 +3322,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             val from = if (forward) mine else learning
             val to = if (forward) learning else mine
             askedInto = to
+            if (SettingsStore.current.into != to) SettingsStore.setInto(to)
             main.post { if (asking === panel && turn == asks) panel.direction(forward) }
             // The dictionaries of both, which a word is answered from.
             for (lang in listOf(from, to)) {

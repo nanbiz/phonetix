@@ -11,9 +11,10 @@ What it asks of the panel is everything a reader does with it: open it from the 
 type straight away; a word in their own language answered with every meaning in the other, a
 word in the other answered back, and the arrow turning the way; a phrase answered as one line
 with how it is said; another language chosen from a list that can be searched, and still
-chosen when the panel comes back; Escape, a press outside it and the shortcut again each
-taking it down. And of the other command: that it switches Phonetix off and on, which the
-page's own words show, and that switched off a selection opens no card.
+chosen when the panel comes back, pointing the way it was turned; Escape, a press outside it
+and the shortcut again each taking it down. And of the other command: that it switches
+Phonetix off and on, which the page's own words show, and that switched off a selection opens
+no card.
 
 Needs Xvfb and xdotool, which the nix shell below provides. Nothing is drawn on the reader's
 own screen: the display is the check's, and a Wayland socket inherited from the desktop is
@@ -472,6 +473,14 @@ def check(engine):
             failures.append(f"picking German left the panel at {after}")
         if focused() != "field":
             failures.append("after a language is picked the field does not have focus")
+        # Turned to answer in the reader's own language, which the panel opens pointing at
+        # next time: the direction is the language a word is translated into, and the one the
+        # microphone hears in.
+        click("[data-does=turn]")
+        turned_from = wait("(root) => root.querySelector('[data-ask]').dataset.from",
+                           lambda got: got == "de", tries=40)
+        if turned_from != "de":
+            failures.append(f"turning the arrow after German was picked left it from {turned_from!r}")
 
         # Escape takes away the list first, then the panel.
         click("[data-lang=learning]")
@@ -493,6 +502,11 @@ def check(engine):
         print(f"  {engine}: opened again in {name}")
         if name != "German":
             failures.append(f"the panel came back in {name!r}, not the German picked last time")
+        way = panel("(root) => root.querySelector('[data-ask]').dataset.from")
+        print(f"  {engine}: opened again from {way}")
+        if way != "de":
+            failures.append(f"the panel came back asking from {way!r}, not the German it was "
+                            "turned to last time")
         # The shortcut takes down what it put up, and a press outside does too.
         keys(open_key)
         time.sleep(0.6)
