@@ -259,9 +259,11 @@ async function drawAdded(roots: Node[]): Promise<void> {
  *
  * The host reads a request in one go, and a card asked for while it reads waits behind it: a
  * long article sent whole held every card for three seconds. In pieces of this size a card
- * waits for one piece at most, and the page is drawn top first as the pieces come back.
+ * waits for one piece at most, and the page is drawn top first as the pieces come back. On
+ * Firefox the host shares one thread with every page of the extension, the toolbar popup
+ * among them, which waited a second or more behind each piece of eight times this size.
  */
-const PIECE = 12000;
+const PIECE = 1500;
 
 /** Runs cut into pieces of about PIECE characters, in the order they are read. */
 function pieces(runs: ScannedRun[]): ScannedRun[][] {
