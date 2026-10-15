@@ -914,6 +914,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("panelUp", asking != null)
                 .put("asked", askedFor ?: org.json.JSONObject.NULL)
                 .put("into", askedInto ?: org.json.JSONObject.NULL)
+                .put("forward", panelForward)
                 .put("stage", askStage ?: org.json.JSONObject.NULL)
                 .put("waitingMs", if (askedAt == 0L) 0 else System.currentTimeMillis() - askedAt)
                 .put("machineTrouble", Machine.trouble ?: org.json.JSONObject.NULL))

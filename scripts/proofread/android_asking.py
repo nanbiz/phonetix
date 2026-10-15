@@ -229,6 +229,20 @@ def main():
     if "dictionary" not in stage:
         failures.append(f"'por favor' was answered without the dictionary's entry: {stage!r}")
 
+    # Answered into the reader's own language, so the panel opened again points that way: the
+    # language it translates into and the one its microphone hears are what they were.
+    shell("input", "tap", str(at["x"] + 52), str(at["y"] + 52))
+    time.sleep(2)
+    shell("input", "tap", str(at["x"] + 52), str(at["y"] + 52))
+    time.sleep(3)
+    told = believed().get("ask") or {}
+    print(f"  opened again: up {told.get('panelUp')}, from the reader's own {told.get('forward')}")
+    if not told.get("panelUp"):
+        failures.append("the panel did not open again from the button")
+    elif told.get("forward") is not False:
+        failures.append("the panel opened again pointing from the reader's language, not the "
+                        "way it last answered")
+
     if failures:
         print("\nFAIL")
         for line in failures:
