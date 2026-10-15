@@ -3,6 +3,7 @@
   // theirs are set beside them on the Languages screen.
   import { ACCENTS } from '@/data/accents';
   import { named } from '@/data/languages';
+  import { SAYS } from '@/data/wording';
   import { accentFor, setAccent, type Settings } from '@/settings/shape';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
@@ -35,7 +36,9 @@
 </script>
 
 {#if others.length > 0}
-  <Group>
+  <!-- Headed as what they are: without it the list read as three languages picked at random,
+       the reader's own being on the Languages screen. -->
+  <Group name={SAYS['other-languages']}>
     {#each others as lang (lang)}
       <Item
         name={named(lang)}

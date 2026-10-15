@@ -35,7 +35,7 @@
   }
 
   /** The languages with more than one accent to choose between. */
-  const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 0);
+  const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 1);
   /** The reader's own languages, whose accents the Languages screen sets. */
   let mine = $derived([settings.target, ...(settings.known ?? []), settings.learn]);
   let others = $derived(
