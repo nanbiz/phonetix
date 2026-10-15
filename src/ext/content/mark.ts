@@ -28,6 +28,7 @@ import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
 import { OURS } from './scan';
 import { cardBox, seen } from './card';
+import { around, leash } from './fan';
 
 /** A word the circle is over: where it is, and what tells it from every other word. */
 export interface MarkWord {
@@ -785,36 +786,14 @@ function drawDrop(g: CanvasRenderingContext2D): void {
 const ACTIONS: MarkAction[] = ['play', 'article'];
 const icons: ReturnType<typeof mount>[] = [];
 
-/**
- * Open the actions round the finger, on whichever side of it the window has room: either side
- * of it, or both on one side where it is near an edge, or both above it.
- */
+/** Open the actions round the finger, where ./fan puts them. */
 function openMenu(): void {
   if (!menu || !hold.hovered) return;
-  const edges = screen();
-  const x = hold.fingerX;
-  const y = hold.fingerY;
-  const at = (degrees: number) => ({
-    x: x + Math.cos((degrees * Math.PI) / 180) * MENU_REACH,
-    y: y + Math.sin((degrees * Math.PI) / 180) * MENU_REACH,
-  });
-  const half = MENU_SIZE / 2;
-  const card = cardBox();
-  const fits = (p: { x: number; y: number }) => p.x - half >= edges.left + EDGE &&
-    p.x + half <= edges.right - EDGE && p.y - half >= edges.top + EDGE &&
-    p.y + half <= edges.bottom - EDGE;
-  // How much of an action the card would cover, which is an action that cannot be seen.
-  const under = (p: { x: number; y: number }) => !card ? 0
-    : Math.max(0, Math.min(p.x + half, card.right) - Math.max(p.x - half, card.left)) *
-      Math.max(0, Math.min(p.y + half, card.bottom) - Math.max(p.y - half, card.top));
-  // Either side of the finger, both on one side by an edge, both below it, both above it.
-  const fans = [[180, 0], [205, 155], [-25, 25], [125, 55], [-125, -55], [150, 30], [-150, -30]]
-    .map((pair) => pair.map(at));
-  const cost = (pair: { x: number; y: number }[]) =>
-    pair.reduce((sum, p) => sum + under(p) + (fits(p) ? 0 : MENU_SIZE * MENU_SIZE * 4), 0);
-  const fan = fans.find((pair) => cost(pair) === 0) ??
-    fans.reduce((best, pair) => (cost(pair) < cost(best) ? pair : best));
+  const finger = { x: hold.fingerX, y: hold.fingerY };
+  const ball = { x: hold.ballX, y: hold.ballY };
+  const fan = around(finger, ball, MENU_REACH, MENU_SIZE / 2, EDGE, screen(), cardBox());
   hold.menuAt = fan;
+  menu.dataset.leash = String(Math.round(leash(finger, ball)));
   hold.menuWord = hold.hovered;
   hold.chosen = -1;
   for (const [i, act] of [...menu.children].entries()) {

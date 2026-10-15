@@ -140,7 +140,6 @@ class HoverController(
         if (holding && sweeping && swept.size > 1) onPhrase(ArrayList(swept))
     }
 
-    /** Whether the circle is on screen at all. */
     /** Whether the circle is on the screen. The window outlives being put away - see [hide] -
      *  so a window that exists is not the same as a mark a reader can press. */
     val showing: Boolean get() = mark?.visibility == View.VISIBLE
@@ -1022,37 +1021,22 @@ class HoverController(
         private var offeredFor: WordBox? = null
         private var chosen = -1
 
-        /**
-         * Open the actions round the finger, on whichever side of it has room and is clear of
-         * the card: either side of it, both on one side by an edge, both below, both above.
-         */
+        /** Open the actions round the finger, where [ActionsFan] puts them. */
         private fun offer(word: WordBox) {
             val shown = actions ?: return
             val edges = screen()
-            val reach = dp(ActionsView.REACH_DP)
-            val half = dp(ActionsView.SIZE_DP) / 2f
-            val margin = dp(EDGE_DP)
-            val card = cardRect()
-            fun at(degrees: Float) = android.graphics.PointF(
-                fingerX + kotlin.math.cos(Math.toRadians(degrees.toDouble())).toFloat() * reach,
-                fingerY + kotlin.math.sin(Math.toRadians(degrees.toDouble())).toFloat() * reach,
-            )
-            fun fits(p: android.graphics.PointF) = p.x - half >= margin &&
-                p.x + half <= edges.width() - margin && p.y - half >= margin &&
-                p.y + half <= edges.height() - margin
-            fun under(p: android.graphics.PointF): Float {
-                val c = card ?: return 0f
-                val w = minOf(p.x + half, c.right.toFloat()) - maxOf(p.x - half, c.left.toFloat())
-                val h = minOf(p.y + half, c.bottom.toFloat()) - maxOf(p.y - half, c.top.toFloat())
-                return if (w > 0f && h > 0f) w * h else 0f
-            }
-            val fans = listOf(
-                180f to 0f, 205f to 155f, -25f to 25f, 125f to 55f, -125f to -55f,
-                150f to 30f, -150f to -30f,
-            ).map { (a, b) -> listOf(at(a), at(b)) }
-            fun cost(pair: List<android.graphics.PointF>) =
-                pair.sumOf { (under(it) + if (fits(it)) 0f else half * half * 16f).toDouble() }
-            val fan = fans.firstOrNull { cost(it) == 0.0 } ?: fans.minBy { cost(it) }
+            val finger = ActionsFan.Spot(fingerX, fingerY)
+            val ball = ActionsFan.Spot(ballX, ballY)
+            val fan = ActionsFan.around(
+                finger, ball,
+                reach = dp(ActionsView.REACH_DP),
+                half = dp(ActionsView.SIZE_DP) / 2f,
+                margin = dp(EDGE_DP),
+                screen = ActionsFan.Box(0f, 0f, edges.width().toFloat(), edges.height().toFloat()),
+                card = cardRect()?.let {
+                    ActionsFan.Box(it.left.toFloat(), it.top.toFloat(), it.right.toFloat(), it.bottom.toFloat())
+                },
+            ).map { android.graphics.PointF(it.x, it.y) }
             offeredFor = word
             chosen = -1
             shown.offer(fan)
@@ -1062,7 +1046,7 @@ class HoverController(
                     "Phonetix",
                     "LENSACTIONS ${word.word} " + fan.joinToString(" ") {
                         "${it.x.roundToInt()},${it.y.roundToInt()}"
-                    },
+                    } + " finger ${fingerX.roundToInt()},${fingerY.roundToInt()} leash ${ActionsFan.leash(finger, ball).roundToInt()}",
                 )
             }
         }

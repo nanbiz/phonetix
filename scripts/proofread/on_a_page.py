@@ -652,7 +652,8 @@ MENU_JS = """
     if (!menu || !menu.classList.contains('open')) return null;
     return [...menu.children].map(a => {
       const r = a.getBoundingClientRect();
-      return {does: a.dataset.does, x: r.left + r.width / 2, y: r.top + r.height / 2};
+      return {does: a.dataset.does, x: r.left + r.width / 2, y: r.top + r.height / 2,
+              leash: Number(menu.dataset.leash)};
     });
   })()
 """
@@ -827,6 +828,13 @@ def mark_checks(hand, engine, failures, turn_on=None):
                 failures.append(f"{engine}: the {a['does']} action is {off:.0f}px from the finger")
             if not (0 <= a["x"] <= size["w"] and 0 <= a["y"] <= size["h"]):
                 failures.append(f"{engine}: the {a['does']} action is off the window: {a}")
+        # One either side of the line the circle is carried along, the same angle off it, so
+        # neither sits on the line the eye follows to the word.
+        turns = [(math.degrees(math.atan2(a["y"] - goal[1], a["x"] - goal[0])) - a["leash"]
+                  + 540) % 360 - 180 for a in menu]
+        print(f"  {engine}, the actions off the leash: {[round(t) for t in turns]}")
+        if abs(turns[0] + turns[1]) > 8 or min(abs(t) for t in turns) < 45:
+            failures.append(f"{engine}: the actions are not either side of the leash: {turns}")
     if article:
         steps = [(goal[0] + (article["x"] - goal[0]) * k / 6, goal[1] + (article["y"] - goal[1]) * k / 6)
                  for k in range(1, 7)]

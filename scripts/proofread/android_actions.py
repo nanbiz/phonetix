@@ -7,6 +7,7 @@ Wiktionary page opens in the browser; slid onto play and lifted, the word is sai
 
   PHONETIX_ANDROID_SERIAL=emulator-5596 uv run python scripts/proofread/android_actions.py
 """
+import math
 import os
 import re
 import sys
@@ -19,11 +20,13 @@ from android_lens import repark
 
 def offered(dev):
     """The word the actions were offered for and where each is, newest, or nothing."""
-    found = re.findall(r"LENSACTIONS (\S+) (\d+),(\d+) (\d+),(\d+)", dev.lines("LENSACTIONS"))
+    found = re.findall(r"LENSACTIONS (\S+) (\d+),(\d+) (\d+),(\d+) finger (\d+),(\d+) leash (-?\d+)",
+                       dev.lines("LENSACTIONS"))
     if not found:
         return None
-    word, px, py, ax, ay = found[-1]
-    return {"word": word, "play": (int(px), int(py)), "article": (int(ax), int(ay))}
+    word, px, py, ax, ay, fx, fy, leash = found[-1]
+    return {"word": word, "play": (int(px), int(py)), "article": (int(ax), int(ay)),
+            "finger": (int(fx), int(fy)), "leash": int(leash)}
 
 
 def front():
@@ -79,6 +82,14 @@ def main():
                 failures.append(f"the {name} action is {off:.0f}px from the finger")
             if not (0 <= x <= dev.width and 0 <= y <= dev.height):
                 failures.append(f"the {name} action is off the screen at {x},{y}")
+        # One either side of the line the circle is carried along, the same angle off it, so
+        # neither sits on the line the eye follows to the word.
+        fx, fy = first["finger"]
+        turns = [(math.degrees(math.atan2(first[n][1] - fy, first[n][0] - fx)) - first["leash"]
+                  + 540) % 360 - 180 for n in ("play", "article")]
+        print(f"  the actions off the leash: {[round(t) for t in turns]}")
+        if abs(turns[0] + turns[1]) > 8 or min(abs(t) for t in turns) < 45:
+            failures.append(f"the actions are not either side of the leash: {turns}")
     if acted:
         failures.append(f"lifting beside the actions did {acted}")
 
