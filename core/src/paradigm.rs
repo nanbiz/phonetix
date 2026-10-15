@@ -497,7 +497,11 @@ fn others(here: &Place, moving: &[&str], entry: &Entry, spelling: &str) -> Vec<O
         .count()
         > 1;
     // First, so that where it fits as well as a listed cell it is the one taken.
-    let lemma_places = if nominal { places(&lemma_row.label) } else { Vec::new() };
+    let lemma_places = if nominal {
+        places(&lemma_row.label)
+    } else {
+        Vec::new()
+    };
     let rows = nominal
         .then_some((&lemma_row, &lemma_places))
         .into_iter()
