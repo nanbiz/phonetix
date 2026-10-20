@@ -77,6 +77,23 @@ STREAM = (
     "</script></body></html>"
 ).encode()
 
+# A video player with subtitles, the way YouTube draws one: its controls go away when the
+# pointer leaves it, and the subtitles drop into the room they leave. It counts every time it is
+# told the pointer left, which a card the reader goes into must not tell it.
+PLAYER = (
+    "<!doctype html><html lang='es'><meta charset='utf-8'><body style='margin:40px'>"
+    "<div id='player' data-left='0' style='position:relative;width:800px;height:420px;"
+    "background:#111'>"
+    "<p id='prose' style='position:absolute;left:60px;bottom:70px;margin:0;color:#fff;"
+    "font-size:24px;background:rgba(0,0,0,.7)'>" + SENTENCE + "</p></div><script>"
+    "const player = document.getElementById('player');"
+    "const caption = document.getElementById('prose');"
+    "player.addEventListener('mouseleave', () => {"
+    "  player.dataset.left = Number(player.dataset.left) + 1; caption.style.bottom = '20px'; });"
+    "player.addEventListener('mouseenter', () => { caption.style.bottom = '70px'; });"
+    "</script></body></html>"
+).encode()
+
 # A heading, because a page's headings are where its capitals are, and a heading is written
 # in title case whatever the language does. The words in it are ordinary dictionary words
 # wearing a capital they got from the page.
@@ -188,6 +205,7 @@ def serve():
                 else GERMAN if self.path.startswith("/german")
                 else CHAT if self.path.startswith("/chat")
                 else STREAM if self.path.startswith("/stream")
+                else PLAYER if self.path.startswith("/player")
                 else PAGE
             )
             self.send_response(200)
@@ -996,6 +1014,83 @@ def chat_follows(hand, engine, failures):
         failures.append(f"{engine}: the card stayed open after its word was scrolled out of its box")
 
 
+def player_holds(hand, engine, failures):
+    """A card on a subtitle leaves the player it is over as it was.
+
+    The card is laid over the page from outside the player, and a pointer going into it was a
+    pointer leaving the player as far as the page could tell: the controls went away, the
+    subtitles dropped, and the card went with its word or closed. Into the card, the player
+    hears nothing; while the pointer is in it, the card stays where it is even when the player
+    moves the subtitles on its own; off it and off the word, the card closes. Asked of the
+    player page, already open in the hand's tab."""
+    for _ in range(20):
+        if hand.ask("document.querySelectorAll('.px-w').length"):
+            break
+        time.sleep(1)
+    spot = hand.ask("""
+        (() => {
+          const word = [...document.querySelectorAll('.px-w')]
+            .find(w => w.textContent.includes('camino'));
+          if (!word) return null;
+          const r = word.getBoundingClientRect();
+          return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+        })()
+    """)
+    if not spot:
+        failures.append(f"{engine}: the subtitle's words were never drawn")
+        return
+    hand.move(spot["x"] - 200, spot["y"] - 100)
+    time.sleep(0.3)
+    for step in (0, 1):
+        hand.move(spot["x"] + step, spot["y"])
+        time.sleep(0.3)
+    card = None
+    for _ in range(20):
+        card = hand.ask("""(() => { const c = (document.getElementById('phonetix-card-host')
+                             || {}).shadowRoot?.querySelector('.card');
+                           if (!c) return null; const r = c.getBoundingClientRect();
+                           return {top: r.top, bottom: r.bottom, x: (r.left + r.right) / 2,
+                                   above: c.classList.contains('above')}; })()""")
+        if card:
+            break
+        time.sleep(0.5)
+    if not card or not card["above"]:
+        failures.append(f"{engine}: no card opened above a subtitle: {card}")
+        return
+    inside = card["bottom"] - 30
+    walk(hand, (spot["x"], spot["y"]), (spot["x"], inside))
+    time.sleep(0.5)
+    went_in = hand.ask("""(() => { const c = (document.getElementById('phonetix-card-host')
+                             || {}).shadowRoot?.querySelector('.card');
+                           return {open: !!c, top: c ? c.getBoundingClientRect().top : null,
+                                   left: Number(document.getElementById('player').dataset.left)};
+                         })()""") or {}
+    # The player puts its subtitles away on its own, as YouTube does once the pointer has been
+    # still for a while.
+    hand.ask("document.getElementById('prose').style.bottom = '20px'")
+    time.sleep(0.5)
+    moved = hand.ask("""(() => { const c = (document.getElementById('phonetix-card-host')
+                          || {}).shadowRoot?.querySelector('.card');
+                        return c ? c.getBoundingClientRect().top : null; })()""")
+    walk(hand, (spot["x"], inside), (spot["x"] + 420, inside))
+    time.sleep(0.5)
+    gone = not hand.ask("""!!(document.getElementById('phonetix-card-host')
+                             || {}).shadowRoot?.querySelector('.card')""")
+    print(f"  {engine}, on a subtitle: in {went_in}, after the subtitles dropped {moved}, "
+          f"closed off it {gone}")
+    if not went_in.get("open"):
+        failures.append(f"{engine}: the card on a subtitle closed as the pointer went into it")
+    if went_in.get("left"):
+        failures.append(f"{engine}: the player was told the pointer left it for the card")
+    if moved is None:
+        failures.append(f"{engine}: the card closed under the pointer when the subtitles dropped")
+    elif went_in.get("top") is not None and abs(moved - went_in["top"]) > 1:
+        failures.append(f"{engine}: the card moved {moved - went_in['top']:.0f}px under the "
+                        f"pointer when the subtitles dropped")
+    if not gone:
+        failures.append(f"{engine}: the card stayed open after the pointer left it and its word")
+
+
 def walk(hand, start, end, step=3, pause=0.012, each=None):
     """Move the pointer along a straight line in small steps, the way a hand moves a mouse.
 
@@ -1632,6 +1727,9 @@ def main():
         }, session=chat)
         cdp.send("Target.activateTarget", {"targetId": chat_target})
         chat_follows(ChromeHand(cdp, chat), "chrome", failures)
+        cdp.send("Page.navigate", {"url": f"{base}/player.html"}, session=chat)
+        time.sleep(2)
+        player_holds(ChromeHand(cdp, chat), "chrome", failures)
         cdp.send("Target.closeTarget", {"targetId": chat_target})
 
         # And a chat that is never still, streaming an answer.

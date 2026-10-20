@@ -29,7 +29,7 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, serve, stream_draws, walk
+from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, player_holds, serve, stream_draws, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -448,6 +448,11 @@ def main():
         driver.send("WebDriver:Navigate", {"url": f"{base}/chat.html"})
         time.sleep(2)
         chat_follows(FirefoxHand(driver), "firefox", failures)
+
+        # A video's subtitles, under a player that hides its controls when the pointer leaves.
+        driver.send("WebDriver:Navigate", {"url": f"{base}/player.html"})
+        time.sleep(2)
+        player_holds(FirefoxHand(driver), "firefox", failures)
 
         # And a chat that is never still, streaming an answer.
         driver.send("WebDriver:Navigate", {"url": f"{base}/stream.html"})

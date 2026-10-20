@@ -56,6 +56,17 @@ ENGLISH = (
     "</body></html>"
 ).encode()
 
+# A Spanish example on an English page about Spanish, with the verb it is about in bold: the
+# verb is a run of its own, too short to tell its language, and the line around it says it.
+QUOTED = (
+    "<!doctype html><html lang='en'><meta charset='utf-8'><body style='margin:0'>"
+    "<p style='margin:40px 0 0 120px;width:520px'>Here is how the preterite of intentar is "
+    "used in everyday sentences.</p>"
+    "<p id='prose' style='margin:40px 0 0 120px;width:520px;font-size:18px;line-height:1.6'>"
+    "Después de bañarme <strong>intenté</strong> preparar el desayuno.</p>"
+    "</body></html>"
+).encode()
+
 # The same line at the bottom of the window, where the card opens over its word and a sheet
 # goes over the card rather than over the word.
 LOW = PAGE.replace(b"margin:80px 0 0 120px;", b"position:fixed;bottom:16px;left:120px;margin:0;")
@@ -86,7 +97,8 @@ def serve():
                 with open(path, "rb") as f:
                     return self.send(f.read(), "application/octet-stream")
             page = LOW if self.path.startswith("/low") else (
-                ENGLISH if self.path.startswith("/en") else PAGE)
+                ENGLISH if self.path.startswith("/en") else
+                QUOTED if self.path.startswith("/quoted") else PAGE)
             return self.send(page, "text/html; charset=utf-8")
 
     httpd = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
@@ -267,6 +279,22 @@ class Run:
         # definitions over every one of them was a sheet to read rather than a glance.
         if sheet["def"] and sheet["rows"]:
             self.fail(f"{where}: the sheet explains {sheet['cat']!r} without being asked")
+
+    def check_quoted(self, word):
+        """A Spanish verb set in bold in a Spanish example on an English page: read as Spanish,
+        as the line it is in is, not as the page."""
+        hand = self.hand
+        hand.click(2, 2)
+        hand.move(2, 2)
+        time.sleep(0.6)
+        for step in (0, 1):
+            hand.move(word["x"] + step, word["y"])
+            time.sleep(0.05)
+        rest = self.wait(lambda c: c["open"] and c["word"] == "intenté" and c["form"])
+        print(f"  {self.name}: quoted: {rest.get('headline', '')!r} / {rest.get('form')!r}")
+        if "1st singular" not in rest.get("form", "") or "intentar" not in rest.get("form", ""):
+            self.fail(f"quoted: intenté in bold on an English page is not read as Spanish: "
+                      f"{rest.get('headline')!r} / {rest.get('form')!r}")
 
     def check_defined(self, word):
         """An English word for a reader who reads English: what it means, in the dictionary's
@@ -570,6 +598,9 @@ def chrome(failures):
         cdp.send("Page.navigate", {"url": f"{base}/low.html"}, session=page)
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        cdp.send("Page.navigate", {"url": f"{base}/quoted.html"}, session=page)
+        time.sleep(4)
+        run.check_quoted(hand.ask(word_js("intenté")))
         cdp.send("Page.navigate", {"url": f"{base}/en.html"}, session=page)
         time.sleep(4)
         run.check_defined(hand.ask(word_js("pulling")))
@@ -633,6 +664,9 @@ def firefox(failures):
         driver.send("WebDriver:Navigate", {"url": f"{base}/low.html"})
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        driver.send("WebDriver:Navigate", {"url": f"{base}/quoted.html"})
+        time.sleep(4)
+        run.check_quoted(hand.ask(word_js("intenté")))
         driver.send("WebDriver:Navigate", {"url": f"{base}/en.html"})
         time.sleep(4)
         run.check_defined(hand.ask(word_js("pulling")))

@@ -36,7 +36,7 @@ import inlineTokens from '@/ui/inline-tokens.css?inline';
 import { emberAt, emberAway, emberPaintedIn } from './ember';
 import { recordingIn } from '@/data/accents';
 import { markHidden, markPaintedIn, markShown, type MarkWord } from './mark';
-import { OURS_ANY, readable, scan, type ScannedRun } from './scan';
+import { OURS_ANY, PARAGRAPH, readable, scan, type ScannedRun } from './scan';
 import { commons, wiktionary } from '@/data/links';
 import { named } from '@/data/languages';
 
@@ -133,24 +133,66 @@ async function readLanguage(runs: ScannedRun[]): Promise<void> {
   if (read?.language) detected = read.language;
 }
 
+/** How much of a paragraph is read to tell its language, which is as much as a page gets. */
+const PARAGRAPH_READ = 1000;
+
+/**
+ * A paragraph's text as the page wrote it, up to as much as is read: a word drawn over is read
+ * as the word it replaced rather than with the transcription drawn on it.
+ */
+function paragraphText(block: Element): string {
+  let text = '';
+  const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node && text.length < PARAGRAPH_READ; node = walker.nextNode()) {
+    const drawn = node.parentElement?.closest(`.${WORD}`);
+    if (drawn && !node.parentElement?.closest('.px-was')) continue;
+    text += node.nodeValue ?? '';
+  }
+  return text.replace(/\s+/g, ' ').trim().slice(0, PARAGRAPH_READ);
+}
+
 /**
  * What each run is in, where it says enough to tell.
  *
  * A page is not always in one language: an English video title on a German page is English,
  * and transcribing it as German tells a reader a word is said in a way nobody says it. A run
- * that says too little keeps whatever the page turned out to be, since three words are not a
- * language.
+ * that says too little on its own is read with the paragraph it is in: a page about Spanish
+ * that sets the verb of its Spanish example in bold has that verb in a run of its own, and
+ * read as the page it came out English. One whose paragraph says too little as well keeps
+ * whatever the page turned out to be, since three words are not a language.
  */
 async function readEachRun(runs: ScannedRun[]): Promise<void> {
-  const worth = runs.filter((run) => !run.lang && run.text.trim().length >= 24);
-  if (worth.length === 0) return;
-  const read = await sendMessage('readRuns', { texts: worth.map((run) => run.text) })
-    .catch(() => null);
+  const texts: string[] = [];
+  const readers: ScannedRun[][] = [];
+  const paragraphs = new Map<Element, number>();
+  for (const run of runs) {
+    if (run.lang) continue;
+    if (run.text.trim().length >= 24) {
+      texts.push(run.text);
+      readers.push([run]);
+      continue;
+    }
+    const block = run.paragraph;
+    if (!block) continue;
+    let at = paragraphs.get(block);
+    if (at === undefined) {
+      const text = paragraphText(block);
+      if (text.length < 24) continue;
+      at = texts.length;
+      paragraphs.set(block, at);
+      texts.push(text);
+      readers.push([]);
+    }
+    readers[at].push(run);
+  }
+  if (texts.length === 0) return;
+  const read = await sendMessage('readRuns', { texts }).catch(() => null);
   if (!read) return;
   read.forEach((said, at) => {
-    if (said.language) {
-      worth[at].lang = said.language;
-      readAs.set(worth[at].node, said.language);
+    if (!said.language) return;
+    for (const run of readers[at]) {
+      run.lang = said.language;
+      readAs.set(run.node, said.language);
     }
   });
 }
@@ -469,9 +511,7 @@ interface Anchor {
  */
 function sentenceOf(anchor: Anchor, spelling: string): string {
   const node = anchor.node();
-  const block = (node instanceof Element ? node : node?.parentElement)?.closest(
-    'p, li, td, th, dd, dt, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div'
-  );
+  const block = (node instanceof Element ? node : node?.parentElement)?.closest(PARAGRAPH);
   if (!block) return '';
   const copy = block.cloneNode(true) as Element;
   for (const word of copy.querySelectorAll(`.${WORD}`)) {
@@ -1231,6 +1271,10 @@ function gestures(): void {
   };
   document.addEventListener('mousemove', followSoon, { passive: true });
   window.addEventListener('scroll', followSoon, { capture: true, passive: true });
+  window.addEventListener('scroll', () => (scrolledAt = performance.now()), {
+    capture: true,
+    passive: true,
+  });
   // Off the window, or into a frame of the page, whose moves this page never hears, the
   // pointer is nowhere on the page: where it last was is forgotten, or a scroll afterwards put
   // the fire back there and it burnt on where nothing was.
@@ -1258,7 +1302,7 @@ function gestures(): void {
       void open(anchored, askedOf(found.token, found.before));
     }, Math.max(0, settings.delay));
   });
-  document.addEventListener('mouseout', (event) => {
+  const leftWord = (event: MouseEvent) => {
     if (inside(event.target)) return;
     if (!wordAt(event.target)) return;
     if (opening) clearTimeout(opening);
@@ -1270,7 +1314,27 @@ function gestures(): void {
       pointer = { x: event.clientX, y: event.clientY };
       letGo();
     }
-  });
+  };
+  document.addEventListener('mouseout', leftWord);
+
+  // The page is not told the pointer left it for something of ours. What we draw is laid over
+  // the page from outside it, so to the page a pointer going into the card is a pointer leaving
+  // whatever it was on: YouTube's player took it for the reader leaving the video, put its
+  // controls away, and the subtitles dropped from under the card the reader was going into.
+  // Only a way out of the page's own: a move between two parts of the card is the card's.
+  for (const kind of ['mouseout', 'mouseleave', 'pointerout', 'pointerleave'] as const) {
+    window.addEventListener(
+      kind,
+      (event) => {
+        const to = event.relatedTarget;
+        const over = (node: EventTarget | null) => node instanceof Element && node.closest(OURS_ANY);
+        if (!over(to) || over(event.target)) return;
+        if (kind === 'mouseout') leftWord(event);
+        event.stopImmediatePropagation();
+      },
+      { capture: true }
+    );
+  }
 
   // A touch opens it outright: there is no resting on a phone, and the annotation is small
   // enough that a tap on it is deliberate.
@@ -1303,7 +1367,6 @@ function gestures(): void {
   });
 }
 
-/** Whether a node is something this extension drew rather than something the page brought. */
 /** The frame the card is next checked against its word in, while one is open. */
 let tracking = 0;
 
@@ -1318,6 +1381,9 @@ let tracking = 0;
  * whatever came there next. So the word is looked at once a frame, which is one measurement, and
  * the card closes once the word is gone, off the screen, or scrolled out of its box.
  */
+/** When the page last scrolled, which moves a word the reader asked to move. */
+let scrolledAt = -Infinity;
+
 function keepWithWord(): void {
   if (tracking) return;
   let was: DOMRect | null = null;
@@ -1326,7 +1392,7 @@ function keepWithWord(): void {
     if (!showing()) return;
     const word = anchored;
     if (!word) return;
-    if (!word.alive()) {
+    if (!word.alive() && !inside(under())) {
       hide();
       anchored = null;
       return;
@@ -1334,6 +1400,14 @@ function keepWithWord(): void {
     const box = word.box();
     const moved =
       !was || box.top !== was.top || box.left !== was.left || box.width !== was.width;
+    // Not while the pointer is in the card, unless the reader is scrolling: a card that went
+    // with its word, or closed with it, when the page moved it on its own - YouTube's subtitles
+    // drop when its controls go away - left the reader's pointer on the page halfway through
+    // reading it. Where the pointer goes next decides, as it does for any card.
+    if (moved && was && performance.now() - scrolledAt > 300 && inside(under())) {
+      tracking = requestAnimationFrame(step);
+      return;
+    }
     if (moved) {
       if (box.bottom < 0 || box.top > window.innerHeight || (was && !word.seen())) {
         hide();
@@ -1348,6 +1422,7 @@ function keepWithWord(): void {
   tracking = requestAnimationFrame(step);
 }
 
+/** Whether a node is something this extension drew rather than something the page brought. */
 function ours(node: Node): boolean {
   if (drewIt(node)) return true;
   const element = node instanceof Element ? node : node.parentElement;

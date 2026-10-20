@@ -15,7 +15,14 @@ export interface ScannedRun {
   node: Text;
   /** The language of the closest element that declares one, where it is not the page's. */
   lang?: string;
+  /** The paragraph it is part of, found while the run is in the page: a run is drawn over
+   *  afterwards, and its node is then no longer in the paragraph. */
+  paragraph?: Element;
 }
+
+/** What a sentence is written in: the nearest of these round a piece of it. */
+export const PARAGRAPH =
+  'p, li, td, th, dd, dt, blockquote, h1, h2, h3, h4, h5, h6, figcaption, article, section, div';
 
 /**
  * Elements whose text is not prose.
@@ -83,6 +90,11 @@ function declared(node: Text): string | undefined {
   return lang || undefined;
 }
 
+function found(id: number, node: Text): ScannedRun {
+  const paragraph = node.parentElement?.closest(PARAGRAPH) ?? undefined;
+  return { id, text: node.nodeValue ?? '', node, lang: declared(node), paragraph };
+}
+
 /**
  * The runs of text under a root, in the order they are read.
  *
@@ -101,7 +113,7 @@ export function scan(root: Node = document.body, from = 0): ScannedRun[] {
   };
   // A text node the page added on its own is a run of its own, or nothing.
   if (root instanceof Text) {
-    if (accept(root)) runs.push({ id: from, text: root.nodeValue ?? '', node: root, lang: declared(root) });
+    if (accept(root)) runs.push(found(from, root));
     return runs;
   }
   if (!(root instanceof Element) && !(root instanceof Document)) return runs;
@@ -111,7 +123,7 @@ export function scan(root: Node = document.body, from = 0): ScannedRun[] {
   let id = from;
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const text = node as Text;
-    runs.push({ id: id++, text: text.nodeValue ?? '', node: text, lang: declared(text) });
+    runs.push(found(id++, text));
   }
   return runs;
 }
