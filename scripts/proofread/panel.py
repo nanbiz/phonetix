@@ -365,11 +365,20 @@ def check(engine):
             time.sleep(0.5)
         print(f"  {engine}: the page draws {drawn} words")
 
+        # On a page that sets its own root font size, as YouTube does at ten pixels: a size in
+        # rem inside the panel is the page's, and drew the panel too narrow for its own bar.
+        browser.on_page("document.documentElement.style.fontSize = '10px'")
+
         # Opened from the keyboard, and typed into straight away.
         keys(open_key)
         if wait("(root) => !!root.querySelector('[data-ask]')", lambda got: got is True) is not True:
             failures.append(f"{open_key} opened no panel")
             return failures, shots
+        fits = panel("(root) => { const f = root.querySelector('[data-ask]').parentElement;"
+                     " return {width: f.clientWidth, over: f.scrollWidth - f.clientWidth}; }")
+        print(f"  {engine}: the panel on a ten-pixel page: {fits}")
+        if not fits or fits["width"] < 400 or fits["over"] > 0:
+            failures.append(f"the panel is cut off on a page with a ten-pixel root: {fits}")
         where = focused()
         print(f"  {engine}: opened from the keyboard, focus on: {where}")
         if where != "field":

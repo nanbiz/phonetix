@@ -79,10 +79,11 @@ export async function open(page = '', listen = false): Promise<void> {
   const frame = document.createElement('div');
   frame.className = themeOf(darkHere(), settings.theme || THEME);
   // Where a panel over a page belongs: near the top, out of the way of what is being read,
-  // and never wider than the window it is drawn in.
+  // and never wider than the window it is drawn in. In pixels: a rem inside a shadow root is
+  // the page's, and YouTube's ten-pixel one drew the panel too narrow for its own bar.
   frame.style.cssText =
     'position:fixed;top:72px;left:50%;transform:translateX(-50%);' +
-    'width:min(28rem, calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;';
+    'width:min(448px, calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;';
   shadow.appendChild(frame);
 
   const mine = settings.target;
