@@ -191,7 +191,8 @@ svg {
 }
 
 button.item:active,
-label.item:active {
+label.item:active,
+.option.lit {
   background: var(--color-scrim);
 }
 

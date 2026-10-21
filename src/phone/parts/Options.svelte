@@ -7,9 +7,18 @@
     options: { value: string; label: string; about?: string }[];
     chosen: string | string[];
     change: (value: string) => void;
+    /** The row the keyboard is on, where a search field has the keys. */
+    lit?: string;
   }
 
-  let { options, chosen, change }: Props = $props();
+  let { options, chosen, change, lit = '' }: Props = $props();
+
+  /** Keep the row the keyboard is on in sight as the arrows move it. */
+  function inSight(row: HTMLElement, value: string) {
+    $effect(() => {
+      if (lit === value) row.scrollIntoView({ block: 'nearest' });
+    });
+  }
 
   let many = $derived(Array.isArray(chosen));
   const on = (value: string) => (Array.isArray(chosen) ? chosen.includes(value) : chosen === value);
@@ -20,6 +29,8 @@
     <button
       class="item option"
       class:on={on(option.value)}
+      class:lit={lit === option.value}
+      use:inSight={option.value}
       role={many ? 'checkbox' : 'radio'}
       aria-checked={on(option.value)}
       data-choice={option.value}

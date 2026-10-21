@@ -35,6 +35,34 @@
     );
   });
 
+  /** Which of the rows shown the keyboard is on: the first that matches what was typed, and
+   *  then wherever the arrows take it, so Enter picks a language without the pointer. None
+   *  until something is typed or an arrow pressed. */
+  let at = $state<number | null>(null);
+  $effect(() => {
+    at = typed.trim() ? 0 : null;
+  });
+  let lit = $derived(at === null ? '' : (shown[Math.min(at, shown.length - 1)]?.value ?? ''));
+
+  function pick(value: string): void {
+    change(value);
+    if (!Array.isArray(chosen)) close();
+  }
+
+  function keys(event: KeyboardEvent): void {
+    const last = shown.length - 1;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      at = at === null ? 0 : Math.min(last, at + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      at = at === null ? 0 : Math.max(0, at - 1);
+    } else if (event.key === 'Enter' && lit) {
+      event.preventDefault();
+      pick(lit);
+    }
+  }
+
   onMount(() => standing(close));
 </script>
 
@@ -46,18 +74,17 @@
     </button>
   </header>
   {#if options.length >= searchFrom}
-    <input class="search" type="search" placeholder={SAYS['search']} bind:value={typed} />
+    <input
+      class="search"
+      type="search"
+      placeholder={SAYS['search']}
+      bind:value={typed}
+      onkeydown={keys}
+    />
   {/if}
   <div class="sheet-list">
     <div class="card">
-      <Options
-        options={shown}
-        {chosen}
-        change={(value) => {
-          change(value);
-          if (!Array.isArray(chosen)) close();
-        }}
-      />
+      <Options options={shown} {chosen} {lit} change={pick} />
     </div>
     {#if shown.length === 0}<p class="none">{SAYS['nothing-found']}</p>{/if}
   </div>

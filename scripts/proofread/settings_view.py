@@ -292,6 +292,18 @@ def main():
                     f"document.querySelector('[data-sheet] [data-choice={lang}]').click();"
                     "await new Promise(r => setTimeout(r, 300));")
 
+        def typed(name):
+            """Add a language from the keyboard: part of its name typed into the list's search,
+            then Enter, which takes the first language that matches."""
+            return ("document.querySelector('[data-does=add-language]').click();"
+                    "await new Promise(r => setTimeout(r, 300));"
+                    "const field = document.querySelector('[data-sheet] input.search');"
+                    f"field.value = {json.dumps(name)};"
+                    "field.dispatchEvent(new Event('input', {bubbles: true}));"
+                    "await new Promise(r => setTimeout(r, 200));"
+                    "field.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}));"
+                    "await new Promise(r => setTimeout(r, 300));")
+
         def listed():
             return ("[...document.querySelectorAll('[data-row=language]')].map(r => r.dataset.lang"
                     " + (r.querySelector('.main') ? '*' : '')).join(' ')")
@@ -312,7 +324,7 @@ def main():
 
         # A language the reader reads as it is: a word of it pointed at, replaced or not,
         # opens a card that says it and does not translate it.
-        known = languages("(async () => {" + add("es") + "return " + listed() + "; })()")
+        known = languages("(async () => {" + typed("spani") + "return " + listed() + "; })()")
         # Every word is replaced at this end of the bar, so the plain word is pointed at with
         # replacing off.
         control(cdp, view, "document.querySelector('[data-row=inline] [data-choice=off]').click()")
