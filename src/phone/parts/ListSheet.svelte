@@ -38,10 +38,7 @@
   /** Which of the rows shown the keyboard is on: the first that matches what was typed, and
    *  then wherever the arrows take it, so Enter picks a language without the pointer. None
    *  until something is typed or an arrow pressed. */
-  let at = $state<number | null>(null);
-  $effect(() => {
-    at = typed.trim() ? 0 : null;
-  });
+  let at = $derived<number | null>(typed.trim() ? 0 : null);
   let lit = $derived(at === null ? '' : (shown[Math.min(at, shown.length - 1)]?.value ?? ''));
 
   function pick(value: string): void {

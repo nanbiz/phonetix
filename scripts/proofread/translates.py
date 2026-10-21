@@ -325,8 +325,10 @@ def main():
             failures.append(f"the phrase was translated {clause['says'][0]!r}")
         if (clause.get("provenance") or {}).get("kind") != "guess":
             failures.append("a phrase is not marked as a machine's answer")
-        if clause.get("ipa"):
-            failures.append("a phrase carries a transcription, which is nobody's question")
+        # How it is said, word after word, as the card for a word says it.
+        print(f"  the phrase said: {clause.get('ipa')}")
+        if not clause.get("ipa"):
+            failures.append("a phrase does not say how it is said, as a word's card does")
 
         # The models came from the reader's own host and nowhere else.
         asked = [p for p in SERVED if p.startswith("/models")]

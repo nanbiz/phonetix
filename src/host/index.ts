@@ -241,7 +241,7 @@ export function host(): void {
       )
     );
     const missing = words.filter((_, at) => !each[at]);
-    const voiced = await ipa(data.source, missing).catch(() => ({}) as Record<string, string>);
+    const voiced: Record<string, string> = await ipa(data.source, missing).catch(() => ({}));
     words.forEach((word, at) => {
       if (!each[at]) each[at] = voiced[word] ?? '';
     });
