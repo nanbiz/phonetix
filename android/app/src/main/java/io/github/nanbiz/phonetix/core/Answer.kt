@@ -71,7 +71,13 @@ data class Answer(
      * "singular"), where its own ending starts, and what it means said in that form ("he
      * walked"), as the core works them out.
      */
-    data class Paradigm(val place: List<String>, val endingAt: Int, val said: String?) {
+    data class Paradigm(
+        val place: List<String>,
+        val endingAt: Int,
+        val said: String?,
+        /** A pronoun written onto the end of the word: "me" in Spanish "bañarme". */
+        val joined: String? = null,
+    ) {
         /** The place as a card names it, person and number together: "preterite ·
          *  indicative · 3rd singular". */
         fun named(): List<String> {
@@ -219,6 +225,8 @@ data class Answer(
                         },
                         endingAt = row.optInt("endingAt"),
                         said = if (row.isNull("said")) null else row.optString("said").ifEmpty { null },
+                        joined = if (row.isNull("joined")) null
+                            else row.optString("joined").ifEmpty { null },
                     )
                 },
                 marks = (o.optJSONArray("marks") ?: JSONArray()).let { outer ->

@@ -141,6 +141,8 @@ export interface Paradigm {
   endingAt: number;
   /** What the word means said in this place: "he walked". */
   said: string | null;
+  /** A pronoun written onto the end of the word: "me" in Spanish "bañarme". */
+  joined?: string | null;
   along: ParadigmAlong[];
 }
 

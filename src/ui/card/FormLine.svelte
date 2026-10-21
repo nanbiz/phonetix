@@ -197,6 +197,8 @@
       >{#if onLemma}<button class="form-lemma" data-lemma onclick={() => onLemma?.()}
           >{ofLemma}</button
         >{:else}<span class="form-lemma still">{ofLemma}</span>{/if}</span
+    >{/if}{#if paradigm.joined}<span class="form-of-word" data-joined
+      >{' + '}{paradigm.joined}</span
     >{/if}
 
   {#if term}

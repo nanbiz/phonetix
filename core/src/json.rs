@@ -110,10 +110,11 @@ fn paradigm(form: &Option<crate::paradigm::Form>) -> String {
         })
         .collect();
     format!(
-        "{{\"place\":{},\"endingAt\":{},\"said\":{},\"along\":[{}]}}",
+        "{{\"place\":{},\"endingAt\":{},\"said\":{},\"joined\":{},\"along\":[{}]}}",
         place(&form.place),
         form.ending_at,
         maybe(&form.said),
+        maybe(&form.joined),
         along.join(",")
     )
 }

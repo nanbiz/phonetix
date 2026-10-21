@@ -198,6 +198,8 @@ fun GlanceCard(
                                 append(lemma)
                                 pop()
                             }
+                            // And what is written onto its end: "infinitive of bañar + me".
+                            paradigm?.joined?.takeIf { form != null }?.let { append(" + $it") }
                         },
                         color = Color(palette.inkMuted),
                         fontSize = Tokens.Scale.fontSizeSmall.sp,

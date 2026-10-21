@@ -56,14 +56,16 @@ ENGLISH = (
     "</body></html>"
 ).encode()
 
-# A Spanish example on an English page about Spanish, with the verb it is about in bold: the
-# verb is a run of its own, too short to tell its language, and the line around it says it.
+# A Spanish example on an English page about Spanish, under its verb alone as a heading, with
+# the verb in the example in bold: neither the bold verb nor the heading says enough to tell its
+# language. The line around the bold one says it; the heading is told by the dictionaries, for a
+# reader learning Spanish, and "costar" is a co-star in English's.
 QUOTED = (
     "<!doctype html><html lang='en'><meta charset='utf-8'><body style='margin:0'>"
-    "<p style='margin:40px 0 0 120px;width:520px'>Here is how the preterite of intentar is "
-    "used in everyday sentences.</p>"
-    "<p id='prose' style='margin:40px 0 0 120px;width:520px;font-size:18px;line-height:1.6'>"
-    "Después de bañarme <strong>intenté</strong> preparar el desayuno.</p>"
+    "<p style='margin:40px 0 0 120px;width:520px'>Here is how these verbs are used in everyday "
+    "sentences.</p><div id='prose' style='margin:40px 0 0 120px;width:520px;font-size:18px;"
+    "line-height:1.6'><h2>costar</h2><p>Después de bañarme <strong>intenté</strong> preparar el "
+    "desayuno.</p><p><i>After bathing I tried to make breakfast.</i></p></div>"
     "</body></html>"
 ).encode()
 
@@ -280,21 +282,25 @@ class Run:
         if sheet["def"] and sheet["rows"]:
             self.fail(f"{where}: the sheet explains {sheet['cat']!r} without being asked")
 
-    def check_quoted(self, word):
-        """A Spanish verb set in bold in a Spanish example on an English page: read as Spanish,
-        as the line it is in is, not as the page."""
-        hand = self.hand
-        hand.click(2, 2)
-        hand.move(2, 2)
-        time.sleep(0.6)
-        for step in (0, 1):
-            hand.move(word["x"] + step, word["y"])
-            time.sleep(0.05)
-        rest = self.wait(lambda c: c["open"] and c["word"] == "intenté" and c["form"])
-        print(f"  {self.name}: quoted: {rest.get('headline', '')!r} / {rest.get('form')!r}")
-        if "1st singular" not in rest.get("form", "") or "intentar" not in rest.get("form", ""):
-            self.fail(f"quoted: intenté in bold on an English page is not read as Spanish: "
-                      f"{rest.get('headline')!r} / {rest.get('form')!r}")
+    def check_quoted(self, word, heading, joined):
+        """A Spanish verb set in bold in a Spanish example on an English page, read as Spanish as
+        the line it is in is; and the verb heading the example, read as Spanish for a reader
+        learning it, not as the page. And "bañarme" beside it, the infinitive with a pronoun
+        written onto it, says so."""
+        for spot, spelling, want in ((word, "intenté", "1st singular"), (heading, "costar", "to cost"),
+                                     (joined, "bañarme", "infinitive of bañar + me")):
+            hand = self.hand
+            hand.click(2, 2)
+            hand.move(2, 2)
+            time.sleep(0.6)
+            for step in (0, 1):
+                hand.move(spot["x"] + step, spot["y"])
+                time.sleep(0.05)
+            rest = self.wait(lambda c: c["open"] and c["word"] == spelling and c["headline"])
+            said = f"{rest.get('headline', '')} / {rest.get('form', '')}"
+            print(f"  {self.name}: quoted {spelling}: {said!r}")
+            if want not in said:
+                self.fail(f"quoted: {spelling} on an English page is not read as Spanish: {said!r}")
 
     def check_defined(self, word):
         """An English word for a reader who reads English: what it means, in the dictionary's
@@ -598,14 +604,26 @@ def chrome(failures):
         cdp.send("Page.navigate", {"url": f"{base}/low.html"}, session=page)
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        evaluate(cdp, settings, "chrome.storage.local.set({learn: 'es'})")
         cdp.send("Page.navigate", {"url": f"{base}/quoted.html"}, session=page)
         time.sleep(4)
-        run.check_quoted(hand.ask(word_js("intenté")))
+        run.check_quoted(hand.ask(word_js("intenté")), hand.ask(word_js("costar")),
+                        hand.ask(word_js("bañarme")))
+        evaluate(cdp, settings, "chrome.storage.local.set({learn: ''})")
         cdp.send("Page.navigate", {"url": f"{base}/en.html"}, session=page)
         time.sleep(4)
         run.check_defined(hand.ask(word_js("pulling")))
     finally:
         cdp.close()
+
+
+def learning(driver, lang):
+    """Say which language the reader learns, from the extension's own page."""
+    from on_firefox import UUID
+    driver.send("WebDriver:Navigate", {"url": f"moz-extension://{UUID}/viewbook.html"})
+    time.sleep(1)
+    driver.script("const done = arguments[0];"
+                  f"browser.storage.local.set({{learn: '{lang}'}}).then(() => done(true));")
 
 
 def firefox(failures):
@@ -664,9 +682,12 @@ def firefox(failures):
         driver.send("WebDriver:Navigate", {"url": f"{base}/low.html"})
         time.sleep(4)
         run.check_low(hand.ask(WORD_JS))
+        learning(driver, "es")
         driver.send("WebDriver:Navigate", {"url": f"{base}/quoted.html"})
         time.sleep(4)
-        run.check_quoted(hand.ask(word_js("intenté")))
+        run.check_quoted(hand.ask(word_js("intenté")), hand.ask(word_js("costar")),
+                        hand.ask(word_js("bañarme")))
+        learning(driver, "")
         driver.send("WebDriver:Navigate", {"url": f"{base}/en.html"})
         time.sleep(4)
         run.check_defined(hand.ask(word_js("pulling")))

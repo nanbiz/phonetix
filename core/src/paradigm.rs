@@ -158,6 +158,9 @@ pub struct Form {
     pub said: Option<String>,
     /// The same without who does it, which is what takes the word's place on a page: "walked".
     pub bare: Option<String>,
+    /// What is written onto the end of the word, where it is the form with a pronoun joined to
+    /// it: Spanish "bañarme" is the infinitive of bañar with "me".
+    pub joined: Option<String>,
 }
 
 /// One category of a form, and the word in each of its values with everything else kept.
@@ -440,6 +443,7 @@ pub fn form_at(spelling: &str, place: Place, entry: &Entry) -> Form {
         along,
         said: None,
         bare: None,
+        joined: None,
     }
 }
 

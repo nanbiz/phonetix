@@ -4108,3 +4108,48 @@ fn german_pronouns_by_what_spanish_pronouns_mean() {
     assert_eq!(lead("du").as_deref(), Some("tú"));
     assert_ne!(lead("es").as_deref(), Some("el"));
 }
+
+/// A form with a pronoun written onto its end is the form of its verb with that pronoun:
+/// Spanish "bañarme" is filed as "infinitive of bañar combined with me", and a card for it says
+/// which form it is, of which word, and what is joined to it.
+#[test]
+fn a_form_with_a_pronoun_joined_is_that_form_of_its_verb() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add(
+        word("bañar", "verb", "baˈɲaɾ", &["to bathe"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    pack.add(
+        word(
+            "bañarme",
+            "verb",
+            "baˈɲaɾme",
+            &["infinitive of bañar combined with me"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let es = pack.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+        accent: "",
+        accent_pack: None,
+        said: None,
+        classifier: None,
+        others: None,
+        defines: None,
+    };
+    let got = look_up("bañarme", &lang("es"), &lang("en"), &open);
+    let form = got.paradigm.as_ref().expect("bañarme names no form");
+    assert_eq!(got.lemma.as_deref(), Some("bañar"));
+    assert_eq!(form.joined.as_deref(), Some("me"));
+    assert!(
+        form.place.iter().any(|(value, _)| value == "infinitive"),
+        "{:?}",
+        form.place
+    );
+}

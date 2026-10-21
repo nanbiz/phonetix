@@ -1737,6 +1737,7 @@ pub(crate) fn form_of_word(gloss: &str) -> Option<String> {
     if gloss.contains(':') || !crate::annotate::about_grammar(gloss) {
         return None;
     }
+    let (gloss, _) = joined(gloss);
     let (label, word) = gloss.rsplit_once(" of ")?;
     // The label is a few names of a form, never a sentence: "used to express the future
     // tense, sometimes with an implication of volition" is a definition.
@@ -1745,6 +1746,19 @@ pub(crate) fn form_of_word(gloss: &str) -> Option<String> {
     }
     let word = word.trim().trim_end_matches('.');
     (!word.is_empty() && !word.contains(' ')).then(|| word.to_string())
+}
+
+/// A note about a form with a pronoun written onto its end, and that pronoun: Spanish
+/// "bañarme" is filed as "infinitive of bañar combined with me", which is the infinitive of
+/// bañar, with "me".
+pub(crate) fn joined(gloss: &str) -> (&str, Option<&str>) {
+    match gloss.split_once(" combined with ") {
+        Some((form, with)) => {
+            let with = with.trim().trim_end_matches('.');
+            (form, (!with.is_empty()).then_some(with))
+        }
+        None => (gloss, None),
+    }
 }
 
 /// The words a gloss says its entry is a spelling of: "Eye dialect spelling of have and 've,
@@ -2321,6 +2335,7 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
     let Some(lemma) = form_of_word(note) else {
         return answer;
     };
+    let (note, with) = joined(note);
     let Some((named, _)) = note.rsplit_once(" of ") else {
         return answer;
     };
@@ -2336,6 +2351,7 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
         return answer;
     };
     let mut form = crate::paradigm::form_at(&answer.spelling, place, &entry);
+    form.joined = with.map(str::to_string);
     // Only a translation is said in the form: an English word's meaning is a definition, and
     // "To provide a list of references for" said as a participle is no meaning at all.
     if answer.target.0 == "en" && answer.source != answer.target {
