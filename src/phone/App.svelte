@@ -4,6 +4,7 @@
   import { darkSide, DEFAULTS, type Settings } from '@/settings/shape';
   import { themeOf } from '@/ui/theme';
   import { ROWS, SAYS } from '@/data/wording';
+  import { interfaceFor, markDocument, speakIn, type Spoken } from '@/data/interface';
   import type { Offered } from '@/host/packs';
   import { ACCENTS } from '@/data/accents';
   import { covered, uncover } from '@/ui/controls/sheets.svelte';
@@ -33,14 +34,29 @@
   let trouble = $state<string[]>([]);
   let apps = $state<{ pkg: string; label: string }[]>([]);
 
-  const TITLES: Record<string, string> = {
-    apps: ROWS.apps.name,
-    packs: ROWS.dictionaries.name,
-    languages: ROWS['group-languages'].name,
-    lookup: ROWS.cards.name,
-    accents: ROWS.accents.name,
-    appearance: ROWS.appearance.name,
+  /** Each screen's title, by the row it opens from, in the language the screen is in. */
+  const TITLED: Record<string, string> = {
+    apps: 'apps',
+    packs: 'dictionaries',
+    languages: 'group-languages',
+    lookup: 'cards',
+    accents: 'accents',
+    appearance: 'appearance',
   };
+
+  /** The interface's words in each language, bundled beside this page and read when needed. */
+  const TABLES = import.meta.glob<Spoken>('../../public/interface/*.json', { import: 'default' });
+  /** The language the screen is drawn in; drawn again whole when it changes. */
+  let spoken = $state('en');
+
+  async function speak(mine: string): Promise<void> {
+    const lang = interfaceFor(mine);
+    if (lang === spoken) return;
+    const table = TABLES[`../../public/interface/${lang}.json`];
+    speakIn(lang, table ? await table().catch(() => null) : null);
+    markDocument();
+    spoken = lang;
+  }
 
   /** The palette on the document itself: the tokens are declared per palette and side. */
   function paint(chosen: Settings) {
@@ -62,6 +78,7 @@
       trouble: string[];
     }>('state');
     if (edits === before || !settings) settings = { ...DEFAULTS, ...told.settings };
+    await speak(settings.target);
     packs = told.packs ?? { held: [], offered: [] };
     // The dictionaries, not the accents' packs listed beside them, which come with an accent.
     packs = { ...packs, offered: packs.offered.filter((it) => !ACCENT_PACKS.has(it.lang)) };
@@ -77,6 +94,7 @@
     edits++;
     settings = { ...settings, [name]: value };
     if (name === 'theme' || name === 'dark') paint(settings);
+    if (name === 'target') void speak(settings.target);
     void ask('set', { name, value });
   }
 
@@ -117,7 +135,7 @@
   whenChanged(() => void load());
   window.phonetixOpen = (wanted: string) => {
     if (!settings) return false;
-    open(TITLES[wanted] ? wanted : 'main');
+    open(TITLED[wanted] ? wanted : 'main');
     return true;
   };
   // The phone's own way back: whatever stands over the screen first, then the screen.
@@ -133,6 +151,7 @@
   void load();
 </script>
 
+{#key spoken}
 <main class="screen" data-view={view}>
   {#if settings}
     {#if view === 'main'}
@@ -150,10 +169,10 @@
       />
     {:else}
       <header class="top">
-        <button class="icon-button" aria-label={SAYS['back']} onclick={() => open('main')}>
+        <button class="icon-button" data-does="back" aria-label={SAYS['back']} onclick={() => open('main')}>
           <Back />
         </button>
-        <h1 class="title">{TITLES[view]}</h1>
+        <h1 class="title">{ROWS[TITLED[view]]?.name}</h1>
       </header>
       {#if view === 'apps'}
         <Apps
@@ -176,3 +195,4 @@
     {/if}
   {/if}
 </main>
+{/key}

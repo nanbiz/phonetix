@@ -11,6 +11,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.nanbiz.phonetix.BuildConfig
 import io.github.nanbiz.phonetix.MainActivity
+import io.github.nanbiz.phonetix.core.Interface
 import io.github.nanbiz.phonetix.core.Lex
 import io.github.nanbiz.phonetix.core.Dictionary
 import io.github.nanbiz.phonetix.core.DisplayIpa
@@ -3161,7 +3162,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // Every language, in the order worth offering: the two in use, the ones asked in
         // lately, the ones a dictionary is held for, and the rest by name.
         val offered = (listOf(mine, learning) + settings.recent + held +
-            Languages.all().sortedBy { Languages.english(it) })
+            Languages.all().sortedBy { Interface.named(it) })
             .distinct().filter { it.isNotBlank() }
         // The side of the palette the reader reads in: their own answer where they gave one,
         // and the device's where they left it to the device.
@@ -3373,7 +3374,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     if (asking === panel && turn == asks) {
                         panel.saying(
                             Wording.says["say-fetching"].orEmpty()
-                                .replace("%s", Languages.english(to)),
+                                .replace("%s", Interface.named(to)),
                         )
                     }
                 }

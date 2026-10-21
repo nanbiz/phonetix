@@ -6,6 +6,7 @@
 // It is written on the browser's own runtime messaging directly. The boundary is four messages and a reply, and a
 // library in the middle of it was one more place for a message to disappear between a page and
 // a service worker with nothing to show for it.
+import type { Spoken } from '@/data/interface';
 import type { Answer, IpaSymbol } from '@/core/answer';
 import type { Guess, Meant, Said, Screen } from '@/core';
 import type { AnnotateOptions, Batch, TextRun } from '@/core/tokens';
@@ -65,6 +66,9 @@ export interface HostProtocol {
   readScreen: { data: { text: string }; reply: Screen };
   /** What each run of a page is in, since a page is not always in one language. */
   readRuns: { data: { texts: string[] }; reply: Screen[] };
+  /** What the interface says in a language, for a page's script, which cannot read the
+   *  extension's files. */
+  interface: { data: { lang: string }; reply: Spoken | null };
   /** Which of two languages each of these words is in, by which dictionary holds it and, held
    *  by both, which says it more: true for the second. */
   inOther: { data: { words: string[]; mine: string; other: string }; reply: boolean[] };

@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.core.SymbolInfo
 
 /**
@@ -64,7 +65,7 @@ fun SoundLine(
     ) {
         if (about == null) {
             Text(
-                text = "Tap a sound to hear what it is",
+                text = Wording.say("tap-sound"),
                 color = Color(palette.inkFaint),
                 fontSize = Tokens.Scale.fontSizeLabel.sp,
             )

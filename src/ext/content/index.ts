@@ -39,6 +39,7 @@ import { markHidden, markPaintedIn, markShown, type MarkWord } from './mark';
 import { OURS_ANY, PARAGRAPH, readable, scan, type ScannedRun } from './scan';
 import { commons, wiktionary } from '@/data/links';
 import { named } from '@/data/languages';
+import { interfaceFor, speakIn } from '@/data/interface';
 
 /**
  * What takes the place of the words of a page: how each is said, or what it means.
@@ -1659,9 +1660,18 @@ function translatorKey(): void {
   }, true);
 }
 
+/** Say what the card and the panel say in the reader's own language, from the host, which can
+ *  read the extension's files where a page's script cannot. */
+async function speakFor(mine: string): Promise<void> {
+  const lang = interfaceFor(mine);
+  const words = lang === 'en' ? null : await sendMessage('interface', { lang }).catch(() => null);
+  speakIn(lang, words);
+}
+
 /** Start reading this document. */
 export async function session(): Promise<void> {
   settings = await current();
+  void speakFor(settings.target);
   paintedIn(settings.theme, settings.dark);
   cardPaintedIn(settings.theme, settings.dark);
   emberPaintedIn(settings.theme, settings.animations);
@@ -1674,6 +1684,7 @@ export async function session(): Promise<void> {
   watch((fresh) => {
     const was = settings;
     settings = fresh;
+    if (was.target !== fresh.target) void speakFor(fresh.target);
     emberPaintedIn(fresh.theme, fresh.animations);
     markPaintedIn(fresh.theme, fresh.animations);
     if (!allowed(fresh, location.hostname) || !fresh.cards) emberAway();

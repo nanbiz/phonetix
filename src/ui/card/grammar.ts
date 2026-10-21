@@ -5,6 +5,8 @@
 // The file is read when it is there; a term it has no text for is named and nothing more, since
 // a definition written here would be ours passed off as the dictionary's.
 import type { ParadigmForm, PlaceValue } from '@/core/answer';
+import { SAYS, say } from '@/data/wording';
+import { plainIn, type Plain } from '@/data/interface';
 
 /** One category or value as data/grammar.json describes it. */
 interface Described {
@@ -25,12 +27,6 @@ const files = import.meta.glob<Grammar>('../../../data/grammar.json', {
 });
 const grammar: Grammar = Object.values(files)[0] ?? {};
 
-/** A term said plainly, with an example whose word in that form is between stars. */
-interface Plain {
-  plain?: string;
-  example?: string;
-}
-
 /** What each term is said plainly, written for a reader who has never met it: Wiktionary's
  *  glossary is written for one who has, and "hypothetical or anticipated rather than actual"
  *  told nobody what a subjunctive is. */
@@ -45,36 +41,32 @@ const plain = Object.values(plainFiles)[0] ?? {};
 function told(said: Plain | undefined, wiktionary: string | null | undefined): string | null {
   if (!said?.plain) return wiktionary ?? null;
   return said.example
-    ? `${said.plain} For example: ${said.example.replaceAll('*', '')}`
+    ? `${said.plain} ${say('for-example', said.example.replaceAll('*', ''))}`
     : said.plain;
 }
 
 /** What a category is. */
 export function categoryText(category: string): string | null {
-  return told(plain.categories?.[category], grammar.categories?.[category]?.text);
+  return told(
+    plainIn.categories?.[category] ?? plain.categories?.[category],
+    grammar.categories?.[category]?.text
+  );
 }
 
 /** What a value is. */
 export function valueText(value: string): string | null {
-  return told(plain.values?.[value], grammar.values?.[value]?.text);
+  return told(plainIn.values?.[value] ?? plain.values?.[value], grammar.values?.[value]?.text);
 }
 
-/** The ordinal a person is said by on a form line: "3rd" for "third-person". */
-const ORDINAL: Record<string, string> = {
-  'first-person': '1st',
-  'second-person': '2nd',
-  'third-person': '3rd',
-};
-
-/** A value as a reader reads it: "3rd" for "third-person", "future perfect" for
- *  "future-perfect". */
+/** A value as a reader reads it, in the interface's language where it has a name for it:
+ *  "3rd" for "third-person", "future perfect" for "future-perfect". */
 export function valueName(value: string): string {
-  return ORDINAL[value] ?? value.replaceAll('-', ' ');
+  return SAYS[`ordinal-${value}`] ?? SAYS[`term-${value}`] ?? value.replaceAll('-', ' ');
 }
 
 /** A category as a sheet names it. Person moves with number, so the sheet is about both. */
 export function categoryName(category: string): string {
-  return category === 'person' ? 'person and number' : category;
+  return category === 'person' ? say('person-and-number') : (SAYS[`term-${category}`] ?? category);
 }
 
 /**
@@ -101,11 +93,12 @@ export function termsOf(place: PlaceValue[]): Term[] {
     if (value === person) {
       const values = number ? [person, number] : [person];
       const ordinal = valueName(person.value);
+      const many = number ? valueName(number.value) : '';
       out.push({
         category: 'person',
         values,
-        label: number ? `${ordinal} ${number.value}` : ordinal,
-        long: number ? `${ordinal} person ${number.value}` : `${ordinal} person`,
+        label: number ? say('person-number', ordinal, many) : ordinal,
+        long: number ? say('person-number-long', ordinal, many) : say('person-long', ordinal),
       });
       continue;
     }

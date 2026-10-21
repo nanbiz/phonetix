@@ -8,6 +8,7 @@
   // of that category with everything else kept, the word's own row lit. A row is a form the
   // card can be read as. The lemma is the way to the whole entry, and is there only for a word
   // that is not its own lemma.
+  import { say } from '@/data/wording';
   import type { Paradigm, ParadigmAlong, ParadigmForm } from '@/core/answer';
   import {
     categoryName,
@@ -194,7 +195,7 @@
         onkeydown={(event) => event.key === 'Enter' && toggle(it.category)}>{it.label}</span
       >{/if}{/each}</span
   >{#if ofLemma}<span class="form-of"
-      ><span class="form-of-word">{' of '}</span
+      ><span class="form-of-word">{` ${say('form-of')} `}</span
       >{#if onLemma}<button class="form-lemma" data-lemma onclick={() => onLemma?.()}
           >{ofLemma}</button
         >{:else}<span class="form-lemma still">{ofLemma}</span>{/if}</span
@@ -216,7 +217,7 @@
         {categoryName(term.category)} · {term.long}{#if explained(term).length > 0 && !bare}<button
             class="sheet-ask{asked ? ' on' : ''}"
             data-ask
-            aria-label="What this is"
+            aria-label={say('what-this-is')}
             aria-expanded={asked}
             title={explained(term)
               .map((line) => `${capital(line.name)}: ${line.text}`)

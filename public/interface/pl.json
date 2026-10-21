@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Zezwól",
+    "allow-overlay": "Zezwól na nakładkę",
+    "already-in": "Ta strona jest już w języku: %s",
+    "broad-mark": "/ /",
+    "change": "Zmień",
+    "choose-language": "Wybierz język",
+    "close": "Zamknij",
+    "detail-explained": "Szeroka to dźwięki, które odróżniają wyrazy; wąska to każdy szczegół wymowy wyrazu, tak jak wymawia go ktoś z tym akcentem.",
+    "every-app": "Każda aplikacja",
+    "get": "Pobierz",
+    "loading-dictionary": "Ładowanie słownika…",
+    "master-idle": "Nic nie jest rysowane nad aplikacjami",
+    "master-off": "Wstrzymane",
+    "master-on": "Czytanie",
+    "master-unready": "Zezwól na odczyt ekranu i rysowanie nad aplikacjami",
+    "master-working": "Wyrazy w aplikacjach są objaśniane",
+    "narrow-mark": "[ ]",
+    "no-source": "znaczenia wyrazów; wymowa jest wbudowana",
+    "no-translation": "Nie tłumacz",
+    "nothing-found": "Brak wyniku o tej nazwie",
+    "nothing-yet": "na razie nic",
+    "open-accessibility": "Otwórz ułatwienia dostępu",
+    "preview": "Podgląd",
+    "preview-about": "wyrazy na stronie, na które to odpowie",
+    "remove": "Usuń",
+    "rest-edge": "Przy krawędzi: %s",
+    "rest-loose": "Gdziekolwiek go zostawisz",
+    "no-direction": "Nie udało się uzyskać tłumaczenia z języka %s. Wyrazy pokazują zamiast tego, jak brzmią.",
+    "service-stopped": "Phonetix może czytać ekran, ale nie działa. Wyłącz ją i włącz ponownie w ustawieniach ułatwień dostępu telefonu.",
+    "rest-put": "Przesuń przycisk w górę lub w dół albo na drugą stronę.",
+    "say-into": "Odpowiadaj w",
+    "say-no-language": "Najpierw wybierz język, do którego czytać.",
+    "say-no-model": "Na twoim hoście słowników nie ma modelu tłumaczenia w tym kierunku.",
+    "say-nothing": "brak słowa na to",
+    "say-placeholder": "co chcesz powiedzieć",
+    "search": "Szukaj",
+    "speak": "Powiedz",
+    "touch-off": "Każde dotknięcie trafia do aplikacji pod spodem, więc przewijanie działa normalnie.",
+    "touch-on": "Przesunięcie zaczynające się na wyrazie nie przewija strony.",
+    "turn": "Odpowiadaj w odwrotnym kierunku",
+    "use-this": "Użyj tego",
+    "say-fetching": "pobieranie: %s",
+    "back": "Wstecz",
+    "apps-chosen": "wybrano: %s",
+    "packs-held": "pobrano: %s",
+    "other-languages": "Inne języki",
+    "words-count": "Słowa: %s",
+    "packs-here": "Na tym telefonie",
+    "packs-more": "Dostępne",
+    "every-word": "każdy wyraz",
+    "one-in": "jeden na %s",
+    "open-panel": "Otwórz",
+    "site-off": "tutaj zawsze wyłączone",
+    "site-following": "według przełącznika głównego (teraz: %s)",
+    "on": "włączone",
+    "off": "wyłączone",
+    "set-key": "Ustaw klawisz",
+    "simple": "Prosta",
+    "detailed": "Szczegółowa",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "nic więcej",
+    "learn-none": "brak",
+    "add-language": "Dodaj język",
+    "learn-language": "Ucz się języka",
+    "make-main": "Ustaw jako mój język",
+    "main-language": "Mój język",
+    "learning-it": "uczę się: %s",
+    "dictate": "Dyktuj",
+    "pos-adj": "przymiotnik",
+    "pos-adv": "przysłówek",
+    "pos-article": "rodzajnik",
+    "pos-character": "znak",
+    "pos-conj": "spójnik",
+    "pos-contraction": "skrócenie",
+    "pos-det": "determinator",
+    "pos-intj": "wykrzyknik",
+    "pos-name": "nazwa własna",
+    "pos-noun": "rzeczownik",
+    "pos-num": "liczebnik",
+    "pos-particle": "partykuła",
+    "pos-phrase": "wyrażenie",
+    "pos-postp": "postpozycja",
+    "pos-prefix": "przedrostek",
+    "pos-prep": "przyimek",
+    "pos-prep_phrase": "wyrażenie przyimkowe",
+    "pos-pron": "zaimek",
+    "pos-proverb": "przysłowie",
+    "pos-punct": "interpunkcja",
+    "pos-suffix": "przyrostek",
+    "pos-symbol": "symbol",
+    "pos-verb": "czasownik",
+    "pos-abbrev": "skrót",
+    "pos-affix": "afiks",
+    "pos-infix": "wrostek",
+    "pos-interfix": "interfiks",
+    "pos-circumfix": "cyrkumfiks",
+    "pos-root": "rdzeń",
+    "pos-combining_form": "forma złożeniowa",
+    "pos-classifier": "klasyfikator",
+    "pos-counter": "licznik",
+    "pos-letter": "litera",
+    "no-dictionary-for": "Brak słownika dla %s",
+    "unknown-language": "Nie wiadomo, jaki to język",
+    "looking-up": "Szukam",
+    "nothing-for": "Nic nie znaleziono dla %s",
+    "read-as": "Czytane jako %s",
+    "read-as-accent": "Czytane jako %s, akcent: %s",
+    "translated-by": "Tłumaczenie: %s",
+    "translated-by-machine": "Przetłumaczone maszynowo",
+    "guess": "domysł",
+    "in-english": "po angielsku",
+    "getting-dictionary": "Pobieranie słownika: %s",
+    "getting-dictionaries": "Pobieranie słowników: %s",
+    "say-word": "powiedz %s",
+    "hear-word": "usłysz %s",
+    "play-sound": "odtwórz nagranie: %s",
+    "read-about-sound": "przeczytaj o %s",
+    "see-mouth": "zobacz usta mówiące %s",
+    "mouth-making": "jak usta wymawiają %s",
+    "tap-sound": "Dotknij dźwięku, aby usłyszeć, czym jest",
+    "what-this-is": "Co to jest",
+    "for-example": "Na przykład: %s",
+    "fetching": "pobieranie",
+    "done": "gotowe",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "%s osoba, %s",
+    "person-long": "%s osoba",
+    "person-and-number": "osoba i liczba",
+    "form-of": "od",
+    "term-mood": "tryb",
+    "term-tense": "czas",
+    "term-aspect": "aspekt",
+    "term-person": "osoba",
+    "term-number": "liczba",
+    "term-case": "przypadek",
+    "term-gender": "rodzaj",
+    "term-definiteness": "określoność",
+    "term-declension": "odmiana",
+    "term-degree": "stopień",
+    "term-voice": "strona",
+    "term-register": "rejestr",
+    "term-nonfinite": "forma nieosobowa",
+    "term-singular": "pojedyncza",
+    "term-plural": "mnoga",
+    "term-dual": "podwójna",
+    "term-first-person": "pierwsza osoba",
+    "term-second-person": "druga osoba",
+    "term-third-person": "trzecia osoba",
+    "term-nominative": "mianownik",
+    "term-accusative": "biernik",
+    "term-dative": "celownik",
+    "term-genitive": "dopełniacz",
+    "term-vocative": "wołacz",
+    "term-instrumental": "narzędnik",
+    "term-locative": "miejscownik",
+    "term-prepositional": "przyimkowy",
+    "term-ablative": "ablatiw",
+    "term-partitive": "partytyw",
+    "term-inessive": "inessiv",
+    "term-elative": "elatyw",
+    "term-illative": "illatyw",
+    "term-adessive": "adesyw",
+    "term-allative": "alatyw",
+    "term-essive": "esyw",
+    "term-translative": "translatyw",
+    "term-abessive": "abesyw",
+    "term-comitative": "komitatyw",
+    "term-masculine": "męski",
+    "term-feminine": "żeński",
+    "term-neuter": "nijaki",
+    "term-animate": "żywotny",
+    "term-inanimate": "nieżywotny",
+    "term-definite": "określony",
+    "term-indefinite": "nieokreślony",
+    "term-present": "teraźniejszy",
+    "term-past": "przeszły",
+    "term-future": "przyszły",
+    "term-non-past": "nieprzeszły",
+    "term-preterite": "preteryt",
+    "term-imperfect": "imperfekt",
+    "term-perfect": "perfekt",
+    "term-pluperfect": "pluskwamperfekt",
+    "term-aorist": "aoryst",
+    "term-indicative": "tryb oznajmujący",
+    "term-subjunctive": "tryb przypuszczający",
+    "term-subjunctive-i": "konjunktiv i",
+    "term-subjunctive-ii": "konjunktiv ii",
+    "term-conditional": "tryb warunkowy",
+    "term-conditional-i": "warunkowy i",
+    "term-conditional-ii": "warunkowy ii",
+    "term-future-i": "futurum i",
+    "term-future-ii": "futurum ii",
+    "term-imperative": "tryb rozkazujący",
+    "term-jussive": "jussiv",
+    "term-optative": "optatyw",
+    "term-potential": "potencjał",
+    "term-active": "strona czynna",
+    "term-passive": "strona bierna",
+    "term-infinitive": "bezokolicznik",
+    "term-participle": "imiesłów",
+    "term-gerund": "gerundium",
+    "term-imperfective": "niedokonany",
+    "term-perfective": "dokonany",
+    "term-progressive": "ciągły",
+    "term-positive": "stopień równy",
+    "term-comparative": "stopień wyższy",
+    "term-superlative": "stopień najwyższy",
+    "term-strong": "mocna",
+    "term-weak": "słaba",
+    "term-mixed": "mieszana",
+    "term-formal": "formalny",
+    "term-informal": "nieformalny",
+    "term-polite": "grzecznościowy",
+    "accent-British": "brytyjski",
+    "accent-American": "amerykański",
+    "accent-Scottish": "szkocki",
+    "accent-Australian": "australijski",
+    "accent-Caribbean": "karaibski",
+    "accent-Canadian": "kanadyjski",
+    "accent-Spain": "hiszpański",
+    "accent-Latin America": "latynoamerykański",
+    "accent-Rioplatense": "rioplatense",
+    "accent-Germany": "niemiecki",
+    "accent-Switzerland": "szwajcarski",
+    "accent-Austria": "austriacki",
+    "accent-Portugal": "portugalski",
+    "accent-Brazil": "brazylijski",
+    "accent-France": "francuski",
+    "accent-Canada": "kanadyjski",
+    "accent-Northern": "północny",
+    "accent-Central": "środkowy"
+  },
+  "rows": {
+    "on": {
+      "name": "Opisuj to, co czytam",
+      "about": ""
+    },
+    "site": {
+      "name": "Na tej stronie",
+      "about": ""
+    },
+    "layer": {
+      "name": "Nakładka",
+      "about": ""
+    },
+    "density": {
+      "name": "Jak często",
+      "about": ""
+    },
+    "target": {
+      "name": "Język",
+      "about": ""
+    },
+    "source": {
+      "name": "Ta strona jest w języku",
+      "about": ""
+    },
+    "accent": {
+      "name": "Akcent",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Słowniki",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transkrypcje",
+      "about": ""
+    },
+    "stress": {
+      "name": "Znaki akcentu",
+      "about": ""
+    },
+    "delay": {
+      "name": "Przerwa przed otwarciem karty",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animacje",
+      "about": ""
+    },
+    "say": {
+      "name": "Słowo dla czegoś",
+      "about": ""
+    },
+    "setup": {
+      "name": "Konfiguracja",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Odczyt ekranu",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Rysowanie nad aplikacjami",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Wymowa",
+      "about": ""
+    },
+    "translate": {
+      "name": "Tłumaczenie",
+      "about": ""
+    },
+    "side": {
+      "name": "Która strona",
+      "about": ""
+    },
+    "rest": {
+      "name": "Gdzie stoi przycisk",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Stała wysokość",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Przeciągnij nad wyraz",
+      "about": "Mówi, co przesuwa się pod spodem, a strona pod nim nadal się przewija"
+    },
+    "lens-sweep": {
+      "name": "Przytrzymaj, potem przesuń",
+      "about": "Każdy wyraz, nad którym przejdzie, dołącza do ciągu, a karta odpowiada na całe zdanie"
+    },
+    "lens-hold": {
+      "name": "Przytrzymaj",
+      "about": "Otwiera ustawienia"
+    },
+    "lens-tap": {
+      "name": "Dotknij",
+      "about": "Zapytaj o wyraz na coś w środku czytanego tekstu; dotknij ponownie, aby schować kartę"
+    },
+    "touch": {
+      "name": "Dotknięcie wyrazu",
+      "about": ""
+    },
+    "where": {
+      "name": "Gdzie",
+      "about": ""
+    },
+    "apps": {
+      "name": "Aplikacje",
+      "about": ""
+    },
+    "start": {
+      "name": "Zanim odpowie na wyraz",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Dotknij wyrazu, aby zobaczyć kartę",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Aby zobaczyć znaczenie wyrazu",
+      "about": ""
+    },
+    "theme": {
+      "name": "Motyw",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Zaawansowane",
+      "about": ""
+    },
+    "dark": {
+      "name": "Jasny czy ciemny",
+      "about": ""
+    },
+    "mine": {
+      "name": "Mój język",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Przycisk boczny",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Języki",
+      "about": ""
+    },
+    "position": {
+      "name": "Położenie",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Wygląd",
+      "about": ""
+    },
+    "accents": {
+      "name": "Akcenty",
+      "about": ""
+    },
+    "inline": {
+      "name": "Zastępuj wyrazy",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Zastąpione wyrazy",
+      "about": ""
+    },
+    "translator": {
+      "name": "Tłumacz",
+      "about": ""
+    },
+    "into": {
+      "name": "Tłumacz na",
+      "about": ""
+    },
+    "known": {
+      "name": "Nigdy nie tłumacz",
+      "about": ""
+    },
+    "learn": {
+      "name": "Nauka",
+      "about": ""
+    },
+    "cards": {
+      "name": "Wyszukaj",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Wymowa",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Znaczenie",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Gramatyka",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Inne znaczenia",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Opisuj każdy wyraz",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Mój",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "kilka wyrazów",
+      "każdy wyraz"
+    ],
+    "delay": [
+      "natychmiast",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Wyłączone",
+        "about": {
+          "browser": "nic nie jest zastępowane; sam pytaj o wyraz",
+          "phone": "nic nie jest zastępowane; przycisk nadal odpowiada na wyraz"
+        }
+      },
+      "meaning": {
+        "label": "Tłumaczenie",
+        "about": {
+          "browser": "wyraz zastąpiony jego znaczeniem",
+          "phone": "wyraz zastąpiony jego znaczeniem"
+        }
+      },
+      "sound": {
+        "label": "Wymowa",
+        "about": {
+          "browser": "wyraz zastąpiony tym, jak się go wymawia",
+          "phone": "wyraz zastąpiony tym, jak się go wymawia"
+        }
+      },
+      "both": {
+        "label": "Oba",
+        "about": {
+          "browser": "znaczenie i to, jak je powiedzieć",
+          "phone": "znaczenie i to, jak je powiedzieć"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "dźwięki, które odróżniają wyrazy",
+          "phone": "dźwięki, które odróżniają wyrazy"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "każdy szczegół wymowy, jak aspiracja i ubezdźwięcznienie",
+          "phone": "każdy szczegół wymowy, jak aspiracja i ubezdźwięcznienie"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "System",
+        "about": {
+          "browser": "jak ustawione jest to urządzenie",
+          "phone": "jak ustawione jest to urządzenie"
+        }
+      },
+      "light": {
+        "label": "Jasny",
+        "about": {
+          "browser": "zawsze jasna strona palety",
+          "phone": "zawsze jasna strona palety"
+        }
+      },
+      "dark": {
+        "label": "Ciemny",
+        "about": {
+          "browser": "zawsze ciemna strona palety",
+          "phone": "zawsze ciemna strona palety"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Lewa",
+        "about": {
+          "phone": "dla telefonu trzymanego w lewej ręce"
+        }
+      },
+      "free": {
+        "label": "Dowolnie",
+        "about": {
+          "phone": "zostaje tam, gdzie go odłożysz"
+        }
+      },
+      "right": {
+        "label": "Prawa",
+        "about": {
+          "phone": "dla telefonu trzymanego w prawej ręce"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Jak mówiący przedstawia to, co mówi czasownik: jako fakt, jako coś życzonego, wątpliwego lub wyobrażonego, albo jako rozkaz."
+      },
+      "tense": {
+        "plain": "Kiedy to się dzieje: przed teraz, teraz albo później."
+      },
+      "aspect": {
+        "plain": "Jak widziana jest czynność: jako jedna skończona całość, albo jako coś, co trwa, powtarza się lub jest nieskończone."
+      },
+      "person": {
+        "plain": "Kto to robi: mówiący (ja, my), ten, do kogo się mówi (ty), albo ktoś inny (on, ona, oni)."
+      },
+      "number": {
+        "plain": "Ile: jeden, albo więcej niż jeden."
+      },
+      "case": {
+        "plain": "Forma, jaką przyjmuje rzeczownik, by pokazać swoją rolę w zdaniu: kto coś robi, komu, czyje, gdzie."
+      },
+      "gender": {
+        "plain": "Klasa, do której należy każdy rzeczownik, a słowa wokół niego zmieniają się, by do niej pasować. Ma niewiele wspólnego z płcią: w niemieckim das Mädchen, dziewczyna, jest nijakie."
+      },
+      "definiteness": {
+        "plain": "Czy chodzi o konkretną, znaną rzecz (dom) czy o dowolną (jakiś dom)."
+      },
+      "declension": {
+        "plain": "Zestaw końcówek, jakie przyjmuje rzeczownik lub przymiotnik, zależnie od słów wokół."
+      },
+      "degree": {
+        "plain": "Jak mocno przymiotnik się sprawdza: duży, większy, największy."
+      },
+      "voice": {
+        "plain": "Czy podmiot wykonuje czynność (ona napisała to), czy czynność jest wykonywana na nim (zostało to napisane)."
+      },
+      "register": {
+        "plain": "Jak formalne jest słowo: dla obcych i pism urzędowych, czy dla przyjaciół."
+      },
+      "nonfinite": {
+        "plain": "Forma czasownika, która nazywa czynność, nie mówiąc, kto ją wykonuje ani kiedy: iść, idąc, pójść."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Jeden z czegoś.",
+        "example": "jeden *pies*"
+      },
+      "plural": {
+        "plain": "Więcej niż jeden.",
+        "example": "dwa *psy*"
+      },
+      "dual": {
+        "plain": "Dokładnie dwa, w językach, które mają osobną formę tylko dla par.",
+        "example": "słoweński *hiši*, dwa domy"
+      },
+      "first-person": {
+        "plain": "Mówiący: ja, albo my.",
+        "example": "*ja* idę, *my* idziemy"
+      },
+      "second-person": {
+        "plain": "Ten, do kogo się mówi: ty.",
+        "example": "*ty* idziesz"
+      },
+      "third-person": {
+        "plain": "Ktokolwiek inny: on, ona, ono, oni.",
+        "example": "*ona* idzie"
+      },
+      "nominative": {
+        "plain": "Ten, kto wykonuje czynność: podmiot.",
+        "example": "*Pies* gryzie człowieka."
+      },
+      "accusative": {
+        "plain": "Ten, na kim wykonywana jest czynność: dopełnienie bliższe.",
+        "example": "Pies gryzie *człowieka*."
+      },
+      "dative": {
+        "plain": "Ten, dla kogo coś się daje lub robi: komu.",
+        "example": "Daję *człowiekowi* książkę."
+      },
+      "genitive": {
+        "plain": "Czyje to jest albo czego jest częścią: czyje, czego.",
+        "example": "książka *człowieka*, dach *domu*"
+      },
+      "vocative": {
+        "plain": "Forma używana, by kogoś zawołać albo zwrócić się do niego wprost.",
+        "example": "*Anno!*, wołanie do Anny"
+      },
+      "instrumental": {
+        "plain": "To, czym albo przez co coś jest robione.",
+        "example": "rosyjski писать *ручкой*, pisać *piórem*"
+      },
+      "locative": {
+        "plain": "Gdzie coś jest.",
+        "example": "mieszkam w *domu*, mieszkam w domu"
+      },
+      "prepositional": {
+        "plain": "Forma, jaką rzeczownik przyjmuje po niektórych przyimkach, zwykle o miejscu albo o czymś.",
+        "example": "rosyjski о *книге*, o *książce*"
+      },
+      "ablative": {
+        "plain": "Oddalenie od czegoś, wyjście z czegoś albo sposób, przez który coś się dzieje.",
+        "example": "łacina *Romā*, z Rzymu"
+      },
+      "partitive": {
+        "plain": "Część czegoś albo czynność niedoprowadzona do końca.",
+        "example": "fiński *vettä*, trochę wody"
+      },
+      "inessive": {
+        "plain": "Wewnątrz czegoś.",
+        "example": "fiński *talossa*, w domu"
+      },
+      "elative": {
+        "plain": "Z wnętrza czegoś.",
+        "example": "fiński *talosta*, z domu"
+      },
+      "illative": {
+        "plain": "Do wnętrza czegoś.",
+        "example": "fiński *taloon*, do domu"
+      },
+      "adessive": {
+        "plain": "Na czymś albo przy czymś.",
+        "example": "fiński *pöydällä*, na stole"
+      },
+      "allative": {
+        "plain": "Na coś albo do czegoś.",
+        "example": "fiński *pöydälle*, na stół"
+      },
+      "essive": {
+        "plain": "Bycie czymś przez pewien czas, jako rola albo stan.",
+        "example": "fiński *lapsena*, jako dziecko"
+      },
+      "translative": {
+        "plain": "Stawanie się czymś.",
+        "example": "fiński *opettajaksi*, (zostać) nauczycielem"
+      },
+      "abessive": {
+        "plain": "Bez czegoś.",
+        "example": "fiński *rahatta*, bez pieniędzy"
+      },
+      "comitative": {
+        "plain": "Razem z czymś.",
+        "example": "estoński *sõbraga*, z przyjacielem"
+      },
+      "masculine": {
+        "plain": "Jedna z klas, do których należą rzeczowniki; słowa wokół rzeczownika męskiego biorą jego końcówki. Zależy głównie od słowa, nie od płci.",
+        "example": "hiszpański *el libro*, książka"
+      },
+      "feminine": {
+        "plain": "Jedna z klas, do których należą rzeczowniki; słowa wokół rzeczownika żeńskiego biorą jego końcówki. Zależy głównie od słowa, nie od płci.",
+        "example": "hiszpański *la mesa*, stół"
+      },
+      "neuter": {
+        "plain": "Klasa rzeczowników, które nie są ani męskie, ani żeńskie.",
+        "example": "niemiecki *das Haus*, dom"
+      },
+      "animate": {
+        "plain": "Mówi się tak o rzeczowniku oznaczającym osobę albo zwierzę; niektóre języki nadają im własne końcówki.",
+        "example": "rosyjski вижу *брата*, widzę brata"
+      },
+      "inanimate": {
+        "plain": "Mówi się tak o rzeczowniku oznaczającym rzecz, nie osobę ani zwierzę.",
+        "example": "rosyjski вижу *стол*, widzę stół"
+      },
+      "definite": {
+        "plain": "Konkretna rzecz, o której wiedzą obaj rozmówcy: ten, ta, to.",
+        "example": "szwedzki *huset*, dom"
+      },
+      "indefinite": {
+        "plain": "Dowolna, jeszcze nieznana: jakiś, jakaś.",
+        "example": "szwedzki *ett hus*, jakiś dom"
+      },
+      "present": {
+        "plain": "Teraz, albo zawsze, albo jako nawyk.",
+        "example": "ona *idzie*"
+      },
+      "past": {
+        "plain": "Przed teraz.",
+        "example": "ona *szła*"
+      },
+      "future": {
+        "plain": "Później niż teraz.",
+        "example": "ona *będzie szła*"
+      },
+      "non-past": {
+        "plain": "Teraz albo później: jedna forma dla obu.",
+        "example": "japoński *食べる*, jeść albo będzie jeść"
+      },
+      "preterite": {
+        "plain": "Coś, co się wydarzyło i skończyło w pewnym punkcie przeszłości.",
+        "example": "hiszpański ayer *comí*, wczoraj *zjadłem*"
+      },
+      "imperfect": {
+        "plain": "Przeszłość widziana od środka: coś, co trwało, powtarzało się albo się zwykło robić.",
+        "example": "hiszpański *comía*, *jadłem*, *jadałem zwykle*"
+      },
+      "perfect": {
+        "plain": "Zrobione przed teraz i wciąż ważne teraz.",
+        "example": "ona *już zjadła*"
+      },
+      "pluperfect": {
+        "plain": "Zrobione przed innym momentem w przeszłości.",
+        "example": "ona *była już zjadła*"
+      },
+      "aorist": {
+        "plain": "Czynność z przeszłości opowiedziana jako jedno dokończone zdarzenie, tak jak opowiada ją historia.",
+        "example": "bułgarski *писах*, napisałem"
+      },
+      "indicative": {
+        "plain": "Zwykła forma do mówienia, jak jest: fakty i pytania o nie.",
+        "example": "Ona *jest* tutaj."
+      },
+      "subjunctive": {
+        "plain": "Forma dla tego, czego się pragnie, chce, w co się wątpi, czego się obawia albo co tylko sobie wyobrażamy, a nie mówi się jako prawdę. Zwykle występuje po słowach takich jak że, jeśli, żeby.",
+        "example": "Chciałbym, żeby on *był* tutaj. Ważne, żeby ona *była* punktualnie. Hiszpański quiero que *vengas*, chcę, żebyś przyszedł."
+      },
+      "subjunctive-i": {
+        "plain": "Niemiecka forma do przytaczania tego, co powiedział ktoś inny, bez ręczenia za to.",
+        "example": "Er sagt, er *sei* krank. Mówi, że jest chory."
+      },
+      "subjunctive-ii": {
+        "plain": "Niemiecka forma dla tego, co nierzeczywiste: życzeń, uprzejmych próśb i gdyby.",
+        "example": "Wenn ich Zeit *hätte*... Gdybym miał czas..."
+      },
+      "conditional": {
+        "plain": "To, co by się stało, gdyby coś innego było prawdą.",
+        "example": "ona *by poszła*"
+      },
+      "conditional-i": {
+        "plain": "To, co by się stało, gdyby coś innego było prawdą.",
+        "example": "niemiecki ich *würde gehen*, poszedłbym"
+      },
+      "conditional-ii": {
+        "plain": "To, co by się stało, gdyby coś innego było prawdą w przeszłości.",
+        "example": "niemiecki ich *wäre gegangen*, byłbym poszedł"
+      },
+      "future-i": {
+        "plain": "Później niż teraz.",
+        "example": "niemiecki ich *werde gehen*, pójdę"
+      },
+      "future-ii": {
+        "plain": "Zrobione do pewnego późniejszego momentu.",
+        "example": "niemiecki ich *werde gegangen sein*, będę poszedł"
+      },
+      "imperative": {
+        "plain": "Forma, by komuś powiedzieć, żeby coś zrobił.",
+        "example": "*Idź!*"
+      },
+      "jussive": {
+        "plain": "Forma, by pozwolić albo powiedzieć, żeby ktoś, często nie słuchacz, coś zrobił.",
+        "example": "arabski *لِيَكْتُبْ*, niech napisze"
+      },
+      "optative": {
+        "plain": "Forma wyrażająca życzenie: oby tak było."
+      },
+      "potential": {
+        "plain": "Forma dla tego, co jest prawdopodobnie albo możliwie tak.",
+        "example": "fiński *lienee*, (on) chyba jest"
+      },
+      "active": {
+        "plain": "Podmiot wykonuje czynność.",
+        "example": "Ona *napisała* list."
+      },
+      "passive": {
+        "plain": "Na podmiocie wykonywana jest czynność.",
+        "example": "List *został napisany*."
+      },
+      "infinitive": {
+        "plain": "Sam czasownik, bez wykonawcy: forma, pod którą słownik go podaje.",
+        "example": "*pisać*, hiszpański *caminar*"
+      },
+      "participle": {
+        "plain": "Forma czasownika, która działa jak przymiotnik i z pomocniczym tworzy inne czasy.",
+        "example": "*złamany* kubek, *napisany* list"
+      },
+      "gerund": {
+        "plain": "Forma czasownika dla czynności w toku albo używana jak rzeczownik.",
+        "example": "hiszpański está *caminando*, idzie (w tej chwili)"
+      },
+      "imperfective": {
+        "plain": "Czynność widziana jako trwająca, powtarzana lub nieskończona.",
+        "example": "rosyjski я *читал*, czytałem"
+      },
+      "perfective": {
+        "plain": "Czynność widziana jako jedna skończona całość.",
+        "example": "rosyjski я *прочитал*, przeczytałem (do końca)"
+      },
+      "progressive": {
+        "plain": "Trwa w tym momencie.",
+        "example": "ona *właśnie idzie*"
+      },
+      "positive": {
+        "plain": "Przymiotnik taki, jaki jest, bez porównywania.",
+        "example": "*duży*"
+      },
+      "comparative": {
+        "plain": "Więcej niż coś innego.",
+        "example": "*większy*, *piękniejszy*"
+      },
+      "superlative": {
+        "plain": "Więcej niż wszystko inne.",
+        "example": "*największy*, *najpiękniejszy*"
+      },
+      "strong": {
+        "plain": "Końcówki przymiotnika, których niemiecki używa, gdy żaden przedimek przed nim nie pokazuje przypadku.",
+        "example": "*kaltes* Wasser, zimna woda"
+      },
+      "weak": {
+        "plain": "Końcówki przymiotnika, których niemiecki używa po der, die, das, gdzie przedimek już pokazuje przypadek.",
+        "example": "das *kalte* Wasser, ta zimna woda"
+      },
+      "mixed": {
+        "plain": "Końcówki przymiotnika, których niemiecki używa po ein, kein, mein.",
+        "example": "ein *kaltes* Bier, zimne piwo"
+      },
+      "formal": {
+        "plain": "Dla obcych, starszych osób i pism urzędowych.",
+        "example": "niemiecki *Sie*, hiszpański *usted*"
+      },
+      "informal": {
+        "plain": "Dla przyjaciół, rodziny i dzieci.",
+        "example": "niemiecki *du*, hiszpański *tú*"
+      },
+      "polite": {
+        "plain": "Grzeczny sposób powiedzenia tego.",
+        "example": "japoński *食べます*, (ja) jem, powiedziane grzecznie"
+      }
+    }
+  }
+}

@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Engedélyezés",
+    "allow-overlay": "Fedőréteg engedélyezése",
+    "already-in": "Ez az oldal már %s nyelvű",
+    "broad-mark": "/ /",
+    "change": "Módosítás",
+    "choose-language": "Válassz nyelvet",
+    "close": "Bezárás",
+    "detail-explained": "A tág átírás a szavakat megkülönböztető hangokat mutatja; a szűk minden részletet, ahogyan az adott akcentus beszélője kiejti.",
+    "every-app": "Minden alkalmazás",
+    "get": "Letöltés",
+    "loading-dictionary": "Szótár betöltése…",
+    "master-idle": "Semmi nem jelenik meg az alkalmazásaid fölött",
+    "master-off": "Szüneteltetve",
+    "master-on": "Olvasás",
+    "master-unready": "Engedélyezd a képernyő olvasását és a megjelenítést az alkalmazások fölött",
+    "master-working": "Válaszol az alkalmazásaidban lévő szavakra",
+    "narrow-mark": "[ ]",
+    "no-source": "a szavak jelentéséhez; a kiejtés beépített",
+    "no-translation": "Nincs fordítás",
+    "nothing-found": "Nincs ilyen nevű",
+    "nothing-yet": "még semmi",
+    "open-accessibility": "Kisegítő lehetőségek",
+    "preview": "Előnézet",
+    "preview-about": "egy oldal szavai, amelyekre ez válaszolna",
+    "remove": "Eltávolítás",
+    "rest-edge": "%s oldalon",
+    "rest-loose": "Ahol hagyod",
+    "no-direction": "Nem érhető el fordítás innen: %s. A szavak helyette a kiejtésüket mutatják.",
+    "service-stopped": "A Phonetix olvashatja a képernyőt, de nem fut. Kapcsold ki, majd be a telefon kisegítő lehetőségeinél.",
+    "rest-put": "Húzd a gombot fel vagy le, vagy át a másik oldalra.",
+    "say-into": "Válasz ezen a nyelven",
+    "say-no-language": "Előbb válaszd ki, milyen nyelvre olvasson.",
+    "say-no-model": "A szótárszervereden nincs fordítási modell ehhez az irányhoz.",
+    "say-nothing": "nincs rá szó",
+    "say-placeholder": "amit mondani szeretnél",
+    "search": "Keresés",
+    "speak": "Mondd ki",
+    "touch-off": "Minden érintés az alatta lévő alkalmazáshoz jut, így a görgetés változatlan.",
+    "touch-on": "A szón kezdődő húzás nem görgeti az oldalt.",
+    "turn": "Válasz fordított irányban",
+    "use-this": "Ezt használom",
+    "say-fetching": "%s letöltése",
+    "back": "Vissza",
+    "apps-chosen": "%s kiválasztva",
+    "packs-held": "%s letöltve",
+    "other-languages": "Más nyelvek",
+    "words-count": "%s szó",
+    "packs-here": "Ezen a telefonon",
+    "packs-more": "Elérhető",
+    "every-word": "minden szó",
+    "one-in": "minden %s.",
+    "open-panel": "Megnyitás",
+    "site-off": "itt mindig ki",
+    "site-following": "a főkapcsolót követi (most: %s)",
+    "on": "be",
+    "off": "ki",
+    "set-key": "Billentyű beállítása",
+    "simple": "Egyszerű",
+    "detailed": "Részletes",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "semmi más",
+    "learn-none": "egyik sem",
+    "add-language": "Nyelv hozzáadása",
+    "learn-language": "Nyelv tanulása",
+    "make-main": "Legyen ez a nyelvem",
+    "main-language": "Saját nyelvem",
+    "learning-it": "tanulom: %s",
+    "dictate": "Diktálás",
+    "pos-adj": "melléknév",
+    "pos-adv": "határozószó",
+    "pos-article": "névelő",
+    "pos-character": "írásjegy",
+    "pos-conj": "kötőszó",
+    "pos-contraction": "összevonás",
+    "pos-det": "determináns",
+    "pos-intj": "indulatszó",
+    "pos-name": "név",
+    "pos-noun": "főnév",
+    "pos-num": "számnév",
+    "pos-particle": "partikula",
+    "pos-phrase": "kifejezés",
+    "pos-postp": "névutó",
+    "pos-prefix": "előtag",
+    "pos-prep": "elöljárószó",
+    "pos-prep_phrase": "elöljárós szerkezet",
+    "pos-pron": "névmás",
+    "pos-proverb": "közmondás",
+    "pos-punct": "írásjel",
+    "pos-suffix": "toldalék",
+    "pos-symbol": "szimbólum",
+    "pos-verb": "ige",
+    "pos-abbrev": "rövidítés",
+    "pos-affix": "toldalék",
+    "pos-infix": "középrag",
+    "pos-interfix": "kötőelem",
+    "pos-circumfix": "körülrag",
+    "pos-root": "szótő",
+    "pos-combining_form": "összetételi elem",
+    "pos-classifier": "osztályozó",
+    "pos-counter": "számlálószó",
+    "pos-letter": "betű",
+    "no-dictionary-for": "Még nincs szótár ehhez: %s",
+    "unknown-language": "Nem biztos, milyen nyelvű",
+    "looking-up": "Keresés",
+    "nothing-for": "Nincs találat: %s",
+    "read-as": "Olvasva: %s",
+    "read-as-accent": "Olvasva: %s, %s akcentus",
+    "translated-by": "Fordította: %s",
+    "translated-by-machine": "Gépi fordítás",
+    "guess": "tipp",
+    "in-english": "angolul",
+    "getting-dictionary": "%s szótár letöltése",
+    "getting-dictionaries": "%s szótár letöltése",
+    "say-word": "%s kimondása",
+    "hear-word": "%s meghallgatása",
+    "play-sound": "%s hangfelvételének lejátszása",
+    "read-about-sound": "olvass erről: %s",
+    "see-mouth": "nézd meg, hogyan mondja egy száj: %s",
+    "mouth-making": "hogyan képzi a száj: %s",
+    "tap-sound": "Koppints egy hangra, hogy meghalld",
+    "what-this-is": "Mi ez",
+    "for-example": "Például: %s",
+    "fetching": "letöltés",
+    "done": "kész",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s szem. %s",
+    "person-number-long": "%s személy, %s",
+    "person-long": "%s személy",
+    "person-and-number": "személy és szám",
+    "form-of": "alakja:",
+    "term-mood": "mód",
+    "term-tense": "idő",
+    "term-aspect": "aspektus",
+    "term-person": "személy",
+    "term-number": "szám",
+    "term-case": "eset",
+    "term-gender": "nem",
+    "term-definiteness": "határozottság",
+    "term-declension": "ragozási típus",
+    "term-degree": "fok",
+    "term-voice": "igenem",
+    "term-register": "stílusréteg",
+    "term-nonfinite": "igenév",
+    "term-singular": "egyes szám",
+    "term-plural": "többes szám",
+    "term-dual": "kettes szám",
+    "term-first-person": "első személy",
+    "term-second-person": "második személy",
+    "term-third-person": "harmadik személy",
+    "term-nominative": "alanyeset",
+    "term-accusative": "tárgyeset",
+    "term-dative": "részes eset",
+    "term-genitive": "birtokos eset",
+    "term-vocative": "megszólító eset",
+    "term-instrumental": "eszközhatározói eset",
+    "term-locative": "helyhatározói eset",
+    "term-prepositional": "elöljárós eset",
+    "term-ablative": "ablativus",
+    "term-partitive": "partitivus",
+    "term-inessive": "inessivus",
+    "term-elative": "elativus",
+    "term-illative": "illativus",
+    "term-adessive": "adessivus",
+    "term-allative": "allativus",
+    "term-essive": "essivus",
+    "term-translative": "translativus",
+    "term-abessive": "abessivus",
+    "term-comitative": "comitativus",
+    "term-masculine": "hímnem",
+    "term-feminine": "nőnem",
+    "term-neuter": "semlegesnem",
+    "term-animate": "élő",
+    "term-inanimate": "élettelen",
+    "term-definite": "határozott",
+    "term-indefinite": "határozatlan",
+    "term-present": "jelen idő",
+    "term-past": "múlt idő",
+    "term-future": "jövő idő",
+    "term-non-past": "nem múlt idő",
+    "term-preterite": "befejezett múlt",
+    "term-imperfect": "folyamatos múlt",
+    "term-perfect": "perfektum",
+    "term-pluperfect": "régmúlt",
+    "term-aorist": "aoristos",
+    "term-indicative": "kijelentő mód",
+    "term-subjunctive": "kötőmód",
+    "term-subjunctive-i": "Konjunktiv I",
+    "term-subjunctive-ii": "Konjunktiv II",
+    "term-conditional": "feltételes mód",
+    "term-conditional-i": "feltételes mód I",
+    "term-conditional-ii": "feltételes mód II",
+    "term-future-i": "jövő idő I",
+    "term-future-ii": "jövő idő II",
+    "term-imperative": "felszólító mód",
+    "term-jussive": "jussivus",
+    "term-optative": "óhajtó mód",
+    "term-potential": "lehetőségi mód",
+    "term-active": "cselekvő",
+    "term-passive": "szenvedő",
+    "term-infinitive": "főnévi igenév",
+    "term-participle": "melléknévi igenév",
+    "term-gerund": "gerundium",
+    "term-imperfective": "folyamatos szemlélet",
+    "term-perfective": "befejezett szemlélet",
+    "term-progressive": "folyamatos",
+    "term-positive": "alapfok",
+    "term-comparative": "középfok",
+    "term-superlative": "felsőfok",
+    "term-strong": "erős",
+    "term-weak": "gyenge",
+    "term-mixed": "vegyes",
+    "term-formal": "magázó",
+    "term-informal": "tegező",
+    "term-polite": "udvarias",
+    "accent-British": "brit",
+    "accent-American": "amerikai",
+    "accent-Scottish": "skót",
+    "accent-Australian": "ausztrál",
+    "accent-Caribbean": "karibi",
+    "accent-Canadian": "kanadai",
+    "accent-Spain": "Spanyolország",
+    "accent-Latin America": "Latin-Amerika",
+    "accent-Rioplatense": "rioplatensi",
+    "accent-Germany": "Németország",
+    "accent-Switzerland": "Svájc",
+    "accent-Austria": "Ausztria",
+    "accent-Portugal": "Portugália",
+    "accent-Brazil": "Brazília",
+    "accent-France": "Franciaország",
+    "accent-Canada": "Kanada",
+    "accent-Northern": "északi",
+    "accent-Central": "közép"
+  },
+  "rows": {
+    "on": {
+      "name": "Amit olvasok, jelölje",
+      "about": ""
+    },
+    "site": {
+      "name": "Ezen az oldalon",
+      "about": ""
+    },
+    "layer": {
+      "name": "Fedőréteg",
+      "about": ""
+    },
+    "density": {
+      "name": "Milyen gyakran",
+      "about": ""
+    },
+    "target": {
+      "name": "Nyelv",
+      "about": ""
+    },
+    "source": {
+      "name": "Az oldal nyelve",
+      "about": ""
+    },
+    "accent": {
+      "name": "Akcentus",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Szótárak",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Átírás",
+      "about": ""
+    },
+    "stress": {
+      "name": "Hangsúlyjelek",
+      "about": ""
+    },
+    "delay": {
+      "name": "Várakozás a kártya előtt",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animációk",
+      "about": ""
+    },
+    "say": {
+      "name": "Hogy mondják…",
+      "about": ""
+    },
+    "setup": {
+      "name": "Beállítás",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Képernyő olvasása",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Megjelenítés az alkalmazások fölött",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Kiejtés",
+      "about": ""
+    },
+    "translate": {
+      "name": "Fordítás",
+      "about": ""
+    },
+    "side": {
+      "name": "Melyik oldalon",
+      "about": ""
+    },
+    "rest": {
+      "name": "A gomb helye",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Rögzített magasság",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Húzd egy szó fölé",
+      "about": "Kimondja, ami fölött áthalad, és az alatta lévő oldal továbbra is görgethető"
+    },
+    "lens-sweep": {
+      "name": "Tartsd lenyomva, majd húzd végig",
+      "about": "Minden szó, ami fölött áthalad, bekerül a sorba, és a kártya az egész tagmondatra válaszol"
+    },
+    "lens-hold": {
+      "name": "Tartsd lenyomva",
+      "about": "Megnyitja a beállításokat"
+    },
+    "lens-tap": {
+      "name": "Koppints rá",
+      "about": "Kérdezd meg, hogy mondják valamit, olvasás közben; koppints újra a kártya elrakásához"
+    },
+    "touch": {
+      "name": "Szó megérintése",
+      "about": ""
+    },
+    "where": {
+      "name": "Hol",
+      "about": ""
+    },
+    "apps": {
+      "name": "Alkalmazások",
+      "about": ""
+    },
+    "start": {
+      "name": "Mielőtt egy szóra válaszolhat",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Koppints egy szóra a kártyájáért",
+      "about": ""
+    },
+    "meanings": {
+      "name": "A szavak jelentéséhez",
+      "about": ""
+    },
+    "theme": {
+      "name": "Téma",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Speciális",
+      "about": ""
+    },
+    "dark": {
+      "name": "Világos vagy sötét",
+      "about": ""
+    },
+    "mine": {
+      "name": "Saját nyelvem",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Oldalsó gomb",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Nyelvek",
+      "about": ""
+    },
+    "position": {
+      "name": "Elhelyezés",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Megjelenés",
+      "about": ""
+    },
+    "accents": {
+      "name": "Akcentusok",
+      "about": ""
+    },
+    "inline": {
+      "name": "Szavak cseréje",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Cserélt szavak",
+      "about": ""
+    },
+    "translator": {
+      "name": "Fordító",
+      "about": ""
+    },
+    "into": {
+      "name": "Fordítás erre",
+      "about": ""
+    },
+    "known": {
+      "name": "Soha ne fordítsa",
+      "about": ""
+    },
+    "learn": {
+      "name": "Tanulás",
+      "about": ""
+    },
+    "cards": {
+      "name": "Keresés",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Kiejtés",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Jelentés",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Nyelvtan",
+      "about": ""
+    },
+    "show-others": {
+      "name": "További jelentések",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Minden szó leírása",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Sajátom",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "néhány szó",
+      "minden szó"
+    ],
+    "delay": [
+      "azonnal",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Ki",
+        "about": {
+          "browser": "semmi sincs lecserélve; egy szóra magad kérdezhetsz rá",
+          "phone": "semmi sincs lecserélve; a gomb továbbra is válaszol egy szóra"
+        }
+      },
+      "meaning": {
+        "label": "Fordítás",
+        "about": {
+          "browser": "a szó helyett a jelentése",
+          "phone": "a szó helyett a jelentése"
+        }
+      },
+      "sound": {
+        "label": "Kiejtés",
+        "about": {
+          "browser": "a szó helyett a kiejtése",
+          "phone": "a szó helyett a kiejtése"
+        }
+      },
+      "both": {
+        "label": "Mindkettő",
+        "about": {
+          "browser": "a jelentése, és hogyan kell azt kimondani",
+          "phone": "a jelentése, és hogyan kell azt kimondani"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "a szavakat megkülönböztető hangok",
+          "phone": "a szavakat megkülönböztető hangok"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "a kiejtés minden részlete, például a hehezet és a zöngétlenedés",
+          "phone": "a kiejtés minden részlete, például a hehezet és a zöngétlenedés"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Rendszer",
+        "about": {
+          "browser": "ahogy az eszköz be van állítva",
+          "phone": "ahogy az eszköz be van állítva"
+        }
+      },
+      "light": {
+        "label": "Világos",
+        "about": {
+          "browser": "mindig a paletta világos oldala",
+          "phone": "mindig a paletta világos oldala"
+        }
+      },
+      "dark": {
+        "label": "Sötét",
+        "about": {
+          "browser": "mindig a paletta sötét oldala",
+          "phone": "mindig a paletta sötét oldala"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Bal",
+        "about": {
+          "phone": "bal kézben tartott telefonhoz"
+        }
+      },
+      "free": {
+        "label": "Bárhol",
+        "about": {
+          "phone": "ott marad, ahová leteszed"
+        }
+      },
+      "right": {
+        "label": "Jobb",
+        "about": {
+          "phone": "jobb kézben tartott telefonhoz"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Hogyan érti a beszélő, amit az ige mond: tényként, kívánságként, kétségként, elképzelésként vagy parancsként."
+      },
+      "tense": {
+        "plain": "Mikor történik: korábban, most vagy később."
+      },
+      "aspect": {
+        "plain": "Hogyan látjuk a cselekvést: egyetlen lezárt egészként, vagy folyamatban lévőként, ismétlődőként, befejezetlenként."
+      },
+      "person": {
+        "plain": "Ki csinálja: a beszélő (én, mi), akihez beszél (te, ti), vagy valaki más (ő, ők)."
+      },
+      "number": {
+        "plain": "Hány: egy, vagy több mint egy."
+      },
+      "case": {
+        "plain": "Az az alak, amellyel a főnév a mondatbeli szerepét mutatja: ki csinál valamit, kinek, kié, hol."
+      },
+      "gender": {
+        "plain": "Egy osztály, amelybe minden főnév tartozik, és amelyhez a körülötte lévő szavak igazodnak. A biológiai nemhez kevés köze van: a német das Mädchen, a lány, semlegesnemű."
+      },
+      "definiteness": {
+        "plain": "Hogy egy bizonyos, ismert dologról van-e szó (a ház), vagy bármelyikről (egy ház)."
+      },
+      "declension": {
+        "plain": "A végződések készlete, amelyet egy főnév vagy melléknév felvesz, a körülötte lévő szavaktól függően."
+      },
+      "degree": {
+        "plain": "Milyen mértékben áll fenn a melléknév: nagy, nagyobb, a legnagyobb."
+      },
+      "voice": {
+        "plain": "Hogy az alany végzi-e a cselekvést (ő írta), vagy elszenvedi (meg lett írva)."
+      },
+      "register": {
+        "plain": "Mennyire hivatalos a szó: idegeneknek és hivatalos írásban, vagy barátoknak."
+      },
+      "nonfinite": {
+        "plain": "Igealak, amely megnevezi a cselekvést, de nem mondja meg, ki végzi és mikor: menni, menő, ment."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Valamiből egy.",
+        "example": "egy *kutya*"
+      },
+      "plural": {
+        "plain": "Több mint egy.",
+        "example": "a *kutyák*"
+      },
+      "dual": {
+        "plain": "Pontosan kettő, azokban a nyelvekben, amelyeknek külön alakjuk van a párokra.",
+        "example": "szlovén *hiši*, két ház"
+      },
+      "first-person": {
+        "plain": "A beszélő: én vagy mi.",
+        "example": "*én* sétálok, *mi* sétálunk"
+      },
+      "second-person": {
+        "plain": "Akihez beszélünk: te vagy ti.",
+        "example": "*te* sétálsz"
+      },
+      "third-person": {
+        "plain": "Bárki más: ő, ők.",
+        "example": "*ő sétál*"
+      },
+      "nominative": {
+        "plain": "Aki a cselekvést végzi: az alany.",
+        "example": "*A kutya* megharapja az embert."
+      },
+      "accusative": {
+        "plain": "Akin vagy amin a cselekvés történik: a tárgy.",
+        "example": "A kutya megharapja *az embert*."
+      },
+      "dative": {
+        "plain": "Akinek valamit adnak vagy tesznek: kinek.",
+        "example": "Adok egy könyvet *az embernek*."
+      },
+      "genitive": {
+        "plain": "Kié, vagy minek a része.",
+        "example": "*az ember* könyve, *a ház* teteje"
+      },
+      "vocative": {
+        "plain": "Az az alak, amellyel valakit közvetlenül megszólítunk.",
+        "example": "lengyel *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Amivel vagy ami által valamit csinálnak.",
+        "example": "*tollal* írni"
+      },
+      "locative": {
+        "plain": "Hol van valami.",
+        "example": "lengyel w *domu*, *a házban*"
+      },
+      "prepositional": {
+        "plain": "Az az alak, amelyet a főnév bizonyos elöljárószók után vesz fel, többnyire hol vagy miről.",
+        "example": "orosz о *книге*, *a könyvről*"
+      },
+      "ablative": {
+        "plain": "Valamitől el, valamiből ki, vagy valami által.",
+        "example": "latin *Romā*, Rómából"
+      },
+      "partitive": {
+        "plain": "Valaminek egy része, vagy végig nem vitt cselekvés.",
+        "example": "finn *vettä*, egy kis víz"
+      },
+      "inessive": {
+        "plain": "Valaminek a belsejében.",
+        "example": "*házban*"
+      },
+      "elative": {
+        "plain": "Valaminek a belsejéből ki.",
+        "example": "*házból*"
+      },
+      "illative": {
+        "plain": "Valaminek a belsejébe.",
+        "example": "*házba*"
+      },
+      "adessive": {
+        "plain": "Valamin vagy valaminél.",
+        "example": "finn *pöydällä*, az asztalon"
+      },
+      "allative": {
+        "plain": "Valamire vagy valamihez.",
+        "example": "finn *pöydälle*, az asztalra"
+      },
+      "essive": {
+        "plain": "Egy ideig valamiként lenni, szerepként vagy állapotként.",
+        "example": "*gyerekként*"
+      },
+      "translative": {
+        "plain": "Valamivé válni.",
+        "example": "*tanárrá* (válni)"
+      },
+      "abessive": {
+        "plain": "Valami nélkül.",
+        "example": "*pénztelen*"
+      },
+      "comitative": {
+        "plain": "Valamivel együtt.",
+        "example": "*barátostul*"
+      },
+      "masculine": {
+        "plain": "A főnevek egyik osztálya; a hímnemű főnév körüli szavak az ő végződéseit veszik fel. Inkább a szón múlik, nem a biológiai nemen.",
+        "example": "spanyol *el libro*, a könyv"
+      },
+      "feminine": {
+        "plain": "A főnevek egyik osztálya; a nőnemű főnév körüli szavak az ő végződéseit veszik fel. Inkább a szón múlik, nem a biológiai nemen.",
+        "example": "spanyol *la mesa*, az asztal"
+      },
+      "neuter": {
+        "plain": "Azoknak a főneveknek az osztálya, amelyek se nem hímneműek, se nem nőneműek.",
+        "example": "német *das Haus*, a ház"
+      },
+      "animate": {
+        "plain": "Személyt vagy állatot jelölő főnév, amelynek egyes nyelvek saját végződéseket adnak.",
+        "example": "orosz вижу *брата*, látom a bátyámat"
+      },
+      "inanimate": {
+        "plain": "Tárgyat jelölő főnév, nem személyt vagy állatot.",
+        "example": "orosz вижу *стол*, látom az asztalt"
+      },
+      "definite": {
+        "plain": "Egy bizonyos dolog, amelyet mindkét fél ismer: a, az.",
+        "example": "svéd *huset*, a ház"
+      },
+      "indefinite": {
+        "plain": "Bármelyik, még nem ismert: egy.",
+        "example": "svéd *ett hus*, egy ház"
+      },
+      "present": {
+        "plain": "Most, mindig, vagy szokásként.",
+        "example": "ő *sétál*"
+      },
+      "past": {
+        "plain": "Korábban, mint most.",
+        "example": "ő *sétált*"
+      },
+      "future": {
+        "plain": "Később, mint most.",
+        "example": "ő *sétálni fog*"
+      },
+      "non-past": {
+        "plain": "Most vagy később: egy alak mindkettőre.",
+        "example": "japán *食べる*, eszik vagy enni fog"
+      },
+      "preterite": {
+        "plain": "Valami, ami a múlt egy pontján megtörtént és lezárult.",
+        "example": "spanyol ayer *comí*, tegnap *ettem*"
+      },
+      "imperfect": {
+        "plain": "A múlt belülről nézve: valami, ami folyamatban volt, ismétlődött, vagy szokás volt.",
+        "example": "spanyol *comía*, *éppen ettem*, *enni szoktam*"
+      },
+      "perfect": {
+        "plain": "Most előtt történt, és most is számít.",
+        "example": "angol she *has walked*, már sétált"
+      },
+      "pluperfect": {
+        "plain": "Egy másik múltbeli pillanat előtt történt.",
+        "example": "angol she *had walked*, már sétált volt"
+      },
+      "aorist": {
+        "plain": "Múltbeli cselekvés egyetlen lezárt eseményként elmondva, ahogy egy történet meséli.",
+        "example": "bolgár *писах*, írtam"
+      },
+      "indicative": {
+        "plain": "A szokásos alak annak kimondására, ami van: tények és a rájuk vonatkozó kérdések.",
+        "example": "Ő itt *van*."
+      },
+      "subjunctive": {
+        "plain": "Az alak arra, amit kívánnak, akarnak, kétségbe vonnak, amitől félnek vagy amit csak elképzelnek, nem pedig állítanak. Többnyire olyan szavak után áll, mint hogy, ha, azért hogy.",
+        "example": "Azt akarom, hogy *gyere*. Spanyol quiero que *vengas*, azt akarom, hogy gyere."
+      },
+      "subjunctive-i": {
+        "plain": "A német alak arra, ha valaki más szavait adjuk vissza, anélkül, hogy kezeskednénk érte.",
+        "example": "Er sagt, er *sei* krank. Azt mondja, beteg."
+      },
+      "subjunctive-ii": {
+        "plain": "A német alak arra, ami nem valós: kívánságok, udvarias kérések, és a „bárcsak”.",
+        "example": "Wenn ich Zeit *hätte*... Ha lenne időm..."
+      },
+      "conditional": {
+        "plain": "Mi történne, ha valami más így lenne.",
+        "example": "ő *sétálna*"
+      },
+      "conditional-i": {
+        "plain": "Mi történne, ha valami más így lenne.",
+        "example": "német ich *würde gehen*, mennék"
+      },
+      "conditional-ii": {
+        "plain": "Mi történt volna, ha valami más így lett volna.",
+        "example": "német ich *wäre gegangen*, mentem volna"
+      },
+      "future-i": {
+        "plain": "Később, mint most.",
+        "example": "német ich *werde gehen*, menni fogok"
+      },
+      "future-ii": {
+        "plain": "Egy későbbi időpontig befejeződik.",
+        "example": "német ich *werde gegangen sein*, addigra elmentem"
+      },
+      "imperative": {
+        "plain": "Az alak, amellyel valakit felszólítunk, hogy tegyen valamit.",
+        "example": "*Sétálj!*"
+      },
+      "jussive": {
+        "plain": "Alak arra, hogy valakinek, gyakran nem a hallgatónak, megengedjük vagy megmondjuk, hogy tegyen valamit.",
+        "example": "arab *لِيَكْتُبْ*, hadd írjon"
+      },
+      "optative": {
+        "plain": "Kívánságot kifejező alak: bárcsak így lenne."
+      },
+      "potential": {
+        "plain": "Alak arra, ami valószínűleg vagy talán így van.",
+        "example": "finn *lienee*, (ő) valószínűleg van"
+      },
+      "active": {
+        "plain": "Az alany végzi a cselekvést.",
+        "example": "Ő *írta* a levelet."
+      },
+      "passive": {
+        "plain": "Az alany elszenvedi a cselekvést.",
+        "example": "angol The letter *was written*, a levél meg lett írva."
+      },
+      "infinitive": {
+        "plain": "Maga az ige, még senki sem végzi: az alak, amelyen a szótár felsorolja.",
+        "example": "*sétálni*, spanyol *caminar*"
+      },
+      "participle": {
+        "plain": "Igealak, amely melléknévként működik, és segédigével más igeidőket képez.",
+        "example": "egy *eltört* csésze, a *sétáló* nő"
+      },
+      "gerund": {
+        "plain": "Igealak folyamatban lévő cselekvésre, vagy főnévként használva.",
+        "example": "*sétálva*, spanyol está *caminando*"
+      },
+      "imperfective": {
+        "plain": "A cselekvés folyamatban lévőként, ismétlődőként vagy befejezetlenként.",
+        "example": "orosz я *читал*, olvastam (éppen)"
+      },
+      "perfective": {
+        "plain": "A cselekvés egyetlen lezárt egészként.",
+        "example": "orosz я *прочитал*, elolvastam"
+      },
+      "progressive": {
+        "plain": "Éppen abban a pillanatban zajlik.",
+        "example": "angol she *is walking*, éppen sétál"
+      },
+      "positive": {
+        "plain": "A melléknév úgy, ahogy van, összehasonlítás nélkül.",
+        "example": "*nagy*"
+      },
+      "comparative": {
+        "plain": "Jobban, mint valami más.",
+        "example": "*nagyobb*, *szebb*"
+      },
+      "superlative": {
+        "plain": "Jobban, mint bármi más.",
+        "example": "a *legnagyobb*, a *legszebb*"
+      },
+      "strong": {
+        "plain": "A német melléknévvégződések, amikor előtte nincs névelő, amely mutatná az esetet.",
+        "example": "*kaltes* Wasser, hideg víz"
+      },
+      "weak": {
+        "plain": "A német melléknévvégződések der, die, das után, ahol már a névelő mutatja az esetet.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "A német melléknévvégződések ein, kein, mein után.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Idegeneknek, idősebbeknek és hivatalos írásban.",
+        "example": "*Ön*, *maga*"
+      },
+      "informal": {
+        "plain": "Barátoknak, családnak és gyerekeknek.",
+        "example": "*te*, *ti*"
+      },
+      "polite": {
+        "plain": "Valaminek a tiszteletteljes kimondása.",
+        "example": "japán *食べます*, (én) eszem, udvariasan"
+      }
+    }
+  }
+}

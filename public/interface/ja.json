@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "許可",
+    "allow-overlay": "重ねて表示を許可",
+    "already-in": "このページはすでに%sです",
+    "broad-mark": "/ /",
+    "change": "変更",
+    "choose-language": "言語を選択",
+    "close": "閉じる",
+    "detail-explained": "簡易表記は単語を区別する音だけを示し、精密表記はそのアクセントの話者が実際に発音する細部まですべて示します。",
+    "every-app": "すべてのアプリ",
+    "get": "入手",
+    "loading-dictionary": "辞書を読み込み中…",
+    "master-idle": "アプリの上には何も表示されていません",
+    "master-off": "一時停止中",
+    "master-on": "読み取り中",
+    "master-unready": "画面の読み取りとアプリ上への表示を許可してください",
+    "master-working": "アプリ内の単語に答えています",
+    "narrow-mark": "[ ]",
+    "no-source": "単語の意味を調べるため（発音は組み込み済み）",
+    "no-translation": "翻訳しない",
+    "nothing-found": "その名前のものはありません",
+    "nothing-yet": "まだありません",
+    "open-accessibility": "ユーザー補助を開く",
+    "preview": "プレビュー",
+    "preview-about": "この設定でページ上のどの単語に答えるか",
+    "remove": "削除",
+    "rest-edge": "%s端",
+    "rest-loose": "置いた場所",
+    "no-direction": "%sからの翻訳を取得できませんでした。代わりに単語の発音を表示します。",
+    "service-stopped": "Phonetixは画面の読み取りを許可されていますが、動作していません。端末のユーザー補助設定で一度オフにしてから、もう一度オンにしてください。",
+    "rest-put": "ボタンを上下にドラッグするか、反対側へ移動してください。",
+    "say-into": "答える言語",
+    "say-no-language": "先に読む言語を選んでください。",
+    "say-no-model": "辞書ホストにこの方向の翻訳モデルがありません。",
+    "say-nothing": "該当する語がありません",
+    "say-placeholder": "言いたいこと",
+    "search": "検索",
+    "speak": "言う",
+    "touch-off": "タッチはすべて下のアプリに渡るので、スクロールはそのまま使えます。",
+    "touch-on": "単語の上から始めたスワイプでは、ページはスクロールしません。",
+    "turn": "逆方向に答える",
+    "use-this": "これを使う",
+    "say-fetching": "%sを取得中",
+    "back": "戻る",
+    "apps-chosen": "%s個選択中",
+    "packs-held": "%s件ダウンロード済み",
+    "other-languages": "その他の言語",
+    "words-count": "%s語",
+    "packs-here": "この端末",
+    "packs-more": "利用可能",
+    "every-word": "すべての単語",
+    "one-in": "%s語に1語",
+    "open-panel": "開く",
+    "site-off": "このサイトでは常にオフ",
+    "site-following": "メインスイッチに従う（現在: %s）",
+    "on": "オン",
+    "off": "オフ",
+    "set-key": "キーを設定",
+    "simple": "簡易",
+    "detailed": "詳細",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "ほかにはなし",
+    "learn-none": "なし",
+    "add-language": "言語を追加",
+    "learn-language": "言語を学ぶ",
+    "make-main": "自分の言語にする",
+    "main-language": "自分の言語",
+    "learning-it": "%sを学習中",
+    "dictate": "音声入力",
+    "pos-adj": "形容詞",
+    "pos-adv": "副詞",
+    "pos-article": "冠詞",
+    "pos-character": "文字",
+    "pos-conj": "接続詞",
+    "pos-contraction": "縮約形",
+    "pos-det": "限定詞",
+    "pos-intj": "間投詞",
+    "pos-name": "固有名詞",
+    "pos-noun": "名詞",
+    "pos-num": "数詞",
+    "pos-particle": "助詞",
+    "pos-phrase": "句",
+    "pos-postp": "後置詞",
+    "pos-prefix": "接頭辞",
+    "pos-prep": "前置詞",
+    "pos-prep_phrase": "前置詞句",
+    "pos-pron": "代名詞",
+    "pos-proverb": "ことわざ",
+    "pos-punct": "句読点",
+    "pos-suffix": "接尾辞",
+    "pos-symbol": "記号",
+    "pos-verb": "動詞",
+    "pos-abbrev": "略語",
+    "pos-affix": "接辞",
+    "pos-infix": "接中辞",
+    "pos-interfix": "中間接辞",
+    "pos-circumfix": "接周辞",
+    "pos-root": "語根",
+    "pos-combining_form": "連結形",
+    "pos-classifier": "類別詞",
+    "pos-counter": "助数詞",
+    "pos-letter": "字母",
+    "no-dictionary-for": "%sの辞書はまだありません",
+    "unknown-language": "何語か判別できません",
+    "looking-up": "検索中",
+    "nothing-for": "%sは見つかりませんでした",
+    "read-as": "%sとして読む",
+    "read-as-accent": "%sとして読む（%sアクセント）",
+    "translated-by": "翻訳: %s",
+    "translated-by-machine": "機械翻訳",
+    "guess": "推定",
+    "in-english": "英語で",
+    "getting-dictionary": "%sの辞書を取得中",
+    "getting-dictionaries": "%sの辞書を取得中",
+    "say-word": "%sを発音",
+    "hear-word": "%sを聞く",
+    "play-sound": "%sの録音を再生",
+    "read-about-sound": "%sについて読む",
+    "see-mouth": "%sを発音する口の動きを見る",
+    "mouth-making": "%sの口の作り方",
+    "tap-sound": "音をタップすると聞けます",
+    "what-this-is": "これは何？",
+    "for-example": "例: %s",
+    "fetching": "取得中",
+    "done": "完了",
+    "ordinal-first-person": "1人称",
+    "ordinal-second-person": "2人称",
+    "ordinal-third-person": "3人称",
+    "person-number": "%s%s",
+    "person-number-long": "%s%s",
+    "person-long": "%s",
+    "person-and-number": "人称と数",
+    "form-of": "原形",
+    "term-mood": "法",
+    "term-tense": "時制",
+    "term-aspect": "相",
+    "term-person": "人称",
+    "term-number": "数",
+    "term-case": "格",
+    "term-gender": "性",
+    "term-definiteness": "定性",
+    "term-declension": "曲用",
+    "term-degree": "級",
+    "term-voice": "態",
+    "term-register": "文体",
+    "term-nonfinite": "非定形",
+    "term-singular": "単数",
+    "term-plural": "複数",
+    "term-dual": "双数",
+    "term-first-person": "一人称",
+    "term-second-person": "二人称",
+    "term-third-person": "三人称",
+    "term-nominative": "主格",
+    "term-accusative": "対格",
+    "term-dative": "与格",
+    "term-genitive": "属格",
+    "term-vocative": "呼格",
+    "term-instrumental": "具格",
+    "term-locative": "処格",
+    "term-prepositional": "前置格",
+    "term-ablative": "奪格",
+    "term-partitive": "分格",
+    "term-inessive": "内格",
+    "term-elative": "出格",
+    "term-illative": "入格",
+    "term-adessive": "接格",
+    "term-allative": "向格",
+    "term-essive": "様格",
+    "term-translative": "変格",
+    "term-abessive": "欠格",
+    "term-comitative": "共格",
+    "term-masculine": "男性",
+    "term-feminine": "女性",
+    "term-neuter": "中性",
+    "term-animate": "有生",
+    "term-inanimate": "無生",
+    "term-definite": "定",
+    "term-indefinite": "不定",
+    "term-present": "現在",
+    "term-past": "過去",
+    "term-future": "未来",
+    "term-non-past": "非過去",
+    "term-preterite": "点過去",
+    "term-imperfect": "未完了過去",
+    "term-perfect": "完了",
+    "term-pluperfect": "過去完了",
+    "term-aorist": "アオリスト",
+    "term-indicative": "直説法",
+    "term-subjunctive": "接続法",
+    "term-subjunctive-i": "接続法第1式",
+    "term-subjunctive-ii": "接続法第2式",
+    "term-conditional": "条件法",
+    "term-conditional-i": "条件法第1式",
+    "term-conditional-ii": "条件法第2式",
+    "term-future-i": "未来第1式",
+    "term-future-ii": "未来第2式",
+    "term-imperative": "命令法",
+    "term-jussive": "要求法",
+    "term-optative": "願望法",
+    "term-potential": "可能法",
+    "term-active": "能動態",
+    "term-passive": "受動態",
+    "term-infinitive": "不定詞",
+    "term-participle": "分詞",
+    "term-gerund": "動名詞",
+    "term-imperfective": "不完了体",
+    "term-perfective": "完了体",
+    "term-progressive": "進行形",
+    "term-positive": "原級",
+    "term-comparative": "比較級",
+    "term-superlative": "最上級",
+    "term-strong": "強変化",
+    "term-weak": "弱変化",
+    "term-mixed": "混合変化",
+    "term-formal": "敬称",
+    "term-informal": "親称",
+    "term-polite": "丁寧",
+    "accent-British": "イギリス",
+    "accent-American": "アメリカ",
+    "accent-Scottish": "スコットランド",
+    "accent-Australian": "オーストラリア",
+    "accent-Caribbean": "カリブ",
+    "accent-Canadian": "カナダ",
+    "accent-Spain": "スペイン",
+    "accent-Latin America": "ラテンアメリカ",
+    "accent-Rioplatense": "リオプラテンセ",
+    "accent-Germany": "ドイツ",
+    "accent-Switzerland": "スイス",
+    "accent-Austria": "オーストリア",
+    "accent-Portugal": "ポルトガル",
+    "accent-Brazil": "ブラジル",
+    "accent-France": "フランス",
+    "accent-Canada": "カナダ",
+    "accent-Northern": "北部",
+    "accent-Central": "中部"
+  },
+  "rows": {
+    "on": {
+      "name": "読んでいる文章に注釈を付ける",
+      "about": ""
+    },
+    "site": {
+      "name": "このサイトでは",
+      "about": ""
+    },
+    "layer": {
+      "name": "重ねて表示",
+      "about": ""
+    },
+    "density": {
+      "name": "頻度",
+      "about": ""
+    },
+    "target": {
+      "name": "言語",
+      "about": ""
+    },
+    "source": {
+      "name": "このページの言語",
+      "about": ""
+    },
+    "accent": {
+      "name": "アクセント",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "辞書",
+      "about": ""
+    },
+    "narrow": {
+      "name": "発音表記",
+      "about": ""
+    },
+    "stress": {
+      "name": "強勢記号",
+      "about": ""
+    },
+    "delay": {
+      "name": "カードが開くまでの待ち時間",
+      "about": ""
+    },
+    "animations": {
+      "name": "アニメーション",
+      "about": ""
+    },
+    "say": {
+      "name": "○○は何と言う？",
+      "about": ""
+    },
+    "setup": {
+      "name": "セットアップ",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "画面の読み取り",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "他のアプリの上に表示",
+      "about": ""
+    },
+    "ipa": {
+      "name": "発音",
+      "about": ""
+    },
+    "translate": {
+      "name": "翻訳",
+      "about": ""
+    },
+    "side": {
+      "name": "表示する側",
+      "about": ""
+    },
+    "rest": {
+      "name": "ボタンの位置",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "高さを固定",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "単語の上へドラッグ",
+      "about": "通過した単語を表示し、その下のページはそのままスクロールできます"
+    },
+    "lens-sweep": {
+      "name": "長押ししてなぞる",
+      "about": "なぞった単語がすべてつながり、カードが節全体に答えます"
+    },
+    "lens-hold": {
+      "name": "長押し",
+      "about": "設定を開きます"
+    },
+    "lens-tap": {
+      "name": "タップ",
+      "about": "読んでいる途中で、何かを何と言うか尋ねられます。もう一度タップするとカードを閉じます"
+    },
+    "touch": {
+      "name": "単語に触れたとき",
+      "about": ""
+    },
+    "where": {
+      "name": "場所",
+      "about": ""
+    },
+    "apps": {
+      "name": "アプリ",
+      "about": ""
+    },
+    "start": {
+      "name": "単語に答える前に",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "単語をタップしてカードを表示",
+      "about": ""
+    },
+    "meanings": {
+      "name": "単語の意味を見るには",
+      "about": ""
+    },
+    "theme": {
+      "name": "テーマ",
+      "about": ""
+    },
+    "advanced": {
+      "name": "詳細設定",
+      "about": ""
+    },
+    "dark": {
+      "name": "ライトまたはダーク",
+      "about": ""
+    },
+    "mine": {
+      "name": "自分の言語",
+      "about": ""
+    },
+    "group-button": {
+      "name": "サイドボタン",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "言語",
+      "about": ""
+    },
+    "position": {
+      "name": "位置",
+      "about": ""
+    },
+    "appearance": {
+      "name": "外観",
+      "about": ""
+    },
+    "accents": {
+      "name": "アクセント",
+      "about": ""
+    },
+    "inline": {
+      "name": "単語を置き換える",
+      "about": ""
+    },
+    "replaced": {
+      "name": "置き換える単語",
+      "about": ""
+    },
+    "translator": {
+      "name": "翻訳ツール",
+      "about": ""
+    },
+    "into": {
+      "name": "翻訳先",
+      "about": ""
+    },
+    "known": {
+      "name": "翻訳しない言語",
+      "about": ""
+    },
+    "learn": {
+      "name": "学習中",
+      "about": ""
+    },
+    "cards": {
+      "name": "調べる",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "発音",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "意味",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "文法",
+      "about": ""
+    },
+    "show-others": {
+      "name": "ほかの意味",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "すべての単語を説明",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "自分用",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "少しの単語",
+      "すべての単語"
+    ],
+    "delay": [
+      "すぐ",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "オフ",
+        "about": {
+          "browser": "何も置き換えません。単語は自分で調べます",
+          "phone": "何も置き換えません。ボタンでは引き続き単語に答えます"
+        }
+      },
+      "meaning": {
+        "label": "翻訳",
+        "about": {
+          "browser": "単語をその意味に置き換えます",
+          "phone": "単語をその意味に置き換えます"
+        }
+      },
+      "sound": {
+        "label": "発音",
+        "about": {
+          "browser": "単語をその発音に置き換えます",
+          "phone": "単語をその発音に置き換えます"
+        }
+      },
+      "both": {
+        "label": "両方",
+        "about": {
+          "browser": "意味と、その言い方",
+          "phone": "意味と、その言い方"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "単語を区別する音",
+          "phone": "単語を区別する音"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "帯気や無声化など、発音の細部まですべて",
+          "phone": "帯気や無声化など、発音の細部まですべて"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "システム",
+        "about": {
+          "browser": "この端末の設定に合わせる",
+          "phone": "この端末の設定に合わせる"
+        }
+      },
+      "light": {
+        "label": "ライト",
+        "about": {
+          "browser": "常に明るい配色",
+          "phone": "常に明るい配色"
+        }
+      },
+      "dark": {
+        "label": "ダーク",
+        "about": {
+          "browser": "常に暗い配色",
+          "phone": "常に暗い配色"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "左",
+        "about": {
+          "phone": "左手で持つとき"
+        }
+      },
+      "free": {
+        "label": "どこでも",
+        "about": {
+          "phone": "置いた場所にとどまります"
+        }
+      },
+      "right": {
+        "label": "右",
+        "about": {
+          "phone": "右手で持つとき"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "話し手が動詞の内容をどう捉えているか：事実として、願い・疑い・想像として、あるいは命令として。"
+      },
+      "tense": {
+        "plain": "いつ起こるか：今より前、今、それとも後か。"
+      },
+      "aspect": {
+        "plain": "動作をどう見るか：ひとまとまりの終わったこととして、あるいは続いている・繰り返される・まだ終わっていないこととして。"
+      },
+      "person": {
+        "plain": "誰がするか：話し手（私、私たち）、聞き手（あなた）、それ以外の人（彼、彼女、彼ら）。"
+      },
+      "number": {
+        "plain": "いくつか：一つか、二つ以上か。"
+      },
+      "case": {
+        "plain": "文の中での役割を示す名詞の形：誰がするのか、誰に、誰のものか、どこでか。"
+      },
+      "gender": {
+        "plain": "すべての名詞が属するグループで、周りの語はそれに合わせて形を変えます。性別とはあまり関係がありません。ドイツ語の das Mädchen（少女）は中性です。"
+      },
+      "definiteness": {
+        "plain": "特定の、知られているもの（英語 the house）か、どれでもよいもの（a house）か。"
+      },
+      "declension": {
+        "plain": "名詞や形容詞がとる語尾の組み合わせで、周りの語によって決まります。"
+      },
+      "degree": {
+        "plain": "形容詞の程度：大きい、より大きい、いちばん大きい。"
+      },
+      "voice": {
+        "plain": "主語が動作をする（彼女がそれを書いた）のか、動作を受ける（それが書かれた）のか。"
+      },
+      "register": {
+        "plain": "語がどれだけ改まっているか：知らない人や公式な文章向けか、友人向けか。"
+      },
+      "nonfinite": {
+        "plain": "誰がいつするかを示さず、動作だけを表す動詞の形：英語 to go、going、gone。"
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "一つのもの。",
+        "example": "英語 one *dog*、1匹の犬"
+      },
+      "plural": {
+        "plain": "二つ以上。",
+        "example": "英語 two *dogs*、2匹の犬"
+      },
+      "dual": {
+        "plain": "ちょうど二つ。二つ組のための形を持つ言語にあります。",
+        "example": "スロベニア語 *hiši*、2軒の家"
+      },
+      "first-person": {
+        "plain": "話し手：私、または私たち。",
+        "example": "*私*が歩く、*私たち*が歩く"
+      },
+      "second-person": {
+        "plain": "話しかけられている相手：あなた。",
+        "example": "*あなた*が歩く"
+      },
+      "third-person": {
+        "plain": "それ以外の誰か：彼、彼女、それ、彼ら。",
+        "example": "*彼女が歩く*"
+      },
+      "nominative": {
+        "plain": "動作をする側：主語。",
+        "example": "*犬が*男をかむ。"
+      },
+      "accusative": {
+        "plain": "動作を受ける側：直接目的語。",
+        "example": "犬が*男を*かむ。"
+      },
+      "dative": {
+        "plain": "何かを与えられる、または何かをしてもらう相手：誰に。",
+        "example": "*男に*本をあげる。"
+      },
+      "genitive": {
+        "plain": "誰のものか、何の一部か：「の」。",
+        "example": "*男の*本、*家の*屋根"
+      },
+      "vocative": {
+        "plain": "人に直接呼びかけるときの形。",
+        "example": "ポーランド語 *Anno!*、アンナ！"
+      },
+      "instrumental": {
+        "plain": "何を使って、または何によってするか。",
+        "example": "ロシア語 писать *ручкой*、*ペンで*書く"
+      },
+      "locative": {
+        "plain": "どこにあるか。",
+        "example": "ポーランド語 w *domu*、*家の中で*"
+      },
+      "prepositional": {
+        "plain": "特定の前置詞の後で名詞がとる形。主に場所や話題を表します。",
+        "example": "ロシア語 о *книге*、*本*について"
+      },
+      "ablative": {
+        "plain": "何かから離れて、何かの中から、または何かによって。",
+        "example": "ラテン語 *Romā*、ローマから"
+      },
+      "partitive": {
+        "plain": "何かの一部、または最後までされない動作。",
+        "example": "フィンランド語 *vettä*、いくらかの水"
+      },
+      "inessive": {
+        "plain": "何かの中に。",
+        "example": "フィンランド語 *talossa*、家の中で"
+      },
+      "elative": {
+        "plain": "何かの中から外へ。",
+        "example": "フィンランド語 *talosta*、家の中から"
+      },
+      "illative": {
+        "plain": "何かの中へ。",
+        "example": "フィンランド語 *taloon*、家の中へ"
+      },
+      "adessive": {
+        "plain": "何かの上に、またはそばに。",
+        "example": "フィンランド語 *pöydällä*、テーブルの上に"
+      },
+      "allative": {
+        "plain": "何かの上へ、または何かへ。",
+        "example": "フィンランド語 *pöydälle*、テーブルの上へ"
+      },
+      "essive": {
+        "plain": "役割や状態として、しばらくの間何かであること。",
+        "example": "フィンランド語 *lapsena*、子どもの頃に"
+      },
+      "translative": {
+        "plain": "何かになること。",
+        "example": "フィンランド語 *opettajaksi*、教師に（なる）"
+      },
+      "abessive": {
+        "plain": "何かなしで。",
+        "example": "フィンランド語 *rahatta*、お金なしで"
+      },
+      "comitative": {
+        "plain": "何かと一緒に。",
+        "example": "エストニア語 *sõbraga*、友達と"
+      },
+      "masculine": {
+        "plain": "名詞が分かれるグループの一つで、男性名詞の周りの語はそれに合った語尾をとります。性別よりも、主に語そのものの問題です。",
+        "example": "スペイン語 *el libro*、本"
+      },
+      "feminine": {
+        "plain": "名詞が分かれるグループの一つで、女性名詞の周りの語はそれに合った語尾をとります。性別よりも、主に語そのものの問題です。",
+        "example": "スペイン語 *la mesa*、テーブル"
+      },
+      "neuter": {
+        "plain": "男性でも女性でもない名詞のグループ。",
+        "example": "ドイツ語 *das Haus*、家"
+      },
+      "animate": {
+        "plain": "人や動物を表す名詞のこと。言語によっては専用の語尾があります。",
+        "example": "ロシア語 вижу *брата*、兄弟が見える"
+      },
+      "inanimate": {
+        "plain": "人や動物ではなく、物を表す名詞のこと。",
+        "example": "ロシア語 вижу *стол*、テーブルが見える"
+      },
+      "definite": {
+        "plain": "話し手と聞き手の両方が知っている特定のもの：英語の the。",
+        "example": "スウェーデン語 *huset*、その家"
+      },
+      "indefinite": {
+        "plain": "まだ知られていない、どれか一つ：英語の a。",
+        "example": "スウェーデン語 *ett hus*、ある家"
+      },
+      "present": {
+        "plain": "今、いつも、または習慣として。",
+        "example": "彼女は*歩く*"
+      },
+      "past": {
+        "plain": "今より前。",
+        "example": "彼女は*歩いた*"
+      },
+      "future": {
+        "plain": "今より後。",
+        "example": "英語 she *will walk*、彼女は歩くだろう"
+      },
+      "non-past": {
+        "plain": "今またはこれから：両方を一つの形で表します。",
+        "example": "*食べる*、今食べる、またはこれから食べる"
+      },
+      "preterite": {
+        "plain": "過去のある時点で起こり、終わったこと。",
+        "example": "スペイン語 ayer *comí*、昨日*食べた*"
+      },
+      "imperfect": {
+        "plain": "内側から見た過去：続いていたこと、繰り返し起きていたこと、以前はそうだったこと。",
+        "example": "スペイン語 *comía*、*食べていた*、よく*食べたものだ*"
+      },
+      "perfect": {
+        "plain": "今より前にされ、今もまだ関わりがあること。",
+        "example": "英語 she *has walked*、彼女は歩いてきた"
+      },
+      "pluperfect": {
+        "plain": "過去の別の時点より前にされたこと。",
+        "example": "英語 she *had walked*、彼女は（その時までに）歩いていた"
+      },
+      "aorist": {
+        "plain": "物語のように、一つの完結した出来事として語られる過去の動作。",
+        "example": "ブルガリア語 *писах*、私は書いた"
+      },
+      "indicative": {
+        "plain": "事実や、それについての質問など、そうであることを言うふつうの形。",
+        "example": "彼女はここに*いる*。"
+      },
+      "subjunctive": {
+        "plain": "そうだと言い切るのではなく、願い・望み・疑い・恐れ・想像を表す形。多くは英語の that、if、so that のような語の後に来ます。",
+        "example": "英語 I wish he *were* here、彼がここにいればいいのに。It is vital that she *be* on time、彼女が時間どおりに来ることが大切だ。スペイン語 quiero que *vengas*、来てほしい。"
+      },
+      "subjunctive-i": {
+        "plain": "ドイツ語で、他人が言ったことを、正しいと保証せずに伝える形。",
+        "example": "Er sagt, er *sei* krank. 彼は病気だと言っている。"
+      },
+      "subjunctive-ii": {
+        "plain": "ドイツ語で、現実ではないことを表す形：願い、丁寧な依頼、「もし〜なら」。",
+        "example": "Wenn ich Zeit *hätte*... もし時間があれば…"
+      },
+      "conditional": {
+        "plain": "別のことがそうであれば、起こるであろうこと。",
+        "example": "英語 she *would walk*、彼女なら歩くだろう"
+      },
+      "conditional-i": {
+        "plain": "別のことがそうであれば、起こるであろうこと。",
+        "example": "ドイツ語 ich *würde gehen*、私なら行くだろう"
+      },
+      "conditional-ii": {
+        "plain": "別のことがそうであったなら、起こったであろうこと。",
+        "example": "ドイツ語 ich *wäre gegangen*、私なら行っただろう"
+      },
+      "future-i": {
+        "plain": "今より後。",
+        "example": "ドイツ語 ich *werde gehen*、私は行くつもりだ"
+      },
+      "future-ii": {
+        "plain": "将来のある時点までに済んでいること。",
+        "example": "ドイツ語 ich *werde gegangen sein*、私は行ってしまっているだろう"
+      },
+      "imperative": {
+        "plain": "人に何かをするように言うときの形。",
+        "example": "*歩け！*"
+      },
+      "jussive": {
+        "plain": "人に（多くは聞き手以外に）何かをさせる、またはするように言う形。",
+        "example": "アラビア語 *لِيَكْتُبْ*、彼に書かせよ"
+      },
+      "optative": {
+        "plain": "願いを表す形：そうでありますように。"
+      },
+      "potential": {
+        "plain": "たぶん、あるいはもしかするとそうであることを表す形。",
+        "example": "フィンランド語 *lienee*、（彼は）おそらく〜だろう"
+      },
+      "active": {
+        "plain": "主語が動作をする。",
+        "example": "彼女が手紙を*書いた*。"
+      },
+      "passive": {
+        "plain": "主語が動作を受ける。",
+        "example": "手紙が*書かれた*。"
+      },
+      "infinitive": {
+        "plain": "まだ誰もしていない、動詞そのもの：辞書に載っている形。",
+        "example": "英語 *to walk*、スペイン語 *caminar*"
+      },
+      "participle": {
+        "plain": "形容詞のように働く動詞の形で、助動詞と組み合わせると別の時制を作ります。",
+        "example": "英語 a *broken* cup、割れたカップ、she has *walked*、彼女は歩いてきた"
+      },
+      "gerund": {
+        "plain": "続いている動作を表す、または名詞のように使われる動詞の形。",
+        "example": "英語 she is *walking*、スペイン語 está *caminando*、彼女は歩いている"
+      },
+      "imperfective": {
+        "plain": "続いている、繰り返される、またはまだ終わっていない動作。",
+        "example": "ロシア語 я *читал*、私は読んでいた"
+      },
+      "perfective": {
+        "plain": "ひとまとまりの終わった動作。",
+        "example": "ロシア語 я *прочитал*、私は（最後まで）読んだ"
+      },
+      "progressive": {
+        "plain": "その時点で続いていること。",
+        "example": "彼女は*歩いている*"
+      },
+      "positive": {
+        "plain": "比べずに、そのままの形容詞。",
+        "example": "*大きい*"
+      },
+      "comparative": {
+        "plain": "ほかの何かより上。",
+        "example": "英語 *bigger*、*more beautiful*、より大きい、より美しい"
+      },
+      "superlative": {
+        "plain": "ほかのすべてより上。",
+        "example": "英語 the *biggest*、the *most beautiful*、いちばん大きい、いちばん美しい"
+      },
+      "strong": {
+        "plain": "前に格を示す冠詞がないときに、ドイツ語が使う形容詞の語尾。",
+        "example": "*kaltes* Wasser、冷たい水"
+      },
+      "weak": {
+        "plain": "der、die、das の後で、冠詞がすでに格を示しているときに、ドイツ語が使う形容詞の語尾。",
+        "example": "das *kalte* Wasser、その冷たい水"
+      },
+      "mixed": {
+        "plain": "ein、kein、mein の後で、ドイツ語が使う形容詞の語尾。",
+        "example": "ein *kaltes* Bier、冷たいビール1杯"
+      },
+      "formal": {
+        "plain": "知らない人、目上の人、公式な文章に使う。",
+        "example": "ドイツ語 *Sie*、スペイン語 *usted*"
+      },
+      "informal": {
+        "plain": "友人、家族、子どもに使う。",
+        "example": "ドイツ語 *du*、スペイン語 *tú*"
+      },
+      "polite": {
+        "plain": "相手を敬う丁寧な言い方。",
+        "example": "*食べます*、「食べる」の丁寧な言い方"
+      }
+    }
+  }
+}

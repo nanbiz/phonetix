@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "허용",
+    "allow-overlay": "오버레이 허용",
+    "already-in": "이 페이지는 이미 %s입니다",
+    "broad-mark": "/ /",
+    "change": "변경",
+    "choose-language": "언어 선택",
+    "close": "닫기",
+    "detail-explained": "간략 표기는 단어를 서로 구별하는 소리이고, 정밀 표기는 그 억양의 화자가 실제로 말하는 모든 세부 발음입니다.",
+    "every-app": "모든 앱",
+    "get": "받기",
+    "loading-dictionary": "사전 불러오는 중…",
+    "master-idle": "앱 위에 아무것도 표시되지 않음",
+    "master-off": "일시중지됨",
+    "master-on": "읽는 중",
+    "master-unready": "화면 읽기와 앱 위에 표시를 허용하세요",
+    "master-working": "앱 속 단어에 답하는 중",
+    "narrow-mark": "[ ]",
+    "no-source": "단어의 뜻을 보려면 필요합니다. 발음은 기본으로 들어 있습니다",
+    "no-translation": "번역 안 함",
+    "nothing-found": "그런 이름이 없습니다",
+    "nothing-yet": "아직 없음",
+    "open-accessibility": "접근성 열기",
+    "preview": "미리보기",
+    "preview-about": "이 설정으로 페이지에서 답할 단어",
+    "remove": "삭제",
+    "rest-edge": "%s 가장자리",
+    "rest-loose": "놓아둔 자리에",
+    "no-direction": "%s에서 번역할 수 없습니다. 대신 단어의 발음을 보여 줍니다.",
+    "service-stopped": "Phonetix에 화면 읽기 권한은 있지만 실행 중이 아닙니다. 휴대전화의 접근성 설정에서 껐다가 다시 켜세요.",
+    "rest-put": "버튼을 위아래로 끌거나 반대쪽으로 옮기세요.",
+    "say-into": "답할 언어",
+    "say-no-language": "먼저 읽을 언어를 선택하세요.",
+    "say-no-model": "사전 호스트에 이 방향의 번역 모델이 없습니다.",
+    "say-nothing": "해당하는 단어 없음",
+    "say-placeholder": "하고 싶은 말",
+    "search": "검색",
+    "speak": "말하기",
+    "touch-off": "모든 터치가 아래의 앱으로 전달되어 스크롤은 그대로입니다.",
+    "touch-on": "단어에서 시작한 스와이프는 페이지를 스크롤하지 않습니다.",
+    "turn": "반대 방향으로 답하기",
+    "use-this": "이것 사용",
+    "say-fetching": "%s 가져오는 중",
+    "back": "뒤로",
+    "apps-chosen": "%s개 선택됨",
+    "packs-held": "%s개 다운로드됨",
+    "other-languages": "다른 언어",
+    "words-count": "단어 %s개",
+    "packs-here": "이 휴대전화에 있음",
+    "packs-more": "받을 수 있음",
+    "every-word": "모든 단어",
+    "one-in": "%s개 중 하나",
+    "open-panel": "열기",
+    "site-off": "여기서는 항상 꺼짐",
+    "site-following": "기본 스위치를 따름 (현재: %s)",
+    "on": "켜짐",
+    "off": "꺼짐",
+    "set-key": "키 설정",
+    "simple": "간단히",
+    "detailed": "자세히",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "그 밖에 없음",
+    "learn-none": "없음",
+    "add-language": "언어 추가",
+    "learn-language": "언어 배우기",
+    "make-main": "내 언어로 설정",
+    "main-language": "내 언어",
+    "learning-it": "%s 배우는 중",
+    "dictate": "받아쓰기",
+    "pos-adj": "형용사",
+    "pos-adv": "부사",
+    "pos-article": "관사",
+    "pos-character": "글자",
+    "pos-conj": "접속사",
+    "pos-contraction": "축약형",
+    "pos-det": "한정사",
+    "pos-intj": "감탄사",
+    "pos-name": "고유명사",
+    "pos-noun": "명사",
+    "pos-num": "수사",
+    "pos-particle": "조사",
+    "pos-phrase": "구",
+    "pos-postp": "후치사",
+    "pos-prefix": "접두사",
+    "pos-prep": "전치사",
+    "pos-prep_phrase": "전치사구",
+    "pos-pron": "대명사",
+    "pos-proverb": "속담",
+    "pos-punct": "문장 부호",
+    "pos-suffix": "접미사",
+    "pos-symbol": "기호",
+    "pos-verb": "동사",
+    "pos-abbrev": "약어",
+    "pos-affix": "접사",
+    "pos-infix": "접요사",
+    "pos-interfix": "연결 접사",
+    "pos-circumfix": "양면 접사",
+    "pos-root": "어근",
+    "pos-combining_form": "결합형",
+    "pos-classifier": "분류사",
+    "pos-counter": "단위 명사",
+    "pos-letter": "문자",
+    "no-dictionary-for": "아직 %s 사전이 없습니다",
+    "unknown-language": "어떤 언어인지 잘 모르겠습니다",
+    "looking-up": "찾는 중",
+    "nothing-for": "%s에 대한 결과 없음",
+    "read-as": "%s(으)로 읽음",
+    "read-as-accent": "%s, %s 억양으로 읽음",
+    "translated-by": "번역: %s",
+    "translated-by-machine": "기계 번역",
+    "guess": "추정",
+    "in-english": "영어로",
+    "getting-dictionary": "%s 사전 받는 중",
+    "getting-dictionaries": "사전 %s개 받는 중",
+    "say-word": "%s 말하기",
+    "hear-word": "%s 듣기",
+    "play-sound": "%s 녹음 재생",
+    "read-about-sound": "%s에 대해 읽기",
+    "see-mouth": "%s을(를) 말하는 입 모양 보기",
+    "mouth-making": "%s을(를) 내는 입 모양",
+    "tap-sound": "소리를 탭하면 어떤 소리인지 들을 수 있습니다",
+    "what-this-is": "이것은 무엇인가요",
+    "for-example": "예: %s",
+    "fetching": "가져오는 중",
+    "done": "완료",
+    "ordinal-first-person": "1인칭",
+    "ordinal-second-person": "2인칭",
+    "ordinal-third-person": "3인칭",
+    "person-number": "%s %s",
+    "person-number-long": "%s %s",
+    "person-long": "%s",
+    "person-and-number": "인칭과 수",
+    "form-of": "· 기본형",
+    "term-mood": "서법",
+    "term-tense": "시제",
+    "term-aspect": "상",
+    "term-person": "인칭",
+    "term-number": "수",
+    "term-case": "격",
+    "term-gender": "성",
+    "term-definiteness": "한정성",
+    "term-declension": "곡용",
+    "term-degree": "비교 등급",
+    "term-voice": "태",
+    "term-register": "말투",
+    "term-nonfinite": "비정형",
+    "term-singular": "단수",
+    "term-plural": "복수",
+    "term-dual": "쌍수",
+    "term-first-person": "1인칭",
+    "term-second-person": "2인칭",
+    "term-third-person": "3인칭",
+    "term-nominative": "주격",
+    "term-accusative": "대격",
+    "term-dative": "여격",
+    "term-genitive": "속격",
+    "term-vocative": "호격",
+    "term-instrumental": "도구격",
+    "term-locative": "처격",
+    "term-prepositional": "전치격",
+    "term-ablative": "탈격",
+    "term-partitive": "분격",
+    "term-inessive": "내격",
+    "term-elative": "출격",
+    "term-illative": "입격",
+    "term-adessive": "접격",
+    "term-allative": "향격",
+    "term-essive": "양태격",
+    "term-translative": "변화격",
+    "term-abessive": "결격",
+    "term-comitative": "공동격",
+    "term-masculine": "남성",
+    "term-feminine": "여성",
+    "term-neuter": "중성",
+    "term-animate": "유정",
+    "term-inanimate": "무정",
+    "term-definite": "한정",
+    "term-indefinite": "비한정",
+    "term-present": "현재",
+    "term-past": "과거",
+    "term-future": "미래",
+    "term-non-past": "비과거",
+    "term-preterite": "단순과거",
+    "term-imperfect": "반과거",
+    "term-perfect": "완료",
+    "term-pluperfect": "과거완료",
+    "term-aorist": "아오리스트",
+    "term-indicative": "직설법",
+    "term-subjunctive": "접속법",
+    "term-subjunctive-i": "접속법 1식",
+    "term-subjunctive-ii": "접속법 2식",
+    "term-conditional": "조건법",
+    "term-conditional-i": "조건법 1식",
+    "term-conditional-ii": "조건법 2식",
+    "term-future-i": "미래 1식",
+    "term-future-ii": "미래 2식",
+    "term-imperative": "명령법",
+    "term-jussive": "지시법",
+    "term-optative": "기원법",
+    "term-potential": "가능법",
+    "term-active": "능동태",
+    "term-passive": "수동태",
+    "term-infinitive": "부정사",
+    "term-participle": "분사",
+    "term-gerund": "동명사",
+    "term-imperfective": "미완료상",
+    "term-perfective": "완료상",
+    "term-progressive": "진행형",
+    "term-positive": "원급",
+    "term-comparative": "비교급",
+    "term-superlative": "최상급",
+    "term-strong": "강변화",
+    "term-weak": "약변화",
+    "term-mixed": "혼합변화",
+    "term-formal": "격식체",
+    "term-informal": "비격식체",
+    "term-polite": "존댓말",
+    "accent-British": "영국",
+    "accent-American": "미국",
+    "accent-Scottish": "스코틀랜드",
+    "accent-Australian": "호주",
+    "accent-Caribbean": "카리브",
+    "accent-Canadian": "캐나다",
+    "accent-Spain": "스페인",
+    "accent-Latin America": "라틴 아메리카",
+    "accent-Rioplatense": "리오플라텐세",
+    "accent-Germany": "독일",
+    "accent-Switzerland": "스위스",
+    "accent-Austria": "오스트리아",
+    "accent-Portugal": "포르투갈",
+    "accent-Brazil": "브라질",
+    "accent-France": "프랑스",
+    "accent-Canada": "캐나다",
+    "accent-Northern": "북부",
+    "accent-Central": "중부"
+  },
+  "rows": {
+    "on": {
+      "name": "읽는 내용에 주석 달기",
+      "about": ""
+    },
+    "site": {
+      "name": "이 사이트에서",
+      "about": ""
+    },
+    "layer": {
+      "name": "오버레이",
+      "about": ""
+    },
+    "density": {
+      "name": "빈도",
+      "about": ""
+    },
+    "target": {
+      "name": "언어",
+      "about": ""
+    },
+    "source": {
+      "name": "이 페이지의 언어",
+      "about": ""
+    },
+    "accent": {
+      "name": "억양",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "사전",
+      "about": ""
+    },
+    "narrow": {
+      "name": "발음 표기",
+      "about": ""
+    },
+    "stress": {
+      "name": "강세 표시",
+      "about": ""
+    },
+    "delay": {
+      "name": "카드가 열리기 전 대기",
+      "about": ""
+    },
+    "animations": {
+      "name": "애니메이션",
+      "about": ""
+    },
+    "say": {
+      "name": "이걸 뭐라고 하지",
+      "about": ""
+    },
+    "setup": {
+      "name": "설정",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "화면 읽기",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "다른 앱 위에 표시",
+      "about": ""
+    },
+    "ipa": {
+      "name": "발음",
+      "about": ""
+    },
+    "translate": {
+      "name": "번역",
+      "about": ""
+    },
+    "side": {
+      "name": "위치할 쪽",
+      "about": ""
+    },
+    "rest": {
+      "name": "버튼 위치",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "고정 높이",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "단어 위로 끌기",
+      "about": "지나가는 단어를 알려 주며, 아래 페이지는 계속 스크롤됩니다"
+    },
+    "lens-sweep": {
+      "name": "길게 누른 뒤 쓸기",
+      "about": "지나간 단어가 모두 이어지고, 카드가 구절 전체에 답합니다"
+    },
+    "lens-hold": {
+      "name": "길게 누르기",
+      "about": "설정을 엽니다"
+    },
+    "lens-tap": {
+      "name": "탭하기",
+      "about": "읽는 도중에 무언가를 뭐라고 하는지 묻습니다. 다시 탭하면 카드가 닫힙니다"
+    },
+    "touch": {
+      "name": "단어 터치",
+      "about": ""
+    },
+    "where": {
+      "name": "사용할 곳",
+      "about": ""
+    },
+    "apps": {
+      "name": "앱",
+      "about": ""
+    },
+    "start": {
+      "name": "단어에 답하기 전에",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "단어를 탭하면 카드 표시",
+      "about": ""
+    },
+    "meanings": {
+      "name": "단어의 뜻을 보려면",
+      "about": ""
+    },
+    "theme": {
+      "name": "테마",
+      "about": ""
+    },
+    "advanced": {
+      "name": "고급",
+      "about": ""
+    },
+    "dark": {
+      "name": "라이트 또는 다크",
+      "about": ""
+    },
+    "mine": {
+      "name": "내 언어",
+      "about": ""
+    },
+    "group-button": {
+      "name": "사이드 버튼",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "언어",
+      "about": ""
+    },
+    "position": {
+      "name": "위치",
+      "about": ""
+    },
+    "appearance": {
+      "name": "모양",
+      "about": ""
+    },
+    "accents": {
+      "name": "억양",
+      "about": ""
+    },
+    "inline": {
+      "name": "단어 바꾸기",
+      "about": ""
+    },
+    "replaced": {
+      "name": "바꿀 단어",
+      "about": ""
+    },
+    "translator": {
+      "name": "번역기",
+      "about": ""
+    },
+    "into": {
+      "name": "번역할 언어",
+      "about": ""
+    },
+    "known": {
+      "name": "번역하지 않음",
+      "about": ""
+    },
+    "learn": {
+      "name": "배우는 중",
+      "about": ""
+    },
+    "cards": {
+      "name": "찾아보기",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "발음",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "뜻",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "문법",
+      "about": ""
+    },
+    "show-others": {
+      "name": "다른 뜻",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "모든 단어 설명",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "내 설정",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "몇 단어만",
+      "모든 단어"
+    ],
+    "delay": [
+      "즉시",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "끄기",
+        "about": {
+          "browser": "아무것도 바꾸지 않음. 단어는 직접 물어보기",
+          "phone": "아무것도 바꾸지 않음. 버튼은 계속 단어에 답함"
+        }
+      },
+      "meaning": {
+        "label": "번역",
+        "about": {
+          "browser": "단어를 그 뜻으로 바꿈",
+          "phone": "단어를 그 뜻으로 바꿈"
+        }
+      },
+      "sound": {
+        "label": "발음",
+        "about": {
+          "browser": "단어를 그 발음으로 바꿈",
+          "phone": "단어를 그 발음으로 바꿈"
+        }
+      },
+      "both": {
+        "label": "둘 다",
+        "about": {
+          "browser": "뜻과 그 뜻의 발음",
+          "phone": "뜻과 그 뜻의 발음"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "단어를 서로 구별하는 소리",
+          "phone": "단어를 서로 구별하는 소리"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "기식음이나 무성음화처럼 발음의 모든 세부 사항",
+          "phone": "기식음이나 무성음화처럼 발음의 모든 세부 사항"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "시스템",
+        "about": {
+          "browser": "이 기기의 설정을 따름",
+          "phone": "이 기기의 설정을 따름"
+        }
+      },
+      "light": {
+        "label": "라이트",
+        "about": {
+          "browser": "항상 밝은 색상",
+          "phone": "항상 밝은 색상"
+        }
+      },
+      "dark": {
+        "label": "다크",
+        "about": {
+          "browser": "항상 어두운 색상",
+          "phone": "항상 어두운 색상"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "왼쪽",
+        "about": {
+          "phone": "휴대전화를 왼손으로 들 때"
+        }
+      },
+      "free": {
+        "label": "아무 곳",
+        "about": {
+          "phone": "내려놓은 자리에 그대로 있음"
+        }
+      },
+      "right": {
+        "label": "오른쪽",
+        "about": {
+          "phone": "휴대전화를 오른손으로 들 때"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "말하는 사람이 동사의 내용을 어떻게 뜻하는지: 사실로, 바람이나 의심, 상상으로, 또는 명령으로."
+      },
+      "tense": {
+        "plain": "언제 일어나는지: 지금보다 전, 지금, 또는 나중."
+      },
+      "aspect": {
+        "plain": "동작을 어떻게 보는지: 끝난 하나의 전체로, 또는 진행 중이거나 반복되거나 끝나지 않은 것으로."
+      },
+      "person": {
+        "plain": "누가 하는지: 말하는 사람(나, 우리), 듣는 사람(너), 또는 그 밖의 사람(그, 그녀, 그들)."
+      },
+      "number": {
+        "plain": "몇 개인지: 하나, 또는 둘 이상."
+      },
+      "case": {
+        "plain": "명사가 문장에서 맡은 역할을 보여 주는 형태: 누가 하는지, 누구에게, 누구의, 어디에서."
+      },
+      "gender": {
+        "plain": "모든 명사가 속하는 부류로, 주변 단어가 그에 맞춰 형태를 바꿉니다. 실제 성별과는 거의 관계가 없습니다. 독일어 das Mädchen(소녀)은 중성입니다."
+      },
+      "definiteness": {
+        "plain": "특정한, 이미 아는 것인지(그 집) 아니면 아무것이나 하나인지(어떤 집)."
+      },
+      "declension": {
+        "plain": "명사나 형용사가 취하는 어미의 묶음으로, 주변 단어에 따라 달라집니다."
+      },
+      "degree": {
+        "plain": "형용사의 정도가 얼마나 센지: 크다, 더 크다, 가장 크다."
+      },
+      "voice": {
+        "plain": "주어가 동작을 하는지(그녀가 그것을 썼다) 아니면 동작을 당하는지(그것이 쓰였다)."
+      },
+      "register": {
+        "plain": "단어가 얼마나 격식 있는지: 낯선 사람과 공식 문서용인지, 친구용인지."
+      },
+      "nonfinite": {
+        "plain": "누가 언제 하는지 말하지 않고 동작만 나타내는 동사 형태: 가다, 가기, 간."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "하나.",
+        "example": "*개* 한 마리"
+      },
+      "plural": {
+        "plain": "둘 이상.",
+        "example": "여러 *개들*"
+      },
+      "dual": {
+        "plain": "정확히 둘. 쌍만을 위한 형태가 있는 언어에서 씁니다.",
+        "example": "슬로베니아어 *hiši*, 집 두 채"
+      },
+      "first-person": {
+        "plain": "말하는 사람: 나, 또는 우리.",
+        "example": "*나는* 걷는다, *우리는* 걷는다"
+      },
+      "second-person": {
+        "plain": "듣는 사람: 너.",
+        "example": "*너는* 걷는다"
+      },
+      "third-person": {
+        "plain": "그 밖의 누구든: 그, 그녀, 그것, 그들.",
+        "example": "*그녀가 걷는다*"
+      },
+      "nominative": {
+        "plain": "동작을 하는 쪽: 주어.",
+        "example": "*개가* 사람을 문다."
+      },
+      "accusative": {
+        "plain": "동작을 받는 쪽: 직접 목적어.",
+        "example": "개가 *사람을* 문다."
+      },
+      "dative": {
+        "plain": "무언가를 받거나 무언가가 그를 위해 행해지는 쪽: 누구에게.",
+        "example": "나는 *그 사람에게* 책을 준다."
+      },
+      "genitive": {
+        "plain": "누구의 것인지, 또는 무엇의 일부인지: ~의.",
+        "example": "*그 사람의* 책, *집의* 지붕"
+      },
+      "vocative": {
+        "plain": "누군가를 직접 부르거나 그에게 말할 때 쓰는 형태.",
+        "example": "폴란드어 *Anno!*, 안나야!"
+      },
+      "instrumental": {
+        "plain": "무엇으로, 또는 무엇에 의해 행해지는지.",
+        "example": "러시아어 писать *ручкой*, *펜으로* 쓰다"
+      },
+      "locative": {
+        "plain": "무언가가 있는 곳.",
+        "example": "폴란드어 w *domu*, *집에*"
+      },
+      "prepositional": {
+        "plain": "특정 전치사 뒤에서 명사가 취하는 형태로, 주로 장소나 주제를 나타냅니다.",
+        "example": "러시아어 о *книге*, *그 책에* 대해"
+      },
+      "ablative": {
+        "plain": "무언가로부터 떨어져, 밖으로, 또는 무언가를 수단으로.",
+        "example": "라틴어 *Romā*, 로마에서부터"
+      },
+      "partitive": {
+        "plain": "무언가의 일부, 또는 끝까지 하지 않은 동작.",
+        "example": "핀란드어 *vettä*, 물 조금"
+      },
+      "inessive": {
+        "plain": "무언가의 안에.",
+        "example": "핀란드어 *talossa*, 집 안에"
+      },
+      "elative": {
+        "plain": "무언가의 안에서 밖으로.",
+        "example": "핀란드어 *talosta*, 집 안에서 밖으로"
+      },
+      "illative": {
+        "plain": "무언가의 안으로.",
+        "example": "핀란드어 *taloon*, 집 안으로"
+      },
+      "adessive": {
+        "plain": "무언가의 위에, 또는 곁에.",
+        "example": "핀란드어 *pöydällä*, 탁자 위에"
+      },
+      "allative": {
+        "plain": "무언가의 위로, 또는 쪽으로.",
+        "example": "핀란드어 *pöydälle*, 탁자 위로"
+      },
+      "essive": {
+        "plain": "한동안 어떤 역할이나 상태로 있음.",
+        "example": "핀란드어 *lapsena*, 어린아이였을 때"
+      },
+      "translative": {
+        "plain": "무언가가 됨.",
+        "example": "핀란드어 *opettajaksi*, 교사(가 되다)"
+      },
+      "abessive": {
+        "plain": "무언가 없이.",
+        "example": "핀란드어 *rahatta*, 돈 없이"
+      },
+      "comitative": {
+        "plain": "무언가와 함께.",
+        "example": "에스토니아어 *sõbraga*, 친구와 함께"
+      },
+      "masculine": {
+        "plain": "명사가 나뉘는 부류 중 하나로, 남성 명사 주변의 단어는 그에 맞는 어미를 취합니다. 대개 성별이 아니라 단어에 따른 것입니다.",
+        "example": "스페인어 *el libro*, 책"
+      },
+      "feminine": {
+        "plain": "명사가 나뉘는 부류 중 하나로, 여성 명사 주변의 단어는 그에 맞는 어미를 취합니다. 대개 성별이 아니라 단어에 따른 것입니다.",
+        "example": "스페인어 *la mesa*, 탁자"
+      },
+      "neuter": {
+        "plain": "남성도 여성도 아닌 명사의 부류.",
+        "example": "독일어 *das Haus*, 집"
+      },
+      "animate": {
+        "plain": "사람이나 동물을 가리키는 명사를 말하며, 일부 언어는 이런 명사에 따로 어미를 붙입니다.",
+        "example": "러시아어 вижу *брата*, 나는 형을 본다"
+      },
+      "inanimate": {
+        "plain": "사람이나 동물이 아닌 사물을 가리키는 명사를 말합니다.",
+        "example": "러시아어 вижу *стол*, 나는 탁자를 본다"
+      },
+      "definite": {
+        "plain": "말하는 두 사람이 모두 아는 특정한 것: 그.",
+        "example": "스웨덴어 *huset*, 그 집"
+      },
+      "indefinite": {
+        "plain": "아직 정해지지 않은 아무것: 어떤.",
+        "example": "스웨덴어 *ett hus*, 어떤 집"
+      },
+      "present": {
+        "plain": "지금, 또는 언제나, 또는 습관으로.",
+        "example": "그녀는 *걷는다*"
+      },
+      "past": {
+        "plain": "지금보다 전.",
+        "example": "그녀는 *걸었다*"
+      },
+      "future": {
+        "plain": "지금보다 나중.",
+        "example": "그녀는 *걸을 것이다*"
+      },
+      "non-past": {
+        "plain": "지금 또는 나중: 둘을 하나의 형태로.",
+        "example": "일본어 *食べる*, 먹는다 또는 먹을 것이다"
+      },
+      "preterite": {
+        "plain": "과거의 한 시점에 일어나 끝난 일.",
+        "example": "스페인어 ayer *comí*, 어제 나는 *먹었다*"
+      },
+      "imperfect": {
+        "plain": "안에서 바라본 과거: 계속되던 일, 되풀이되던 일, 예전에 그랬던 일.",
+        "example": "스페인어 *comía*, 나는 *먹고 있었다*, 나는 *먹곤 했다*"
+      },
+      "perfect": {
+        "plain": "지금보다 전에 했고 지금도 의미가 있는 일.",
+        "example": "she *has walked*"
+      },
+      "pluperfect": {
+        "plain": "과거의 다른 시점보다 전에 한 일.",
+        "example": "그녀는 *걸었었다*"
+      },
+      "aorist": {
+        "plain": "이야기하듯 하나의 완결된 사건으로 말하는 과거의 동작.",
+        "example": "불가리아어 *писах*, 나는 썼다"
+      },
+      "indicative": {
+        "plain": "사실이나 그에 관한 질문처럼, 그렇다고 말하는 보통의 형태.",
+        "example": "그녀는 여기 *있다*."
+      },
+      "subjunctive": {
+        "plain": "그렇다고 말하는 대신, 바라거나 원하거나 의심하거나 두려워하거나 상상만 하는 것을 나타내는 형태. 주로 that, if, so that 같은 말 뒤에 옵니다.",
+        "example": "I wish he *were* here. It is vital that she *be* on time. 스페인어 quiero que *vengas*, 네가 왔으면 좋겠다."
+      },
+      "subjunctive-i": {
+        "plain": "남이 한 말을 보증하지 않고 그대로 전할 때 쓰는 독일어의 형태.",
+        "example": "Er sagt, er *sei* krank. 그는 아프다고 한다."
+      },
+      "subjunctive-ii": {
+        "plain": "사실이 아닌 것을 나타내는 독일어의 형태: 바람, 공손한 부탁, '~라면 좋을 텐데'.",
+        "example": "Wenn ich Zeit *hätte*... 시간이 있다면..."
+      },
+      "conditional": {
+        "plain": "다른 무언가가 그렇다면 일어날 일.",
+        "example": "she *would walk*"
+      },
+      "conditional-i": {
+        "plain": "다른 무언가가 그렇다면 일어날 일.",
+        "example": "독일어 ich *würde gehen*, 나라면 갈 것이다"
+      },
+      "conditional-ii": {
+        "plain": "다른 무언가가 그랬다면 일어났을 일.",
+        "example": "독일어 ich *wäre gegangen*, 나라면 갔을 것이다"
+      },
+      "future-i": {
+        "plain": "지금보다 나중.",
+        "example": "독일어 ich *werde gehen*, 나는 갈 것이다"
+      },
+      "future-ii": {
+        "plain": "나중의 어느 시점까지 끝나 있을 일.",
+        "example": "독일어 ich *werde gegangen sein*, 나는 가 있을 것이다"
+      },
+      "imperative": {
+        "plain": "누군가에게 무언가를 하라고 말하는 형태.",
+        "example": "*걸어!*"
+      },
+      "jussive": {
+        "plain": "흔히 듣는 사람이 아닌 누군가에게 무언가를 하게 하거나 하라고 하는 형태.",
+        "example": "아랍어 *لِيَكْتُبْ*, 그가 쓰게 하라"
+      },
+      "optative": {
+        "plain": "바람을 나타내는 형태: 그렇게 되기를."
+      },
+      "potential": {
+        "plain": "아마 또는 어쩌면 그렇다는 것을 나타내는 형태.",
+        "example": "핀란드어 *lienee*, (그는) 아마 ~일 것이다"
+      },
+      "active": {
+        "plain": "주어가 동작을 합니다.",
+        "example": "그녀가 편지를 *썼다*."
+      },
+      "passive": {
+        "plain": "주어가 동작을 당합니다.",
+        "example": "편지가 *쓰였다*."
+      },
+      "infinitive": {
+        "plain": "아직 아무도 하지 않는 동사 그 자체: 사전에 실리는 형태.",
+        "example": "*걷다*, 스페인어 *caminar*"
+      },
+      "participle": {
+        "plain": "형용사처럼 쓰이고, 조동사와 함께 다른 시제를 만드는 동사의 형태.",
+        "example": "*깨진* 컵, she has *walked*"
+      },
+      "gerund": {
+        "plain": "진행 중인 동작을 나타내거나 명사처럼 쓰이는 동사의 형태.",
+        "example": "그녀는 *걷고* 있다, 스페인어 está *caminando*"
+      },
+      "imperfective": {
+        "plain": "진행 중이거나 반복되거나 끝나지 않은 동작.",
+        "example": "러시아어 я *читал*, 나는 읽고 있었다"
+      },
+      "perfective": {
+        "plain": "끝난 하나의 전체로서의 동작.",
+        "example": "러시아어 я *прочитал*, 나는 (끝까지) 다 읽었다"
+      },
+      "progressive": {
+        "plain": "그 순간에 진행 중인 것.",
+        "example": "그녀는 *걷고 있다*"
+      },
+      "positive": {
+        "plain": "비교하지 않은 형용사 그대로의 형태.",
+        "example": "*크다*"
+      },
+      "comparative": {
+        "plain": "다른 것보다 더.",
+        "example": "*더 크다*, *더 아름답다*"
+      },
+      "superlative": {
+        "plain": "다른 모든 것보다 더.",
+        "example": "*가장 크다*, *가장 아름답다*"
+      },
+      "strong": {
+        "plain": "앞에 격을 보여 주는 관사가 없을 때 독일어가 쓰는 형용사 어미.",
+        "example": "*kaltes* Wasser, 차가운 물"
+      },
+      "weak": {
+        "plain": "관사가 이미 격을 보여 주는 der, die, das 뒤에서 독일어가 쓰는 형용사 어미.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "ein, kein, mein 뒤에서 독일어가 쓰는 형용사 어미.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "낯선 사람, 윗사람, 공식 문서에 씁니다.",
+        "example": "독일어 *Sie*, 스페인어 *usted*"
+      },
+      "informal": {
+        "plain": "친구, 가족, 아이에게 씁니다.",
+        "example": "독일어 *du*, 스페인어 *tú*"
+      },
+      "polite": {
+        "plain": "상대를 높여 공손하게 말하는 방식.",
+        "example": "*먹습니다*, '먹는다'를 공손하게"
+      }
+    }
+  }
+}

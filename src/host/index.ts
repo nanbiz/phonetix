@@ -18,6 +18,7 @@ import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from 
 import { audio, guessed, ipa, translatable } from './voice';
 import { hear, stopHearing } from './speech';
 import { current, watch } from '@/settings';
+import { spokenFrom } from '@/data/interface';
 import type { Settings } from '@/settings/shape';
 
 /** The languages the reader reads or learns, whose dictionaries are worth fetching for a line
@@ -168,6 +169,7 @@ export function host(): void {
   onMessage('readScreen', async ({ data }) => readScreen(data.text));
 
   onMessage('readRuns', async ({ data }) => readRuns(data.texts));
+  onMessage('interface', async ({ data }) => spokenFrom(data.lang));
   onMessage('inOther', async ({ data }) => {
     await Promise.all([openReadInto(data.mine), openReadInto(data.other)]);
     const read: boolean[] = [];

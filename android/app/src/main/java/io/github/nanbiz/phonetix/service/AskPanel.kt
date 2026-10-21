@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import io.github.nanbiz.phonetix.core.Interface
 import io.github.nanbiz.phonetix.core.Languages
 import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.ui.Tokens
@@ -312,11 +313,11 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         arrow.visibility = VISIBLE
         learningChip.visibility = VISIBLE
         mineChip.setCompoundDrawablesRelative(null, null, null, null)
-        mineChip.text = Languages.english(mine)
+        mineChip.text = Interface.named(mine)
         learningChip.text = if (learning.isBlank()) {
             Wording.says["choose-language"].orEmpty()
         } else {
-            Languages.english(learning)
+            Interface.named(learning)
         }
         arrow.rotation = if (forward) 0f else 180f
         arrow.setOnClickListener { onTurn() }
@@ -355,7 +356,7 @@ class AskPanel(context: Context, private val palette: Tokens.Palette) : LinearLa
         listed.removeAllViews()
         val wanted = typed.trim().lowercase()
         for (code in languages) {
-            val name = Languages.english(code)
+            val name = Interface.named(code)
             if (wanted.isNotEmpty() && !name.lowercase().contains(wanted) &&
                 !Languages.native(code).lowercase().contains(wanted)
             ) continue

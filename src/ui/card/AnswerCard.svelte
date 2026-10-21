@@ -13,7 +13,7 @@
   // The markup is the surface page's own and the stylesheet is generated from it.
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
-  import { posName } from '@/data/wording';
+  import { posName, say } from '@/data/wording';
   import { wiktionary } from '@/data/links';
   import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
@@ -269,12 +269,12 @@
   );
   let missing = $derived(
     answer.state === 'NoPack'
-      ? `No dictionary for ${named(answer.source)} yet`
+      ? say('no-dictionary-for', named(answer.source))
       : answer.state === 'UnknownLang'
-        ? 'Not sure what language this is'
+        ? say('unknown-language')
         : answer.state === 'Loading'
-          ? 'Looking it up'
-          : `Nothing found for ${answer.spelling}`
+          ? say('looking-up')
+          : say('nothing-for', answer.spelling)
   );
 </script>
 
@@ -289,8 +289,8 @@
         aria-haspopup="listbox"
         aria-expanded={picking}
         title={readAs.name
-          ? `Read as ${named(answer.source)}, ${readAs.name} accent`
-          : `Read as ${named(answer.source)}`}
+          ? say('read-as-accent', named(answer.source), readAs.name)
+          : say('read-as', named(answer.source))}
         onclick={() => (picking = !picking)}
         onkeydown={(event) => {
           if (event.key === 'Escape' && picking) {
@@ -321,8 +321,8 @@
     </span>
   {:else if answer.source}
     <span class="pill" title={readAs.name
-      ? `Read as ${named(answer.source)}, ${readAs.name} accent`
-      : `Read as ${named(answer.source)}`}>{readAs.label}</span>
+      ? say('read-as-accent', named(answer.source), readAs.name)
+      : say('read-as', named(answer.source))}>{readAs.label}</span>
   {/if}
 {/snippet}
 
@@ -351,7 +351,7 @@
         >
       {:else if answer.ipa.length > 0 && !nothing}
         <PlayButton
-          label={recorded ? `hear ${answer.spelling}` : `say ${answer.spelling}`}
+          label={say(recorded ? 'hear-word' : 'say-word', answer.spelling)}
           onplay={() => onPlay?.()}
         />
       {/if}
@@ -415,10 +415,10 @@
             {#if answer.pos && !phrase && show.grammar}<span class="chip">{posName(answer.pos)}</span>{/if}
             {#if show.grammar}{#each marks as mark (mark)}<span class="chip mark">{mark}</span>{/each}{/if}
             {#if guessed}
-              <span class="badge guess" title={engine ? `Translated by ${engine}` : 'Translated by a machine'}
-                >guess</span>
+              <span class="badge guess" title={engine ? say('translated-by', engine) : say('translated-by-machine')}
+                >{say('guess')}</span>
             {:else if anchored}
-              <span class="badge">in English</span>
+              <span class="badge">{say('in-english')}</span>
             {/if}
           </div>
         {/if}
@@ -453,7 +453,7 @@
                it says why and how long. -->
           <div class="gram" data-arriving>
             <span class="one-line"
-              >Getting the {named(answer.source)} dictionary · {Math.round(arriving * 100)}%</span>
+              >{say('getting-dictionary', named(answer.source))} · {Math.round(arriving * 100)}%</span>
           </div>
         {/if}
 

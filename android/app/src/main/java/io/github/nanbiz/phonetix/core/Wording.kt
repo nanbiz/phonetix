@@ -101,8 +101,8 @@ object Wording {
         "density" to Pair("a few words", "every word"),
     )
 
-    /** Phrases both surfaces use, so neither invents its own wording. */
-    val says = mapOf(
+    /** Phrases both surfaces use, so neither invents its own wording, in English. */
+    private val english = mapOf(
         "add-language" to "Add a language",
         "allow" to "Allow",
         "allow-overlay" to "Allow overlay",
@@ -117,13 +117,23 @@ object Wording {
         "detailed" to "Detailed",
         "detailed-example" to "[tʰɒp]",
         "dictate" to "Dictate",
+        "done" to "done",
         "every-app" to "Every app",
         "every-word" to "every word",
+        "fetching" to "fetching",
+        "for-example" to "For example: %s",
+        "form-of" to "of",
         "get" to "Get",
+        "getting-dictionaries" to "Getting %s dictionaries",
+        "getting-dictionary" to "Getting the %s dictionary",
+        "guess" to "guess",
+        "hear-word" to "hear %s",
+        "in-english" to "in English",
         "learn-language" to "Learn a language",
         "learn-none" to "none",
         "learning-it" to "learning %s",
         "loading-dictionary" to "Loading the dictionary…",
+        "looking-up" to "Looking it up",
         "main-language" to "My language",
         "make-main" to "Make it my language",
         "master-idle" to "Nothing is drawn over your apps",
@@ -131,11 +141,14 @@ object Wording {
         "master-on" to "Reading",
         "master-unready" to "Allow it to read the screen and draw over your apps",
         "master-working" to "The words in your apps are being answered",
+        "mouth-making" to "how the mouth makes %s",
         "narrow-mark" to "[ ]",
+        "no-dictionary-for" to "No dictionary for %s yet",
         "no-direction" to "No translation from %s could be had. The words show how they sound instead.",
         "no-source" to "for what a word means; how it is said is built in",
         "no-translation" to "Don't translate",
         "nothing-else" to "nothing else",
+        "nothing-for" to "Nothing found for %s",
         "nothing-found" to "Nothing by that name",
         "nothing-yet" to "nothing yet",
         "off" to "off",
@@ -143,10 +156,18 @@ object Wording {
         "one-in" to "one in %s",
         "open-accessibility" to "Open accessibility",
         "open-panel" to "Open",
+        "ordinal-first-person" to "1st",
+        "ordinal-second-person" to "2nd",
+        "ordinal-third-person" to "3rd",
         "other-languages" to "Other languages",
         "packs-held" to "%s downloaded",
         "packs-here" to "On this phone",
         "packs-more" to "Available",
+        "person-and-number" to "person and number",
+        "person-long" to "%s person",
+        "person-number" to "%s %s",
+        "person-number-long" to "%s person %s",
+        "play-sound" to "play a recording of %s",
         "pos-abbrev" to "abbreviation",
         "pos-adj" to "adjective",
         "pos-adv" to "adverb",
@@ -182,6 +203,9 @@ object Wording {
         "pos-verb" to "verb",
         "preview" to "Preview",
         "preview-about" to "the words on a page this would answer",
+        "read-about-sound" to "read about %s",
+        "read-as" to "Read as %s",
+        "read-as-accent" to "Read as %s, %s accent",
         "remove" to "Remove",
         "rest-edge" to "On the %s",
         "rest-loose" to "Wherever you leave it",
@@ -192,7 +216,9 @@ object Wording {
         "say-no-model" to "No translation model for that direction at your dictionary host.",
         "say-nothing" to "no word for that",
         "say-placeholder" to "what you want to say",
+        "say-word" to "say %s",
         "search" to "Search",
+        "see-mouth" to "see a mouth saying %s",
         "service-stopped" to "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
         "set-key" to "Set a key",
         "simple" to "Simple",
@@ -200,12 +226,40 @@ object Wording {
         "site-following" to "following the main switch (currently: %s)",
         "site-off" to "always off here",
         "speak" to "Say it",
+        "tap-sound" to "Tap a sound to hear what it is",
         "touch-off" to "Every touch goes to the app underneath, so scrolling is untouched.",
         "touch-on" to "A swipe that starts on a word will not scroll the page.",
+        "translated-by" to "Translated by %s",
+        "translated-by-machine" to "Translated by a machine",
         "turn" to "Answer the other way round",
+        "unknown-language" to "Not sure what language this is",
         "use-this" to "Use this",
+        "what-this-is" to "What this is",
         "words-count" to "%s words",
     )
+
+    /** The same in the interface's language: English, with whatever a language's table
+     *  says in its place (core/Interface.kt). */
+    @Volatile var says: Map<String, String> = english
+        private set
+
+    /** The language the interface is in now. */
+    @Volatile var speaking = "en"
+        private set
+
+    /** Say everything in these words from now on, or in English with none. */
+    fun speakIn(lang: String, words: Map<String, String>?) {
+        speaking = if (words == null) "en" else lang
+        says = if (words == null) english else english + words
+    }
+
+    /** A phrase with what goes in its places, in order: "Getting the %s dictionary". */
+    fun say(key: String, vararg fill: Any): String {
+        var at = 0
+        return Regex.fromLiteral("%s").replace(says[key] ?: key) {
+            fill.getOrNull(at++)?.toString().orEmpty()
+        }
+    }
 
     /** What one row is called, or the name it is asked for when the table is short. */
     fun row(name: String): Words = rows[name] ?: Words(name, "")

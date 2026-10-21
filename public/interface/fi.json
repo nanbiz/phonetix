@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Salli",
+    "allow-overlay": "Salli peittokuva",
+    "already-in": "Tämä sivu on jo kielellä %s",
+    "broad-mark": "/ /",
+    "change": "Vaihda",
+    "choose-language": "Valitse kieli",
+    "close": "Sulje",
+    "detail-explained": "Karkea näyttää äänteet, jotka erottavat sanat toisistaan; tarkka näyttää ääntämisen jokaisen yksityiskohdan niin kuin kyseisen aksentin puhuja sen sanoo.",
+    "every-app": "Kaikki sovellukset",
+    "get": "Hae",
+    "loading-dictionary": "Ladataan sanakirjaa…",
+    "master-idle": "Sovellusten päälle ei piirretä mitään",
+    "master-off": "Tauolla",
+    "master-on": "Luetaan",
+    "master-unready": "Salli näytön lukeminen ja piirtäminen sovellusten päälle",
+    "master-working": "Sovellustesi sanoihin vastataan",
+    "narrow-mark": "[ ]",
+    "no-source": "sanan merkitystä varten; ääntäminen on sisäänrakennettu",
+    "no-translation": "Älä käännä",
+    "nothing-found": "Sen nimistä ei löytynyt",
+    "nothing-yet": "ei vielä mitään",
+    "open-accessibility": "Avaa esteettömyys",
+    "preview": "Esikatselu",
+    "preview-about": "sivun sanat, joihin tämä vastaisi",
+    "remove": "Poista",
+    "rest-edge": "Reunalla: %s",
+    "rest-loose": "Siellä, mihin jätät sen",
+    "no-direction": "Käännöstä kielestä %s ei saatu. Sanat näyttävät sen sijaan, miten ne äännetään.",
+    "service-stopped": "Phonetix saa lukea näyttöä, mutta se ei ole käynnissä. Kytke se pois ja takaisin päälle puhelimen esteettömyysasetuksista.",
+    "rest-put": "Vedä painiketta ylös tai alas tai toiselle puolelle.",
+    "say-into": "Vastaa kielellä",
+    "say-no-language": "Valitse ensin kieli, jolle luetaan.",
+    "say-no-model": "Sanakirjapalvelimellasi ei ole käännösmallia tähän suuntaan.",
+    "say-nothing": "ei sanaa tälle",
+    "say-placeholder": "mitä haluat sanoa",
+    "search": "Haku",
+    "speak": "Sano se",
+    "touch-off": "Jokainen kosketus menee alla olevalle sovellukselle, joten vierittäminen toimii tavalliseen tapaan.",
+    "touch-on": "Sanasta alkava pyyhkäisy ei vieritä sivua.",
+    "turn": "Vastaa toisin päin",
+    "use-this": "Käytä tätä",
+    "say-fetching": "haetaan %s",
+    "back": "Takaisin",
+    "apps-chosen": "%s valittu",
+    "packs-held": "%s ladattu",
+    "other-languages": "Muut kielet",
+    "words-count": "%s sanaa",
+    "packs-here": "Tässä puhelimessa",
+    "packs-more": "Saatavilla",
+    "every-word": "jokainen sana",
+    "one-in": "yksi %s:sta",
+    "open-panel": "Avaa",
+    "site-off": "aina pois täällä",
+    "site-following": "seuraa pääkytkintä (nyt: %s)",
+    "on": "päällä",
+    "off": "pois",
+    "set-key": "Aseta näppäin",
+    "simple": "Yksinkertainen",
+    "detailed": "Yksityiskohtainen",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "ei muuta",
+    "learn-none": "ei mitään",
+    "add-language": "Lisää kieli",
+    "learn-language": "Opettele kieltä",
+    "make-main": "Tee siitä kieleni",
+    "main-language": "Oma kieleni",
+    "learning-it": "opettelee: %s",
+    "dictate": "Sanele",
+    "pos-adj": "adjektiivi",
+    "pos-adv": "adverbi",
+    "pos-article": "artikkeli",
+    "pos-character": "merkki",
+    "pos-conj": "konjunktio",
+    "pos-contraction": "supistuma",
+    "pos-det": "determinantti",
+    "pos-intj": "interjektio",
+    "pos-name": "nimi",
+    "pos-noun": "substantiivi",
+    "pos-num": "numeraali",
+    "pos-particle": "partikkeli",
+    "pos-phrase": "fraasi",
+    "pos-postp": "postpositio",
+    "pos-prefix": "prefiksi",
+    "pos-prep": "prepositio",
+    "pos-prep_phrase": "prepositiolauseke",
+    "pos-pron": "pronomini",
+    "pos-proverb": "sananlasku",
+    "pos-punct": "välimerkki",
+    "pos-suffix": "suffiksi",
+    "pos-symbol": "symboli",
+    "pos-verb": "verbi",
+    "pos-abbrev": "lyhenne",
+    "pos-affix": "affiksi",
+    "pos-infix": "infiksi",
+    "pos-interfix": "interfiksi",
+    "pos-circumfix": "sirkumfiksi",
+    "pos-root": "kanta",
+    "pos-combining_form": "yhdysosa",
+    "pos-classifier": "luokitin",
+    "pos-counter": "numeraaliluokitin",
+    "pos-letter": "kirjain",
+    "no-dictionary-for": "Kielelle %s ei vielä ole sanakirjaa",
+    "unknown-language": "Kieli on epävarma",
+    "looking-up": "Haetaan",
+    "nothing-for": "Ei tuloksia: %s",
+    "read-as": "Luettu kielenä %s",
+    "read-as-accent": "Luettu kielenä %s, aksentti %s",
+    "translated-by": "Kääntänyt %s",
+    "translated-by-machine": "Konekäännös",
+    "guess": "arvaus",
+    "in-english": "englanniksi",
+    "getting-dictionary": "Haetaan sanakirjaa: %s",
+    "getting-dictionaries": "Haetaan %s sanakirjaa",
+    "say-word": "sano %s",
+    "hear-word": "kuuntele %s",
+    "play-sound": "toista äänite: %s",
+    "read-about-sound": "lue lisää: %s",
+    "see-mouth": "katso, miten suu sanoo %s",
+    "mouth-making": "miten suu muodostaa %s",
+    "tap-sound": "Napauta äännettä kuullaksesi sen",
+    "what-this-is": "Mitä tämä on",
+    "for-example": "Esimerkiksi: %s",
+    "fetching": "haetaan",
+    "done": "valmis",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s p. %s",
+    "person-number-long": "%s persoona, %s",
+    "person-long": "%s persoona",
+    "person-and-number": "persoona ja luku",
+    "form-of": "sanasta",
+    "term-mood": "modus",
+    "term-tense": "aikamuoto",
+    "term-aspect": "aspekti",
+    "term-person": "persoona",
+    "term-number": "luku",
+    "term-case": "sija",
+    "term-gender": "suku",
+    "term-definiteness": "määräisyys",
+    "term-declension": "taivutus",
+    "term-degree": "vertailuaste",
+    "term-voice": "pääluokka",
+    "term-register": "rekisteri",
+    "term-nonfinite": "nominaalimuoto",
+    "term-singular": "yksikkö",
+    "term-plural": "monikko",
+    "term-dual": "duaali",
+    "term-first-person": "1. persoona",
+    "term-second-person": "2. persoona",
+    "term-third-person": "3. persoona",
+    "term-nominative": "nominatiivi",
+    "term-accusative": "akkusatiivi",
+    "term-dative": "datiivi",
+    "term-genitive": "genetiivi",
+    "term-vocative": "vokatiivi",
+    "term-instrumental": "instrumentaali",
+    "term-locative": "lokatiivi",
+    "term-prepositional": "prepositionaali",
+    "term-ablative": "ablatiivi",
+    "term-partitive": "partitiivi",
+    "term-inessive": "inessiivi",
+    "term-elative": "elatiivi",
+    "term-illative": "illatiivi",
+    "term-adessive": "adessiivi",
+    "term-allative": "allatiivi",
+    "term-essive": "essiivi",
+    "term-translative": "translatiivi",
+    "term-abessive": "abessiivi",
+    "term-comitative": "komitatiivi",
+    "term-masculine": "maskuliini",
+    "term-feminine": "feminiini",
+    "term-neuter": "neutri",
+    "term-animate": "elollinen",
+    "term-inanimate": "eloton",
+    "term-definite": "määräinen",
+    "term-indefinite": "epämääräinen",
+    "term-present": "preesens",
+    "term-past": "mennyt aika",
+    "term-future": "futuuri",
+    "term-non-past": "ei-mennyt aika",
+    "term-preterite": "preteriti",
+    "term-imperfect": "imperfekti",
+    "term-perfect": "perfekti",
+    "term-pluperfect": "pluskvamperfekti",
+    "term-aorist": "aoristi",
+    "term-indicative": "indikatiivi",
+    "term-subjunctive": "subjunktiivi",
+    "term-subjunctive-i": "konjunktiivi I",
+    "term-subjunctive-ii": "konjunktiivi II",
+    "term-conditional": "konditionaali",
+    "term-conditional-i": "konditionaali I",
+    "term-conditional-ii": "konditionaali II",
+    "term-future-i": "futuuri I",
+    "term-future-ii": "futuuri II",
+    "term-imperative": "imperatiivi",
+    "term-jussive": "jussiivi",
+    "term-optative": "optatiivi",
+    "term-potential": "potentiaali",
+    "term-active": "aktiivi",
+    "term-passive": "passiivi",
+    "term-infinitive": "infinitiivi",
+    "term-participle": "partisiippi",
+    "term-gerund": "gerundi",
+    "term-imperfective": "imperfektiivinen",
+    "term-perfective": "perfektiivinen",
+    "term-progressive": "progressiivi",
+    "term-positive": "positiivi",
+    "term-comparative": "komparatiivi",
+    "term-superlative": "superlatiivi",
+    "term-strong": "vahva",
+    "term-weak": "heikko",
+    "term-mixed": "sekataivutus",
+    "term-formal": "muodollinen",
+    "term-informal": "arkinen",
+    "term-polite": "kohtelias",
+    "accent-British": "brittiläinen",
+    "accent-American": "amerikkalainen",
+    "accent-Scottish": "skotlantilainen",
+    "accent-Australian": "australialainen",
+    "accent-Caribbean": "karibialainen",
+    "accent-Canadian": "kanadalainen",
+    "accent-Spain": "Espanja",
+    "accent-Latin America": "Latinalainen Amerikka",
+    "accent-Rioplatense": "rioplatense",
+    "accent-Germany": "Saksa",
+    "accent-Switzerland": "Sveitsi",
+    "accent-Austria": "Itävalta",
+    "accent-Portugal": "Portugali",
+    "accent-Brazil": "Brasilia",
+    "accent-France": "Ranska",
+    "accent-Canada": "Kanada",
+    "accent-Northern": "pohjoinen",
+    "accent-Central": "keskinen"
+  },
+  "rows": {
+    "on": {
+      "name": "Merkitse lukemani",
+      "about": ""
+    },
+    "site": {
+      "name": "Tällä sivustolla",
+      "about": ""
+    },
+    "layer": {
+      "name": "Peittokuva",
+      "about": ""
+    },
+    "density": {
+      "name": "Kuinka usein",
+      "about": ""
+    },
+    "target": {
+      "name": "Kieli",
+      "about": ""
+    },
+    "source": {
+      "name": "Tämän sivun kieli",
+      "about": ""
+    },
+    "accent": {
+      "name": "Aksentti",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Sanakirjat",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transkriptiot",
+      "about": ""
+    },
+    "stress": {
+      "name": "Painomerkit",
+      "about": ""
+    },
+    "delay": {
+      "name": "Viive ennen kortin avautumista",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animaatiot",
+      "about": ""
+    },
+    "say": {
+      "name": "Sana jollekin",
+      "about": ""
+    },
+    "setup": {
+      "name": "Käyttöönotto",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Näytön lukeminen",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Piirtäminen sovellusten päälle",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Ääntäminen",
+      "about": ""
+    },
+    "translate": {
+      "name": "Käännös",
+      "about": ""
+    },
+    "side": {
+      "name": "Kumpi puoli",
+      "about": ""
+    },
+    "rest": {
+      "name": "Painikkeen paikka",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Kiinteä korkeus",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Vedä se sanan yli",
+      "about": "Se sanoo sen, minkä yli se kulkee, ja alla oleva sivu vierii edelleen"
+    },
+    "lens-sweep": {
+      "name": "Pidä painettuna ja pyyhkäise",
+      "about": "Jokainen sana, jonka yli se kulkee, liittyy mukaan, ja kortti vastaa koko lauseeseen"
+    },
+    "lens-hold": {
+      "name": "Pidä painettuna",
+      "about": "Avaa asetukset"
+    },
+    "lens-tap": {
+      "name": "Napauta",
+      "about": "Kysy sanaa jollekin kesken lukemisen; napauta uudelleen, niin kortti sulkeutuu"
+    },
+    "touch": {
+      "name": "Sanan koskettaminen",
+      "about": ""
+    },
+    "where": {
+      "name": "Missä",
+      "about": ""
+    },
+    "apps": {
+      "name": "Sovellukset",
+      "about": ""
+    },
+    "start": {
+      "name": "Ennen kuin se voi vastata sanaan",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Napauta sanaa nähdäksesi kortin",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Sanan merkityksen näkemiseen",
+      "about": ""
+    },
+    "theme": {
+      "name": "Teema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Lisäasetukset",
+      "about": ""
+    },
+    "dark": {
+      "name": "Vaalea tai tumma",
+      "about": ""
+    },
+    "mine": {
+      "name": "Oma kieleni",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Sivupainike",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Kielet",
+      "about": ""
+    },
+    "position": {
+      "name": "Sijainti",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Ulkoasu",
+      "about": ""
+    },
+    "accents": {
+      "name": "Aksentit",
+      "about": ""
+    },
+    "inline": {
+      "name": "Korvaa sanat",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Korvatut sanat",
+      "about": ""
+    },
+    "translator": {
+      "name": "Kääntäjä",
+      "about": ""
+    },
+    "into": {
+      "name": "Käännä kielelle",
+      "about": ""
+    },
+    "known": {
+      "name": "Älä koskaan käännä",
+      "about": ""
+    },
+    "learn": {
+      "name": "Opettelen",
+      "about": ""
+    },
+    "cards": {
+      "name": "Haku",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Ääntäminen",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Merkitys",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Kielioppi",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Muut merkitykset",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Kuvaile jokainen sana",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Omat",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "muutama sana",
+      "jokainen sana"
+    ],
+    "delay": [
+      "heti",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Pois",
+        "about": {
+          "browser": "mitään ei korvata; kysy sanasta itse",
+          "phone": "mitään ei korvata; painike vastaa silti sanaan"
+        }
+      },
+      "meaning": {
+        "label": "Käännös",
+        "about": {
+          "browser": "sana korvataan sen merkityksellä",
+          "phone": "sana korvataan sen merkityksellä"
+        }
+      },
+      "sound": {
+        "label": "Ääntäminen",
+        "about": {
+          "browser": "sana korvataan sen ääntämisellä",
+          "phone": "sana korvataan sen ääntämisellä"
+        }
+      },
+      "both": {
+        "label": "Molemmat",
+        "about": {
+          "browser": "mitä se tarkoittaa ja miten se sanotaan",
+          "phone": "mitä se tarkoittaa ja miten se sanotaan"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "äänteet, jotka erottavat sanat toisistaan",
+          "phone": "äänteet, jotka erottavat sanat toisistaan"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "ääntämisen jokainen yksityiskohta, kuten aspiraatio ja soinnittomuus",
+          "phone": "ääntämisen jokainen yksityiskohta, kuten aspiraatio ja soinnittomuus"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Järjestelmä",
+        "about": {
+          "browser": "laitteen oma asetus",
+          "phone": "laitteen oma asetus"
+        }
+      },
+      "light": {
+        "label": "Vaalea",
+        "about": {
+          "browser": "aina paletin vaalea puoli",
+          "phone": "aina paletin vaalea puoli"
+        }
+      },
+      "dark": {
+        "label": "Tumma",
+        "about": {
+          "browser": "aina paletin tumma puoli",
+          "phone": "aina paletin tumma puoli"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Vasen",
+        "about": {
+          "phone": "kun puhelinta pidetään vasemmassa kädessä"
+        }
+      },
+      "free": {
+        "label": "Missä tahansa",
+        "about": {
+          "phone": "se pysyy siellä, mihin sen jätät"
+        }
+      },
+      "right": {
+        "label": "Oikea",
+        "about": {
+          "phone": "kun puhelinta pidetään oikeassa kädessä"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Miten puhuja tarkoittaa sen, mitä verbi sanoo: tosiasiana, toiveena, epäilynä tai kuviteltuna, tai käskynä."
+      },
+      "tense": {
+        "plain": "Milloin se tapahtuu: ennen nykyhetkeä, nyt tai myöhemmin."
+      },
+      "aspect": {
+        "plain": "Miten tekeminen nähdään: yhtenä valmiina kokonaisuutena, tai jatkuvana, toistuvana tai keskeneräisenä."
+      },
+      "person": {
+        "plain": "Kuka sen tekee: puhuja (minä, me), puhuteltava (sinä, te) vai joku muu (hän, he)."
+      },
+      "number": {
+        "plain": "Kuinka monta: yksi vai useampi."
+      },
+      "case": {
+        "plain": "Muoto, jonka nomini saa näyttääkseen tehtävänsä lauseessa: kuka tekee, kenelle, kenen, missä."
+      },
+      "gender": {
+        "plain": "Luokka, johon jokainen substantiivi kuuluu ja jonka mukaan ympäröivät sanat taipuvat. Sillä on vähän tekemistä sukupuolen kanssa: saksan das Mädchen, tyttö, on neutri."
+      },
+      "definiteness": {
+        "plain": "Onko kyse tietystä, tunnetusta (the house) vai mistä tahansa (a house)."
+      },
+      "declension": {
+        "plain": "Päätteet, jotka substantiivi tai adjektiivi saa ja jotka riippuvat ympäröivistä sanoista."
+      },
+      "degree": {
+        "plain": "Kuinka vahvasti adjektiivi pätee: iso, isompi, isoin."
+      },
+      "voice": {
+        "plain": "Tekeekö subjekti teon (hän kirjoitti sen) vai kohdistuuko teko siihen (se kirjoitettiin)."
+      },
+      "register": {
+        "plain": "Kuinka muodollinen sana on: vieraille ja virallisiin teksteihin vai ystäville."
+      },
+      "nonfinite": {
+        "plain": "Verbimuoto, joka nimeää teon kertomatta, kuka sen tekee tai milloin: mennä, menevä, mennyt."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Yksi jotakin.",
+        "example": "*koira*"
+      },
+      "plural": {
+        "plain": "Enemmän kuin yksi.",
+        "example": "*koirat*"
+      },
+      "dual": {
+        "plain": "Täsmälleen kaksi, kielissä joissa on oma muoto vain pareille.",
+        "example": "sloveeni *hiši*, kaksi taloa"
+      },
+      "first-person": {
+        "plain": "Puhuja: minä tai me.",
+        "example": "*minä* kävelen, *me* kävelemme"
+      },
+      "second-person": {
+        "plain": "Puhuteltava: sinä tai te.",
+        "example": "*sinä* kävelet"
+      },
+      "third-person": {
+        "plain": "Kuka tahansa muu: hän, se, he, ne.",
+        "example": "*hän kävelee*"
+      },
+      "nominative": {
+        "plain": "Teon tekijä: subjekti.",
+        "example": "*Koira* puree miestä."
+      },
+      "accusative": {
+        "plain": "Se, johon teko kohdistuu: suora objekti.",
+        "example": "Koira puri *miehen*."
+      },
+      "dative": {
+        "plain": "Se, jolle jotain annetaan tai tehdään: kenelle.",
+        "example": "Englanti I give *the man* a book, annan miehelle kirjan."
+      },
+      "genitive": {
+        "plain": "Kenen se on tai minkä osa se on.",
+        "example": "*miehen* kirja, *talon* katto"
+      },
+      "vocative": {
+        "plain": "Muoto, jota käytetään, kun jotakuta kutsutaan tai puhutellaan suoraan.",
+        "example": "puola *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Se, jolla tai jonka avulla jotain tehdään.",
+        "example": "venäjä писать *ручкой*, kirjoittaa *kynällä*"
+      },
+      "locative": {
+        "plain": "Missä jokin on.",
+        "example": "puola w *domu*, *talossa*"
+      },
+      "prepositional": {
+        "plain": "Muoto, jonka substantiivi saa tiettyjen prepositioiden jälkeen, useimmiten paikasta tai aiheesta puhuttaessa.",
+        "example": "venäjä о *книге*, *kirjasta*"
+      },
+      "ablative": {
+        "plain": "Pois jostakin, ulos jostakin tai jonkin avulla.",
+        "example": "latina *Romā*, Roomasta"
+      },
+      "partitive": {
+        "plain": "Osa jostakin, tai teko, jota ei viedä loppuun.",
+        "example": "*vettä*, vähän vettä"
+      },
+      "inessive": {
+        "plain": "Jonkin sisällä.",
+        "example": "*talossa*, talon sisällä"
+      },
+      "elative": {
+        "plain": "Ulos jostakin.",
+        "example": "*talosta*, ulos talosta"
+      },
+      "illative": {
+        "plain": "Sisään johonkin.",
+        "example": "*taloon*, sisään taloon"
+      },
+      "adessive": {
+        "plain": "Jonkin päällä tai luona.",
+        "example": "*pöydällä*, pöydän päällä"
+      },
+      "allative": {
+        "plain": "Jonkin päälle tai luo.",
+        "example": "*pöydälle*, pöydän päälle"
+      },
+      "essive": {
+        "plain": "Jonakin oleminen jonkin aikaa, roolina tai tilana.",
+        "example": "*lapsena*, lapsuudessa"
+      },
+      "translative": {
+        "plain": "Joksikin tuleminen.",
+        "example": "*opettajaksi*, (tulla) opettajaksi"
+      },
+      "abessive": {
+        "plain": "Ilman jotakin.",
+        "example": "*rahatta*, ilman rahaa"
+      },
+      "comitative": {
+        "plain": "Yhdessä jonkin kanssa.",
+        "example": "viro *sõbraga*, ystävän kanssa"
+      },
+      "masculine": {
+        "plain": "Yksi luokista, joihin substantiivit jakautuvat; maskuliinin ympärillä olevat sanat saavat sen mukaiset päätteet. Enimmäkseen sanan eikä sukupuolen asia.",
+        "example": "espanja *el libro*, kirja"
+      },
+      "feminine": {
+        "plain": "Yksi luokista, joihin substantiivit jakautuvat; feminiinin ympärillä olevat sanat saavat sen mukaiset päätteet. Enimmäkseen sanan eikä sukupuolen asia.",
+        "example": "espanja *la mesa*, pöytä"
+      },
+      "neuter": {
+        "plain": "Niiden substantiivien luokka, jotka eivät ole maskuliineja eivätkä feminiinejä.",
+        "example": "saksa *das Haus*, talo"
+      },
+      "animate": {
+        "plain": "Sanotaan ihmistä tai eläintä tarkoittavasta substantiivista, jolle jotkin kielet antavat omat päätteensä.",
+        "example": "venäjä вижу *брата*, näen veljeni"
+      },
+      "inanimate": {
+        "plain": "Sanotaan esinettä tarkoittavasta substantiivista, joka ei ole ihminen eikä eläin.",
+        "example": "venäjä вижу *стол*, näen pöydän"
+      },
+      "definite": {
+        "plain": "Tietty, jonka kumpikin puhuja tuntee: englannin the.",
+        "example": "ruotsi *huset*, (se) talo"
+      },
+      "indefinite": {
+        "plain": "Mikä tahansa, ei vielä tunnettu: englannin a.",
+        "example": "ruotsi *ett hus*, (eräs) talo"
+      },
+      "present": {
+        "plain": "Nyt, aina tai tapana.",
+        "example": "hän *kävelee*"
+      },
+      "past": {
+        "plain": "Ennen nykyhetkeä.",
+        "example": "hän *käveli*"
+      },
+      "future": {
+        "plain": "Myöhemmin kuin nyt.",
+        "example": "englanti she *will walk*, hän kävelee (myöhemmin)"
+      },
+      "non-past": {
+        "plain": "Nyt tai myöhemmin: yksi muoto molemmille.",
+        "example": "japani *食べる*, syö tai tulee syömään"
+      },
+      "preterite": {
+        "plain": "Jotain, mikä tapahtui ja päättyi tiettynä hetkenä menneisyydessä.",
+        "example": "espanja ayer *comí*, eilen *söin*"
+      },
+      "imperfect": {
+        "plain": "Menneisyys nähtynä sisältäpäin: jotain, mikä oli käynnissä, toistui tai oli tapana.",
+        "example": "espanja *comía*, *olin syömässä*, minulla *oli tapana syödä*"
+      },
+      "perfect": {
+        "plain": "Tehty ennen nykyhetkeä ja yhä merkityksellinen nyt.",
+        "example": "hän *on kävellyt*"
+      },
+      "pluperfect": {
+        "plain": "Tehty ennen toista menneisyyden hetkeä.",
+        "example": "hän *oli kävellyt*"
+      },
+      "aorist": {
+        "plain": "Mennyt teko kerrottuna yhtenä päättyneenä tapahtumana, niin kuin tarina sen kertoo.",
+        "example": "bulgaria *писах*, kirjoitin"
+      },
+      "indicative": {
+        "plain": "Tavallinen muoto, jolla sanotaan, miten asiat ovat: tosiasiat ja niitä koskevat kysymykset.",
+        "example": "Hän *on* täällä."
+      },
+      "subjunctive": {
+        "plain": "Muoto sille, mitä toivotaan, halutaan, epäillään, pelätään tai vain kuvitellaan, eikä sanota todeksi. Se tulee useimmiten sanojen kuten että, jos, jotta jälkeen.",
+        "example": "englanti I wish he *were* here, toivon, että hän olisi täällä. Espanja quiero que *vengas*, haluan, että tulet."
+      },
+      "subjunctive-i": {
+        "plain": "Saksan muoto, jolla toistetaan, mitä joku muu sanoi, menemättä takuuseen siitä.",
+        "example": "Er sagt, er *sei* krank. Hän sanoo olevansa sairas."
+      },
+      "subjunctive-ii": {
+        "plain": "Saksan muoto sille, mikä ei ole totta: toiveet, kohteliaat pyynnöt ja kunpa-lauseet.",
+        "example": "Wenn ich Zeit *hätte*... Jos minulla olisi aikaa..."
+      },
+      "conditional": {
+        "plain": "Mitä tapahtuisi, jos jokin muu olisi niin.",
+        "example": "hän *kävelisi*"
+      },
+      "conditional-i": {
+        "plain": "Mitä tapahtuisi, jos jokin muu olisi niin.",
+        "example": "saksa ich *würde gehen*, menisin"
+      },
+      "conditional-ii": {
+        "plain": "Mitä olisi tapahtunut, jos jokin muu olisi ollut niin.",
+        "example": "saksa ich *wäre gegangen*, olisin mennyt"
+      },
+      "future-i": {
+        "plain": "Myöhemmin kuin nyt.",
+        "example": "saksa ich *werde gehen*, menen (myöhemmin)"
+      },
+      "future-ii": {
+        "plain": "Tehty johonkin myöhempään hetkeen mennessä.",
+        "example": "saksa ich *werde gegangen sein*, olen silloin jo mennyt"
+      },
+      "imperative": {
+        "plain": "Muoto, jolla käsketään jotakuta tekemään jotain.",
+        "example": "*Kävele!*"
+      },
+      "jussive": {
+        "plain": "Muoto, jolla annetaan lupa tai käsketään jonkun, usein muun kuin kuulijan, tehdä jotain.",
+        "example": "arabia *لِيَكْتُبْ*, kirjoittakoon hän"
+      },
+      "optative": {
+        "plain": "Toivomisen muoto: olkoon niin."
+      },
+      "potential": {
+        "plain": "Muoto sille, mikä on todennäköisesti tai mahdollisesti niin.",
+        "example": "*lienee*, (hän) luultavasti on"
+      },
+      "active": {
+        "plain": "Subjekti tekee teon.",
+        "example": "Hän *kirjoitti* kirjeen."
+      },
+      "passive": {
+        "plain": "Teko kohdistuu subjektiin.",
+        "example": "Kirje *kirjoitettiin*."
+      },
+      "infinitive": {
+        "plain": "Verbi sellaisenaan, kenenkään vielä tekemättä sitä: muoto, jolla sanakirja sen luettelee.",
+        "example": "*kävellä*, espanja *caminar*"
+      },
+      "participle": {
+        "plain": "Verbin muoto, joka toimii kuin adjektiivi ja apuverbin kanssa muodostaa muita aikamuotoja.",
+        "example": "*rikkinäinen* kuppi, hän on *kävellyt*"
+      },
+      "gerund": {
+        "plain": "Verbin muoto käynnissä olevalle teolle tai substantiivin tavoin käytettynä.",
+        "example": "englanti she is *walking*, espanja está *caminando*, hän on kävelemässä"
+      },
+      "imperfective": {
+        "plain": "Teko jatkuvana, toistuvana tai keskeneräisenä.",
+        "example": "venäjä я *читал*, luin (olin lukemassa)"
+      },
+      "perfective": {
+        "plain": "Teko yhtenä valmiina kokonaisuutena.",
+        "example": "venäjä я *прочитал*, luin sen (loppuun)"
+      },
+      "progressive": {
+        "plain": "Käynnissä juuri sillä hetkellä.",
+        "example": "hän *on kävelemässä*"
+      },
+      "positive": {
+        "plain": "Adjektiivi sellaisenaan, ilman vertailua.",
+        "example": "*iso*"
+      },
+      "comparative": {
+        "plain": "Enemmän kuin jokin muu.",
+        "example": "*isompi*, *kauniimpi*"
+      },
+      "superlative": {
+        "plain": "Enemmän kuin kaikki muut.",
+        "example": "*isoin*, *kaunein*"
+      },
+      "strong": {
+        "plain": "Adjektiivin päätteet, joita saksa käyttää, kun edessä ei ole sijaa näyttävää artikkelia.",
+        "example": "*kaltes* Wasser, kylmä vesi"
+      },
+      "weak": {
+        "plain": "Adjektiivin päätteet, joita saksa käyttää sanojen der, die, das jälkeen, kun artikkeli jo näyttää sijan.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Adjektiivin päätteet, joita saksa käyttää sanojen ein, kein, mein jälkeen.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Vieraille, vanhemmille ja virallisiin teksteihin.",
+        "example": "*Te*, saksa *Sie*, espanja *usted*"
+      },
+      "informal": {
+        "plain": "Ystäville, perheelle ja lapsille.",
+        "example": "*sinä*, saksa *du*, espanja *tú*"
+      },
+      "polite": {
+        "plain": "Kunnioittava tapa sanoa se.",
+        "example": "japani *食べます*, syön, kohteliaasti sanottuna"
+      }
+    }
+  }
+}

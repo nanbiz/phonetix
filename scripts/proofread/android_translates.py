@@ -113,9 +113,12 @@ def set_on_the_screen(dev):
         view.evaluate("document.querySelector('[data-sheet] [data-choice=fr]')?.click()")
         time.sleep(1)
         listed = view.evaluate("[...document.querySelectorAll('[data-row=language]')].map(r => r.dataset.lang).join(' ')")
-        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+        view.evaluate("document.querySelector('[data-does=back]').click()")
         time.sleep(1)
         after = view.evaluate("document.querySelector('[data-row=languages] [data-about]')?.textContent?.trim()")
+        # Named in the language the screen is in, which is the reader's own.
+        french = view.evaluate("new Intl.DisplayNames([document.documentElement.lang || 'en'],"
+                               " {type: 'language'}).of('fr')") or "French"
         wraps = view.evaluate("""(() => { const r = document.querySelector('[data-row=languages] [data-about]');
             const h = parseFloat(getComputedStyle(r).lineHeight) || 20; return r.getBoundingClientRect().height > h * 1.5 })()""")
     known = State.fetch(SERIAL, State.ask(SERIAL)).get("settings", {}).get("known")
@@ -125,8 +128,8 @@ def set_on_the_screen(dev):
         failures.append(f"the screen still offers {extra}")
     if "fr" not in (listed or "").split():
         failures.append(f"the Languages screen does not list French once added: {listed!r}")
-    if "French" not in (after or ""):
-        failures.append(f"the Languages row does not name French once added: {after!r}")
+    if french.lower() not in (after or "").lower():
+        failures.append(f"the Languages row does not name French ({french}) once added: {after!r}")
     if wraps:
         failures.append("the Languages row's value wraps")
     if "fr" not in (known or []):
@@ -162,7 +165,7 @@ def parts_on_the_screen(dev, base):
         rows = view.evaluate("[...document.querySelectorAll('[data-view=lookup] [data-row]')].map(r => r.dataset.row).join(' ')")
         switch(view, "show-grammar")
         switch(view, "show-sound")
-        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+        view.evaluate("document.querySelector('[data-does=back]').click()")
     dev.surface(mode="spanish", packHost=base, target="de", known="none", enable=1, density=1)
     time.sleep(4)
     texts, _ = card_while_held(dev, "perro")
@@ -187,7 +190,7 @@ def parts_on_the_screen(dev, base):
         time.sleep(1)
         switch(view, "show-grammar")
         switch(view, "show-sound")
-        view.evaluate("document.querySelector('[aria-label=Back]').click()")
+        view.evaluate("document.querySelector('[data-does=back]').click()")
     return failures
 
 

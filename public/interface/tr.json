@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "İzin ver",
+    "allow-overlay": "Katmana izin ver",
+    "already-in": "Bu sayfa zaten %s dilinde",
+    "broad-mark": "/ /",
+    "change": "Değiştir",
+    "choose-language": "Bir dil seç",
+    "close": "Kapat",
+    "detail-explained": "Geniş, sözcükleri birbirinden ayıran seslerdir; dar ise bir sözcüğün nasıl söylendiğinin her ayrıntısıdır, o aksanı konuşan birinin söylediği gibi.",
+    "every-app": "Her uygulama",
+    "get": "Al",
+    "loading-dictionary": "Sözlük yükleniyor…",
+    "master-idle": "Uygulamalarının üstüne hiçbir şey çizilmiyor",
+    "master-off": "Duraklatıldı",
+    "master-on": "Okunuyor",
+    "master-unready": "Ekranı okumasına ve uygulamaların üstüne çizim yapmasına izin ver",
+    "master-working": "Uygulamalarındaki sözcükler yanıtlanıyor",
+    "narrow-mark": "[ ]",
+    "no-source": "bir sözcüğün anlamı için; nasıl söylendiği zaten hazır",
+    "no-translation": "Çevirme",
+    "nothing-found": "Bu adda bir şey yok",
+    "nothing-yet": "henüz bir şey yok",
+    "open-accessibility": "Erişilebilirliği aç",
+    "preview": "Önizleme",
+    "preview-about": "bu uygulamanın yanıtlayacağı sayfadaki sözcükler",
+    "remove": "Kaldır",
+    "rest-edge": "%s kenarında",
+    "rest-loose": "Nereye bırakırsan orada",
+    "no-direction": "%s dilinden çeviri alınamadı. Bunun yerine sözcükler nasıl okunduklarını gösterir.",
+    "service-stopped": "Phonetix ekranı okumaya izinli ama çalışmıyor. Telefonun erişilebilirlik ayarlarında kapatıp yeniden aç.",
+    "rest-put": "Düğmeyi yukarı ya da aşağı, ya da öbür kenara sürükle.",
+    "say-into": "Şu dilde yanıtla",
+    "say-no-language": "Önce okumak istediğin dili seç.",
+    "say-no-model": "Sözlük sunucunda bu yön için çeviri modeli yok.",
+    "say-nothing": "bunun için sözcük yok",
+    "say-placeholder": "söylemek istediğin",
+    "search": "Ara",
+    "speak": "Söyle",
+    "touch-off": "Her dokunuş altındaki uygulamaya gider, kaydırma etkilenmez.",
+    "touch-on": "Bir sözcükte başlayan kaydırma sayfayı kaydırmaz.",
+    "turn": "Tersini yanıtla",
+    "use-this": "Bunu kullan",
+    "say-fetching": "%s alınıyor",
+    "back": "Geri",
+    "apps-chosen": "%s seçildi",
+    "packs-held": "%s indirildi",
+    "other-languages": "Diğer diller",
+    "words-count": "%s sözcük",
+    "packs-here": "Bu telefonda",
+    "packs-more": "Kullanılabilir",
+    "every-word": "her sözcük",
+    "one-in": "%s içinden bir",
+    "open-panel": "Aç",
+    "site-off": "burada hep kapalı",
+    "site-following": "ana anahtarı izliyor (şu an: %s)",
+    "on": "açık",
+    "off": "kapalı",
+    "set-key": "Bir tuş ata",
+    "simple": "Basit",
+    "detailed": "Ayrıntılı",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "başka bir şey yok",
+    "learn-none": "yok",
+    "add-language": "Dil ekle",
+    "learn-language": "Bir dil öğren",
+    "make-main": "Ana dilim yap",
+    "main-language": "Ana dilim",
+    "learning-it": "%s öğreniliyor",
+    "dictate": "Dikte et",
+    "pos-adj": "sıfat",
+    "pos-adv": "zarf",
+    "pos-article": "artikel",
+    "pos-character": "karakter",
+    "pos-conj": "bağlaç",
+    "pos-contraction": "kısaltma",
+    "pos-det": "belirleyici",
+    "pos-intj": "ünlem",
+    "pos-name": "özel ad",
+    "pos-noun": "isim",
+    "pos-num": "sayı",
+    "pos-particle": "partikül",
+    "pos-phrase": "ifade",
+    "pos-postp": "ilgeç",
+    "pos-prefix": "önek",
+    "pos-prep": "edat",
+    "pos-prep_phrase": "edat öbeği",
+    "pos-pron": "zamir",
+    "pos-proverb": "atasözü",
+    "pos-punct": "noktalama işareti",
+    "pos-suffix": "sonek",
+    "pos-symbol": "sembol",
+    "pos-verb": "fiil",
+    "pos-abbrev": "kısaltma",
+    "pos-affix": "ek",
+    "pos-infix": "ara ek",
+    "pos-interfix": "bağlantı eki",
+    "pos-circumfix": "çevreleyici ek",
+    "pos-root": "kök",
+    "pos-combining_form": "bileşik biçim",
+    "pos-classifier": "sınıflandırıcı",
+    "pos-counter": "ölçü sözcüğü",
+    "pos-letter": "harf",
+    "no-dictionary-for": "%s için henüz sözlük yok",
+    "unknown-language": "Bunun hangi dil olduğu belli değil",
+    "looking-up": "Bakılıyor",
+    "nothing-for": "%s için bir şey bulunamadı",
+    "read-as": "%s olarak oku",
+    "read-as-accent": "%s, %s aksanıyla oku",
+    "translated-by": "Çevirmen: %s",
+    "translated-by-machine": "Makine çevirisi",
+    "guess": "tahmin",
+    "in-english": "İngilizce",
+    "getting-dictionary": "%s sözlüğü alınıyor",
+    "getting-dictionaries": "%s sözlükleri alınıyor",
+    "say-word": "%s de",
+    "hear-word": "%s dinle",
+    "play-sound": "%s kaydını çal",
+    "read-about-sound": "%s hakkında oku",
+    "see-mouth": "%s diyen ağzı gör",
+    "mouth-making": "ağız %s sesini nasıl çıkarır",
+    "tap-sound": "Ne olduğunu duymak için bir sese dokun",
+    "what-this-is": "Bu nedir",
+    "for-example": "Örneğin: %s",
+    "fetching": "alınıyor",
+    "done": "tamam",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "%s. kişi, %s",
+    "person-long": "%s. kişi",
+    "person-and-number": "kişi ve sayı",
+    "form-of": "fiilinin",
+    "term-mood": "kip",
+    "term-tense": "zaman",
+    "term-aspect": "görünüş",
+    "term-person": "kişi",
+    "term-number": "sayı",
+    "term-case": "hal",
+    "term-gender": "cins",
+    "term-definiteness": "belirlilik",
+    "term-declension": "çekim",
+    "term-degree": "derece",
+    "term-voice": "çatı",
+    "term-register": "kullanım düzeyi",
+    "term-nonfinite": "eylemsi",
+    "term-singular": "tekil",
+    "term-plural": "çoğul",
+    "term-dual": "ikil",
+    "term-first-person": "birinci kişi",
+    "term-second-person": "ikinci kişi",
+    "term-third-person": "üçüncü kişi",
+    "term-nominative": "yalın hal",
+    "term-accusative": "belirtme hali",
+    "term-dative": "yönelme hali",
+    "term-genitive": "tamlayan hali",
+    "term-vocative": "seslenme hali",
+    "term-instrumental": "araç hali",
+    "term-locative": "bulunma hali",
+    "term-prepositional": "edat hali",
+    "term-ablative": "çıkma hali",
+    "term-partitive": "bölümleme hali",
+    "term-inessive": "içinde hali",
+    "term-elative": "içinden hali",
+    "term-illative": "içine hali",
+    "term-adessive": "üstünde hali",
+    "term-allative": "üstüne hali",
+    "term-essive": "olarak hali",
+    "term-translative": "oluş hali",
+    "term-abessive": "yoksunluk hali",
+    "term-comitative": "birliktelik hali",
+    "term-masculine": "eril",
+    "term-feminine": "dişil",
+    "term-neuter": "nötr",
+    "term-animate": "canlı",
+    "term-inanimate": "cansız",
+    "term-definite": "belirli",
+    "term-indefinite": "belirsiz",
+    "term-present": "şimdiki zaman",
+    "term-past": "geçmiş zaman",
+    "term-future": "gelecek zaman",
+    "term-non-past": "geçmiş olmayan",
+    "term-preterite": "belirli geçmiş",
+    "term-imperfect": "sürekli geçmiş",
+    "term-perfect": "belirsiz geçmiş",
+    "term-pluperfect": "geçmişin geçmişi",
+    "term-aorist": "geniş zaman",
+    "term-indicative": "bildirme kipi",
+    "term-subjunctive": "dilek kipi",
+    "term-subjunctive-i": "birinci dilek kipi",
+    "term-subjunctive-ii": "ikinci dilek kipi",
+    "term-conditional": "koşul kipi",
+    "term-conditional-i": "birinci koşul kipi",
+    "term-conditional-ii": "ikinci koşul kipi",
+    "term-future-i": "birinci gelecek zaman",
+    "term-future-ii": "ikinci gelecek zaman",
+    "term-imperative": "emir kipi",
+    "term-jussive": "istek kipi",
+    "term-optative": "temenni kipi",
+    "term-potential": "olasılık kipi",
+    "term-active": "etken çatı",
+    "term-passive": "edilgen çatı",
+    "term-infinitive": "mastar",
+    "term-participle": "ortaç",
+    "term-gerund": "ulaç",
+    "term-imperfective": "sürekli görünüş",
+    "term-perfective": "tamamlanmış görünüş",
+    "term-progressive": "devam görünüşü",
+    "term-positive": "yalın derece",
+    "term-comparative": "üstünlük derecesi",
+    "term-superlative": "en üstünlük derecesi",
+    "term-strong": "güçlü",
+    "term-weak": "zayıf",
+    "term-mixed": "karma",
+    "term-formal": "resmi",
+    "term-informal": "samimi",
+    "term-polite": "kibar",
+    "accent-British": "İngiliz",
+    "accent-American": "Amerikan",
+    "accent-Scottish": "İskoç",
+    "accent-Australian": "Avustralya",
+    "accent-Caribbean": "Karayip",
+    "accent-Canadian": "Kanada",
+    "accent-Spain": "İspanya",
+    "accent-Latin America": "Latin Amerika",
+    "accent-Rioplatense": "Rioplatense",
+    "accent-Germany": "Almanya",
+    "accent-Switzerland": "İsviçre",
+    "accent-Austria": "Avusturya",
+    "accent-Portugal": "Portekiz",
+    "accent-Brazil": "Brezilya",
+    "accent-France": "Fransa",
+    "accent-Canada": "Kanada",
+    "accent-Northern": "Kuzey",
+    "accent-Central": "Orta"
+  },
+  "rows": {
+    "on": {
+      "name": "Okuduklarımı işaretle",
+      "about": ""
+    },
+    "site": {
+      "name": "Bu sitede",
+      "about": ""
+    },
+    "layer": {
+      "name": "Katman",
+      "about": ""
+    },
+    "density": {
+      "name": "Ne sıklıkla",
+      "about": ""
+    },
+    "target": {
+      "name": "Dil",
+      "about": ""
+    },
+    "source": {
+      "name": "Bu sayfa şu dilde",
+      "about": ""
+    },
+    "accent": {
+      "name": "Aksan",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Sözlükler",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transkripsiyon",
+      "about": ""
+    },
+    "stress": {
+      "name": "Vurgu işaretleri",
+      "about": ""
+    },
+    "delay": {
+      "name": "Kart açılmadan önce bekleme",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animasyonlar",
+      "about": ""
+    },
+    "say": {
+      "name": "Bir şeyin sözcüğü",
+      "about": ""
+    },
+    "setup": {
+      "name": "Kurulum",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Ekranı okuma",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Uygulamaların üstüne çizim",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Telaffuz",
+      "about": ""
+    },
+    "translate": {
+      "name": "Çeviri",
+      "about": ""
+    },
+    "side": {
+      "name": "Hangi taraf",
+      "about": ""
+    },
+    "rest": {
+      "name": "Düğmenin durduğu yer",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Sabit yükseklik",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Bir sözcüğün üstüne sürükle",
+      "about": "Üzerinden geçtiği şeyi söyler, altındaki sayfa yine kayar"
+    },
+    "lens-sweep": {
+      "name": "Basılı tut, sonra süpür",
+      "about": "Üzerinden geçtiği her sözcük sıraya girer, kart tüm cümleyi yanıtlar"
+    },
+    "lens-hold": {
+      "name": "Basılı tut",
+      "about": "Ayarları açar"
+    },
+    "lens-tap": {
+      "name": "Dokun",
+      "about": "Okuduğun metnin ortasında bir şeyin sözcüğünü iste; kartı kapatmak için tekrar dokun"
+    },
+    "touch": {
+      "name": "Bir sözcüğe dokunma",
+      "about": ""
+    },
+    "where": {
+      "name": "Konum",
+      "about": ""
+    },
+    "apps": {
+      "name": "Uygulamalar",
+      "about": ""
+    },
+    "start": {
+      "name": "Bir sözcüğü yanıtlamadan önce",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Kartı için bir sözcüğe dokun",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Bir sözcüğün anlamını görmek için",
+      "about": ""
+    },
+    "theme": {
+      "name": "Tema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Gelişmiş",
+      "about": ""
+    },
+    "dark": {
+      "name": "Açık ya da koyu",
+      "about": ""
+    },
+    "mine": {
+      "name": "Ana dilim",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Yan düğme",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Diller",
+      "about": ""
+    },
+    "position": {
+      "name": "Konum",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Görünüm",
+      "about": ""
+    },
+    "accents": {
+      "name": "Aksanlar",
+      "about": ""
+    },
+    "inline": {
+      "name": "Sözcükleri değiştir",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Değiştirilen sözcükler",
+      "about": ""
+    },
+    "translator": {
+      "name": "Çevirmen",
+      "about": ""
+    },
+    "into": {
+      "name": "Şuna çevir",
+      "about": ""
+    },
+    "known": {
+      "name": "Hiçbir zaman çevirme",
+      "about": ""
+    },
+    "learn": {
+      "name": "Öğrenme",
+      "about": ""
+    },
+    "cards": {
+      "name": "Bak",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Telaffuz",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Anlam",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Dilbilgisi",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Diğer anlamlar",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Her sözcüğü açıkla",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Benim",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "birkaç sözcük",
+      "her sözcük"
+    ],
+    "delay": [
+      "anında",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Kapalı",
+        "about": {
+          "browser": "hiçbir şey değiştirilmez; bir sözcüğü kendin sor",
+          "phone": "hiçbir şey değiştirilmez; düğme yine de bir sözcüğü yanıtlar"
+        }
+      },
+      "meaning": {
+        "label": "Çeviri",
+        "about": {
+          "browser": "sözcük anlamıyla değiştirilir",
+          "phone": "sözcük anlamıyla değiştirilir"
+        }
+      },
+      "sound": {
+        "label": "Telaffuz",
+        "about": {
+          "browser": "sözcük nasıl söylendiğiyle değiştirilir",
+          "phone": "sözcük nasıl söylendiğiyle değiştirilir"
+        }
+      },
+      "both": {
+        "label": "İkisi de",
+        "about": {
+          "browser": "ne anlama geldiği ve bunun nasıl söylendiği",
+          "phone": "ne anlama geldiği ve bunun nasıl söylendiği"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "sözcükleri birbirinden ayıran sesler",
+          "phone": "sözcükleri birbirinden ayıran sesler"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "nasıl söylendiğinin her ayrıntısı, nefeslenme ve sertleşme gibi",
+          "phone": "nasıl söylendiğinin her ayrıntısı, nefeslenme ve sertleşme gibi"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Sistem",
+        "about": {
+          "browser": "bu cihaz neye ayarlıysa o",
+          "phone": "bu cihaz neye ayarlıysa o"
+        }
+      },
+      "light": {
+        "label": "Açık",
+        "about": {
+          "browser": "her zaman paletin açık tarafı",
+          "phone": "her zaman paletin açık tarafı"
+        }
+      },
+      "dark": {
+        "label": "Koyu",
+        "about": {
+          "browser": "her zaman paletin koyu tarafı",
+          "phone": "her zaman paletin koyu tarafı"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Sol",
+        "about": {
+          "phone": "telefon sol elde tutulduğunda"
+        }
+      },
+      "free": {
+        "label": "Serbest",
+        "about": {
+          "phone": "nereye bırakırsan orada kalır"
+        }
+      },
+      "right": {
+        "label": "Sağ",
+        "about": {
+          "phone": "telefon sağ elde tutulduğunda"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Konuşanın eylemi nasıl kastettiği: bir gerçek olarak mı, bir dilek, şüphe ya da hayal olarak mı, yoksa bir emir olarak mı."
+      },
+      "tense": {
+        "plain": "Ne zaman olduğu: şimdiden önce, şimdi ya da sonra."
+      },
+      "aspect": {
+        "plain": "Eylemin nasıl görüldüğü: bitmiş bütün bir şey olarak mı, yoksa sürüp giden, tekrarlanan ya da bitmemiş olarak mı."
+      },
+      "person": {
+        "plain": "Kimin yaptığı: konuşan (ben, biz), karşısındaki (sen) ya da başka biri (o, onlar)."
+      },
+      "number": {
+        "plain": "Kaç tane: bir ya da birden fazla."
+      },
+      "case": {
+        "plain": "Bir ismin cümledeki işini göstermek için aldığı biçim: kim bir şey yapıyor, kime, kimin, nerede."
+      },
+      "gender": {
+        "plain": "Her ismin ait olduğu ve çevresindeki sözcüklerin ona uymak için değiştiği bir sınıf. Cinsiyetle pek ilgisi yoktur: Almanca das Mädchen, kız, nötrdür."
+      },
+      "definiteness": {
+        "plain": "Bir şeyin belli, bilinen tek bir şey mi (ev), yoksa herhangi biri mi (bir ev) olduğu."
+      },
+      "declension": {
+        "plain": "Bir isim ya da sıfatın, çevresindeki sözcüklere göre aldığı ekler kümesi."
+      },
+      "degree": {
+        "plain": "Bir sıfatın ne kadar güçlü olduğu: büyük, daha büyük, en büyük."
+      },
+      "voice": {
+        "plain": "Öznenin eylemi yapıp yapmadığı (o yazdı) ya da eylemin ona yapılıp yapılmadığı (yazıldı)."
+      },
+      "register": {
+        "plain": "Sözcüğün ne kadar resmi olduğu: yabancılar ve resmi yazılar için mi, yoksa arkadaşlar için mi."
+      },
+      "nonfinite": {
+        "plain": "Kimin ya da ne zaman yaptığını söylemeden eylemi adlandıran fiil biçimi: gitmek, giderken, gitmiş."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Bir tane.",
+        "example": "bir *kedi*"
+      },
+      "plural": {
+        "plain": "Birden fazla.",
+        "example": "*kediler*"
+      },
+      "dual": {
+        "plain": "Tam olarak iki; ikil bir biçimi olan dillerde.",
+        "example": "Slovence *hiši*, iki ev"
+      },
+      "first-person": {
+        "plain": "Konuşan: ben ya da biz.",
+        "example": "*ben* yürürüm, *biz* yürürüz"
+      },
+      "second-person": {
+        "plain": "Karşısındaki: sen.",
+        "example": "*sen* yürürsün"
+      },
+      "third-person": {
+        "plain": "Başka herhangi biri: o, onlar, bu.",
+        "example": "*o* yürür"
+      },
+      "nominative": {
+        "plain": "Eylemi yapan: özne.",
+        "example": "*Köpek* adamı ısırır."
+      },
+      "accusative": {
+        "plain": "Eylemin üzerine yapıldığı: doğrudan nesne.",
+        "example": "Köpek *adamı* ısırır."
+      },
+      "dative": {
+        "plain": "Bir şeyin verildiği ya da yapıldığı kişi: kime.",
+        "example": "*Adama* bir kitap veriyorum."
+      },
+      "genitive": {
+        "plain": "Kime ait olduğu ya da neyin parçası olduğu: -ın, -in, -un, -ün.",
+        "example": "*adamın* kitabı, *evin* çatısı"
+      },
+      "vocative": {
+        "plain": "Birini doğrudan çağırmak ya da ona seslenmek için kullanılan biçim.",
+        "example": "Lehçe *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Bir şeyin ile ya da tarafından yapıldığı.",
+        "example": "Rusça писать *ручкой*, *kalemle* yazmak"
+      },
+      "locative": {
+        "plain": "Bir şeyin nerede olduğu.",
+        "example": "Lehçe w *domu*, *evde*"
+      },
+      "prepositional": {
+        "plain": "Bazı edatlardan sonra alınan biçim; çoğunlukla nerede ya da ne hakkında olduğu için.",
+        "example": "Rusça о *книге*, *kitap* hakkında"
+      },
+      "ablative": {
+        "plain": "Bir şeyden uzaklaşma, dışına çıkma ya da bir araçla.",
+        "example": "Latince *Romā*, Roma'dan"
+      },
+      "partitive": {
+        "plain": "Bir şeyin bir kısmı, ya da sonuna kadar yapılmayan bir eylem.",
+        "example": "Fince *vettä*, biraz su"
+      },
+      "inessive": {
+        "plain": "Bir şeyin içinde.",
+        "example": "Fince *talossa*, evde"
+      },
+      "elative": {
+        "plain": "Bir şeyin içinden dışarı.",
+        "example": "Fince *talosta*, evden"
+      },
+      "illative": {
+        "plain": "Bir şeyin içine.",
+        "example": "Fince *taloon*, evin içine"
+      },
+      "adessive": {
+        "plain": "Bir şeyin üstünde ya da yanında.",
+        "example": "Fince *pöydällä*, masanın üstünde"
+      },
+      "allative": {
+        "plain": "Bir şeyin üstüne ya da bir şeye doğru.",
+        "example": "Fince *pöydälle*, masanın üstüne"
+      },
+      "essive": {
+        "plain": "Bir süre bir şey olmak: bir rol ya da durum olarak.",
+        "example": "Fince *lapsena*, çocuk olarak"
+      },
+      "translative": {
+        "plain": "Bir şeye dönüşmek.",
+        "example": "Fince *opettajaksi*, (olmak için) öğretmen"
+      },
+      "abessive": {
+        "plain": "Bir şey olmadan.",
+        "example": "Fince *rahatta*, parasız"
+      },
+      "comitative": {
+        "plain": "Bir şeyle birlikte.",
+        "example": "Estonca *sõbraga*, bir arkadaşla"
+      },
+      "masculine": {
+        "plain": "İsimlerin girdiği sınıflardan biri; eril bir ismin çevresindeki sözcükler onun eklerini alır. Çoğunlukla sözcüğün bir özelliğidir, cinsiyetin değil.",
+        "example": "İspanyolca *el libro*, kitap"
+      },
+      "feminine": {
+        "plain": "İsimlerin girdiği sınıflardan biri; dişil bir ismin çevresindeki sözcükler onun eklerini alır. Çoğunlukla sözcüğün bir özelliğidir, cinsiyetin değil.",
+        "example": "İspanyolca *la mesa*, masa"
+      },
+      "neuter": {
+        "plain": "Eril ve dişil olmayan isimlerin sınıfı.",
+        "example": "Almanca *das Haus*, ev"
+      },
+      "animate": {
+        "plain": "Bir insanı ya da hayvanı anlatan isim için; bazı diller bunlara kendi ekini verir.",
+        "example": "Rusça вижу *брата*, kardeşimi görüyorum"
+      },
+      "inanimate": {
+        "plain": "Bir insan ya da hayvan olmayan, bir şeyi anlatan isim için.",
+        "example": "Rusça вижу *стол*, masayı görüyorum"
+      },
+      "definite": {
+        "plain": "Konuşanların ikisinin de hangisi olduğunu bildiği belli bir şey: İngilizcedeki the.",
+        "example": "İsveççe *huset*, ev"
+      },
+      "indefinite": {
+        "plain": "Herhangi biri, henüz bilinmeyen: İngilizcedeki a.",
+        "example": "İsveççe *ett hus*, bir ev"
+      },
+      "present": {
+        "plain": "Şimdi, hep ya da alışkanlık olarak.",
+        "example": "o *yürür*"
+      },
+      "past": {
+        "plain": "Şimdiden önce.",
+        "example": "o *yürüdü*"
+      },
+      "future": {
+        "plain": "Şimdiden sonra.",
+        "example": "o *yürüyecek*"
+      },
+      "non-past": {
+        "plain": "Şimdi ya da sonra: iki durum için tek biçim.",
+        "example": "Japonca *食べる*, yer ya da yiyecek"
+      },
+      "preterite": {
+        "plain": "Geçmişte bir noktada olup bitmiş bir şey.",
+        "example": "İspanyolca ayer *comí*, dün *yedim*"
+      },
+      "imperfect": {
+        "plain": "Geçmişin içinden görünüşü: sürüp giden, tekrarlanan ya da eskiden olan bir şey.",
+        "example": "İspanyolca *comía*, *yiyordum*, *yerdim*"
+      },
+      "perfect": {
+        "plain": "Şimdiden önce olup bitmiş ve şimdi de önemi olan.",
+        "example": "o *yürümüş*"
+      },
+      "pluperfect": {
+        "plain": "Geçmişteki başka bir andan önce olup bitmiş.",
+        "example": "o *yürümüştü*"
+      },
+      "aorist": {
+        "plain": "Geçmişte olmuş bir eylem, bir hikâyenin anlattığı gibi tek bir tamamlanmış olay olarak.",
+        "example": "Bulgarca *писах*, yazdım"
+      },
+      "indicative": {
+        "plain": "Durumu olduğu gibi söyleyen olağan biçim: olgular ve onlar hakkındaki sorular.",
+        "example": "o her gün *gelir*"
+      },
+      "subjunctive": {
+        "plain": "Bir şeyin olmasının dilendiği, istendiği, şüphe edildiği, korkulduğu ya da yalnızca hayal edildiği hali; öyle olduğu söylenen değil. Çoğunlukla keşke, eğer, öyle ki gibi sözcüklerden sonra gelir.",
+        "example": "Keşke burada *olsaydı*. Vaktinde *gelmesi* şart. İspanyolca quiero que *vengas*, gelmeni istiyorum."
+      },
+      "subjunctive-i": {
+        "plain": "Almancanın, başkasının söylediğini onaylamadan tekrarlama biçimi.",
+        "example": "Almanca Er sagt, er *sei* krank. O, hasta olduğunu söylüyor."
+      },
+      "subjunctive-ii": {
+        "plain": "Almancanın gerçek olmayan şeyler için biçimi: dilekler, nazik istekler ve keşke.",
+        "example": "Almanca Wenn ich Zeit *hätte*... Zamanım olsaydı..."
+      },
+      "conditional": {
+        "plain": "Başka bir şey öyle olsaydı, ne olurdu.",
+        "example": "o *yürürdü*"
+      },
+      "conditional-i": {
+        "plain": "Başka bir şey öyle olsaydı, ne olurdu.",
+        "example": "Almanca ich *würde gehen*, giderdim"
+      },
+      "conditional-ii": {
+        "plain": "Başka bir şey öyle olsaydı, ne olmuş olurdu.",
+        "example": "Almanca ich *wäre gegangen*, gitmiş olurdum"
+      },
+      "future-i": {
+        "plain": "Şimdiden sonra.",
+        "example": "Almanca ich *werde gehen*, gideceğim"
+      },
+      "future-ii": {
+        "plain": "Daha sonraki bir noktaya kadar tamamlanmış olacak.",
+        "example": "Almanca ich *werde gegangen sein*, gitmiş olacağım"
+      },
+      "imperative": {
+        "plain": "Birine bir şeyi yapmasını söyleme biçimi.",
+        "example": "*Yürü!*"
+      },
+      "jussive": {
+        "plain": "Birinin, çoğunlukla dinleyici olmayan birinin bir şeyi yapmasına izin vermek ya da söylemek için biçim.",
+        "example": "Arapça *لِيَكْتُبْ*, yazsın"
+      },
+      "optative": {
+        "plain": "Bir dileği anlatan biçim: öyle olsun."
+      },
+      "potential": {
+        "plain": "Muhtemelen ya da olası olan bir şey için biçim.",
+        "example": "Fince *lienee*, (o) muhtemelen öyledir"
+      },
+      "active": {
+        "plain": "Öznenin eylemi yaptığı.",
+        "example": "O mektubu *yazdı*."
+      },
+      "passive": {
+        "plain": "Öznenin üzerine eylemin yapıldığı.",
+        "example": "Mektup *yazıldı*."
+      },
+      "infinitive": {
+        "plain": "Fiilin kendisi, henüz kimse yapmadan: sözlüğün altında listelediği biçim.",
+        "example": "*yürümek*, İspanyolca *caminar*"
+      },
+      "participle": {
+        "plain": "Sıfat gibi çalışan ve bir yardımcıyla öbür zamanları yapan fiil biçimi.",
+        "example": "*kırık* bir fincan, o *yürümüş*"
+      },
+      "gerund": {
+        "plain": "Sürmekte olan bir eylem için ya da isim gibi kullanılan fiil biçimi.",
+        "example": "o *yürüyor*, İspanyolca está *caminando*"
+      },
+      "imperfective": {
+        "plain": "Eylemin sürüp giden, tekrarlanan ya da bitmemiş olarak görünüşü.",
+        "example": "Rusça я *читал*, okuyordum"
+      },
+      "perfective": {
+        "plain": "Eylemin bitmiş bütün bir şey olarak görünüşü.",
+        "example": "Rusça я *прочитал*, okudum (sonuna kadar)"
+      },
+      "progressive": {
+        "plain": "O anda sürmekte olan.",
+        "example": "o *yürüyor*"
+      },
+      "positive": {
+        "plain": "Sıfatın olduğu gibi, karşılaştırma yapılmadan.",
+        "example": "*büyük*"
+      },
+      "comparative": {
+        "plain": "Başka bir şeyden daha fazla.",
+        "example": "*daha büyük*, *daha güzel*"
+      },
+      "superlative": {
+        "plain": "Her şeyden daha fazla.",
+        "example": "*en büyük*, *en güzel*"
+      },
+      "strong": {
+        "plain": "Önünde bir artikel hali göstermediğinde Almancanın kullandığı sıfat ekleri.",
+        "example": "Almanca *kaltes* Wasser, soğuk su"
+      },
+      "weak": {
+        "plain": "Almancada der, die, das'tan sonra kullanılan sıfat ekleri; burada artikel hali zaten gösterir.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Almancada ein, kein, mein'den sonra kullanılan sıfat ekleri.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Yabancılar, büyükler ve resmi yazılar için.",
+        "example": "Almanca *Sie*, İspanyolca *usted*"
+      },
+      "informal": {
+        "plain": "Arkadaşlar, aile ve çocuklar için.",
+        "example": "Almanca *du*, İspanyolca *tú*"
+      },
+      "polite": {
+        "plain": "Saygılı söyleme biçimi.",
+        "example": "Japonca *食べます*, (ben) yerim, saygılı biçimde söylenir"
+      }
+    }
+  }
+}

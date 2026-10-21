@@ -43,7 +43,27 @@ export const LANGUAGES: Record<string, Named> = {
   zh: { english: "Chinese", native: "中文", rtl: false },
 };
 
-/** What to call this language to a reader, or the code when it is not named. */
+/** The language languages are named in, which is the interface's. */
+let namingIn = 'en';
+let names: Intl.DisplayNames | null = null;
+
+/** Name languages in this one from now on. */
+export function nameIn(lang: string): void {
+  namingIn = lang;
+  try {
+    names = lang === 'en' ? null : new Intl.DisplayNames([lang], { type: 'language' });
+  } catch {
+    names = null;
+  }
+}
+
+/** What to call this language to a reader, in the interface's language, or the code when
+ *  it is not named. */
 export function named(code: string): string {
-  return LANGUAGES[code]?.english ?? code;
+  const english = LANGUAGES[code]?.english;
+  if (!english || !names) return english ?? code;
+  const said = names.of(code);
+  return said && said !== code
+    ? said.charAt(0).toLocaleUpperCase(namingIn) + said.slice(1)
+    : english;
 }

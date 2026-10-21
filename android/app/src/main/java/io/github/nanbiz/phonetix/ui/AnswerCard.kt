@@ -30,7 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.nanbiz.phonetix.core.Accents
 import io.github.nanbiz.phonetix.core.Answer
+import io.github.nanbiz.phonetix.core.Interface
 import io.github.nanbiz.phonetix.core.Languages
+import io.github.nanbiz.phonetix.core.Wording
 import io.github.nanbiz.phonetix.core.SymbolInfo
 
 /** Told what a piece of a card says and where it landed. */
@@ -348,7 +350,7 @@ private fun Headline(answer: Answer, palette: Tokens.Palette, report: Reporter?)
         if (guessed || anchor) {
             Box(Modifier.width(Tokens.Scale.space3.dp))
             Badge(
-                text = if (guessed) "guess" else "in English",
+                text = Wording.say(if (guessed) "guess" else "in-english"),
                 ink = Color(if (guessed) palette.guess else palette.inkMuted),
                 background = Color(if (guessed) palette.guessBg else palette.chipBg),
             )
@@ -614,7 +616,7 @@ internal fun wiktionary(answer: Answer): String {
     // At the section for the language it is being read as: a spelling like "stops" is an entry
     // in four languages, every section arriving collapsed, and the page alone leaves the reader
     // to work out which of them they were reading. Wiktionary names its sections in English.
-    val language = io.github.nanbiz.phonetix.core.Languages.english(answer.source)
+    val language = Interface.named(answer.source)
     return if (answer.source.isBlank()) page else "$page#" + java.net.URLEncoder.encode(language, "UTF-8")
 }
 
@@ -629,7 +631,7 @@ private fun Pair(answer: Answer, palette: Tokens.Palette) {
     androidx.compose.material3.Text(
         // Named rather than tagged: a reader knows what Spanish is and does not have to know
         // what "es" is.
-        text = "${Languages.english(answer.source)} → ${Languages.english(answer.target)}",
+        text = "${Interface.named(answer.source)} → ${Interface.named(answer.target)}",
         color = Color(palette.inkFaint),
         fontSize = Tokens.Scale.fontSizeLabel.sp,
     )
@@ -640,10 +642,10 @@ private fun Pair(answer: Answer, palette: Tokens.Palette) {
 private fun Nothing(answer: Answer, palette: Tokens.Palette, report: Reporter?) {
     androidx.compose.material3.Text(
         text = when (answer.state) {
-            Answer.State.NoPack -> "No dictionary for ${Languages.english(answer.source)} yet"
-            Answer.State.UnknownLang -> "Not sure what language this is"
-            Answer.State.Loading -> "Looking it up"
-            else -> "Nothing found for ${answer.spelling}"
+            Answer.State.NoPack -> Wording.say("no-dictionary-for", Interface.named(answer.source))
+            Answer.State.UnknownLang -> Wording.say("unknown-language")
+            Answer.State.Loading -> Wording.say("looking-up")
+            else -> Wording.say("nothing-for", answer.spelling)
         },
         color = Color(palette.inkMuted),
         fontSize = Tokens.Scale.fontSizeBody.sp,

@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Cho phép",
+    "allow-overlay": "Cho phép lớp phủ",
+    "already-in": "Trang này đã ở %s",
+    "broad-mark": "/ /",
+    "change": "Đổi",
+    "choose-language": "Chọn ngôn ngữ",
+    "close": "Đóng",
+    "detail-explained": "Rộng là các âm giúp phân biệt từ; hẹp là mọi chi tiết cách phát âm một từ, như người bản ngữ của giọng đó nói.",
+    "every-app": "Mọi ứng dụng",
+    "get": "Tải",
+    "loading-dictionary": "Đang tải từ điển…",
+    "master-idle": "Không có gì được vẽ lên ứng dụng của bạn",
+    "master-off": "Đã tạm dừng",
+    "master-on": "Đang đọc",
+    "master-unready": "Cho phép đọc màn hình và vẽ lên ứng dụng của bạn",
+    "master-working": "Các từ trong ứng dụng của bạn đang được trả lời",
+    "narrow-mark": "[ ]",
+    "no-source": "về nghĩa của từ; cách đọc đã có sẵn",
+    "no-translation": "Không dịch",
+    "nothing-found": "Không có gì mang tên đó",
+    "nothing-yet": "chưa có gì",
+    "open-accessibility": "Mở trợ năng",
+    "preview": "Xem trước",
+    "preview-about": "các từ trên trang mà mục này sẽ trả lời",
+    "remove": "Xóa",
+    "rest-edge": "Ở cạnh %s",
+    "rest-loose": "Bất cứ chỗ nào bạn để",
+    "no-direction": "Không lấy được bản dịch từ %s. Thay vào đó, các từ hiển thị cách chúng được đọc.",
+    "service-stopped": "Phonetix được phép đọc màn hình nhưng không chạy. Hãy tắt rồi bật lại trong phần trợ năng của điện thoại.",
+    "rest-put": "Kéo nút lên hoặc xuống, hoặc sang phía bên kia.",
+    "say-into": "Trả lời bằng",
+    "say-no-language": "Hãy chọn trước ngôn ngữ để đọc sang.",
+    "say-no-model": "Máy chủ từ điển của bạn chưa có mô hình dịch cho chiều này.",
+    "say-nothing": "không có từ cho việc đó",
+    "say-placeholder": "điều bạn muốn nói",
+    "search": "Tìm",
+    "speak": "Nói",
+    "touch-off": "Mọi chạm đều đi tới ứng dụng bên dưới, nên việc cuộn không bị ảnh hưởng.",
+    "touch-on": "Vuốt bắt đầu trên một từ sẽ không cuộn trang.",
+    "turn": "Trả lời theo chiều ngược lại",
+    "use-this": "Dùng cái này",
+    "say-fetching": "đang lấy %s",
+    "back": "Quay lại",
+    "apps-chosen": "Đã chọn %s",
+    "packs-held": "Đã tải %s",
+    "other-languages": "Ngôn ngữ khác",
+    "words-count": "%s từ",
+    "packs-here": "Trên điện thoại này",
+    "packs-more": "Có sẵn",
+    "every-word": "mọi từ",
+    "one-in": "một trong %s",
+    "open-panel": "Mở",
+    "site-off": "luôn tắt ở đây",
+    "site-following": "theo công tắc chính (hiện: %s)",
+    "on": "bật",
+    "off": "tắt",
+    "set-key": "Đặt phím",
+    "simple": "Đơn giản",
+    "detailed": "Chi tiết",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "không gì khác",
+    "learn-none": "không có",
+    "add-language": "Thêm ngôn ngữ",
+    "learn-language": "Học ngôn ngữ",
+    "make-main": "Đặt làm ngôn ngữ của tôi",
+    "main-language": "Ngôn ngữ của tôi",
+    "learning-it": "đang học %s",
+    "dictate": "Đọc chép",
+    "pos-adj": "tính từ",
+    "pos-adv": "trạng từ",
+    "pos-article": "mạo từ",
+    "pos-character": "chữ",
+    "pos-conj": "liên từ",
+    "pos-contraction": "từ rút gọn",
+    "pos-det": "từ hạn định",
+    "pos-intj": "thán từ",
+    "pos-name": "danh từ riêng",
+    "pos-noun": "danh từ",
+    "pos-num": "số từ",
+    "pos-particle": "tiểu từ",
+    "pos-phrase": "cụm từ",
+    "pos-postp": "hậu giới từ",
+    "pos-prefix": "tiền tố",
+    "pos-prep": "giới từ",
+    "pos-prep_phrase": "cụm giới từ",
+    "pos-pron": "đại từ",
+    "pos-proverb": "tục ngữ",
+    "pos-punct": "dấu câu",
+    "pos-suffix": "hậu tố",
+    "pos-symbol": "ký hiệu",
+    "pos-verb": "động từ",
+    "pos-abbrev": "từ viết tắt",
+    "pos-affix": "phụ tố",
+    "pos-infix": "trung tố",
+    "pos-interfix": "phụ tố nối",
+    "pos-circumfix": "phụ tố bao",
+    "pos-root": "gốc từ",
+    "pos-combining_form": "dạng kết hợp",
+    "pos-classifier": "loại từ",
+    "pos-counter": "lượng từ",
+    "pos-letter": "chữ cái",
+    "no-dictionary-for": "Chưa có từ điển cho %s",
+    "unknown-language": "Chưa rõ đây là ngôn ngữ nào",
+    "looking-up": "Đang tra",
+    "nothing-for": "Không tìm thấy gì cho %s",
+    "read-as": "Đọc như %s",
+    "read-as-accent": "Đọc như %s, giọng %s",
+    "translated-by": "Dịch bởi %s",
+    "translated-by-machine": "Dịch bằng máy",
+    "guess": "đoán",
+    "in-english": "bằng tiếng Anh",
+    "getting-dictionary": "Đang lấy từ điển %s",
+    "getting-dictionaries": "Đang lấy từ điển %s",
+    "say-word": "nói %s",
+    "hear-word": "nghe %s",
+    "play-sound": "phát bản ghi âm %s",
+    "read-about-sound": "đọc về %s",
+    "see-mouth": "xem miệng nói %s",
+    "mouth-making": "miệng tạo ra %s như thế nào",
+    "tap-sound": "Chạm vào một âm để nghe nó là gì",
+    "what-this-is": "Đây là gì",
+    "for-example": "Ví dụ: %s",
+    "fetching": "đang lấy",
+    "done": "xong",
+    "ordinal-first-person": "1",
+    "ordinal-second-person": "2",
+    "ordinal-third-person": "3",
+    "person-number": "%s %s",
+    "person-number-long": "ngôi %s, %s",
+    "person-long": "ngôi %s",
+    "person-and-number": "ngôi và số",
+    "form-of": "của",
+    "term-mood": "thức",
+    "term-tense": "thì",
+    "term-aspect": "thể",
+    "term-person": "ngôi",
+    "term-number": "số",
+    "term-case": "cách",
+    "term-gender": "giống",
+    "term-definiteness": "xác định",
+    "term-declension": "biến cách",
+    "term-degree": "cấp",
+    "term-voice": "thái",
+    "term-register": "ngữ vực",
+    "term-nonfinite": "vô định",
+    "term-singular": "số ít",
+    "term-plural": "số nhiều",
+    "term-dual": "số đôi",
+    "term-first-person": "ngôi thứ nhất",
+    "term-second-person": "ngôi thứ hai",
+    "term-third-person": "ngôi thứ ba",
+    "term-nominative": "cách chủ ngữ",
+    "term-accusative": "cách tân ngữ",
+    "term-dative": "cách gián tiếp",
+    "term-genitive": "cách sở hữu",
+    "term-vocative": "cách hô ngữ",
+    "term-instrumental": "cách công cụ",
+    "term-locative": "cách nơi chốn",
+    "term-prepositional": "cách giới từ",
+    "term-ablative": "cách xuất xứ",
+    "term-partitive": "cách bộ phận",
+    "term-inessive": "cách trong",
+    "term-elative": "cách từ trong ra",
+    "term-illative": "cách vào trong",
+    "term-adessive": "cách trên",
+    "term-allative": "cách hướng đến",
+    "term-essive": "cách trạng thái",
+    "term-translative": "cách biến đổi",
+    "term-abessive": "cách thiếu",
+    "term-comitative": "cách cùng",
+    "term-masculine": "giống đực",
+    "term-feminine": "giống cái",
+    "term-neuter": "giống trung",
+    "term-animate": "hữu tình",
+    "term-inanimate": "vô tình",
+    "term-definite": "xác định",
+    "term-indefinite": "không xác định",
+    "term-present": "hiện tại",
+    "term-past": "quá khứ",
+    "term-future": "tương lai",
+    "term-non-past": "không quá khứ",
+    "term-preterite": "quá khứ đơn",
+    "term-imperfect": "quá khứ chưa hoàn thành",
+    "term-perfect": "hiện tại hoàn thành",
+    "term-pluperfect": "quá khứ hoàn thành",
+    "term-aorist": "bất định quá khứ",
+    "term-indicative": "trực thuyết",
+    "term-subjunctive": "giả định",
+    "term-subjunctive-i": "giả định I",
+    "term-subjunctive-ii": "giả định II",
+    "term-conditional": "điều kiện",
+    "term-conditional-i": "điều kiện I",
+    "term-conditional-ii": "điều kiện II",
+    "term-future-i": "tương lai I",
+    "term-future-ii": "tương lai II",
+    "term-imperative": "mệnh lệnh",
+    "term-jussive": "cầu khiến",
+    "term-optative": "nguyện vọng",
+    "term-potential": "khả năng",
+    "term-active": "chủ động",
+    "term-passive": "bị động",
+    "term-infinitive": "nguyên thể",
+    "term-participle": "phân từ",
+    "term-gerund": "danh động từ",
+    "term-imperfective": "chưa hoàn thành",
+    "term-perfective": "hoàn thành",
+    "term-progressive": "tiếp diễn",
+    "term-positive": "nguyên cấp",
+    "term-comparative": "so sánh hơn",
+    "term-superlative": "so sánh nhất",
+    "term-strong": "mạnh",
+    "term-weak": "yếu",
+    "term-mixed": "hỗn hợp",
+    "term-formal": "trang trọng",
+    "term-informal": "thân mật",
+    "term-polite": "lịch sự",
+    "accent-British": "Anh",
+    "accent-American": "Mỹ",
+    "accent-Scottish": "Scotland",
+    "accent-Australian": "Úc",
+    "accent-Caribbean": "Caribe",
+    "accent-Canadian": "Canada",
+    "accent-Spain": "Tây Ban Nha",
+    "accent-Latin America": "Mỹ Latinh",
+    "accent-Rioplatense": "Rioplatense",
+    "accent-Germany": "Đức",
+    "accent-Switzerland": "Thụy Sĩ",
+    "accent-Austria": "Áo",
+    "accent-Portugal": "Bồ Đào Nha",
+    "accent-Brazil": "Brazil",
+    "accent-France": "Pháp",
+    "accent-Canada": "Canada",
+    "accent-Northern": "Bắc",
+    "accent-Central": "Trung"
+  },
+  "rows": {
+    "on": {
+      "name": "Chú thích những gì tôi đọc",
+      "about": ""
+    },
+    "site": {
+      "name": "Trên trang này",
+      "about": ""
+    },
+    "layer": {
+      "name": "Lớp phủ",
+      "about": ""
+    },
+    "density": {
+      "name": "Tần suất",
+      "about": ""
+    },
+    "target": {
+      "name": "Ngôn ngữ",
+      "about": ""
+    },
+    "source": {
+      "name": "Trang này bằng",
+      "about": ""
+    },
+    "accent": {
+      "name": "Giọng",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Từ điển",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Phiên âm",
+      "about": ""
+    },
+    "stress": {
+      "name": "Dấu trọng âm",
+      "about": ""
+    },
+    "delay": {
+      "name": "Chờ trước khi thẻ mở",
+      "about": ""
+    },
+    "animations": {
+      "name": "Hoạt ảnh",
+      "about": ""
+    },
+    "say": {
+      "name": "Từ cho một điều",
+      "about": ""
+    },
+    "setup": {
+      "name": "Thiết lập",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Đọc màn hình",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Vẽ lên ứng dụng",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Phát âm",
+      "about": ""
+    },
+    "translate": {
+      "name": "Dịch",
+      "about": ""
+    },
+    "side": {
+      "name": "Bên nào",
+      "about": ""
+    },
+    "rest": {
+      "name": "Nút nằm ở đâu",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Chiều cao cố định",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Kéo qua một từ",
+      "about": "Nói về những gì nó đi qua, và trang bên dưới vẫn cuộn được"
+    },
+    "lens-sweep": {
+      "name": "Giữ, rồi quét",
+      "about": "Mọi từ nó đi qua được nối vào dãy, và thẻ trả lời cho cả mệnh đề"
+    },
+    "lens-hold": {
+      "name": "Giữ",
+      "about": "Mở phần cài đặt"
+    },
+    "lens-tap": {
+      "name": "Chạm",
+      "about": "Hỏi từ cho một điều giữa đoạn bạn đang đọc; chạm lần nữa để cất thẻ"
+    },
+    "touch": {
+      "name": "Chạm vào một từ",
+      "about": ""
+    },
+    "where": {
+      "name": "Vị trí",
+      "about": ""
+    },
+    "apps": {
+      "name": "Ứng dụng",
+      "about": ""
+    },
+    "start": {
+      "name": "Trước khi có thể trả lời một từ",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Chạm vào một từ để xem thẻ",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Để xem nghĩa của một từ",
+      "about": ""
+    },
+    "theme": {
+      "name": "Giao diện",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Nâng cao",
+      "about": ""
+    },
+    "dark": {
+      "name": "Sáng hoặc tối",
+      "about": ""
+    },
+    "mine": {
+      "name": "Ngôn ngữ của tôi",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Nút bên",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Ngôn ngữ",
+      "about": ""
+    },
+    "position": {
+      "name": "Vị trí",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Giao diện",
+      "about": ""
+    },
+    "accents": {
+      "name": "Giọng",
+      "about": ""
+    },
+    "inline": {
+      "name": "Thay từ",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Từ đã thay",
+      "about": ""
+    },
+    "translator": {
+      "name": "Dịch",
+      "about": ""
+    },
+    "into": {
+      "name": "Dịch sang",
+      "about": ""
+    },
+    "known": {
+      "name": "Không bao giờ dịch",
+      "about": ""
+    },
+    "learn": {
+      "name": "Học",
+      "about": ""
+    },
+    "cards": {
+      "name": "Tra",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Phát âm",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Nghĩa",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Ngữ pháp",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Các nghĩa khác",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Giải thích mọi từ",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Của tôi",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "vài từ",
+      "mọi từ"
+    ],
+    "delay": [
+      "tức thì",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Tắt",
+        "about": {
+          "browser": "không có từ nào được thay; tự hỏi về một từ",
+          "phone": "không có từ nào được thay; nút vẫn trả lời về một từ"
+        }
+      },
+      "meaning": {
+        "label": "Dịch nghĩa",
+        "about": {
+          "browser": "từ được thay bằng nghĩa của nó",
+          "phone": "từ được thay bằng nghĩa của nó"
+        }
+      },
+      "sound": {
+        "label": "Phát âm",
+        "about": {
+          "browser": "từ được thay bằng cách đọc của nó",
+          "phone": "từ được thay bằng cách đọc của nó"
+        }
+      },
+      "both": {
+        "label": "Cả hai",
+        "about": {
+          "browser": "nghĩa của từ, và cách đọc điều đó",
+          "phone": "nghĩa của từ, và cách đọc điều đó"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "các âm giúp phân biệt từ",
+          "phone": "các âm giúp phân biệt từ"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "mọi chi tiết cách đọc, như bật hơi và câm hóa",
+          "phone": "mọi chi tiết cách đọc, như bật hơi và câm hóa"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Theo hệ thống",
+        "about": {
+          "browser": "theo cài đặt của thiết bị này",
+          "phone": "theo cài đặt của thiết bị này"
+        }
+      },
+      "light": {
+        "label": "Sáng",
+        "about": {
+          "browser": "luôn là phía sáng của bảng màu",
+          "phone": "luôn là phía sáng của bảng màu"
+        }
+      },
+      "dark": {
+        "label": "Tối",
+        "about": {
+          "browser": "luôn là phía tối của bảng màu",
+          "phone": "luôn là phía tối của bảng màu"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Trái",
+        "about": {
+          "phone": "cho điện thoại cầm bằng tay trái"
+        }
+      },
+      "free": {
+        "label": "Tùy ý",
+        "about": {
+          "phone": "nó nằm yên ở chỗ bạn đặt xuống"
+        }
+      },
+      "right": {
+        "label": "Phải",
+        "about": {
+          "phone": "cho điện thoại cầm bằng tay phải"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Cách người nói muốn động từ nói điều gì: như một sự thật, như điều được mong muốn, nghi ngờ hay tưởng tượng, hoặc như một mệnh lệnh."
+      },
+      "tense": {
+        "plain": "Thời điểm xảy ra: trước bây giờ, bây giờ, hoặc sau này."
+      },
+      "aspect": {
+        "plain": "Cách hành động được nhìn nhận: như một tổng thể đã xong, hay như đang diễn ra, lặp lại hoặc chưa xong."
+      },
+      "person": {
+        "plain": "Ai làm: người nói (tôi, chúng tôi), người được nói tới (bạn), hay người khác (anh ấy, họ)."
+      },
+      "number": {
+        "plain": "Bao nhiêu: một, hay nhiều hơn một."
+      },
+      "case": {
+        "plain": "Dạng mà danh từ mang để cho thấy vai trò của nó trong câu: ai làm gì, cho ai, của ai, ở đâu."
+      },
+      "gender": {
+        "plain": "Một lớp mà mỗi danh từ thuộc về, khiến các từ xung quanh đổi theo. Ít liên quan tới giới tính: das Mädchen trong tiếng Đức, cô gái, thuộc giống trung."
+      },
+      "definiteness": {
+        "plain": "Cái đó là một cái cụ thể, đã biết (cái nhà), hay là một cái bất kỳ (một cái nhà)."
+      },
+      "declension": {
+        "plain": "Tập hợp các đuôi mà danh từ hoặc tính từ mang, tùy thuộc vào các từ xung quanh."
+      },
+      "degree": {
+        "plain": "Tính từ mạnh đến mức nào: to, to hơn, to nhất."
+      },
+      "voice": {
+        "plain": "Chủ ngữ tự làm hành động (cô ấy viết nó) hay hành động được làm lên nó (nó đã được viết)."
+      },
+      "register": {
+        "plain": "Từ trang trọng đến mức nào: dùng cho người lạ và văn bản chính thức, hay cho bạn bè."
+      },
+      "nonfinite": {
+        "plain": "Dạng động từ nêu hành động mà không nói ai làm hay khi nào: đi, đang đi, đã đi."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Một cái.",
+        "example": "một *con chó*"
+      },
+      "plural": {
+        "plain": "Nhiều hơn một.",
+        "example": "*những con chó*"
+      },
+      "dual": {
+        "plain": "Đúng hai, trong các ngôn ngữ có dạng riêng cho cặp.",
+        "example": "Slovene *hiši*, hai ngôi nhà"
+      },
+      "first-person": {
+        "plain": "Người nói: tôi, hoặc chúng tôi.",
+        "example": "*Tôi* đi, *chúng tôi* đi"
+      },
+      "second-person": {
+        "plain": "Người được nói tới: bạn.",
+        "example": "*Bạn* đi"
+      },
+      "third-person": {
+        "plain": "Bất kỳ người nào khác: anh ấy, cô ấy, nó, họ.",
+        "example": "*Anh ấy* đi"
+      },
+      "nominative": {
+        "plain": "Người làm hành động: chủ ngữ.",
+        "example": "*Con chó* cắn người đàn ông."
+      },
+      "accusative": {
+        "plain": "Người bị hành động tác động vào: tân ngữ trực tiếp.",
+        "example": "Con chó cắn *người đàn ông*."
+      },
+      "dative": {
+        "plain": "Người được đưa hay được làm cho: cho ai.",
+        "example": "Tôi đưa *cho người đàn ông* một cuốn sách."
+      },
+      "genitive": {
+        "plain": "Của ai, hay là phần của cái gì: của.",
+        "example": "*cuốn sách của người đàn ông*, mái nhà *của ngôi nhà*"
+      },
+      "vocative": {
+        "plain": "Dạng dùng để gọi hoặc nói trực tiếp với ai đó.",
+        "example": "Ba Lan *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Cái dùng để làm việc gì, hoặc cái làm nên việc đó.",
+        "example": "Nga писать *ручкой*, *viết bằng bút*"
+      },
+      "locative": {
+        "plain": "Nơi một cái gì đó ở.",
+        "example": "Ba Lan w *domu*, *ở trong nhà*"
+      },
+      "prepositional": {
+        "plain": "Dạng danh từ đứng sau một số giới từ, chủ yếu về nơi chốn hoặc về điều gì.",
+        "example": "Nga о *книге*, *về cuốn sách*"
+      },
+      "ablative": {
+        "plain": "Rời xa, ra khỏi, hoặc bằng phương tiện của cái gì.",
+        "example": "Latinh *Romā*, từ Roma"
+      },
+      "partitive": {
+        "plain": "Một phần của cái gì, hoặc một hành động chưa làm đến cùng.",
+        "example": "Phần Lan *vettä*, một ít nước"
+      },
+      "inessive": {
+        "plain": "Ở bên trong cái gì.",
+        "example": "Phần Lan *talossa*, trong nhà"
+      },
+      "elative": {
+        "plain": "Ra khỏi cái gì.",
+        "example": "Phần Lan *talosta*, ra khỏi nhà"
+      },
+      "illative": {
+        "plain": "Vào bên trong cái gì.",
+        "example": "Phần Lan *taloon*, vào trong nhà"
+      },
+      "adessive": {
+        "plain": "Ở trên hoặc ở cạnh cái gì.",
+        "example": "Phần Lan *pöydällä*, trên bàn"
+      },
+      "allative": {
+        "plain": "Lên trên hoặc hướng tới cái gì.",
+        "example": "Phần Lan *pöydälle*, lên bàn"
+      },
+      "essive": {
+        "plain": "Là cái gì đó trong một lúc, như một vai trò hay trạng thái.",
+        "example": "Phần Lan *lapsena*, khi còn là đứa trẻ"
+      },
+      "translative": {
+        "plain": "Trở thành cái gì đó.",
+        "example": "Phần Lan *opettajaksi*, (để trở thành) giáo viên"
+      },
+      "abessive": {
+        "plain": "Không có cái gì.",
+        "example": "Phần Lan *rahatta*, không có tiền"
+      },
+      "comitative": {
+        "plain": "Cùng với cái gì.",
+        "example": "Estonia *sõbraga*, với một người bạn"
+      },
+      "masculine": {
+        "plain": "Một trong các lớp danh từ; các từ xung quanh một danh từ giống đực mang đuôi của nó. Chủ yếu thuộc về từ, không phải giới tính.",
+        "example": "Tây Ban Nha *el libro*, cuốn sách"
+      },
+      "feminine": {
+        "plain": "Một trong các lớp danh từ; các từ xung quanh một danh từ giống cái mang đuôi của nó. Chủ yếu thuộc về từ, không phải giới tính.",
+        "example": "Tây Ban Nha *la mesa*, cái bàn"
+      },
+      "neuter": {
+        "plain": "Lớp danh từ không phải giống đực cũng không phải giống cái.",
+        "example": "Đức *das Haus*, ngôi nhà"
+      },
+      "animate": {
+        "plain": "Nói về danh từ chỉ người hay động vật; một số ngôn ngữ có đuôi riêng cho chúng.",
+        "example": "Nga вижу *брата*, tôi thấy anh trai tôi"
+      },
+      "inanimate": {
+        "plain": "Nói về danh từ chỉ một vật, không phải người hay động vật.",
+        "example": "Nga вижу *стол*, tôi thấy cái bàn"
+      },
+      "definite": {
+        "plain": "Một cái cụ thể mà cả hai người nói đều biết: the.",
+        "example": "Thụy Điển *huset*, ngôi nhà ấy"
+      },
+      "indefinite": {
+        "plain": "Một cái bất kỳ, chưa được biết: a.",
+        "example": "Thụy Điển *ett hus*, một ngôi nhà"
+      },
+      "present": {
+        "plain": "Bây giờ, luôn luôn, hoặc theo thói quen.",
+        "example": "anh ấy *đi*"
+      },
+      "past": {
+        "plain": "Trước bây giờ.",
+        "example": "anh ấy *đã đi*"
+      },
+      "future": {
+        "plain": "Sau bây giờ.",
+        "example": "anh ấy *sẽ đi*"
+      },
+      "non-past": {
+        "plain": "Bây giờ hoặc sau này: một dạng cho cả hai.",
+        "example": "Nhật *食べる*, ăn hoặc sẽ ăn"
+      },
+      "preterite": {
+        "plain": "Việc đã xảy ra và kết thúc tại một thời điểm trong quá khứ.",
+        "example": "Tây Ban Nha ayer *comí*, hôm qua tôi *đã ăn*"
+      },
+      "imperfect": {
+        "plain": "Quá khứ nhìn từ bên trong: việc đang diễn ra, cứ xảy ra, hoặc từng xảy ra.",
+        "example": "Tây Ban Nha *comía*, tôi *đang ăn*, tôi *thường ăn*"
+      },
+      "perfect": {
+        "plain": "Đã xong trước bây giờ và vẫn còn quan trọng bây giờ.",
+        "example": "cô ấy *đã đi rồi*"
+      },
+      "pluperfect": {
+        "plain": "Đã xong trước một thời điểm khác trong quá khứ.",
+        "example": "cô ấy *đã đi* trước đó"
+      },
+      "aorist": {
+        "plain": "Một hành động quá khứ được kể như một sự kiện trọn vẹn, như cách một câu chuyện kể.",
+        "example": "Bulgaria *писах*, tôi đã viết"
+      },
+      "indicative": {
+        "plain": "Dạng thông thường để nói điều đang là như vậy: sự kiện, và các câu hỏi về chúng.",
+        "example": "Cô ấy *ở* đây."
+      },
+      "subjunctive": {
+        "plain": "Dạng cho điều được mong muốn, mong đợi, nghi ngờ, lo sợ hay chỉ tưởng tượng, chứ không phải điều được nói là đúng. Thường đứng sau các từ như vậy, nếu, để mà.",
+        "example": "I wish he *were* here. It is vital that she *be* on time. Tây Ban Nha quiero que *vengas*, tôi muốn bạn đến"
+      },
+      "subjunctive-i": {
+        "plain": "Dạng tiếng Đức để thuật lại điều người khác nói, mà không bảo đảm nó đúng.",
+        "example": "Đức Er sagt, er *sei* krank. Anh ấy nói anh ấy bị ốm."
+      },
+      "subjunctive-ii": {
+        "plain": "Dạng tiếng Đức cho điều không có thật: điều ước, lời đề nghị lịch sự, và giá như.",
+        "example": "Đức Wenn ich Zeit *hätte*... Nếu tôi có thời gian..."
+      },
+      "conditional": {
+        "plain": "Điều sẽ xảy ra, nếu một điều khác là như vậy.",
+        "example": "anh ấy *sẽ đi*"
+      },
+      "conditional-i": {
+        "plain": "Điều sẽ xảy ra, nếu một điều khác là như vậy.",
+        "example": "Đức ich *würde gehen*, tôi sẽ đi"
+      },
+      "conditional-ii": {
+        "plain": "Điều đã có thể xảy ra, nếu một điều khác đã là như vậy.",
+        "example": "Đức ich *wäre gegangen*, tôi đã đi rồi"
+      },
+      "future-i": {
+        "plain": "Sau bây giờ.",
+        "example": "Đức ich *werde gehen*, tôi sẽ đi"
+      },
+      "future-ii": {
+        "plain": "Xong vào một thời điểm sau này.",
+        "example": "Đức ich *werde gegangen sein*, tôi sẽ đi rồi"
+      },
+      "imperative": {
+        "plain": "Dạng để bảo ai đó làm việc gì.",
+        "example": "*Đi!*"
+      },
+      "jussive": {
+        "plain": "Dạng để cho phép hoặc bảo ai đó, thường không phải người nghe, làm việc gì.",
+        "example": "Ả Rập *لِيَكْتُبْ*, cho anh ấy viết"
+      },
+      "optative": {
+        "plain": "Dạng để ước: mong là như vậy."
+      },
+      "potential": {
+        "plain": "Dạng cho điều có thể hoặc có lẽ là như vậy.",
+        "example": "Phần Lan *lienee*, (anh ấy) có lẽ là vậy"
+      },
+      "active": {
+        "plain": "Chủ ngữ làm hành động.",
+        "example": "Cô ấy *viết* lá thư."
+      },
+      "passive": {
+        "plain": "Chủ ngữ bị hành động tác động vào.",
+        "example": "Lá thư *đã được viết*."
+      },
+      "infinitive": {
+        "plain": "Chính động từ, chưa có ai làm: dạng mà từ điển dùng để liệt kê.",
+        "example": "*đi*, Tây Ban Nha *caminar*"
+      },
+      "participle": {
+        "plain": "Dạng động từ hoạt động như tính từ, và với một trợ động từ tạo nên các thì khác.",
+        "example": "cái cốc *vỡ*, cô ấy *đã đi*"
+      },
+      "gerund": {
+        "plain": "Dạng động từ cho hành động đang diễn ra, hoặc dùng như danh từ.",
+        "example": "cô ấy *đang đi*, Tây Ban Nha está *caminando*"
+      },
+      "imperfective": {
+        "plain": "Hành động được nhìn như đang diễn ra, lặp lại, hoặc chưa xong.",
+        "example": "Nga я *читал*, tôi *đã đọc* (đọc dở)"
+      },
+      "perfective": {
+        "plain": "Hành động được nhìn như một tổng thể đã xong.",
+        "example": "Nga я *прочитал*, tôi *đã đọc xong*"
+      },
+      "progressive": {
+        "plain": "Đang diễn ra vào lúc đó.",
+        "example": "cô ấy *đang đi*"
+      },
+      "positive": {
+        "plain": "Tính từ như vốn có, không so sánh.",
+        "example": "*to*"
+      },
+      "comparative": {
+        "plain": "Hơn một cái khác.",
+        "example": "*to hơn*, *đẹp hơn*"
+      },
+      "superlative": {
+        "plain": "Hơn tất cả.",
+        "example": "*to nhất*, *đẹp nhất*"
+      },
+      "strong": {
+        "plain": "Các đuôi tính từ trong tiếng Đức dùng khi không có mạo từ đứng trước để cho thấy cách.",
+        "example": "Đức *kaltes* Wasser, nước lạnh"
+      },
+      "weak": {
+        "plain": "Các đuôi tính từ trong tiếng Đức dùng sau der, die, das, khi mạo từ đã cho thấy cách.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Các đuôi tính từ trong tiếng Đức dùng sau ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Dành cho người lạ, người lớn tuổi và văn bản chính thức.",
+        "example": "Đức *Sie*, Tây Ban Nha *usted*"
+      },
+      "informal": {
+        "plain": "Dành cho bạn bè, gia đình và trẻ em.",
+        "example": "Đức *du*, Tây Ban Nha *tú*"
+      },
+      "polite": {
+        "plain": "Cách nói lịch sự, tôn trọng.",
+        "example": "Nhật *食べます*, (tôi) ăn, nói một cách lịch sự"
+      }
+    }
+  }
+}

@@ -801,8 +801,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .seg { display: inline-flex; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); overflow: hidden; }
 /* Buttons, because that is what they are: spans cut into the shape of a control took the text
    cursor, dragged into a selection and reached neither the keyboard nor a screen reader. */
-.seg button { font-family: var(--font-ui); padding: 0 var(--space-3); height: calc(var(--button-height) - 4px); display: inline-flex; align-items: center; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: var(--color-surface); border: none; border-right: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
-.seg button:last-child { border-right: none; }
+.seg button { font-family: var(--font-ui); padding: 0 var(--space-3); height: calc(var(--button-height) - 4px); display: inline-flex; align-items: center; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: var(--color-surface); border: none; border-inline-end: var(--border-width) solid var(--color-border); white-space: nowrap; cursor: pointer; }
+.seg button:last-child { border-inline-end: none; }
 /* Each choice the same width as its neighbours, so a control of three reads as one control
    rather than as three buttons of different sizes. Given its own row it fills the width: on a
    phone a three-choice control huddled against the left edge left half the screen empty. */
@@ -824,17 +824,17 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    colour it disappeared in both palettes: the light track is near-white and the dark track is
    near-black, and each of them is the surface colour it was being drawn in, so a switched-off
    toggle read as an empty outlined pill. */
-.toggle::before { content: ""; position: absolute; top: 3px; left: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: left 120ms ease, background 120ms ease; }
+.toggle::before { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: calc(var(--toggle-height) - 6px); height: calc(var(--toggle-height) - 6px); border-radius: 50%; background: var(--color-ink-muted); box-shadow: 0 1px 2px var(--color-shadow); transition: inset-inline-start 120ms ease, background 120ms ease; }
 /* The one switch a reader opens the popup to find is drawn larger than the rest: what it
    answers - whether this is on at all - is not one setting among many. */
 .toggle.big { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
-.toggle.big::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
-.toggle.big:checked::before, .toggle.big.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+.toggle.big::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; inset-inline-start: 4px; }
+.toggle.big:checked::before, .toggle.big.on::before { inset-inline-start: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
 /* A switch for something that cannot be switched on yet: still readable, plainly not ready. */
 .toggle:disabled { opacity: 0.5; cursor: default; }
 .toggle:checked, .toggle.on { background: var(--color-accent); }
-.toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); left: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
-.select { font-family: var(--font-ui); background: none; text-align: left; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
+.toggle:checked::before, .toggle.on::before { background: var(--color-accent-ink); inset-inline-start: calc(var(--toggle-width) - var(--toggle-height) + 3px); }
+.select { font-family: var(--font-ui); background: none; text-align: start; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink); border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: 0 var(--space-2) 0 var(--space-3); height: calc(var(--button-height) - 4px); }
 .select::after { content: "⌄"; color: var(--color-ink-faint); line-height: 1; }
 /* A real menu inside that frame. The caret has to be the frame's, because a select cannot draw
    a pseudo-element of its own: styled as the control itself it came out as a box with no sign
@@ -843,7 +843,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .select select { appearance: none; -webkit-appearance: none; background: none; border: none; outline: none; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; max-width: 12em; text-overflow: ellipsis; }
 .select select option { background: var(--color-surface); color: var(--color-ink); }
 .scope-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-1); font-size: var(--font-size-label); font-weight: var(--weight-medium); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); background: var(--color-surface-raised); border-bottom: var(--border-width) solid var(--color-border); }
-.scope-note { font-weight: var(--weight-regular); letter-spacing: 0; text-transform: none; color: var(--color-ink-faint); text-align: right; }
+.scope-note { font-weight: var(--weight-regular); letter-spacing: 0; text-transform: none; color: var(--color-ink-faint); text-align: end; }
 .chips { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; justify-content: flex-end; }
 .ticks { display: flex; justify-content: space-between; font-size: var(--font-size-label); color: var(--color-ink-faint); margin-top: calc(-1 * var(--space-1)); }
 .disclosure .chev { font-size: var(--font-size-ipa); color: var(--color-ink-faint); line-height: 1; }
@@ -875,7 +875,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* What answers a word, in the order it is asked: the one thing in the settings that is prose
    rather than a control, and the ground a reader stands on when deciding what to trust. */
 .steps { margin: 0; padding: 0 0 0 var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); font-size: var(--font-size-small); color: var(--color-ink-muted); }
-.steps li { padding-left: var(--space-1); }
+.steps li { padding-inline-start: var(--space-1); }
 .steps b { color: var(--color-ink); font-weight: var(--weight-medium); }
 /* A line of prose on a screen that is otherwise controls: what a screen is for, and what came
    of asking. The answer a machine gave sits under it as the card the rest of the product
@@ -884,7 +884,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
    explanation for. The sentence is there for whoever wants it and takes no room from the row. */
 /* A button, because a finger cannot hover: as a span with a title it was a mark that answered
    nothing at all on a phone. Large enough to hit, drawn the size it always was. */
-.hint { display: inline-flex; align-items: center; justify-content: center; width: var(--touch-target); height: var(--touch-target); margin-left: calc(var(--space-1) - 10px); padding: 0; background: none; border: none; font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: pointer; }
+.hint { display: inline-flex; align-items: center; justify-content: center; width: var(--touch-target); height: var(--touch-target); margin-inline-start: calc(var(--space-1) - 10px); padding: 0; background: none; border: none; font-family: var(--font-ui); font-size: var(--font-size-label); color: var(--color-ink-faint); cursor: pointer; }
 .hint::before { content: "?"; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: var(--border-width) solid var(--color-border); border-radius: 50%; }
 /* The mark itself is drawn by the rule above; the character in the markup would be a second. */
 .hint { font-size: 0; }
@@ -900,14 +900,14 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* A row that opens a screen of its own. The settings a reader changes once - which accent,
    which dictionaries - are a screen behind a row rather than a wall of controls in front of
    the two they change daily. */
-.nav { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; text-align: left; font: inherit; color: var(--color-ink); background: none; border: none; border-bottom: var(--border-width) solid var(--color-border); padding: var(--space-3) var(--space-4); min-height: var(--touch-target); cursor: pointer; }
+.nav { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-1) var(--space-3); width: 100%; text-align: start; font: inherit; color: var(--color-ink); background: none; border: none; border-bottom: var(--border-width) solid var(--color-border); padding: var(--space-3) var(--space-4); min-height: var(--touch-target); cursor: pointer; }
 .nav:hover { background: var(--color-surface-raised); }
 .nav .n-name { font-weight: var(--weight-medium); display: inline-flex; align-items: center; gap: var(--space-2); }
 .nav .n-sub { grid-column: 1; font-size: var(--font-size-small); color: var(--color-ink-muted); }
 .nav .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-ink-faint); font-size: var(--font-size-ipa); }
 /* A row that belongs to the one above it: set in, so the eye reads it as part of that switch
    rather than as the next question. */
-.nav.small { padding-left: var(--space-6); min-height: 0; }
+.nav.small { padding-inline-start: var(--space-6); min-height: 0; }
 .nav.small .n-name { font-weight: var(--weight-regular); font-size: var(--font-size-small); }
 /* The way back out of one, which is the first thing on the screen it leads to. */
 .back { display: inline-flex; align-items: center; gap: var(--space-1); font: inherit; font-size: var(--font-size-small); font-weight: var(--weight-medium); color: var(--color-ink-muted); background: none; border: none; padding: var(--space-2) var(--space-4); cursor: pointer; }
@@ -916,7 +916,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .head .h-note { font-size: var(--font-size-label); font-weight: var(--weight-regular); color: var(--color-ink-faint); }
 .r-icon { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; color: var(--color-ink-faint); }
 /* One choice out of a list too long for a segmented control: which accent, which language. */
-.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; text-align: left; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
+.choice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); width: 100%; text-align: start; font: inherit; font-size: var(--font-size-small); color: var(--color-ink); background: none; border: var(--border-width) solid var(--color-border); border-radius: var(--radius-button); padding: var(--space-2) var(--space-3); cursor: pointer; }
 .choice.on { border-color: var(--color-accent); background: var(--color-accent-bg); color: var(--color-accent); font-weight: var(--weight-medium); }
 /* What the choice is and what it does, because a word on its own is not a choice a reader can
    make: "both" says nothing at all to somebody who has not already worked out what the other
@@ -961,7 +961,7 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 /* The microphone, at the end of the field the way the phone draws it: faint while it waits, the
  * accent while it is being allowed, the accent with a ring going out while it hears, turning while
  * it writes down what it heard. */
-.ask-mic { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; margin-right: -10px; padding: 0; border: none; border-radius: 50%; background: none; color: var(--color-ink-muted); cursor: pointer; }
+.ask-mic { position: relative; flex: 0 0 auto; display: grid; place-items: center; width: 36px; height: 36px; margin-inline-end: -10px; padding: 0; border: none; border-radius: 50%; background: none; color: var(--color-ink-muted); cursor: pointer; }
 .ask-mic svg { width: 20px; height: 20px; }
 .ask-mic:hover { color: var(--color-accent); }
 .ask-mic.listening { background: var(--color-accent); color: var(--color-accent-ink); animation: ask-hearing 1.4s ease-out infinite; }
@@ -987,10 +987,10 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .ask-means { display: flex; flex-direction: column; gap: var(--space-2); }
 .ask-mean .m-word { font-size: var(--font-size-lemma); font-weight: 600; color: var(--color-ink); }
 .ask-mean:first-child .m-word { font-size: var(--font-size-headline); }
-.ask-mean .m-ipa { margin-left: var(--space-2); font-family: var(--font-ipa); font-size: var(--font-size-sense); color: var(--color-ipa); }
+.ask-mean .m-ipa { margin-inline-start: var(--space-2); font-family: var(--font-ipa); font-size: var(--font-size-sense); color: var(--color-ipa); }
 .ask-mean .m-about { font-size: var(--font-size-small); line-height: 1.45; color: var(--color-ink-muted); margin-top: 2px; }
 /* Its kind in front, as the card's other readings have theirs, and which meaning it is after it, whole: one cut at the panel's edge said nothing. */
-.ask-mean .m-about .chip { margin-right: var(--space-2); vertical-align: 0.1em; }
+.ask-mean .m-about .chip { margin-inline-end: var(--space-2); vertical-align: 0.1em; }
 /* A phrase, translated, and how it is said under it. */
 .ask-line { font-size: var(--font-size-headline); font-weight: 600; line-height: 1.3; color: var(--color-ink); }
 .ask-line .l-ipa { display: block; margin-top: 2px; font-family: var(--font-ipa); font-size: var(--font-size-sense); font-weight: var(--weight-regular); color: var(--color-ipa); }
@@ -1011,8 +1011,8 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
   .choice { padding: var(--space-3) var(--space-4); }
   .seg button { height: var(--touch-target); padding: 0 var(--space-4); font-size: var(--font-size-body); }
   .toggle { width: var(--toggle-width-lg); height: var(--toggle-height-lg); }
-  .toggle::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; left: 4px; }
-  .toggle:checked::before, .toggle.on::before { left: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
+  .toggle::before { width: calc(var(--toggle-height-lg) - 8px); height: calc(var(--toggle-height-lg) - 8px); top: 4px; inset-inline-start: 4px; }
+  .toggle:checked::before, .toggle.on::before { inset-inline-start: calc(var(--toggle-width-lg) - var(--toggle-height-lg) + 4px); }
   .select, .pick { min-height: var(--touch-target); }
   .btn, .btn-text { min-height: var(--touch-target); }
   /* A bar dragged with a finger, which lands nowhere near as precisely as a cursor. */

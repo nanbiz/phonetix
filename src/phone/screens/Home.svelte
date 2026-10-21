@@ -79,7 +79,7 @@
       <div class="item" data-row={step.row}>
         <span class="item-text"><span class="item-name" data-name>{ROWS[step.row].name}</span></span>
         {#if step.done}
-          <span aria-label="done"><Check class="option-check" /></span>
+          <span aria-label={SAYS['done']}><Check class="option-check" /></span>
         {:else}
           <button class="button" data-does="allow" onclick={step.go}>{SAYS['allow']}</button>
         {/if}

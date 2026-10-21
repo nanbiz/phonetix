@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Tillåt",
+    "allow-overlay": "Tillåt överlägg",
+    "already-in": "Sidan är redan på %s",
+    "broad-mark": "/ /",
+    "change": "Ändra",
+    "choose-language": "Välj ett språk",
+    "close": "Stäng",
+    "detail-explained": "Bred visar de ljud som skiljer ord åt; smal visar varje detalj i hur ett ord uttalas, så som en talare med den accenten säger det.",
+    "every-app": "Alla appar",
+    "get": "Hämta",
+    "loading-dictionary": "Läser in ordboken…",
+    "master-idle": "Inget ritas över dina appar",
+    "master-off": "Pausad",
+    "master-on": "Läser",
+    "master-unready": "Tillåt att skärmen läses och att det ritas över dina appar",
+    "master-working": "Orden i dina appar besvaras",
+    "narrow-mark": "[ ]",
+    "no-source": "för vad ett ord betyder; uttalet är inbyggt",
+    "no-translation": "Översätt inte",
+    "nothing-found": "Inget med det namnet",
+    "nothing-yet": "inget än",
+    "open-accessibility": "Öppna tillgänglighet",
+    "preview": "Förhandsvisning",
+    "preview-about": "orden på en sida som detta skulle besvara",
+    "remove": "Ta bort",
+    "rest-edge": "Till %s",
+    "rest-loose": "Där du lämnar den",
+    "no-direction": "Ingen översättning från %s fanns att få. Orden visar i stället hur de låter.",
+    "service-stopped": "Phonetix får läsa skärmen men körs inte. Stäng av och slå på det igen i telefonens tillgänglighetsinställningar.",
+    "rest-put": "Dra knappen uppåt eller nedåt, eller över till andra sidan.",
+    "say-into": "Svara på",
+    "say-no-language": "Välj först ett språk att läsa på.",
+    "say-no-model": "Ingen översättningsmodell för den riktningen hos din ordboksvärd.",
+    "say-nothing": "inget ord för det",
+    "say-placeholder": "det du vill säga",
+    "search": "Sök",
+    "speak": "Säg det",
+    "touch-off": "Varje beröring går till appen under, så rullningen påverkas inte.",
+    "touch-on": "Ett svep som börjar på ett ord rullar inte sidan.",
+    "turn": "Svara åt andra hållet",
+    "use-this": "Använd den här",
+    "say-fetching": "hämtar %s",
+    "back": "Tillbaka",
+    "apps-chosen": "%s valda",
+    "packs-held": "%s nedladdade",
+    "other-languages": "Andra språk",
+    "words-count": "%s ord",
+    "packs-here": "På den här telefonen",
+    "packs-more": "Tillgängliga",
+    "every-word": "varje ord",
+    "one-in": "ett av %s",
+    "open-panel": "Öppna",
+    "site-off": "alltid av här",
+    "site-following": "följer huvudreglaget (nu: %s)",
+    "on": "på",
+    "off": "av",
+    "set-key": "Välj tangent",
+    "simple": "Enkel",
+    "detailed": "Detaljerad",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "inget annat",
+    "learn-none": "inget",
+    "add-language": "Lägg till språk",
+    "learn-language": "Lär dig ett språk",
+    "make-main": "Gör till mitt språk",
+    "main-language": "Mitt språk",
+    "learning-it": "lär sig %s",
+    "dictate": "Diktera",
+    "pos-adj": "adjektiv",
+    "pos-adv": "adverb",
+    "pos-article": "artikel",
+    "pos-character": "tecken",
+    "pos-conj": "konjunktion",
+    "pos-contraction": "sammandragning",
+    "pos-det": "determinerare",
+    "pos-intj": "interjektion",
+    "pos-name": "namn",
+    "pos-noun": "substantiv",
+    "pos-num": "räkneord",
+    "pos-particle": "partikel",
+    "pos-phrase": "fras",
+    "pos-postp": "postposition",
+    "pos-prefix": "prefix",
+    "pos-prep": "preposition",
+    "pos-prep_phrase": "prepositionsfras",
+    "pos-pron": "pronomen",
+    "pos-proverb": "ordspråk",
+    "pos-punct": "skiljetecken",
+    "pos-suffix": "suffix",
+    "pos-symbol": "symbol",
+    "pos-verb": "verb",
+    "pos-abbrev": "förkortning",
+    "pos-affix": "affix",
+    "pos-infix": "infix",
+    "pos-interfix": "fogemorfem",
+    "pos-circumfix": "cirkumfix",
+    "pos-root": "rot",
+    "pos-combining_form": "sammansättningsled",
+    "pos-classifier": "klassificerare",
+    "pos-counter": "räkneordsklassificerare",
+    "pos-letter": "bokstav",
+    "no-dictionary-for": "Ingen ordbok för %s än",
+    "unknown-language": "Osäkert vilket språk detta är",
+    "looking-up": "Slår upp",
+    "nothing-for": "Inget hittades för %s",
+    "read-as": "Läst som %s",
+    "read-as-accent": "Läst som %s, %s accent",
+    "translated-by": "Översatt av %s",
+    "translated-by-machine": "Maskinöversatt",
+    "guess": "gissning",
+    "in-english": "på engelska",
+    "getting-dictionary": "Hämtar ordboken för %s",
+    "getting-dictionaries": "Hämtar %s ordböcker",
+    "say-word": "säg %s",
+    "hear-word": "lyssna på %s",
+    "play-sound": "spela en inspelning av %s",
+    "read-about-sound": "läs om %s",
+    "see-mouth": "se en mun som säger %s",
+    "mouth-making": "hur munnen bildar %s",
+    "tap-sound": "Tryck på ett ljud för att höra vad det är",
+    "what-this-is": "Vad det här är",
+    "for-example": "Till exempel: %s",
+    "fetching": "hämtar",
+    "done": "klart",
+    "ordinal-first-person": "1:a",
+    "ordinal-second-person": "2:a",
+    "ordinal-third-person": "3:e",
+    "person-number": "%s %s",
+    "person-number-long": "%s person %s",
+    "person-long": "%s person",
+    "person-and-number": "person och numerus",
+    "form-of": "av",
+    "term-mood": "modus",
+    "term-tense": "tempus",
+    "term-aspect": "aspekt",
+    "term-person": "person",
+    "term-number": "numerus",
+    "term-case": "kasus",
+    "term-gender": "genus",
+    "term-definiteness": "species",
+    "term-declension": "deklination",
+    "term-degree": "komparation",
+    "term-voice": "diates",
+    "term-register": "stilnivå",
+    "term-nonfinite": "infinit form",
+    "term-singular": "singular",
+    "term-plural": "plural",
+    "term-dual": "dualis",
+    "term-first-person": "första person",
+    "term-second-person": "andra person",
+    "term-third-person": "tredje person",
+    "term-nominative": "nominativ",
+    "term-accusative": "ackusativ",
+    "term-dative": "dativ",
+    "term-genitive": "genitiv",
+    "term-vocative": "vokativ",
+    "term-instrumental": "instrumentalis",
+    "term-locative": "lokativ",
+    "term-prepositional": "prepositionalis",
+    "term-ablative": "ablativ",
+    "term-partitive": "partitiv",
+    "term-inessive": "inessiv",
+    "term-elative": "elativ",
+    "term-illative": "illativ",
+    "term-adessive": "adessiv",
+    "term-allative": "allativ",
+    "term-essive": "essiv",
+    "term-translative": "translativ",
+    "term-abessive": "abessiv",
+    "term-comitative": "komitativ",
+    "term-masculine": "maskulinum",
+    "term-feminine": "femininum",
+    "term-neuter": "neutrum",
+    "term-animate": "animat",
+    "term-inanimate": "inanimat",
+    "term-definite": "bestämd form",
+    "term-indefinite": "obestämd form",
+    "term-present": "presens",
+    "term-past": "dåtid",
+    "term-future": "futurum",
+    "term-non-past": "icke-dåtid",
+    "term-preterite": "preteritum",
+    "term-imperfect": "imperfekt",
+    "term-perfect": "perfekt",
+    "term-pluperfect": "pluskvamperfekt",
+    "term-aorist": "aorist",
+    "term-indicative": "indikativ",
+    "term-subjunctive": "konjunktiv",
+    "term-subjunctive-i": "konjunktiv I",
+    "term-subjunctive-ii": "konjunktiv II",
+    "term-conditional": "konditionalis",
+    "term-conditional-i": "konditionalis I",
+    "term-conditional-ii": "konditionalis II",
+    "term-future-i": "futurum I",
+    "term-future-ii": "futurum II",
+    "term-imperative": "imperativ",
+    "term-jussive": "jussiv",
+    "term-optative": "optativ",
+    "term-potential": "potential",
+    "term-active": "aktiv",
+    "term-passive": "passiv",
+    "term-infinitive": "infinitiv",
+    "term-participle": "particip",
+    "term-gerund": "gerundium",
+    "term-imperfective": "imperfektiv",
+    "term-perfective": "perfektiv",
+    "term-progressive": "progressiv",
+    "term-positive": "positiv",
+    "term-comparative": "komparativ",
+    "term-superlative": "superlativ",
+    "term-strong": "stark",
+    "term-weak": "svag",
+    "term-mixed": "blandad",
+    "term-formal": "formell",
+    "term-informal": "informell",
+    "term-polite": "artig",
+    "accent-British": "brittisk",
+    "accent-American": "amerikansk",
+    "accent-Scottish": "skotsk",
+    "accent-Australian": "australisk",
+    "accent-Caribbean": "karibisk",
+    "accent-Canadian": "kanadensisk",
+    "accent-Spain": "Spanien",
+    "accent-Latin America": "Latinamerika",
+    "accent-Rioplatense": "rioplatensisk",
+    "accent-Germany": "Tyskland",
+    "accent-Switzerland": "Schweiz",
+    "accent-Austria": "Österrike",
+    "accent-Portugal": "Portugal",
+    "accent-Brazil": "Brasilien",
+    "accent-France": "Frankrike",
+    "accent-Canada": "Kanada",
+    "accent-Northern": "nordlig",
+    "accent-Central": "central"
+  },
+  "rows": {
+    "on": {
+      "name": "Kommentera det jag läser",
+      "about": ""
+    },
+    "site": {
+      "name": "På den här webbplatsen",
+      "about": ""
+    },
+    "layer": {
+      "name": "Överlägg",
+      "about": ""
+    },
+    "density": {
+      "name": "Hur ofta",
+      "about": ""
+    },
+    "target": {
+      "name": "Språk",
+      "about": ""
+    },
+    "source": {
+      "name": "Sidan är på",
+      "about": ""
+    },
+    "accent": {
+      "name": "Accent",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Ordböcker",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transkriptioner",
+      "about": ""
+    },
+    "stress": {
+      "name": "Betoningstecken",
+      "about": ""
+    },
+    "delay": {
+      "name": "Paus innan ett kort öppnas",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animationer",
+      "about": ""
+    },
+    "say": {
+      "name": "Ordet för något",
+      "about": ""
+    },
+    "setup": {
+      "name": "Konfiguration",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Läsa skärmen",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Rita över appar",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Uttal",
+      "about": ""
+    },
+    "translate": {
+      "name": "Översättning",
+      "about": ""
+    },
+    "side": {
+      "name": "Vilken sida",
+      "about": ""
+    },
+    "rest": {
+      "name": "Var knappen sitter",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Fast höjd",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Dra den över ett ord",
+      "about": "Den säger vad den passerar, och sidan under rullar fortfarande"
+    },
+    "lens-sweep": {
+      "name": "Håll den, svep sedan",
+      "about": "Varje ord den passerar läggs till, och kortet besvarar hela satsen"
+    },
+    "lens-hold": {
+      "name": "Håll den",
+      "about": "Öppnar inställningarna"
+    },
+    "lens-tap": {
+      "name": "Tryck på den",
+      "about": "Fråga efter ordet för något mitt i läsningen; tryck igen för att lägga undan kortet"
+    },
+    "touch": {
+      "name": "Röra vid ett ord",
+      "about": ""
+    },
+    "where": {
+      "name": "Var",
+      "about": ""
+    },
+    "apps": {
+      "name": "Appar",
+      "about": ""
+    },
+    "start": {
+      "name": "Innan den kan besvara ett ord",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Tryck på ett ord för dess kort",
+      "about": ""
+    },
+    "meanings": {
+      "name": "För att se vad ett ord betyder",
+      "about": ""
+    },
+    "theme": {
+      "name": "Tema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Avancerat",
+      "about": ""
+    },
+    "dark": {
+      "name": "Ljust eller mörkt",
+      "about": ""
+    },
+    "mine": {
+      "name": "Mitt språk",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Sidoknapp",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Språk",
+      "about": ""
+    },
+    "position": {
+      "name": "Position",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Utseende",
+      "about": ""
+    },
+    "accents": {
+      "name": "Accenter",
+      "about": ""
+    },
+    "inline": {
+      "name": "Ersätt ord",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Ersatta ord",
+      "about": ""
+    },
+    "translator": {
+      "name": "Översättare",
+      "about": ""
+    },
+    "into": {
+      "name": "Översätt till",
+      "about": ""
+    },
+    "known": {
+      "name": "Översätt aldrig",
+      "about": ""
+    },
+    "learn": {
+      "name": "Lär mig",
+      "about": ""
+    },
+    "cards": {
+      "name": "Slå upp",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Uttal",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Betydelse",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Grammatik",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Andra betydelser",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Beskriv varje ord",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Mina",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "några få ord",
+      "varje ord"
+    ],
+    "delay": [
+      "direkt",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Av",
+        "about": {
+          "browser": "inget ersätts; fråga om ett ord själv",
+          "phone": "inget ersätts; knappen besvarar fortfarande ett ord"
+        }
+      },
+      "meaning": {
+        "label": "Översättning",
+        "about": {
+          "browser": "ordet ersatt med vad det betyder",
+          "phone": "ordet ersatt med vad det betyder"
+        }
+      },
+      "sound": {
+        "label": "Uttal",
+        "about": {
+          "browser": "ordet ersatt med hur det uttalas",
+          "phone": "ordet ersatt med hur det uttalas"
+        }
+      },
+      "both": {
+        "label": "Båda",
+        "about": {
+          "browser": "vad det betyder, och hur man säger det",
+          "phone": "vad det betyder, och hur man säger det"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "de ljud som skiljer ord åt",
+          "phone": "de ljud som skiljer ord åt"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "varje detalj i hur det uttalas, som aspiration och tonlöshet",
+          "phone": "varje detalj i hur det uttalas, som aspiration och tonlöshet"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "System",
+        "about": {
+          "browser": "det enheten är inställd på",
+          "phone": "det enheten är inställd på"
+        }
+      },
+      "light": {
+        "label": "Ljust",
+        "about": {
+          "browser": "alltid den ljusa sidan av paletten",
+          "phone": "alltid den ljusa sidan av paletten"
+        }
+      },
+      "dark": {
+        "label": "Mörkt",
+        "about": {
+          "browser": "alltid den mörka sidan av paletten",
+          "phone": "alltid den mörka sidan av paletten"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Vänster",
+        "about": {
+          "phone": "för en telefon i vänster hand"
+        }
+      },
+      "free": {
+        "label": "Var som helst",
+        "about": {
+          "phone": "den stannar där du släpper den"
+        }
+      },
+      "right": {
+        "label": "Höger",
+        "about": {
+          "phone": "för en telefon i höger hand"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Hur talaren menar det verbet säger: som fakta, som något önskat, tvivlat på eller föreställt, eller som en uppmaning."
+      },
+      "tense": {
+        "plain": "När det händer: före nu, nu eller senare."
+      },
+      "aspect": {
+        "plain": "Hur handlingen ses: som en avslutad helhet, eller som pågående, upprepad eller oavslutad."
+      },
+      "person": {
+        "plain": "Vem som gör det: talaren (jag, vi), den man talar till (du, ni) eller någon annan (han, hon, de)."
+      },
+      "number": {
+        "plain": "Hur många: en, eller fler än en."
+      },
+      "case": {
+        "plain": "Den form ett substantiv tar för att visa sin roll i meningen: vem som gör något, åt vem, vems, var."
+      },
+      "gender": {
+        "plain": "En klass som varje substantiv hör till, och som orden runt omkring böjs efter. Det har lite med kön att göra: tyskans das Mädchen, flickan, är neutrum."
+      },
+      "definiteness": {
+        "plain": "Om något är en viss, känd sak (huset) eller vilken som helst (ett hus)."
+      },
+      "declension": {
+        "plain": "Den uppsättning ändelser ett substantiv eller adjektiv får, beroende på orden runt omkring."
+      },
+      "degree": {
+        "plain": "Hur starkt ett adjektiv gäller: stor, större, störst."
+      },
+      "voice": {
+        "plain": "Om subjektet utför handlingen (hon skrev det) eller utsätts för den (det skrevs)."
+      },
+      "register": {
+        "plain": "Hur formellt ordet är: för främlingar och officiella texter, eller för vänner."
+      },
+      "nonfinite": {
+        "plain": "En verbform som namnger handlingen utan att säga vem som gör den eller när: att gå, gående, gått."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "En av något.",
+        "example": "en *hund*"
+      },
+      "plural": {
+        "plain": "Fler än en.",
+        "example": "två *hundar*"
+      },
+      "dual": {
+        "plain": "Exakt två, i språk som har en egen form för par.",
+        "example": "slovenska *hiši*, två hus"
+      },
+      "first-person": {
+        "plain": "Talaren: jag, eller vi.",
+        "example": "*jag* går, *vi* går"
+      },
+      "second-person": {
+        "plain": "Den man talar till: du, ni.",
+        "example": "*du* går"
+      },
+      "third-person": {
+        "plain": "Alla andra: han, hon, den, det, de.",
+        "example": "*hon går*"
+      },
+      "nominative": {
+        "plain": "Den som utför handlingen: subjektet.",
+        "example": "*Hunden* biter mannen."
+      },
+      "accusative": {
+        "plain": "Den som handlingen riktas mot: det direkta objektet.",
+        "example": "Hunden biter *mannen*."
+      },
+      "dative": {
+        "plain": "Den som får något eller som något görs för: åt vem.",
+        "example": "Jag ger *mannen* en bok."
+      },
+      "genitive": {
+        "plain": "Vems det är, eller vad det är en del av: -s.",
+        "example": "*mannens* bok, *husets* tak"
+      },
+      "vocative": {
+        "plain": "Formen för att ropa på eller tala direkt till någon.",
+        "example": "polska *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Det som något görs med eller genom.",
+        "example": "ryska писать *ручкой*, skriva *med en penna*"
+      },
+      "locative": {
+        "plain": "Var något är.",
+        "example": "polska w *domu*, *i huset*"
+      },
+      "prepositional": {
+        "plain": "Den form ett substantiv tar efter vissa prepositioner, mest om var eller om vad.",
+        "example": "ryska о *книге*, om *boken*"
+      },
+      "ablative": {
+        "plain": "Bort från, ut ur, eller med hjälp av något.",
+        "example": "latin *Romā*, från Rom"
+      },
+      "partitive": {
+        "plain": "En del av något, eller en handling som inte görs till slut.",
+        "example": "finska *vettä*, lite vatten"
+      },
+      "inessive": {
+        "plain": "Inuti något.",
+        "example": "finska *talossa*, i huset"
+      },
+      "elative": {
+        "plain": "Ut ur något.",
+        "example": "finska *talosta*, ut ur huset"
+      },
+      "illative": {
+        "plain": "In i något.",
+        "example": "finska *taloon*, in i huset"
+      },
+      "adessive": {
+        "plain": "På eller vid något.",
+        "example": "finska *pöydällä*, på bordet"
+      },
+      "allative": {
+        "plain": "Upp på eller till något.",
+        "example": "finska *pöydälle*, upp på bordet"
+      },
+      "essive": {
+        "plain": "Att vara något en tid, som roll eller tillstånd.",
+        "example": "finska *lapsena*, som barn"
+      },
+      "translative": {
+        "plain": "Att bli något.",
+        "example": "finska *opettajaksi*, (bli) lärare"
+      },
+      "abessive": {
+        "plain": "Utan något.",
+        "example": "finska *rahatta*, utan pengar"
+      },
+      "comitative": {
+        "plain": "Tillsammans med något.",
+        "example": "estniska *sõbraga*, med en vän"
+      },
+      "masculine": {
+        "plain": "En av de klasser som substantiv delas in i; orden runt ett maskulint substantiv får dess ändelser. Mest en fråga om ordet, inte om kön.",
+        "example": "spanska *el libro*, boken"
+      },
+      "feminine": {
+        "plain": "En av de klasser som substantiv delas in i; orden runt ett feminint substantiv får dess ändelser. Mest en fråga om ordet, inte om kön.",
+        "example": "spanska *la mesa*, bordet"
+      },
+      "neuter": {
+        "plain": "Klassen av substantiv som varken är maskulina eller feminina; i svenskan ett-orden.",
+        "example": "*ett hus*, tyska *das Haus*"
+      },
+      "animate": {
+        "plain": "Sägs om ett substantiv för en person eller ett djur, som vissa språk ger egna ändelser.",
+        "example": "ryska вижу *брата*, jag ser min bror"
+      },
+      "inanimate": {
+        "plain": "Sägs om ett substantiv för en sak, inte en person eller ett djur.",
+        "example": "ryska вижу *стол*, jag ser bordet"
+      },
+      "definite": {
+        "plain": "En viss sak som båda talarna känner till.",
+        "example": "*huset*"
+      },
+      "indefinite": {
+        "plain": "Vilken som helst, ännu inte känd: en, ett.",
+        "example": "*ett hus*"
+      },
+      "present": {
+        "plain": "Nu, alltid, eller som vana.",
+        "example": "hon *går*"
+      },
+      "past": {
+        "plain": "Före nu.",
+        "example": "hon *gick*"
+      },
+      "future": {
+        "plain": "Senare än nu.",
+        "example": "hon *ska gå*"
+      },
+      "non-past": {
+        "plain": "Nu eller senare: en form för båda.",
+        "example": "japanska *食べる*, äter eller ska äta"
+      },
+      "preterite": {
+        "plain": "Något som hände och var över vid en tidpunkt i det förflutna.",
+        "example": "spanska ayer *comí*, i går *åt* jag"
+      },
+      "imperfect": {
+        "plain": "Det förflutna sett inifrån: något som pågick, hände om och om igen eller brukade vara.",
+        "example": "spanska *comía*, jag *höll på att äta*, jag *brukade äta*"
+      },
+      "perfect": {
+        "plain": "Gjort före nu och fortfarande viktigt nu.",
+        "example": "hon *har gått*"
+      },
+      "pluperfect": {
+        "plain": "Gjort före en annan tidpunkt i det förflutna.",
+        "example": "hon *hade gått*"
+      },
+      "aorist": {
+        "plain": "En handling i det förflutna berättad som en avslutad händelse, så som en berättelse gör.",
+        "example": "bulgariska *писах*, jag skrev"
+      },
+      "indicative": {
+        "plain": "Den vanliga formen för att säga hur något är: fakta, och frågor om dem.",
+        "example": "Hon *är* här."
+      },
+      "subjunctive": {
+        "plain": "Formen för det som önskas, vill, tvivlas på, fruktas eller bara föreställs, i stället för att sägas vara så. Kommer oftast efter ord som att, om, så att. I svenskan finns den nästan bara kvar i fasta uttryck.",
+        "example": "*Leve* kungen! Om jag *vore* rik... spanska quiero que *vengas*, jag vill att du kommer."
+      },
+      "subjunctive-i": {
+        "plain": "Tyskans form för att återge vad någon annan sagt, utan att gå i god för det.",
+        "example": "Er sagt, er *sei* krank. Han säger att han är sjuk."
+      },
+      "subjunctive-ii": {
+        "plain": "Tyskans form för det som inte är verkligt: önskningar, artiga förfrågningar och om bara.",
+        "example": "Wenn ich Zeit *hätte*... Om jag hade tid..."
+      },
+      "conditional": {
+        "plain": "Det som skulle hända, om något annat vore så.",
+        "example": "hon *skulle gå*"
+      },
+      "conditional-i": {
+        "plain": "Det som skulle hända, om något annat vore så.",
+        "example": "tyska ich *würde gehen*, jag skulle gå"
+      },
+      "conditional-ii": {
+        "plain": "Det som skulle ha hänt, om något annat hade varit så.",
+        "example": "tyska ich *wäre gegangen*, jag skulle ha gått"
+      },
+      "future-i": {
+        "plain": "Senare än nu.",
+        "example": "tyska ich *werde gehen*, jag ska gå"
+      },
+      "future-ii": {
+        "plain": "Gjort till en viss tidpunkt längre fram.",
+        "example": "tyska ich *werde gegangen sein*, jag kommer att ha gått"
+      },
+      "imperative": {
+        "plain": "Formen för att säga åt någon att göra något.",
+        "example": "*Gå!*"
+      },
+      "jussive": {
+        "plain": "En form för att låta eller säga åt någon, ofta inte lyssnaren, att göra något.",
+        "example": "arabiska *لِيَكْتُبْ*, låt honom skriva"
+      },
+      "optative": {
+        "plain": "En form för att önska: måtte det vara så."
+      },
+      "potential": {
+        "plain": "En form för det som troligen eller möjligen är så.",
+        "example": "finska *lienee*, (han) är troligen"
+      },
+      "active": {
+        "plain": "Subjektet utför handlingen.",
+        "example": "Hon *skrev* brevet."
+      },
+      "passive": {
+        "plain": "Subjektet utsätts för handlingen.",
+        "example": "Brevet *skrevs*."
+      },
+      "infinitive": {
+        "plain": "Verbet självt, utan att någon gör det än: den form det står under i ordboken.",
+        "example": "*att gå*, spanska *caminar*"
+      },
+      "participle": {
+        "plain": "En verbform som fungerar som ett adjektiv och som med ett hjälpverb bildar andra tempus.",
+        "example": "en *sönderslagen* kopp, en *gående* man"
+      },
+      "gerund": {
+        "plain": "En verbform för en pågående handling, eller som används som ett substantiv.",
+        "example": "engelska she is *walking*, spanska está *caminando*"
+      },
+      "imperfective": {
+        "plain": "Handlingen som pågående, upprepad eller oavslutad.",
+        "example": "ryska я *читал*, jag läste (höll på att läsa)"
+      },
+      "perfective": {
+        "plain": "Handlingen som en avslutad helhet.",
+        "example": "ryska я *прочитал*, jag läste ut den"
+      },
+      "progressive": {
+        "plain": "Pågående just då.",
+        "example": "hon *håller på att gå*"
+      },
+      "positive": {
+        "plain": "Adjektivet som det är, utan jämförelse.",
+        "example": "*stor*"
+      },
+      "comparative": {
+        "plain": "Mer än något annat.",
+        "example": "*större*, *vackrare*"
+      },
+      "superlative": {
+        "plain": "Mer än allt annat.",
+        "example": "*störst*, *vackrast*"
+      },
+      "strong": {
+        "plain": "De adjektivändelser tyskan använder när ingen artikel framför visar kasus.",
+        "example": "*kaltes* Wasser, kallt vatten"
+      },
+      "weak": {
+        "plain": "De adjektivändelser tyskan använder efter der, die, das, där artikeln redan visar kasus.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "De adjektivändelser tyskan använder efter ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "För främlingar, äldre och officiella texter.",
+        "example": "tyska *Sie*, spanska *usted*"
+      },
+      "informal": {
+        "plain": "För vänner, familj och barn.",
+        "example": "tyska *du*, spanska *tú*"
+      },
+      "polite": {
+        "plain": "Det respektfulla sättet att säga det.",
+        "example": "japanska *食べます*, (jag) äter, sagt artigt"
+      }
+    }
+  }
+}

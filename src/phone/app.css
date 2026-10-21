@@ -62,7 +62,7 @@ svg {
 }
 
 .top .icon-button {
-  margin-left: -12px;
+  margin-inline-start: -12px;
 }
 
 .mark {
@@ -131,7 +131,7 @@ svg {
   box-sizing: border-box;
   border: none;
   background: none;
-  text-align: left;
+  text-align: start;
   position: relative;
   cursor: pointer;
 }
@@ -140,8 +140,8 @@ svg {
   content: "";
   position: absolute;
   top: 0;
-  left: 16px;
-  right: 0;
+  inset-inline-start: 16px;
+  inset-inline-end: 0;
   border-top: var(--border-width) solid var(--color-border);
 }
 
@@ -163,7 +163,7 @@ svg {
   background: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -173,12 +173,12 @@ svg {
 
 /* A part of something above it, which goes quiet when that is off. */
 .item.sub {
-  padding-left: 40px;
+  padding-inline-start: 40px;
 }
 
 .item.sub + .item::before,
 .item + .item.sub::before {
-  left: 40px;
+  inset-inline-start: 40px;
 }
 
 .item.quiet .item-text {
@@ -288,12 +288,12 @@ label.item:active,
   content: "";
   position: absolute;
   top: 4px;
-  left: 4px;
+  inset-inline-start: 4px;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   background: var(--color-ink-faint);
-  transition: left 120ms ease, background 120ms ease;
+  transition: inset-inline-start 120ms ease, background 120ms ease;
 }
 
 .switch:checked {
@@ -301,7 +301,7 @@ label.item:active,
 }
 
 .switch:checked::before {
-  left: 24px;
+  inset-inline-start: 24px;
   background: var(--color-accent-ink);
 }
 
@@ -492,7 +492,7 @@ button.item:disabled:active {
   border: 2px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-ink);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -535,7 +535,7 @@ button.item:disabled:active {
 
 .palette-check {
   position: absolute;
-  right: 10px;
+  inset-inline-end: 10px;
   bottom: 10px;
   width: 20px;
   height: 20px;
@@ -562,7 +562,7 @@ button.item:disabled:active {
   background: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 
@@ -606,7 +606,7 @@ button.language-open:active {
 .row-icon {
   width: 1.25em;
   height: 1.25em;
-  margin-right: 8px;
+  margin-inline-end: 8px;
   vertical-align: -0.25em;
   color: var(--color-accent);
 }

@@ -1,9 +1,10 @@
 // The settings view, where the browser puts it. Everything it does is in src/ext/popup.
-import { mount } from 'svelte';
+import { mount, unmount } from 'svelte';
 import App from '@/ext/popup/App.svelte';
 import './app.css';
 import { themeOf } from '@/ui/theme';
-import { current, darkSide } from '@/settings';
+import { current, darkSide, watch } from '@/settings';
+import { interfaceFor, markDocument, speakIn, spokenFrom } from '@/data/interface';
 
 // The palette on the document itself. The tokens are defined per theme and mode, so a
 // stylesheet binding a component library to them has to find them at the root: put them on an
@@ -28,4 +29,23 @@ new ResizeObserver(() => {
   document.body.style.minHeight = `${Math.ceil(app.getBoundingClientRect().height)}px`;
 }).observe(app);
 
-export default mount(App, { target: app });
+// In the reader's own language, read before the view is drawn so it opens in theirs; and drawn
+// again in another when they make another language their own.
+let shown: string | null = null;
+let drawn: ReturnType<typeof mount> | null = null;
+/** One drawing at a time: the first settings read and a change arriving while its words load
+ *  would otherwise each draw a view, one over the other. */
+let drawing = Promise.resolve();
+function draw(mine: string): void {
+  drawing = drawing.then(async () => {
+    const lang = interfaceFor(mine);
+    if (lang === shown) return;
+    shown = lang;
+    speakIn(lang, await spokenFrom(lang));
+    markDocument();
+    if (drawn) await unmount(drawn);
+    drawn = mount(App, { target: app });
+  });
+}
+void current().then((settings) => draw(settings.target));
+watch((settings) => draw(settings.target));

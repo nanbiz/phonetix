@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Izinkan",
+    "allow-overlay": "Izinkan lapisan",
+    "already-in": "Halaman ini sudah dalam %s",
+    "broad-mark": "/ /",
+    "change": "Ubah",
+    "choose-language": "Pilih bahasa",
+    "close": "Tutup",
+    "detail-explained": "Lebar adalah bunyi yang membedakan kata; sempit adalah setiap detail cara sebuah kata diucapkan, seperti penutur aksen itu mengucapkannya.",
+    "every-app": "Semua aplikasi",
+    "get": "Unduh",
+    "loading-dictionary": "Memuat kamus…",
+    "master-idle": "Tidak ada yang digambar di atas aplikasi Anda",
+    "master-off": "Dijeda",
+    "master-on": "Membaca",
+    "master-unready": "Izinkan membaca layar dan menggambar di atas aplikasi Anda",
+    "master-working": "Kata-kata di aplikasi Anda sedang dijawab",
+    "narrow-mark": "[ ]",
+    "no-source": "untuk arti kata; cara pengucapannya sudah tersedia",
+    "no-translation": "Jangan terjemahkan",
+    "nothing-found": "Tidak ada yang bernama itu",
+    "nothing-yet": "belum ada",
+    "open-accessibility": "Buka aksesibilitas",
+    "preview": "Pratinjau",
+    "preview-about": "kata-kata di halaman yang akan dijawab",
+    "remove": "Hapus",
+    "rest-edge": "Di sisi %s",
+    "rest-loose": "Di mana pun Anda meletakkannya",
+    "no-direction": "Terjemahan dari %s tidak dapat diperoleh. Kata-kata menampilkan cara pengucapannya sebagai gantinya.",
+    "service-stopped": "Phonetix diizinkan membaca layar tetapi tidak berjalan. Matikan lalu nyalakan lagi di pengaturan aksesibilitas ponsel.",
+    "rest-put": "Seret tombol ke atas atau ke bawah, atau ke sisi lain.",
+    "say-into": "Jawab dalam",
+    "say-no-language": "Pilih dulu bahasa yang akan dibaca.",
+    "say-no-model": "Tidak ada model terjemahan untuk arah itu di host kamus Anda.",
+    "say-nothing": "tidak ada kata untuk itu",
+    "say-placeholder": "yang ingin Anda katakan",
+    "search": "Cari",
+    "speak": "Ucapkan",
+    "touch-off": "Setiap sentuhan diteruskan ke aplikasi di bawahnya, jadi gulir tidak terganggu.",
+    "touch-on": "Geseran yang dimulai di atas kata tidak akan menggulir halaman.",
+    "turn": "Jawab dengan arah sebaliknya",
+    "use-this": "Gunakan ini",
+    "say-fetching": "mengambil %s",
+    "back": "Kembali",
+    "apps-chosen": "%s dipilih",
+    "packs-held": "%s diunduh",
+    "other-languages": "Bahasa lain",
+    "words-count": "%s kata",
+    "packs-here": "Di ponsel ini",
+    "packs-more": "Tersedia",
+    "every-word": "setiap kata",
+    "one-in": "satu dari %s",
+    "open-panel": "Buka",
+    "site-off": "selalu mati di sini",
+    "site-following": "mengikuti sakelar utama (saat ini: %s)",
+    "on": "nyala",
+    "off": "mati",
+    "set-key": "Atur tombol",
+    "simple": "Sederhana",
+    "detailed": "Rinci",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "tidak ada yang lain",
+    "learn-none": "tidak ada",
+    "add-language": "Tambah bahasa",
+    "learn-language": "Pelajari bahasa",
+    "make-main": "Jadikan bahasa saya",
+    "main-language": "Bahasa saya",
+    "learning-it": "mempelajari %s",
+    "dictate": "Dikte",
+    "pos-adj": "adjektiva",
+    "pos-adv": "adverbia",
+    "pos-article": "artikel",
+    "pos-character": "karakter",
+    "pos-conj": "konjungsi",
+    "pos-contraction": "kontraksi",
+    "pos-det": "determiner",
+    "pos-intj": "interjeksi",
+    "pos-name": "nama",
+    "pos-noun": "nomina",
+    "pos-num": "numeralia",
+    "pos-particle": "partikel",
+    "pos-phrase": "frasa",
+    "pos-postp": "postposisi",
+    "pos-prefix": "prefiks",
+    "pos-prep": "preposisi",
+    "pos-prep_phrase": "frasa preposisi",
+    "pos-pron": "pronomina",
+    "pos-proverb": "peribahasa",
+    "pos-punct": "tanda baca",
+    "pos-suffix": "sufiks",
+    "pos-symbol": "simbol",
+    "pos-verb": "verba",
+    "pos-abbrev": "singkatan",
+    "pos-affix": "afiks",
+    "pos-infix": "infiks",
+    "pos-interfix": "interfiks",
+    "pos-circumfix": "konfiks",
+    "pos-root": "akar",
+    "pos-combining_form": "bentuk terikat",
+    "pos-classifier": "klasifikator",
+    "pos-counter": "penanda hitungan",
+    "pos-letter": "huruf",
+    "no-dictionary-for": "Belum ada kamus untuk %s",
+    "unknown-language": "Belum jelas ini bahasa apa",
+    "looking-up": "Sedang mencari",
+    "nothing-for": "Tidak ada hasil untuk %s",
+    "read-as": "Baca sebagai %s",
+    "read-as-accent": "Baca sebagai %s, aksen %s",
+    "translated-by": "Diterjemahkan oleh %s",
+    "translated-by-machine": "Diterjemahkan oleh mesin",
+    "guess": "tebakan",
+    "in-english": "dalam bahasa Inggris",
+    "getting-dictionary": "Mengambil kamus %s",
+    "getting-dictionaries": "Mengambil kamus %s",
+    "say-word": "ucapkan %s",
+    "hear-word": "dengarkan %s",
+    "play-sound": "putar rekaman %s",
+    "read-about-sound": "baca tentang %s",
+    "see-mouth": "lihat mulut mengucapkan %s",
+    "mouth-making": "cara mulut membuat %s",
+    "tap-sound": "Ketuk sebuah bunyi untuk mendengar apa itu",
+    "what-this-is": "Ini apa",
+    "for-example": "Misalnya: %s",
+    "fetching": "mengambil",
+    "done": "selesai",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "persona %s, %s",
+    "person-long": "persona %s",
+    "person-and-number": "persona dan jumlah",
+    "form-of": "dari",
+    "term-mood": "modus",
+    "term-tense": "kala",
+    "term-aspect": "aspek",
+    "term-person": "persona",
+    "term-number": "jumlah",
+    "term-case": "kasus",
+    "term-gender": "gender",
+    "term-definiteness": "ketentuan",
+    "term-declension": "deklinasi",
+    "term-degree": "tingkat",
+    "term-voice": "diatesis",
+    "term-register": "ragam",
+    "term-nonfinite": "nonfinit",
+    "term-singular": "tunggal",
+    "term-plural": "jamak",
+    "term-dual": "dualis",
+    "term-first-person": "persona pertama",
+    "term-second-person": "persona kedua",
+    "term-third-person": "persona ketiga",
+    "term-nominative": "nominatif",
+    "term-accusative": "akusatif",
+    "term-dative": "datif",
+    "term-genitive": "genitif",
+    "term-vocative": "vokatif",
+    "term-instrumental": "instrumental",
+    "term-locative": "lokatif",
+    "term-prepositional": "prepositif",
+    "term-ablative": "ablatif",
+    "term-partitive": "partitif",
+    "term-inessive": "inesif",
+    "term-elative": "elatif",
+    "term-illative": "ilatif",
+    "term-adessive": "adesif",
+    "term-allative": "alatif",
+    "term-essive": "esif",
+    "term-translative": "translatif",
+    "term-abessive": "abesif",
+    "term-comitative": "komitatif",
+    "term-masculine": "maskulin",
+    "term-feminine": "feminin",
+    "term-neuter": "netral",
+    "term-animate": "animat",
+    "term-inanimate": "inanimat",
+    "term-definite": "definit",
+    "term-indefinite": "indefinit",
+    "term-present": "kini",
+    "term-past": "lampau",
+    "term-future": "akan datang",
+    "term-non-past": "bukan lampau",
+    "term-preterite": "pretérito",
+    "term-imperfect": "imperfektum",
+    "term-perfect": "perfektum",
+    "term-pluperfect": "pluperfektum",
+    "term-aorist": "aorist",
+    "term-indicative": "indikatif",
+    "term-subjunctive": "subjungtif",
+    "term-subjunctive-i": "subjungtif I",
+    "term-subjunctive-ii": "subjungtif II",
+    "term-conditional": "kondisional",
+    "term-conditional-i": "kondisional I",
+    "term-conditional-ii": "kondisional II",
+    "term-future-i": "futurum I",
+    "term-future-ii": "futurum II",
+    "term-imperative": "imperatif",
+    "term-jussive": "jusif",
+    "term-optative": "optatif",
+    "term-potential": "potensial",
+    "term-active": "aktif",
+    "term-passive": "pasif",
+    "term-infinitive": "infinitif",
+    "term-participle": "partisip",
+    "term-gerund": "gerundium",
+    "term-imperfective": "imperfektif",
+    "term-perfective": "perfektif",
+    "term-progressive": "progresif",
+    "term-positive": "positif",
+    "term-comparative": "komparatif",
+    "term-superlative": "superlatif",
+    "term-strong": "kuat",
+    "term-weak": "lemah",
+    "term-mixed": "campuran",
+    "term-formal": "formal",
+    "term-informal": "informal",
+    "term-polite": "sopan",
+    "accent-British": "Inggris",
+    "accent-American": "Amerika",
+    "accent-Scottish": "Skotlandia",
+    "accent-Australian": "Australia",
+    "accent-Caribbean": "Karibia",
+    "accent-Canadian": "Kanada",
+    "accent-Spain": "Spanyol",
+    "accent-Latin America": "Amerika Latin",
+    "accent-Rioplatense": "Rioplatense",
+    "accent-Germany": "Jerman",
+    "accent-Switzerland": "Swiss",
+    "accent-Austria": "Austria",
+    "accent-Portugal": "Portugal",
+    "accent-Brazil": "Brasil",
+    "accent-France": "Prancis",
+    "accent-Canada": "Kanada",
+    "accent-Northern": "Utara",
+    "accent-Central": "Tengah"
+  },
+  "rows": {
+    "on": {
+      "name": "Beri anotasi pada yang saya baca",
+      "about": ""
+    },
+    "site": {
+      "name": "Di situs ini",
+      "about": ""
+    },
+    "layer": {
+      "name": "Lapisan",
+      "about": ""
+    },
+    "density": {
+      "name": "Seberapa sering",
+      "about": ""
+    },
+    "target": {
+      "name": "Bahasa",
+      "about": ""
+    },
+    "source": {
+      "name": "Halaman ini dalam bahasa",
+      "about": ""
+    },
+    "accent": {
+      "name": "Aksen",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Kamus",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transkripsi",
+      "about": ""
+    },
+    "stress": {
+      "name": "Tanda tekanan",
+      "about": ""
+    },
+    "delay": {
+      "name": "Jeda sebelum kartu terbuka",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animasi",
+      "about": ""
+    },
+    "say": {
+      "name": "Kata untuk sesuatu",
+      "about": ""
+    },
+    "setup": {
+      "name": "Pengaturan",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Membaca layar",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Menggambar di atas aplikasi",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Pengucapan",
+      "about": ""
+    },
+    "translate": {
+      "name": "Terjemahan",
+      "about": ""
+    },
+    "side": {
+      "name": "Sisi mana",
+      "about": ""
+    },
+    "rest": {
+      "name": "Tempat tombol berada",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Tinggi tetap",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Seret di atas sebuah kata",
+      "about": "Menyebutkan apa yang dilewatinya, dan halaman di bawahnya tetap bisa digulir"
+    },
+    "lens-sweep": {
+      "name": "Tahan, lalu sapu",
+      "about": "Setiap kata yang dilewatinya masuk ke deretan, dan kartu menjawab seluruh klausa"
+    },
+    "lens-hold": {
+      "name": "Tahan",
+      "about": "Membuka pengaturan"
+    },
+    "lens-tap": {
+      "name": "Ketuk",
+      "about": "Minta kata untuk sesuatu di tengah bacaan Anda; ketuk lagi untuk menyembunyikan kartu"
+    },
+    "touch": {
+      "name": "Menyentuh sebuah kata",
+      "about": ""
+    },
+    "where": {
+      "name": "Lokasi",
+      "about": ""
+    },
+    "apps": {
+      "name": "Aplikasi",
+      "about": ""
+    },
+    "start": {
+      "name": "Sebelum bisa menjawab sebuah kata",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Ketuk sebuah kata untuk kartunya",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Untuk melihat arti sebuah kata",
+      "about": ""
+    },
+    "theme": {
+      "name": "Tema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Lanjutan",
+      "about": ""
+    },
+    "dark": {
+      "name": "Terang atau gelap",
+      "about": ""
+    },
+    "mine": {
+      "name": "Bahasa saya",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Tombol samping",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Bahasa",
+      "about": ""
+    },
+    "position": {
+      "name": "Posisi",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Tampilan",
+      "about": ""
+    },
+    "accents": {
+      "name": "Aksen",
+      "about": ""
+    },
+    "inline": {
+      "name": "Ganti kata",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Kata yang diganti",
+      "about": ""
+    },
+    "translator": {
+      "name": "Penerjemah",
+      "about": ""
+    },
+    "into": {
+      "name": "Terjemahkan ke",
+      "about": ""
+    },
+    "known": {
+      "name": "Jangan pernah diterjemahkan",
+      "about": ""
+    },
+    "learn": {
+      "name": "Belajar",
+      "about": ""
+    },
+    "cards": {
+      "name": "Cari",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Pengucapan",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Arti",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Tata bahasa",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Arti lainnya",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Jelaskan setiap kata",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Milik saya",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "beberapa kata",
+      "setiap kata"
+    ],
+    "delay": [
+      "seketika",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Mati",
+        "about": {
+          "browser": "tidak ada kata yang diganti; tanyakan sendiri tentang sebuah kata",
+          "phone": "tidak ada kata yang diganti; tombol tetap menjawab sebuah kata"
+        }
+      },
+      "meaning": {
+        "label": "Terjemahan",
+        "about": {
+          "browser": "kata diganti dengan artinya",
+          "phone": "kata diganti dengan artinya"
+        }
+      },
+      "sound": {
+        "label": "Pengucapan",
+        "about": {
+          "browser": "kata diganti dengan cara mengucapkannya",
+          "phone": "kata diganti dengan cara mengucapkannya"
+        }
+      },
+      "both": {
+        "label": "Keduanya",
+        "about": {
+          "browser": "apa artinya, dan cara mengucapkannya",
+          "phone": "apa artinya, dan cara mengucapkannya"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "bunyi yang membedakan kata",
+          "phone": "bunyi yang membedakan kata"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "setiap detail cara mengucapkannya, seperti aspirasi dan devoisasi",
+          "phone": "setiap detail cara mengucapkannya, seperti aspirasi dan devoisasi"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Sistem",
+        "about": {
+          "browser": "sesuai pengaturan perangkat ini",
+          "phone": "sesuai pengaturan perangkat ini"
+        }
+      },
+      "light": {
+        "label": "Terang",
+        "about": {
+          "browser": "selalu sisi terang dari palet",
+          "phone": "selalu sisi terang dari palet"
+        }
+      },
+      "dark": {
+        "label": "Gelap",
+        "about": {
+          "browser": "selalu sisi gelap dari palet",
+          "phone": "selalu sisi gelap dari palet"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Kiri",
+        "about": {
+          "phone": "untuk ponsel yang dipegang di tangan kiri"
+        }
+      },
+      "free": {
+        "label": "Bebas",
+        "about": {
+          "phone": "tetap di tempat Anda meletakkannya"
+        }
+      },
+      "right": {
+        "label": "Kanan",
+        "about": {
+          "phone": "untuk ponsel yang dipegang di tangan kanan"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Cara pembicara memaksudkan apa yang dikatakan kata kerja: sebagai fakta, sebagai sesuatu yang diharapkan, diragukan atau dibayangkan, atau sebagai perintah."
+      },
+      "tense": {
+        "plain": "Kapan terjadinya: sebelum sekarang, sekarang, atau nanti."
+      },
+      "aspect": {
+        "plain": "Cara tindakan itu dilihat: sebagai satu keseluruhan yang selesai, atau sebagai sesuatu yang berlangsung, berulang atau belum selesai."
+      },
+      "person": {
+        "plain": "Siapa yang melakukannya: pembicara (saya, kami), lawan bicara (kamu), atau orang lain (dia, mereka)."
+      },
+      "number": {
+        "plain": "Berapa banyak: satu, atau lebih dari satu."
+      },
+      "case": {
+        "plain": "Bentuk yang diambil kata benda untuk menunjukkan perannya dalam kalimat: siapa yang melakukan sesuatu, kepada siapa, milik siapa, di mana."
+      },
+      "gender": {
+        "plain": "Kelas yang dimiliki setiap kata benda, yang membuat kata di sekitarnya menyesuaikan diri. Hampir tidak ada hubungannya dengan jenis kelamin: das Mädchen dalam bahasa Jerman, gadis, adalah netral."
+      },
+      "definiteness": {
+        "plain": "Apakah sesuatu itu satu yang tertentu dan sudah dikenal (rumah itu), atau salah satu saja (sebuah rumah)."
+      },
+      "declension": {
+        "plain": "Kumpulan akhiran yang diambil kata benda atau kata sifat, bergantung pada kata di sekitarnya."
+      },
+      "degree": {
+        "plain": "Seberapa kuat kata sifat itu: besar, lebih besar, paling besar."
+      },
+      "voice": {
+        "plain": "Apakah subjek melakukan tindakan (dia menulisnya) atau tindakan itu dilakukan terhadapnya (itu ditulis)."
+      },
+      "register": {
+        "plain": "Seberapa formal kata itu: untuk orang asing dan tulisan resmi, atau untuk teman."
+      },
+      "nonfinite": {
+        "plain": "Bentuk kata kerja yang menyebut tindakan tanpa menyebut siapa yang melakukannya atau kapan: pergi, sedang pergi, sudah pergi."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Satu dari sesuatu.",
+        "example": "satu *anjing*"
+      },
+      "plural": {
+        "plain": "Lebih dari satu.",
+        "example": "*anjing-anjing*, banyak anjing"
+      },
+      "dual": {
+        "plain": "Tepat dua, dalam bahasa yang punya bentuk khusus untuk pasangan.",
+        "example": "Slovenia *hiši*, dua rumah"
+      },
+      "first-person": {
+        "plain": "Pembicara: saya, atau kami.",
+        "example": "*Saya* berjalan, *kami* berjalan"
+      },
+      "second-person": {
+        "plain": "Lawan bicara: kamu.",
+        "example": "*Kamu* berjalan"
+      },
+      "third-person": {
+        "plain": "Siapa pun yang lain: dia, mereka, itu.",
+        "example": "*Dia* berjalan"
+      },
+      "nominative": {
+        "plain": "Pelaku tindakan: subjek.",
+        "example": "*Anjing* itu menggigit pria itu."
+      },
+      "accusative": {
+        "plain": "Yang dikenai tindakan: objek langsung.",
+        "example": "Anjing itu menggigit *pria itu*."
+      },
+      "dative": {
+        "plain": "Yang diberi atau dilakukan untuk sesuatu: kepada siapa.",
+        "example": "Saya memberi *pria itu* sebuah buku."
+      },
+      "genitive": {
+        "plain": "Milik siapa, atau bagian dari apa: milik, dari.",
+        "example": "*buku pria itu*, atap *rumah itu*"
+      },
+      "vocative": {
+        "plain": "Bentuk yang dipakai untuk memanggil atau menyapa seseorang secara langsung.",
+        "example": "Polandia *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Sesuatu yang dipakai untuk melakukan sesuatu.",
+        "example": "Rusia писать *ручкой*, *menulis dengan pulpen*"
+      },
+      "locative": {
+        "plain": "Tempat sesuatu berada.",
+        "example": "Polandia w *domu*, *di rumah*"
+      },
+      "prepositional": {
+        "plain": "Bentuk kata benda setelah preposisi tertentu, sebagian besar tentang tempat atau topik.",
+        "example": "Rusia о *книге*, *tentang buku*"
+      },
+      "ablative": {
+        "plain": "Menjauh dari, keluar dari, atau dengan perantaraan sesuatu.",
+        "example": "Latin *Romā*, dari Roma"
+      },
+      "partitive": {
+        "plain": "Sebagian dari sesuatu, atau tindakan yang belum selesai sampai akhir.",
+        "example": "Finlandia *vettä*, sedikit air"
+      },
+      "inessive": {
+        "plain": "Di dalam sesuatu.",
+        "example": "Finlandia *talossa*, di dalam rumah"
+      },
+      "elative": {
+        "plain": "Keluar dari sesuatu.",
+        "example": "Finlandia *talosta*, keluar dari rumah"
+      },
+      "illative": {
+        "plain": "Masuk ke dalam sesuatu.",
+        "example": "Finlandia *taloon*, masuk ke dalam rumah"
+      },
+      "adessive": {
+        "plain": "Di atas atau di dekat sesuatu.",
+        "example": "Finlandia *pöydällä*, di atas meja"
+      },
+      "allative": {
+        "plain": "Ke atas sesuatu atau menuju sesuatu.",
+        "example": "Finlandia *pöydälle*, ke atas meja"
+      },
+      "essive": {
+        "plain": "Menjadi sesuatu untuk sementara, sebagai peran atau keadaan.",
+        "example": "Finlandia *lapsena*, sebagai anak"
+      },
+      "translative": {
+        "plain": "Menjadi sesuatu.",
+        "example": "Finlandia *opettajaksi*, (untuk menjadi) guru"
+      },
+      "abessive": {
+        "plain": "Tanpa sesuatu.",
+        "example": "Finlandia *rahatta*, tanpa uang"
+      },
+      "comitative": {
+        "plain": "Bersama sesuatu.",
+        "example": "Estonia *sõbraga*, dengan seorang teman"
+      },
+      "masculine": {
+        "plain": "Salah satu kelas kata benda; kata di sekitar kata benda maskulin mengikuti bentuknya. Lebih soal katanya, bukan jenis kelamin.",
+        "example": "Spanyol *el libro*, buku"
+      },
+      "feminine": {
+        "plain": "Salah satu kelas kata benda; kata di sekitar kata benda feminin mengikuti bentuknya. Lebih soal katanya, bukan jenis kelamin.",
+        "example": "Spanyol *la mesa*, meja"
+      },
+      "neuter": {
+        "plain": "Kelas kata benda yang bukan maskulin maupun feminin.",
+        "example": "Jerman *das Haus*, rumah"
+      },
+      "animate": {
+        "plain": "Untuk kata benda yang merujuk pada orang atau hewan; beberapa bahasa memberinya akhiran sendiri.",
+        "example": "Rusia вижу *брата*, saya melihat saudara laki-laki saya"
+      },
+      "inanimate": {
+        "plain": "Untuk kata benda yang merujuk pada benda, bukan orang atau hewan.",
+        "example": "Rusia вижу *стол*, saya melihat meja"
+      },
+      "definite": {
+        "plain": "Satu yang dikenal kedua pembicara: the.",
+        "example": "Swedia *huset*, rumah itu"
+      },
+      "indefinite": {
+        "plain": "Salah satu yang belum dikenal: a.",
+        "example": "Swedia *ett hus*, sebuah rumah"
+      },
+      "present": {
+        "plain": "Sekarang, selalu, atau sebagai kebiasaan.",
+        "example": "dia *berjalan*"
+      },
+      "past": {
+        "plain": "Sebelum sekarang.",
+        "example": "kemarin dia *berjalan*"
+      },
+      "future": {
+        "plain": "Setelah sekarang.",
+        "example": "dia *akan berjalan*"
+      },
+      "non-past": {
+        "plain": "Sekarang atau nanti: satu bentuk untuk keduanya.",
+        "example": "Jepang *食べる*, makan atau akan makan"
+      },
+      "preterite": {
+        "plain": "Sesuatu yang terjadi dan selesai pada suatu titik di masa lalu.",
+        "example": "Spanyol ayer *comí*, kemarin saya *makan*"
+      },
+      "imperfect": {
+        "plain": "Masa lalu dilihat dari dalam: sesuatu yang berlangsung, terus terjadi, atau biasa terjadi.",
+        "example": "Spanyol *comía*, saya *sedang makan*, saya *biasa makan*"
+      },
+      "perfect": {
+        "plain": "Selesai sebelum sekarang dan masih berarti sekarang.",
+        "example": "dia *sudah berjalan*"
+      },
+      "pluperfect": {
+        "plain": "Selesai sebelum momen lain di masa lalu.",
+        "example": "dia *sudah berjalan* (saat itu)"
+      },
+      "aorist": {
+        "plain": "Tindakan masa lalu yang diceritakan sebagai satu peristiwa utuh, seperti dalam sebuah cerita.",
+        "example": "Bulgaria *писах*, saya menulis"
+      },
+      "indicative": {
+        "plain": "Bentuk biasa untuk menyatakan apa yang terjadi: fakta, dan pertanyaan tentangnya.",
+        "example": "Dia *ada* di sini."
+      },
+      "subjunctive": {
+        "plain": "Bentuk untuk apa yang diinginkan, diharapkan, diragukan, ditakutkan, atau hanya dibayangkan, bukan dinyatakan benar. Biasanya muncul setelah kata seperti itu, jika, supaya.",
+        "example": "I wish he *were* here. It is vital that she *be* on time. Spanyol quiero que *vengas*, saya mau kamu datang."
+      },
+      "subjunctive-i": {
+        "plain": "Bentuk bahasa Jerman untuk mengulang apa yang dikatakan orang lain, tanpa menjamin kebenarannya.",
+        "example": "Jerman Er sagt, er *sei* krank. Dia bilang dia sakit."
+      },
+      "subjunctive-ii": {
+        "plain": "Bentuk bahasa Jerman untuk yang tidak nyata: harapan, permintaan sopan, dan andai saja.",
+        "example": "Jerman Wenn ich Zeit *hätte*... Andai saya punya waktu..."
+      },
+      "conditional": {
+        "plain": "Apa yang akan terjadi, jika sesuatu yang lain benar.",
+        "example": "dia *akan berjalan*"
+      },
+      "conditional-i": {
+        "plain": "Apa yang akan terjadi, jika sesuatu yang lain benar.",
+        "example": "Jerman ich *würde gehen*, saya akan pergi"
+      },
+      "conditional-ii": {
+        "plain": "Apa yang akan terjadi, jika sesuatu yang lain telah benar.",
+        "example": "Jerman ich *wäre gegangen*, saya akan sudah pergi"
+      },
+      "future-i": {
+        "plain": "Setelah sekarang.",
+        "example": "Jerman ich *werde gehen*, saya akan pergi"
+      },
+      "future-ii": {
+        "plain": "Selesai pada suatu titik nanti.",
+        "example": "Jerman ich *werde gegangen sein*, saya akan sudah pergi"
+      },
+      "imperative": {
+        "plain": "Bentuk untuk menyuruh seseorang melakukan sesuatu.",
+        "example": "*Jalan!*"
+      },
+      "jussive": {
+        "plain": "Bentuk untuk membiarkan atau menyuruh seseorang, sering bukan lawan bicara, melakukan sesuatu.",
+        "example": "Arab *لِيَكْتُبْ*, biarlah dia menulis"
+      },
+      "optative": {
+        "plain": "Bentuk untuk harapan: semoga begitu."
+      },
+      "potential": {
+        "plain": "Bentuk untuk yang mungkin atau bisa jadi begitu.",
+        "example": "Finlandia *lienee*, (dia) mungkin begitu"
+      },
+      "active": {
+        "plain": "Subjek melakukan tindakan.",
+        "example": "Dia *menulis* surat itu."
+      },
+      "passive": {
+        "plain": "Subjek dikenai tindakan.",
+        "example": "Surat itu *ditulis*."
+      },
+      "infinitive": {
+        "plain": "Kata kerjanya sendiri, belum ada yang melakukannya: bentuk yang didaftar kamus.",
+        "example": "*berjalan*, Spanyol *caminar*"
+      },
+      "participle": {
+        "plain": "Bentuk kata kerja yang berfungsi seperti kata sifat, dan dengan kata bantu membentuk kala lain.",
+        "example": "cangkir *pecah*, dia *sudah berjalan*"
+      },
+      "gerund": {
+        "plain": "Bentuk kata kerja untuk tindakan yang sedang berlangsung, atau dipakai seperti kata benda.",
+        "example": "dia *sedang berjalan*, Spanyol está *caminando*"
+      },
+      "imperfective": {
+        "plain": "Tindakan dilihat sebagai berlangsung, berulang, atau belum selesai.",
+        "example": "Rusia я *читал*, saya *sedang membaca*"
+      },
+      "perfective": {
+        "plain": "Tindakan dilihat sebagai satu keseluruhan yang selesai.",
+        "example": "Rusia я *прочитал*, saya *membacanya* (sampai habis)"
+      },
+      "progressive": {
+        "plain": "Sedang berlangsung pada saat itu.",
+        "example": "dia *sedang berjalan*"
+      },
+      "positive": {
+        "plain": "Kata sifat apa adanya, tanpa perbandingan.",
+        "example": "*besar*"
+      },
+      "comparative": {
+        "plain": "Lebih dari sesuatu yang lain.",
+        "example": "*lebih besar*, *lebih indah*"
+      },
+      "superlative": {
+        "plain": "Lebih dari semuanya.",
+        "example": "*paling besar*, *paling indah*"
+      },
+      "strong": {
+        "plain": "Akhiran kata sifat bahasa Jerman yang dipakai jika tidak ada artikel di depannya untuk menunjukkan kasus.",
+        "example": "Jerman *kaltes* Wasser, air dingin"
+      },
+      "weak": {
+        "plain": "Akhiran kata sifat bahasa Jerman setelah der, die, das, saat artikel itu sudah menunjukkan kasus.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Akhiran kata sifat bahasa Jerman setelah ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Untuk orang asing, orang yang lebih tua, dan tulisan resmi.",
+        "example": "Jerman *Sie*, Spanyol *usted*"
+      },
+      "informal": {
+        "plain": "Untuk teman, keluarga, dan anak-anak.",
+        "example": "Jerman *du*, Spanyol *tú*"
+      },
+      "polite": {
+        "plain": "Cara yang hormat untuk mengatakannya.",
+        "example": "Jepang *食べます*, (saya) makan, diucapkan dengan sopan"
+      }
+    }
+  }
+}

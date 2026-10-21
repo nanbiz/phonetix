@@ -74,6 +74,11 @@ def popup(cdp, extid, page_target):
                 "Target.attachToTarget", {"targetId": found["targetId"], "flatten": True},
             )["sessionId"]
             cdp.send("Runtime.enable", session=view)
+            # Drawn once it has read the reader's settings and the words of their language.
+            for _ in range(40):
+                if evaluate(cdp, view, "!!document.querySelector('[data-row]')"):
+                    break
+                time.sleep(0.1)
             return view
         time.sleep(0.5)
     raise SystemExit("FAIL - the toolbar button opened no popup")
@@ -283,7 +288,7 @@ def main():
         def languages(script):
             control(cdp, view, "document.querySelector('[data-row=languages]').click()", settle=1)
             told = control(cdp, view, script, settle=1)
-            control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+            control(cdp, view, "document.querySelector('[data-does=back]').click()", settle=1)
             return told
 
         def add(lang):
@@ -317,6 +322,15 @@ def main():
         print(f"  German made my language: the rows read {rows!r}")
         if not (rows or "").startswith("de* en"):
             failures.append(f"making German my language left the rows as {rows!r}")
+        # And the view is in German now, every row as the German table names it.
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                               "public", "interface", "de.json")) as f:
+            german_rows = json.load(f)["rows"]
+        named = evaluate(cdp, view, "(document.querySelector('[data-row=languages] .item-name')"
+                                    " || {}).textContent")
+        print(f"  the languages row, in German: {named!r}")
+        if (named or "").strip() != german_rows["group-languages"]["name"]:
+            failures.append(f"making German my language left the view in English: {named!r}")
         card = point_at(cdp, page, "camino")
         print(f"  my language German, pointing at camino: {(card or '')[:80]!r}")
         if not card or "Weg" not in card:
@@ -390,8 +404,9 @@ def main():
         control(cdp, view, "document.querySelector('[data-sheet] [data-choice=es]').click()", settle=1)
         picked = control(cdp, view, """
             (() => {
-              const choice = [...document.querySelectorAll('[data-sheet] [data-choice]')]
-                .find(c => c.textContent.includes('Latin'));
+              // By what it is, not what it is called: the reader made German their own above,
+              // and the list is in German.
+              const choice = document.querySelector('[data-sheet] [data-choice=es-419]');
               if (!choice) return 'no Latin American accent';
               choice.click();
               return choice.dataset.choice;
@@ -420,7 +435,7 @@ def main():
               const choices = [...root.querySelectorAll('.accent-menu [data-choice]')];
               const was = (choices.find(c => c.getAttribute('aria-selected') === 'true') || {})
                 .dataset?.choice ?? null;
-              const offered = choices.map(c => 'ES · ' + c.textContent.trim()).join(', ');
+              const offered = choices.map(c => c.dataset.choice).join(', ');
               const spain = choices.find(c => c.dataset.choice === 'es');
               if (spain) spain.click();
               return JSON.stringify({was, offered});
@@ -433,7 +448,7 @@ def main():
             offered = json.loads(offered)
             if offered["was"] != "es-419":
                 failures.append(f"the card names {offered['was']!r} after Latin American was picked")
-            if "ES · Spain" not in offered["offered"] or "ES · Latin America" not in offered["offered"]:
+            if not {"es", "es-419"} <= set(offered["offered"].split(", ")):
                 failures.append(f"the card offers {offered['offered']!r}")
             spain = wait_for(cdp, page, """
               (() => {
@@ -513,7 +528,7 @@ def main():
         if not on or off:
             failures.append(f"the stress switch left {on} marks on and {off} off")
         evaluate(cdp, view, "chrome.storage.local.remove('density').then(() => 1)")
-        control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-does=back]').click()", settle=1)
 
         # Appearance: a palette is what the page's words are drawn in, and light or dark is
         # which way round the settings view itself is.
@@ -546,7 +561,7 @@ def main():
             failures.append(f"light and dark did not turn the settings view round: {sides}")
         control(cdp, view, "document.querySelector('[data-row=dark] [data-choice=system]').click()",
                 settle=1)
-        control(cdp, view, "document.querySelector('[aria-label=Back]').click()", settle=1)
+        control(cdp, view, "document.querySelector('[data-does=back]').click()", settle=1)
 
         # Both commands' keys as the browser bound them, the main switch's beside it and the
         # translator's on its row.

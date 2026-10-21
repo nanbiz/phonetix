@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Permite",
+    "allow-overlay": "Permite suprapunerea",
+    "already-in": "Pagina este deja în %s",
+    "broad-mark": "/ /",
+    "change": "Schimbă",
+    "choose-language": "Alege o limbă",
+    "close": "Închide",
+    "detail-explained": "Transcrierea largă arată sunetele care deosebesc cuvintele; cea îngustă arată fiecare detaliu al pronunției, așa cum o rostește un vorbitor cu acel accent.",
+    "every-app": "Toate aplicațiile",
+    "get": "Descarcă",
+    "loading-dictionary": "Se încarcă dicționarul…",
+    "master-idle": "Nimic nu se afișează peste aplicațiile tale",
+    "master-off": "În pauză",
+    "master-on": "Citește",
+    "master-unready": "Permite-i să citească ecranul și să afișeze peste aplicații",
+    "master-working": "Răspunde la cuvintele din aplicațiile tale",
+    "narrow-mark": "[ ]",
+    "no-source": "pentru sensul cuvintelor; pronunția este inclusă",
+    "no-translation": "Fără traducere",
+    "nothing-found": "Nimic cu acest nume",
+    "nothing-yet": "nimic încă",
+    "open-accessibility": "Deschide accesibilitatea",
+    "preview": "Previzualizare",
+    "preview-about": "cuvintele de pe o pagină la care ar răspunde",
+    "remove": "Elimină",
+    "rest-edge": "Pe partea %s",
+    "rest-loose": "Oriunde îl lași",
+    "no-direction": "Nu s-a găsit nicio traducere din %s. Cuvintele arată în schimb cum se pronunță.",
+    "service-stopped": "Phonetix are voie să citească ecranul, dar nu rulează. Oprește-l și pornește-l din nou în setările de accesibilitate ale telefonului.",
+    "rest-put": "Trage butonul în sus sau în jos, ori pe cealaltă parte.",
+    "say-into": "Răspunde în",
+    "say-no-language": "Alege mai întâi o limbă în care să citească.",
+    "say-no-model": "Serverul tău de dicționare nu are un model de traducere pentru această direcție.",
+    "say-nothing": "niciun cuvânt pentru asta",
+    "say-placeholder": "ce vrei să spui",
+    "search": "Caută",
+    "speak": "Spune",
+    "touch-off": "Fiecare atingere ajunge la aplicația de dedesubt, deci derularea rămâne neschimbată.",
+    "touch-on": "O glisare care începe pe un cuvânt nu derulează pagina.",
+    "turn": "Răspunde în sens invers",
+    "use-this": "Folosește",
+    "say-fetching": "se descarcă %s",
+    "back": "Înapoi",
+    "apps-chosen": "%s alese",
+    "packs-held": "%s descărcate",
+    "other-languages": "Alte limbi",
+    "words-count": "%s cuvinte",
+    "packs-here": "Pe acest telefon",
+    "packs-more": "Disponibile",
+    "every-word": "fiecare cuvânt",
+    "one-in": "unul din %s",
+    "open-panel": "Deschide",
+    "site-off": "mereu oprit aici",
+    "site-following": "urmează comutatorul principal (acum: %s)",
+    "on": "pornit",
+    "off": "oprit",
+    "set-key": "Setează o tastă",
+    "simple": "Simplu",
+    "detailed": "Detaliat",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "nimic altceva",
+    "learn-none": "niciuna",
+    "add-language": "Adaugă o limbă",
+    "learn-language": "Învață o limbă",
+    "make-main": "Fă-o limba mea",
+    "main-language": "Limba mea",
+    "learning-it": "învăț %s",
+    "dictate": "Dictează",
+    "pos-adj": "adjectiv",
+    "pos-adv": "adverb",
+    "pos-article": "articol",
+    "pos-character": "caracter",
+    "pos-conj": "conjuncție",
+    "pos-contraction": "contracție",
+    "pos-det": "determinant",
+    "pos-intj": "interjecție",
+    "pos-name": "nume propriu",
+    "pos-noun": "substantiv",
+    "pos-num": "numeral",
+    "pos-particle": "particulă",
+    "pos-phrase": "expresie",
+    "pos-postp": "postpoziție",
+    "pos-prefix": "prefix",
+    "pos-prep": "prepoziție",
+    "pos-prep_phrase": "locuțiune prepozițională",
+    "pos-pron": "pronume",
+    "pos-proverb": "proverb",
+    "pos-punct": "semn de punctuație",
+    "pos-suffix": "sufix",
+    "pos-symbol": "simbol",
+    "pos-verb": "verb",
+    "pos-abbrev": "abreviere",
+    "pos-affix": "afix",
+    "pos-infix": "infix",
+    "pos-interfix": "interfix",
+    "pos-circumfix": "circumfix",
+    "pos-root": "rădăcină",
+    "pos-combining_form": "element de compunere",
+    "pos-classifier": "clasificator",
+    "pos-counter": "numărător",
+    "pos-letter": "literă",
+    "no-dictionary-for": "Încă nu există dicționar pentru %s",
+    "unknown-language": "Nu e clar ce limbă este",
+    "looking-up": "Se caută",
+    "nothing-for": "Nimic găsit pentru %s",
+    "read-as": "Citit ca %s",
+    "read-as-accent": "Citit ca %s, accent %s",
+    "translated-by": "Tradus de %s",
+    "translated-by-machine": "Traducere automată",
+    "guess": "presupunere",
+    "in-english": "în engleză",
+    "getting-dictionary": "Se descarcă dicționarul de %s",
+    "getting-dictionaries": "Se descarcă %s dicționare",
+    "say-word": "spune %s",
+    "hear-word": "ascultă %s",
+    "play-sound": "redă o înregistrare cu %s",
+    "read-about-sound": "citește despre %s",
+    "see-mouth": "vezi o gură care rostește %s",
+    "mouth-making": "cum formează gura %s",
+    "tap-sound": "Atinge un sunet ca să auzi ce este",
+    "what-this-is": "Ce este",
+    "for-example": "De exemplu: %s",
+    "fetching": "se descarcă",
+    "done": "gata",
+    "ordinal-first-person": "I",
+    "ordinal-second-person": "a II-a",
+    "ordinal-third-person": "a III-a",
+    "person-number": "pers. %s %s",
+    "person-number-long": "persoana %s %s",
+    "person-long": "persoana %s",
+    "person-and-number": "persoană și număr",
+    "form-of": "de la",
+    "term-mood": "mod",
+    "term-tense": "timp",
+    "term-aspect": "aspect",
+    "term-person": "persoană",
+    "term-number": "număr",
+    "term-case": "caz",
+    "term-gender": "gen",
+    "term-definiteness": "determinare",
+    "term-declension": "declinare",
+    "term-degree": "grad de comparație",
+    "term-voice": "diateză",
+    "term-register": "registru",
+    "term-nonfinite": "formă nepersonală",
+    "term-singular": "singular",
+    "term-plural": "plural",
+    "term-dual": "dual",
+    "term-first-person": "persoana I",
+    "term-second-person": "persoana a II-a",
+    "term-third-person": "persoana a III-a",
+    "term-nominative": "nominativ",
+    "term-accusative": "acuzativ",
+    "term-dative": "dativ",
+    "term-genitive": "genitiv",
+    "term-vocative": "vocativ",
+    "term-instrumental": "instrumental",
+    "term-locative": "locativ",
+    "term-prepositional": "prepozițional",
+    "term-ablative": "ablativ",
+    "term-partitive": "partitiv",
+    "term-inessive": "inesiv",
+    "term-elative": "elativ",
+    "term-illative": "ilativ",
+    "term-adessive": "adesiv",
+    "term-allative": "alativ",
+    "term-essive": "esiv",
+    "term-translative": "translativ",
+    "term-abessive": "abesiv",
+    "term-comitative": "comitativ",
+    "term-masculine": "masculin",
+    "term-feminine": "feminin",
+    "term-neuter": "neutru",
+    "term-animate": "animat",
+    "term-inanimate": "inanimat",
+    "term-definite": "articulat hotărât",
+    "term-indefinite": "nehotărât",
+    "term-present": "prezent",
+    "term-past": "trecut",
+    "term-future": "viitor",
+    "term-non-past": "non-trecut",
+    "term-preterite": "perfect simplu",
+    "term-imperfect": "imperfect",
+    "term-perfect": "perfect compus",
+    "term-pluperfect": "mai-mult-ca-perfect",
+    "term-aorist": "aorist",
+    "term-indicative": "indicativ",
+    "term-subjunctive": "conjunctiv",
+    "term-subjunctive-i": "conjunctiv I",
+    "term-subjunctive-ii": "conjunctiv II",
+    "term-conditional": "condițional",
+    "term-conditional-i": "condițional I",
+    "term-conditional-ii": "condițional II",
+    "term-future-i": "viitor I",
+    "term-future-ii": "viitor II",
+    "term-imperative": "imperativ",
+    "term-jussive": "jusiv",
+    "term-optative": "optativ",
+    "term-potential": "potențial",
+    "term-active": "activ",
+    "term-passive": "pasiv",
+    "term-infinitive": "infinitiv",
+    "term-participle": "participiu",
+    "term-gerund": "gerunziu",
+    "term-imperfective": "imperfectiv",
+    "term-perfective": "perfectiv",
+    "term-progressive": "progresiv",
+    "term-positive": "pozitiv",
+    "term-comparative": "comparativ",
+    "term-superlative": "superlativ",
+    "term-strong": "tare",
+    "term-weak": "slab",
+    "term-mixed": "mixt",
+    "term-formal": "formal",
+    "term-informal": "informal",
+    "term-polite": "de politețe",
+    "accent-British": "britanic",
+    "accent-American": "american",
+    "accent-Scottish": "scoțian",
+    "accent-Australian": "australian",
+    "accent-Caribbean": "caraibian",
+    "accent-Canadian": "canadian",
+    "accent-Spain": "Spania",
+    "accent-Latin America": "America Latină",
+    "accent-Rioplatense": "rioplatens",
+    "accent-Germany": "Germania",
+    "accent-Switzerland": "Elveția",
+    "accent-Austria": "Austria",
+    "accent-Portugal": "Portugalia",
+    "accent-Brazil": "Brazilia",
+    "accent-France": "Franța",
+    "accent-Canada": "Canada",
+    "accent-Northern": "nordic",
+    "accent-Central": "central"
+  },
+  "rows": {
+    "on": {
+      "name": "Adnotează ce citesc",
+      "about": ""
+    },
+    "site": {
+      "name": "Pe acest site",
+      "about": ""
+    },
+    "layer": {
+      "name": "Suprapunere",
+      "about": ""
+    },
+    "density": {
+      "name": "Cât de des",
+      "about": ""
+    },
+    "target": {
+      "name": "Limbă",
+      "about": ""
+    },
+    "source": {
+      "name": "Pagina este în",
+      "about": ""
+    },
+    "accent": {
+      "name": "Accent",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Dicționare",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transcrieri",
+      "about": ""
+    },
+    "stress": {
+      "name": "Semne de accent",
+      "about": ""
+    },
+    "delay": {
+      "name": "Pauză înainte de card",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animații",
+      "about": ""
+    },
+    "say": {
+      "name": "Cum se spune",
+      "about": ""
+    },
+    "setup": {
+      "name": "Configurare",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Citirea ecranului",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Afișare peste aplicații",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Pronunție",
+      "about": ""
+    },
+    "translate": {
+      "name": "Traducere",
+      "about": ""
+    },
+    "side": {
+      "name": "Pe ce parte",
+      "about": ""
+    },
+    "rest": {
+      "name": "Unde stă butonul",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Înălțime fixă",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Trage-l peste un cuvânt",
+      "about": "Spune ce trece pe sub el, iar pagina de dedesubt se derulează în continuare"
+    },
+    "lens-sweep": {
+      "name": "Ține-l apăsat, apoi glisează",
+      "about": "Fiecare cuvânt peste care trece se adaugă, iar cardul răspunde la toată propoziția"
+    },
+    "lens-hold": {
+      "name": "Ține-l apăsat",
+      "about": "Deschide setările"
+    },
+    "lens-tap": {
+      "name": "Atinge-l",
+      "about": "Întreabă cum se spune ceva, în mijlocul lecturii; atinge-l din nou ca să închizi cardul"
+    },
+    "touch": {
+      "name": "Atingerea unui cuvânt",
+      "about": ""
+    },
+    "where": {
+      "name": "Unde",
+      "about": ""
+    },
+    "apps": {
+      "name": "Aplicații",
+      "about": ""
+    },
+    "start": {
+      "name": "Înainte să poată răspunde",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Atinge un cuvânt pentru cardul lui",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Pentru sensul cuvintelor",
+      "about": ""
+    },
+    "theme": {
+      "name": "Temă",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Avansat",
+      "about": ""
+    },
+    "dark": {
+      "name": "Luminos sau întunecat",
+      "about": ""
+    },
+    "mine": {
+      "name": "Limba mea",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Buton lateral",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Limbi",
+      "about": ""
+    },
+    "position": {
+      "name": "Poziție",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Aspect",
+      "about": ""
+    },
+    "accents": {
+      "name": "Accente",
+      "about": ""
+    },
+    "inline": {
+      "name": "Înlocuiește cuvinte",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Cuvinte înlocuite",
+      "about": ""
+    },
+    "translator": {
+      "name": "Traducător",
+      "about": ""
+    },
+    "into": {
+      "name": "Tradu în",
+      "about": ""
+    },
+    "known": {
+      "name": "Nu traduce niciodată",
+      "about": ""
+    },
+    "learn": {
+      "name": "Învăț",
+      "about": ""
+    },
+    "cards": {
+      "name": "Căutare",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Pronunție",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Sens",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Gramatică",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Alte sensuri",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Descrie fiecare cuvânt",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Ale mele",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "câteva cuvinte",
+      "fiecare cuvânt"
+    ],
+    "delay": [
+      "imediat",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Oprit",
+        "about": {
+          "browser": "nu se înlocuiește nimic; întreabă singur despre un cuvânt",
+          "phone": "nu se înlocuiește nimic; butonul răspunde în continuare la un cuvânt"
+        }
+      },
+      "meaning": {
+        "label": "Traducere",
+        "about": {
+          "browser": "cuvântul înlocuit cu sensul lui",
+          "phone": "cuvântul înlocuit cu sensul lui"
+        }
+      },
+      "sound": {
+        "label": "Pronunție",
+        "about": {
+          "browser": "cuvântul înlocuit cu felul în care se pronunță",
+          "phone": "cuvântul înlocuit cu felul în care se pronunță"
+        }
+      },
+      "both": {
+        "label": "Ambele",
+        "about": {
+          "browser": "ce înseamnă și cum se pronunță",
+          "phone": "ce înseamnă și cum se pronunță"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "sunetele care deosebesc cuvintele",
+          "phone": "sunetele care deosebesc cuvintele"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "fiecare detaliu al pronunției, ca aspirația și desonorizarea",
+          "phone": "fiecare detaliu al pronunției, ca aspirația și desonorizarea"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Sistem",
+        "about": {
+          "browser": "cum este setat acest dispozitiv",
+          "phone": "cum este setat acest dispozitiv"
+        }
+      },
+      "light": {
+        "label": "Luminos",
+        "about": {
+          "browser": "mereu partea luminoasă a paletei",
+          "phone": "mereu partea luminoasă a paletei"
+        }
+      },
+      "dark": {
+        "label": "Întunecat",
+        "about": {
+          "browser": "mereu partea întunecată a paletei",
+          "phone": "mereu partea întunecată a paletei"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Stânga",
+        "about": {
+          "phone": "pentru un telefon ținut în mâna stângă"
+        }
+      },
+      "free": {
+        "label": "Oriunde",
+        "about": {
+          "phone": "rămâne unde îl lași"
+        }
+      },
+      "right": {
+        "label": "Dreapta",
+        "about": {
+          "phone": "pentru un telefon ținut în mâna dreaptă"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Cum înțelege vorbitorul ce spune verbul: ca fapt, ca ceva dorit, pus la îndoială sau imaginat, ori ca ordin."
+      },
+      "tense": {
+        "plain": "Când se întâmplă: înainte de acum, acum sau mai târziu."
+      },
+      "aspect": {
+        "plain": "Cum e privită acțiunea: ca un întreg încheiat, sau ca ceva în desfășurare, repetat ori neterminat."
+      },
+      "person": {
+        "plain": "Cine o face: vorbitorul (eu, noi), cel căruia i se vorbește (tu, voi) sau altcineva (el, ea, ei)."
+      },
+      "number": {
+        "plain": "Câți: unul sau mai mulți."
+      },
+      "case": {
+        "plain": "Forma pe care o ia un substantiv ca să-și arate rolul în propoziție: cine face ceva, cui, al cui, unde."
+      },
+      "gender": {
+        "plain": "O clasă din care face parte fiecare substantiv și după care se acordă cuvintele din jur. Are puțin de-a face cu sexul: germanul das Mädchen, fata, este neutru."
+      },
+      "definiteness": {
+        "plain": "Dacă e vorba de un anume lucru cunoscut (casa) sau de oricare (o casă)."
+      },
+      "declension": {
+        "plain": "Setul de terminații pe care le ia un substantiv sau un adjectiv, în funcție de cuvintele din jur."
+      },
+      "degree": {
+        "plain": "Cât de puternic se aplică un adjectiv: mare, mai mare, cel mai mare."
+      },
+      "voice": {
+        "plain": "Dacă subiectul face acțiunea (ea a scris-o) sau o suferă (a fost scrisă)."
+      },
+      "register": {
+        "plain": "Cât de formal este cuvântul: pentru străini și texte oficiale, sau pentru prieteni."
+      },
+      "nonfinite": {
+        "plain": "O formă a verbului care numește acțiunea fără să spună cine o face sau când: a merge, mergând, mers."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Un singur lucru.",
+        "example": "un *câine*"
+      },
+      "plural": {
+        "plain": "Mai mult de unul.",
+        "example": "doi *câini*"
+      },
+      "dual": {
+        "plain": "Exact doi, în limbile care au o formă doar pentru perechi.",
+        "example": "slovenă *hiši*, două case"
+      },
+      "first-person": {
+        "plain": "Vorbitorul: eu sau noi.",
+        "example": "*eu* merg, *noi* mergem"
+      },
+      "second-person": {
+        "plain": "Cel căruia i se vorbește: tu.",
+        "example": "*tu* mergi"
+      },
+      "third-person": {
+        "plain": "Oricine altcineva: el, ea, ei, ele.",
+        "example": "*ea merge*"
+      },
+      "nominative": {
+        "plain": "Cel care face acțiunea: subiectul.",
+        "example": "*Câinele* mușcă omul."
+      },
+      "accusative": {
+        "plain": "Cel asupra căruia se face acțiunea: complementul direct.",
+        "example": "Câinele mușcă *omul*."
+      },
+      "dative": {
+        "plain": "Cel căruia i se dă sau i se face ceva: cui.",
+        "example": "Îi dau *omului* o carte."
+      },
+      "genitive": {
+        "plain": "Al cui este, sau din ce face parte: al, a, ai, ale.",
+        "example": "cartea *omului*, acoperișul *casei*"
+      },
+      "vocative": {
+        "plain": "Forma folosită pentru a chema pe cineva sau a i te adresa direct.",
+        "example": "*Ioane!*, *Mario!*"
+      },
+      "instrumental": {
+        "plain": "Cu ce sau prin ce se face ceva.",
+        "example": "rusă писать *ручкой*, a scrie *cu pixul*"
+      },
+      "locative": {
+        "plain": "Unde se află ceva.",
+        "example": "poloneză w *domu*, *în casă*"
+      },
+      "prepositional": {
+        "plain": "Forma pe care o ia un substantiv după anumite prepoziții, mai ales despre unde sau despre ce.",
+        "example": "rusă о *книге*, despre *carte*"
+      },
+      "ablative": {
+        "plain": "Dinspre, din, sau prin intermediul a ceva.",
+        "example": "latină *Romā*, din Roma"
+      },
+      "partitive": {
+        "plain": "O parte din ceva, sau o acțiune nedusă până la capăt.",
+        "example": "finlandeză *vettä*, niște apă"
+      },
+      "inessive": {
+        "plain": "Înăuntrul a ceva.",
+        "example": "finlandeză *talossa*, în casă"
+      },
+      "elative": {
+        "plain": "Din interiorul a ceva.",
+        "example": "finlandeză *talosta*, din casă"
+      },
+      "illative": {
+        "plain": "Înspre interiorul a ceva.",
+        "example": "finlandeză *taloon*, în casă (intrând)"
+      },
+      "adessive": {
+        "plain": "Pe sau la ceva.",
+        "example": "finlandeză *pöydällä*, pe masă"
+      },
+      "allative": {
+        "plain": "Spre sau pe ceva.",
+        "example": "finlandeză *pöydälle*, pe masă (punând)"
+      },
+      "essive": {
+        "plain": "A fi ceva pentru o vreme, ca rol sau stare.",
+        "example": "finlandeză *lapsena*, ca copil"
+      },
+      "translative": {
+        "plain": "A deveni ceva.",
+        "example": "finlandeză *opettajaksi*, (a deveni) profesor"
+      },
+      "abessive": {
+        "plain": "Fără ceva.",
+        "example": "finlandeză *rahatta*, fără bani"
+      },
+      "comitative": {
+        "plain": "Împreună cu ceva.",
+        "example": "estonă *sõbraga*, cu un prieten"
+      },
+      "masculine": {
+        "plain": "Una dintre clasele în care se împart substantivele; cuvintele din jurul unui substantiv masculin iau terminațiile lui. Ține mai ales de cuvânt, nu de sex.",
+        "example": "*un copac* înalt"
+      },
+      "feminine": {
+        "plain": "Una dintre clasele în care se împart substantivele; cuvintele din jurul unui substantiv feminin iau terminațiile lui. Ține mai ales de cuvânt, nu de sex.",
+        "example": "*o masă* înaltă"
+      },
+      "neuter": {
+        "plain": "Clasa substantivelor care nu sunt nici masculine, nici feminine.",
+        "example": "*un scaun*, *două scaune*"
+      },
+      "animate": {
+        "plain": "Spus despre un substantiv pentru o persoană sau un animal, căruia unele limbi îi dau terminații proprii.",
+        "example": "rusă вижу *брата*, îl văd pe fratele meu"
+      },
+      "inanimate": {
+        "plain": "Spus despre un substantiv pentru un lucru, nu o persoană sau un animal.",
+        "example": "rusă вижу *стол*, văd masa"
+      },
+      "definite": {
+        "plain": "Un anume lucru pe care îl cunosc ambii vorbitori: articolul hotărât.",
+        "example": "*casa*, *omul*"
+      },
+      "indefinite": {
+        "plain": "Oricare, încă necunoscut: un, o.",
+        "example": "*o casă*, *un om*"
+      },
+      "present": {
+        "plain": "Acum, mereu sau din obișnuință.",
+        "example": "ea *merge*"
+      },
+      "past": {
+        "plain": "Înainte de acum.",
+        "example": "ea *a mers*"
+      },
+      "future": {
+        "plain": "Mai târziu decât acum.",
+        "example": "ea *va merge*"
+      },
+      "non-past": {
+        "plain": "Acum sau mai târziu: o singură formă pentru ambele.",
+        "example": "japoneză *食べる*, mănâncă sau va mânca"
+      },
+      "preterite": {
+        "plain": "Ceva care s-a întâmplat și s-a încheiat într-un moment din trecut.",
+        "example": "ieri *mâncai* devreme"
+      },
+      "imperfect": {
+        "plain": "Trecutul văzut din interior: ceva care se desfășura, se repeta sau obișnuia să fie.",
+        "example": "*mâncam* când a sunat, *mâncam* acolo zilnic"
+      },
+      "perfect": {
+        "plain": "Făcut înainte de acum și încă important acum.",
+        "example": "engleză she *has walked*, ea a mers"
+      },
+      "pluperfect": {
+        "plain": "Făcut înaintea altui moment din trecut.",
+        "example": "ea *mersese*"
+      },
+      "aorist": {
+        "plain": "O acțiune trecută spusă ca un singur eveniment încheiat, așa cum o povestește o poveste.",
+        "example": "bulgară *писах*, am scris"
+      },
+      "indicative": {
+        "plain": "Forma obișnuită pentru a spune ce este: fapte și întrebări despre ele.",
+        "example": "Ea *este* aici."
+      },
+      "subjunctive": {
+        "plain": "Forma pentru ce este dorit, vrut, pus la îndoială, temut sau doar imaginat, nu afirmat ca adevărat. În română vine după să: vreau să, trebuie să, ca să.",
+        "example": "Vreau să *vii*. Trebuie să *fie* la timp."
+      },
+      "subjunctive-i": {
+        "plain": "Forma germanei pentru a reda ce a spus altcineva, fără a garanta pentru asta.",
+        "example": "Er sagt, er *sei* krank. Spune că e bolnav."
+      },
+      "subjunctive-ii": {
+        "plain": "Forma germanei pentru ce nu e real: dorințe, rugăminți politicoase și „de-ar fi”.",
+        "example": "Wenn ich Zeit *hätte*... Dacă aș avea timp..."
+      },
+      "conditional": {
+        "plain": "Ce s-ar întâmpla, dacă altceva ar fi așa.",
+        "example": "ea *ar merge*"
+      },
+      "conditional-i": {
+        "plain": "Ce s-ar întâmpla, dacă altceva ar fi așa.",
+        "example": "germană ich *würde gehen*, aș merge"
+      },
+      "conditional-ii": {
+        "plain": "Ce s-ar fi întâmplat, dacă altceva ar fi fost așa.",
+        "example": "germană ich *wäre gegangen*, aș fi mers"
+      },
+      "future-i": {
+        "plain": "Mai târziu decât acum.",
+        "example": "germană ich *werde gehen*, voi merge"
+      },
+      "future-ii": {
+        "plain": "Încheiat până la un moment din viitor.",
+        "example": "germană ich *werde gegangen sein*, voi fi mers"
+      },
+      "imperative": {
+        "plain": "Forma pentru a-i spune cuiva să facă ceva.",
+        "example": "*Mergi!*"
+      },
+      "jussive": {
+        "plain": "O formă pentru a lăsa sau a cere cuiva, adesea nu ascultătorului, să facă ceva.",
+        "example": "arabă *لِيَكْتُبْ*, să scrie el"
+      },
+      "optative": {
+        "plain": "O formă pentru a ura: fie să fie așa."
+      },
+      "potential": {
+        "plain": "O formă pentru ce este probabil sau posibil așa.",
+        "example": "finlandeză *lienee*, (el) probabil este"
+      },
+      "active": {
+        "plain": "Subiectul face acțiunea.",
+        "example": "Ea *a scris* scrisoarea."
+      },
+      "passive": {
+        "plain": "Subiectul suferă acțiunea.",
+        "example": "Scrisoarea *a fost scrisă*."
+      },
+      "infinitive": {
+        "plain": "Verbul în sine, fără cineva care să facă acțiunea: forma după care îl găsești în dicționar.",
+        "example": "*a merge*, spaniolă *caminar*"
+      },
+      "participle": {
+        "plain": "O formă a verbului care funcționează ca un adjectiv și, cu un verb auxiliar, formează alte timpuri.",
+        "example": "o ceașcă *spartă*, ea a *mers*"
+      },
+      "gerund": {
+        "plain": "O formă a verbului pentru o acțiune în desfășurare.",
+        "example": "*mergând*, spaniolă está *caminando*"
+      },
+      "imperfective": {
+        "plain": "Acțiunea ca în desfășurare, repetată sau neterminată.",
+        "example": "rusă я *читал*, citeam"
+      },
+      "perfective": {
+        "plain": "Acțiunea ca un întreg încheiat.",
+        "example": "rusă я *прочитал*, am citit-o (până la capăt)"
+      },
+      "progressive": {
+        "plain": "În desfășurare chiar în acel moment.",
+        "example": "engleză she *is walking*, ea merge (acum)"
+      },
+      "positive": {
+        "plain": "Adjectivul așa cum este, fără comparație.",
+        "example": "*mare*"
+      },
+      "comparative": {
+        "plain": "Mai mult decât altceva.",
+        "example": "*mai mare*, *mai frumos*"
+      },
+      "superlative": {
+        "plain": "Mai mult decât orice altceva.",
+        "example": "*cel mai mare*, *cel mai frumos*"
+      },
+      "strong": {
+        "plain": "Terminațiile adjectivale pe care germana le folosește când niciun articol din față nu arată cazul.",
+        "example": "*kaltes* Wasser, apă rece"
+      },
+      "weak": {
+        "plain": "Terminațiile adjectivale pe care germana le folosește după der, die, das, unde articolul arată deja cazul.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Terminațiile adjectivale pe care germana le folosește după ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Pentru străini, persoane mai în vârstă și texte oficiale.",
+        "example": "*dumneavoastră*"
+      },
+      "informal": {
+        "plain": "Pentru prieteni, familie și copii.",
+        "example": "*tu*"
+      },
+      "polite": {
+        "plain": "Felul respectuos de a spune ceva.",
+        "example": "japoneză *食べます*, (eu) mănânc, spus politicos"
+      }
+    }
+  }
+}

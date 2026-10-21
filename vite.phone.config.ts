@@ -7,6 +7,21 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import Icons from 'unplugin-icons/vite';
 import path from 'path';
+import fs from 'fs';
+
+/** The interface's words in every language, beside the page, where the app's own drawing reads
+ *  them too (android core/Interface.kt). The page itself bundles them. */
+function interfaceTables() {
+  return {
+    name: 'interface-tables',
+    closeBundle() {
+      const from = path.resolve(__dirname, 'public/interface');
+      const to = path.resolve(__dirname, 'android/app/src/main/assets/ui/interface');
+      fs.mkdirSync(to, { recursive: true });
+      for (const file of fs.readdirSync(from)) fs.copyFileSync(path.join(from, file), path.join(to, file));
+    },
+  };
+}
 
 export default defineConfig({
   root: path.resolve(__dirname, 'src/phone'),
@@ -16,7 +31,7 @@ export default defineConfig({
   // The marks the extension ships, rather than a second copy of them beside this entry: the
   // product has one icon, in public/icon, and both surfaces are drawn with it.
   publicDir: path.resolve(__dirname, 'public/icon'),
-  plugins: [svelte(), Icons({ autoInstall: true, compiler: 'svelte' })],
+  plugins: [svelte(), Icons({ autoInstall: true, compiler: 'svelte' }), interfaceTables()],
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
   },

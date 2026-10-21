@@ -10,7 +10,7 @@
   // written the moment it changes: every page watches the same keys and redraws itself.
   import { current, darkSide, set, setSite, type Settings } from '@/settings';
   import { named } from '@/data/languages';
-  import { DARK_CHOICES, LAYER_CHOICES, labelOf, ROWS, SAYS } from '@/data/wording';
+  import { DARK_CHOICES, LAYER_CHOICES, labelOf, ROWS, SAYS, say } from '@/data/wording';
   import { sendMessage } from '@/host/messages';
   import type { Layer } from '@/ext/content/inline';
   import { THEME, themeOf } from '@/ui/theme';
@@ -49,7 +49,11 @@
   /** And the keys that open the translator hearing what to translate. */
   let speaking = $state('');
   /** Which screen is showing. */
-  let view = $state<'main' | 'accents' | 'appearance' | 'languages' | 'lookup'>('main');
+  type View = 'main' | 'accents' | 'appearance' | 'languages' | 'lookup';
+  // Kept for the life of this popup: drawn again in another language when the reader makes it
+  // their own, on the Languages screen, the view opens where they were rather than at the top.
+  let view = $state<View>((sessionStorage.getItem('phonetix-view') as View | null) ?? 'main');
+  $effect(() => sessionStorage.setItem('phonetix-view', view));
   /** The dictionaries on their way and how far each has got, as the host tells it. */
   let arriving = $state<Record<string, number>>({});
 
@@ -61,7 +65,9 @@
     // Asked first and waited for last: the bar's positions come from the host, which may still
     // be waking, and nothing else here needs them.
     const curving = sendMessage('curve', {}).catch(() => [] as number[]);
-    settings = await current();
+    // Drawn once the site is known as well: drawn before it, the view came up without the
+    // site's row and then grew one, moving everything under it.
+    const read = current();
     // The page the reader is on, which is not always the active tab: where the popup is a tab
     // of its own (Firefox on a phone, or opened as one) the active tab is the popup, and the
     // page is the one the reader was on last. Through `browser` rather than `chrome`: on
@@ -79,6 +85,7 @@
       siteIcon = tab.favIconUrl ?? '';
       tabId = tab.id;
     }
+    settings = await read;
     const commands = await browser.commands.getAll().catch(() => []);
     // Alt+Shift+T where the reader bound nothing else: the page hears it (content/index.ts).
     shortcut = commands.find((it) => it.name === 'translator')?.shortcut || 'Alt+Shift+T';
@@ -137,8 +144,8 @@
     return {
       what:
         langs.length === 1
-          ? `Getting the ${named(langs[0])} dictionary`
-          : `Getting ${langs.length} dictionaries`,
+          ? say('getting-dictionary', named(langs[0]))
+          : say('getting-dictionaries', langs.length),
       share: shares.reduce((sum, share) => sum + share, 0) / shares.length,
     };
   });
@@ -339,7 +346,7 @@
 
   {:else}
     <header class="top">
-      <button class="icon-button" aria-label={SAYS['back']} onclick={() => (view = 'main')}>
+      <button class="icon-button" data-does="back" aria-label={SAYS['back']} onclick={() => (view = 'main')}>
         <Back />
       </button>
       <h1 class="title"

@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Toestaan",
+    "allow-overlay": "Overlay toestaan",
+    "already-in": "Deze pagina is al in het %s",
+    "broad-mark": "/ /",
+    "change": "Wijzigen",
+    "choose-language": "Kies een taal",
+    "close": "Sluiten",
+    "detail-explained": "Breed zijn de klanken die woorden van elkaar onderscheiden; nauw is elk detail van hoe een woord wordt uitgesproken, zoals een spreker met dat accent het zegt.",
+    "every-app": "Alle apps",
+    "get": "Downloaden",
+    "loading-dictionary": "Woordenboek laden…",
+    "master-idle": "Er wordt niets over je apps getekend",
+    "master-off": "Gepauzeerd",
+    "master-on": "Leest mee",
+    "master-unready": "Sta toe dat het scherm gelezen en over je apps getekend wordt",
+    "master-working": "De woorden in je apps worden beantwoord",
+    "narrow-mark": "[ ]",
+    "no-source": "voor wat een woord betekent; hoe het klinkt is ingebouwd",
+    "no-translation": "Niet vertalen",
+    "nothing-found": "Niets met die naam",
+    "nothing-yet": "nog niets",
+    "open-accessibility": "Toegankelijkheid openen",
+    "preview": "Voorbeeld",
+    "preview-about": "de woorden op een pagina die dit zou beantwoorden",
+    "remove": "Verwijderen",
+    "rest-edge": "Aan de %s",
+    "rest-loose": "Waar je hem laat",
+    "no-direction": "Er is geen vertaling uit het %s beschikbaar. De woorden tonen in plaats daarvan hoe ze klinken.",
+    "service-stopped": "Phonetix mag het scherm lezen, maar draait niet. Zet het uit en weer aan in de toegankelijkheidsinstellingen van je telefoon.",
+    "rest-put": "Sleep de knop omhoog of omlaag, of naar de andere kant.",
+    "say-into": "Antwoorden in",
+    "say-no-language": "Kies eerst een taal om in te lezen.",
+    "say-no-model": "Geen vertaalmodel voor die richting bij je woordenboekserver.",
+    "say-nothing": "daar is geen woord voor",
+    "say-placeholder": "wat je wilt zeggen",
+    "search": "Zoeken",
+    "speak": "Zeg het",
+    "touch-off": "Elke aanraking gaat naar de app eronder, dus scrollen blijft gewoon werken.",
+    "touch-on": "Een veeg die op een woord begint, scrolt de pagina niet.",
+    "turn": "Andersom antwoorden",
+    "use-this": "Deze gebruiken",
+    "say-fetching": "%s ophalen",
+    "back": "Terug",
+    "apps-chosen": "%s gekozen",
+    "packs-held": "%s gedownload",
+    "other-languages": "Andere talen",
+    "words-count": "%s woorden",
+    "packs-here": "Op deze telefoon",
+    "packs-more": "Beschikbaar",
+    "every-word": "elk woord",
+    "one-in": "één op %s",
+    "open-panel": "Openen",
+    "site-off": "hier altijd uit",
+    "site-following": "volgt de hoofdschakelaar (nu: %s)",
+    "on": "aan",
+    "off": "uit",
+    "set-key": "Toets instellen",
+    "simple": "Eenvoudig",
+    "detailed": "Gedetailleerd",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "verder niets",
+    "learn-none": "geen",
+    "add-language": "Taal toevoegen",
+    "learn-language": "Een taal leren",
+    "make-main": "Als mijn taal instellen",
+    "main-language": "Mijn taal",
+    "learning-it": "leert %s",
+    "dictate": "Dicteren",
+    "pos-adj": "bijvoeglijk naamwoord",
+    "pos-adv": "bijwoord",
+    "pos-article": "lidwoord",
+    "pos-character": "teken",
+    "pos-conj": "voegwoord",
+    "pos-contraction": "samentrekking",
+    "pos-det": "determinator",
+    "pos-intj": "tussenwerpsel",
+    "pos-name": "naam",
+    "pos-noun": "zelfstandig naamwoord",
+    "pos-num": "telwoord",
+    "pos-particle": "partikel",
+    "pos-phrase": "uitdrukking",
+    "pos-postp": "achterzetsel",
+    "pos-prefix": "voorvoegsel",
+    "pos-prep": "voorzetsel",
+    "pos-prep_phrase": "voorzetselgroep",
+    "pos-pron": "voornaamwoord",
+    "pos-proverb": "spreekwoord",
+    "pos-punct": "leesteken",
+    "pos-suffix": "achtervoegsel",
+    "pos-symbol": "symbool",
+    "pos-verb": "werkwoord",
+    "pos-abbrev": "afkorting",
+    "pos-affix": "affix",
+    "pos-infix": "infix",
+    "pos-interfix": "tussenklank",
+    "pos-circumfix": "circumfix",
+    "pos-root": "stam",
+    "pos-combining_form": "combinatievorm",
+    "pos-classifier": "classificator",
+    "pos-counter": "telwoordclassificator",
+    "pos-letter": "letter",
+    "no-dictionary-for": "Nog geen woordenboek voor het %s",
+    "unknown-language": "Niet zeker welke taal dit is",
+    "looking-up": "Opzoeken",
+    "nothing-for": "Niets gevonden voor %s",
+    "read-as": "Gelezen als %s",
+    "read-as-accent": "Gelezen als %s, %s accent",
+    "translated-by": "Vertaald door %s",
+    "translated-by-machine": "Machinevertaling",
+    "guess": "gok",
+    "in-english": "in het Engels",
+    "getting-dictionary": "Woordenboek %s ophalen",
+    "getting-dictionaries": "%s woordenboeken ophalen",
+    "say-word": "zeg %s",
+    "hear-word": "hoor %s",
+    "play-sound": "een opname van %s afspelen",
+    "read-about-sound": "lees over %s",
+    "see-mouth": "zie een mond die %s zegt",
+    "mouth-making": "hoe de mond %s maakt",
+    "tap-sound": "Tik op een klank om te horen wat het is",
+    "what-this-is": "Wat dit is",
+    "for-example": "Bijvoorbeeld: %s",
+    "fetching": "ophalen",
+    "done": "klaar",
+    "ordinal-first-person": "1e",
+    "ordinal-second-person": "2e",
+    "ordinal-third-person": "3e",
+    "person-number": "%s %s",
+    "person-number-long": "%s persoon %s",
+    "person-long": "%s persoon",
+    "person-and-number": "persoon en getal",
+    "form-of": "van",
+    "term-mood": "wijs",
+    "term-tense": "tijd",
+    "term-aspect": "aspect",
+    "term-person": "persoon",
+    "term-number": "getal",
+    "term-case": "naamval",
+    "term-gender": "geslacht",
+    "term-definiteness": "bepaaldheid",
+    "term-declension": "verbuiging",
+    "term-degree": "trap",
+    "term-voice": "vorm",
+    "term-register": "register",
+    "term-nonfinite": "infiniete vorm",
+    "term-singular": "enkelvoud",
+    "term-plural": "meervoud",
+    "term-dual": "tweevoud",
+    "term-first-person": "eerste persoon",
+    "term-second-person": "tweede persoon",
+    "term-third-person": "derde persoon",
+    "term-nominative": "nominatief",
+    "term-accusative": "accusatief",
+    "term-dative": "datief",
+    "term-genitive": "genitief",
+    "term-vocative": "vocatief",
+    "term-instrumental": "instrumentalis",
+    "term-locative": "locatief",
+    "term-prepositional": "prepositief",
+    "term-ablative": "ablatief",
+    "term-partitive": "partitief",
+    "term-inessive": "inessief",
+    "term-elative": "elatief",
+    "term-illative": "illatief",
+    "term-adessive": "adessief",
+    "term-allative": "allatief",
+    "term-essive": "essief",
+    "term-translative": "translatief",
+    "term-abessive": "abessief",
+    "term-comitative": "comitatief",
+    "term-masculine": "mannelijk",
+    "term-feminine": "vrouwelijk",
+    "term-neuter": "onzijdig",
+    "term-animate": "bezield",
+    "term-inanimate": "onbezield",
+    "term-definite": "bepaald",
+    "term-indefinite": "onbepaald",
+    "term-present": "tegenwoordige tijd",
+    "term-past": "verleden tijd",
+    "term-future": "toekomende tijd",
+    "term-non-past": "niet-verleden tijd",
+    "term-preterite": "preteritum",
+    "term-imperfect": "imperfectum",
+    "term-perfect": "voltooid tegenwoordige tijd",
+    "term-pluperfect": "voltooid verleden tijd",
+    "term-aorist": "aoristus",
+    "term-indicative": "aantonende wijs",
+    "term-subjunctive": "aanvoegende wijs",
+    "term-subjunctive-i": "conjunctief I",
+    "term-subjunctive-ii": "conjunctief II",
+    "term-conditional": "voorwaardelijke wijs",
+    "term-conditional-i": "conditionalis I",
+    "term-conditional-ii": "conditionalis II",
+    "term-future-i": "futurum I",
+    "term-future-ii": "futurum II",
+    "term-imperative": "gebiedende wijs",
+    "term-jussive": "jussief",
+    "term-optative": "optatief",
+    "term-potential": "potentialis",
+    "term-active": "bedrijvend",
+    "term-passive": "lijdend",
+    "term-infinitive": "infinitief",
+    "term-participle": "deelwoord",
+    "term-gerund": "gerundium",
+    "term-imperfective": "imperfectief",
+    "term-perfective": "perfectief",
+    "term-progressive": "progressief",
+    "term-positive": "stellende trap",
+    "term-comparative": "vergrotende trap",
+    "term-superlative": "overtreffende trap",
+    "term-strong": "sterk",
+    "term-weak": "zwak",
+    "term-mixed": "gemengd",
+    "term-formal": "formeel",
+    "term-informal": "informeel",
+    "term-polite": "beleefd",
+    "accent-British": "Brits",
+    "accent-American": "Amerikaans",
+    "accent-Scottish": "Schots",
+    "accent-Australian": "Australisch",
+    "accent-Caribbean": "Caribisch",
+    "accent-Canadian": "Canadees",
+    "accent-Spain": "Spanje",
+    "accent-Latin America": "Latijns-Amerika",
+    "accent-Rioplatense": "Rioplatense",
+    "accent-Germany": "Duitsland",
+    "accent-Switzerland": "Zwitserland",
+    "accent-Austria": "Oostenrijk",
+    "accent-Portugal": "Portugal",
+    "accent-Brazil": "Brazilië",
+    "accent-France": "Frankrijk",
+    "accent-Canada": "Canada",
+    "accent-Northern": "Noord",
+    "accent-Central": "Centraal"
+  },
+  "rows": {
+    "on": {
+      "name": "Annoteren wat ik lees",
+      "about": ""
+    },
+    "site": {
+      "name": "Op deze site",
+      "about": ""
+    },
+    "layer": {
+      "name": "Overlay",
+      "about": ""
+    },
+    "density": {
+      "name": "Hoe vaak",
+      "about": ""
+    },
+    "target": {
+      "name": "Taal",
+      "about": ""
+    },
+    "source": {
+      "name": "Deze pagina is in het",
+      "about": ""
+    },
+    "accent": {
+      "name": "Accent",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Woordenboeken",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transcripties",
+      "about": ""
+    },
+    "stress": {
+      "name": "Klemtoontekens",
+      "about": ""
+    },
+    "delay": {
+      "name": "Wachten voordat een kaart opent",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animaties",
+      "about": ""
+    },
+    "say": {
+      "name": "Het woord voor iets",
+      "about": ""
+    },
+    "setup": {
+      "name": "Instellen",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Het scherm lezen",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Over apps tekenen",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Uitspraak",
+      "about": ""
+    },
+    "translate": {
+      "name": "Vertaling",
+      "about": ""
+    },
+    "side": {
+      "name": "Welke kant",
+      "about": ""
+    },
+    "rest": {
+      "name": "Waar de knop zit",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Vaste hoogte",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Sleep hem over een woord",
+      "about": "Hij zegt wat hij passeert, en de pagina eronder scrolt gewoon"
+    },
+    "lens-sweep": {
+      "name": "Houd vast en veeg",
+      "about": "Elk woord dat hij passeert, komt erbij, en de kaart beantwoordt de hele zin"
+    },
+    "lens-hold": {
+      "name": "Houd vast",
+      "about": "Opent de instellingen"
+    },
+    "lens-tap": {
+      "name": "Tik erop",
+      "about": "Vraag midden in het lezen naar het woord voor iets; tik nog eens om de kaart weg te leggen"
+    },
+    "touch": {
+      "name": "Een woord aanraken",
+      "about": ""
+    },
+    "where": {
+      "name": "Waar",
+      "about": ""
+    },
+    "apps": {
+      "name": "Apps",
+      "about": ""
+    },
+    "start": {
+      "name": "Voordat het een woord kan beantwoorden",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Tik op een woord voor de kaart",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Om te zien wat een woord betekent",
+      "about": ""
+    },
+    "theme": {
+      "name": "Thema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Geavanceerd",
+      "about": ""
+    },
+    "dark": {
+      "name": "Licht of donker",
+      "about": ""
+    },
+    "mine": {
+      "name": "Mijn taal",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Zijknop",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Talen",
+      "about": ""
+    },
+    "position": {
+      "name": "Positie",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Weergave",
+      "about": ""
+    },
+    "accents": {
+      "name": "Accenten",
+      "about": ""
+    },
+    "inline": {
+      "name": "Woorden vervangen",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Vervangen woorden",
+      "about": ""
+    },
+    "translator": {
+      "name": "Vertaler",
+      "about": ""
+    },
+    "into": {
+      "name": "Vertalen naar",
+      "about": ""
+    },
+    "known": {
+      "name": "Nooit vertalen",
+      "about": ""
+    },
+    "learn": {
+      "name": "Leren",
+      "about": ""
+    },
+    "cards": {
+      "name": "Opzoeken",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Uitspraak",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Betekenis",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Grammatica",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Andere betekenissen",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Elk woord beschrijven",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Van mij",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "een paar woorden",
+      "elk woord"
+    ],
+    "delay": [
+      "meteen",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Uit",
+        "about": {
+          "browser": "er wordt niets vervangen; vraag zelf naar een woord",
+          "phone": "er wordt niets vervangen; de knop beantwoordt nog steeds een woord"
+        }
+      },
+      "meaning": {
+        "label": "Vertaling",
+        "about": {
+          "browser": "het woord vervangen door wat het betekent",
+          "phone": "het woord vervangen door wat het betekent"
+        }
+      },
+      "sound": {
+        "label": "Uitspraak",
+        "about": {
+          "browser": "het woord vervangen door hoe het klinkt",
+          "phone": "het woord vervangen door hoe het klinkt"
+        }
+      },
+      "both": {
+        "label": "Beide",
+        "about": {
+          "browser": "wat het betekent, en hoe je dat zegt",
+          "phone": "wat het betekent, en hoe je dat zegt"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "de klanken die woorden van elkaar onderscheiden",
+          "phone": "de klanken die woorden van elkaar onderscheiden"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "elk detail van hoe het klinkt, zoals aspiratie en verstemlozing",
+          "phone": "elk detail van hoe het klinkt, zoals aspiratie en verstemlozing"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Systeem",
+        "about": {
+          "browser": "wat dit apparaat gebruikt",
+          "phone": "wat dit apparaat gebruikt"
+        }
+      },
+      "light": {
+        "label": "Licht",
+        "about": {
+          "browser": "altijd de lichte kant van het palet",
+          "phone": "altijd de lichte kant van het palet"
+        }
+      },
+      "dark": {
+        "label": "Donker",
+        "about": {
+          "browser": "altijd de donkere kant van het palet",
+          "phone": "altijd de donkere kant van het palet"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Links",
+        "about": {
+          "phone": "voor een telefoon in de linkerhand"
+        }
+      },
+      "free": {
+        "label": "Overal",
+        "about": {
+          "phone": "hij blijft waar je hem neerzet"
+        }
+      },
+      "right": {
+        "label": "Rechts",
+        "about": {
+          "phone": "voor een telefoon in de rechterhand"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Hoe de spreker bedoelt wat het werkwoord zegt: als feit, als iets wat gewenst, betwijfeld of ingebeeld wordt, of als bevel."
+      },
+      "tense": {
+        "plain": "Wanneer het gebeurt: vóór nu, nu of later."
+      },
+      "aspect": {
+        "plain": "Hoe de handeling wordt bekeken: als één afgerond geheel, of als iets wat bezig is, zich herhaalt of niet af is."
+      },
+      "person": {
+        "plain": "Wie het doet: de spreker (ik, wij), degene tegen wie je praat (jij) of iemand anders (hij, zij)."
+      },
+      "number": {
+        "plain": "Hoeveel: één, of meer dan één."
+      },
+      "case": {
+        "plain": "De vorm die een zelfstandig naamwoord aanneemt om zijn rol in de zin te tonen: wie iets doet, aan wie, van wie, waar."
+      },
+      "gender": {
+        "plain": "Een klasse waartoe elk zelfstandig naamwoord hoort en waaraan de woorden eromheen zich aanpassen. Met sekse heeft het weinig te maken: het meisje is onzijdig."
+      },
+      "definiteness": {
+        "plain": "Of iets een bepaald, bekend exemplaar is (het huis) of een willekeurig (een huis)."
+      },
+      "declension": {
+        "plain": "De reeks uitgangen die een zelfstandig of bijvoeglijk naamwoord krijgt, afhankelijk van de woorden eromheen."
+      },
+      "degree": {
+        "plain": "Hoe sterk een bijvoeglijk naamwoord geldt: groot, groter, het grootst."
+      },
+      "voice": {
+        "plain": "Of het onderwerp de handeling doet (zij schreef het) of ondergaat (het werd geschreven)."
+      },
+      "register": {
+        "plain": "Hoe formeel het woord is: voor vreemden en officiële teksten, of voor vrienden."
+      },
+      "nonfinite": {
+        "plain": "Een werkwoordsvorm die de handeling noemt zonder te zeggen wie of wanneer: gaan, gaand, gegaan."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Eén van iets.",
+        "example": "één *hond*"
+      },
+      "plural": {
+        "plain": "Meer dan één.",
+        "example": "twee *honden*"
+      },
+      "dual": {
+        "plain": "Precies twee, in talen met een eigen vorm voor paren.",
+        "example": "Sloveens *hiši*, twee huizen"
+      },
+      "first-person": {
+        "plain": "De spreker: ik, of wij.",
+        "example": "*ik* loop, *wij* lopen"
+      },
+      "second-person": {
+        "plain": "Degene tegen wie je praat: jij, jullie.",
+        "example": "*jij* loopt"
+      },
+      "third-person": {
+        "plain": "Iedereen anders: hij, zij, het, zij (meervoud).",
+        "example": "*zij loopt*"
+      },
+      "nominative": {
+        "plain": "Wie de handeling doet: het onderwerp.",
+        "example": "*De hond* bijt de man."
+      },
+      "accusative": {
+        "plain": "Wat de handeling ondergaat: het lijdend voorwerp.",
+        "example": "De hond bijt *de man*."
+      },
+      "dative": {
+        "plain": "Aan of voor wie iets gegeven of gedaan wordt.",
+        "example": "Ik geef *de man* een boek."
+      },
+      "genitive": {
+        "plain": "Van wie het is, of waar het deel van is: van, 's.",
+        "example": "*vaders* boek, het dak *van het huis*"
+      },
+      "vocative": {
+        "plain": "De vorm om iemand te roepen of direct aan te spreken.",
+        "example": "Pools *Anno!*, Anna!"
+      },
+      "instrumental": {
+        "plain": "Waarmee of waardoor iets gedaan wordt.",
+        "example": "Russisch писать *ручкой*, schrijven *met een pen*"
+      },
+      "locative": {
+        "plain": "Waar iets is.",
+        "example": "Pools w *domu*, *in huis*"
+      },
+      "prepositional": {
+        "plain": "De vorm die een zelfstandig naamwoord krijgt na bepaalde voorzetsels, meestal over waar of waarover.",
+        "example": "Russisch о *книге*, over *het boek*"
+      },
+      "ablative": {
+        "plain": "Weg van, uit, of door middel van iets.",
+        "example": "Latijn *Romā*, uit Rome"
+      },
+      "partitive": {
+        "plain": "Een deel van iets, of een handeling die niet wordt afgemaakt.",
+        "example": "Fins *vettä*, wat water"
+      },
+      "inessive": {
+        "plain": "In iets.",
+        "example": "Fins *talossa*, in het huis"
+      },
+      "elative": {
+        "plain": "Uit iets.",
+        "example": "Fins *talosta*, uit het huis"
+      },
+      "illative": {
+        "plain": "Iets in.",
+        "example": "Fins *taloon*, het huis in"
+      },
+      "adessive": {
+        "plain": "Op of bij iets.",
+        "example": "Fins *pöydällä*, op de tafel"
+      },
+      "allative": {
+        "plain": "Op iets of naar iets toe.",
+        "example": "Fins *pöydälle*, op de tafel (naartoe)"
+      },
+      "essive": {
+        "plain": "Een tijd iets zijn, als rol of toestand.",
+        "example": "Fins *lapsena*, als kind"
+      },
+      "translative": {
+        "plain": "Iets worden.",
+        "example": "Fins *opettajaksi*, (worden tot) leraar"
+      },
+      "abessive": {
+        "plain": "Zonder iets.",
+        "example": "Fins *rahatta*, zonder geld"
+      },
+      "comitative": {
+        "plain": "Samen met iets.",
+        "example": "Ests *sõbraga*, met een vriend"
+      },
+      "masculine": {
+        "plain": "Een van de klassen waarin zelfstandige naamwoorden vallen; de woorden rond een mannelijk naamwoord krijgen de bijpassende uitgangen. Vooral een kwestie van het woord, niet van sekse.",
+        "example": "Spaans *el libro*, het boek"
+      },
+      "feminine": {
+        "plain": "Een van de klassen waarin zelfstandige naamwoorden vallen; de woorden rond een vrouwelijk naamwoord krijgen de bijpassende uitgangen. Vooral een kwestie van het woord, niet van sekse.",
+        "example": "Spaans *la mesa*, de tafel"
+      },
+      "neuter": {
+        "plain": "De klasse van zelfstandige naamwoorden die mannelijk noch vrouwelijk zijn.",
+        "example": "*het huis*"
+      },
+      "animate": {
+        "plain": "Gezegd van een zelfstandig naamwoord voor een persoon of dier, dat sommige talen eigen uitgangen geven.",
+        "example": "Russisch вижу *брата*, ik zie mijn broer"
+      },
+      "inanimate": {
+        "plain": "Gezegd van een zelfstandig naamwoord voor een ding, geen persoon of dier.",
+        "example": "Russisch вижу *стол*, ik zie de tafel"
+      },
+      "definite": {
+        "plain": "Een bepaald exemplaar dat beide sprekers kennen: de, het.",
+        "example": "Zweeds *huset*, het huis"
+      },
+      "indefinite": {
+        "plain": "Een willekeurig exemplaar, nog niet bekend: een.",
+        "example": "Zweeds *ett hus*, een huis"
+      },
+      "present": {
+        "plain": "Nu, of altijd, of als gewoonte.",
+        "example": "zij *loopt*"
+      },
+      "past": {
+        "plain": "Vóór nu.",
+        "example": "zij *liep*"
+      },
+      "future": {
+        "plain": "Later dan nu.",
+        "example": "zij *zal lopen*"
+      },
+      "non-past": {
+        "plain": "Nu of later: één vorm voor beide.",
+        "example": "Japans *食べる*, eet of zal eten"
+      },
+      "preterite": {
+        "plain": "Iets wat op een moment in het verleden gebeurde en toen voorbij was.",
+        "example": "Spaans ayer *comí*, gisteren *at* ik"
+      },
+      "imperfect": {
+        "plain": "Het verleden van binnenuit gezien: iets wat bezig was, steeds gebeurde of vroeger zo was.",
+        "example": "Spaans *comía*, ik *was aan het eten*, ik *at* vroeger"
+      },
+      "perfect": {
+        "plain": "Gedaan vóór nu en nu nog van belang.",
+        "example": "zij *heeft gelopen*"
+      },
+      "pluperfect": {
+        "plain": "Gedaan vóór een ander moment in het verleden.",
+        "example": "zij *had gelopen*"
+      },
+      "aorist": {
+        "plain": "Een handeling in het verleden, verteld als één afgeronde gebeurtenis, zoals een verhaal dat doet.",
+        "example": "Bulgaars *писах*, ik schreef"
+      },
+      "indicative": {
+        "plain": "De gewone vorm om te zeggen wat zo is: feiten, en vragen daarover.",
+        "example": "Zij *is* hier."
+      },
+      "subjunctive": {
+        "plain": "De vorm voor wat gewenst, gewild, betwijfeld, gevreesd of alleen ingebeeld wordt, in plaats van gesteld. Komt meestal na woorden als dat, als, opdat. In het Nederlands bijna alleen nog in vaste uitdrukkingen.",
+        "example": "*Leve* de koning! Spaans quiero que *vengas*, ik wil dat je komt."
+      },
+      "subjunctive-i": {
+        "plain": "De Duitse vorm om na te vertellen wat iemand anders zei, zonder ervoor in te staan.",
+        "example": "Er sagt, er *sei* krank. Hij zegt dat hij ziek is."
+      },
+      "subjunctive-ii": {
+        "plain": "De Duitse vorm voor wat niet echt is: wensen, beleefde verzoeken en als-dan.",
+        "example": "Wenn ich Zeit *hätte*... Als ik tijd had..."
+      },
+      "conditional": {
+        "plain": "Wat er zou gebeuren als iets anders zo was.",
+        "example": "zij *zou lopen*"
+      },
+      "conditional-i": {
+        "plain": "Wat er zou gebeuren als iets anders zo was.",
+        "example": "Duits ich *würde gehen*, ik zou gaan"
+      },
+      "conditional-ii": {
+        "plain": "Wat er gebeurd zou zijn als iets anders zo was geweest.",
+        "example": "Duits ich *wäre gegangen*, ik zou gegaan zijn"
+      },
+      "future-i": {
+        "plain": "Later dan nu.",
+        "example": "Duits ich *werde gehen*, ik zal gaan"
+      },
+      "future-ii": {
+        "plain": "Gedaan tegen een later moment.",
+        "example": "Duits ich *werde gegangen sein*, ik zal gegaan zijn"
+      },
+      "imperative": {
+        "plain": "De vorm om iemand te zeggen iets te doen.",
+        "example": "*Loop!*"
+      },
+      "jussive": {
+        "plain": "Een vorm om iemand, vaak niet de luisteraar, iets te laten of te laten doen.",
+        "example": "Arabisch *لِيَكْتُبْ*, laat hem schrijven"
+      },
+      "optative": {
+        "plain": "Een vorm om te wensen: moge het zo zijn."
+      },
+      "potential": {
+        "plain": "Een vorm voor wat waarschijnlijk of mogelijk zo is.",
+        "example": "Fins *lienee*, (hij) is waarschijnlijk"
+      },
+      "active": {
+        "plain": "Het onderwerp doet de handeling.",
+        "example": "Zij *schreef* de brief."
+      },
+      "passive": {
+        "plain": "Het onderwerp ondergaat de handeling.",
+        "example": "De brief *werd geschreven*."
+      },
+      "infinitive": {
+        "plain": "Het werkwoord zelf, nog zonder iemand die het doet: de vorm waaronder het in het woordenboek staat.",
+        "example": "*lopen*, Spaans *caminar*"
+      },
+      "participle": {
+        "plain": "Een vorm van het werkwoord die als bijvoeglijk naamwoord werkt en met een hulpwerkwoord andere tijden vormt.",
+        "example": "een *gebroken* kopje, zij heeft *gelopen*"
+      },
+      "gerund": {
+        "plain": "Een vorm van het werkwoord voor een handeling die bezig is, of gebruikt als zelfstandig naamwoord.",
+        "example": "Engels she is *walking*, Spaans está *caminando*"
+      },
+      "imperfective": {
+        "plain": "De handeling als bezig, herhaald of niet af.",
+        "example": "Russisch я *читал*, ik was aan het lezen"
+      },
+      "perfective": {
+        "plain": "De handeling als één afgerond geheel.",
+        "example": "Russisch я *прочитал*, ik heb het (uit)gelezen"
+      },
+      "progressive": {
+        "plain": "Op dat moment bezig.",
+        "example": "zij *is aan het lopen*"
+      },
+      "positive": {
+        "plain": "Het bijvoeglijk naamwoord zoals het is, zonder vergelijking.",
+        "example": "*groot*"
+      },
+      "comparative": {
+        "plain": "Meer dan iets anders.",
+        "example": "*groter*, *mooier*"
+      },
+      "superlative": {
+        "plain": "Meer dan al het andere.",
+        "example": "het *grootst*, het *mooist*"
+      },
+      "strong": {
+        "plain": "De uitgangen van bijvoeglijke naamwoorden die het Duits gebruikt als geen lidwoord ervoor de naamval toont.",
+        "example": "*kaltes* Wasser, koud water"
+      },
+      "weak": {
+        "plain": "De uitgangen van bijvoeglijke naamwoorden die het Duits gebruikt na der, die, das, waar het lidwoord de naamval al toont.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "De uitgangen van bijvoeglijke naamwoorden die het Duits gebruikt na ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Voor vreemden, ouderen en officiële teksten.",
+        "example": "*u*, Duits *Sie*"
+      },
+      "informal": {
+        "plain": "Voor vrienden, familie en kinderen.",
+        "example": "*jij*, Duits *du*"
+      },
+      "polite": {
+        "plain": "De respectvolle manier om het te zeggen.",
+        "example": "Japans *食べます*, (ik) eet, beleefd gezegd"
+      }
+    }
+  }
+}

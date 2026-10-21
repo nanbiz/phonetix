@@ -7,6 +7,7 @@
   //
   // Only what the table actually has. A sound with no recording shows no play button, because
   // a control that leads nowhere is worse than no control.
+  import { say } from '@/data/wording';
   import type { IpaSymbol } from '@/core/answer';
   import { commons, seeingSpeech, wikipedia } from '@/data/links';
   import IconButton from '@/ui/controls/IconButton.svelte';
@@ -37,7 +38,7 @@
     {#if about.audio}
       <IconButton
         icon={SPEAKER}
-        label="play a recording of {about.token}"
+        label={say('play-sound', about.token)}
         name="play-recording"
         press={() => onPlay?.(commons(about.audio))}
       />
@@ -45,7 +46,7 @@
     {#if about.wiki}
       <IconLink
         icon={ARTICLE}
-        label="read about {about.token}"
+        label={say('read-about-sound', about.token)}
         url={wikipedia(about.wiki)}
         name="Wikipedia"
         open={onOpen}
@@ -55,7 +56,7 @@
       <!-- Films of a real mouth saying it, which is what a diagram cannot show. -->
       <IconLink
         icon={FILM}
-        label="see a mouth saying {about.token}"
+        label={say('see-mouth', about.token)}
         url={seeingSpeech(about.seeing)}
         name="Seeing Speech"
         open={onOpen}
@@ -64,9 +65,9 @@
     {#if diagram}
       <!-- The mouth that makes it, fetched by the host because a page's own policy would
            refuse the load. -->
-      <span class="d-thumb"><img src={diagram} alt="how the mouth makes {about.token}" /></span>
+      <span class="d-thumb"><img src={diagram} alt={say('mouth-making', about.token)} /></span>
     {/if}
   {:else}
-    <span class="d-hint">Tap a sound to hear what it is</span>
+    <span class="d-hint">{say('tap-sound')}</span>
   {/if}
 </div>

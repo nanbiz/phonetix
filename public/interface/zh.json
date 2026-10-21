@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "允许",
+    "allow-overlay": "允许悬浮显示",
+    "already-in": "此页面已经是%s",
+    "broad-mark": "/ /",
+    "change": "更改",
+    "choose-language": "选择语言",
+    "close": "关闭",
+    "detail-explained": "宽式标音只标出区分词语的音；严式标音标出一个词怎么说的每个细节，按该口音的人怎么说来标。",
+    "every-app": "所有应用",
+    "get": "获取",
+    "loading-dictionary": "正在加载词典…",
+    "master-idle": "没有内容显示在应用上方",
+    "master-off": "已暂停",
+    "master-on": "正在读取",
+    "master-unready": "允许它读取屏幕并显示在应用上方",
+    "master-working": "正在解答应用中的词语",
+    "narrow-mark": "[ ]",
+    "no-source": "用于查看词义；读音已内置",
+    "no-translation": "不翻译",
+    "nothing-found": "没有这个名称",
+    "nothing-yet": "暂无",
+    "open-accessibility": "打开无障碍设置",
+    "preview": "预览",
+    "preview-about": "页面上会被解答的词语",
+    "remove": "移除",
+    "rest-edge": "在%s",
+    "rest-loose": "放在哪里就在哪里",
+    "no-direction": "无法从%s翻译。词语改为显示读音。",
+    "service-stopped": "Phonetix 已获准读取屏幕，但没有运行。请在手机的无障碍设置中将其关闭再打开。",
+    "rest-put": "上下拖动按钮，或拖到另一侧。",
+    "say-into": "回答语言",
+    "say-no-language": "请先选择要翻译成的语言。",
+    "say-no-model": "你的词典来源没有这个方向的翻译模型。",
+    "say-nothing": "没有对应的词",
+    "say-placeholder": "你想说的话",
+    "search": "搜索",
+    "speak": "说出来",
+    "touch-off": "所有触摸都交给下方的应用，滚动不受影响。",
+    "touch-on": "从词语上开始的滑动不会滚动页面。",
+    "turn": "反方向回答",
+    "use-this": "使用",
+    "say-fetching": "正在获取%s",
+    "back": "返回",
+    "apps-chosen": "已选 %s 个",
+    "packs-held": "已下载 %s 个",
+    "other-languages": "其他语言",
+    "words-count": "%s 个词",
+    "packs-here": "本机",
+    "packs-more": "可下载",
+    "every-word": "每个词",
+    "one-in": "每 %s 个一个",
+    "open-panel": "打开",
+    "site-off": "此网站始终关闭",
+    "site-following": "跟随总开关（当前：%s）",
+    "on": "开",
+    "off": "关",
+    "set-key": "设置按键",
+    "simple": "简单",
+    "detailed": "详细",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "无其他",
+    "learn-none": "无",
+    "add-language": "添加语言",
+    "learn-language": "学习语言",
+    "make-main": "设为我的语言",
+    "main-language": "我的语言",
+    "learning-it": "正在学习%s",
+    "dictate": "语音输入",
+    "pos-adj": "形容词",
+    "pos-adv": "副词",
+    "pos-article": "冠词",
+    "pos-character": "字",
+    "pos-conj": "连词",
+    "pos-contraction": "缩约形式",
+    "pos-det": "限定词",
+    "pos-intj": "叹词",
+    "pos-name": "专有名词",
+    "pos-noun": "名词",
+    "pos-num": "数词",
+    "pos-particle": "助词",
+    "pos-phrase": "短语",
+    "pos-postp": "后置词",
+    "pos-prefix": "前缀",
+    "pos-prep": "介词",
+    "pos-prep_phrase": "介词短语",
+    "pos-pron": "代词",
+    "pos-proverb": "谚语",
+    "pos-punct": "标点",
+    "pos-suffix": "后缀",
+    "pos-symbol": "符号",
+    "pos-verb": "动词",
+    "pos-abbrev": "缩写",
+    "pos-affix": "词缀",
+    "pos-infix": "中缀",
+    "pos-interfix": "间缀",
+    "pos-circumfix": "环缀",
+    "pos-root": "词根",
+    "pos-combining_form": "构词成分",
+    "pos-classifier": "量词",
+    "pos-counter": "量词",
+    "pos-letter": "字母",
+    "no-dictionary-for": "暂无%s词典",
+    "unknown-language": "无法确定这是什么语言",
+    "looking-up": "正在查询",
+    "nothing-for": "未找到%s",
+    "read-as": "按%s读",
+    "read-as-accent": "按%s读，%s口音",
+    "translated-by": "由%s翻译",
+    "translated-by-machine": "机器翻译",
+    "guess": "推测",
+    "in-english": "英语",
+    "getting-dictionary": "正在获取%s词典",
+    "getting-dictionaries": "正在获取 %s 个词典",
+    "say-word": "读出%s",
+    "hear-word": "听%s",
+    "play-sound": "播放%s的录音",
+    "read-about-sound": "了解%s",
+    "see-mouth": "看嘴巴怎么发%s",
+    "mouth-making": "嘴巴怎么发%s",
+    "tap-sound": "点按一个音来听它是什么",
+    "what-this-is": "这是什么",
+    "for-example": "例如：%s",
+    "fetching": "获取中",
+    "done": "完成",
+    "ordinal-first-person": "第一",
+    "ordinal-second-person": "第二",
+    "ordinal-third-person": "第三",
+    "person-number": "%s人称%s",
+    "person-number-long": "%s人称%s",
+    "person-long": "%s人称",
+    "person-and-number": "人称和数",
+    "form-of": "的",
+    "term-mood": "语气",
+    "term-tense": "时态",
+    "term-aspect": "体",
+    "term-person": "人称",
+    "term-number": "数",
+    "term-case": "格",
+    "term-gender": "性",
+    "term-definiteness": "定指",
+    "term-declension": "变格",
+    "term-degree": "级",
+    "term-voice": "语态",
+    "term-register": "语体",
+    "term-nonfinite": "非限定形式",
+    "term-singular": "单数",
+    "term-plural": "复数",
+    "term-dual": "双数",
+    "term-first-person": "第一人称",
+    "term-second-person": "第二人称",
+    "term-third-person": "第三人称",
+    "term-nominative": "主格",
+    "term-accusative": "宾格",
+    "term-dative": "与格",
+    "term-genitive": "属格",
+    "term-vocative": "呼格",
+    "term-instrumental": "工具格",
+    "term-locative": "方位格",
+    "term-prepositional": "前置格",
+    "term-ablative": "离格",
+    "term-partitive": "部分格",
+    "term-inessive": "内格",
+    "term-elative": "出格",
+    "term-illative": "入格",
+    "term-adessive": "所格",
+    "term-allative": "向格",
+    "term-essive": "样格",
+    "term-translative": "转格",
+    "term-abessive": "缺格",
+    "term-comitative": "伴随格",
+    "term-masculine": "阳性",
+    "term-feminine": "阴性",
+    "term-neuter": "中性",
+    "term-animate": "有生",
+    "term-inanimate": "无生",
+    "term-definite": "定指",
+    "term-indefinite": "不定指",
+    "term-present": "现在时",
+    "term-past": "过去时",
+    "term-future": "将来时",
+    "term-non-past": "非过去时",
+    "term-preterite": "简单过去时",
+    "term-imperfect": "未完成过去时",
+    "term-perfect": "完成时",
+    "term-pluperfect": "过去完成时",
+    "term-aorist": "不定过去时",
+    "term-indicative": "陈述式",
+    "term-subjunctive": "虚拟式",
+    "term-subjunctive-i": "第一虚拟式",
+    "term-subjunctive-ii": "第二虚拟式",
+    "term-conditional": "条件式",
+    "term-conditional-i": "第一条件式",
+    "term-conditional-ii": "第二条件式",
+    "term-future-i": "第一将来时",
+    "term-future-ii": "第二将来时",
+    "term-imperative": "命令式",
+    "term-jussive": "祈使式",
+    "term-optative": "祈愿式",
+    "term-potential": "可能式",
+    "term-active": "主动态",
+    "term-passive": "被动态",
+    "term-infinitive": "不定式",
+    "term-participle": "分词",
+    "term-gerund": "副动词",
+    "term-imperfective": "未完成体",
+    "term-perfective": "完成体",
+    "term-progressive": "进行体",
+    "term-positive": "原级",
+    "term-comparative": "比较级",
+    "term-superlative": "最高级",
+    "term-strong": "强变化",
+    "term-weak": "弱变化",
+    "term-mixed": "混合变化",
+    "term-formal": "正式",
+    "term-informal": "非正式",
+    "term-polite": "礼貌",
+    "accent-British": "英国",
+    "accent-American": "美国",
+    "accent-Scottish": "苏格兰",
+    "accent-Australian": "澳大利亚",
+    "accent-Caribbean": "加勒比",
+    "accent-Canadian": "加拿大",
+    "accent-Spain": "西班牙",
+    "accent-Latin America": "拉丁美洲",
+    "accent-Rioplatense": "拉普拉塔",
+    "accent-Germany": "德国",
+    "accent-Switzerland": "瑞士",
+    "accent-Austria": "奥地利",
+    "accent-Portugal": "葡萄牙",
+    "accent-Brazil": "巴西",
+    "accent-France": "法国",
+    "accent-Canada": "加拿大",
+    "accent-Northern": "北部",
+    "accent-Central": "中部"
+  },
+  "rows": {
+    "on": {
+      "name": "标注我读的内容",
+      "about": ""
+    },
+    "site": {
+      "name": "在此网站",
+      "about": ""
+    },
+    "layer": {
+      "name": "叠加显示",
+      "about": ""
+    },
+    "density": {
+      "name": "频率",
+      "about": ""
+    },
+    "target": {
+      "name": "语言",
+      "about": ""
+    },
+    "source": {
+      "name": "此页面的语言",
+      "about": ""
+    },
+    "accent": {
+      "name": "口音",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "词典",
+      "about": ""
+    },
+    "narrow": {
+      "name": "标音",
+      "about": ""
+    },
+    "stress": {
+      "name": "重音符号",
+      "about": ""
+    },
+    "delay": {
+      "name": "卡片弹出前的停留",
+      "about": ""
+    },
+    "animations": {
+      "name": "动画",
+      "about": ""
+    },
+    "say": {
+      "name": "某样东西怎么说",
+      "about": ""
+    },
+    "setup": {
+      "name": "设置",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "读取屏幕",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "显示在应用上方",
+      "about": ""
+    },
+    "ipa": {
+      "name": "读音",
+      "about": ""
+    },
+    "translate": {
+      "name": "翻译",
+      "about": ""
+    },
+    "side": {
+      "name": "哪一侧",
+      "about": ""
+    },
+    "rest": {
+      "name": "按钮位置",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "固定高度",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "拖过一个词",
+      "about": "它会说出经过的内容，下方页面仍可滚动"
+    },
+    "lens-sweep": {
+      "name": "按住再划过",
+      "about": "经过的每个词都会加入，卡片解答整个分句"
+    },
+    "lens-hold": {
+      "name": "按住",
+      "about": "打开设置"
+    },
+    "lens-tap": {
+      "name": "点按",
+      "about": "阅读时随时查问某样东西怎么说；再点一次收起卡片"
+    },
+    "touch": {
+      "name": "触摸词语",
+      "about": ""
+    },
+    "where": {
+      "name": "位置",
+      "about": ""
+    },
+    "apps": {
+      "name": "应用",
+      "about": ""
+    },
+    "start": {
+      "name": "解答词语之前",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "点按词语查看卡片",
+      "about": ""
+    },
+    "meanings": {
+      "name": "查看词义",
+      "about": ""
+    },
+    "theme": {
+      "name": "主题",
+      "about": ""
+    },
+    "advanced": {
+      "name": "高级",
+      "about": ""
+    },
+    "dark": {
+      "name": "浅色或深色",
+      "about": ""
+    },
+    "mine": {
+      "name": "我的语言",
+      "about": ""
+    },
+    "group-button": {
+      "name": "侧边按钮",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "语言",
+      "about": ""
+    },
+    "position": {
+      "name": "位置",
+      "about": ""
+    },
+    "appearance": {
+      "name": "外观",
+      "about": ""
+    },
+    "accents": {
+      "name": "口音",
+      "about": ""
+    },
+    "inline": {
+      "name": "替换词语",
+      "about": ""
+    },
+    "replaced": {
+      "name": "已替换的词",
+      "about": ""
+    },
+    "translator": {
+      "name": "翻译器",
+      "about": ""
+    },
+    "into": {
+      "name": "翻译成",
+      "about": ""
+    },
+    "known": {
+      "name": "从不翻译",
+      "about": ""
+    },
+    "learn": {
+      "name": "正在学习",
+      "about": ""
+    },
+    "cards": {
+      "name": "查词",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "读音",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "词义",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "语法",
+      "about": ""
+    },
+    "show-others": {
+      "name": "其他词义",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "说明每个词",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "我的",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "少数几个词",
+      "每个词"
+    ],
+    "delay": [
+      "立即",
+      "1000 毫秒"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "关",
+        "about": {
+          "browser": "不替换任何内容；自己查问某个词",
+          "phone": "不替换任何内容；按钮仍可解答词语"
+        }
+      },
+      "meaning": {
+        "label": "翻译",
+        "about": {
+          "browser": "词语替换为它的意思",
+          "phone": "词语替换为它的意思"
+        }
+      },
+      "sound": {
+        "label": "读音",
+        "about": {
+          "browser": "词语替换为它的读音",
+          "phone": "词语替换为它的读音"
+        }
+      },
+      "both": {
+        "label": "两者",
+        "about": {
+          "browser": "它的意思，以及那个意思怎么读",
+          "phone": "它的意思，以及那个意思怎么读"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "区分词语的音",
+          "phone": "区分词语的音"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "发音的每个细节，如送气和清化",
+          "phone": "发音的每个细节，如送气和清化"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "跟随系统",
+        "about": {
+          "browser": "跟随此设备的设置",
+          "phone": "跟随此设备的设置"
+        }
+      },
+      "light": {
+        "label": "浅色",
+        "about": {
+          "browser": "始终使用浅色配色",
+          "phone": "始终使用浅色配色"
+        }
+      },
+      "dark": {
+        "label": "深色",
+        "about": {
+          "browser": "始终使用深色配色",
+          "phone": "始终使用深色配色"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "左",
+        "about": {
+          "phone": "适合左手持机"
+        }
+      },
+      "free": {
+        "label": "任意位置",
+        "about": {
+          "phone": "放在哪里就停在哪里"
+        }
+      },
+      "right": {
+        "label": "右",
+        "about": {
+          "phone": "适合右手持机"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "说话人怎样看待动词所说的事：当作事实、愿望、怀疑或想象，或当作命令。"
+      },
+      "tense": {
+        "plain": "事情什么时候发生：现在之前、现在或以后。"
+      },
+      "aspect": {
+        "plain": "怎样看待动作：作为一个完整结束的整体，或作为正在进行、反复或未完成的动作。"
+      },
+      "person": {
+        "plain": "谁做的：说话人（我、我们）、听话人（你）或其他人（他、她、他们）。"
+      },
+      "number": {
+        "plain": "多少：一个，或不止一个。"
+      },
+      "case": {
+        "plain": "名词为表示它在句中的作用而采用的形式：谁做事、对谁、谁的、在哪里。"
+      },
+      "gender": {
+        "plain": "每个名词所属的类别，周围的词要随之变化。它和生理性别关系不大：德语 das Mädchen（女孩）是中性。"
+      },
+      "definiteness": {
+        "plain": "指的是特定的、已知的那一个（这座房子），还是任意一个（一座房子）。"
+      },
+      "declension": {
+        "plain": "名词或形容词所带的一套词尾，取决于周围的词。"
+      },
+      "degree": {
+        "plain": "形容词的程度：大、更大、最大。"
+      },
+      "voice": {
+        "plain": "主语是做动作的一方（她写了它），还是承受动作的一方（它被写出来了）。"
+      },
+      "register": {
+        "plain": "这个词有多正式：对陌生人和公文用，还是对朋友用。"
+      },
+      "nonfinite": {
+        "plain": "只说出动作、不说谁做或何时做的动词形式：to go、going、gone。"
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "一个。",
+        "example": "one *dog*，一只狗"
+      },
+      "plural": {
+        "plain": "不止一个。",
+        "example": "two *dogs*，两只狗"
+      },
+      "dual": {
+        "plain": "正好两个，用于有专门表示成对形式的语言。",
+        "example": "斯洛文尼亚语 *hiši*，两座房子"
+      },
+      "first-person": {
+        "plain": "说话人：我，或我们。",
+        "example": "*我*走，*我们*走"
+      },
+      "second-person": {
+        "plain": "听话人：你。",
+        "example": "*你*走"
+      },
+      "third-person": {
+        "plain": "其他任何人：他、她、它、他们。",
+        "example": "*她*走"
+      },
+      "nominative": {
+        "plain": "做动作的一方：主语。",
+        "example": "*The dog* bites the man.，狗咬了那个人。"
+      },
+      "accusative": {
+        "plain": "承受动作的一方：直接宾语。",
+        "example": "The dog bites *the man*.，狗咬了那个人。"
+      },
+      "dative": {
+        "plain": "接受某物或为之做事的一方：给谁。",
+        "example": "I give *the man* a book.，我给那个人一本书。"
+      },
+      "genitive": {
+        "plain": "是谁的，或是什么的一部分：of、's。",
+        "example": "*the man's* book, the roof *of the house*，那个人的书，房子的屋顶"
+      },
+      "vocative": {
+        "plain": "直接称呼某人时用的形式。",
+        "example": "波兰语 *Anno!*，安娜！"
+      },
+      "instrumental": {
+        "plain": "用什么做某事，或由什么做成。",
+        "example": "俄语 писать *ручкой*，*用钢笔*写"
+      },
+      "locative": {
+        "plain": "某物在哪里。",
+        "example": "波兰语 w *domu*，*在房子里*"
+      },
+      "prepositional": {
+        "plain": "名词在某些介词后的形式，多表示在哪里或关于什么。",
+        "example": "俄语 о *книге*，关于*这本书*"
+      },
+      "ablative": {
+        "plain": "离开、出自某物，或借助某物。",
+        "example": "拉丁语 *Romā*，从罗马"
+      },
+      "partitive": {
+        "plain": "某物的一部分，或没有做完的动作。",
+        "example": "芬兰语 *vettä*，一些水"
+      },
+      "inessive": {
+        "plain": "在某物里面。",
+        "example": "芬兰语 *talossa*，在房子里"
+      },
+      "elative": {
+        "plain": "从某物里面出来。",
+        "example": "芬兰语 *talosta*，从房子里出来"
+      },
+      "illative": {
+        "plain": "进入某物。",
+        "example": "芬兰语 *taloon*，进入房子"
+      },
+      "adessive": {
+        "plain": "在某物上或旁边。",
+        "example": "芬兰语 *pöydällä*，在桌子上"
+      },
+      "allative": {
+        "plain": "到某物上或向某物。",
+        "example": "芬兰语 *pöydälle*，到桌子上"
+      },
+      "essive": {
+        "plain": "暂时作为某种身份或处于某种状态。",
+        "example": "芬兰语 *lapsena*，作为孩子"
+      },
+      "translative": {
+        "plain": "变成某物。",
+        "example": "芬兰语 *opettajaksi*，（成为）老师"
+      },
+      "abessive": {
+        "plain": "没有某物。",
+        "example": "芬兰语 *rahatta*，没有钱"
+      },
+      "comitative": {
+        "plain": "和某物一起。",
+        "example": "爱沙尼亚语 *sõbraga*，和朋友一起"
+      },
+      "masculine": {
+        "plain": "名词所分的类别之一；阳性名词周围的词采用相应的词尾。多半取决于词本身，而不是生理性别。",
+        "example": "西班牙语 *el libro*，书"
+      },
+      "feminine": {
+        "plain": "名词所分的类别之一；阴性名词周围的词采用相应的词尾。多半取决于词本身，而不是生理性别。",
+        "example": "西班牙语 *la mesa*，桌子"
+      },
+      "neuter": {
+        "plain": "既不是阳性也不是阴性的那一类名词。",
+        "example": "德语 *das Haus*，房子"
+      },
+      "animate": {
+        "plain": "指人或动物的名词，有些语言为它们设有专门的词尾。",
+        "example": "俄语 вижу *брата*，我看见我哥哥"
+      },
+      "inanimate": {
+        "plain": "指物品而不是人或动物的名词。",
+        "example": "俄语 вижу *стол*，我看见桌子"
+      },
+      "definite": {
+        "plain": "说话双方都知道的特定那一个：the。",
+        "example": "瑞典语 *huset*，这座房子"
+      },
+      "indefinite": {
+        "plain": "任意一个，尚未知道的：a。",
+        "example": "瑞典语 *ett hus*，一座房子"
+      },
+      "present": {
+        "plain": "现在、一直如此，或习惯上如此。",
+        "example": "she *walks*，她走路"
+      },
+      "past": {
+        "plain": "现在之前。",
+        "example": "she *walked*，她走了"
+      },
+      "future": {
+        "plain": "比现在晚。",
+        "example": "she *will walk*，她将会走"
+      },
+      "non-past": {
+        "plain": "现在或以后：一个形式兼表两者。",
+        "example": "日语 *食べる*，吃或将要吃"
+      },
+      "preterite": {
+        "plain": "在过去某个时间点发生并已结束的事。",
+        "example": "西班牙语 ayer *comí*，我昨天*吃了*"
+      },
+      "imperfect": {
+        "plain": "从内部看过去：持续进行、反复发生或过去常常如此的事。",
+        "example": "西班牙语 *comía*，我当时*在吃*，我以前*常吃*"
+      },
+      "perfect": {
+        "plain": "在现在之前完成，而且现在仍有影响。",
+        "example": "she *has walked*，她已经走了"
+      },
+      "pluperfect": {
+        "plain": "在过去另一个时刻之前完成。",
+        "example": "she *had walked*，她（那时）已经走了"
+      },
+      "aorist": {
+        "plain": "把过去的动作当作一个完整事件来讲，就像讲故事那样。",
+        "example": "保加利亚语 *писах*，我写了"
+      },
+      "indicative": {
+        "plain": "陈述事实的普通形式：事实，以及关于事实的问题。",
+        "example": "She *is* here.，她在这里。"
+      },
+      "subjunctive": {
+        "plain": "表示希望、想要、怀疑、担心或只是想象的事，而不是说它确实如此。多用在 that、if、so that 这类词之后。",
+        "example": "I wish he *were* here. It is vital that she *be* on time. 西班牙语 quiero que *vengas*，我希望他在这里。她必须准时。我想要你来。"
+      },
+      "subjunctive-i": {
+        "plain": "德语用来转述别人的话、而不为其担保的形式。",
+        "example": "Er sagt, er *sei* krank.，他说他病了。"
+      },
+      "subjunctive-ii": {
+        "plain": "德语表示非真实情况的形式：愿望、礼貌请求，以及“要是……就好了”。",
+        "example": "Wenn ich Zeit *hätte*...，要是我有时间……"
+      },
+      "conditional": {
+        "plain": "如果另一件事成立，会发生什么。",
+        "example": "she *would walk*，她会走"
+      },
+      "conditional-i": {
+        "plain": "如果另一件事成立，会发生什么。",
+        "example": "德语 ich *würde gehen*，我会去"
+      },
+      "conditional-ii": {
+        "plain": "如果另一件事当时成立，本来会发生什么。",
+        "example": "德语 ich *wäre gegangen*，我本来会去"
+      },
+      "future-i": {
+        "plain": "比现在晚。",
+        "example": "德语 ich *werde gehen*，我将会去"
+      },
+      "future-ii": {
+        "plain": "到以后某个时间点已经完成。",
+        "example": "德语 ich *werde gegangen sein*，我将已经去了"
+      },
+      "imperative": {
+        "plain": "叫别人做某事的形式。",
+        "example": "*Walk!*，走！"
+      },
+      "jussive": {
+        "plain": "让或叫某人（常常不是听话人）做某事的形式。",
+        "example": "阿拉伯语 *لِيَكْتُبْ*，让他写"
+      },
+      "optative": {
+        "plain": "表示愿望的形式：但愿如此。"
+      },
+      "potential": {
+        "plain": "表示大概或可能如此的形式。",
+        "example": "芬兰语 *lienee*，（他）大概是"
+      },
+      "active": {
+        "plain": "主语做动作。",
+        "example": "She *wrote* the letter.，她写了这封信。"
+      },
+      "passive": {
+        "plain": "主语承受动作。",
+        "example": "The letter *was written*.，这封信被写好了。"
+      },
+      "infinitive": {
+        "plain": "动词本身，还没有人去做：词典列出它时用的形式。",
+        "example": "*to walk*, 西班牙语 *caminar*，走"
+      },
+      "participle": {
+        "plain": "动词的一种形式，用法像形容词，加上助动词可构成其他时态。",
+        "example": "a *broken* cup, she has *walked*，一个破了的杯子，她已经走了"
+      },
+      "gerund": {
+        "plain": "动词的一种形式，表示正在进行的动作，或当名词用。",
+        "example": "she is *walking*, 西班牙语 está *caminando*，她正在走"
+      },
+      "imperfective": {
+        "plain": "把动作看作正在进行、反复或未完成。",
+        "example": "俄语 я *читал*，我那时在读"
+      },
+      "perfective": {
+        "plain": "把动作看作一个完整结束的整体。",
+        "example": "俄语 я *прочитал*，我读完了"
+      },
+      "progressive": {
+        "plain": "在那一刻正在进行。",
+        "example": "她*正在走*"
+      },
+      "positive": {
+        "plain": "形容词本来的样子，不作比较。",
+        "example": "*大*"
+      },
+      "comparative": {
+        "plain": "比别的东西更甚。",
+        "example": "*更大*，*更美*"
+      },
+      "superlative": {
+        "plain": "比其他一切都更甚。",
+        "example": "*最大*，*最美*"
+      },
+      "strong": {
+        "plain": "前面没有冠词表明格时，德语用的形容词词尾。",
+        "example": "*kaltes* Wasser，冷水"
+      },
+      "weak": {
+        "plain": "在 der、die、das 之后，冠词已表明格时，德语用的形容词词尾。",
+        "example": "das *kalte* Wasser，这冷水"
+      },
+      "mixed": {
+        "plain": "在 ein、kein、mein 之后德语用的形容词词尾。",
+        "example": "ein *kaltes* Bier，一杯冰啤酒"
+      },
+      "formal": {
+        "plain": "对陌生人、长辈和公文用。",
+        "example": "*您*"
+      },
+      "informal": {
+        "plain": "对朋友、家人和孩子用。",
+        "example": "*你*"
+      },
+      "polite": {
+        "plain": "表示尊敬的说法。",
+        "example": "日语 *食べます*，（我）吃，礼貌说法"
+      }
+    }
+  }
+}

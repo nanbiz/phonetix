@@ -188,8 +188,12 @@ object SettingsStore {
 
     val current: Settings get() = _state.value
 
+    /** The app, for what has to be read out of it when a setting changes: the interface's words. */
+    private var app: Context? = null
+
     fun init(context: Context) {
         if (prefs != null) return
+        app = context.applicationContext
         val p = context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
         prefs = p
         _state.value = Settings(
@@ -226,11 +230,13 @@ object SettingsStore {
             showOthers = p.getBoolean(K_OTHERS, true),
             describeAll = p.getBoolean(K_DESCRIBE, false),
         )
+        Interface.follow(context.applicationContext, _state.value.target)
     }
 
     private fun update(block: (Settings) -> Settings) {
         val next = block(_state.value)
         _state.value = next
+        app?.let { Interface.follow(it, next.target) }
         prefs?.edit()
             ?.putBoolean(K_ENABLED, next.enabled)
             ?.putInt(K_DENSITY, next.density)

@@ -52,6 +52,14 @@ export const SIDE_CHOICES: Choice[] = [
   { value: "right", label: "Right", about: "for a phone held in the right hand" },
 ];
 
+/** Every table of choices, by the name data/wording.json files it under. */
+export const CHOICES: Record<string, Choice[]> = {
+  "dark": DARK_CHOICES,
+  "detail": DETAIL_CHOICES,
+  "layer": LAYER_CHOICES,
+  "side": SIDE_CHOICES,
+};
+
 /** Every row of the settings surfaces, by the name it reports itself under. */
 export const ROWS: Record<string, Words> = {
   "accent": { name: "Accent", about: "" },
@@ -131,13 +139,23 @@ export const SAYS: Record<string, string> = {
   "detailed": "Detailed",
   "detailed-example": "[tʰɒp]",
   "dictate": "Dictate",
+  "done": "done",
   "every-app": "Every app",
   "every-word": "every word",
+  "fetching": "fetching",
+  "for-example": "For example: %s",
+  "form-of": "of",
   "get": "Get",
+  "getting-dictionaries": "Getting %s dictionaries",
+  "getting-dictionary": "Getting the %s dictionary",
+  "guess": "guess",
+  "hear-word": "hear %s",
+  "in-english": "in English",
   "learn-language": "Learn a language",
   "learn-none": "none",
   "learning-it": "learning %s",
   "loading-dictionary": "Loading the dictionary…",
+  "looking-up": "Looking it up",
   "main-language": "My language",
   "make-main": "Make it my language",
   "master-idle": "Nothing is drawn over your apps",
@@ -145,11 +163,14 @@ export const SAYS: Record<string, string> = {
   "master-on": "Reading",
   "master-unready": "Allow it to read the screen and draw over your apps",
   "master-working": "The words in your apps are being answered",
+  "mouth-making": "how the mouth makes %s",
   "narrow-mark": "[ ]",
+  "no-dictionary-for": "No dictionary for %s yet",
   "no-direction": "No translation from %s could be had. The words show how they sound instead.",
   "no-source": "for what a word means; how it is said is built in",
   "no-translation": "Don't translate",
   "nothing-else": "nothing else",
+  "nothing-for": "Nothing found for %s",
   "nothing-found": "Nothing by that name",
   "nothing-yet": "nothing yet",
   "off": "off",
@@ -157,10 +178,18 @@ export const SAYS: Record<string, string> = {
   "one-in": "one in %s",
   "open-accessibility": "Open accessibility",
   "open-panel": "Open",
+  "ordinal-first-person": "1st",
+  "ordinal-second-person": "2nd",
+  "ordinal-third-person": "3rd",
   "other-languages": "Other languages",
   "packs-held": "%s downloaded",
   "packs-here": "On this phone",
   "packs-more": "Available",
+  "person-and-number": "person and number",
+  "person-long": "%s person",
+  "person-number": "%s %s",
+  "person-number-long": "%s person %s",
+  "play-sound": "play a recording of %s",
   "pos-abbrev": "abbreviation",
   "pos-adj": "adjective",
   "pos-adv": "adverb",
@@ -196,6 +225,9 @@ export const SAYS: Record<string, string> = {
   "pos-verb": "verb",
   "preview": "Preview",
   "preview-about": "the words on a page this would answer",
+  "read-about-sound": "read about %s",
+  "read-as": "Read as %s",
+  "read-as-accent": "Read as %s, %s accent",
   "remove": "Remove",
   "rest-edge": "On the %s",
   "rest-loose": "Wherever you leave it",
@@ -206,7 +238,9 @@ export const SAYS: Record<string, string> = {
   "say-no-model": "No translation model for that direction at your dictionary host.",
   "say-nothing": "no word for that",
   "say-placeholder": "what you want to say",
+  "say-word": "say %s",
   "search": "Search",
+  "see-mouth": "see a mouth saying %s",
   "service-stopped": "Phonetix is allowed to read the screen but is not running. Switch it off and on again in the phone's accessibility settings.",
   "set-key": "Set a key",
   "simple": "Simple",
@@ -214,10 +248,15 @@ export const SAYS: Record<string, string> = {
   "site-following": "following the main switch (currently: %s)",
   "site-off": "always off here",
   "speak": "Say it",
+  "tap-sound": "Tap a sound to hear what it is",
   "touch-off": "Every touch goes to the app underneath, so scrolling is untouched.",
   "touch-on": "A swipe that starts on a word will not scroll the page.",
+  "translated-by": "Translated by %s",
+  "translated-by-machine": "Translated by a machine",
   "turn": "Answer the other way round",
+  "unknown-language": "Not sure what language this is",
   "use-this": "Use this",
+  "what-this-is": "What this is",
   "words-count": "%s words",
 };
 
@@ -229,6 +268,12 @@ export function labelOf(choices: Choice[], value: string): string {
 /** What one of them does, for a row that explains itself. */
 export function aboutOf(choices: Choice[], value: string): string {
   return choices.find((row) => row.value === value)?.about ?? '';
+}
+
+/** A phrase with what goes in its places, in order: "Getting the %s dictionary". */
+export function say(key: string, ...fill: (string | number)[]): string {
+  let at = 0;
+  return (SAYS[key] ?? key).replace(/%s/g, () => String(fill[at++] ?? ''));
 }
 
 /** A kind of word by its whole name, where the dictionary files it by a short code: a

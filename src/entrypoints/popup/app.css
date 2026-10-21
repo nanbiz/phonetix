@@ -42,7 +42,7 @@ body {
 }
 
 .top .icon-button {
-  margin-left: -8px;
+  margin-inline-start: -8px;
 }
 
 .title {
@@ -85,7 +85,7 @@ body {
 }
 
 .item.sub {
-  padding-left: 36px;
+  padding-inline-start: 36px;
 }
 
 .item-name {
@@ -104,8 +104,8 @@ body {
   content: "";
   position: absolute;
   top: 0;
-  left: 14px;
-  right: 0;
+  inset-inline-start: 14px;
+  inset-inline-end: 0;
   border-top: var(--border-width) solid var(--color-border);
 }
 
@@ -128,13 +128,13 @@ label.item:hover {
 
 .switch::before {
   top: 3px;
-  left: 3px;
+  inset-inline-start: 3px;
   width: 20px;
   height: 20px;
 }
 
 .switch:checked::before {
-  left: 21px;
+  inset-inline-start: 21px;
 }
 
 .button {
@@ -249,12 +249,15 @@ kbd {
 }
 
 .pair + .item::before {
-  left: 14px;
+  inset-inline-start: 14px;
 }
 
 /* Which build this is, beside the name, for a reader saying what they are looking at. */
 .version-tag {
-  margin-left: 8px;
+  margin-inline-start: 8px;
+  /* Its own run of text: beside the name in a right-to-left interface the two Latin runs
+     otherwise read as one, and the gap between them went to the far side. */
+  unicode-bidi: isolate;
   font-size: 12px;
   font-weight: var(--weight-regular, 400);
   color: var(--color-ink-faint);
@@ -356,7 +359,7 @@ kbd {
 
 /* Simple or detailed, each beside the same word written that way. */
 .segment-example {
-  margin-right: 6px;
+  margin-inline-end: 6px;
   font-size: 15px;
 }
 
@@ -386,16 +389,16 @@ kbd {
 
 .duo .item {
   gap: 4px;
-  padding-right: 8px;
+  padding-inline-end: 8px;
 }
 
 .duo .item + .item::before {
   top: 10px;
   bottom: 10px;
-  left: 0;
-  right: auto;
+  inset-inline-start: 0;
+  inset-inline-end: auto;
   border-top: none;
-  border-left: var(--border-width) solid var(--color-border);
+  border-inline-start: var(--border-width) solid var(--color-border);
 }
 
 .duo .item-value {
@@ -467,7 +470,7 @@ kbd {
 }
 
 .palette-check {
-  right: 8px;
+  inset-inline-end: 8px;
   bottom: 8px;
   width: 16px;
   height: 16px;

@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "سماح",
+    "allow-overlay": "السماح بالطبقة فوق التطبيقات",
+    "already-in": "هذه الصفحة بالفعل بلغة %s",
+    "broad-mark": "/ /",
+    "change": "تغيير",
+    "choose-language": "اختر لغة",
+    "close": "إغلاق",
+    "detail-explained": "العريض هو الأصوات التي تفرّق بين الكلمات؛ والدقيق هو كل تفصيل في طريقة نطق الكلمة كما ينطقها متحدث بتلك اللكنة.",
+    "every-app": "كل التطبيقات",
+    "get": "تنزيل",
+    "loading-dictionary": "جارٍ تحميل القاموس…",
+    "master-idle": "لا شيء يُرسم فوق تطبيقاتك",
+    "master-off": "متوقف مؤقتاً",
+    "master-on": "قيد القراءة",
+    "master-unready": "اسمح له بقراءة الشاشة والرسم فوق تطبيقاتك",
+    "master-working": "يجري الرد على الكلمات في تطبيقاتك",
+    "narrow-mark": "[ ]",
+    "no-source": "لمعنى الكلمة؛ أما طريقة نطقها فمدمجة فيه",
+    "no-translation": "لا تترجم",
+    "nothing-found": "لا شيء بهذا الاسم",
+    "nothing-yet": "لا شيء بعد",
+    "open-accessibility": "فتح إمكانية الوصول",
+    "preview": "معاينة",
+    "preview-about": "الكلمات في الصفحة التي سيجيب عنها هذا",
+    "remove": "إزالة",
+    "rest-edge": "على الجانب %s",
+    "rest-loose": "حيثما تتركه",
+    "no-direction": "تعذّر الحصول على ترجمة من %s. تُظهر الكلمات طريقة نطقها بدلاً من ذلك.",
+    "service-stopped": "مسموح لـ Phonetix بقراءة الشاشة لكنه لا يعمل. أوقفه ثم شغّله من جديد في إعدادات إمكانية الوصول بالهاتف.",
+    "rest-put": "اسحب الزر لأعلى أو لأسفل، أو إلى الجانب الآخر.",
+    "say-into": "أجب بـ",
+    "say-no-language": "اختر أولاً اللغة التي تريد القراءة بها.",
+    "say-no-model": "لا يوجد نموذج ترجمة لهذا الاتجاه على خادم القواميس لديك.",
+    "say-nothing": "لا توجد كلمة لذلك",
+    "say-placeholder": "ما تريد قوله",
+    "search": "بحث",
+    "speak": "قلها",
+    "touch-off": "كل لمسة تذهب إلى التطبيق الذي تحتها، فالتمرير لا يتأثر.",
+    "touch-on": "السحب الذي يبدأ على كلمة لن يمرّر الصفحة.",
+    "turn": "أجب بالاتجاه المعاكس",
+    "use-this": "استخدم هذا",
+    "say-fetching": "جارٍ جلب %s",
+    "back": "رجوع",
+    "apps-chosen": "تم اختيار %s",
+    "packs-held": "تم تنزيل %s",
+    "other-languages": "لغات أخرى",
+    "words-count": "%s كلمة",
+    "packs-here": "على هذا الهاتف",
+    "packs-more": "متاح",
+    "every-word": "كل كلمة",
+    "one-in": "واحدة من كل %s",
+    "open-panel": "فتح",
+    "site-off": "متوقف دائماً هنا",
+    "site-following": "يتبع المفتاح الرئيسي (الحالي: %s)",
+    "on": "مُفعّل",
+    "off": "متوقف",
+    "set-key": "تعيين مفتاح",
+    "simple": "مبسّط",
+    "detailed": "مفصّل",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "لا شيء آخر",
+    "learn-none": "لا شيء",
+    "add-language": "إضافة لغة",
+    "learn-language": "تعلّم لغة",
+    "make-main": "اجعلها لغتي",
+    "main-language": "لغتي",
+    "learning-it": "أتعلّم %s",
+    "dictate": "إملاء",
+    "pos-adj": "صفة",
+    "pos-adv": "ظرف",
+    "pos-article": "أداة تعريف",
+    "pos-character": "رمز",
+    "pos-conj": "حرف عطف",
+    "pos-contraction": "اختصار",
+    "pos-det": "محدِّد",
+    "pos-intj": "تعجب",
+    "pos-name": "اسم علم",
+    "pos-noun": "اسم",
+    "pos-num": "عدد",
+    "pos-particle": "أداة",
+    "pos-phrase": "عبارة",
+    "pos-postp": "حرف جر لاحق",
+    "pos-prefix": "بادئة",
+    "pos-prep": "حرف جر",
+    "pos-prep_phrase": "عبارة حرف جر",
+    "pos-pron": "ضمير",
+    "pos-proverb": "مثل",
+    "pos-punct": "علامة ترقيم",
+    "pos-suffix": "لاحقة",
+    "pos-symbol": "رمز",
+    "pos-verb": "فعل",
+    "pos-abbrev": "اختصار",
+    "pos-affix": "زائدة",
+    "pos-infix": "حشوة",
+    "pos-interfix": "زائدة رابطة",
+    "pos-circumfix": "زائدة محيطة",
+    "pos-root": "جذر",
+    "pos-combining_form": "صيغة مركبة",
+    "pos-classifier": "مصنِّف",
+    "pos-counter": "أداة عدّ",
+    "pos-letter": "حرف",
+    "no-dictionary-for": "لا يوجد قاموس لـ %s بعد",
+    "unknown-language": "لست متأكداً من هذه اللغة",
+    "looking-up": "جارٍ البحث",
+    "nothing-for": "لم يُعثر على شيء لـ %s",
+    "read-as": "اقرأ بوصفها %s",
+    "read-as-accent": "اقرأ بوصفها %s بلكنة %s",
+    "translated-by": "ترجمة %s",
+    "translated-by-machine": "ترجمة آلية",
+    "guess": "تخمين",
+    "in-english": "بالإنجليزية",
+    "getting-dictionary": "جارٍ جلب قاموس %s",
+    "getting-dictionaries": "جارٍ جلب قواميس %s",
+    "say-word": "قل %s",
+    "hear-word": "اسمع %s",
+    "play-sound": "شغّل تسجيل %s",
+    "read-about-sound": "اقرأ عن %s",
+    "see-mouth": "شاهد فماً ينطق %s",
+    "mouth-making": "كيف يصنع الفم %s",
+    "tap-sound": "اضغط على صوت لتسمع ما هو",
+    "what-this-is": "ما هذا",
+    "for-example": "مثلاً: %s",
+    "fetching": "جارٍ الجلب",
+    "done": "تم",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "%s شخص، %s",
+    "person-long": "%s شخص",
+    "person-and-number": "الشخص والعدد",
+    "form-of": "من",
+    "term-mood": "الصيغة",
+    "term-tense": "الزمن",
+    "term-aspect": "الجهة",
+    "term-person": "الشخص",
+    "term-number": "العدد",
+    "term-case": "الحالة الإعرابية",
+    "term-gender": "النوع",
+    "term-definiteness": "التعريف",
+    "term-declension": "التصريف",
+    "term-degree": "الدرجة",
+    "term-voice": "المبنى",
+    "term-register": "المستوى اللغوي",
+    "term-nonfinite": "غير المحدَّد",
+    "term-singular": "المفرد",
+    "term-plural": "الجمع",
+    "term-dual": "المثنى",
+    "term-first-person": "المتكلم",
+    "term-second-person": "المخاطب",
+    "term-third-person": "الغائب",
+    "term-nominative": "الرفع",
+    "term-accusative": "النصب",
+    "term-dative": "حالة الإيصال",
+    "term-genitive": "الجر",
+    "term-vocative": "النداء",
+    "term-instrumental": "حالة الوسيلة",
+    "term-locative": "حالة المكان",
+    "term-prepositional": "حالة حرف الجر",
+    "term-ablative": "حالة الانفصال",
+    "term-partitive": "حالة التبعيض",
+    "term-inessive": "حالة الظرفية",
+    "term-elative": "حالة الخروج",
+    "term-illative": "حالة الدخول",
+    "term-adessive": "حالة القرب",
+    "term-allative": "حالة الوصول",
+    "term-essive": "حالة الوصف",
+    "term-translative": "حالة التحول",
+    "term-abessive": "حالة النقص",
+    "term-comitative": "حالة المصاحبة",
+    "term-masculine": "مذكر",
+    "term-feminine": "مؤنث",
+    "term-neuter": "محايد",
+    "term-animate": "عاقل",
+    "term-inanimate": "غير عاقل",
+    "term-definite": "معرفة",
+    "term-indefinite": "نكرة",
+    "term-present": "المضارع",
+    "term-past": "الماضي",
+    "term-future": "المستقبل",
+    "term-non-past": "غير الماضي",
+    "term-preterite": "الماضي البسيط",
+    "term-imperfect": "الماضي المستمر",
+    "term-perfect": "الماضي التام",
+    "term-pluperfect": "الماضي الأبعد",
+    "term-aorist": "الأوريست",
+    "term-indicative": "الإخباري",
+    "term-subjunctive": "المنصوب",
+    "term-subjunctive-i": "المنصوب (الأول)",
+    "term-subjunctive-ii": "المنصوب (الثاني)",
+    "term-conditional": "الشرطي",
+    "term-conditional-i": "الشرطي (الأول)",
+    "term-conditional-ii": "الشرطي (الثاني)",
+    "term-future-i": "المستقبل (الأول)",
+    "term-future-ii": "المستقبل التام",
+    "term-imperative": "الأمر",
+    "term-jussive": "المجزوم",
+    "term-optative": "الدعائي",
+    "term-potential": "الاحتمالي",
+    "term-active": "المعلوم",
+    "term-passive": "المجهول",
+    "term-infinitive": "المصدر",
+    "term-participle": "اسم الفاعل",
+    "term-gerund": "اسم المصدر",
+    "term-imperfective": "غير التام",
+    "term-perfective": "التام",
+    "term-progressive": "المستمر",
+    "term-positive": "الأصلية",
+    "term-comparative": "التفضيل",
+    "term-superlative": "التفضيل المطلق",
+    "term-strong": "القوي",
+    "term-weak": "الضعيف",
+    "term-mixed": "المختلط",
+    "term-formal": "الرسمي",
+    "term-informal": "غير الرسمي",
+    "term-polite": "المهذب",
+    "accent-British": "البريطانية",
+    "accent-American": "الأمريكية",
+    "accent-Scottish": "الاسكتلندية",
+    "accent-Australian": "الأسترالية",
+    "accent-Caribbean": "الكاريبية",
+    "accent-Canadian": "الكندية",
+    "accent-Spain": "إسبانيا",
+    "accent-Latin America": "أمريكا اللاتينية",
+    "accent-Rioplatense": "ريوبلاتنسي",
+    "accent-Germany": "ألمانيا",
+    "accent-Switzerland": "سويسرا",
+    "accent-Austria": "النمسا",
+    "accent-Portugal": "البرتغال",
+    "accent-Brazil": "البرازيل",
+    "accent-France": "فرنسا",
+    "accent-Canada": "كندا",
+    "accent-Northern": "الشمالية",
+    "accent-Central": "الوسطى"
+  },
+  "rows": {
+    "on": {
+      "name": "شرح ما أقرؤه",
+      "about": ""
+    },
+    "site": {
+      "name": "في هذا الموقع",
+      "about": ""
+    },
+    "layer": {
+      "name": "الطبقة",
+      "about": ""
+    },
+    "density": {
+      "name": "عدد المرات",
+      "about": ""
+    },
+    "target": {
+      "name": "اللغة",
+      "about": ""
+    },
+    "source": {
+      "name": "هذه الصفحة بلغة",
+      "about": ""
+    },
+    "accent": {
+      "name": "اللكنة",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "القواميس",
+      "about": ""
+    },
+    "narrow": {
+      "name": "النسخ الصوتي",
+      "about": ""
+    },
+    "stress": {
+      "name": "علامات النبر",
+      "about": ""
+    },
+    "delay": {
+      "name": "انتظار قبل فتح البطاقة",
+      "about": ""
+    },
+    "animations": {
+      "name": "الرسوم المتحركة",
+      "about": ""
+    },
+    "say": {
+      "name": "الكلمة لشيء",
+      "about": ""
+    },
+    "setup": {
+      "name": "الإعداد",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "قراءة الشاشة",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "الرسم فوق التطبيقات",
+      "about": ""
+    },
+    "ipa": {
+      "name": "النطق",
+      "about": ""
+    },
+    "translate": {
+      "name": "الترجمة",
+      "about": ""
+    },
+    "side": {
+      "name": "أي جانب",
+      "about": ""
+    },
+    "rest": {
+      "name": "مكان الزر",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "ارتفاع ثابت",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "اسحبه فوق كلمة",
+      "about": "يذكر ما يمرّ عليه، وتبقى الصفحة تحته قابلة للتمرير"
+    },
+    "lens-sweep": {
+      "name": "امسكه ثم امسح",
+      "about": "تنضم كل كلمة يمرّ عليها إلى السلسلة، وتجيب البطاقة عن الجملة كلها"
+    },
+    "lens-hold": {
+      "name": "امسكه",
+      "about": "يفتح الإعدادات"
+    },
+    "lens-tap": {
+      "name": "اضغط عليه",
+      "about": "اطلب كلمة لشيء وسط ما تقرؤه؛ اضغط مرة أخرى لإخفاء البطاقة"
+    },
+    "touch": {
+      "name": "لمس كلمة",
+      "about": ""
+    },
+    "where": {
+      "name": "المكان",
+      "about": ""
+    },
+    "apps": {
+      "name": "التطبيقات",
+      "about": ""
+    },
+    "start": {
+      "name": "قبل أن يجيب عن كلمة",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "اضغط على كلمة لبطاقتها",
+      "about": ""
+    },
+    "meanings": {
+      "name": "لمعرفة معنى كلمة",
+      "about": ""
+    },
+    "theme": {
+      "name": "المظهر",
+      "about": ""
+    },
+    "advanced": {
+      "name": "متقدم",
+      "about": ""
+    },
+    "dark": {
+      "name": "فاتح أو داكن",
+      "about": ""
+    },
+    "mine": {
+      "name": "لغتي",
+      "about": ""
+    },
+    "group-button": {
+      "name": "الزر الجانبي",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "اللغات",
+      "about": ""
+    },
+    "position": {
+      "name": "الموضع",
+      "about": ""
+    },
+    "appearance": {
+      "name": "المظهر",
+      "about": ""
+    },
+    "accents": {
+      "name": "اللكنات",
+      "about": ""
+    },
+    "inline": {
+      "name": "استبدال الكلمات",
+      "about": ""
+    },
+    "replaced": {
+      "name": "الكلمات المستبدلة",
+      "about": ""
+    },
+    "translator": {
+      "name": "المترجم",
+      "about": ""
+    },
+    "into": {
+      "name": "الترجمة إلى",
+      "about": ""
+    },
+    "known": {
+      "name": "لا تترجم أبداً",
+      "about": ""
+    },
+    "learn": {
+      "name": "التعلّم",
+      "about": ""
+    },
+    "cards": {
+      "name": "ابحث",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "النطق",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "المعنى",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "القواعد",
+      "about": ""
+    },
+    "show-others": {
+      "name": "معانٍ أخرى",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "اشرح كل كلمة",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "خاصتي",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "بعض الكلمات",
+      "كل كلمة"
+    ],
+    "delay": [
+      "فوري",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "إيقاف",
+        "about": {
+          "browser": "لا تُستبدل أي كلمة؛ اسأل عن كلمة بنفسك",
+          "phone": "لا تُستبدل أي كلمة؛ الزر ما زال يجيب عن كلمة"
+        }
+      },
+      "meaning": {
+        "label": "الترجمة",
+        "about": {
+          "browser": "الكلمة تُستبدل بمعناها",
+          "phone": "الكلمة تُستبدل بمعناها"
+        }
+      },
+      "sound": {
+        "label": "النطق",
+        "about": {
+          "browser": "الكلمة تُستبدل بطريقة نطقها",
+          "phone": "الكلمة تُستبدل بطريقة نطقها"
+        }
+      },
+      "both": {
+        "label": "كلاهما",
+        "about": {
+          "browser": "معنى الكلمة، وكيف تُنطق ذلك المعنى",
+          "phone": "معنى الكلمة، وكيف تُنطق ذلك المعنى"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "الأصوات التي تفرّق بين الكلمات",
+          "phone": "الأصوات التي تفرّق بين الكلمات"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "كل تفصيل في طريقة النطق، مثل التنفيس والإسكات",
+          "phone": "كل تفصيل في طريقة النطق، مثل التنفيس والإسكات"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "النظام",
+        "about": {
+          "browser": "حسب إعداد هذا الجهاز",
+          "phone": "حسب إعداد هذا الجهاز"
+        }
+      },
+      "light": {
+        "label": "فاتح",
+        "about": {
+          "browser": "الجانب الفاتح من اللوحة دائماً",
+          "phone": "الجانب الفاتح من اللوحة دائماً"
+        }
+      },
+      "dark": {
+        "label": "داكن",
+        "about": {
+          "browser": "الجانب الداكن من اللوحة دائماً",
+          "phone": "الجانب الداكن من اللوحة دائماً"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "يسار",
+        "about": {
+          "phone": "للهاتف الممسوك باليد اليسرى"
+        }
+      },
+      "free": {
+        "label": "أي مكان",
+        "about": {
+          "phone": "يبقى حيث تضعه"
+        }
+      },
+      "right": {
+        "label": "يمين",
+        "about": {
+          "phone": "للهاتف الممسوك باليد اليمنى"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "كيف يقصد المتكلم ما يقوله الفعل: حقيقةً، أم أمنيةً، أم شكّاً أو تخيّلاً، أم أمراً."
+      },
+      "tense": {
+        "plain": "متى يحدث: قبل الآن، أو الآن، أو لاحقاً."
+      },
+      "aspect": {
+        "plain": "كيف يُرى الفعل: كلٌّ واحد تام، أم جارٍ أو متكرر أو غير مكتمل."
+      },
+      "person": {
+        "plain": "من يفعل: المتكلم (أنا، نحن)، أو المخاطَب (أنت)، أو شخص آخر (هو، هي، هم)."
+      },
+      "number": {
+        "plain": "كم عدده: واحد، أو أكثر من واحد."
+      },
+      "case": {
+        "plain": "الشكل الذي يأخذه الاسم ليدل على دوره في الجملة: من يفعل شيئاً، ولمن، ولمن يملك، وأين."
+      },
+      "gender": {
+        "plain": "فئة ينتمي إليها كل اسم، فتتغير الكلمات حوله لتطابقه. وله صلة قليلة بالجنس البيولوجي: كلمة das Mädchen الألمانية، أي الفتاة، محايدة."
+      },
+      "definiteness": {
+        "plain": "هل الشيء واحد معيّن معروف (البيت)، أم أي واحد (بيت)."
+      },
+      "declension": {
+        "plain": "مجموعة النهايات التي يأخذها الاسم أو الصفة، وتعتمد على الكلمات التي حولها."
+      },
+      "degree": {
+        "plain": "مدى قوة الصفة: كبير، أكبر، الأكبر."
+      },
+      "voice": {
+        "plain": "هل الفاعل يقوم بالفعل (كتبت الرسالة) أم يقع الفعل عليه (كُتبت الرسالة)."
+      },
+      "register": {
+        "plain": "مدى رسمية الكلمة: للغرباء والكتابة الرسمية، أم للأصدقاء."
+      },
+      "nonfinite": {
+        "plain": "صيغة فعل تذكر الحدث دون أن تذكر من يقوم به ومتى: أن يذهب، يذهب، ذاهباً."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "واحد من شيء.",
+        "example": "كلب *واحد*"
+      },
+      "plural": {
+        "plain": "أكثر من واحد.",
+        "example": "*كلاب*"
+      },
+      "dual": {
+        "plain": "اثنان بالضبط، في اللغات التي لها صيغة خاصة بالزوج.",
+        "example": "السلوفينية *hiši*، بيتان"
+      },
+      "first-person": {
+        "plain": "المتكلم: أنا، أو نحن.",
+        "example": "*أنا* أمشي، *نحن* نمشي"
+      },
+      "second-person": {
+        "plain": "المخاطَب: أنت.",
+        "example": "*أنتَ* تمشي"
+      },
+      "third-person": {
+        "plain": "أي شخص آخر: هو، هي، هم.",
+        "example": "*هي* تمشي"
+      },
+      "nominative": {
+        "plain": "من يقوم بالفعل: الفاعل.",
+        "example": "*الكلب* يعضّ الرجل."
+      },
+      "accusative": {
+        "plain": "من يقع عليه الفعل: المفعول به.",
+        "example": "الكلب يعضّ *الرجل*."
+      },
+      "dative": {
+        "plain": "من يُعطى له شيء أو يُفعل له: لمن.",
+        "example": "أعطي *الرجلَ* كتاباً."
+      },
+      "genitive": {
+        "plain": "لمن هو، أو جزء ممن أو مما: لـ، من.",
+        "example": "*كتاب الرجل*، سقف *البيت*"
+      },
+      "vocative": {
+        "plain": "الصيغة التي تُستعمل لنداء شخص أو مخاطبته مباشرة.",
+        "example": "البولندية *Anno!*، يا آنا!"
+      },
+      "instrumental": {
+        "plain": "ما يُفعل به شيء أو بواسطته.",
+        "example": "الروسية писать *ручкой*، *الكتابة بالقلم*"
+      },
+      "locative": {
+        "plain": "أين يوجد الشيء.",
+        "example": "البولندية w *domu*، *في البيت*"
+      },
+      "prepositional": {
+        "plain": "الصيغة التي يأخذها الاسم بعد حروف جر معينة، غالباً عن المكان أو الموضوع.",
+        "example": "الروسية о *книге*، *عن الكتاب*"
+      },
+      "ablative": {
+        "plain": "الابتعاد عن شيء، أو الخروج منه، أو بواسطته.",
+        "example": "اللاتينية *Romā*، من روما"
+      },
+      "partitive": {
+        "plain": "جزء من شيء، أو فعل لم يُنجز إلى نهايته.",
+        "example": "الفنلندية *vettä*، بعض الماء"
+      },
+      "inessive": {
+        "plain": "داخل شيء.",
+        "example": "الفنلندية *talossa*، *في البيت*"
+      },
+      "elative": {
+        "plain": "خارج شيء.",
+        "example": "الفنلندية *talosta*، *من البيت*"
+      },
+      "illative": {
+        "plain": "إلى داخل شيء.",
+        "example": "الفنلندية *taloon*، *إلى البيت*"
+      },
+      "adessive": {
+        "plain": "على شيء أو عنده.",
+        "example": "الفنلندية *pöydällä*، *على الطاولة*"
+      },
+      "allative": {
+        "plain": "إلى أعلى شيء أو نحوه.",
+        "example": "الفنلندية *pöydälle*، *إلى الطاولة*"
+      },
+      "essive": {
+        "plain": "أن تكون شيئاً لفترة، كدور أو حال.",
+        "example": "الفنلندية *lapsena*، *كطفل*"
+      },
+      "translative": {
+        "plain": "أن تصير شيئاً.",
+        "example": "الفنلندية *opettajaksi*، (لتصبح) *معلماً*"
+      },
+      "abessive": {
+        "plain": "بلا شيء.",
+        "example": "الفنلندية *rahatta*، *بلا مال*"
+      },
+      "comitative": {
+        "plain": "مع شيء.",
+        "example": "الإستونية *sõbraga*، *مع صديق*"
+      },
+      "masculine": {
+        "plain": "إحدى فئات الأسماء؛ الكلمات حول الاسم المذكر تأخذ نهاياته. وهو في الغالب من شأن الكلمة لا من شأن الجنس.",
+        "example": "الإسبانية *el libro*، الكتاب"
+      },
+      "feminine": {
+        "plain": "إحدى فئات الأسماء؛ الكلمات حول الاسم المؤنث تأخذ نهاياته. وهو في الغالب من شأن الكلمة لا من شأن الجنس.",
+        "example": "الإسبانية *la mesa*، الطاولة"
+      },
+      "neuter": {
+        "plain": "فئة الأسماء التي ليست مذكرة ولا مؤنثة.",
+        "example": "الألمانية *das Haus*، البيت"
+      },
+      "animate": {
+        "plain": "يُقال عن اسم يدل على إنسان أو حيوان، ولبعض اللغات نهايات خاصة به.",
+        "example": "الروسية вижу *брата*، أرى أخي"
+      },
+      "inanimate": {
+        "plain": "يُقال عن اسم يدل على شيء لا على إنسان أو حيوان.",
+        "example": "الروسية вижу *стол*، أرى الطاولة"
+      },
+      "definite": {
+        "plain": "شيء معيّن يعرفه المتكلمان: ال التعريف.",
+        "example": "السويدية *huset*، البيت"
+      },
+      "indefinite": {
+        "plain": "أي شيء، غير معروف بعد: التنكير.",
+        "example": "السويدية *ett hus*، بيت"
+      },
+      "present": {
+        "plain": "الآن، أو دائماً، أو عادةً.",
+        "example": "هي *تمشي*"
+      },
+      "past": {
+        "plain": "قبل الآن.",
+        "example": "هي *مشت*"
+      },
+      "future": {
+        "plain": "بعد الآن.",
+        "example": "هي *ستمشي*"
+      },
+      "non-past": {
+        "plain": "الآن أو لاحقاً: صيغة واحدة للاثنين.",
+        "example": "اليابانية *食べる*، يأكل أو سيأكل"
+      },
+      "preterite": {
+        "plain": "شيء حدث وانتهى عند نقطة في الماضي.",
+        "example": "الإسبانية ayer *comí*، أمس *أكلتُ*"
+      },
+      "imperfect": {
+        "plain": "الماضي من الداخل: شيء كان يجري، أو يتكرر، أو كان معتاداً.",
+        "example": "الإسبانية *comía*، *كنت آكل*، *كنت آكل عادةً*"
+      },
+      "perfect": {
+        "plain": "انتهى قبل الآن، ولا يزال مهماً الآن.",
+        "example": "هي *مشت* (وأثر ذلك باقٍ)"
+      },
+      "pluperfect": {
+        "plain": "انتهى قبل لحظة أخرى في الماضي.",
+        "example": "هي *كانت قد مشت*"
+      },
+      "aorist": {
+        "plain": "حدث ماضٍ يُروى كحدث تام واحد، كما تروي القصة.",
+        "example": "البلغارية *писах*، كتبتُ"
+      },
+      "indicative": {
+        "plain": "الصيغة المعتادة لقول ما هو كائن: الوقائع، والأسئلة عنها.",
+        "example": "هي *هنا*."
+      },
+      "subjunctive": {
+        "plain": "الصيغة لما يُتمنّى أو يُطلب أو يُشكّ فيه أو يُخشى أو يُتخيّل فقط، لا لما يُقال إنه كائن. وتأتي غالباً بعد كلمات مثل: لو، إذا، كي.",
+        "example": "I wish he *were* here. It is vital that she *be* on time. الإسبانية quiero que *vengas*، أريدك أن تأتي"
+      },
+      "subjunctive-i": {
+        "plain": "صيغة الألمانية لنقل ما قاله غيرك دون أن تضمن صحته.",
+        "example": "الألمانية Er sagt, er *sei* krank. يقول إنه مريض."
+      },
+      "subjunctive-ii": {
+        "plain": "صيغة الألمانية لما ليس واقعاً: الأمنيات، والطلبات المهذبة، ولو.",
+        "example": "الألمانية Wenn ich Zeit *hätte*... لو كان لي وقت..."
+      },
+      "conditional": {
+        "plain": "ما سيحدث لو كان شيء آخر كائناً.",
+        "example": "هي *ستمشي* (لو...)"
+      },
+      "conditional-i": {
+        "plain": "ما سيحدث لو كان شيء آخر كائناً.",
+        "example": "الألمانية ich *würde gehen*، كنت سأذهب"
+      },
+      "conditional-ii": {
+        "plain": "ما كان سيحدث لو كان شيء آخر قد كان كائناً.",
+        "example": "الألمانية ich *wäre gegangen*، كنت سأكون قد ذهبت"
+      },
+      "future-i": {
+        "plain": "بعد الآن.",
+        "example": "الألمانية ich *werde gehen*، سأذهب"
+      },
+      "future-ii": {
+        "plain": "ينتهي عند نقطة لاحقة.",
+        "example": "الألمانية ich *werde gegangen sein*، سأكون قد ذهبت"
+      },
+      "imperative": {
+        "plain": "الصيغة لأمر شخص بفعل شيء.",
+        "example": "*امشِ!*"
+      },
+      "jussive": {
+        "plain": "صيغة للسماح أو الأمر لشخص، غالباً ليس المستمع، بفعل شيء.",
+        "example": "العربية *لِيَكْتُبْ*، ليكتبْ"
+      },
+      "optative": {
+        "plain": "صيغة للتمني: ليكن كذلك."
+      },
+      "potential": {
+        "plain": "صيغة لما هو محتمل أو ممكن أن يكون كذلك.",
+        "example": "الفنلندية *lienee*، (هو) ربما كذلك"
+      },
+      "active": {
+        "plain": "الفاعل يقوم بالفعل.",
+        "example": "*كتبت* الرسالة."
+      },
+      "passive": {
+        "plain": "يقع الفعل على الفاعل.",
+        "example": "*كُتبت* الرسالة."
+      },
+      "infinitive": {
+        "plain": "الفعل نفسه، دون أن يقوم به أحد بعد: الصيغة التي يُسجَّل بها في القاموس.",
+        "example": "*أن يمشي*، الإسبانية *caminar*"
+      },
+      "participle": {
+        "plain": "صيغة من الفعل تعمل كالصفة، ومع فعل مساعد تكوّن أزمنة أخرى.",
+        "example": "كوب *مكسور*، هي *قد مشت*"
+      },
+      "gerund": {
+        "plain": "صيغة من الفعل لحدث جارٍ، أو تُستعمل كالاسم.",
+        "example": "هي *تمشي الآن*، الإسبانية está *caminando*"
+      },
+      "imperfective": {
+        "plain": "الفعل مُرى كأنه جارٍ أو متكرر أو غير مكتمل.",
+        "example": "الروسية я *читал*، كنت أقرأ"
+      },
+      "perfective": {
+        "plain": "الفعل مُرى كأنه كلٌّ واحد تام.",
+        "example": "الروسية я *прочитал*، قرأته (حتى النهاية)"
+      },
+      "progressive": {
+        "plain": "يجري في تلك اللحظة.",
+        "example": "هي *تمشي الآن*"
+      },
+      "positive": {
+        "plain": "الصفة كما هي، دون مقارنة.",
+        "example": "*كبير*"
+      },
+      "comparative": {
+        "plain": "أكثر من شيء آخر.",
+        "example": "*أكبر*، *أجمل*"
+      },
+      "superlative": {
+        "plain": "أكثر من كل شيء.",
+        "example": "*الأكبر*، *الأجمل*"
+      },
+      "strong": {
+        "plain": "نهايات الصفة في الألمانية عندما لا تسبقها أداة تعريف تدل على الحالة.",
+        "example": "الألمانية *kaltes* Wasser، ماء بارد"
+      },
+      "weak": {
+        "plain": "نهايات الصفة في الألمانية بعد der وdie وdas، حين تدل أداة التعريف على الحالة أصلاً.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "نهايات الصفة في الألمانية بعد ein وkein وmein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "للغرباء والكبار والكتابة الرسمية.",
+        "example": "الألمانية *Sie*، الإسبانية *usted*"
+      },
+      "informal": {
+        "plain": "للأصدقاء والعائلة والأطفال.",
+        "example": "الألمانية *du*، الإسبانية *tú*"
+      },
+      "polite": {
+        "plain": "الطريقة المحترمة للقول.",
+        "example": "اليابانية *食べます*، (أنا) آكل، بأدب"
+      }
+    }
+  }
+}

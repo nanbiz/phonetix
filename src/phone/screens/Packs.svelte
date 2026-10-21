@@ -54,7 +54,7 @@
             <span class="item-value">{count(pack.entries)} · {size(pack.bytes)}</span>
           </span>
           {#if fetching === pack.lang}
-            <span aria-label="fetching"><Loader class="option-check" /></span>
+            <span aria-label={SAYS['fetching']}><Loader class="option-check" /></span>
           {:else if held.includes(pack.lang)}
             <button class="icon-button" data-does="remove" aria-label={SAYS['remove']} onclick={() => forget(pack.lang)}>
               <Remove />

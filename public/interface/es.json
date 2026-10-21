@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Permitir",
+    "allow-overlay": "Permitir superposición",
+    "already-in": "Esta página ya está en %s",
+    "broad-mark": "/ /",
+    "change": "Cambiar",
+    "choose-language": "Elegir un idioma",
+    "close": "Cerrar",
+    "detail-explained": "Amplia son los sonidos que distinguen unas palabras de otras; estrecha es cada detalle de cómo se pronuncia, tal como lo dice un hablante de ese acento.",
+    "every-app": "Todas las apps",
+    "get": "Descargar",
+    "loading-dictionary": "Cargando el diccionario…",
+    "master-idle": "No se muestra nada sobre tus apps",
+    "master-off": "En pausa",
+    "master-on": "Leyendo",
+    "master-unready": "Permite que lea la pantalla y se muestre sobre tus apps",
+    "master-working": "Se están explicando las palabras de tus apps",
+    "narrow-mark": "[ ]",
+    "no-source": "para el significado de una palabra; la pronunciación ya viene incluida",
+    "no-translation": "No traducir",
+    "nothing-found": "Nada con ese nombre",
+    "nothing-yet": "nada todavía",
+    "open-accessibility": "Abrir accesibilidad",
+    "preview": "Vista previa",
+    "preview-about": "las palabras de una página que esto explicaría",
+    "remove": "Quitar",
+    "rest-edge": "En el borde: %s",
+    "rest-loose": "Donde lo dejes",
+    "no-direction": "No se pudo obtener ninguna traducción desde %s. Las palabras muestran cómo suenan.",
+    "service-stopped": "Phonetix tiene permiso para leer la pantalla, pero no está en marcha. Desactívalo y vuelve a activarlo en los ajustes de accesibilidad del teléfono.",
+    "rest-put": "Arrastra el botón hacia arriba o hacia abajo, o al otro lado.",
+    "say-into": "Responder en",
+    "say-no-language": "Primero elige un idioma al que traducir.",
+    "say-no-model": "Tu servidor de diccionarios no tiene modelo de traducción para esa dirección.",
+    "say-nothing": "no hay palabra para eso",
+    "say-placeholder": "lo que quieres decir",
+    "search": "Buscar",
+    "speak": "Dilo",
+    "touch-off": "Cada toque va a la app de debajo, así que el desplazamiento no cambia.",
+    "touch-on": "Un deslizamiento que empieza en una palabra no desplaza la página.",
+    "turn": "Responder al revés",
+    "use-this": "Usar",
+    "say-fetching": "descargando %s",
+    "back": "Atrás",
+    "apps-chosen": "%s elegidas",
+    "packs-held": "%s descargados",
+    "other-languages": "Otros idiomas",
+    "words-count": "%s palabras",
+    "packs-here": "En este teléfono",
+    "packs-more": "Disponibles",
+    "every-word": "cada palabra",
+    "one-in": "una de cada %s",
+    "open-panel": "Abrir",
+    "site-off": "siempre desactivado aquí",
+    "site-following": "sigue el interruptor principal (ahora: %s)",
+    "on": "activado",
+    "off": "desactivado",
+    "set-key": "Asignar una tecla",
+    "simple": "Sencilla",
+    "detailed": "Detallada",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "nada más",
+    "learn-none": "ninguno",
+    "add-language": "Añadir un idioma",
+    "learn-language": "Aprender un idioma",
+    "make-main": "Hacerlo mi idioma",
+    "main-language": "Mi idioma",
+    "learning-it": "aprendiendo %s",
+    "dictate": "Dictar",
+    "pos-adj": "adjetivo",
+    "pos-adv": "adverbio",
+    "pos-article": "artículo",
+    "pos-character": "carácter",
+    "pos-conj": "conjunción",
+    "pos-contraction": "contracción",
+    "pos-det": "determinante",
+    "pos-intj": "interjección",
+    "pos-name": "nombre propio",
+    "pos-noun": "sustantivo",
+    "pos-num": "numeral",
+    "pos-particle": "partícula",
+    "pos-phrase": "locución",
+    "pos-postp": "posposición",
+    "pos-prefix": "prefijo",
+    "pos-prep": "preposición",
+    "pos-prep_phrase": "locución preposicional",
+    "pos-pron": "pronombre",
+    "pos-proverb": "refrán",
+    "pos-punct": "puntuación",
+    "pos-suffix": "sufijo",
+    "pos-symbol": "símbolo",
+    "pos-verb": "verbo",
+    "pos-abbrev": "abreviatura",
+    "pos-affix": "afijo",
+    "pos-infix": "infijo",
+    "pos-interfix": "interfijo",
+    "pos-circumfix": "circunfijo",
+    "pos-root": "raíz",
+    "pos-combining_form": "elemento compositivo",
+    "pos-classifier": "clasificador",
+    "pos-counter": "contador",
+    "pos-letter": "letra",
+    "no-dictionary-for": "Aún no hay diccionario para %s",
+    "unknown-language": "No está claro qué idioma es",
+    "looking-up": "Buscando",
+    "nothing-for": "No se encontró nada para %s",
+    "read-as": "Leído como %s",
+    "read-as-accent": "Leído como %s, acento %s",
+    "translated-by": "Traducido por %s",
+    "translated-by-machine": "Traducción automática",
+    "guess": "estimado",
+    "in-english": "en inglés",
+    "getting-dictionary": "Descargando el diccionario de %s",
+    "getting-dictionaries": "Descargando %s diccionarios",
+    "say-word": "decir %s",
+    "hear-word": "escuchar %s",
+    "play-sound": "reproducir una grabación de %s",
+    "read-about-sound": "leer sobre %s",
+    "see-mouth": "ver una boca diciendo %s",
+    "mouth-making": "cómo forma la boca %s",
+    "tap-sound": "Toca un sonido para oír cuál es",
+    "what-this-is": "Qué es esto",
+    "for-example": "Por ejemplo: %s",
+    "fetching": "descargando",
+    "done": "listo",
+    "ordinal-first-person": "1.ª",
+    "ordinal-second-person": "2.ª",
+    "ordinal-third-person": "3.ª",
+    "person-number": "%s %s",
+    "person-number-long": "%s persona del %s",
+    "person-long": "%s persona",
+    "person-and-number": "persona y número",
+    "form-of": "de",
+    "term-mood": "modo",
+    "term-tense": "tiempo",
+    "term-aspect": "aspecto",
+    "term-person": "persona",
+    "term-number": "número",
+    "term-case": "caso",
+    "term-gender": "género",
+    "term-definiteness": "definitud",
+    "term-declension": "declinación",
+    "term-degree": "grado",
+    "term-voice": "voz",
+    "term-register": "registro",
+    "term-nonfinite": "forma no personal",
+    "term-singular": "singular",
+    "term-plural": "plural",
+    "term-dual": "dual",
+    "term-first-person": "primera persona",
+    "term-second-person": "segunda persona",
+    "term-third-person": "tercera persona",
+    "term-nominative": "nominativo",
+    "term-accusative": "acusativo",
+    "term-dative": "dativo",
+    "term-genitive": "genitivo",
+    "term-vocative": "vocativo",
+    "term-instrumental": "instrumental",
+    "term-locative": "locativo",
+    "term-prepositional": "preposicional",
+    "term-ablative": "ablativo",
+    "term-partitive": "partitivo",
+    "term-inessive": "inesivo",
+    "term-elative": "elativo",
+    "term-illative": "ilativo",
+    "term-adessive": "adesivo",
+    "term-allative": "alativo",
+    "term-essive": "esivo",
+    "term-translative": "translativo",
+    "term-abessive": "abesivo",
+    "term-comitative": "comitativo",
+    "term-masculine": "masculino",
+    "term-feminine": "femenino",
+    "term-neuter": "neutro",
+    "term-animate": "animado",
+    "term-inanimate": "inanimado",
+    "term-definite": "definido",
+    "term-indefinite": "indefinido",
+    "term-present": "presente",
+    "term-past": "pasado",
+    "term-future": "futuro",
+    "term-non-past": "no pasado",
+    "term-preterite": "pretérito indefinido",
+    "term-imperfect": "pretérito imperfecto",
+    "term-perfect": "pretérito perfecto",
+    "term-pluperfect": "pretérito pluscuamperfecto",
+    "term-aorist": "aoristo",
+    "term-indicative": "indicativo",
+    "term-subjunctive": "subjuntivo",
+    "term-subjunctive-i": "subjuntivo I",
+    "term-subjunctive-ii": "subjuntivo II",
+    "term-conditional": "condicional",
+    "term-conditional-i": "condicional simple",
+    "term-conditional-ii": "condicional compuesto",
+    "term-future-i": "futuro simple",
+    "term-future-ii": "futuro compuesto",
+    "term-imperative": "imperativo",
+    "term-jussive": "yusivo",
+    "term-optative": "optativo",
+    "term-potential": "potencial",
+    "term-active": "activa",
+    "term-passive": "pasiva",
+    "term-infinitive": "infinitivo",
+    "term-participle": "participio",
+    "term-gerund": "gerundio",
+    "term-imperfective": "imperfectivo",
+    "term-perfective": "perfectivo",
+    "term-progressive": "progresivo",
+    "term-positive": "positivo",
+    "term-comparative": "comparativo",
+    "term-superlative": "superlativo",
+    "term-strong": "fuerte",
+    "term-weak": "débil",
+    "term-mixed": "mixta",
+    "term-formal": "formal",
+    "term-informal": "informal",
+    "term-polite": "cortés",
+    "accent-British": "británico",
+    "accent-American": "estadounidense",
+    "accent-Scottish": "escocés",
+    "accent-Australian": "australiano",
+    "accent-Caribbean": "caribeño",
+    "accent-Canadian": "canadiense",
+    "accent-Spain": "España",
+    "accent-Latin America": "Latinoamérica",
+    "accent-Rioplatense": "rioplatense",
+    "accent-Germany": "Alemania",
+    "accent-Switzerland": "Suiza",
+    "accent-Austria": "Austria",
+    "accent-Portugal": "Portugal",
+    "accent-Brazil": "Brasil",
+    "accent-France": "Francia",
+    "accent-Canada": "Canadá",
+    "accent-Northern": "norte",
+    "accent-Central": "central"
+  },
+  "rows": {
+    "on": {
+      "name": "Anotar lo que leo",
+      "about": ""
+    },
+    "site": {
+      "name": "En este sitio",
+      "about": ""
+    },
+    "layer": {
+      "name": "Superposición",
+      "about": ""
+    },
+    "density": {
+      "name": "Con qué frecuencia",
+      "about": ""
+    },
+    "target": {
+      "name": "Idioma",
+      "about": ""
+    },
+    "source": {
+      "name": "Esta página está en",
+      "about": ""
+    },
+    "accent": {
+      "name": "Acento",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Diccionarios",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Transcripciones",
+      "about": ""
+    },
+    "stress": {
+      "name": "Marcas de acento",
+      "about": ""
+    },
+    "delay": {
+      "name": "Espera antes de abrir una tarjeta",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animaciones",
+      "about": ""
+    },
+    "say": {
+      "name": "La palabra para algo",
+      "about": ""
+    },
+    "setup": {
+      "name": "Configuración",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Leer la pantalla",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Mostrar sobre otras apps",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Pronunciación",
+      "about": ""
+    },
+    "translate": {
+      "name": "Traducción",
+      "about": ""
+    },
+    "side": {
+      "name": "Qué lado",
+      "about": ""
+    },
+    "rest": {
+      "name": "Dónde está el botón",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Altura fija",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Arrástralo sobre una palabra",
+      "about": "Explica lo que va pasando por debajo, y la página sigue desplazándose"
+    },
+    "lens-sweep": {
+      "name": "Mantenlo pulsado y desliza",
+      "about": "Cada palabra por la que pasa se suma, y la tarjeta explica toda la frase"
+    },
+    "lens-hold": {
+      "name": "Mantenlo pulsado",
+      "about": "Abre los ajustes"
+    },
+    "lens-tap": {
+      "name": "Tócalo",
+      "about": "Pregunta cómo se dice algo en medio de lo que lees; tócalo otra vez para guardar la tarjeta"
+    },
+    "touch": {
+      "name": "Tocar una palabra",
+      "about": ""
+    },
+    "where": {
+      "name": "Dónde",
+      "about": ""
+    },
+    "apps": {
+      "name": "Apps",
+      "about": ""
+    },
+    "start": {
+      "name": "Antes de poder explicar una palabra",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Toca una palabra para ver su tarjeta",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Para ver qué significa una palabra",
+      "about": ""
+    },
+    "theme": {
+      "name": "Tema",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Avanzado",
+      "about": ""
+    },
+    "dark": {
+      "name": "Claro u oscuro",
+      "about": ""
+    },
+    "mine": {
+      "name": "Mi idioma",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Botón lateral",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Idiomas",
+      "about": ""
+    },
+    "position": {
+      "name": "Posición",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Apariencia",
+      "about": ""
+    },
+    "accents": {
+      "name": "Acentos",
+      "about": ""
+    },
+    "inline": {
+      "name": "Reemplazar palabras",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Palabras reemplazadas",
+      "about": ""
+    },
+    "translator": {
+      "name": "Traductor",
+      "about": ""
+    },
+    "into": {
+      "name": "Traducir al",
+      "about": ""
+    },
+    "known": {
+      "name": "No traducir nunca",
+      "about": ""
+    },
+    "learn": {
+      "name": "Aprendiendo",
+      "about": ""
+    },
+    "cards": {
+      "name": "Consultar",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Pronunciación",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Significado",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Gramática",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Otros significados",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Describir cada palabra",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Míos",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "pocas palabras",
+      "cada palabra"
+    ],
+    "delay": [
+      "al instante",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Desactivado",
+        "about": {
+          "browser": "no se reemplaza nada; pregunta tú por una palabra",
+          "phone": "no se reemplaza nada; el botón sigue explicando una palabra"
+        }
+      },
+      "meaning": {
+        "label": "Traducción",
+        "about": {
+          "browser": "la palabra reemplazada por lo que significa",
+          "phone": "la palabra reemplazada por lo que significa"
+        }
+      },
+      "sound": {
+        "label": "Pronunciación",
+        "about": {
+          "browser": "la palabra reemplazada por cómo se dice",
+          "phone": "la palabra reemplazada por cómo se dice"
+        }
+      },
+      "both": {
+        "label": "Ambos",
+        "about": {
+          "browser": "lo que significa, y cómo se dice eso",
+          "phone": "lo que significa, y cómo se dice eso"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "los sonidos que distinguen las palabras",
+          "phone": "los sonidos que distinguen las palabras"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "cada detalle de cómo se dice, como la aspiración y el ensordecimiento",
+          "phone": "cada detalle de cómo se dice, como la aspiración y el ensordecimiento"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Sistema",
+        "about": {
+          "browser": "lo que tenga configurado este dispositivo",
+          "phone": "lo que tenga configurado este dispositivo"
+        }
+      },
+      "light": {
+        "label": "Claro",
+        "about": {
+          "browser": "siempre el lado claro de la paleta",
+          "phone": "siempre el lado claro de la paleta"
+        }
+      },
+      "dark": {
+        "label": "Oscuro",
+        "about": {
+          "browser": "siempre el lado oscuro de la paleta",
+          "phone": "siempre el lado oscuro de la paleta"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Izquierda",
+        "about": {
+          "phone": "para un teléfono en la mano izquierda"
+        }
+      },
+      "free": {
+        "label": "Libre",
+        "about": {
+          "phone": "se queda donde lo dejes"
+        }
+      },
+      "right": {
+        "label": "Derecha",
+        "about": {
+          "phone": "para un teléfono en la mano derecha"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Cómo presenta el hablante lo que dice el verbo: como un hecho, como algo deseado, dudado o imaginado, o como una orden."
+      },
+      "tense": {
+        "plain": "Cuándo ocurre: antes de ahora, ahora o más tarde."
+      },
+      "aspect": {
+        "plain": "Cómo se ve la acción: como un todo terminado, o como algo en curso, repetido o sin terminar."
+      },
+      "person": {
+        "plain": "Quién lo hace: el que habla (yo, nosotros), aquel a quien se habla (tú, vosotros) u otra persona (él, ella, ellos)."
+      },
+      "number": {
+        "plain": "Cuántos: uno, o más de uno."
+      },
+      "case": {
+        "plain": "La forma que toma un sustantivo para mostrar su función en la oración: quién hace algo, a quién, de quién, dónde."
+      },
+      "gender": {
+        "plain": "Una clase a la que pertenece cada sustantivo, con la que concuerdan las palabras de alrededor. Tiene poco que ver con el sexo: en alemán, das Mädchen, la niña, es neutro."
+      },
+      "definiteness": {
+        "plain": "Si se trata de algo concreto y conocido (la casa) o de uno cualquiera (una casa)."
+      },
+      "declension": {
+        "plain": "El conjunto de terminaciones que toma un sustantivo o un adjetivo, según las palabras que lo rodean."
+      },
+      "degree": {
+        "plain": "En qué medida se aplica un adjetivo: grande, más grande, el más grande."
+      },
+      "voice": {
+        "plain": "Si el sujeto hace la acción (ella lo escribió) o la recibe (fue escrito)."
+      },
+      "register": {
+        "plain": "Lo formal que es la palabra: para desconocidos y textos oficiales, o para amigos."
+      },
+      "nonfinite": {
+        "plain": "Una forma del verbo que nombra la acción sin decir quién la hace ni cuándo: ir, yendo, ido."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Uno solo.",
+        "example": "un *perro*"
+      },
+      "plural": {
+        "plain": "Más de uno.",
+        "example": "dos *perros*"
+      },
+      "dual": {
+        "plain": "Exactamente dos, en los idiomas que tienen una forma solo para pares.",
+        "example": "esloveno *hiši*, dos casas"
+      },
+      "first-person": {
+        "plain": "El que habla: yo, o nosotros.",
+        "example": "*yo* camino, *nosotros* caminamos"
+      },
+      "second-person": {
+        "plain": "Aquel a quien se habla: tú, o vosotros.",
+        "example": "*tú* caminas"
+      },
+      "third-person": {
+        "plain": "Cualquier otro: él, ella, ellos, ellas.",
+        "example": "*ella camina*"
+      },
+      "nominative": {
+        "plain": "Quien hace la acción: el sujeto.",
+        "example": "*El perro* muerde al hombre."
+      },
+      "accusative": {
+        "plain": "Aquello sobre lo que recae la acción: el complemento directo.",
+        "example": "El perro muerde *al hombre*."
+      },
+      "dative": {
+        "plain": "Aquel a quien se da algo o para quien se hace: a quién.",
+        "example": "Le doy un libro *al hombre*."
+      },
+      "genitive": {
+        "plain": "De quién es, o de qué forma parte: de.",
+        "example": "el libro *del hombre*, el tejado *de la casa*"
+      },
+      "vocative": {
+        "plain": "La forma que se usa para llamar o hablar directamente a alguien.",
+        "example": "polaco *Anno!*, ¡Ana!"
+      },
+      "instrumental": {
+        "plain": "Con qué o por medio de qué se hace algo.",
+        "example": "ruso писать *ручкой*, escribir *con un bolígrafo*"
+      },
+      "locative": {
+        "plain": "Dónde está algo.",
+        "example": "polaco w *domu*, *en la casa*"
+      },
+      "prepositional": {
+        "plain": "La forma que toma un sustantivo tras ciertas preposiciones, sobre todo para decir dónde o sobre qué.",
+        "example": "ruso о *книге*, sobre *el libro*"
+      },
+      "ablative": {
+        "plain": "Lejos de, fuera de, o por medio de algo.",
+        "example": "latín *Romā*, desde Roma"
+      },
+      "partitive": {
+        "plain": "Una parte de algo, o una acción que no se lleva hasta el final.",
+        "example": "finés *vettä*, algo de agua"
+      },
+      "inessive": {
+        "plain": "Dentro de algo.",
+        "example": "finés *talossa*, en la casa"
+      },
+      "elative": {
+        "plain": "Saliendo de algo.",
+        "example": "finés *talosta*, fuera de la casa"
+      },
+      "illative": {
+        "plain": "Entrando en algo.",
+        "example": "finés *taloon*, a la casa (hacia dentro)"
+      },
+      "adessive": {
+        "plain": "Sobre algo o junto a algo.",
+        "example": "finés *pöydällä*, sobre la mesa"
+      },
+      "allative": {
+        "plain": "Hacia algo o encima de algo.",
+        "example": "finés *pöydälle*, a la mesa (encima)"
+      },
+      "essive": {
+        "plain": "Ser algo durante un tiempo, como papel o estado.",
+        "example": "finés *lapsena*, de niño"
+      },
+      "translative": {
+        "plain": "Convertirse en algo.",
+        "example": "finés *opettajaksi*, (llegar a ser) profesor"
+      },
+      "abessive": {
+        "plain": "Sin algo.",
+        "example": "finés *rahatta*, sin dinero"
+      },
+      "comitative": {
+        "plain": "Junto con algo o alguien.",
+        "example": "estonio *sõbraga*, con un amigo"
+      },
+      "masculine": {
+        "plain": "Una de las clases en que se dividen los sustantivos; las palabras que rodean a un sustantivo masculino concuerdan con él. Es más cosa de la palabra que del sexo.",
+        "example": "*el libro*"
+      },
+      "feminine": {
+        "plain": "Una de las clases en que se dividen los sustantivos; las palabras que rodean a un sustantivo femenino concuerdan con él. Es más cosa de la palabra que del sexo.",
+        "example": "*la mesa*"
+      },
+      "neuter": {
+        "plain": "La clase de los sustantivos que no son ni masculinos ni femeninos.",
+        "example": "alemán *das Haus*, la casa"
+      },
+      "animate": {
+        "plain": "Se dice de un sustantivo que designa una persona o un animal, al que algunos idiomas dan terminaciones propias.",
+        "example": "ruso вижу *брата*, veo a mi hermano"
+      },
+      "inanimate": {
+        "plain": "Se dice de un sustantivo que designa una cosa, no una persona ni un animal.",
+        "example": "ruso вижу *стол*, veo la mesa"
+      },
+      "definite": {
+        "plain": "Uno concreto que ambos hablantes conocen: el, la.",
+        "example": "*la casa*"
+      },
+      "indefinite": {
+        "plain": "Uno cualquiera, aún no conocido: un, una.",
+        "example": "*una casa*"
+      },
+      "present": {
+        "plain": "Ahora, siempre, o por costumbre.",
+        "example": "ella *camina*"
+      },
+      "past": {
+        "plain": "Antes de ahora.",
+        "example": "ella *caminó*"
+      },
+      "future": {
+        "plain": "Después de ahora.",
+        "example": "ella *caminará*"
+      },
+      "non-past": {
+        "plain": "Ahora o más tarde: una sola forma para ambos.",
+        "example": "japonés *食べる*, come o comerá"
+      },
+      "preterite": {
+        "plain": "Algo que ocurrió y terminó en un momento del pasado.",
+        "example": "ayer *comí*"
+      },
+      "imperfect": {
+        "plain": "El pasado visto desde dentro: algo que duraba, se repetía o solía ser así.",
+        "example": "*comía*"
+      },
+      "perfect": {
+        "plain": "Hecho antes de ahora y que todavía importa ahora.",
+        "example": "ella *ha caminado*"
+      },
+      "pluperfect": {
+        "plain": "Hecho antes de otro momento del pasado.",
+        "example": "ella *había caminado*"
+      },
+      "aorist": {
+        "plain": "Una acción pasada contada como un único hecho completo, como la cuenta un relato.",
+        "example": "búlgaro *писах*, escribí"
+      },
+      "indicative": {
+        "plain": "La forma corriente para decir lo que es: hechos, y preguntas sobre ellos.",
+        "example": "Ella *está* aquí."
+      },
+      "subjunctive": {
+        "plain": "La forma para lo que se desea, se quiere, se duda, se teme o solo se imagina, en vez de afirmarse. Suele ir tras palabras como que, si, para que.",
+        "example": "Quiero que *vengas*. Ojalá *estuviera* aquí. Es necesario que *llegue* a tiempo."
+      },
+      "subjunctive-i": {
+        "plain": "La forma del alemán para repetir lo que otro ha dicho, sin responder de ello.",
+        "example": "Er sagt, er *sei* krank. Dice que está enfermo."
+      },
+      "subjunctive-ii": {
+        "plain": "La forma del alemán para lo que no es real: deseos, peticiones corteses y ojalás.",
+        "example": "Wenn ich Zeit *hätte*... Si tuviera tiempo..."
+      },
+      "conditional": {
+        "plain": "Lo que pasaría, si otra cosa fuera así.",
+        "example": "ella *caminaría*"
+      },
+      "conditional-i": {
+        "plain": "Lo que pasaría, si otra cosa fuera así.",
+        "example": "alemán ich *würde gehen*, yo iría"
+      },
+      "conditional-ii": {
+        "plain": "Lo que habría pasado, si otra cosa hubiera sido así.",
+        "example": "alemán ich *wäre gegangen*, yo habría ido"
+      },
+      "future-i": {
+        "plain": "Después de ahora.",
+        "example": "alemán ich *werde gehen*, iré"
+      },
+      "future-ii": {
+        "plain": "Hecho para algún momento posterior.",
+        "example": "alemán ich *werde gegangen sein*, habré ido"
+      },
+      "imperative": {
+        "plain": "La forma para decirle a alguien que haga algo.",
+        "example": "*¡Camina!*"
+      },
+      "jussive": {
+        "plain": "Una forma para dejar o mandar que alguien, a menudo no el oyente, haga algo.",
+        "example": "árabe *لِيَكْتُبْ*, que escriba"
+      },
+      "optative": {
+        "plain": "Una forma para desear: ojalá sea así."
+      },
+      "potential": {
+        "plain": "Una forma para lo que probablemente o posiblemente es así.",
+        "example": "finés *lienee*, (él) probablemente es"
+      },
+      "active": {
+        "plain": "El sujeto hace la acción.",
+        "example": "Ella *escribió* la carta."
+      },
+      "passive": {
+        "plain": "El sujeto recibe la acción.",
+        "example": "La carta *fue escrita*."
+      },
+      "infinitive": {
+        "plain": "El verbo en sí, sin nadie que lo haga todavía: la forma con la que aparece en el diccionario.",
+        "example": "*caminar*"
+      },
+      "participle": {
+        "plain": "Una forma del verbo que funciona como un adjetivo y que, con un auxiliar, forma otros tiempos.",
+        "example": "una taza *rota*, ella ha *caminado*"
+      },
+      "gerund": {
+        "plain": "Una forma del verbo para una acción en curso, o usada como un sustantivo.",
+        "example": "está *caminando*"
+      },
+      "imperfective": {
+        "plain": "La acción vista como en curso, repetida o sin terminar.",
+        "example": "ruso я *читал*, leía"
+      },
+      "perfective": {
+        "plain": "La acción vista como un todo terminado.",
+        "example": "ruso я *прочитал*, lo leí (hasta el final)"
+      },
+      "progressive": {
+        "plain": "En curso en ese momento.",
+        "example": "ella *está caminando*"
+      },
+      "positive": {
+        "plain": "El adjetivo tal cual, sin comparar.",
+        "example": "*grande*"
+      },
+      "comparative": {
+        "plain": "Más que otra cosa.",
+        "example": "*más grande*, *más bonito*"
+      },
+      "superlative": {
+        "plain": "Más que todo lo demás.",
+        "example": "el *más grande*, el *más bonito*"
+      },
+      "strong": {
+        "plain": "Las terminaciones de adjetivo que usa el alemán cuando ningún artículo delante muestra el caso.",
+        "example": "*kaltes* Wasser, agua fría"
+      },
+      "weak": {
+        "plain": "Las terminaciones de adjetivo que usa el alemán tras der, die, das, donde el artículo ya muestra el caso.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "Las terminaciones de adjetivo que usa el alemán tras ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "Para desconocidos, mayores y textos oficiales.",
+        "example": "*usted*, alemán *Sie*"
+      },
+      "informal": {
+        "plain": "Para amigos, familia y niños.",
+        "example": "*tú*, alemán *du*"
+      },
+      "polite": {
+        "plain": "La forma respetuosa de decirlo.",
+        "example": "japonés *食べます*, (yo) como, dicho con cortesía"
+      }
+    }
+  }
+}

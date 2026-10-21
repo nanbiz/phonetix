@@ -276,7 +276,7 @@ def real_popup(cdp, extid):
         if inner["tall"] > inner["height"] or inner["tall"] > 520:
             failures.append(f"the {name} screen is {inner['tall']}px in a "
                             f"{inner['height']}px window")
-        evaluate(cdp, session, "document.querySelector('[aria-label=Back]').click()")
+        evaluate(cdp, session, "document.querySelector('[data-does=back]').click()")
         time.sleep(0.5)
     # The lists of languages, which scroll inside themselves and say so.
     for row in ("target", "known"):

@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "אישור",
+    "allow-overlay": "אישור שכבה",
+    "already-in": "הדף הזה כבר בשפת %s",
+    "broad-mark": "/ /",
+    "change": "שינוי",
+    "choose-language": "בחירת שפה",
+    "close": "סגירה",
+    "detail-explained": "רחב הם הצלילים שמבדילים בין מילים; צר הוא כל פרט בהגייה של מילה, כפי שדובר באותה מבטא אומר אותה.",
+    "every-app": "כל האפליקציות",
+    "get": "הורדה",
+    "loading-dictionary": "טוען מילון…",
+    "master-idle": "שום דבר לא מצויר מעל האפליקציות שלך",
+    "master-off": "מושהה",
+    "master-on": "קורא",
+    "master-unready": "אפשר לו לקרוא את המסך ולצייר מעל האפליקציות שלך",
+    "master-working": "המילים באפליקציות שלך מקבלות מענה",
+    "narrow-mark": "[ ]",
+    "no-source": "למשמעות של מילה; איך היא נהגית כבר מובנה",
+    "no-translation": "אל תתרגם",
+    "nothing-found": "אין דבר בשם הזה",
+    "nothing-yet": "עדיין כלום",
+    "open-accessibility": "פתיחת נגישות",
+    "preview": "תצוגה מקדימה",
+    "preview-about": "המילים בדף שהתשובה תענה להן",
+    "remove": "הסרה",
+    "rest-edge": "בצד %s",
+    "rest-loose": "איפה שתשאיר אותו",
+    "no-direction": "לא ניתן היה לקבל תרגום מ-%s. המילים מראות במקום זאת איך הן נשמעות.",
+    "service-stopped": "ל-Phonetix מותר לקרוא את המסך, אבל הוא לא פועל. כבו והדליקו אותו שוב בהגדרות הנגישות של הטלפון.",
+    "rest-put": "גררו את הכפתור למעלה או למטה, או לצד השני.",
+    "say-into": "ענו ב",
+    "say-no-language": "בחרו קודם שפה לקריאה.",
+    "say-no-model": "אין מודל תרגום לכיוון הזה בשרת המילונים שלכם.",
+    "say-nothing": "אין מילה לזה",
+    "say-placeholder": "מה שאתם רוצים לומר",
+    "search": "חיפוש",
+    "speak": "אמרו את זה",
+    "touch-off": "כל מגע הולך לאפליקציה שמתחתיו, ולכן הגלילה לא משתנה.",
+    "touch-on": "גרירה שמתחילה על מילה לא תגלול את הדף.",
+    "turn": "ענו בכיוון ההפוך",
+    "use-this": "שימוש בזה",
+    "say-fetching": "מביא %s",
+    "back": "חזרה",
+    "apps-chosen": "נבחרו %s",
+    "packs-held": "הורדו %s",
+    "other-languages": "שפות אחרות",
+    "words-count": "%s מילים",
+    "packs-here": "בטלפון הזה",
+    "packs-more": "זמין",
+    "every-word": "כל מילה",
+    "one-in": "אחת מתוך %s",
+    "open-panel": "פתיחה",
+    "site-off": "תמיד כבוי כאן",
+    "site-following": "עוקב אחרי המתג הראשי (כרגע: %s)",
+    "on": "פעיל",
+    "off": "כבוי",
+    "set-key": "הגדרת מקש",
+    "simple": "פשוט",
+    "detailed": "מפורט",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "שום דבר אחר",
+    "learn-none": "אין",
+    "add-language": "הוספת שפה",
+    "learn-language": "לימוד שפה",
+    "make-main": "הפיכה לשפה שלי",
+    "main-language": "השפה שלי",
+    "learning-it": "לומד %s",
+    "dictate": "הכתבה",
+    "pos-adj": "תואר",
+    "pos-adv": "תואר הפועל",
+    "pos-article": "מיידע",
+    "pos-character": "תו",
+    "pos-conj": "מילת חיבור",
+    "pos-contraction": "צירוף מקוצר",
+    "pos-det": "מציין",
+    "pos-intj": "מילת קריאה",
+    "pos-name": "שם פרטי",
+    "pos-noun": "שם עצם",
+    "pos-num": "מספר",
+    "pos-particle": "מילית",
+    "pos-phrase": "צירוף",
+    "pos-postp": "מילת יחס מאוחרת",
+    "pos-prefix": "תחילית",
+    "pos-prep": "מילת יחס",
+    "pos-prep_phrase": "צירוף יחס",
+    "pos-pron": "כינוי",
+    "pos-proverb": "פתגם",
+    "pos-punct": "סימן פיסוק",
+    "pos-suffix": "סיומת",
+    "pos-symbol": "סמל",
+    "pos-verb": "פועל",
+    "pos-abbrev": "קיצור",
+    "pos-affix": "תוספת",
+    "pos-infix": "תוספת פנימית",
+    "pos-interfix": "תוספת קישור",
+    "pos-circumfix": "תוספת עוטפת",
+    "pos-root": "שורש",
+    "pos-combining_form": "צורה מורכבת",
+    "pos-classifier": "מסווג",
+    "pos-counter": "מונה",
+    "pos-letter": "אות",
+    "no-dictionary-for": "אין עדיין מילון ל-%s",
+    "unknown-language": "לא בטוח איזו שפה זו",
+    "looking-up": "מחפש",
+    "nothing-for": "לא נמצא דבר עבור %s",
+    "read-as": "קריאה כ-%s",
+    "read-as-accent": "קריאה כ-%s, במבטא %s",
+    "translated-by": "תורגם על ידי %s",
+    "translated-by-machine": "תורגם על ידי מכונה",
+    "guess": "ניחוש",
+    "in-english": "באנגלית",
+    "getting-dictionary": "מביא את מילון %s",
+    "getting-dictionaries": "מביא מילוני %s",
+    "say-word": "אמרו %s",
+    "hear-word": "שמעו את %s",
+    "play-sound": "הפעלת הקלטה של %s",
+    "read-about-sound": "קראו על %s",
+    "see-mouth": "ראו פה אומר %s",
+    "mouth-making": "איך הפה יוצר את %s",
+    "tap-sound": "הקישו על צליל כדי לשמוע מה הוא",
+    "what-this-is": "מה זה",
+    "for-example": "לדוגמה: %s",
+    "fetching": "מביא",
+    "done": "סיום",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "גוף %s, %s",
+    "person-long": "גוף %s",
+    "person-and-number": "גוף ומספר",
+    "form-of": "של",
+    "term-mood": "אופן",
+    "term-tense": "זמן",
+    "term-aspect": "היבט",
+    "term-person": "גוף",
+    "term-number": "מספר",
+    "term-case": "יחסה",
+    "term-gender": "מין",
+    "term-definiteness": "יידוע",
+    "term-declension": "נטייה",
+    "term-degree": "דרגה",
+    "term-voice": "קול",
+    "term-register": "רמת לשון",
+    "term-nonfinite": "שאינו נטוי",
+    "term-singular": "יחיד",
+    "term-plural": "רבים",
+    "term-dual": "זוגי",
+    "term-first-person": "גוף ראשון",
+    "term-second-person": "גוף שני",
+    "term-third-person": "גוף שלישי",
+    "term-nominative": "יחסת הנושא",
+    "term-accusative": "יחסת המושא",
+    "term-dative": "יחסת המקבל",
+    "term-genitive": "יחסת הקניין",
+    "term-vocative": "יחסת הקריאה",
+    "term-instrumental": "יחסת האמצעי",
+    "term-locative": "יחסת המקום",
+    "term-prepositional": "יחסת מילת היחס",
+    "term-ablative": "יחסת היציאה",
+    "term-partitive": "יחסת החלק",
+    "term-inessive": "יחסת הפנימיות",
+    "term-elative": "יחסת היציאה מפנים",
+    "term-illative": "יחסת הכניסה לפנים",
+    "term-adessive": "יחסת הקרבה",
+    "term-allative": "יחסת ההגעה",
+    "term-essive": "יחסת התואר",
+    "term-translative": "יחסת השינוי",
+    "term-abessive": "יחסת ההעדר",
+    "term-comitative": "יחסת הליווי",
+    "term-masculine": "זכר",
+    "term-feminine": "נקבה",
+    "term-neuter": "סתמי",
+    "term-animate": "חי",
+    "term-inanimate": "דומם",
+    "term-definite": "מיודע",
+    "term-indefinite": "לא מיודע",
+    "term-present": "הווה",
+    "term-past": "עבר",
+    "term-future": "עתיד",
+    "term-non-past": "לא עבר",
+    "term-preterite": "עבר פשוט",
+    "term-imperfect": "עבר מתמשך",
+    "term-perfect": "עבר מושלם",
+    "term-pluperfect": "עבר מושלם מוקדם",
+    "term-aorist": "אוריסט",
+    "term-indicative": "אינדיקטיב",
+    "term-subjunctive": "צורת משאלה",
+    "term-subjunctive-i": "צורת משאלה א'",
+    "term-subjunctive-ii": "צורת משאלה ב'",
+    "term-conditional": "תנאי",
+    "term-conditional-i": "תנאי א'",
+    "term-conditional-ii": "תנאי ב'",
+    "term-future-i": "עתיד א'",
+    "term-future-ii": "עתיד ב'",
+    "term-imperative": "ציווי",
+    "term-jussive": "ציווי עקיף",
+    "term-optative": "תפילה",
+    "term-potential": "אפשרות",
+    "term-active": "פעיל",
+    "term-passive": "סביל",
+    "term-infinitive": "שם הפועל",
+    "term-participle": "בינוני",
+    "term-gerund": "שם פעולה",
+    "term-imperfective": "לא גמור",
+    "term-perfective": "גמור",
+    "term-progressive": "מתמשך",
+    "term-positive": "לא מקבילי",
+    "term-comparative": "הפרש",
+    "term-superlative": "הפרש עליון",
+    "term-strong": "חזק",
+    "term-weak": "חלש",
+    "term-mixed": "מעורב",
+    "term-formal": "רשמי",
+    "term-informal": "לא רשמי",
+    "term-polite": "מנומס",
+    "accent-British": "בריטי",
+    "accent-American": "אמריקאי",
+    "accent-Scottish": "סקוטי",
+    "accent-Australian": "אוסטרלי",
+    "accent-Caribbean": "קריבי",
+    "accent-Canadian": "קנדי",
+    "accent-Spain": "ספרד",
+    "accent-Latin America": "אמריקה הלטינית",
+    "accent-Rioplatense": "ריופלטנסה",
+    "accent-Germany": "גרמניה",
+    "accent-Switzerland": "שוויץ",
+    "accent-Austria": "אוסטריה",
+    "accent-Portugal": "פורטוגל",
+    "accent-Brazil": "ברזיל",
+    "accent-France": "צרפת",
+    "accent-Canada": "קנדה",
+    "accent-Northern": "צפוני",
+    "accent-Central": "מרכזי"
+  },
+  "rows": {
+    "on": {
+      "name": "הסבר על מה שאני קורא",
+      "about": ""
+    },
+    "site": {
+      "name": "באתר הזה",
+      "about": ""
+    },
+    "layer": {
+      "name": "שכבה",
+      "about": ""
+    },
+    "density": {
+      "name": "באיזו תדירות",
+      "about": ""
+    },
+    "target": {
+      "name": "שפה",
+      "about": ""
+    },
+    "source": {
+      "name": "הדף הזה בשפה",
+      "about": ""
+    },
+    "accent": {
+      "name": "מבטא",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "מילונים",
+      "about": ""
+    },
+    "narrow": {
+      "name": "תעתיק",
+      "about": ""
+    },
+    "stress": {
+      "name": "סימני הטעמה",
+      "about": ""
+    },
+    "delay": {
+      "name": "המתנה לפני פתיחת כרטיס",
+      "about": ""
+    },
+    "animations": {
+      "name": "אנימציות",
+      "about": ""
+    },
+    "say": {
+      "name": "המילה לדבר",
+      "about": ""
+    },
+    "setup": {
+      "name": "הגדרה",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "קריאת המסך",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "ציור מעל אפליקציות",
+      "about": ""
+    },
+    "ipa": {
+      "name": "הגייה",
+      "about": ""
+    },
+    "translate": {
+      "name": "תרגום",
+      "about": ""
+    },
+    "side": {
+      "name": "איזה צד",
+      "about": ""
+    },
+    "rest": {
+      "name": "איפה הכפתור נמצא",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "גובה קבוע",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "גררו על מילה",
+      "about": "הוא אומר מה הוא עובר עליו, והדף שמתחתיו עדיין נגלל"
+    },
+    "lens-sweep": {
+      "name": "החזיקו, ואז סחפו",
+      "about": "כל מילה שהוא עובר עליה מצטרפת לרצף, והכרטיס עונה על כל המשפט"
+    },
+    "lens-hold": {
+      "name": "החזיקו",
+      "about": "פותח את ההגדרות"
+    },
+    "lens-tap": {
+      "name": "הקישו",
+      "about": "בקשו מילה לדבר, באמצע מה שאתם קוראים; הקישו שוב כדי להסתיר את הכרטיס"
+    },
+    "touch": {
+      "name": "נגיעה במילה",
+      "about": ""
+    },
+    "where": {
+      "name": "מיקום",
+      "about": ""
+    },
+    "apps": {
+      "name": "אפליקציות",
+      "about": ""
+    },
+    "start": {
+      "name": "לפני שאפשר לענות על מילה",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "הקישו על מילה לכרטיס שלה",
+      "about": ""
+    },
+    "meanings": {
+      "name": "כדי לראות מה מילה פירושה",
+      "about": ""
+    },
+    "theme": {
+      "name": "ערכת נושא",
+      "about": ""
+    },
+    "advanced": {
+      "name": "מתקדם",
+      "about": ""
+    },
+    "dark": {
+      "name": "בהיר או כהה",
+      "about": ""
+    },
+    "mine": {
+      "name": "השפה שלי",
+      "about": ""
+    },
+    "group-button": {
+      "name": "כפתור צד",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "שפות",
+      "about": ""
+    },
+    "position": {
+      "name": "מיקום",
+      "about": ""
+    },
+    "appearance": {
+      "name": "מראה",
+      "about": ""
+    },
+    "accents": {
+      "name": "מבטאים",
+      "about": ""
+    },
+    "inline": {
+      "name": "החלפת מילים",
+      "about": ""
+    },
+    "replaced": {
+      "name": "מילים שהוחלפו",
+      "about": ""
+    },
+    "translator": {
+      "name": "מתרגם",
+      "about": ""
+    },
+    "into": {
+      "name": "לתרגם אל",
+      "about": ""
+    },
+    "known": {
+      "name": "לעולם לא לתרגם",
+      "about": ""
+    },
+    "learn": {
+      "name": "לימוד",
+      "about": ""
+    },
+    "cards": {
+      "name": "חיפוש",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "הגייה",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "משמעות",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "דקדוק",
+      "about": ""
+    },
+    "show-others": {
+      "name": "משמעויות נוספות",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "הסבר כל מילה",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "שלי",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "כמה מילים",
+      "כל מילה"
+    ],
+    "delay": [
+      "מיידי",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "כבוי",
+        "about": {
+          "browser": "שום מילה לא מוחלפת; שאלו על מילה בעצמכם",
+          "phone": "שום מילה לא מוחלפת; הכפתור עדיין עונה על מילה"
+        }
+      },
+      "meaning": {
+        "label": "תרגום",
+        "about": {
+          "browser": "המילה מוחלפת במשמעותה",
+          "phone": "המילה מוחלפת במשמעותה"
+        }
+      },
+      "sound": {
+        "label": "הגייה",
+        "about": {
+          "browser": "המילה מוחלפת באופן הגייתה",
+          "phone": "המילה מוחלפת באופן הגייתה"
+        }
+      },
+      "both": {
+        "label": "שניהם",
+        "about": {
+          "browser": "מה היא אומרת, ואיך אומרים את זה",
+          "phone": "מה היא אומרת, ואיך אומרים את זה"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "הצלילים שמבדילים בין מילים",
+          "phone": "הצלילים שמבדילים בין מילים"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "כל פרט בהגייה, כמו השתנקות והשתקה",
+          "phone": "כל פרט בהגייה, כמו השתנקות והשתקה"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "מערכת",
+        "about": {
+          "browser": "לפי ההגדרה של המכשיר הזה",
+          "phone": "לפי ההגדרה של המכשיר הזה"
+        }
+      },
+      "light": {
+        "label": "בהיר",
+        "about": {
+          "browser": "תמיד הצד הבהיר של הפלטה",
+          "phone": "תמיד הצד הבהיר של הפלטה"
+        }
+      },
+      "dark": {
+        "label": "כהה",
+        "about": {
+          "browser": "תמיד הצד הכהה של הפלטה",
+          "phone": "תמיד הצד הכהה של הפלטה"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "שמאל",
+        "about": {
+          "phone": "לטלפון שמחזיקים ביד שמאל"
+        }
+      },
+      "free": {
+        "label": "בכל מקום",
+        "about": {
+          "phone": "הוא נשאר במקום שבו מניחים אותו"
+        }
+      },
+      "right": {
+        "label": "ימין",
+        "about": {
+          "phone": "לטלפון שמחזיקים ביד ימין"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "איך הדובר מתכוון למה שהפועל אומר: כעובדה, כדבר שמבקשים, מפקפקים בו או מדמיינים אותו, או כפקודה."
+      },
+      "tense": {
+        "plain": "מתי זה קורה: לפני עכשיו, עכשיו, או אחר כך."
+      },
+      "aspect": {
+        "plain": "איך הפעולה נתפסת: כשלם אחד גמור, או כמתמשכת, חוזרת או לא גמורה."
+      },
+      "person": {
+        "plain": "מי עושה: הדובר (אני, אנחנו), מי שמדברים אליו (אתה), או מישהו אחר (הוא, היא, הם)."
+      },
+      "number": {
+        "plain": "כמה: אחד, או יותר מאחד."
+      },
+      "case": {
+        "plain": "הצורה שהשם לוקח כדי להראות את תפקידו במשפט: מי עושה משהו, למי, של מי, איפה."
+      },
+      "gender": {
+        "plain": "מחלקה שכל שם עצם שייך לה, והמילים שסביבו משתנות כדי להתאים לו. יש לזה קשר מועט למין הביולוגי: das Mädchen בגרמנית, הילדה, הוא סתמי."
+      },
+      "definiteness": {
+        "plain": "האם זה דבר מסוים וידוע (הבית), או כל אחד (בית)."
+      },
+      "declension": {
+        "plain": "קבוצת הסיומות שהשם או התואר לוקחים, שתלויה במילים שסביבם."
+      },
+      "degree": {
+        "plain": "עד כמה חזק התואר: גדול, גדול יותר, הכי גדול."
+      },
+      "voice": {
+        "plain": "האם הנושא עושה את הפעולה (היא כתבה את זה) או שהפעולה נעשית עליו (זה נכתב)."
+      },
+      "register": {
+        "plain": "עד כמה המילה רשמית: לזרים ולכתיבה רשמית, או לחברים."
+      },
+      "nonfinite": {
+        "plain": "צורת פועל שמציינת את הפעולה בלי לומר מי עושה אותה או מתי: ללכת, הולך, הלך."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "אחד מדבר.",
+        "example": "כלב *אחד*"
+      },
+      "plural": {
+        "plain": "יותר מאחד.",
+        "example": "*כלבים*"
+      },
+      "dual": {
+        "plain": "בדיוק שניים, בשפות שיש להן צורה מיוחדת לזוגות.",
+        "example": "סלובנית *hiši*, שני בתים"
+      },
+      "first-person": {
+        "plain": "הדובר: אני, או אנחנו.",
+        "example": "*אני* הולך, *אנחנו* הולכים"
+      },
+      "second-person": {
+        "plain": "מי שמדברים אליו: אתה.",
+        "example": "*אתה* הולך"
+      },
+      "third-person": {
+        "plain": "כל מישהו אחר: הוא, היא, הם.",
+        "example": "*היא* הולכת"
+      },
+      "nominative": {
+        "plain": "מי שעושה את הפעולה: הנושא.",
+        "example": "*הכלב* נושך את האיש."
+      },
+      "accusative": {
+        "plain": "מי שהפעולה נעשית בו: המושא הישיר.",
+        "example": "הכלב נושך *את האיש*."
+      },
+      "dative": {
+        "plain": "מי שמקבל משהו או שעושים בשבילו משהו: למי.",
+        "example": "אני נותן *לאיש* ספר."
+      },
+      "genitive": {
+        "plain": "של מי הדבר, או חלק ממה: של.",
+        "example": "*ספרו של האיש*, גג *הבית*"
+      },
+      "vocative": {
+        "plain": "הצורה שמשתמשים בה כדי לקרוא למישהו או לפנות אליו ישירות.",
+        "example": "פולנית *Anno!*, אנה!"
+      },
+      "instrumental": {
+        "plain": "מה שעושים בו או באמצעותו משהו.",
+        "example": "רוסית писать *ручкой*, לכתוב *בעט*"
+      },
+      "locative": {
+        "plain": "איפה משהו נמצא.",
+        "example": "פולנית w *domu*, *בבית*"
+      },
+      "prepositional": {
+        "plain": "הצורה שהשם לוקח אחרי מילות יחס מסוימות, בעיקר על מקום או על נושא.",
+        "example": "רוסית о *книге*, *על הספר*"
+      },
+      "ablative": {
+        "plain": "הרחקה מדבר, יציאה ממנו, או באמצעותו.",
+        "example": "לטינית *Romā*, מרומא"
+      },
+      "partitive": {
+        "plain": "חלק מדבר, או פעולה שלא הושלמה עד הסוף.",
+        "example": "פינית *vettä*, קצת מים"
+      },
+      "inessive": {
+        "plain": "בתוך משהו.",
+        "example": "פינית *talossa*, *בבית*"
+      },
+      "elative": {
+        "plain": "מתוך משהו.",
+        "example": "פינית *talosta*, *מהבית*"
+      },
+      "illative": {
+        "plain": "אל תוך משהו.",
+        "example": "פינית *taloon*, *אל הבית*"
+      },
+      "adessive": {
+        "plain": "על משהו או ליד משהו.",
+        "example": "פינית *pöydällä*, *על השולחן*"
+      },
+      "allative": {
+        "plain": "אל משהו, או אל מעל משהו.",
+        "example": "פינית *pöydälle*, *אל השולחן*"
+      },
+      "essive": {
+        "plain": "להיות משהו לזמן מה, כתפקיד או כמצב.",
+        "example": "פינית *lapsena*, *כילד*"
+      },
+      "translative": {
+        "plain": "להפוך להיות משהו.",
+        "example": "פינית *opettajaksi*, (להיות) *מורה*"
+      },
+      "abessive": {
+        "plain": "בלי משהו.",
+        "example": "פינית *rahatta*, *בלי כסף*"
+      },
+      "comitative": {
+        "plain": "יחד עם משהו.",
+        "example": "אסטונית *sõbraga*, *עם חבר*"
+      },
+      "masculine": {
+        "plain": "אחת המחלקות של שמות העצם; המילים סביב שם עצם זכר לוקחות את הסיומות שלו. זה בעיקר עניין של המילה, לא של מין.",
+        "example": "ספרדית *el libro*, הספר"
+      },
+      "feminine": {
+        "plain": "אחת המחלקות של שמות העצם; המילים סביב שם עצם נקבה לוקחות את הסיומות שלו. זה בעיקר עניין של המילה, לא של מין.",
+        "example": "ספרדית *la mesa*, השולחן"
+      },
+      "neuter": {
+        "plain": "המחלקה של שמות עצם שאינם זכר ואינם נקבה.",
+        "example": "גרמנית *das Haus*, הבית"
+      },
+      "animate": {
+        "plain": "אומר על שם עצם שמציין אדם או בעל חיים, ולחלק מהשפות יש להם סיומות משלהם.",
+        "example": "רוסית вижу *брата*, אני רואה את אחי"
+      },
+      "inanimate": {
+        "plain": "אומר על שם עצם שמציין דבר, לא אדם או בעל חיים.",
+        "example": "רוסית вижу *стол*, אני רואה את השולחן"
+      },
+      "definite": {
+        "plain": "דבר מסוים ששני הדוברים יודעים עליו: ה־ (the).",
+        "example": "שוודית *huset*, הבית"
+      },
+      "indefinite": {
+        "plain": "כל אחד, שעוד לא ידוע: א' (a).",
+        "example": "שוודית *ett hus*, בית אחד"
+      },
+      "present": {
+        "plain": "עכשיו, תמיד, או כהרגל.",
+        "example": "היא *הולכת*"
+      },
+      "past": {
+        "plain": "לפני עכשיו.",
+        "example": "היא *הלכה*"
+      },
+      "future": {
+        "plain": "אחרי עכשיו.",
+        "example": "היא *תלך*"
+      },
+      "non-past": {
+        "plain": "עכשיו או אחר כך: צורה אחת לשניהם.",
+        "example": "יפנית *食べる*, אוכל או יאכל"
+      },
+      "preterite": {
+        "plain": "דבר שקרה ונגמר ברגע מסוים בעבר.",
+        "example": "ספרדית ayer *comí*, אתמול *אכלתי*"
+      },
+      "imperfect": {
+        "plain": "העבר מבפנים: דבר שהתמשך, קרה שוב ושוב, או נהג לקרות.",
+        "example": "ספרדית *comía*, *הייתי אוכל*, *נהגתי לאכול*"
+      },
+      "perfect": {
+        "plain": "נגמר לפני עכשיו, ועדיין חשוב עכשיו.",
+        "example": "היא *הלכה* כבר"
+      },
+      "pluperfect": {
+        "plain": "נגמר לפני רגע אחר בעבר.",
+        "example": "היא *הייתה הלכה*"
+      },
+      "aorist": {
+        "plain": "פעולה בעבר שמסופרת כאירוע שלם אחד, כמו שסיפור מספר אותה.",
+        "example": "בולגרית *писах*, כתבתי"
+      },
+      "indicative": {
+        "plain": "הצורה הרגילה לומר מה שקורה: עובדות, ושאלות עליהן.",
+        "example": "היא *כאן*."
+      },
+      "subjunctive": {
+        "plain": "הצורה למה שרוצים, מבקשים, מפקפקים בו, חוששים ממנו, או רק מדמיינים, ולא למה שאומרים שכך הוא. בדרך כלל היא באה אחרי מילים כמו לו, אם, כדי ש.",
+        "example": "I wish he *were* here. It is vital that she *be* on time. ספרדית quiero que *vengas*, אני רוצה שתבוא"
+      },
+      "subjunctive-i": {
+        "plain": "הצורה בגרמנית לחזרה על מה שאדם אחר אמר, בלי לערוב לאמיתותו.",
+        "example": "גרמנית Er sagt, er *sei* krank. הוא אומר שהוא חולה."
+      },
+      "subjunctive-ii": {
+        "plain": "הצורה בגרמנית למה שאינו אמיתי: משאלות, בקשות מנומסות ולו רק.",
+        "example": "גרמנית Wenn ich Zeit *hätte*... אילו *היה* לי זמן..."
+      },
+      "conditional": {
+        "plain": "מה שיקרה, אם דבר אחר היה נכון.",
+        "example": "היא *הייתה הולכת*"
+      },
+      "conditional-i": {
+        "plain": "מה שיקרה, אם דבר אחר היה נכון.",
+        "example": "גרמנית ich *würde gehen*, הייתי הולך"
+      },
+      "conditional-ii": {
+        "plain": "מה שהיה קורה, אם דבר אחר היה נכון.",
+        "example": "גרמנית ich *wäre gegangen*, הייתי *הולך* (אילו הלכתי)"
+      },
+      "future-i": {
+        "plain": "אחרי עכשיו.",
+        "example": "גרמנית ich *werde gehen*, אני אלך"
+      },
+      "future-ii": {
+        "plain": "נגמר בנקודה מאוחרת יותר.",
+        "example": "גרמנית ich *werde gegangen sein*, אהיה כבר הלכתי"
+      },
+      "imperative": {
+        "plain": "הצורה לומר למישהו לעשות משהו.",
+        "example": "*לך!*"
+      },
+      "jussive": {
+        "plain": "צורה לתת רשות למישהו, או לומר לו, לעשות משהו, לעיתים קרובות מישהו שאינו השומע.",
+        "example": "ערבית *لِيَكْتُبْ*, שיכתוב"
+      },
+      "optative": {
+        "plain": "צורה לתפילה: יהי כך."
+      },
+      "potential": {
+        "plain": "צורה למה שכנראה או אולי כך.",
+        "example": "פינית *lienee*, (הוא) כנראה כך"
+      },
+      "active": {
+        "plain": "הנושא עושה את הפעולה.",
+        "example": "*היא כתבה* את המכתב."
+      },
+      "passive": {
+        "plain": "הנושא מקבל את הפעולה.",
+        "example": "המכתב *נכתב*."
+      },
+      "infinitive": {
+        "plain": "הפועל עצמו, בלי שמישהו עושה אותו עדיין: הצורה שהמילון מונה לפיה.",
+        "example": "*ללכת*, ספרדית *caminar*"
+      },
+      "participle": {
+        "plain": "צורת פועל שפועלת כתואר, ועם עזר יוצרת זמנים אחרים.",
+        "example": "כוס *שבורה*, היא *הלכה*"
+      },
+      "gerund": {
+        "plain": "צורת פועל לפעולה שמתרחשת, או שנשמעת כשם עצם.",
+        "example": "היא *הולכת*, ספרדית está *caminando*"
+      },
+      "imperfective": {
+        "plain": "הפעולה נתפסת כמתמשכת, חוזרת או לא גמורה.",
+        "example": "רוסית я *читал*, קראתי (קריאה מתמשכת)"
+      },
+      "perfective": {
+        "plain": "הפעולה נתפסת כשלם אחד גמור.",
+        "example": "רוסית я *прочитал*, קראתי (עד הסוף)"
+      },
+      "progressive": {
+        "plain": "מתרחש ברגע הזה.",
+        "example": "היא *הולכת* עכשיו"
+      },
+      "positive": {
+        "plain": "התואר כמו שהוא, בלי השוואה.",
+        "example": "*גדול*"
+      },
+      "comparative": {
+        "plain": "יותר מדבר אחר.",
+        "example": "*גדול יותר*, *יפה יותר*"
+      },
+      "superlative": {
+        "plain": "יותר מכל דבר.",
+        "example": "*הגדול ביותר*, *היפה ביותר*"
+      },
+      "strong": {
+        "plain": "הסיומות של התואר בגרמנית כשאין לפניו מיידע שמראה את היחסה.",
+        "example": "גרמנית *kaltes* Wasser, מים קרים"
+      },
+      "weak": {
+        "plain": "הסיומות של התואר בגרמנית אחרי der, die, das, כשהמיידע כבר מראה את היחסה.",
+        "example": "das *kalte* Wasser"
+      },
+      "mixed": {
+        "plain": "הסיומות של התואר בגרמנית אחרי ein, kein, mein.",
+        "example": "ein *kaltes* Bier"
+      },
+      "formal": {
+        "plain": "לזרים, למבוגרים ולכתיבה רשמית.",
+        "example": "גרמנית *Sie*, ספרדית *usted*"
+      },
+      "informal": {
+        "plain": "לחברים, למשפחה ולילדים.",
+        "example": "גרמנית *du*, ספרדית *tú*"
+      },
+      "polite": {
+        "plain": "הדרך המכובדת לומר את זה.",
+        "example": "יפנית *食べます*, (אני) אוכל, באדיבות"
+      }
+    }
+  }
+}

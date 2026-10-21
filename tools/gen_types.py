@@ -1163,6 +1163,11 @@ def choices_ts():
             )
         lines.append("];")
         lines.append("")
+    lines.append("/** Every table of choices, by the name data/wording.json files it under. */")
+    lines.append("export const CHOICES: Record<string, Choice[]> = {")
+    for name in sorted(table):
+        lines.append(f"  {json.dumps(name)}: {name.upper()}_CHOICES,")
+    lines += ["};", ""]
     lines.append("/** Every row of the settings surfaces, by the name it reports itself under. */")
     lines.append("export const ROWS: Record<string, Words> = {")
     for name in sorted(rows):
@@ -1204,6 +1209,12 @@ def choices_ts():
         "/** What one of them does, for a row that explains itself. */",
         "export function aboutOf(choices: Choice[], value: string): string {",
         "  return choices.find((row) => row.value === value)?.about ?? '';",
+        "}",
+        "",
+        "/** A phrase with what goes in its places, in order: \"Getting the %s dictionary\". */",
+        "export function say(key: string, ...fill: (string | number)[]): string {",
+        "  let at = 0;",
+        "  return (SAYS[key] ?? key).replace(/%s/g, () => String(fill[at++] ?? ''));",
         "}",
         "",
         "/** A kind of word by its whole name, where the dictionary files it by a short code: a",
@@ -1285,14 +1296,37 @@ def choices_kotlin():
             )
         )
     lines += ["    )", ""]
-    lines.append("    /** Phrases both surfaces use, so neither invents its own wording. */")
-    lines.append("    val says = mapOf(")
+    lines.append("    /** Phrases both surfaces use, so neither invents its own wording, in English. */")
+    lines.append("    private val english = mapOf(")
     for name in sorted(says):
         lines.append(
             "        %s to %s," % (json.dumps(name), json.dumps(says[name], ensure_ascii=False))
         )
     lines += [
         "    )",
+        "",
+        "    /** The same in the interface's language: English, with whatever a language's table",
+        "     *  says in its place (core/Interface.kt). */",
+        "    @Volatile var says: Map<String, String> = english",
+        "        private set",
+        "",
+        "    /** The language the interface is in now. */",
+        "    @Volatile var speaking = \"en\"",
+        "        private set",
+        "",
+        "    /** Say everything in these words from now on, or in English with none. */",
+        "    fun speakIn(lang: String, words: Map<String, String>?) {",
+        "        speaking = if (words == null) \"en\" else lang",
+        "        says = if (words == null) english else english + words",
+        "    }",
+        "",
+        "    /** A phrase with what goes in its places, in order: \"Getting the %s dictionary\". */",
+        "    fun say(key: String, vararg fill: Any): String {",
+        "        var at = 0",
+        "        return Regex.fromLiteral(\"%s\").replace(says[key] ?: key) {",
+        "            fill.getOrNull(at++)?.toString().orEmpty()",
+        "        }",
+        "    }",
         "",
         "    /** What one row is called, or the name it is asked for when the table is short. */",
         "    fun row(name: String): Words = rows[name] ?: Words(name, \"\")",
@@ -1343,9 +1377,29 @@ def languages_ts():
     lines += [
         "};",
         "",
-        "/** What to call this language to a reader, or the code when it is not named. */",
+        "/** The language languages are named in, which is the interface's. */",
+        "let namingIn = 'en';",
+        "let names: Intl.DisplayNames | null = null;",
+        "",
+        "/** Name languages in this one from now on. */",
+        "export function nameIn(lang: string): void {",
+        "  namingIn = lang;",
+        "  try {",
+        "    names = lang === 'en' ? null : new Intl.DisplayNames([lang], { type: 'language' });",
+        "  } catch {",
+        "    names = null;",
+        "  }",
+        "}",
+        "",
+        "/** What to call this language to a reader, in the interface's language, or the code when",
+        " *  it is not named. */",
         "export function named(code: string): string {",
-        "  return LANGUAGES[code]?.english ?? code;",
+        "  const english = LANGUAGES[code]?.english;",
+        "  if (!english || !names) return english ?? code;",
+        "  const said = names.of(code);",
+        "  return said && said !== code",
+        "    ? said.charAt(0).toLocaleUpperCase(namingIn) + said.slice(1)",
+        "    : english;",
         "}",
         "",
     ]

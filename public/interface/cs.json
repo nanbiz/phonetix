@@ -1,0 +1,882 @@
+{
+  "says": {
+    "allow": "Povolit",
+    "allow-overlay": "Povolit překryv",
+    "already-in": "Tato stránka je už v: %s",
+    "broad-mark": "/ /",
+    "change": "Změnit",
+    "choose-language": "Vyberte jazyk",
+    "close": "Zavřít",
+    "detail-explained": "Široký přepis zachycuje zvuky, které odlišují slova; úzký zachycuje každý detail, jak se slovo říká, tak jak ho říká mluvčí s tímto přízvukem.",
+    "every-app": "Každá aplikace",
+    "get": "Stáhnout",
+    "loading-dictionary": "Načítání slovníku…",
+    "master-idle": "Nic se nekreslí přes vaše aplikace",
+    "master-off": "Pozastaveno",
+    "master-on": "Čtení",
+    "master-unready": "Povolte čtení obrazovky a kreslení přes aplikace",
+    "master-working": "Slova ve vašich aplikacích se zpracovávají",
+    "narrow-mark": "[ ]",
+    "no-source": "pro význam slova; výslovnost je vestavěná",
+    "no-translation": "Nepřekládat",
+    "nothing-found": "Nic s tímto názvem",
+    "nothing-yet": "zatím nic",
+    "open-accessibility": "Otevřít přístupnost",
+    "preview": "Náhled",
+    "preview-about": "slova na stránce, na která by to odpovědělo",
+    "remove": "Odebrat",
+    "rest-edge": "U okraje: %s",
+    "rest-loose": "Kdekoli ho necháte",
+    "no-direction": "Z jazyka %s se nepodařilo získat překlad. Slova místo toho ukazují, jak se říkají.",
+    "service-stopped": "Phonetix smí číst obrazovku, ale neběží. Vypněte ji a znovu zapněte v nastavení přístupnosti telefonu.",
+    "rest-put": "Posuňte tlačítko nahoru nebo dolů, nebo na druhou stranu.",
+    "say-into": "Odpovídat v",
+    "say-no-language": "Nejdřív vyberte jazyk, do kterého číst.",
+    "say-no-model": "Na vašem hostiteli slovníků není překladový model pro tento směr.",
+    "say-nothing": "pro to není slovo",
+    "say-placeholder": "co chcete říct",
+    "search": "Hledat",
+    "speak": "Řekni to",
+    "touch-off": "Každý dotyk jde do aplikace pod ním, takže posouvání se nemění.",
+    "touch-on": "Tažení začínající na slově neposune stránku.",
+    "turn": "Odpovídat opačným směrem",
+    "use-this": "Použít tohle",
+    "say-fetching": "načítám %s",
+    "back": "Zpět",
+    "apps-chosen": "vybráno: %s",
+    "packs-held": "staženo: %s",
+    "other-languages": "Další jazyky",
+    "words-count": "Slova: %s",
+    "packs-here": "V tomto telefonu",
+    "packs-more": "Dostupné",
+    "every-word": "každé slovo",
+    "one-in": "jedno z %s",
+    "open-panel": "Otevřít",
+    "site-off": "tady vždy vypnuto",
+    "site-following": "podle hlavního přepínače (právě: %s)",
+    "on": "zapnuto",
+    "off": "vypnuto",
+    "set-key": "Nastavit klávesu",
+    "simple": "Jednoduchá",
+    "detailed": "Podrobná",
+    "simple-example": "/tɒp/",
+    "detailed-example": "[tʰɒp]",
+    "nothing-else": "nic jiného",
+    "learn-none": "žádný",
+    "add-language": "Přidat jazyk",
+    "learn-language": "Učit se jazyk",
+    "make-main": "Nastavit jako můj jazyk",
+    "main-language": "Můj jazyk",
+    "learning-it": "učím se: %s",
+    "dictate": "Diktovat",
+    "pos-adj": "přídavné jméno",
+    "pos-adv": "příslovce",
+    "pos-article": "člen",
+    "pos-character": "znak",
+    "pos-conj": "spojka",
+    "pos-contraction": "zkrácenina",
+    "pos-det": "determinant",
+    "pos-intj": "citoslovce",
+    "pos-name": "vlastní jméno",
+    "pos-noun": "podstatné jméno",
+    "pos-num": "číslovka",
+    "pos-particle": "částice",
+    "pos-phrase": "fráze",
+    "pos-postp": "postpozice",
+    "pos-prefix": "předpona",
+    "pos-prep": "předložka",
+    "pos-prep_phrase": "předložková vazba",
+    "pos-pron": "zájmeno",
+    "pos-proverb": "přísloví",
+    "pos-punct": "interpunkce",
+    "pos-suffix": "přípona",
+    "pos-symbol": "symbol",
+    "pos-verb": "sloveso",
+    "pos-abbrev": "zkratka",
+    "pos-affix": "afix",
+    "pos-infix": "infix",
+    "pos-interfix": "interfix",
+    "pos-circumfix": "cirkumfix",
+    "pos-root": "kořen",
+    "pos-combining_form": "skladebná část",
+    "pos-classifier": "klasifikátor",
+    "pos-counter": "počítadlo",
+    "pos-letter": "písmeno",
+    "no-dictionary-for": "Pro %s zatím není slovník",
+    "unknown-language": "Nejsem si jistý, jaký jazyk to je",
+    "looking-up": "Hledám",
+    "nothing-for": "Pro %s nic nenalezeno",
+    "read-as": "Čteno jako %s",
+    "read-as-accent": "Čteno jako %s, přízvuk: %s",
+    "translated-by": "Přeložil %s",
+    "translated-by-machine": "Přeloženo strojem",
+    "guess": "odhad",
+    "in-english": "anglicky",
+    "getting-dictionary": "Stahuji slovník: %s",
+    "getting-dictionaries": "Stahuji slovníky: %s",
+    "say-word": "řekni %s",
+    "hear-word": "slyš %s",
+    "play-sound": "přehrát nahrávku: %s",
+    "read-about-sound": "číst o %s",
+    "see-mouth": "vidět ústa, jak říkají %s",
+    "mouth-making": "jak ústa tvoří %s",
+    "tap-sound": "Klepněte na zvuk a uslyšíte, co to je",
+    "what-this-is": "Co to je",
+    "for-example": "Například: %s",
+    "fetching": "načítám",
+    "done": "hotovo",
+    "ordinal-first-person": "1.",
+    "ordinal-second-person": "2.",
+    "ordinal-third-person": "3.",
+    "person-number": "%s %s",
+    "person-number-long": "%s osoba, %s",
+    "person-long": "%s osoba",
+    "person-and-number": "osoba a číslo",
+    "form-of": "od",
+    "term-mood": "způsob",
+    "term-tense": "čas",
+    "term-aspect": "vid",
+    "term-person": "osoba",
+    "term-number": "číslo",
+    "term-case": "pád",
+    "term-gender": "rod",
+    "term-definiteness": "určitost",
+    "term-declension": "skloňování",
+    "term-degree": "stupeň",
+    "term-voice": "slovesný rod",
+    "term-register": "rejstřík",
+    "term-nonfinite": "neurčitý tvar",
+    "term-singular": "jednotné",
+    "term-plural": "množné",
+    "term-dual": "dvojné",
+    "term-first-person": "první osoba",
+    "term-second-person": "druhá osoba",
+    "term-third-person": "třetí osoba",
+    "term-nominative": "nominativ",
+    "term-accusative": "akuzativ",
+    "term-dative": "dativ",
+    "term-genitive": "genitiv",
+    "term-vocative": "vokativ",
+    "term-instrumental": "instrumentál",
+    "term-locative": "lokál",
+    "term-prepositional": "předložkový pád",
+    "term-ablative": "ablativ",
+    "term-partitive": "partitiv",
+    "term-inessive": "inesiv",
+    "term-elative": "elativ",
+    "term-illative": "ilativ",
+    "term-adessive": "adesiv",
+    "term-allative": "alativ",
+    "term-essive": "esiv",
+    "term-translative": "translativ",
+    "term-abessive": "abesiv",
+    "term-comitative": "komitativ",
+    "term-masculine": "mužský rod",
+    "term-feminine": "ženský rod",
+    "term-neuter": "střední rod",
+    "term-animate": "životné",
+    "term-inanimate": "neživotné",
+    "term-definite": "určitý",
+    "term-indefinite": "neurčitý",
+    "term-present": "přítomný",
+    "term-past": "minulý",
+    "term-future": "budoucí",
+    "term-non-past": "neminulý",
+    "term-preterite": "préteritum",
+    "term-imperfect": "imperfektum",
+    "term-perfect": "perfektum",
+    "term-pluperfect": "plusquamperfektum",
+    "term-aorist": "aorist",
+    "term-indicative": "oznamovací způsob",
+    "term-subjunctive": "konjunktiv",
+    "term-subjunctive-i": "konjunktiv i",
+    "term-subjunctive-ii": "konjunktiv ii",
+    "term-conditional": "podmiňovací způsob",
+    "term-conditional-i": "podmiňovací i",
+    "term-conditional-ii": "podmiňovací ii",
+    "term-future-i": "futurum i",
+    "term-future-ii": "futurum ii",
+    "term-imperative": "rozkazovací způsob",
+    "term-jussive": "jusiv",
+    "term-optative": "optativ",
+    "term-potential": "potenciál",
+    "term-active": "činný",
+    "term-passive": "trpný",
+    "term-infinitive": "infinitiv",
+    "term-participle": "příčestí",
+    "term-gerund": "přechodník",
+    "term-imperfective": "nedokonavý",
+    "term-perfective": "dokonavý",
+    "term-progressive": "průběhový",
+    "term-positive": "základní",
+    "term-comparative": "srovnávací",
+    "term-superlative": "nejvyšší",
+    "term-strong": "silná",
+    "term-weak": "slabá",
+    "term-mixed": "smíšená",
+    "term-formal": "formální",
+    "term-informal": "neformální",
+    "term-polite": "zdvořilostní",
+    "accent-British": "britský",
+    "accent-American": "americký",
+    "accent-Scottish": "skotský",
+    "accent-Australian": "australský",
+    "accent-Caribbean": "karibský",
+    "accent-Canadian": "kanadský",
+    "accent-Spain": "španělský",
+    "accent-Latin America": "latinskoamerický",
+    "accent-Rioplatense": "rioplatenský",
+    "accent-Germany": "německý",
+    "accent-Switzerland": "švýcarský",
+    "accent-Austria": "rakouský",
+    "accent-Portugal": "portugalský",
+    "accent-Brazil": "brazilský",
+    "accent-France": "francouzský",
+    "accent-Canada": "kanadský",
+    "accent-Northern": "severní",
+    "accent-Central": "střední"
+  },
+  "rows": {
+    "on": {
+      "name": "Anotovat, co čtu",
+      "about": ""
+    },
+    "site": {
+      "name": "Na tomto webu",
+      "about": ""
+    },
+    "layer": {
+      "name": "Překryv",
+      "about": ""
+    },
+    "density": {
+      "name": "Jak často",
+      "about": ""
+    },
+    "target": {
+      "name": "Jazyk",
+      "about": ""
+    },
+    "source": {
+      "name": "Tato stránka je v",
+      "about": ""
+    },
+    "accent": {
+      "name": "Přízvuk",
+      "about": ""
+    },
+    "dictionaries": {
+      "name": "Slovníky",
+      "about": ""
+    },
+    "narrow": {
+      "name": "Přepisy",
+      "about": ""
+    },
+    "stress": {
+      "name": "Značky přízvuku",
+      "about": ""
+    },
+    "delay": {
+      "name": "Prodleva před otevřením karty",
+      "about": ""
+    },
+    "animations": {
+      "name": "Animace",
+      "about": ""
+    },
+    "say": {
+      "name": "Slovo pro něco",
+      "about": ""
+    },
+    "setup": {
+      "name": "Nastavení",
+      "about": ""
+    },
+    "setup-reading": {
+      "name": "Čtení obrazovky",
+      "about": ""
+    },
+    "setup-overlay": {
+      "name": "Kreslení přes aplikace",
+      "about": ""
+    },
+    "ipa": {
+      "name": "Výslovnost",
+      "about": ""
+    },
+    "translate": {
+      "name": "Překlad",
+      "about": ""
+    },
+    "side": {
+      "name": "Která strana",
+      "about": ""
+    },
+    "rest": {
+      "name": "Kde tlačítko sedí",
+      "about": ""
+    },
+    "rest-pin": {
+      "name": "Pevná výška",
+      "about": ""
+    },
+    "lens-drag": {
+      "name": "Přetáhněte ho přes slovo",
+      "about": "Řekne, co přejíždí, a stránka pod ním se dál posouvá"
+    },
+    "lens-sweep": {
+      "name": "Podržte a přejeďte",
+      "about": "Každé slovo, přes které přejede, se připojí k řadě, a karta odpoví na celou větu"
+    },
+    "lens-hold": {
+      "name": "Podržte",
+      "about": "Otevře nastavení"
+    },
+    "lens-tap": {
+      "name": "Klepněte",
+      "about": "Zeptejte se na slovo pro něco uprostřed čteného textu; klepnutím znovu kartu schováte"
+    },
+    "touch": {
+      "name": "Dotyk slova",
+      "about": ""
+    },
+    "where": {
+      "name": "Kde",
+      "about": ""
+    },
+    "apps": {
+      "name": "Aplikace",
+      "about": ""
+    },
+    "start": {
+      "name": "Než odpoví na slovo",
+      "about": ""
+    },
+    "touch-words": {
+      "name": "Klepněte na slovo pro jeho kartu",
+      "about": ""
+    },
+    "meanings": {
+      "name": "Pro zobrazení významu slova",
+      "about": ""
+    },
+    "theme": {
+      "name": "Motiv",
+      "about": ""
+    },
+    "advanced": {
+      "name": "Pokročilé",
+      "about": ""
+    },
+    "dark": {
+      "name": "Světlý nebo tmavý",
+      "about": ""
+    },
+    "mine": {
+      "name": "Můj jazyk",
+      "about": ""
+    },
+    "group-button": {
+      "name": "Boční tlačítko",
+      "about": ""
+    },
+    "group-languages": {
+      "name": "Jazyky",
+      "about": ""
+    },
+    "position": {
+      "name": "Poloha",
+      "about": ""
+    },
+    "appearance": {
+      "name": "Vzhled",
+      "about": ""
+    },
+    "accents": {
+      "name": "Přízvuky",
+      "about": ""
+    },
+    "inline": {
+      "name": "Nahrazovat slova",
+      "about": ""
+    },
+    "replaced": {
+      "name": "Nahrazená slova",
+      "about": ""
+    },
+    "translator": {
+      "name": "Překladatel",
+      "about": ""
+    },
+    "into": {
+      "name": "Překládat do",
+      "about": ""
+    },
+    "known": {
+      "name": "Nikdy nepřekládat",
+      "about": ""
+    },
+    "learn": {
+      "name": "Učení",
+      "about": ""
+    },
+    "cards": {
+      "name": "Hledat",
+      "about": ""
+    },
+    "show-sound": {
+      "name": "Výslovnost",
+      "about": ""
+    },
+    "show-meaning": {
+      "name": "Význam",
+      "about": ""
+    },
+    "show-grammar": {
+      "name": "Gramatika",
+      "about": ""
+    },
+    "show-others": {
+      "name": "Další významy",
+      "about": ""
+    },
+    "describe-all": {
+      "name": "Popsat každé slovo",
+      "about": ""
+    },
+    "mine-group": {
+      "name": "Můj",
+      "about": ""
+    }
+  },
+  "ends": {
+    "density": [
+      "pár slov",
+      "každé slovo"
+    ],
+    "delay": [
+      "okamžitě",
+      "1000 ms"
+    ]
+  },
+  "choices": {
+    "layer": {
+      "off": {
+        "label": "Vypnuto",
+        "about": {
+          "browser": "nic se nenahrazuje; zeptejte se na slovo sami",
+          "phone": "nic se nenahrazuje; tlačítko na slovo stále odpovídá"
+        }
+      },
+      "meaning": {
+        "label": "Překlad",
+        "about": {
+          "browser": "slovo nahrazené jeho významem",
+          "phone": "slovo nahrazené jeho významem"
+        }
+      },
+      "sound": {
+        "label": "Výslovnost",
+        "about": {
+          "browser": "slovo nahrazené tím, jak se říká",
+          "phone": "slovo nahrazené tím, jak se říká"
+        }
+      },
+      "both": {
+        "label": "Obojí",
+        "about": {
+          "browser": "význam a jak to říct",
+          "phone": "význam a jak to říct"
+        }
+      }
+    },
+    "detail": {
+      "broad": {
+        "label": "/ /",
+        "about": {
+          "browser": "zvuky, které odlišují slova",
+          "phone": "zvuky, které odlišují slova"
+        }
+      },
+      "narrow": {
+        "label": "[ ]",
+        "about": {
+          "browser": "každý detail výslovnosti, jako aspirace a znělost",
+          "phone": "každý detail výslovnosti, jako aspirace a znělost"
+        }
+      }
+    },
+    "dark": {
+      "system": {
+        "label": "Systém",
+        "about": {
+          "browser": "jak je toto zařízení nastaveno",
+          "phone": "jak je toto zařízení nastaveno"
+        }
+      },
+      "light": {
+        "label": "Světlý",
+        "about": {
+          "browser": "vždy světlá strana palety",
+          "phone": "vždy světlá strana palety"
+        }
+      },
+      "dark": {
+        "label": "Tmavý",
+        "about": {
+          "browser": "vždy tmavá strana palety",
+          "phone": "vždy tmavá strana palety"
+        }
+      }
+    },
+    "side": {
+      "left": {
+        "label": "Levá",
+        "about": {
+          "phone": "pro telefon v levé ruce"
+        }
+      },
+      "free": {
+        "label": "Volně",
+        "about": {
+          "phone": "zůstane, kde ho položíte"
+        }
+      },
+      "right": {
+        "label": "Pravá",
+        "about": {
+          "phone": "pro telefon v pravé ruce"
+        }
+      }
+    }
+  },
+  "plain": {
+    "categories": {
+      "mood": {
+        "plain": "Jak mluvčí myslí to, co sloveso říká: jako fakt, jako něco přané, pochybného nebo vymyšleného, nebo jako rozkaz."
+      },
+      "tense": {
+        "plain": "Kdy se to děje: před teď, teď, nebo potom."
+      },
+      "aspect": {
+        "plain": "Jak je děj viděn: jako jeden dokončený celek, nebo jako něco, co trvá, opakuje se nebo není dokončeno."
+      },
+      "person": {
+        "plain": "Kdo to dělá: mluvčí (já, my), ten, s kým se mluví (ty), nebo někdo jiný (on, ona, oni)."
+      },
+      "number": {
+        "plain": "Kolik: jeden, nebo víc než jeden."
+      },
+      "case": {
+        "plain": "Tvar, který podstatné jméno dostane, aby ukázalo svou roli ve větě: kdo něco dělá, komu, čí, kde."
+      },
+      "gender": {
+        "plain": "Třída, do které patří každé podstatné jméno, a slova kolem se podle ní mění. Má málo společného s pohlavím: v němčině das Mädchen, dívka, je střední rod."
+      },
+      "definiteness": {
+        "plain": "Jestli jde o konkrétní, známou věc (ten dům), nebo o libovolnou (nějaký dům)."
+      },
+      "declension": {
+        "plain": "Soubor koncovek, které podstatné jméno nebo přídavné jméno dostane podle slov kolem."
+      },
+      "degree": {
+        "plain": "Jak moc přídavné jméno platí: velký, větší, největší."
+      },
+      "voice": {
+        "plain": "Jestli podmět sám děj dělá (ona to napsala), nebo se na něm děj provádí (bylo to napsáno)."
+      },
+      "register": {
+        "plain": "Jak formální slovo je: pro cizí lidi a úřední texty, nebo pro přátele."
+      },
+      "nonfinite": {
+        "plain": "Tvar slovesa, který pojmenovává děj, aniž řekne, kdo ho dělá nebo kdy: psát, psaje, napsat."
+      }
+    },
+    "values": {
+      "singular": {
+        "plain": "Jeden z čeho.",
+        "example": "jeden *pes*"
+      },
+      "plural": {
+        "plain": "Víc než jeden.",
+        "example": "dva *psi*"
+      },
+      "dual": {
+        "plain": "Přesně dva, v jazycích, které mají tvar jen pro dvojice.",
+        "example": "slovinsky *hiši*, dva domy"
+      },
+      "first-person": {
+        "plain": "Mluvčí: já, nebo my.",
+        "example": "*já* jdu, *my* jdeme"
+      },
+      "second-person": {
+        "plain": "Ten, s kým se mluví: ty.",
+        "example": "*ty* jdeš"
+      },
+      "third-person": {
+        "plain": "Kdokoli jiný: on, ona, ono, oni.",
+        "example": "*ona* jde"
+      },
+      "nominative": {
+        "plain": "Ten, kdo děj dělá: podmět.",
+        "example": "*Pes* kouše muže."
+      },
+      "accusative": {
+        "plain": "Ten, na kom se děj provádí: předmět.",
+        "example": "Pes kouše *muže*."
+      },
+      "dative": {
+        "plain": "Ten, pro koho se něco dává nebo dělá: komu.",
+        "example": "Dávám *muži* knihu."
+      },
+      "genitive": {
+        "plain": "Čí to je, nebo čí je to část: koho, čeho.",
+        "example": "kniha *muže*, střecha *domu*"
+      },
+      "vocative": {
+        "plain": "Tvar, kterým někoho voláme nebo oslovujeme přímo.",
+        "example": "*Anno!*, oslovení Anny"
+      },
+      "instrumental": {
+        "plain": "To, čím nebo kým se něco dělá.",
+        "example": "rusky писать *ручкой*, psát *perem*"
+      },
+      "locative": {
+        "plain": "Kde něco je.",
+        "example": "bydlím v *domě*"
+      },
+      "prepositional": {
+        "plain": "Tvar podstatného jména po některých předložkách, většinou o místě nebo o tom, o čem se mluví.",
+        "example": "rusky о *книге*, o *knize*"
+      },
+      "ablative": {
+        "plain": "Pryč od něčeho, ven z něčeho, nebo prostřednictvím něčeho.",
+        "example": "latinsky *Romā*, z Říma"
+      },
+      "partitive": {
+        "plain": "Část něčeho, nebo děj, který nebyl dokončen.",
+        "example": "finsky *vettä*, trochu vody"
+      },
+      "inessive": {
+        "plain": "Uvnitř něčeho.",
+        "example": "finsky *talossa*, v domě"
+      },
+      "elative": {
+        "plain": "Ven z něčeho.",
+        "example": "finsky *talosta*, z domu"
+      },
+      "illative": {
+        "plain": "Dovnitř něčeho.",
+        "example": "finsky *taloon*, do domu"
+      },
+      "adessive": {
+        "plain": "Na něčem nebo u něčeho.",
+        "example": "finsky *pöydällä*, na stole"
+      },
+      "allative": {
+        "plain": "Na něco nebo k něčemu.",
+        "example": "finsky *pöydälle*, na stůl"
+      },
+      "essive": {
+        "plain": "Být něčím na chvíli, jako role nebo stav.",
+        "example": "finsky *lapsena*, jako dítě"
+      },
+      "translative": {
+        "plain": "Stát se něčím.",
+        "example": "finsky *opettajaksi*, (stát se) učitelem"
+      },
+      "abessive": {
+        "plain": "Bez něčeho.",
+        "example": "finsky *rahatta*, bez peněz"
+      },
+      "comitative": {
+        "plain": "Spolu s něčím.",
+        "example": "estonsky *sõbraga*, s přítelem"
+      },
+      "masculine": {
+        "plain": "Jedna z tříd, do kterých podstatná jména patří; slova kolem mužského podstatného jména přebírají jeho koncovky. Většinou záleží na slově, ne na pohlaví.",
+        "example": "španělsky *el libro*, kniha"
+      },
+      "feminine": {
+        "plain": "Jedna z tříd, do kterých podstatná jména patří; slova kolem ženského podstatného jména přebírají jeho koncovky. Většinou záleží na slově, ne na pohlaví.",
+        "example": "španělsky *la mesa*, stůl"
+      },
+      "neuter": {
+        "plain": "Třída podstatných jmen, která nejsou ani mužská, ani ženská.",
+        "example": "německy *das Haus*, dům"
+      },
+      "animate": {
+        "plain": "Říká se tak o podstatném jménu pro osobu nebo zvíře; některé jazyky jim dávají vlastní koncovky.",
+        "example": "rusky вижу *брата*, vidím bratra"
+      },
+      "inanimate": {
+        "plain": "Říká se tak o podstatném jménu pro věc, ne pro osobu nebo zvíře.",
+        "example": "rusky вижу *стол*, vidím stůl"
+      },
+      "definite": {
+        "plain": "Konkrétní věc, kterou znají oba mluvčí: ten, ta, to.",
+        "example": "švédsky *huset*, ten dům"
+      },
+      "indefinite": {
+        "plain": "Libovolná, zatím neznámá: nějaký, nějaká.",
+        "example": "švédsky *ett hus*, nějaký dům"
+      },
+      "present": {
+        "plain": "Teď, nebo vždycky, nebo jako zvyk.",
+        "example": "ona *jde*"
+      },
+      "past": {
+        "plain": "Před teď.",
+        "example": "ona *šla*"
+      },
+      "future": {
+        "plain": "Později než teď.",
+        "example": "ona *bude jít*"
+      },
+      "non-past": {
+        "plain": "Teď nebo později: jeden tvar pro obojí.",
+        "example": "japonsky *食べる*, jíst nebo bude jíst"
+      },
+      "preterite": {
+        "plain": "Něco, co se stalo a skončilo v nějakém bodě minulosti.",
+        "example": "španělsky ayer *comí*, včera *jsem snědl*"
+      },
+      "imperfect": {
+        "plain": "Minulost zevnitř: něco, co trvalo, pořád se dělo nebo se dřív dělávalo.",
+        "example": "španělsky *comía*, *jedl jsem*, *jídával jsem*"
+      },
+      "perfect": {
+        "plain": "Hotovo před teď a pořád to něco znamená teď.",
+        "example": "ona *už přišla*"
+      },
+      "pluperfect": {
+        "plain": "Hotovo před jiným okamžikem v minulosti.",
+        "example": "ona *byla už přišla*"
+      },
+      "aorist": {
+        "plain": "Děj z minulosti vyprávěný jako jedna celá událost, jak to dělá příběh.",
+        "example": "bulharsky *писах*, psal jsem"
+      },
+      "indicative": {
+        "plain": "Obvyklý tvar pro říkání, jak věci jsou: fakta a otázky na ně.",
+        "example": "Ona *je* tady."
+      },
+      "subjunctive": {
+        "plain": "Tvar pro to, co se přeje nebo chce, o čem se pochybuje, čeho se bojíme nebo co si jen představujeme, místo toho, aby se řeklo, že je to tak. Obvykle po slovech jako že, když, aby.",
+        "example": "Kéž by *byl* tady. Je důležité, aby *byla* včas. Španělsky quiero que *vengas*, chci, abys přišel."
+      },
+      "subjunctive-i": {
+        "plain": "Německý tvar pro převyprávění toho, co řekl někdo jiný, bez ručení za to.",
+        "example": "Er sagt, er *sei* krank. Říká, že je nemocný."
+      },
+      "subjunctive-ii": {
+        "plain": "Německý tvar pro to, co není skutečné: přání, zdvořilé prosby a kdyby.",
+        "example": "Wenn ich Zeit *hätte*... Kdybych měl čas..."
+      },
+      "conditional": {
+        "plain": "Co by se stalo, kdyby něco jiného bylo pravda.",
+        "example": "ona *by šla*"
+      },
+      "conditional-i": {
+        "plain": "Co by se stalo, kdyby něco jiného bylo pravda.",
+        "example": "německy ich *würde gehen*, šel bych"
+      },
+      "conditional-ii": {
+        "plain": "Co by se bylo stalo, kdyby něco jiného bylo pravda v minulosti.",
+        "example": "německy ich *wäre gegangen*, byl bych šel"
+      },
+      "future-i": {
+        "plain": "Později než teď.",
+        "example": "německy ich *werde gehen*, půjdu"
+      },
+      "future-ii": {
+        "plain": "Hotovo do pozdějšího okamžiku.",
+        "example": "německy ich *werde gegangen sein*, budu šel"
+      },
+      "imperative": {
+        "plain": "Tvar, kterým někomu řekneme, aby něco udělal.",
+        "example": "*Jdi!*"
+      },
+      "jussive": {
+        "plain": "Tvar, kterým něco necháme nebo přikážeme někomu, často ne posluchači.",
+        "example": "arabsky *لِيَكْتُبْ*, ať napíše"
+      },
+      "optative": {
+        "plain": "Tvar pro přání: kéž by tak bylo."
+      },
+      "potential": {
+        "plain": "Tvar pro to, co je pravděpodobně nebo možná tak.",
+        "example": "finsky *lienee*, (on) asi je"
+      },
+      "active": {
+        "plain": "Podmět děj dělá.",
+        "example": "Ona *napsala* dopis."
+      },
+      "passive": {
+        "plain": "Na podmětu se děj provádí.",
+        "example": "Dopis *byl napsán*."
+      },
+      "infinitive": {
+        "plain": "Sloveso samo, bez toho, že by ho někdo dělal: tvar, pod kterým ho slovník uvádí.",
+        "example": "*psát*, španělsky *caminar*"
+      },
+      "participle": {
+        "plain": "Tvar slovesa, který funguje jako přídavné jméno a s pomocným slovesem tvoří jiné časy.",
+        "example": "rozbitý *hrnek*, ona *napsala*"
+      },
+      "gerund": {
+        "plain": "Tvar slovesa pro děj v průběhu, nebo použitý jako podstatné jméno.",
+        "example": "španělsky está *caminando*, právě jde"
+      },
+      "imperfective": {
+        "plain": "Děj viděný jako probíhající, opakovaný nebo nedokončený.",
+        "example": "rusky я *читал*, četl jsem"
+      },
+      "perfective": {
+        "plain": "Děj viděný jako jeden dokončený celek.",
+        "example": "rusky я *прочитал*, přečetl jsem (to) do konce"
+      },
+      "progressive": {
+        "plain": "Právě probíhá.",
+        "example": "ona *právě jde*"
+      },
+      "positive": {
+        "plain": "Přídavné jméno takové, jaké je, bez srovnávání.",
+        "example": "*velký*"
+      },
+      "comparative": {
+        "plain": "Víc než něco jiného.",
+        "example": "*větší*, *krásnější*"
+      },
+      "superlative": {
+        "plain": "Víc než všechno ostatní.",
+        "example": "*největší*, *nejkrásnější*"
+      },
+      "strong": {
+        "plain": "Koncovky přídavného jména v němčině, když žádný člen před ním neukazuje pád.",
+        "example": "*kaltes* Wasser, studená voda"
+      },
+      "weak": {
+        "plain": "Koncovky přídavného jména v němčině po der, die, das, kde člen už pád ukazuje.",
+        "example": "das *kalte* Wasser, ta studená voda"
+      },
+      "mixed": {
+        "plain": "Koncovky přídavného jména v němčině po ein, kein, mein.",
+        "example": "ein *kaltes* Bier, studené pivo"
+      },
+      "formal": {
+        "plain": "Pro cizí lidi, starší a úřední texty.",
+        "example": "německy *Sie*, španělsky *usted*"
+      },
+      "informal": {
+        "plain": "Pro přátele, rodinu a děti.",
+        "example": "německy *du*, španělsky *tú*"
+      },
+      "polite": {
+        "plain": "Zdvořilý způsob, jak to říct.",
+        "example": "japonsky *食べます*, (já) jím, řečeno zdvořile"
+      }
+    }
+  }
+}
