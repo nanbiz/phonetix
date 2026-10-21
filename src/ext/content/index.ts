@@ -185,15 +185,47 @@ async function readEachRun(runs: ScannedRun[]): Promise<void> {
     }
     readers[at].push(run);
   }
-  if (texts.length === 0) return;
-  const read = await sendMessage('readRuns', { texts }).catch(() => null);
-  if (!read) return;
-  read.forEach((said, at) => {
-    if (!said.language) return;
-    for (const run of readers[at]) {
-      run.lang = said.language;
-      readAs.set(run.node, said.language);
-    }
+  if (texts.length > 0) {
+    const read = await sendMessage('readRuns', { texts }).catch(() => null);
+    read?.forEach((said, at) => {
+      if (!said.language) return;
+      if (said.language === settings.learn) learnedHere = true;
+      for (const run of readers[at]) {
+        run.lang = said.language;
+        readAs.set(run.node, said.language);
+      }
+    });
+  }
+  await headwords(runs);
+}
+
+/** Whether a line of this page has turned out to be in the language the reader is learning. */
+let learnedHere = false;
+
+/**
+ * A word standing on its own, in the language the reader is learning, on a page in another.
+ *
+ * A page that teaches a language heads each of its entries with the word alone, and a word
+ * alone says nothing a detector can read: "venir" and "costar" over a Spanish example on an
+ * English page were read as English, "costar" as a film's co-star. Where some of the page is in
+ * the language the reader learns, a word on its own is in whichever of the two languages holds
+ * it, and held by both, the one that says it more.
+ */
+async function headwords(runs: ScannedRun[]): Promise<void> {
+  const other = settings.learn;
+  const page = pageLanguage();
+  if (!learnedHere || !other || other === page) return;
+  const alone = runs.filter((run) => !run.lang && /^\p{L}+$/u.test(run.text.trim()));
+  if (alone.length === 0) return;
+  const read = await sendMessage('inOther', {
+    words: alone.map((run) => run.text.trim()),
+    mine: page,
+    other,
+  }).catch(() => null);
+  read?.forEach((theirs, at) => {
+    if (!theirs) return;
+    alone[at].lang = other;
+    readAs.set(alone[at].node, other);
   });
 }
 

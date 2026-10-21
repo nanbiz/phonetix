@@ -65,6 +65,9 @@ export interface HostProtocol {
   readScreen: { data: { text: string }; reply: Screen };
   /** What each run of a page is in, since a page is not always in one language. */
   readRuns: { data: { texts: string[] }; reply: Screen[] };
+  /** Which of two languages each of these words is in, by which dictionary holds it and, held
+   *  by both, which says it more: true for the second. */
+  inOther: { data: { words: string[]; mine: string; other: string }; reply: boolean[] };
   /** A transcription, symbol by symbol, for a surface with no answer to read them off. */
   symbols: { data: { ipa: string }; reply: IpaSymbol[] };
   /** What Wiktionary says about a word: a transcription a person wrote, and a recording of

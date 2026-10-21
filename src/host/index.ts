@@ -17,9 +17,23 @@ import { commonsAt, wiktionarySource } from '@/data/links';
 import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
 import { hear, stopHearing } from './speech';
+import { current, watch } from '@/settings';
+import type { Settings } from '@/settings/shape';
+
+/** The languages the reader reads or learns, whose dictionaries are worth fetching for a line
+ *  of a page that turned out to be in one of them. */
+let readersOwn = new Set<string>();
+
+function own(settings: Settings): void {
+  readersOwn = new Set(
+    [settings.target, ...(settings.known ?? []), settings.learn, settings.learning].filter(Boolean)
+  );
+}
 
 /** Start answering. Called once, by the background entry point. */
 export function host(): void {
+  void current().then(own);
+  watch(own);
   // A new place to fetch dictionaries from is a new situation: what failed against the old
   // host was about the old host, and a reader who has just corrected the address should not
   // be met by the complaint they were correcting. Whatever is still wrong records itself
@@ -60,10 +74,13 @@ export function host(): void {
         .filter(([lang, accent]) => accent && accent !== lang)
         .map(([, accent]) => open(accent).catch(() => null)),
       // And each language a line of the page turned out to be in, so an English notice on a
-      // German page is read with the English pack rather than the German one.
+      // German page is read with the English pack rather than the German one. Fetched only for
+      // a language the reader reads or learns: what one line is in is a guess from a few words,
+      // and every line guessed Polish, Catalan or Lithuanian set a whole dictionary of it
+      // downloading. Any other is read with what is here, which says how its words are said.
       ...[...new Set(data.runs.map((run) => run.lang).filter((lang): lang is string =>
         Boolean(lang) && lang !== data.source && lang !== data.target))]
-        .map((lang) => open(lang).catch(() => null)),
+        .map((lang) => open(lang, readersOwn.has(lang)).catch(() => null)),
       // The classifier for what is being read, where the language has one. It decides which
       // word a spelling is, above the rule about the word before it.
       openHomographs(data.source).catch(() => 0),
@@ -151,6 +168,12 @@ export function host(): void {
   onMessage('readScreen', async ({ data }) => readScreen(data.text));
 
   onMessage('readRuns', async ({ data }) => readRuns(data.texts));
+  onMessage('inOther', async ({ data }) => {
+    await Promise.all([openReadInto(data.mine), openReadInto(data.other)]);
+    const read: boolean[] = [];
+    for (const word of data.words) read.push(!(await typedInMine(word, data.mine, data.other)));
+    return read;
+  });
 
   onMessage('enrich', async ({ data }) => {
     try {

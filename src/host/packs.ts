@@ -66,14 +66,15 @@ async function carriedPack(lang: string): Promise<Uint8Array | undefined> {
 
 /**
  * A language's pack, open in the core, from what this machine already holds - and the
- * dictionary of what its words mean fetched in the background the first time it is needed.
+ * dictionary of what its words mean fetched in the background the first time it is needed,
+ * unless [fetchMissing] says this one is only to be read with what is here.
  *
  * What is opened now is what is here, so a page is answered at once with how its words are
  * said; the meanings arrive a moment later and the page is told. Making the reader find a list
  * and fetch each dictionary by hand was a step nobody could work out, and until they did, a
  * reader who had chosen a language to read into was answered with nothing in it.
  */
-export async function open(lang: string): Promise<string | null> {
+export async function open(lang: string, fetchMissing = true): Promise<string | null> {
   if ((await openLanguages()).includes(lang) && !carried.has(lang)) return lang;
   const bytes = await cached(lang);
   if (bytes) {
@@ -82,7 +83,7 @@ export async function open(lang: string): Promise<string | null> {
     freshen(opened, bytes);
     return opened;
   }
-  inBackground(lang);
+  if (fetchMissing) inBackground(lang);
   if ((await openLanguages()).includes(lang)) return lang;
   return fromWhatWeCarry(lang);
 }
