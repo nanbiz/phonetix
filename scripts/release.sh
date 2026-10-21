@@ -11,7 +11,7 @@
 #                                        this same tree and nothing has changed since
 #
 # The Firefox add-on is signed by Mozilla, which needs MOZ_API_KEY and MOZ_API_SECRET in the
-# environment; without them the xpi is left unsigned and the release says which artifacts it
+# environment or in ~/.config/phonetix/amo.env; without them the xpi is left unsigned and the release says which artifacts it
 # has. Everything else needs nothing but this machine.
 #
 # The release notes are yours: this creates the release with GitHub's own generated notes and
@@ -61,16 +61,27 @@ apk="$out/phonetix-$tag-android-debug.apk"
 cp android/app/build/outputs/apk/debug/app-debug.apk "$apk"
 
 signed=""
+# The keys are this machine's, kept outside the repository: the workflow that once held them
+# runs on GitHub's machines, which this repository no longer gets.
+amo="${XDG_CONFIG_HOME:-$HOME/.config}/phonetix/amo.env"
+if [[ -z "${MOZ_API_KEY:-}" && -f "$amo" ]]; then
+  # shellcheck disable=SC1090
+  source "$amo"
+fi
 if [[ -n "${MOZ_API_KEY:-}" && -n "${MOZ_API_SECRET:-}" ]]; then
-  echo "== signing with Mozilla"
+  echo "== signing with Mozilla, listed on addons.mozilla.org"
+  # Listed, so the add-on's page and every Firefox that installed it from there get the new
+  # version; with the source the build was made from, which Mozilla's reviewers ask for
+  # because what ships is bundled and carries WebAssembly.
   pnpm dlx web-ext@latest sign \
-    --channel=unlisted \
+    --channel=listed \
     --approval-timeout=5400000 \
     --api-key="$MOZ_API_KEY" \
     --api-secret="$MOZ_API_SECRET" \
     --source-dir="$out/firefox-mv2" \
+    --upload-source-code="$out/phonetix-$version-sources.zip" \
     --artifacts-dir="$out/signed"
-  signed=$(ls -t "$out"/signed/*.xpi 2>/dev/null | head -1 || true)
+  signed=$(ls -t "$out"/signed/*"$version"*.xpi 2>/dev/null | head -1 || true)
 else
   echo "== no Mozilla keys in the environment; the Firefox build goes up unsigned"
 fi
