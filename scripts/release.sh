@@ -69,12 +69,12 @@ if [[ -z "${MOZ_API_KEY:-}" && -f "$amo" ]]; then
   source "$amo"
 fi
 if [[ -n "${MOZ_API_KEY:-}" && -n "${MOZ_API_SECRET:-}" ]]; then
-  echo "== signing with Mozilla, listed on addons.mozilla.org"
-  # Listed, so the add-on's page and every Firefox that installed it from there get the new
-  # version; with the source the build was made from, which Mozilla's reviewers ask for
+  echo "== signing with Mozilla"
+  # Unlisted, as the add-on is on addons.mozilla.org: signed there and installed from this
+  # release. With the source the build was made from, which Mozilla's reviewers ask for
   # because what ships is bundled and carries WebAssembly.
   pnpm dlx web-ext@latest sign \
-    --channel=listed \
+    --channel=unlisted \
     --approval-timeout=5400000 \
     --api-key="$MOZ_API_KEY" \
     --api-secret="$MOZ_API_SECRET" \
