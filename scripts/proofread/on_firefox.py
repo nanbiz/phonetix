@@ -29,7 +29,7 @@ import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
-from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, player_holds, serve, stream_draws, walk
+from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, mark_checks, player_holds, selection_checks, serve, stream_draws, walk
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ADDON = os.path.join(ROOT, ".output")
@@ -128,6 +128,16 @@ class FirefoxHand:
             {"type": "pointerDown", "button": 0},
             {"type": "pointerUp", "button": 0},
         ])
+
+    def drag(self, start, end, steps=10):
+        """The button held from one point to another, the way a reader selects text."""
+        (x0, y0), (x1, y1) = start, end
+        self.act([{"type": "pointerMove", "duration": 0, "origin": "viewport",
+                   "x": round(x0), "y": round(y0)}, {"type": "pointerDown", "button": 0}]
+                 + [{"type": "pointerMove", "duration": 20, "origin": "viewport",
+                     "x": round(x0 + (x1 - x0) * k / steps), "y": round(y0 + (y1 - y0) * k / steps)}
+                    for k in range(1, steps + 1)]
+                 + [{"type": "pointerUp", "button": 0}])
 
     def touch(self, points):
         """A finger down at the first point, along the rest, and up at the last."""
@@ -453,6 +463,11 @@ def main():
         driver.send("WebDriver:Navigate", {"url": f"{base}/player.html"})
         time.sleep(2)
         player_holds(FirefoxHand(driver), "firefox", failures)
+
+        # Words selected, one card for all of them.
+        driver.send("WebDriver:Navigate", {"url": f"{base}/page.html"})
+        time.sleep(3)
+        selection_checks(FirefoxHand(driver), "firefox", failures)
 
         # And a chat that is never still, streaming an answer.
         driver.send("WebDriver:Navigate", {"url": f"{base}/stream.html"})

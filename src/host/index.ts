@@ -215,10 +215,40 @@ export function host(): void {
   });
 
   onMessage('phrase', async ({ data }) => {
-    // Nothing but an engine can answer several words at once, so this does not ask the packs.
-    // What comes back is a guess and the core is what says so.
-    const [said] = await guessed(data.source, data.target, [data.text]).catch(() => []);
-    return phrase(data.text, said ?? '', data.source, data.target);
+    // Nothing but an engine can answer what several words mean at once. What comes back is a
+    // guess and the core is what says so. In a language the reader reads, nothing is
+    // translated, and the card says how it is said and nothing else.
+    const [said] = data.source === data.target
+      ? ['']
+      : await guessed(data.source, data.target, [data.text]).catch(() => []);
+    const answer = await phrase(data.text, said ?? '', data.source, data.target);
+    // How it is said is each word's, word after word: the dictionary's, and the voice's for a
+    // word it does not hold, a name most often. Only where every word has one: a phrase with a
+    // word missing would be read as if it were said that way whole.
+    await open(data.source).catch(() => null);
+    const words = data.text
+      .split(/\s+/)
+      .map((word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+      .filter(Boolean);
+    const each = await Promise.all(
+      words.map((word) =>
+        lookUp(word, data.source, data.source, data.accent ?? '').then(
+          (it) => it.ipa[0] ?? '',
+          () => ''
+        )
+      )
+    );
+    const missing = words.filter((_, at) => !each[at]);
+    const voiced = await ipa(data.source, missing).catch(() => ({}) as Record<string, string>);
+    words.forEach((word, at) => {
+      if (!each[at]) each[at] = voiced[word] ?? '';
+    });
+    if (words.length > 0 && each.every(Boolean)) {
+      const spoken = each.join(' ');
+      answer.ipa = [spoken];
+      answer.symbols = await symbolsOf(spoken).catch(() => []);
+    }
+    return answer;
   });
 
   onMessage('say', async ({ data }) => {

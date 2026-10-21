@@ -33,7 +33,7 @@ import {
 } from './inline';
 import inlineCss from '@/ui/inline.css?inline';
 import inlineTokens from '@/ui/inline-tokens.css?inline';
-import { emberAt, emberAway, emberPaintedIn } from './ember';
+import { emberAt, emberAway, emberPaintedIn, emberSpan } from './ember';
 import { recordingIn } from '@/data/accents';
 import { markHidden, markPaintedIn, markShown, type MarkWord } from './mark';
 import { OURS_ANY, PARAGRAPH, readable, scan, type ScannedRun } from './scan';
@@ -983,15 +983,57 @@ async function selected(): Promise<void> {
   // Switched off, here or everywhere, is off for every gesture, this one too.
   if (!allowed(settings, location.hostname)) return;
   const selection = document.getSelection();
-  const text = selection?.toString().trim() ?? '';
-  if (!selection || selection.isCollapsed || text.split(/\s+/).length < 2) return;
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+  const text = asWrittenIn(selection.getRangeAt(0));
+  if (text.split(/\s+/).length < 2) return;
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
-  await askPhrase(text, at, selection.getRangeAt(0).getBoundingClientRect());
+  const range = selection.getRangeAt(0);
+  await askPhrase(text, at, range.getBoundingClientRect(), true, range);
+}
+
+/**
+ * The text of a stretch of the page as the page wrote it: a word drawn over is the word it
+ * replaced, where the selection's own text is what was drawn, a transcription read back as if
+ * it were the words.
+ */
+function asWrittenIn(range: Range): string {
+  let text = '';
+  const root = range.commonAncestorContainer;
+  const walker = document.createTreeWalker(
+    root instanceof Element ? root : (root.parentElement ?? document.body),
+    NodeFilter.SHOW_TEXT
+  );
+  let drawn: Element | null = null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!range.intersectsNode(node)) continue;
+    const value = node.nodeValue ?? '';
+    const from = node === range.startContainer ? range.startOffset : 0;
+    const to = node === range.endContainer ? range.endOffset : value.length;
+    // Only touched at its end or its start: Firefox begins a selection at the end of the word
+    // before the one the hand started on.
+    if (from >= to) continue;
+    const word = node.parentElement?.closest(`.${WORD}`) ?? null;
+    if (word) {
+      // A drawn word is its own once, however many pieces of text it is drawn as.
+      if (word !== drawn) text += word.querySelector('.px-was')?.textContent ?? '';
+      drawn = word;
+      continue;
+    }
+    drawn = null;
+    text += value.slice(from, to);
+  }
+  return text.replace(/\s+/g, ' ').trim();
 }
 
 /** Several words of the page, answered as one card at [box]: by the engine, marked as its. */
-async function askPhrase(text: string, at: Node | null, box: DOMRect, entered = true): Promise<void> {
+async function askPhrase(
+  text: string,
+  at: Node | null,
+  box: DOMRect,
+  entered = true,
+  range: Range | null = null
+): Promise<void> {
   if (text.length > PHRASE_LIMIT) return;
   // What the text itself is in, where it says enough to tell: a page tagged German around an
   // English answer is English where the reader selected it, and asking the engine to translate
@@ -1000,17 +1042,90 @@ async function askPhrase(text: string, at: Node | null, box: DOMRect, entered = 
   const source = guess?.reliable && guess.language
     ? guess.language
     : at instanceof Text ? languageOf(at) : pageLanguage();
-  if (!translates(settings, source)) return;
-  const target = settings.target;
-  const answer = await sendMessage('phrase', { text, source, target }).catch(() => null);
+  // In a language the reader reads, how it is said: the card a word of it opens says that too.
+  const translating = translates(settings, source);
+  const target = translating ? settings.target : source;
+  const answer = await sendMessage('phrase', {
+    text,
+    source,
+    target,
+    accent: accentFor(settings, source),
+  }).catch(() => null);
   if (!answer) return;
   // The text handed back unchanged is the engine saying it has nothing.
   const translated = answer.says[0]?.trim().toLowerCase() ?? '';
-  if (!translated || translated === text.toLowerCase()) return;
+  if (translating && (!translated || translated === text.toLowerCase())) answer.says = [];
+  if (answer.says.length === 0 && answer.ipa.length === 0) return;
   // Asked for by selecting, so there is no word to come in from and nothing to pass through;
   // swept with the side button, it is read while the finger is down and touched by nothing.
-  show(answer, box, { recorded: false, entered });
+  // Lit the way a word the pointer is on is lit, line by line.
+  const lines = range ? linesOf(range) : [];
+  anchored = null;
+  show(answer, box, {
+    recorded: false,
+    entered,
+    accent: accentFor(settings, source),
+    narrow: settings.narrow,
+    hideStress: settings.hideStress,
+    parts: partsOf(settings),
+    onPlay: () => speak(text, source, warmAudio()),
+    gone: () => {
+      emberSpan([]);
+      unselected(false);
+      phraseUp = false;
+    },
+  });
+  phraseUp = range !== null;
+  emberSpan(lines);
+  if (phraseUp) unselected(true);
 }
+
+/**
+ * The lines a stretch of the page runs over, one box each: a range reports a box for every
+ * piece of text and element in it, and lit piece by piece the light overlapped itself.
+ */
+function linesOf(range: Range): DOMRect[] {
+  const lines: DOMRect[] = [];
+  const boxes = [...range.getClientRects()]
+    .filter((box) => box.width > 0 && box.height > 0)
+    .sort((a, b) => a.top - b.top || a.left - b.left);
+  for (const box of boxes) {
+    const line = lines.find(
+      (it) => Math.min(it.bottom, box.bottom) - Math.max(it.top, box.top) > Math.min(it.height, box.height) / 2
+    );
+    if (!line) {
+      lines.push(DOMRect.fromRect(box));
+      continue;
+    }
+    const left = Math.min(line.left, box.left);
+    const top = Math.min(line.top, box.top);
+    line.width = Math.max(line.right, box.right) - left;
+    line.height = Math.max(line.bottom, box.bottom) - top;
+    line.x = left;
+    line.y = top;
+  }
+  return lines;
+}
+
+/**
+ * The page's own colour for a selection put away while a card is up for it, or brought back:
+ * the light round what was asked about is the light round a word, and the selection's colour
+ * drawn over it hid it. The text stays selected, to be copied.
+ */
+function unselected(on: boolean): void {
+  const id = 'phonetix-selected-style';
+  document.getElementById(id)?.remove();
+  if (!on) return;
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = '::selection { background-color: transparent !important; color: inherit !important; }';
+  document.head.appendChild(style);
+}
+
+/** Whether the card up is for a phrase the reader selected, which the pointer moving over the
+ *  words of it does not take down or swap for one of theirs: it goes the way a selection does,
+ *  with a press elsewhere or Escape. */
+let phraseUp = false;
 
 /** How much text a phrase card will answer. Past this a reader is selecting a page, not a clause. */
 const PHRASE_LIMIT = 240;
@@ -1055,7 +1170,7 @@ function under(): Element | null {
  * since a page that scrolls under a still cursor reports the word leaving it.
  */
 function letGo(): void {
-  if (grabbed) return;
+  if (grabbed || phraseUp) return;
   const at = under();
   if (at && inside(at)) return;
   if (anchored?.holds(pointer.x, pointer.y) || onTheWayIn(pointer)) return;
@@ -1086,7 +1201,8 @@ function followWithEmber(): void {
     emberAway();
     return;
   }
-  emberAt(pointer.x, pointer.y, wordNear(pointer.x, pointer.y)?.rect ?? null);
+  // Over a phrase asked about, the light is the phrase's, not the word's the pointer is on.
+  emberAt(pointer.x, pointer.y, phraseUp ? null : (wordNear(pointer.x, pointer.y)?.rect ?? null));
 }
 
 /** Whether this screen is touched: one with no pointer that hovers, or one a finger has just
@@ -1280,6 +1396,7 @@ function gestures(): void {
       if (!allowed(settings, location.hostname) || !settings.cards) return;
       resting = setTimeout(() => {
         resting = null;
+        if (phraseUp) return;
         if (anchored?.holds(pointer.x, pointer.y)) return;
         // Any word, in any language: a word in one the reader reads has a card that says it.
         const found = wordNear(pointer.x, pointer.y);
@@ -1330,6 +1447,7 @@ function gestures(): void {
     if (!settings.cards) return;
     if (opening) clearTimeout(opening);
     opening = setTimeout(() => {
+      if (phraseUp) return;
       anchored = onElement(found.element);
       void open(anchored, askedOf(found.token, found.before));
     }, Math.max(0, settings.delay));

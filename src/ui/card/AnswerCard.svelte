@@ -334,12 +334,12 @@
   aria-label={answer.spelling}
 >
   <div class="card-handle"></div>
-  {#if !phrase && (show.sound || back || !bodied)}
+  {#if phrase ? answer.ipa.length > 0 && show.sound : show.sound || back || !bodied}
     <!-- How the word is said, with the button that says it before it and its Wiktionary page at
          the far end. The word itself is on the page under the card, so the card does not say it
          again; what it means is the card's body, set apart below. The accent is glued to the
          transcription's closing mark, so the two wrap as one and never apart. A phrase has
-         none of this. -->
+         how it is said, word after word, where every word of it has one, and no page. -->
     <div class="card-strip">
       {#if back}
         <!-- In place of the play button: a form's card has the way back to the word on the
@@ -378,7 +378,7 @@
         <span class="spelled" data-spelled>{answer.spellingOf}</span>
       {/if}
       <span class="spacer"></span>
-      {#if !back}
+      {#if !back && !phrase}
         <IconLink
           icon={WIKTIONARY}
           label="Wiktionary"

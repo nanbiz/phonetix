@@ -200,6 +200,33 @@ export function emberAt(x: number, y: number, word: DOMRect | null): void {
   if (!frameAsked) frameAsked = requestAnimationFrame(step);
 }
 
+/** The lights over a stretch of the page asked about as one, a line of it each. */
+let spans: HTMLElement[] = [];
+
+/**
+ * Light a stretch of the page the way a word the pointer is on is lit, one box for each line
+ * it runs over, or put those lights out with none: a phrase selected and answered is as much
+ * the thing the card is about as a word is.
+ */
+export function emberSpan(boxes: DOMRect[]): void {
+  build();
+  for (const old of spans) old.remove();
+  spans = boxes
+    .filter((box) => box.width > 0 && box.height > 0)
+    .map((box) => {
+      const span = document.createElement('div');
+      span.className = 'ember-word on';
+      span.dataset.span = '';
+      // As far round the text as the light round a word reaches.
+      const pad = 3;
+      span.style.cssText = `width:${Math.round(box.width + pad * 2)}px;` +
+        `height:${Math.round(box.height + pad * 2)}px;transition:none;` +
+        `transform:translate(${Math.round(box.left - pad)}px,${Math.round(box.top - pad)}px);`;
+      return span;
+    });
+  frame?.prepend(...spans);
+}
+
 /** Put it away: the pointer has left the page, or is on something of ours. */
 export function emberAway(): void {
   where = 'away';

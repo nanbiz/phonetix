@@ -332,6 +332,19 @@ class ChromeHand:
             "type": "mouseMoved", "x": round(x), "y": round(y),
         }, session=self.session)
 
+    def drag(self, start, end, steps=10):
+        """The button held from one point to another, the way a reader selects text."""
+        (x0, y0), (x1, y1) = start, end
+        send = lambda kind, x, y, buttons: self.cdp.send("Input.dispatchMouseEvent", {
+            "type": kind, "x": round(x), "y": round(y), "button": "left", "buttons": buttons,
+            "clickCount": 1}, session=self.session)
+        send("mouseMoved", x0, y0, 0)
+        send("mousePressed", x0, y0, 1)
+        for k in range(1, steps + 1):
+            send("mouseMoved", x0 + (x1 - x0) * k / steps, y0 + (y1 - y0) * k / steps, 1)
+            time.sleep(0.02)
+        send("mouseReleased", x1, y1, 0)
+
     def click(self, x, y):
         for kind in ("mousePressed", "mouseReleased"):
             self.cdp.send("Input.dispatchMouseEvent", {
@@ -414,6 +427,28 @@ CARD_SAYS_JS = """
                     says: card.querySelector('.headline .tr')?.textContent.trim() ?? '',
                     head: !!card.querySelector('.card-head')};
   })()
+"""
+
+# Where a word of #prose is, painted or not, with its edges.
+SPOT_JS = """
+  ((wanted) => {
+    const at = (r) => ({x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right});
+    for (const w of document.querySelectorAll('#prose .px-w')) {
+      const was = ((w.querySelector('.px-was') || w).textContent || '').trim();
+      if (was === wanted) return at(w.getBoundingClientRect());
+    }
+    const walk = document.createTreeWalker(document.getElementById('prose'), NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      if (n.parentElement.closest('.px-w')) continue;
+      const i = n.nodeValue.indexOf(wanted);
+      if (i < 0) continue;
+      const range = document.createRange();
+      range.setStart(n, i);
+      range.setEnd(n, i + wanted.length);
+      return at(range.getBoundingClientRect());
+    }
+    return null;
+  })(%s)
 """
 
 # Where a word of #prose is, painted or not.
@@ -1091,6 +1126,71 @@ def player_holds(hand, engine, failures):
         failures.append(f"{engine}: the card stayed open after the pointer left it and its word")
 
 
+def selection_checks(hand, engine, failures):
+    """Words selected open one card for all of them, lit the way a word the pointer is on is.
+
+    The card says how the words are said, one after another, and what they mean; the light
+    goes round them, the selection's own colour put away so the light shows; the pointer
+    resting on a word of them neither swaps the card for that word's nor lights the word on its
+    own; a press elsewhere takes the card, the light and the selection down. Asked of the page
+    already open in the hand's tab, whose prose is the Spanish sentence."""
+    hand.click(5, 5)
+    time.sleep(0.4)
+    first = hand.ask(SPOT_JS % json.dumps("perro"))
+    last = hand.ask(SPOT_JS % json.dumps("camino"))
+    if not first or not last:
+        failures.append(f"{engine}: no words to select: {first} {last}")
+        return
+    # From inside the word before to inside the word after, the way a hand drags: a selection
+    # begun on the gap between two words drawn as boxes of their own does not start there.
+    hand.drag((first["left"] - 6, first["y"]), (last["right"] + 6, last["y"]))
+    state = """(() => {
+        const c = document.getElementById('phonetix-card-host')?.shadowRoot?.querySelector('.card');
+        const e = document.getElementById('phonetix-card-host-ember')?.shadowRoot;
+        const word = e?.querySelector('.ember-word:not([data-span])');
+        return {card: c ? c.innerText.replace(/\\s+/g, ' ') : null,
+                ipa: !!c?.querySelector('.card-strip .ipa'),
+                lights: e ? e.querySelectorAll('[data-span]').length : 0,
+                word: !!word?.classList.contains('on'),
+                hidden: !!document.getElementById('phonetix-selected-style'),
+                selected: getSelection().toString().trim()};
+    })()"""
+    got = None
+    for _ in range(20):
+        got = hand.ask(state)
+        if got and got["card"]:
+            break
+        time.sleep(0.5)
+    print(f"  {engine}, words selected: {got}")
+    if not got or not got["card"] or "perro" not in got["card"]:
+        failures.append(f"{engine}: selecting words opened no card for them: {got}")
+        return
+    if not got["ipa"]:
+        failures.append(f"{engine}: the card for words selected does not say how they are said")
+    # Asked as the page wrote it, and only what was selected.
+    if not got["card"].endswith("perro corre por el camino"):
+        failures.append(f"{engine}: the card is not about the words selected as written: "
+                        f"{got['card']!r}")
+    if got["lights"] < 1 or not got["hidden"]:
+        failures.append(f"{engine}: the words selected are not lit like a word: {got}")
+    middle = hand.ask(SPOT_JS % json.dumps("corre"))
+    for step in (0, 1):
+        hand.move(middle["x"] + step, middle["y"])
+        time.sleep(0.05)
+    time.sleep(1.5)
+    rested = hand.ask(state)
+    print(f"  {engine}, resting on a word of them: {rested}")
+    if not rested["card"] or "perro" not in rested["card"]:
+        failures.append(f"{engine}: resting on a selected word swapped the card: {rested['card']!r}")
+    if rested["word"]:
+        failures.append(f"{engine}: resting on a selected word lit the word on its own")
+    hand.click(5, 5)
+    time.sleep(0.6)
+    gone = hand.ask(state)
+    if gone["card"] or gone["lights"] or gone["hidden"]:
+        failures.append(f"{engine}: a press elsewhere left the card or its light up: {gone}")
+
+
 def walk(hand, start, end, step=3, pause=0.012, each=None):
     """Move the pointer along a straight line in small steps, the way a hand moves a mouse.
 
@@ -1731,6 +1831,20 @@ def main():
         time.sleep(2)
         player_holds(ChromeHand(cdp, chat), "chrome", failures)
         cdp.send("Target.closeTarget", {"targetId": chat_target})
+
+        # Words selected, in a tab of their own: a tab a finger has been in takes a drag as
+        # a finger's.
+        chosen_target = cdp.send("Target.createTarget", {"url": f"{base}/page.html"})["targetId"]
+        chosen = cdp.send("Target.attachToTarget",
+                          {"targetId": chosen_target, "flatten": True})["sessionId"]
+        cdp.send("Runtime.enable", session=chosen)
+        cdp.send("Emulation.setDeviceMetricsOverride", {
+            "width": 900, "height": 800, "deviceScaleFactor": 1, "mobile": False,
+        }, session=chosen)
+        cdp.send("Target.activateTarget", {"targetId": chosen_target})
+        time.sleep(3)
+        selection_checks(ChromeHand(cdp, chosen), "chrome", failures)
+        cdp.send("Target.closeTarget", {"targetId": chosen_target})
 
         # And a chat that is never still, streaming an answer.
         stream_target = cdp.send("Target.createTarget", {"url": f"{base}/stream.html"})["targetId"]

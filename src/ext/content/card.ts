@@ -316,6 +316,8 @@ export interface CardActions {
   arriving?: number | null;
   /** Look a word up the way the card's own word was: its lemma, and its other forms. */
   lookUp?: (word: string) => Promise<Answer | null>;
+  /** What else goes when the card does: the light over a phrase it is about. */
+  gone?: () => void;
   /** Whether the card takes the pointer from the start rather than from its arrow: one opened
    *  by a tap or for a selection was asked for outright, and there is no hover to come in by. */
   entered?: boolean;
@@ -323,6 +325,8 @@ export interface CardActions {
 
 /** Where the card is anchored, so it can be put back in place when it changes height. */
 let anchor: DOMRect = new DOMRect();
+/** What goes with the card on screen when it goes. */
+let alongside: (() => void) | null = null;
 
 /** Show one answer, anchored to the word it is about. */
 export function show(given: Answer, at: DOMRect, actions: CardActions = {}): void {
@@ -371,6 +375,7 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
   }
   const stayIn = actions.entered ?? false;
   hide();
+  alongside = actions.gone ?? null;
   spelling = answer.spelling;
   const { frame: fresh } = build();
   props = reactive({
@@ -415,6 +420,9 @@ export function moveTo(at: DOMRect): void {
 
 /** Take the card down. */
 export function hide(): void {
+  const going = alongside;
+  alongside = null;
+  going?.();
   if (drawn) {
     // Nothing to wait for: the card has no transition out.
     void unmount(drawn);

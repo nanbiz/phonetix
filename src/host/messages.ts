@@ -82,7 +82,10 @@ export interface HostProtocol {
    *  after a card is up rather than before, so a card never waits on an engine. */
   guess: { data: { word: string; source: string; target: string }; reply: string };
   /** Several words a reader selected, which only an engine can answer. */
-  phrase: { data: { text: string; source: string; target: string }; reply: Answer };
+  phrase: {
+    data: { text: string; source: string; target: string; accent?: string };
+    reply: Answer;
+  };
   /** The other direction: something the reader wants to say, in the language they are
    *  learning, with that word's own entry so the machine's answer can be judged. Nothing
    *  comes back with a reason for it, because "no word for that" and "no model for that
