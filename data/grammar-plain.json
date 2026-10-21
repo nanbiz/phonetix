@@ -1,0 +1,329 @@
+{
+  "note": "What each grammatical term is, said plainly and with an example, for a reader who has never met it. Written by hand; data/grammar.json keeps Wiktionary's glossary, which this is read before. An example marks the word in the form with *stars*.",
+  "categories": {
+    "mood": {
+      "plain": "How the speaker means what the verb says: as a fact, as something wished, doubted or imagined, or as an order."
+    },
+    "tense": {
+      "plain": "When it happens: before now, now, or later."
+    },
+    "aspect": {
+      "plain": "How the action is seen: as one finished whole, or as going on, repeated or unfinished."
+    },
+    "person": {
+      "plain": "Who does it: the speaker (I, we), the one spoken to (you), or someone else (he, she, they)."
+    },
+    "number": {
+      "plain": "How many: one, or more than one."
+    },
+    "case": {
+      "plain": "The form a noun takes to show its job in the sentence: who does something, to whom, whose, where."
+    },
+    "gender": {
+      "plain": "A class every noun belongs to, which the words around it change to match. It has little to do with sex: German das Mädchen, the girl, is neuter."
+    },
+    "definiteness": {
+      "plain": "Whether something is a particular, known one (the house) or any one (a house)."
+    },
+    "declension": {
+      "plain": "The set of endings a noun or adjective takes, which depends on the words around it."
+    },
+    "degree": {
+      "plain": "How strongly an adjective holds: big, bigger, the biggest."
+    },
+    "voice": {
+      "plain": "Whether the subject does the action (she wrote it) or has it done to it (it was written)."
+    },
+    "register": {
+      "plain": "How formal the word is: for strangers and official writing, or for friends."
+    },
+    "nonfinite": {
+      "plain": "A verb form that names the action without saying who does it or when: to go, going, gone."
+    }
+  },
+  "values": {
+    "singular": {
+      "plain": "One of something.",
+      "example": "one *dog*"
+    },
+    "plural": {
+      "plain": "More than one.",
+      "example": "two *dogs*"
+    },
+    "dual": {
+      "plain": "Exactly two, in languages that have a form just for pairs.",
+      "example": "Slovene *hiši*, two houses"
+    },
+    "first-person": {
+      "plain": "The speaker: I, or we.",
+      "example": "*I* walk, *we* walk"
+    },
+    "second-person": {
+      "plain": "The one spoken to: you.",
+      "example": "*you* walk"
+    },
+    "third-person": {
+      "plain": "Anyone else: he, she, it, they.",
+      "example": "*she walks*"
+    },
+    "nominative": {
+      "plain": "The one doing the action: the subject.",
+      "example": "*The dog* bites the man."
+    },
+    "accusative": {
+      "plain": "The one the action is done to: the direct object.",
+      "example": "The dog bites *the man*."
+    },
+    "dative": {
+      "plain": "The one something is given or done for: to whom.",
+      "example": "I give *the man* a book."
+    },
+    "genitive": {
+      "plain": "Whose it is, or what it is part of: of, 's.",
+      "example": "*the man's* book, the roof *of the house*"
+    },
+    "vocative": {
+      "plain": "The form used to call or speak to someone directly.",
+      "example": "Polish *Anno!*, Anna!"
+    },
+    "instrumental": {
+      "plain": "What something is done with or by.",
+      "example": "Russian писать *ручкой*, to write *with a pen*"
+    },
+    "locative": {
+      "plain": "Where something is.",
+      "example": "Polish w *domu*, *in the house*"
+    },
+    "prepositional": {
+      "plain": "The form a noun takes after certain prepositions, mostly about where or about what.",
+      "example": "Russian о *книге*, about *the book*"
+    },
+    "ablative": {
+      "plain": "Away from, out of, or by means of something.",
+      "example": "Latin *Romā*, from Rome"
+    },
+    "partitive": {
+      "plain": "Some of something, or an action not done to the end.",
+      "example": "Finnish *vettä*, some water"
+    },
+    "inessive": {
+      "plain": "Inside something.",
+      "example": "Finnish *talossa*, in the house"
+    },
+    "elative": {
+      "plain": "Out of something.",
+      "example": "Finnish *talosta*, out of the house"
+    },
+    "illative": {
+      "plain": "Into something.",
+      "example": "Finnish *taloon*, into the house"
+    },
+    "adessive": {
+      "plain": "On or at something.",
+      "example": "Finnish *pöydällä*, on the table"
+    },
+    "allative": {
+      "plain": "Onto or to something.",
+      "example": "Finnish *pöydälle*, onto the table"
+    },
+    "essive": {
+      "plain": "Being something for a while, as a role or state.",
+      "example": "Finnish *lapsena*, as a child"
+    },
+    "translative": {
+      "plain": "Becoming something.",
+      "example": "Finnish *opettajaksi*, (to become) a teacher"
+    },
+    "abessive": {
+      "plain": "Without something.",
+      "example": "Finnish *rahatta*, without money"
+    },
+    "comitative": {
+      "plain": "Together with something.",
+      "example": "Estonian *sõbraga*, with a friend"
+    },
+    "masculine": {
+      "plain": "One of the classes nouns fall into; the words around a masculine noun take its endings. Mostly a matter of the word, not of sex.",
+      "example": "Spanish *el libro*, the book"
+    },
+    "feminine": {
+      "plain": "One of the classes nouns fall into; the words around a feminine noun take its endings. Mostly a matter of the word, not of sex.",
+      "example": "Spanish *la mesa*, the table"
+    },
+    "neuter": {
+      "plain": "The class of nouns that are neither masculine nor feminine.",
+      "example": "German *das Haus*, the house"
+    },
+    "animate": {
+      "plain": "Said of a noun for a person or an animal, which some languages give endings of their own.",
+      "example": "Russian вижу *брата*, I see my brother"
+    },
+    "inanimate": {
+      "plain": "Said of a noun for a thing, not a person or an animal.",
+      "example": "Russian вижу *стол*, I see the table"
+    },
+    "definite": {
+      "plain": "A particular one both speakers know about: the.",
+      "example": "Swedish *huset*, the house"
+    },
+    "indefinite": {
+      "plain": "Any one, not yet known: a.",
+      "example": "Swedish *ett hus*, a house"
+    },
+    "present": {
+      "plain": "Now, or always, or as a habit.",
+      "example": "she *walks*"
+    },
+    "past": {
+      "plain": "Before now.",
+      "example": "she *walked*"
+    },
+    "future": {
+      "plain": "Later than now.",
+      "example": "she *will walk*"
+    },
+    "non-past": {
+      "plain": "Now or later: one form for both.",
+      "example": "Japanese *食べる*, eat or will eat"
+    },
+    "preterite": {
+      "plain": "Something that happened and was over at a point in the past.",
+      "example": "Spanish ayer *comí*, yesterday I *ate*"
+    },
+    "imperfect": {
+      "plain": "The past seen from inside: something that went on, kept happening, or used to be.",
+      "example": "Spanish *comía*, I *was eating*, I *used to eat*"
+    },
+    "perfect": {
+      "plain": "Done before now and still mattering now.",
+      "example": "she *has walked*"
+    },
+    "pluperfect": {
+      "plain": "Done before another moment in the past.",
+      "example": "she *had walked*"
+    },
+    "aorist": {
+      "plain": "A past action told as one complete event, the way a story tells it.",
+      "example": "Bulgarian *писах*, I wrote"
+    },
+    "indicative": {
+      "plain": "The ordinary form for saying what is so: facts, and questions about them.",
+      "example": "She *is* here."
+    },
+    "subjunctive": {
+      "plain": "The form for what is wished, wanted, doubted, feared or only imagined, rather than said to be so. It mostly comes after words like that, if, so that.",
+      "example": "I wish he *were* here. It is vital that she *be* on time. Spanish quiero que *vengas*, I want you to come."
+    },
+    "subjunctive-i": {
+      "plain": "German's form for repeating what someone else said, without vouching for it.",
+      "example": "Er sagt, er *sei* krank. He says he is ill."
+    },
+    "subjunctive-ii": {
+      "plain": "German's form for what is not real: wishes, polite requests, and if-only.",
+      "example": "Wenn ich Zeit *hätte*... If I had time..."
+    },
+    "conditional": {
+      "plain": "What would happen, if something else were so.",
+      "example": "she *would walk*"
+    },
+    "conditional-i": {
+      "plain": "What would happen, if something else were so.",
+      "example": "German ich *würde gehen*, I would go"
+    },
+    "conditional-ii": {
+      "plain": "What would have happened, if something else had been so.",
+      "example": "German ich *wäre gegangen*, I would have gone"
+    },
+    "future-i": {
+      "plain": "Later than now.",
+      "example": "German ich *werde gehen*, I will go"
+    },
+    "future-ii": {
+      "plain": "Done by some point later on.",
+      "example": "German ich *werde gegangen sein*, I will have gone"
+    },
+    "imperative": {
+      "plain": "The form for telling someone to do something.",
+      "example": "*Walk!*"
+    },
+    "jussive": {
+      "plain": "A form for letting or telling someone, often not the listener, do something.",
+      "example": "Arabic *لِيَكْتُبْ*, let him write"
+    },
+    "optative": {
+      "plain": "A form for wishing: may it be so."
+    },
+    "potential": {
+      "plain": "A form for what is probably or possibly so.",
+      "example": "Finnish *lienee*, (he) probably is"
+    },
+    "active": {
+      "plain": "The subject does the action.",
+      "example": "She *wrote* the letter."
+    },
+    "passive": {
+      "plain": "The subject has the action done to it.",
+      "example": "The letter *was written*."
+    },
+    "infinitive": {
+      "plain": "The verb itself, with nobody doing it yet: the form a dictionary lists it by.",
+      "example": "*to walk*, Spanish *caminar*"
+    },
+    "participle": {
+      "plain": "A form of the verb that works like an adjective, and with a helper makes other tenses.",
+      "example": "a *broken* cup, she has *walked*"
+    },
+    "gerund": {
+      "plain": "A form of the verb for an action going on, or used like a noun.",
+      "example": "she is *walking*, Spanish está *caminando*"
+    },
+    "imperfective": {
+      "plain": "The action as going on, repeated, or unfinished.",
+      "example": "Russian я *читал*, I was reading"
+    },
+    "perfective": {
+      "plain": "The action as one finished whole.",
+      "example": "Russian я *прочитал*, I read it (to the end)"
+    },
+    "progressive": {
+      "plain": "Going on at that moment.",
+      "example": "she *is walking*"
+    },
+    "positive": {
+      "plain": "The adjective as it is, without comparing.",
+      "example": "*big*"
+    },
+    "comparative": {
+      "plain": "More than something else.",
+      "example": "*bigger*, *more beautiful*"
+    },
+    "superlative": {
+      "plain": "More than everything else.",
+      "example": "the *biggest*, the *most beautiful*"
+    },
+    "strong": {
+      "plain": "The adjective endings German uses when no article in front shows the case.",
+      "example": "*kaltes* Wasser, cold water"
+    },
+    "weak": {
+      "plain": "The adjective endings German uses after der, die, das, where the article already shows the case.",
+      "example": "das *kalte* Wasser"
+    },
+    "mixed": {
+      "plain": "The adjective endings German uses after ein, kein, mein.",
+      "example": "ein *kaltes* Bier"
+    },
+    "formal": {
+      "plain": "For strangers, elders and official writing.",
+      "example": "German *Sie*, Spanish *usted*"
+    },
+    "informal": {
+      "plain": "For friends, family and children.",
+      "example": "German *du*, Spanish *tú*"
+    },
+    "polite": {
+      "plain": "The respectful way of saying it.",
+      "example": "Japanese *食べます*, (I) eat, said politely"
+    }
+  }
+}

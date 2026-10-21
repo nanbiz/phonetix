@@ -202,6 +202,7 @@ CARD_JS = r"""
       })(),
       def: text(sheet.querySelector('.sheet-def')),
       ask: box(sheet.querySelector('[data-ask]')),
+      askTitle: sheet.querySelector('[data-ask]')?.title ?? '',
       rows: [...sheet.querySelectorAll('tr, .g-cell')].map(r => ({
         spelling: r.dataset.spelling || '', here: r.classList.contains('here'),
         text: text(r), box: box(r)})),
@@ -457,6 +458,12 @@ class Run:
         if not ask:
             self.fail("the mood sheet offers no explanation of indicative")
         else:
+            # Pointed at, it says so over everything, plainly and with an example, the way a
+            # row's name does: drawn into the sheet on pointing, it ran past the window's edge.
+            title = mood["sheet"].get("askTitle", "")
+            print(f"  {self.name}: the ? pointed at: {title[:90]!r}")
+            if "Indicative:" not in title or "For example" not in title:
+                self.fail(f"the mood sheet's ? does not say plainly what indicative is: {title!r}")
             hand.click(ask["x"], ask["y"])
             asked = self.wait(lambda c: c.get("sheet") and c["sheet"]["def"], tries=20)
             said = (asked.get("sheet") or {}).get("def") or ""

@@ -25,14 +25,38 @@ const files = import.meta.glob<Grammar>('../../../data/grammar.json', {
 });
 const grammar: Grammar = Object.values(files)[0] ?? {};
 
-/** What Wiktionary says a category is, where it says anything. */
-export function categoryText(category: string): string | null {
-  return grammar.categories?.[category]?.text ?? null;
+/** A term said plainly, with an example whose word in that form is between stars. */
+interface Plain {
+  plain?: string;
+  example?: string;
 }
 
-/** What Wiktionary says a value is, where it says anything. */
+/** What each term is said plainly, written for a reader who has never met it: Wiktionary's
+ *  glossary is written for one who has, and "hypothetical or anticipated rather than actual"
+ *  told nobody what a subjunctive is. */
+const plainFiles = import.meta.glob<{ categories?: Record<string, Plain>; values?: Record<string, Plain> }>(
+  '../../../data/grammar-plain.json',
+  { eager: true, import: 'default' }
+);
+const plain = Object.values(plainFiles)[0] ?? {};
+
+/** What a term is, plainly where it has been said plainly and as Wiktionary has it otherwise,
+ *  with its example after it, the stars that mark the example's word taken out. */
+function told(said: Plain | undefined, wiktionary: string | null | undefined): string | null {
+  if (!said?.plain) return wiktionary ?? null;
+  return said.example
+    ? `${said.plain} For example: ${said.example.replaceAll('*', '')}`
+    : said.plain;
+}
+
+/** What a category is. */
+export function categoryText(category: string): string | null {
+  return told(plain.categories?.[category], grammar.categories?.[category]?.text);
+}
+
+/** What a value is. */
 export function valueText(value: string): string | null {
-  return grammar.values?.[value]?.text ?? null;
+  return told(plain.values?.[value], grammar.values?.[value]?.text);
 }
 
 /** The ordinal a person is said by on a form line: "3rd" for "third-person". */

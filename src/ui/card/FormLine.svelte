@@ -3,8 +3,8 @@
   // andar".
   //
   // Each term is a grammatical value a reader is learning, so each explains itself: pointing at
-  // one opens a sheet under the card that names the category it is a value of, says what the
-  // category and the value are in Wiktionary's words, and lists the word in every other value
+  // one opens a sheet under the card that names the category it is a value of, says plainly
+  // what the category and the value are, with an example, and lists the word in every other value
   // of that category with everything else kept, the word's own row lit. A row is a form the
   // card can be read as. The lemma is the way to the whole entry, and is there only for a word
   // that is not its own lemma.
@@ -139,13 +139,14 @@
     'third-person', 'present', 'past', 'future', 'masculine', 'feminine', 'neuter',
   ]);
 
-  /** Whether the sheet's explanation is shown: while the pointer is on its "?", or since it was
-   *  pressed, until it is pressed again or another sheet opens. */
-  let hovering = $state(false);
+  /** Whether the sheet's explanation is drawn in it: since its "?" was pressed, until it is
+   *  pressed again or another sheet opens. Pointed at, the "?" says it the way a row's name
+   *  does, over everything rather than in the sheet: drawn in, it grew the sheet past the edge
+   *  of the window and was cut off. */
   let pinned = $state(false);
   /** A sheet with no other forms to list is its explanation alone, shown as it opens. */
   let bare = $derived(along === null);
-  let asked = $derived(hovering || pinned || bare);
+  let asked = $derived(pinned || bare);
 
   /** Whether a term has a sheet with anything in it: the word in its other values, or what
    *  the term means where a reader would need telling. One with neither opened a sheet that
@@ -155,8 +156,8 @@
       explained(it).length > 0;
   }
 
-  /** What the sheet's term and its category are, each by itself, where Wiktionary says and a
-   *  reader would need telling. */
+  /** What the sheet's term and its category are, each by itself, where a reader would need
+   *  telling. */
   function explained(of: Term): { name: string; text: string }[] {
     const said: { name: string; text: string }[] = [];
     for (const value of of.values) {
@@ -217,8 +218,9 @@
             data-ask
             aria-label="What this is"
             aria-expanded={asked}
-            onpointerenter={() => (hovering = true)}
-            onpointerleave={() => (hovering = false)}
+            title={explained(term)
+              .map((line) => `${capital(line.name)}: ${line.text}`)
+              .join('\n\n')}
             onclick={() => (pinned = !pinned)}>?</button
           >{/if}
       </div>
