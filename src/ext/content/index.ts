@@ -838,7 +838,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   const translating = translates(settings, source) || practising;
   const target = practising ? settings.learn : translating ? settings.target : source;
   const defining = !translating && source === DEFINED_IN;
-  const looked = await sendMessage('lookUp', {
+  const asking = {
     word: word.spelling,
     source,
     target,
@@ -854,10 +854,17 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // Whether the reader wants every word described, not only one their language has no
     // word for: the host asks the translator only for what the card will say.
     describe: settings.showMeaning && settings.describeAll,
-  });
+  };
+  // Up with what is at hand: the sentence and the definitions the translator has not put into
+  // the reader's language yet are asked for after, rather than holding the card a second or
+  // more on every line the reader comes to.
+  const looked = await sendMessage('lookUp', { ...asking, quick: translating });
   // Shown as the page writes it, whichever way it was read.
-  const written = { ...looked, spelling: word.written };
-  const answer = translating || defining ? written : said(written);
+  const asShown = (found: Answer) => {
+    const written = { ...found, spelling: word.written };
+    return translating || defining ? written : said(written);
+  };
+  const answer = asShown(looked);
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
   const current = () => anchor.alive() && anchored === anchor;
@@ -955,6 +962,19 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
       if (current()) show(shown, anchor.box(), actions);
     })
     .catch(() => undefined);
+  // What the translated sentence decides, which word and which sense, and the definitions put
+  // into the reader's language, where they change the card. A transcription a person wrote
+  // stays where the dictionary still has none.
+  if (translating) {
+    void sendMessage('lookUp', asking)
+      .then((found) => {
+        const full = asShown(found);
+        if (!current() || JSON.stringify(full) === JSON.stringify(answer)) return;
+        shown = full.ipa.length > 0 ? full : { ...full, ipa: shown.ipa, symbols: shown.symbols };
+        show(shown, anchor.box(), actions);
+      })
+      .catch(() => undefined);
+  }
   // A word no dictionary means anything by, in another language than the reader's: what the
   // engine makes of it follows, marked as its guess.
   if (answer.says.length > 0 || answer.glosses.length > 0 || !translating) return;

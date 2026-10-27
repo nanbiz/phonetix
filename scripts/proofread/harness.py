@@ -43,8 +43,9 @@ class QuietAudio:
     Firefox plays a card's word through whatever server it finds, which was the reader's: a
     check that pressed play said the word through their speakers. Firefox given this one plays
     for real - the tab still marks itself as making sound, which a check reads - and nothing is
-    heard. Started without the desktop's session bus or runtime directory, so nothing of the
-    reader's audio is touched."""
+    heard. Started without the desktop's session bus, display or runtime directory, so nothing
+    of the reader's audio is touched: given the display, it found the desktop's bus through X11
+    and quit, the desktop's own sound server holding the name it asks for."""
 
     def __init__(self):
         self.where = tempfile.mkdtemp(prefix="phonetix-quiet-")
@@ -54,7 +55,8 @@ class QuietAudio:
             f.write(f"load-module module-native-protocol-unix socket={socket_path} auth-anonymous=1\n"
                     "load-module module-null-sink sink_name=quiet\nset-default-sink quiet\n")
         env = {k: v for k, v in os.environ.items()
-               if k not in ("PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS")}
+               if k not in ("PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS", "DISPLAY",
+                            "WAYLAND_DISPLAY")}
         env["XDG_RUNTIME_DIR"] = self.where
         env["HOME"] = self.where
         server = ["pulseaudio"] if shutil.which("pulseaudio") else \

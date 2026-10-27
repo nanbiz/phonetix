@@ -211,6 +211,23 @@ CARD_JS = r"""
         return names.map(n => box(n).height);
       })(),
       tableCells: [...sheet.querySelectorAll('td')].map(td => box(td).left),
+      // The room the roomiest line has to spare: a row's cells hold their text and the last
+      // takes what is left, a grid's columns are as wide as each other.
+      slack: (() => {
+        const spare = (cell) => {
+          const range = document.createRange();
+          range.selectNodeContents(cell);
+          const style = getComputedStyle(cell);
+          return cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+            - range.getBoundingClientRect().width;
+        };
+        const rows = [...sheet.querySelectorAll('.sheet-rows tr')].map(
+          r => [...r.children].reduce((all, cell) => all + Math.max(0, spare(cell)), 0));
+        const cells = [...sheet.querySelectorAll('.g-cell:not(.empty)')].map(spare);
+        const head = sheet.querySelector('.sheet-cat');
+        const all = [...rows, ...cells, ...(head && (rows.length || cells.length) ? [spare(head)] : [])];
+        return all.length ? Math.min(...all) : null;
+      })(),
     } : null,
     entry: card.querySelector('[data-entry]') ? {
       senses: card.querySelectorAll('[data-entry] li').length,
@@ -258,8 +275,15 @@ class Run:
         if seen.get("clipped"):
             self.fail(f"{where}: cut off or wrapped: {seen['clipped']}")
 
-    def sheet_ok(self, seen, where):
+    def sheet_ok(self, seen, where, rest=None):
         sheet, card = seen["sheet"], seen["card"]
+        # Widened only as far as its sheet's lines need: two short forms on a narrow card leave
+        # it as it was, where every card used to go to the widest a sheet could want.
+        if rest and card["width"] > rest["card"]["width"] + 1 and (sheet["slack"] or 0) > 3:
+            self.fail(f"{where}: the card went from {rest['card']['width']:.0f} to {card['width']:.0f} "
+                      f"wide, {sheet['slack']:.0f}px more than its sheet needs")
+        print(f"  {self.name}: {where}: card {rest['card']['width'] if rest else 0:.0f} -> "
+              f"{card['width']:.0f} wide, {sheet['slack'] or 0:.0f}px to spare")
         if abs(sheet["box"]["width"] - card["width"]) > 0.5:
             self.fail(f"{where}: sheet {sheet['box']['width']:.1f} wide, card {card['width']:.1f}")
         if abs(sheet["box"]["left"] - card["left"]) > 0.5:
@@ -343,7 +367,7 @@ class Run:
         # "?" is an empty sheet.
         if not sheet["rows"] and (not sheet["def"] or sheet["ask"]):
             self.fail(f"english: the participle sheet is empty until asked: {sheet}")
-        self.sheet_ok(opened, "english participle sheet")
+        self.sheet_ok(opened, "english participle sheet", rest)
         self.words_ok(opened, "english participle sheet")
         self.shoot("english-sheet", opened["card"], sheet["box"])
 
@@ -387,7 +411,7 @@ class Run:
               f"{mood['sheet']['box']['top']:.0f}-{mood['sheet']['box']['bottom']:.0f}")
         if not mood["sheet"]["over"] or mood["sheet"]["box"]["top"] < 0:
             self.fail(f"low: the sheet is not over the card: {mood['sheet']['box']}")
-        self.sheet_ok(mood, "low mood sheet")
+        self.sheet_ok(mood, "low mood sheet", rest)
         self.shoot("low", mood["card"], mood["sheet"]["box"])
 
     def check(self, word):
@@ -450,7 +474,7 @@ class Run:
             self.fail("the mood sheet has no anduviera row")
         if not any(r["here"] and r["spelling"] == "anduvo" for r in mood["sheet"]["rows"]):
             self.fail("the mood sheet does not light anduvo's own row")
-        self.sheet_ok(mood, "mood sheet")
+        self.sheet_ok(mood, "mood sheet", rest)
         self.words_ok(mood, "mood sheet")
         self.shoot("mood", mood["card"], mood["sheet"]["box"])
         # "Indicative" is a term most readers have to look up: its "?" says what it is.
@@ -476,7 +500,7 @@ class Run:
 
         tense = point("tense")
         if tense.get("sheet"):
-            self.sheet_ok(tense, "tense sheet")
+            self.sheet_ok(tense, "tense sheet", rest)
             self.words_ok(tense, "tense sheet")
             self.shoot("tense", tense["card"], tense["sheet"]["box"])
         else:
@@ -488,7 +512,7 @@ class Run:
             print(f"  {self.name}: person grid {person['sheet']['cat']!r}: {cells}")
             if len(cells) != 6:
                 self.fail(f"the person grid has {len(cells)} cells")
-            self.sheet_ok(person, "person grid")
+            self.sheet_ok(person, "person grid", rest)
             # Who and how many need no explaining.
             if person["sheet"].get("ask"):
                 self.fail("the person grid offers to explain person and number")

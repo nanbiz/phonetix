@@ -35,6 +35,8 @@ export interface HostProtocol {
       /** Whether the card says what every word is in the reader's language, not only a word
        *  theirs has no word for or says the same way. */
       describe?: boolean;
+      /** Answered from what is at hand, without waiting on the translator. */
+      quick?: boolean;
     };
     reply: Answer;
   };

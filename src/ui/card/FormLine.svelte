@@ -80,10 +80,47 @@
     onForm?.(form);
   }
 
-  // Under the card, or over it where the card is over its word and the sheet would cover the
-  // word; and the other way where the window has no room for it on that side.
   let sheet = $state<HTMLElement | null>(null);
   let over = $state(false);
+  // As wide as the sheet's rows need, each a line, and no wider than a card gets: a sheet of
+  // two short forms on a narrow card leaves the card as it was. A sheet that is its
+  // explanation alone is text to wrap, and takes the widest card.
+  $effect(() => {
+    if (!sheet) return;
+    void term;
+    void asked;
+    const card = sheet.closest<HTMLElement>('.card');
+    if (!card) return;
+    card.style.width = '';
+    const widest = parseFloat(getComputedStyle(card).getPropertyValue('--card-width')) || Infinity;
+    // What each line runs past its box by: a row's cells together, a grid's widest cell once
+    // per column of values, since those columns are as wide as each other.
+    const over = (cell: Element) => cell.scrollWidth - cell.clientWidth;
+    const rows = [...sheet.querySelectorAll('.sheet-rows tr')];
+    const grid = sheet.querySelector<HTMLElement>('.sheet-grid');
+    if (rows.length === 0 && !grid) {
+      card.style.width = `${widest}px`;
+    } else {
+      const lines = rows.map((row) => [...row.children].reduce((all, cell) => all + over(cell), 0));
+      if (grid) {
+        const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+        const cells = [...grid.children];
+        const name = Math.max(0, ...cells.filter((_, i) => i % columns === 0).map(over));
+        const cell = Math.max(0, ...cells.filter((_, i) => i % columns !== 0).map(over));
+        lines.push(name + cell * (columns - 1));
+      }
+      const head = sheet.querySelector('.sheet-cat');
+      if (head) lines.push(over(head));
+      const more = Math.max(0, ...lines);
+      if (more > 0) card.style.width = `${Math.min(widest, card.offsetWidth + more)}px`;
+    }
+    return () => {
+      card.style.width = '';
+    };
+  });
+
+  // Under the card, or over it where the card is over its word and the sheet would cover the
+  // word; and the other way where the window has no room for it on that side.
   $effect(() => {
     if (!sheet) return;
     const card = sheet.closest('.card');

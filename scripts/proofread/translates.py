@@ -298,6 +298,26 @@ def main():
             if got.get("state") == "Homograph":
                 failures.append(f"the translated line decided nothing about {word}")
 
+        # The card a reader opens on a line the engine has not read yet: up with what the
+        # dictionary says at once, rather than waiting on the translator a second or more, and
+        # asked again for what the translated line decides.
+        fresh = "Vimos la llama del fuego en la noche."
+        card = {"word": "llama", "source": "es", "target": "en", "line": fresh}
+        began = time.monotonic()
+        quick = ask(cdp, session, {"phonetix": "lookUp", "data": {**card, "quick": True}})
+        took = time.monotonic() - began
+        began = time.monotonic()
+        full = ask(cdp, session, {"phonetix": "lookUp", "data": card})
+        waited = time.monotonic() - began
+        first = ((quick.get("ok") or {}).get("says") or [""])[0]
+        then = ((full.get("ok") or {}).get("says") or [""])[0]
+        print(f"  the card on llama, a new line: {first!r} in {took * 1000:.0f} ms, "
+              f"then {then!r} in {waited * 1000:.0f} ms")
+        if took > 0.4:
+            failures.append(f"a card on a line not yet translated waited {took:.2f}s")
+        if then != "flame":
+            failures.append(f"the card asked again on {fresh!r} says {then!r}, not 'flame'")
+
         # And on the card a reader opens on that word: what the engine makes of it, asked once
         # the card is up, the way the page asks it.
         guess = ask(cdp, session, {
@@ -329,6 +349,66 @@ def main():
         print(f"  the phrase said: {clause.get('ipa')}")
         if not clause.get("ipa"):
             failures.append("a phrase does not say how it is said, as a word's card does")
+
+        # And pointed at on a page, the moment it is drawn, while the engine is still reading
+        # its lines: the card is up at once, and says what the line decides once it has.
+        cdp.send("Runtime.evaluate", {
+            "expression": "chrome.storage.local.set({on:true,layer:'sound',density:1})",
+            "awaitPromise": True, "returnByValue": True,
+        }, session=session)
+        tab = cdp.send("Target.createTarget", {"url": f"{base}/lines.html"})
+        page = cdp.send(
+            "Target.attachToTarget", {"targetId": tab["targetId"], "flatten": True},
+        )["sessionId"]
+        cdp.send("Runtime.enable", session=page)
+
+        def on_page(expression):
+            got = cdp.send("Runtime.evaluate", {
+                "expression": expression, "returnByValue": True,
+            }, session=page)
+            return got.get("result", {}).get("value")
+
+        where = None
+        for _ in range(40):
+            where = on_page("""(() => {
+              if (!document.querySelector('.px-w')) return null;
+              const words = [...document.querySelectorAll('.px-w')];
+              const word = words.find(w => /llama/.test(w.textContent));
+              if (!word) return null;
+              const r = word.getBoundingClientRect();
+              return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+            })()""")
+            if where:
+                break
+            time.sleep(0.25)
+        seen = []
+        if not where:
+            failures.append("llama was never drawn on the page: " + str(on_page(
+                "document.querySelectorAll('.px-w').length + ' ' + document.body.innerHTML.slice(0, 300)")))
+        else:
+            for step in (0, 1):
+                cdp.send("Input.dispatchMouseEvent", {
+                    "type": "mouseMoved", "x": where["x"] + step, "y": where["y"],
+                }, session=page)
+            began = time.monotonic()
+            while time.monotonic() - began < 5:
+                text = on_page("""(() => {
+                  const host = document.getElementById('phonetix-card-host');
+                  const card = host && host.shadowRoot && host.shadowRoot.querySelector('.card');
+                  return card ? card.textContent.replace(/\\s+/g, ' ').trim() : '';
+                })()""")
+                if text and (not seen or seen[-1][1] != text):
+                    seen.append((time.monotonic() - began, text))
+                time.sleep(0.03)
+            for at, text in seen:
+                print(f"  the card on llama at {at * 1000:.0f} ms: {text[:70]!r}")
+            if not seen:
+                failures.append("no card opened on llama on the page")
+            else:
+                if seen[0][0] > 0.6:
+                    failures.append(f"the card on llama took {seen[0][0]:.2f}s to open")
+                if "flame" not in seen[-1][1]:
+                    failures.append(f"the card on llama ended as {seen[-1][1]!r}, without flame")
 
         # The models came from the reader's own host and nowhere else.
         asked = [p for p in SERVED if p.startswith("/models")]

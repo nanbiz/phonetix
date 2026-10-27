@@ -373,17 +373,19 @@ export function host(): void {
     // only briefly; one that comes later is kept for the next card on the line.
     // Read in its own language, the sentence as written is that line: the core looks for the
     // word's senses in it rather than for answers.
+    // Asked quickly, nothing the engine has not translated already is waited for: the card
+    // is up with what the dictionary says, and asks again for what the engine adds.
     const drawn =
       data.drawn ||
       (data.line
         ? data.source === data.target
           ? data.line
-          : await lineSaid(data.source, data.target, data.line)
+          : await lineSaid(data.source, data.target, data.line, data.quick ? 0 : LINE_WAIT_MS)
         : '');
     const looked = await lookUp(
       data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn
     );
-    const answer = await described(looked, data.describe ?? false);
+    const answer = await described(looked, data.describe ?? false, data.quick ?? false);
     if (answer.ipa.length > 0 || answer.state === 'Phrase') return answer;
     // No dictionary here says how this word is said: one still on its way, a form the
     // dictionary lists only under its lemma, a language nobody built one for. The voice says
@@ -510,7 +512,7 @@ async function translateWaiting(): Promise<void> {
  * word's language, so each is put into theirs by the translator; one it cannot translate, or
  * not in time, is left out and the card says what it did before.
  */
-async function described(answer: Answer, every: boolean): Promise<Answer> {
+async function described(answer: Answer, every: boolean, quick: boolean): Promise<Answer> {
   const into = answer.target;
   if (!into || into === 'en' || answer.source === into || answer.state === 'Phrase') return answer;
   const first = (glosses: string[]) => sentenceOfGloss(glosses[0] ?? '');
@@ -526,7 +528,7 @@ async function described(answer: Answer, every: boolean): Promise<Answer> {
     }
   });
   if (asked.length === 0) return answer;
-  const said = await Promise.all(asked.map(({ text }) => describedIn(into, text)));
+  const said = await Promise.all(asked.map(({ text }) => describedIn(into, text, quick)));
   const readings = answer.readings.map((reading) => ({ ...reading }));
   let out: Answer = { ...answer, readings };
   asked.forEach(({ at }, n) => {
@@ -544,10 +546,10 @@ async function described(answer: Answer, every: boolean): Promise<Answer> {
  * as a purpose ("Para comer brunch.", in order to eat it), and without the "to" as an order
  * ("Come el brunch."). Labelled, every language it was tried in gave the infinitive.
  */
-async function describedIn(into: string, text: string): Promise<string> {
+async function describedIn(into: string, text: string, quick: boolean): Promise<string> {
   const verb = /^to\s/i.test(text);
   const asked = verb ? `Meaning: ${text.charAt(0).toLowerCase()}${text.slice(1)}` : text;
-  let said = await lineSaid('en', into, asked, DESCRIBE_WAIT_MS);
+  let said = await lineSaid('en', into, asked, quick ? 0 : DESCRIBE_WAIT_MS);
   if (verb && said) {
     const at = said.indexOf(':');
     said = (at >= 0 ? said.slice(at + 1) : said).trim();
@@ -577,6 +579,9 @@ const DESCRIBE_WAIT_MS = 2500;
 /** How long a card waits for its sentence to be translated before answering without it. */
 const LINE_WAIT_MS = 1200;
 
+/** Lines the engine is translating for a card now, by the key they are kept under. */
+const linesAsked = new Map<string, Promise<string>>();
+
 /** A sentence translated, from what has been translated already or by the engine now. */
 async function lineSaid(
   from: string, to: string, line: string, wait: number = LINE_WAIT_MS
@@ -585,13 +590,21 @@ async function lineSaid(
   const key = lineKey(from, to, line);
   const held = translatedLine(key);
   if (held) return held;
-  const asked = guessed(from, to, [line])
-    .then((answers) => {
-      const said = answers[0] ?? '';
-      if (said) translatedLines.set(key, said);
-      return said;
-    })
-    .catch(() => '');
+  // One request per line however many cards ask while it is out: the quick ask and the one
+  // after it wait on the same answer.
+  let asked = linesAsked.get(key);
+  if (!asked) {
+    asked = guessed(from, to, [line])
+      .then((answers) => {
+        const said = answers[0] ?? '';
+        if (said) translatedLines.set(key, said);
+        return said;
+      })
+      .catch(() => '')
+      .finally(() => linesAsked.delete(key));
+    linesAsked.set(key, asked);
+  }
+  if (wait <= 0) return '';
   const late = new Promise<string>((done) => setTimeout(() => done(''), wait));
   return Promise.race([asked, late]);
 }

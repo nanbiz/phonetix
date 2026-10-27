@@ -213,10 +213,10 @@
 .form-lemma { font: inherit; font-weight: var(--weight-bold); color: var(--color-accent); background: none; border: none; border-bottom: 1.5px solid var(--color-accent); border-radius: 0; padding: 0; cursor: pointer; }
 .form-lemma:hover { background: var(--color-accent-bg); }
 .form-lemma.still { color: var(--color-ink); border-bottom: none; cursor: default; }
-/* A card with a sheet open is as wide as a card gets, because the sheet is as wide as the card
-   and a row of a sheet is one line. At rest it is as wide as what it says. A sheet hangs off
-   the card, so the card lets it out. */
-.card:has(.form-sheet) { width: var(--card-width); max-width: 100%; }
+/* A sheet is as wide as the card and a row of a sheet is one line, so a card with a sheet open
+   widens to what the sheet's rows need, never past the widest card. That width is measured
+   where the sheet opens. A sheet hangs off the card, so the card lets it out. */
+.card:has(.form-sheet) { max-width: 100%; }
 .card:has(.form-sheet) { position: relative; overflow: visible; }
 /* The sheet a term opens: the category it is a value of, what the category and the value are,
    and the word in every value of that category with everything else kept, the word's own row
@@ -230,7 +230,7 @@
 .card:has(> .card-head .form-sheet:not(.over)) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .card:has(> .card-head .form-sheet.over) { border-top-left-radius: 0; border-top-right-radius: 0; }
 .card:has(> .card-head .form-sheet.over) > .card-strip { border-top-left-radius: 0; border-top-right-radius: 0; }
-.sheet-cat { padding: 0 var(--space-4); margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
+.sheet-cat { padding: 0 var(--space-4); white-space: nowrap; margin-bottom: var(--space-1); font-size: var(--font-size-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-ink-muted); }
 /* The "?" a term that needs explaining carries in its sheet's heading; the explanation shows
    while it is pointed at or once it is pressed. */
 .sheet-ask { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: var(--space-2); padding: 0; border: 1.5px solid var(--color-ink-faint); border-radius: 50%; background: none; color: var(--color-ink-muted); font: inherit; font-size: 10px; font-weight: var(--weight-bold); letter-spacing: 0; line-height: 1; vertical-align: 1px; cursor: help; }
