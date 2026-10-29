@@ -1133,6 +1133,14 @@ function asWrittenIn(range: Range): string {
     if (from >= to) continue;
     const word = node.parentElement?.closest(`.${WORD}`) ?? null;
     if (word) {
+      // Only by what is seen of it, and not by a space: a word is drawn twice, as its
+      // transcription and as the word, one of them hidden by turns, and a drag that ended at
+      // the start of the shown "y" after "camino" held the whole of its hidden "i", and the
+      // card was about "camino y".
+      const seen =
+        node.parentElement?.checkVisibility?.({ visibilityProperty: true, checkVisibilityCSS: true }) ??
+        true;
+      if (!seen || !value.slice(from, to).trim()) continue;
       // A drawn word is its own once, however many pieces of text it is drawn as.
       if (word !== drawn) text += word.querySelector('.px-was')?.textContent ?? '';
       drawn = word;
