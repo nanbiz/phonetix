@@ -75,6 +75,10 @@ pub struct Answer {
     /// The labels the dictionary gives each transcription, in the order of [ipa]: an accent
     /// with how good a name for it the label was (`en-gb:0`), or `?` for one not offered.
     pub ipa_said_in: Vec<Vec<String>>,
+    /// What the word is, in the reader's language, as their own Wiktionary describes it, where
+    /// that says more than the word it answers with: "barco" is "Schiff", a "großes, bauchiges
+    /// Wasserfahrzeug".
+    pub described: Option<String>,
 }
 
 /// One of the words a spelling is.
@@ -90,6 +94,8 @@ pub struct Reading {
     pub marks: Vec<Vec<String>>,
     /// Each sense's example, where the dictionary keeps one, in the order of the glosses.
     pub examples: Vec<Option<String>>,
+    /// What it is, in the reader's language, as [Answer::described].
+    pub described: Option<String>,
 }
 
 impl Answer {
@@ -116,6 +122,7 @@ impl Answer {
             said_in: None,
             spelling_of: None,
             ipa_said_in: Vec::new(),
+            described: None,
         }
     }
 }
@@ -153,6 +160,11 @@ pub struct Open<'a, D: AsRef<[u8]>> {
     /// where the host holds it (packbuild define, "def-<language>"): a word read in its own
     /// language is defined in it, where its English glosses would be a translation.
     pub defines: Option<&'a Pack<D>>,
+    /// What the language's words are in the reader's language, from the Wiktionary written in
+    /// the reader's language, where the host holds it (packbuild define, "<language>-in-<the
+    /// reader's>"): words people who speak both wrote down, where going through the English
+    /// glosses made "hacer", "to do", the German "ja".
+    pub in_reader: Option<&'a Pack<D>>,
 }
 
 impl<'a, D: AsRef<[u8]>> Open<'a, D> {
@@ -194,6 +206,7 @@ impl<D: AsRef<[u8]>> Default for Open<'_, D> {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         }
     }
 }
@@ -229,6 +242,29 @@ pub fn phrase(text: &str, said: &str, source: &Lang, target: &Lang) -> Answer {
 /// As written first, because case is not always the page's doing: German capitalises every
 /// noun, so "Bank" and "bank" are two different words and the pack holds both.
 fn lookup_either_case<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Vec<Entry> {
+    // Written all in capitals, as a heading or a title is: the word as it is written in a
+    // sentence, after one only ever written so ("NASA"). "SPANISH" looked up in small letters
+    // alone was the printing process "spanish", never the language.
+    let letters: Vec<char> = spelling.chars().filter(|c| c.is_alphabetic()).collect();
+    if letters.len() > 1 && letters.iter().all(|c| c.is_uppercase()) {
+        let mut chars = spelling.chars();
+        let title: String = chars
+            .next()
+            .into_iter()
+            .chain(chars.flat_map(char::to_lowercase))
+            .collect();
+        let mut all: Vec<Entry> = pack
+            .lookup(spelling)
+            .into_iter()
+            .filter(|entry| entry.lemma == spelling)
+            .collect();
+        for entry in lookup_either_case(pack, &title) {
+            if !all.contains(&entry) {
+                all.push(entry);
+            }
+        }
+        return all;
+    }
     let found = pack.lookup(spelling);
     let lowered = spelling.to_lowercase();
     if lowered == spelling {
@@ -296,10 +332,13 @@ fn rank_among(entry: &Entry, spelling: &str, lang: &str) -> u8 {
     // body of persons considered generally", and read as a pointer it ranked below the verb
     // "to people", so every people on a page was "poblarse".
     let pointing = |sense: &lexpack::Sense| {
+        // Nor one that says in quotation marks what it means: "neuter singular of este
+        // (“this”)".
         let defines = sense
             .gloss
             .split_once(": ")
-            .is_some_and(|(_, then)| then.split_whitespace().count() > 3);
+            .is_some_and(|(_, then)| then.split_whitespace().count() > 3)
+            || sense.gloss.contains('“');
         !defines
             && sense
                 .marks
@@ -323,8 +362,14 @@ fn rank_among(entry: &Entry, spelling: &str, lang: &str) -> u8 {
     // for the words that hold a sentence together, which the dictionary files as forms of each
     // other: German "das" is "neuter singular of der: the", Portuguese "pelo" is "por + o". Those
     // are still the words a reader meets on every line.
+    // One that is only another spelling of a word below one that is a word's inflection: "hay"
+    // is the present of "haber" on every page and "ahí" written as some speakers say it.
     if kind != 0 && !entry.senses.is_empty() && entry.senses.iter().all(pointing) {
-        return 32 + kind;
+        let only_spelling = entry
+            .senses
+            .iter()
+            .all(|sense| !sense.marks.iter().any(|mark| mark == "form-of"));
+        return if only_spelling { 36 } else { 32 } + kind;
     }
     let leads_with_meaning =
         entry.senses.first().is_some_and(|sense| !pointing(sense)) || kind == 0;
@@ -358,6 +403,14 @@ fn rank_among(entry: &Entry, spelling: &str, lang: &str) -> u8 {
     // interjection is written exactly so.
     let level = if kind == 3 { level.max(2) } else { level };
     level * 4 + kind
+}
+
+/// Whether TRACE is set, where the core runs with an environment: then each word read says on
+/// stderr which entries it reached, in which order, and which reading was decided on, which is
+/// what finding why a card says what it says needs first.
+fn tracing() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("TRACE").is_some())
 }
 
 /// How often a kind of word is the reading meant, among readings that are otherwise equal.
@@ -621,8 +674,9 @@ fn two_words<D: AsRef<[u8]>>(pack: &Pack<D>, word: &str) -> Option<String> {
 ///
 /// What is typed can be in either, and a reader should not have to say which. One word that
 /// one dictionary holds and the other does not is in that one; one both hold ("banco" is in
-/// English's too, from its tables) is in the language that says it more; anything else is
-/// what the detector makes of it, and the reader's own where it makes nothing.
+/// English's too, from its tables) is in the language that says it more; a few words are in
+/// the language that says them more together; anything else is what the detector makes of it,
+/// and the reader's own where it makes nothing.
 pub fn typed_in_mine<D: AsRef<[u8]>>(
     text: &str,
     learning: &Lang,
@@ -651,10 +705,42 @@ pub fn typed_in_mine<D: AsRef<[u8]>>(
             (false, false) => {}
         }
     }
+    // A few words are no language to a detector, which reads letters: "El libro rojo." on an
+    // English page came out English, its "el" a railway. They are in whichever language uses
+    // them more, word by word, a word a dictionary holds only as a form of another counting
+    // as one it holds at all.
+    let words: Vec<&str> = text
+        .split(|c: char| !c.is_alphabetic() && c != '\'' && c != '’')
+        .filter(|word| !word.is_empty())
+        .collect();
+    if !single && (2..=SHORT_RUN).contains(&words.len()) {
+        if let (Some(mine), Some(theirs)) = (mine_pack, learning_pack) {
+            let weight = |pack: &Pack<D>, word: &str| -> f64 {
+                let often = met(pack, word);
+                if often > 0 {
+                    (often as f64).ln_1p()
+                } else if !pack.lookup(word).is_empty()
+                    || !pack.lookup(&word.to_lowercase()).is_empty()
+                {
+                    1.0
+                } else {
+                    0.0
+                }
+            };
+            let ours: f64 = words.iter().map(|word| weight(mine, word)).sum();
+            let other: f64 = words.iter().map(|word| weight(theirs, word)).sum();
+            if ours != other {
+                return ours > other;
+            }
+        }
+    }
     let read = model.map(|model| model.detect(text));
     read.and_then(|read| read.language)
         .is_none_or(|language| language != learning.0)
 }
+
+/// The most words a run is read word by word in, rather than by what a detector makes of it.
+const SHORT_RUN: usize = 6;
 
 /// An entry's narrow transcription, where its dictionary gave one beside the broad: the pack
 /// records which of its transcriptions that is as a `narrow:<index>` tag.
@@ -830,6 +916,23 @@ const UNUSUAL: &[&str] = &[
     "Internet",
 ];
 
+/// Senses a dictionary marks as seldom met: another age's, a region's, a poem's. Not a
+/// register, which says how a word is said and not how often: "papá" is colloquial in every
+/// sense, and dropped as a word nobody meets, it was read as the masculine of "mamá", "Mama".
+const SELDOM: &[&str] = &[
+    "rare",
+    "archaic",
+    "obsolete",
+    "dated",
+    "dialectal",
+    "neologism",
+    "regional",
+    "poetic",
+    "literary",
+    "nonstandard",
+    "humorous",
+];
+
 /// The word for something a reader wants to say, out of the dictionaries alone.
 ///
 /// The panel asks the translation engine first, which reads a whole phrase and knows which
@@ -982,7 +1085,12 @@ fn ranked_senses<D: AsRef<[u8]>>(
                     .senses
                     .iter()
                     .all(|sense| meaning_of(&sense.gloss).is_none());
-            if kind == 3 || pointer {
+            // Nor a name, a letter or an interjection, unless one is asked for: Spanish "chao"
+            // is "bye", and German "tschüss" is the answer.
+            let asked_so = pos
+                .as_deref()
+                .is_some_and(|pos| by_kind(pos) == 3 && same_part(pos, &entry.pos));
+            if (kind == 3 && !asked_so) || pointer {
                 continue;
             }
             let marks: &[String] = entry
@@ -1013,7 +1121,9 @@ fn ranked_senses<D: AsRef<[u8]>>(
                 Rank {
                     wrong_part,
                     marked,
-                    phrase: entry.lemma.contains(' '),
+                    // A phrase answers a word less well than a word, and a phrase as well:
+                    // "there is" is "es gibt".
+                    phrase: entry.lemma.contains(' ') && !lexpack::gloss_head(gloss).contains(' '),
                     unheard: how_often(&entry).is_none(),
                     partial: shared
                         < terms.min(
@@ -1274,10 +1384,56 @@ fn in_line_of<D: AsRef<[u8]>>(
     if sentence.is_empty() {
         return None;
     }
+    // In a language that writes its nouns with a capital, a word written small is not the noun
+    // written large, except where the line starts with it: the verb "buchen", form "buch", is
+    // not the "Buch" a German line has a book as.
+    let cased = capitalises_nouns(wanted.lang()).then(|| cased_words(said));
     words.into_iter().find_map(|word| {
         forms_as(wanted, &word, pos)
             .into_iter()
-            .find(|form| holds(&sentence, &normalised(form)))
+            .find(|form| match &cased {
+                Some(line) => holds_cased(line, form),
+                None => holds(&sentence, &normalised(form)),
+            })
+    })
+}
+
+/// A line's words as written, each with whether it starts a sentence, where any word may be
+/// written with a capital.
+fn cased_words(text: &str) -> Vec<(String, bool)> {
+    let mut out = Vec::new();
+    let mut starts = true;
+    let mut word = String::new();
+    for c in text.chars().chain(std::iter::once(' ')) {
+        if c.is_alphanumeric() {
+            word.push(c);
+            continue;
+        }
+        if !word.is_empty() {
+            out.push((std::mem::take(&mut word), starts));
+            starts = false;
+        }
+        if matches!(c, '.' | '!' | '?' | ':' | '"' | '«' | '„') {
+            starts = true;
+        }
+    }
+    out
+}
+
+/// Whether a line, as [cased_words] gives it, holds [answer] as written, a word at the start
+/// of a sentence matching whatever its case.
+fn holds_cased(line: &[(String, bool)], answer: &str) -> bool {
+    let wanted: Vec<&str> = answer
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|word| !word.is_empty())
+        .collect();
+    if wanted.is_empty() || wanted.len() > line.len() {
+        return false;
+    }
+    line.windows(wanted.len()).any(|window| {
+        window.iter().zip(&wanted).all(|((word, starts), want)| {
+            word == want || (*starts && word.to_lowercase() == want.to_lowercase())
+        })
     })
 }
 
@@ -1303,13 +1459,61 @@ fn forms_as<D: AsRef<[u8]>>(wanted: &Pack<D>, word: &str, pos: Option<&str>) -> 
         }
     }
     let as_kind = pos.is_some_and(|pos| entries.iter().any(|it| same_part(&it.pos, pos)));
+    // Asked for as a kind of word the pack does not file it as, the word alone: the forms are
+    // another word's. German "dem", reached as a preposition, carried every form of the
+    // article, and "a" was "das" in any line with a "das" in it.
+    if pos.is_some() && !as_kind {
+        return forms;
+    }
     for entry in &entries {
         if as_kind && !pos.is_some_and(|pos| same_part(&entry.pos, pos)) {
             continue;
         }
-        forms.extend(entry.forms.iter().map(|form| form.spelling.clone()));
+        // Forms written today, each a word. A spelling nobody uses any more is some other
+        // word now: "das" is listed as an obsolete spelling of "dass", and every line with the
+        // article in it said "que" was "das". The dump also files notes as forms ("older also:
+        // daß"), which no line holds.
+        // A pronoun's table is every person's: German "Sie" lists "ich", "du" and "er" among
+        // its forms, and "vosotros" was "ich" in a line that began with it. Only its own
+        // person's forms are it, where its own row says which that is; and no row the dump
+        // could not read.
+        forms.extend(
+            entry
+                .forms
+                .iter()
+                .filter(|form| {
+                    !form
+                        .label
+                        .split_whitespace()
+                        .any(|mark| GONE.contains(&mark))
+                        && !form.label.contains("error-")
+                        && !form.spelling.contains(':')
+                        && !form.spelling.starts_with('-')
+                        && (by_kind(&entry.pos) != 1 || in_own_person(entry, &form.label))
+                })
+                .map(|form| form.spelling.clone()),
+        );
     }
     forms
+}
+
+/// Whether a form of a pronoun, by its label, is in the pronoun's own person, where its own
+/// row says which that is. A German pronoun's table is every person's: "Sie" lists "ich",
+/// "du" and "er" among its forms, and "ihr" lists "euch" beside "dich".
+fn in_own_person(entry: &Entry, label: &str) -> bool {
+    let persons = |label: &str| -> Vec<String> {
+        words_of(label)
+            .into_iter()
+            .filter(|it| it.ends_with("-person"))
+            .collect()
+    };
+    let own: Vec<String> = entry
+        .forms
+        .iter()
+        .filter(|form| form.spelling == entry.lemma)
+        .flat_map(|form| persons(&form.label))
+        .collect();
+    persons(label).iter().all(|person| own.contains(person))
 }
 
 /// The words an English word's translation table gives in [wanted]'s language, in the order
@@ -1366,7 +1570,19 @@ fn translated<D: AsRef<[u8]>>(
                         .trim_start_matches("to ")
                         .trim()
                         .to_string();
-                    if head == lower || own.contains(&head) {
+                    // Narrowed by a parenthesis that is a definition of its own, it is a
+                    // narrower thing: German "Bundestagspräsident" is "speaker (the chair or
+                    // presiding officer of the Bundestag)", and led every speaker.
+                    let narrowed = gloss
+                        .split_once('(')
+                        .is_some_and(|(_, inside)| inside.split_whitespace().count() >= 3);
+                    // And one of the English word's own senses with more after it is that
+                    // sense: "Sprecher" is "one who speaks in a presentation or performance".
+                    let starts_own = own.iter().any(|own| {
+                        head.strip_prefix(own.as_str())
+                            .is_some_and(|rest| rest.starts_with(' '))
+                    });
+                    if (head == lower && !narrowed) || own.contains(&head) || starts_own {
                         2
                     } else if gloss
                         .split(|c: char| !c.is_alphanumeric())
@@ -1470,28 +1686,36 @@ fn place_of(entry: &Entry, spelling: &str) -> Option<Vec<&'static str>> {
                 "imperfect",
                 "past",
             ];
-            let present: Vec<&Vec<String>> = labels
-                .iter()
-                .filter(|label| has(label, "present"))
-                .filter(|label| !NOT_PLAIN.iter().any(|it| has(label, it)))
-                .collect();
-            let person = ["third-person", "first-person", "second-person"]
+            // A tense of the indicative, in its person and number: "ist" is "es", and "war"
+            // "fue" and "era" alike.
+            ["present", "preterite", "imperfect", "future"]
                 .into_iter()
-                .find(|person| present.iter().any(|label| has(label, person)))?;
-            let number = ["singular", "plural"].into_iter().find(|number| {
-                present
-                    .iter()
-                    .any(|label| has(label, person) && has(label, number))
-            })?;
-            Some(vec!["present", person, number, "indicative"])
+                .find_map(|tense| {
+                    let in_tense: Vec<&Vec<String>> = labels
+                        .iter()
+                        .filter(|label| has(label, tense))
+                        .filter(|label| !NOT_PLAIN.iter().any(|it| *it != tense && has(label, it)))
+                        .collect();
+                    let person = ["third-person", "first-person", "second-person"]
+                        .into_iter()
+                        .find(|person| in_tense.iter().any(|label| has(label, person)))?;
+                    let number = ["singular", "plural"].into_iter().find(|number| {
+                        in_tense
+                            .iter()
+                            .any(|label| has(label, person) && has(label, number))
+                    })?;
+                    Some(vec![tense, person, number, "indicative"])
+                })
         }
         _ => None,
     }
 }
 
 /// Labels that make a form one a reader is not owed: a dialect's, another age's, a joke's, or
-/// a word made smaller or bigger, which is another word.
-pub(crate) const ODD_FORMS: [&str; 11] = [
+/// a word made smaller or bigger, which is another word. And a voseo form, which is a region's:
+/// "bebé" is the vos imperative of "beber" in Argentina and a baby everywhere.
+pub(crate) const ODD_FORMS: [&str; 12] = [
+    "vos-form",
     "dialectal",
     "dialect",
     "humorous",
@@ -1534,18 +1758,37 @@ fn article_in_kind(
             .flat_map(|form| words_of(&form.label))
             .collect()
     } else {
-        entry.senses.first()?.marks.clone()
+        let first = entry.senses.first()?;
+        let mut marks = first.marks.clone();
+        // A gender the note says and the marks leave out: Spanish "lo" is a "neuter definite
+        // article used only before nominalized adjectives", marked as nothing.
+        if crate::annotate::about_grammar(&first.gloss) {
+            let note = first.gloss.split([':', ';']).next().unwrap_or("");
+            marks.extend(words_of(note).into_iter().filter(|word| word == "neuter"));
+        }
+        marks
     };
     let has = |word: &str| marks.iter().any(|it| it == word);
     let mut place = Vec::new();
+    // Into German too, which has a feminine of its own: "la" said "der" read as a mistake,
+    // though which German article a noun takes is the German noun's.
     if has("feminine")
         && !has("masculine")
         && TWO_GENDERS.contains(&source)
-        && TWO_GENDERS.contains(&target)
+        && (TWO_GENDERS.contains(&target) || target == "de")
     {
         place.push("feminine");
     }
+    // A neuter, into a language that has one: Spanish "lo bueno" is "das Gute". Where the
+    // reader's language has none its table lists no such form, and the word stays as it is.
+    if has("neuter") && !has("masculine") && !has("feminine") {
+        place.push("neuter");
+    }
     if has("plural") && !has("singular") {
+        // German's plural has no gender: "las" is "die".
+        if target == "de" {
+            place.clear();
+        }
         place.push("plural");
     }
     (!place.is_empty()).then_some(place)
@@ -1563,8 +1806,16 @@ fn in_form<D: AsRef<[u8]>>(
     pack: &Pack<D>,
 ) -> Option<String> {
     // A language's present participle is its gerund where it has one: "publicando".
+    // And a language with one past where this has two takes it for either: German "war" is
+    // the preterite, for Spanish "era", the imperfect, too.
+    let as_preterite: Vec<&str> = place
+        .iter()
+        .map(|it| if *it == "imperfect" { "preterite" } else { *it })
+        .collect();
     let wanted: Vec<&[&str]> = if place == ["participle", "present"] {
         vec![&["gerund"], place]
+    } else if place.contains(&"imperfect") {
+        vec![place, &as_preterite]
     } else {
         vec![place]
     };
@@ -1575,29 +1826,75 @@ fn in_form<D: AsRef<[u8]>>(
         "indefinite",
         "strong",
     ];
-    let entry = lookup_either_case(pack, word)
+    // Every entry of the word of that kind, since a dictionary can file one twice and only
+    // one with its table: German "ein" is an article twice, and the first lists no "eine".
+    let all: Vec<Entry> = lookup_either_case(pack, word)
         .into_iter()
-        .find(|entry| same_word(&entry.lemma, word) && entry.pos == pos)?;
-    wanted.iter().find_map(|wanted| {
-        entry
-            .forms
-            .iter()
-            .flat_map(|form| {
-                form.label
-                    .split("; ")
-                    .map(move |label| (form, words_of(label)))
-            })
-            .filter(|(_, label)| wanted.iter().all(|word| label.iter().any(|it| it == word)))
-            .filter(|(_, label)| !label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
-            .filter(|(form, _)| !form.spelling.contains(' '))
-            .min_by_key(|(_, label)| {
-                label
-                    .iter()
-                    .filter(|it| !wanted.contains(&it.as_str()) && !PLAIN.contains(&it.as_str()))
-                    .count()
-            })
-            .map(|(form, _)| form.spelling.clone())
-    })
+        .filter(|entry| same_word(&entry.lemma, word))
+        .collect();
+    let mut entries: Vec<Entry> = all
+        .iter()
+        .filter(|entry| same_part(&entry.pos, pos))
+        .cloned()
+        .collect();
+    // A word of grammar as whichever kind of one the reader's dictionary files it as: German
+    // "dieser" is a pronoun there, and Spanish "esta", the determiner, is "diese".
+    if entries.is_empty() && by_kind(pos) <= 1 {
+        entries = all
+            .into_iter()
+            .filter(|entry| by_kind(&entry.pos) <= 1)
+            .collect();
+    }
+    wanted
+        .iter()
+        .find_map(|wanted| {
+            entries
+                .iter()
+                .flat_map(|entry| entry.forms.iter())
+                .flat_map(|form| {
+                    form.label
+                        .split("; ")
+                        .map(move |label| (form, words_of(label)))
+                })
+                .filter(|(_, label)| wanted.iter().all(|word| label.iter().any(|it| it == word)))
+                .filter(|(_, label)| !label.iter().any(|it| ODD_FORMS.contains(&it.as_str())))
+                .filter(|(form, _)| !form.spelling.contains(' '))
+                .min_by_key(|(_, label)| {
+                    label
+                        .iter()
+                        .filter(|it| {
+                            !wanted.contains(&it.as_str()) && !PLAIN.contains(&it.as_str())
+                        })
+                        .count()
+                })
+                .map(|(form, label)| {
+                    // Only another case where none was asked for: the plain form is then the
+                    // word itself, whose row the pack leaves out for repeating it. German
+                    // "Sprecher" is its own plural, and the table's one plural row is
+                    // "Sprechern", the dative.
+                    const OBLIQUE: [&str; 3] = ["genitive", "dative", "accusative"];
+                    let oblique = label.iter().any(|it| OBLIQUE.contains(&it.as_str()))
+                        && !wanted.iter().any(|it| OBLIQUE.contains(it));
+                    if oblique {
+                        word.to_string()
+                    } else {
+                        form.spelling.clone()
+                    }
+                })
+        })
+        // A pronoun's case, where its table's row does not say it in words the dump reads, by the
+        // note of each form: German "ihr" lists "euch" in a row it cannot read, and "euch" is
+        // "accusative and dative of ihr".
+        .or_else(|| {
+            let cases: Vec<String> = place
+                .iter()
+                .filter(|it| ["nominative", "accusative", "dative", "genitive"].contains(it))
+                .map(|it| it.to_string())
+                .collect();
+            (by_kind(pos) == 1 && !cases.is_empty())
+                .then(|| in_case_of(pack, word, &cases, pos))
+                .flatten()
+        })
 }
 
 /// An English sense that is a word or two rather than a definition - "An error.", "To
@@ -1635,6 +1932,16 @@ fn meaning_of(gloss: &str) -> Option<String> {
     let head = gloss.split([',', ';', '(']).next().unwrap_or("").trim();
     if short(head) {
         return Some(head.to_string());
+    }
+    // Or what it says the word it is a form of means, in quotation marks: "esto" is "neuter
+    // singular of este (“this”)".
+    if let Some((_, quoted)) = gloss.split_once('“') {
+        // A list of them too: "al" is "contraction of a + el, literally “at the, to the”".
+        if let Some((meant, _)) = quoted.split_once('”') {
+            if meant.split([',', ';']).all(|each| short(each.trim())) {
+                return Some(meant.trim().to_string());
+            }
+        }
     }
     // Or the first after it that is one, after a colon, a comma or a full stop: Italian "a"
     // is "Indicates the indirect object. to", and German "sich" "Reflexive pronoun of the
@@ -1726,7 +2033,7 @@ fn is_minor(entry: &Entry) -> bool {
         sense
             .marks
             .iter()
-            .any(|mark| UNUSUAL.contains(&mark.as_str()))
+            .any(|mark| SELDOM.contains(&mark.as_str()))
     });
     spelled_elsewhere || unusual
 }
@@ -1738,6 +2045,15 @@ pub(crate) fn form_of_word(gloss: &str) -> Option<String> {
         return None;
     }
     let (gloss, _) = joined(gloss);
+    // Not what follows it: "Alternative form of further. (See also the usage notes at
+    // further.)" points at "further".
+    let gloss = gloss
+        .split(". ")
+        .next()
+        .unwrap_or(gloss)
+        .split(" (")
+        .next()
+        .unwrap_or(gloss);
     let (label, word) = gloss.rsplit_once(" of ")?;
     // The label is a few names of a form, never a sentence: "used to express the future
     // tense, sometimes with an implication of volition" is a definition.
@@ -1746,6 +2062,102 @@ pub(crate) fn form_of_word(gloss: &str) -> Option<String> {
     }
     let word = word.trim().trim_end_matches('.');
     (!word.is_empty() && !word.contains(' ')).then(|| word.to_string())
+}
+
+/// A form of [lemma] in the reader's language, where a sense of the lemma quotes what the form
+/// means: "hay" is "there is", "es gibt". The line's word for it first.
+fn form_said_by_lemma<D: AsRef<[u8]>>(
+    lemma: &Entry,
+    spelling: &str,
+    line: Option<&str>,
+    other: &Pack<D>,
+) -> Option<String> {
+    let english = lemma
+        .senses
+        .iter()
+        .find_map(|sense| meant_as_form(&sense.gloss, spelling))?;
+    let asked = vec![(english, Some(lemma.pos.clone()))];
+    line.and_then(|line| in_line(&asked, other, line))
+        .or_else(|| glossed_as(&asked, None, other, 1).into_iter().next())
+}
+
+/// The English a sense quotes for one of its word's forms, by the form named after it in
+/// parentheses: "to exist; there be; “there is”, “there are” (hay)" says "hay" is "there is".
+fn meant_as_form(gloss: &str, spelling: &str) -> Option<String> {
+    let named = format!("({spelling})");
+    let at = gloss.find(&named)?;
+    let before = &gloss[..at];
+    let run = before.rsplit(';').next().unwrap_or(before);
+    let (_, quoted) = run.split_once('“')?;
+    let (meant, _) = quoted.split_once('”')?;
+    let meant = meant.trim();
+    (!meant.is_empty()).then(|| meant.to_string())
+}
+
+/// The form of the pronoun [theirs] whose own note says it is [cases] of it, naming no case
+/// besides where one does: German "du" lists "dir", "dative of du", and "dich". Read from the
+/// forms' notes rather than the rows of the pronoun's table, which the dump reads least.
+fn in_case_of<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    theirs: &str,
+    cases: &[String],
+    pos: &str,
+) -> Option<String> {
+    lookup_either_case(pack, theirs)
+        .into_iter()
+        .filter(|it| same_word(&it.lemma, theirs) && same_part(&it.pos, pos))
+        .flat_map(|it| it.forms.into_iter().map(|form| form.spelling))
+        .filter_map(|form| {
+            let fit = lookup_either_case(pack, &form)
+                .iter()
+                .filter(|it| same_word(&it.lemma, &form))
+                .flat_map(|it| it.senses.iter())
+                .filter_map(|sense| case_of(&sense.gloss))
+                .filter(|(_, of)| of.iter().any(|word| same_word(word, theirs)))
+                .filter(|(named, _)| cases.iter().all(|it| named.contains(it)))
+                .map(|(named, _)| named.len())
+                .min()?;
+            Some((fit, form))
+        })
+        .min_by_key(|(fit, _)| *fit)
+        .map(|(_, form)| form)
+}
+
+/// The cases a pronoun's note says it is of other pronouns, and those: German "euch" is
+/// "accusative and dative of ihr; you, yourselves", Spanish "te" "dative of tú and vos: to
+/// you". Only a note that names nothing but cases before its "of".
+fn case_of(gloss: &str) -> Option<(Vec<String>, Vec<String>)> {
+    const CASES: [&str; 5] = [
+        "nominative",
+        "accusative",
+        "dative",
+        "genitive",
+        "prepositional",
+    ];
+    // In any part of the gloss: Spanish "os" is "you, to you, for you; dative and accusative
+    // of vosotros".
+    gloss.split([':', ';']).find_map(|note| {
+        let note = note.trim().trim_end_matches('.');
+        let (label, of) = note.split_once(" of ")?;
+        let named = words_of(label);
+        if !named
+            .iter()
+            .all(|it| CASES.contains(&it.as_str()) || it == "and" || it == "or")
+        {
+            return None;
+        }
+        let cases: Vec<String> = named
+            .into_iter()
+            .filter(|it| CASES.contains(&it.as_str()))
+            .collect();
+        let words: Vec<String> = of
+            .split(" and ")
+            .flat_map(|it| it.split(" or "))
+            .map(|it| it.trim().to_string())
+            .filter(|it| !it.is_empty() && !it.contains(' '))
+            .collect();
+        (!cases.is_empty() && !words.is_empty()).then_some((cases, words))
+    })
 }
 
 /// A note about a form with a pronoun written onto its end, and that pronoun: Spanish
@@ -1788,6 +2200,48 @@ pub fn look_up<D: AsRef<[u8]>>(
 ) -> Answer {
     read_in_context(spelling, None, source, target, open)
 }
+
+/// The words of a line, around the one at [at], that the dictionary holds as one entry:
+/// "a través de" is "through", where "través" alone is a bend, and "a lo lejos" is "in the
+/// distance". The longest such run wins, from two words to [PHRASE_WORDS], as the start and
+/// end (exclusive) of it in [words]. Only an entry under exactly those words, and one that is
+/// more than a pointer at another word.
+pub fn phrase_around<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    words: &[&str],
+    at: usize,
+) -> Option<(usize, usize)> {
+    if at >= words.len() {
+        return None;
+    }
+    for size in (2..=PHRASE_WORDS.min(words.len())).rev() {
+        let first = at.saturating_sub(size - 1);
+        let last = at.min(words.len() - size);
+        for start in first..=last {
+            let joined = words[start..start + size].join(" ");
+            let held = pack
+                .lookup(&joined.to_lowercase())
+                .into_iter()
+                .any(|entry| {
+                    same_word(&entry.lemma, &joined)
+                        && entry.senses.iter().any(|sense| {
+                            !sense.marks.iter().any(|mark| {
+                                mark == "form-of"
+                                    || mark == "alt-of"
+                                    || GONE.contains(&mark.as_str())
+                            })
+                        })
+                });
+            if held {
+                return Some((start, start + size));
+            }
+        }
+    }
+    None
+}
+
+/// The most words a phrase the dictionary holds is looked for as.
+const PHRASE_WORDS: usize = 5;
 
 /// Look one word up, knowing the word before it.
 ///
@@ -1891,11 +2345,33 @@ fn read_found<D: AsRef<[u8]>>(
     let mut found = lookup_either_case(pack, spelling);
     // Not a word the spelling is only an old or a dialect's form of, where it is a word of its
     // own: Italian "con" is "with", and as the obsolete apocope of "come" it was "apenas".
-    if found
-        .iter()
-        .any(|entry| same_word(&entry.lemma, spelling) && !is_minor(entry))
-    {
+    // Only where that word means something itself: "podés" is filed only as a note, "voseo
+    // present of poder", and poder is the word it is.
+    if found.iter().any(|entry| {
+        same_word(&entry.lemma, spelling)
+            && !is_minor(entry)
+            && entry
+                .senses
+                .iter()
+                .any(|sense| !sense.marks.iter().any(|mark| mark == "form-of"))
+    }) {
         found.retain(|entry| same_word(&entry.lemma, spelling) || !only_odd_forms(entry, spelling));
+    }
+    // Not a pronoun whose table lists the spelling in another person's row, or in a row the
+    // dump could not read: German "euch" is listed by "er", "sie", "ich" and "wir" alike, each
+    // filing the one table of every person under its own name, and read through "er" it was
+    // "él". "euch" has an entry of its own.
+    let in_person = |entry: &Entry| {
+        same_word(&entry.lemma, spelling)
+            || by_kind(&entry.pos) != 1
+            || entry
+                .forms
+                .iter()
+                .filter(|form| same_word(&form.spelling, spelling))
+                .any(|form| !form.label.contains("error-") && in_own_person(entry, &form.label))
+    };
+    if found.iter().any(&in_person) {
+        found.retain(|entry| in_person(entry));
     }
     if found.is_empty() {
         // The pack is open and does not hold the word. That is a miss for the engines, not a
@@ -1922,9 +2398,12 @@ fn read_found<D: AsRef<[u8]>>(
                 // even where it says what it means: "ihre" is "her, its, their" as a form of
                 // "ihr".
                 && entry.senses.iter().any(|sense| {
-                    form_of_word(&sense.gloss).is_none()
+                    (form_of_word(&sense.gloss).is_none()
                         && !crate::annotate::about_grammar(&sense.gloss)
-                        && !sense.marks.iter().any(|mark| mark == "form-of")
+                        && !sense.marks.iter().any(|mark| mark == "form-of"))
+                        // Or says what it means in quotation marks: "esto" is "neuter singular
+                        // of este (“this”)", and read through "ése" it was "jener".
+                        || sense.gloss.contains('“')
                 })
         })
         .map(|entry| rank_of(entry, spelling, pack.lang()))
@@ -1944,6 +2423,45 @@ fn read_found<D: AsRef<[u8]>>(
             })
         })
         .collect();
+    // The word a note names, where the lookup did not bring it; and not, beside it, a word of
+    // grammar that only lists the spelling in its table: "esto" is "neuter singular of este",
+    // and "aquéllas", whose table lists every demonstrative, made it "those ones".
+    let grammar: Vec<(String, u8, String)> = named
+        .iter()
+        .filter(|(_, _, pos)| by_kind(pos) <= 1)
+        .cloned()
+        .collect();
+    for (word, _, pos) in &grammar {
+        if !found.iter().any(|entry| same_word(&entry.lemma, word)) {
+            found.extend(
+                lookup_either_case(pack, word)
+                    .into_iter()
+                    .filter(|entry| same_word(&entry.lemma, word) && same_part(&entry.pos, pos))
+                    // Only one the lookup could not have brought: one whose table lists the
+                    // spelling was brought, and left out for a reason ("es" is only a poetic
+                    // form of "das").
+                    .filter(|entry| {
+                        !entry
+                            .forms
+                            .iter()
+                            .any(|form| same_word(&form.spelling, spelling))
+                    }),
+            );
+        }
+    }
+    if !grammar.is_empty() {
+        found.retain(|entry| {
+            same_word(&entry.lemma, spelling)
+                || grammar
+                    .iter()
+                    .any(|(word, _, _)| same_word(word, &entry.lemma))
+                || by_kind(&entry.pos) >= 2
+        });
+    }
+    let mut said_about: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    for entry in &found {
+        *said_about.entry(entry.lemma.clone()).or_default() += entry.senses.len();
+    }
     found.sort_by_key(|entry| {
         let own = rank_of(entry, spelling, pack.lang());
         let standing_for: Vec<&(String, u8, String)> = named
@@ -1952,9 +2470,20 @@ fn read_found<D: AsRef<[u8]>>(
             .collect();
         let rank = standing_for.iter().map(|(_, rank, _)| *rank).min();
         let kind_differs = !standing_for.iter().any(|(_, _, pos)| *pos == entry.pos);
+        // Equal otherwise, in the order the spelling's own notes name them: "ve" is "present
+        // indicative of ver" before "imperative of ir", and is "sieht" far more than "geh".
+        let named_at = named
+            .iter()
+            .position(|(word, _, pos)| same_word(word, &entry.lemma) && *pos == entry.pos)
+            .unwrap_or(usize::MAX);
+        // Equal otherwise, the word its dictionary says more about, which is the word met more:
+        // "Easy" heading a title is the adjective, with seven senses, not the radio code word
+        // for the letter E, with one. Counted by word, so one word's entries keep the order
+        // the dictionary gives them.
+        let said = std::cmp::Reverse(said_about.get(&entry.lemma).copied().unwrap_or(0));
         match rank {
-            Some(rank) => (own.min(rank), false, kind_differs),
-            None => (own, true, false),
+            Some(rank) => (own.min(rank), false, kind_differs, named_at, said),
+            None => (own, true, false, named_at, said),
         }
     });
 
@@ -2009,8 +2538,39 @@ fn read_found<D: AsRef<[u8]>>(
                 open.target,
                 open.said,
                 before,
+                open.in_reader,
             )
         })
+        .collect();
+    if tracing() {
+        eprintln!("TRACE {spelling}: notes stand for {named:?}");
+        eprintln!("TRACE {spelling}: entries in order");
+        for (entry, answer) in found.iter().zip(&answers) {
+            eprintln!(
+                "TRACE   {} {} rank={} says={:?} first={:?}",
+                entry.lemma,
+                entry.pos,
+                rank_of(entry, spelling, pack.lang()),
+                answer.says,
+                entry.senses.first().map(|sense| &sense.gloss),
+            );
+        }
+    }
+    // The words the spelling is only the imperative of, which in running text it is seldom:
+    // "sé" is "I know" far more often than "be!", and "ve" "he sees" more than "go!".
+    let only_commanded: Vec<String> = found
+        .iter()
+        .filter(|entry| !same_word(&entry.lemma, spelling))
+        .filter(|entry| {
+            let labels: Vec<&String> = entry
+                .forms
+                .iter()
+                .filter(|form| same_word(&form.spelling, spelling))
+                .map(|form| &form.label)
+                .collect();
+            !labels.is_empty() && labels.iter().all(|label| label.contains("imperative"))
+        })
+        .map(|entry| entry.lemma.clone())
         .collect();
     // A form reached through its lemma borrows none of the lemma's transcription, but where
     // the dictionary has an entry for the spelling itself - "Tiere", "nominative plural of
@@ -2180,7 +2740,14 @@ fn read_found<D: AsRef<[u8]>>(
     let decided = own_decided
         .then_some(0)
         .or(little_capital)
-        .or_else(|| chosen_by_translation(&meant, &verbs, &fits, open.said))
+        .or_else(|| {
+            // Not from one word of grammar to another: every German line has a "das" and a
+            // "die" in it, and "Esto es" was read as "aquéllas", "those ones", for its "Das".
+            let grammar = |answer: &Answer| by_kind(answer.pos.as_deref().unwrap_or("")) <= 1;
+            chosen_by_translation(&meant, &verbs, &fits, open.said)
+                .filter(|at| !seldom(&all[*at]) || all.iter().all(seldom))
+                .filter(|at| !(grammar(&all[0]) && grammar(&all[*at])))
+        })
         .or_else(|| by_meaning.as_ref().map(|(at, _)| *at))
         .or_else(|| chosen_by_training(&all, spelling, before, open))
         // One reading's answer met far more often than any other's outweighs the word before
@@ -2196,6 +2763,12 @@ fn read_found<D: AsRef<[u8]>>(
             (source.0 != "en" && !contraction)
                 .then(|| commonest_answer(&all, open))
                 .flatten()
+                .filter(|at| {
+                    !all[*at]
+                        .lemma
+                        .as_ref()
+                        .is_some_and(|lemma| only_commanded.contains(lemma))
+                })
         })
         // Between an English spelling's little words, though, it does: those are on every
         // line in both languages, and "but" the conjunction is "pero", met far more than
@@ -2249,6 +2822,15 @@ fn read_found<D: AsRef<[u8]>>(
             }
             Some(0)
         });
+    if tracing() {
+        eprintln!(
+            "TRACE {spelling}: line meaning {:?}, little capital {little_capital:?}, by training {:?}, commonest {:?}, by neighbour {:?}, decided {decided:?}",
+            by_meaning,
+            chosen_by_training(&all, spelling, before, open),
+            commonest_answer(&all, open),
+            chosen_by_neighbour(&all, before, pack),
+        );
+    }
     if let Some(at) = decided {
         all.swap(0, at);
     }
@@ -2281,6 +2863,7 @@ fn read_found<D: AsRef<[u8]>>(
             glosses: answer.glosses.clone(),
             marks: answer.marks.clone(),
             examples: answer.examples.clone(),
+            described: answer.described.clone(),
         })
         .collect();
     // Decided, so the card leads with it and keeps the others under the grammar line rather
@@ -2422,10 +3005,15 @@ fn only_odd_forms(entry: &Entry, spelling: &str) -> bool {
         .filter(|form| same_word(&form.spelling, spelling))
         .flat_map(|form| form.label.split("; ").map(words_of).collect::<Vec<_>>())
         .collect();
+    // "Informal" beside a person is the person, not a register: Spanish tables file every tú
+    // form as "informal second-person", and "puedes" was dropped as an odd form of "poder" and
+    // read from its own note, which says nothing it means.
+    let person = |label: &[String]| label.iter().any(|it| it.ends_with("-person"));
     !labels.is_empty()
         && labels.iter().all(|label| {
             label.iter().any(|it| {
-                ODD_FORMS.contains(&it.as_str()) || matches!(it.as_str(), "informal" | "poetic")
+                ODD_FORMS.contains(&it.as_str())
+                    || (matches!(it.as_str(), "informal" | "poetic") && !person(label))
             })
         })
 }
@@ -2496,18 +3084,54 @@ fn commonest_answer<D: AsRef<[u8]>>(all: &[Answer], open: &Open<D>) -> Option<us
             (!term.is_empty()).then_some(term)
         })
         .collect();
+    // A form by its word's count, which is what a list of words met counts: "ve" is "sieht",
+    // counted as "sehen", against "gehen".
+    // A word filed only as a note about another's form counts as that one too: German "sieht"
+    // has an entry of its own, counted as the spelling, against the lemma "gehen".
+    // As the reader's language writes it: the terms are lowercased to compare them, and German
+    // files "Häuser" under its capital, so every noun was met never.
     let met = |word: &str| -> u64 {
-        pack.lookup(word)
+        let mut found = pack.lookup(word);
+        if found.is_empty() {
+            let mut letters = word.chars();
+            if let Some(first) = letters.next() {
+                found = pack.lookup(&(first.to_uppercase().collect::<String>() + letters.as_str()));
+            }
+        }
+        let word = found
+            .first()
+            .filter(|entry| same_word(&entry.lemma, word))
+            .map(|entry| entry.lemma.clone())
+            .unwrap_or_else(|| word.to_string());
+        let word = word.as_str();
+        let own: Vec<&Entry> = found
             .iter()
             .filter(|entry| same_word(&entry.lemma, word))
-            .filter_map(how_often)
-            .max()
-            .unwrap_or(0)
+            .filter(|entry| {
+                entry
+                    .senses
+                    .iter()
+                    .any(|sense| !sense.marks.iter().any(|mark| mark == "form-of"))
+            })
+            .collect();
+        if own.is_empty() {
+            found.iter().filter_map(how_often).max().unwrap_or(0)
+        } else {
+            own.into_iter().filter_map(how_often).max().unwrap_or(0)
+        }
     };
+    // A list of words met counts no phrase, so a reading answering with one is not met less
+    // for it: "hay" is "es gibt", and set against "da" it lost to a count it never had.
+    if words.iter().flatten().any(|word| word.contains(' ')) {
+        return None;
+    }
     let counts: Vec<u64> = words
         .iter()
         .map(|word| word.as_deref().map(met).unwrap_or(0))
         .collect();
+    if tracing() {
+        eprintln!("TRACE commonest answer: {words:?} met {counts:?}");
+    }
     let (best, most) = counts.iter().enumerate().max_by_key(|(_, count)| **count)?;
     // Two readings of one word - Spanish "perro" the noun and "perro" the adjective - are not
     // told apart by how often the reader's language says their answers: German says "schlimm"
@@ -2755,6 +3379,18 @@ fn own_line_sense(answers: &mut [Answer], line: &str, spelling: &str) -> Option<
     Some(at)
 }
 
+/// Whether every sense of a reading is one the dictionary marks as seldom met: another age's,
+/// a region's. Such a reading is not chosen over a plain one on the strength of a word of the
+/// translated line: "dentro" is "inside", and as a dated form of "dentrar", to enter, its
+/// "eingeben" was found in the line's "gibt es eine Karte".
+fn seldom(answer: &Answer) -> bool {
+    !answer.marks.is_empty()
+        && answer
+            .marks
+            .iter()
+            .all(|marks| marks.iter().any(|mark| SELDOM.contains(&mark.as_str())))
+}
+
 /// The reading the translated line means by one of its words, where none of the readings'
 /// own words is in it: the engine said the thing its own way, with a word no table or join of
 /// this spelling reaches, and what that word's dictionary says it is can still be what one
@@ -2780,13 +3416,45 @@ fn chosen_by_line_meaning<D: AsRef<[u8]>>(
                 .collect()
         })
         .collect();
+    // A reading that is only a note about another word's form is that word in the line, in
+    // whatever form: what its notes share with a line word's are the names of a form, and
+    // Spanish "era", "imperfect indicative of ser", met German "forderte", another verb's
+    // preterite. Where another reading answers for that word, the line word is a form of it.
+    let theirs: Vec<Vec<String>> = all
+        .iter()
+        .map(|answer| {
+            let pointed = answer
+                .glosses
+                .iter()
+                .all(|gloss| crate::annotate::about_grammar(gloss))
+                .then(|| answer.glosses.iter().find_map(|gloss| form_of_word(gloss)))
+                .flatten();
+            pointed
+                .map(|lemma| {
+                    all.iter()
+                        .filter(|it| it.lemma.as_deref().is_some_and(|it| same_word(it, &lemma)))
+                        .filter_map(|it| it.says.first().cloned())
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
+        .collect();
     // For each reading, its best line word and how many words they share.
     let mut best: Vec<(usize, Option<String>)> = vec![(0, None); all.len()];
-    for word in normalised(said) {
+    // As each word is written where the language writes its nouns with a capital: the "Buch"
+    // of a German line is the book, and looked up in small letters it was also the verb
+    // "buchen", and "está" was "buch".
+    let cased = capitalises_nouns(other.lang());
+    for (word, starts) in cased_words(said) {
         if word.chars().count() < 4 {
             continue;
         }
-        for entry in lookup_either_case(other, &word) {
+        let entries = if cased && !starts {
+            other.lookup(&word)
+        } else {
+            lookup_either_case(other, &word.to_lowercase())
+        };
+        for entry in entries {
             if is_minor(&entry) {
                 continue;
             }
@@ -2803,6 +3471,16 @@ fn chosen_by_line_meaning<D: AsRef<[u8]>>(
                     .is_some_and(|pos| !same_part(pos, &entry.pos))
                 {
                     continue;
+                }
+                if !theirs[at].is_empty() {
+                    let forms = forms_as(other, &entry.lemma, Some(&entry.pos));
+                    let of_it = theirs[at].iter().any(|word| {
+                        same_word(word, &entry.lemma)
+                            || forms.iter().any(|form| same_word(form, word))
+                    });
+                    if !of_it {
+                        continue;
+                    }
                 }
                 let shared = reading.intersection(&defined).count();
                 if shared > best[at].0 {
@@ -2926,7 +3604,13 @@ fn sense_in_line<D: AsRef<[u8]>>(
         .iter()
         .take(crate::annotate::SENSES_CONSIDERED)
         .map(|sense| {
-            if crate::annotate::about_grammar(&sense.gloss) {
+            // Not a sense nobody meets any more, which leads no line: "than" is also the
+            // obsolete "because; for", and a line with "que" in it led with that.
+            let seldom = sense
+                .marks
+                .iter()
+                .any(|mark| SELDOM.contains(&mark.as_str()));
+            if crate::annotate::about_grammar(&sense.gloss) || seldom {
                 return Vec::new();
             }
             let says = if target.0 == "en" {
@@ -2945,6 +3629,7 @@ fn sense_in_line<D: AsRef<[u8]>>(
                     open.target,
                     None,
                     None,
+                    open.in_reader,
                 )
                 .says
             };
@@ -3272,7 +3957,72 @@ fn resolve_one<D: AsRef<[u8]>>(
     other: Option<&Pack<D>>,
     said: Option<&str>,
     before: Option<&str>,
+    in_reader: Option<&Pack<D>>,
 ) -> Answer {
+    // What people who write the reader's language say the word is, where their Wiktionary
+    // describes it: which of the English route's words is the one, where the line does not
+    // say ("marzo" reaches "März" and "Marsch" through "March"), and in their words what it is.
+    // Never a word of its own: its lists are a dictionary's, with an insult among an animal's
+    // senses and a person in a tourist's description, and taken as the answer they read a page
+    // worse than the English route did. Not for English, whose tables say it better.
+    let (readers, described) = match (in_reader, other) {
+        (Some(it), Some(other)) if source.0 != "en" && source != target => {
+            in_readers_words(it, other, entry).unwrap_or_default()
+        }
+        _ => (Vec::new(), None),
+    };
+    let mut answer = resolve_one_from(
+        spelling, entry, source, target, pack, other, said, before, in_reader, &readers,
+    );
+    if answer.described.is_none() {
+        answer.described = described;
+    }
+    // And where the English route found no word at all, theirs: "chica" reached nothing
+    // through "girl" and is a "Mädchen".
+    if answer.says.is_empty() && !readers.is_empty() {
+        if let Some(other) = other {
+            let found = readers[0].clone();
+            let inflected = !same_word(&entry.lemma, spelling);
+            let found = if inflected {
+                place_of(entry, spelling)
+                    .and_then(|place| in_form(&found, &entry.pos, &place, other))
+                    .unwrap_or(found)
+            } else {
+                found
+            };
+            answer.says = vec![found];
+            if matches!(answer.state, AnswerState::ViaEn) {
+                answer.state = if inflected {
+                    AnswerState::Form
+                } else {
+                    AnswerState::Entry
+                };
+            }
+            said_in_german(&mut answer, &readers[0], entry, target, other);
+        }
+    }
+    answer
+}
+
+#[allow(clippy::too_many_arguments)]
+fn resolve_one_from<D: AsRef<[u8]>>(
+    spelling: &str,
+    entry: &Entry,
+    source: &Lang,
+    target: &Lang,
+    pack: &Pack<D>,
+    other: Option<&Pack<D>>,
+    said: Option<&str>,
+    before: Option<&str>,
+    in_reader: Option<&Pack<D>>,
+    readers: &[String],
+) -> Answer {
+    // A word of grammar is answered by its dictionary and the word before it, not by a word
+    // picked out of the translated line: every German line has a "die", an "es" and a "sich"
+    // in it, and "la" was "sie", "que" "es" and "se" "dich" on the lines they stood in. The
+    // line still says which of a spelling's readings it is.
+    let line = said;
+    let said = said.filter(|_| by_kind(&entry.pos) >= 2);
     // What the determiner before the word can be, which says which of its places it is in.
     let agreeing = before
         .map(|word| crate::paradigm::determiner_places(word, &lookup_either_case(pack, word)))
@@ -3324,6 +4074,7 @@ fn resolve_one<D: AsRef<[u8]>>(
             &agreeing,
         );
     };
+
     // An entry that only says which form of another word it is, read from a language other
     // than English: that word, in that form, where the reader's language has it. Italian
     // "stato" is filed as "past participle of essere" and essere does not list it, and with no
@@ -3354,8 +4105,35 @@ fn resolve_one<D: AsRef<[u8]>>(
                             .iter()
                             .any(|sense| form_of_word(&sense.gloss).is_none())
                 });
+            if let Some(word) = lemma
+                .as_ref()
+                .and_then(|lemma| form_said_by_lemma(lemma, spelling, line, other))
+            {
+                return finish(
+                    AnswerState::Form,
+                    spelling,
+                    entry,
+                    vec![word],
+                    glosses,
+                    example,
+                    pack,
+                    source,
+                    target,
+                    &agreeing,
+                );
+            }
             if let Some(lemma) = lemma {
-                let read = resolve_one(word, &lemma, source, target, pack, Some(other), said, None);
+                let read = resolve_one(
+                    word,
+                    &lemma,
+                    source,
+                    target,
+                    pack,
+                    Some(other),
+                    said,
+                    None,
+                    in_reader,
+                );
                 if let Some(said_as) = read.says.first() {
                     let as_form = Entry {
                         lemma: word.clone(),
@@ -3387,6 +4165,84 @@ fn resolve_one<D: AsRef<[u8]>>(
             }
         }
     }
+    // A form its word's dictionary says the meaning of: "haber" is "to exist; there be;
+    // “there is”, “there are” (hay)", and "hay" is "there is", where joined on "have" it was
+    // "hat". In the reader's language, the line's word for it first.
+    if source.0 != "en" && !same_word(&entry.lemma, spelling) {
+        if let Some(word) = form_said_by_lemma(entry, spelling, line, other) {
+            return finish(
+                AnswerState::Form,
+                spelling,
+                entry,
+                vec![word],
+                glosses,
+                example,
+                pack,
+                source,
+                target,
+                &agreeing,
+            );
+        }
+    }
+    // A pronoun filed as a case of another, read from a language other than English: that
+    // pronoun's word in the reader's language, in the same case. Spanish "te" is "dative of tú
+    // and vos: to you", tú is "du", and German "dir" is "dative of du"; joined on "you" it was
+    // "sie". The case is read from the note of each word the reader's pronoun lists among its
+    // forms, since a German pronoun's table rows are where the dump reads least.
+    // By the spelling's own note, first case first, whichever pronoun it was reached as: "le"
+    // is "to him, for him; dative of él" first, and "les", listed in the table of "ustedes",
+    // is "to them; dative of ellos" first.
+    if source.0 != "en" && by_kind(&entry.pos) == 1 {
+        let noted = lookup_either_case(pack, spelling)
+            .into_iter()
+            .filter(|it| same_word(&it.lemma, spelling) && same_part(&it.pos, &entry.pos))
+            .find_map(|it| it.senses.iter().find_map(|sense| case_of(&sense.gloss)));
+        if let Some((cases, words)) = noted {
+            let lemma = words.first().and_then(|word| {
+                lookup_either_case(pack, word).into_iter().find(|it| {
+                    same_word(&it.lemma, word)
+                        && same_part(&it.pos, &entry.pos)
+                        && it
+                            .senses
+                            .iter()
+                            .any(|sense| case_of(&sense.gloss).is_none())
+                })
+            });
+            let theirs = lemma.and_then(|lemma| {
+                let read = resolve_one(
+                    &lemma.lemma.clone(),
+                    &lemma,
+                    source,
+                    target,
+                    pack,
+                    Some(other),
+                    said,
+                    None,
+                    in_reader,
+                );
+                read.says.first().cloned()
+            });
+            // Where the reader's language has no such case, the pronoun itself: Spanish "ti",
+            // "prepositional of tú", is "du" in "para ti".
+            let in_case = theirs.as_ref().map(|theirs| {
+                in_case_of(other, theirs, &cases, &entry.pos).unwrap_or_else(|| theirs.clone())
+            });
+            if let Some(word) = in_case {
+                return finish(
+                    AnswerState::Form,
+                    spelling,
+                    entry,
+                    vec![word],
+                    glosses,
+                    example,
+                    pack,
+                    source,
+                    target,
+                    &agreeing,
+                );
+            }
+        }
+    }
     // A contraction naming its parts is answered by them, each in the reader's language, and
     // no word of its own: Italian "della", "of the", joined as "del", where it is "de la".
     if source.0 != "en"
@@ -3396,6 +4252,40 @@ fn resolve_one<D: AsRef<[u8]>>(
             .first()
             .is_some_and(|sense| crate::annotate::contracted(&sense.gloss).is_some())
     {
+        // Unless the line says it with a contraction of the reader's language that means the
+        // same: Spanish "al" is "zum" or "zur" by the German noun's gender, which only the
+        // line knows, and without one "zu der" is at least each part rightly. Only another
+        // contraction is taken from the line, which keeps the reason a word of grammar is
+        // answered without it: a "der" is on every German line.
+        let literal: Vec<(String, Option<String>)> = entry
+            .senses
+            .iter()
+            .filter_map(|sense| meaning_of(&sense.gloss))
+            .map(|meant| (meant, Some(entry.pos.clone())))
+            .collect();
+        let theirs: Vec<String> = glossed_as(&literal, None, other, LOOKED_FOR_IN_LINE)
+            .into_iter()
+            .filter(|word| {
+                other
+                    .lookup(word)
+                    .iter()
+                    .any(|it| same_word(&it.lemma, word) && it.pos == "contraction")
+            })
+            .collect();
+        if let Some(word) = line.and_then(|line| in_line_of(theirs, other, line, None)) {
+            return finish(
+                AnswerState::Entry,
+                spelling,
+                entry,
+                vec![word],
+                glosses,
+                example,
+                pack,
+                source,
+                target,
+                &agreeing,
+            );
+        }
         return finish(
             AnswerState::ViaEn,
             spelling,
@@ -3658,6 +4548,28 @@ fn resolve_one<D: AsRef<[u8]>>(
                 english.insert(0, term);
             }
         }
+        // Where the line has not chosen, the term whose table has a word the reader's own
+        // Wiktionary gives: "hacer" is "to do, to make", and "do" reached "ja".
+        let line_chose = said.is_some_and(|said| {
+            english.first().is_some_and(|(term, _)| {
+                let words: Vec<String> = translated(term, &entry.pos, other, &plain, false)
+                    .into_iter()
+                    .map(|(word, _)| word)
+                    .collect();
+                in_line_of(words, other, said, Some(&entry.pos)).is_some()
+            })
+        });
+        if !line_chose && !readers.is_empty() {
+            let theirs = english.iter().position(|(term, _)| {
+                translated(term, &entry.pos, other, &plain, false)
+                    .iter()
+                    .any(|(word, _)| readers.iter().any(|it| same_word(it, word)))
+            });
+            if let Some(at) = theirs {
+                let term = english.remove(at);
+                english.insert(0, term);
+            }
+        }
         for (english, meant) in &english {
             // In the table's own order: an English word reached this way is a gloss of the
             // word, not the word, and its table's first row is its commonest sense. Reordered
@@ -3717,15 +4629,34 @@ fn resolve_one<D: AsRef<[u8]>>(
             let found = said
                 .and_then(|said| in_line_of(words.clone(), other, said, Some(&entry.pos)))
                 .or_else(|| {
+                    words
+                        .iter()
+                        .find(|word| readers.iter().any(|it| same_word(it, word)))
+                        .cloned()
+                })
+                .or_else(|| {
                     if little {
                         // A word, not a phrase, where the table has one: Italian "di" is "from",
                         // whose table lists "de parte de", "on behalf of", before "desde".
                         let single = |word: &&String| !word.contains(' ');
                         let some_single = words.iter().any(|word| single(&word));
-                        words
+                        // Of those, the one addressing whom the word's note says best:
+                        // "vosotras" is a "second person feminine plural personal pronoun",
+                        // and "you" lists "Sie" before "ihr", "you, ye (plural, familiar)".
+                        let wanted = ordinary
+                            .first()
+                            .map(|sense| addressed(&sense.gloss, &sense.marks))
+                            .filter(|wanted| *wanted != (None, None));
+                        let heads: Vec<String> = words
                             .iter()
                             .filter(|word| !some_single || single(word))
-                            .find(|word| headed(word, false))
+                            .filter(|word| headed(word, false))
+                            .cloned()
+                            .collect();
+                        wanted
+                            .and_then(|wanted| best_addressed(other, &heads, &entry.pos, wanted))
+                            .or_else(|| heads.first().cloned())
+                            .as_ref()
                             .or_else(|| {
                                 words
                                     .iter()
@@ -3929,7 +4860,26 @@ fn resolve_one<D: AsRef<[u8]>>(
     if let Some(word) = said.and_then(|said| in_line(&asked, other, said)) {
         says = vec![word];
     } else {
-        let ranked = glossed_as(&asked, None, other, 1);
+        // A word of grammar whose note says its number, in that number where one of the
+        // likeliest says it: "vosotras", "you; second person feminine plural personal
+        // pronoun", is "ihr", "you, ye (plural, familiar)", which "you" ranks after "Sie".
+        let wanted = entry
+            .senses
+            .first()
+            .filter(|_| by_kind(&entry.pos) <= 1)
+            .map(|sense| addressed(&sense.gloss, &sense.marks))
+            .filter(|wanted| *wanted != (None, None));
+        let ranked = match wanted {
+            Some(wanted) => best_addressed(
+                other,
+                &glossed_as(&asked, None, other, 3),
+                &entry.pos,
+                wanted,
+            )
+            .into_iter()
+            .collect(),
+            None => glossed_as(&asked, None, other, 1),
+        };
         if !ranked.is_empty() {
             says = ranked;
         } else if tied || !asked.is_empty() {
@@ -3949,23 +4899,171 @@ fn resolve_one<D: AsRef<[u8]>>(
     let mut answer = finish(
         state, spelling, entry, says, glosses, example, pack, source, target, &agreeing,
     );
-    // Said in the reader's German in the form the word has: "anduvo" is "er ging", from the
-    // German dictionary's own table of "gehen".
-    if target.0 == "de" {
-        if let (Some(form), Some(lemma)) = (answer.paradigm.as_mut(), lemma_said) {
-            form.said = crate::inflect::german(&lemma, &entry.pos, &form.place, other);
-            form.bare = crate::inflect::german_bare(&lemma, &entry.pos, &form.place, other);
-            for along in &mut form.along {
-                for each in &mut along.forms {
-                    each.said = crate::inflect::german(&lemma, &entry.pos, &each.place, other);
-                }
-            }
-        }
+    if let Some(lemma) = lemma_said {
+        said_in_german(&mut answer, &lemma, entry, target, other);
     }
     answer
 }
 
+/// Whom a sense says its word addresses or names, by its note or its marks: in which number,
+/// and how formally, each where the sense says only one. "usted" is "second person formal;
+/// you (singular)", German "Sie" "you (polite, singular and plural)".
+fn addressed(gloss: &str, marks: &[String]) -> (Option<&'static str>, Option<&'static str>) {
+    let words: Vec<String> = words_of(gloss)
+        .into_iter()
+        .chain(marks.iter().cloned())
+        .collect();
+    let has = |any: &[&str]| words.iter().any(|it| any.contains(&it.as_str()));
+    let one = |this: bool, that: bool, a: &'static str, b: &'static str| match (this, that) {
+        (true, false) => Some(a),
+        (false, true) => Some(b),
+        _ => None,
+    };
+    (
+        one(has(&["plural"]), has(&["singular"]), "plural", "singular"),
+        one(
+            has(&["formal", "polite"]),
+            has(&["informal", "familiar"]),
+            "formal",
+            "informal",
+        ),
+    )
+}
+
+/// How well [word], as the kind of word [pos] is, addresses whom [wanted] says: one for each
+/// of number and formality its first sense says alike, less one for each it says otherwise.
+fn address_fit<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    word: &str,
+    pos: &str,
+    wanted: (Option<&str>, Option<&str>),
+) -> i32 {
+    let fit = |want: Option<&str>, has: Option<&str>| match (want, has) {
+        (Some(want), Some(has)) if want == has => 1,
+        (Some(_), Some(_)) => -1,
+        _ => 0,
+    };
+    pack.lookup(word)
+        .iter()
+        .filter(|it| same_word(&it.lemma, word) && same_part(&it.pos, pos))
+        .filter_map(|it| it.senses.first())
+        .map(|sense| {
+            let (number, formality) = addressed(&sense.gloss, &sense.marks);
+            fit(wanted.0, number) + fit(wanted.1, formality)
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// Of [words], likeliest first, the one that addresses whom [wanted] says best, the likelier
+/// among equals.
+fn best_addressed<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    words: &[String],
+    pos: &str,
+    wanted: (Option<&str>, Option<&str>),
+) -> Option<String> {
+    words
+        .iter()
+        .enumerate()
+        .max_by_key(|(at, word)| (address_fit(pack, word, pos, wanted), std::cmp::Reverse(*at)))
+        .map(|(_, word)| word.clone())
+}
+
+/// Said in the reader's German in the form the word has: "anduvo" is "er ging", from the
+/// German dictionary's own table of "gehen", [lemma] being the German word for the word's lemma.
+fn said_in_german<D: AsRef<[u8]>>(
+    answer: &mut Answer,
+    lemma: &str,
+    entry: &Entry,
+    target: &Lang,
+    other: &Pack<D>,
+) {
+    if target.0 != "de" {
+        return;
+    }
+    if let Some(form) = answer.paradigm.as_mut() {
+        form.said = crate::inflect::german(lemma, &entry.pos, &form.place, other);
+        form.bare = crate::inflect::german_bare(lemma, &entry.pos, &form.place, other);
+        for along in &mut form.along {
+            for each in &mut along.forms {
+                each.said = crate::inflect::german(lemma, &entry.pos, &each.place, other);
+            }
+        }
+    }
+}
+
+/// What the Wiktionary written in the reader's language says [entry]'s word is, as the
+/// words of the reader's language it lists for it, in its order and each one [other] holds as
+/// the same kind of word, with its first sense whole where that says more than its words.
+/// German "das Mädchen" is "Mädchen"; "großes, bauchiges Wasserfahrzeug; Schiff" is "Schiff",
+/// its adjectives being no noun. Only a word of meaning: a word of grammar is answered by the
+/// grammar of the line it is in, which is the English route's.
+fn in_readers_words<D: AsRef<[u8]>>(
+    in_reader: &Pack<D>,
+    other: &Pack<D>,
+    entry: &Entry,
+) -> Option<(Vec<String>, Option<String>)> {
+    if by_kind(&entry.pos) < 2 {
+        return None;
+    }
+    let found: Vec<Entry> = lookup_either_case(in_reader, &entry.lemma)
+        .into_iter()
+        .filter(|it| same_word(&it.lemma, &entry.lemma) && same_part(&it.pos, &entry.pos))
+        .collect();
+    let holds = |word: &str| {
+        other
+            .lookup(word)
+            .iter()
+            .any(|it| same_word(&it.lemma, word) && same_part(&it.pos, &entry.pos))
+    };
+    // Each item of a sense that is a word of its own, in every sense, before the word of an
+    // item the dictionary writes with its article or its object, "das Mädchen", "etwas
+    // darstellen": "großes, bauchiges Wasserfahrzeug; Schiff" is a Schiff.
+    let items: Vec<&str> = found
+        .iter()
+        .flat_map(|it| it.senses.iter())
+        .flat_map(|sense| {
+            sense
+                .gloss
+                .split('(')
+                .next()
+                .unwrap_or("")
+                .split([',', ';'])
+                .map(|item| item.trim().trim_end_matches('.'))
+        })
+        .collect();
+    let whole = items.iter().copied().filter(|item| holds(item));
+    // Only after a word of grammar: "männliche Person" describes a friend, it is not one.
+    let little = |word: &str| {
+        other
+            .lookup(word)
+            .iter()
+            .any(|it| same_word(&it.lemma, word) && by_kind(&it.pos) <= 1)
+    };
+    let within = items.iter().filter_map(|item| {
+        item.split_once(' ')
+            .filter(|(first, last)| !last.contains(' ') && little(first))
+            .map(|(_, last)| last)
+            .filter(|last| holds(last))
+    });
+    let mut words: Vec<String> = Vec::new();
+    for word in whole.chain(within) {
+        if !words.iter().any(|had| same_word(had, word)) {
+            words.push(word.to_string());
+        }
+    }
+    let first = words.first()?.clone();
+    let described = found
+        .iter()
+        .flat_map(|it| it.senses.first())
+        .map(|sense| sense.gloss.trim().to_string())
+        .find(|gloss| !same_word(gloss, &first));
+    Some((words, described))
+}
+
 #[allow(clippy::too_many_arguments)]
+#[track_caller]
 fn finish<D: AsRef<[u8]>>(
     state: AnswerState,
     spelling: &str,
@@ -3978,6 +5076,14 @@ fn finish<D: AsRef<[u8]>>(
     target: &Lang,
     agreeing: &[crate::paradigm::Place],
 ) -> Answer {
+    if tracing() {
+        eprintln!(
+            "TRACE {spelling} as {} {}: {says:?} from line {}",
+            entry.lemma,
+            entry.pos,
+            std::panic::Location::caller().line()
+        );
+    }
     // How the lemma is said is not how its forms are: "dependiendo" reached through
     // "depender" is not said /depenˈdeɾ/. A form with a pronunciation of its own is an entry of
     // its own and never comes through here, so a form that did has none, and is left for the
@@ -4044,5 +5150,6 @@ fn finish<D: AsRef<[u8]>>(
         paradigm,
         said_in: None,
         ipa_said_in,
+        described: None,
     }
 }

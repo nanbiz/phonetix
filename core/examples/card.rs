@@ -1,7 +1,10 @@
 //! What a card says about one word with real packs:
 //! `cargo run --example card -- <source pack> <target pack> <source> <target> [before:]word...`,
 //! with `DEFINES=<def pack>` for a word read in its own language, and `ACCENT=<id>` with
-//! `ACCENT_PACK=<pack>` for a reader who chose an accent, and `SAID=<translated line>`.
+//! `ACCENT_PACK=<pack>` for a reader who chose an accent, `SAID=<translated line>`, and
+//! `IN_READER=<pack>` for the source's words as the target's own Wiktionary gives them.
+//! `TRACE=1` says on stderr which entries each word reached in which order, which rule decided
+//! between them, and which line of resolve.rs answered each reading.
 use lexcore::answer::Lang;
 use lexcore::resolve::{read_in_context, Open};
 
@@ -11,6 +14,10 @@ fn main() {
     let target = lexpack::Pack::open(std::fs::read(&args[2]).expect("reads")).expect("opens");
     // What the language's own Wiktionary says, where DEFINES names its pack.
     let defines = std::env::var("DEFINES")
+        .ok()
+        .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
+    // The source's words in the target's, from the target's own Wiktionary (IN_READER=...).
+    let in_reader = std::env::var("IN_READER")
         .ok()
         .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let accent = std::env::var("ACCENT").unwrap_or_default();
@@ -23,6 +30,7 @@ fn main() {
         source: Some(&source),
         target: Some(&target),
         defines: defines.as_ref(),
+        in_reader: in_reader.as_ref(),
         accent: &accent,
         accent_pack: accent_pack.as_ref(),
         said: said.as_deref(),

@@ -89,6 +89,7 @@ fn a_lemma_that_joins_is_an_entry() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perro", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -124,6 +125,7 @@ fn an_inflected_spelling_answers_through_its_lemma() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perros", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Form);
@@ -155,6 +157,7 @@ fn a_gloss_of_several_terms_reaches_the_word_that_shares_most_of_them() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("camino", &lang("es"), &lang("de"), &open);
     assert_eq!(
@@ -189,6 +192,7 @@ fn two_words_reached_equally_well_are_answered_with_one_of_them() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("banco", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -219,6 +223,7 @@ fn a_language_read_in_itself_answers_with_its_own_senses() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perro", &lang("es"), &lang("es"), &open);
     assert_eq!(got.state, AnswerState::Mono);
@@ -245,6 +250,7 @@ fn a_reader_of_english_needs_no_join_at_all() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Entry);
@@ -266,6 +272,7 @@ fn a_word_the_pack_does_not_hold_is_a_miss_and_not_a_missing_pack() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("murciélago", &lang("es"), &lang("de"), &open);
     assert_eq!(got.state, AnswerState::None);
@@ -285,6 +292,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &open).state,
@@ -300,6 +308,7 @@ fn no_pack_and_a_pronunciation_pack_are_different_answers() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("de"), &offered).state,
@@ -332,6 +341,7 @@ fn a_word_that_joins_nowhere_still_gives_its_sound_and_its_english() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("ornitorrinco", &lang("es"), &lang("de"), &open);
     // The entry is here and the reader's own pack is open; what is missing is a join between
@@ -375,6 +385,7 @@ fn the_applying_senses_example_comes_with_the_answer() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert_eq!(got.example.as_deref(), Some("El perro ladra."));
@@ -394,6 +405,7 @@ fn a_sense_with_no_example_invents_none() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     assert_eq!(
         look_up("perro", &lang("es"), &lang("en"), &open).example,
@@ -428,6 +440,7 @@ fn a_spelling_that_is_two_words_offers_both_readings() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("banco", &lang("es"), &lang("en"), &open);
     assert_eq!(got.state, AnswerState::Homograph);
@@ -452,6 +465,7 @@ fn a_spelling_that_is_one_word_offers_no_choice() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("perro", &lang("es"), &lang("en"), &open);
     assert!(got.readings.is_empty(), "nothing to choose between");
@@ -517,6 +531,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         },
     );
     assert_eq!(standard.ipa, ["ˈʃɛdjuːl"]);
@@ -535,6 +550,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         },
     );
     assert_eq!(said.ipa, ["ˈskɛdʒuːl"]);
@@ -556,6 +572,7 @@ fn an_accent_with_a_word_of_its_own_says_it_that_way() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         },
     );
     assert_eq!(cut.ipa, ["kɐt"]);
@@ -604,6 +621,7 @@ fn a_word_the_accents_pack_does_not_hold_is_said_by_its_rule() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         },
     );
     assert_eq!(said.ipa, ["ˈwɔːtɚ"]);
@@ -1066,6 +1084,7 @@ fn the_sentences_own_translation_says_which_word_it_is() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         };
         look_up("banco", &lang("es"), &lang("en"), &open)
     };
@@ -1947,6 +1966,7 @@ fn a_line_in_another_language_is_read_in_that_language_s_accent() {
         source: held.get("en"),
         others: Some(&held),
         defines: None,
+        in_reader: None,
         ..Open::default()
     };
     let mut accents = std::collections::HashMap::new();
@@ -2000,6 +2020,7 @@ fn a_language_in_its_own_accent_keeps_every_reading() {
             classifier: None,
             others: None,
             defines: None,
+            in_reader: None,
         };
         look_up("modern", &lang("de"), &lang("en"), &open)
     };
@@ -3354,6 +3375,7 @@ fn a_word_read_in_its_own_language_is_defined_in_it() {
         source: Some(&spanish),
         target: Some(&spanish),
         defines: Some(&own),
+        in_reader: None,
         ..Open::default()
     };
     let read = read_in_context("perros", None, &lang("es"), &lang("es"), &open);
@@ -3401,6 +3423,236 @@ fn a_contraction_is_written_as_the_reader_writes_its_parts() {
     };
     let au = read_in_context("au", None, &lang("fr"), &lang("es"), &open);
     assert_eq!(lexcore::annotate::lead(&au, &open).as_deref(), Some("al"));
+}
+
+/// A contraction the translated line says with one of the reader's own is that one, where both
+/// dictionaries say they mean the same: Spanish "al" is German "zum" before a masculine noun
+/// and "zur" before a feminine one, which only the line knows. Without a line it is its parts.
+#[test]
+fn a_contraction_is_the_readers_contraction_the_line_says() {
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    spanish
+        .add::<&str>(
+            word(
+                "al",
+                "contraction",
+                "al",
+                &["contraction of a + el, literally “at the, to the”"],
+            ),
+            &[],
+        )
+        .unwrap();
+    spanish
+        .add::<&str>(word("a", "prep", "a", &["to, at"]), &[])
+        .unwrap();
+    spanish
+        .add::<&str>(word("el", "article", "el", &["the"]), &[])
+        .unwrap();
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    for (lemma, gloss) in [
+        (
+            "zum",
+            "contraction of zu + dem, literally “to the; for the”",
+        ),
+        (
+            "zur",
+            "contraction of zu + der, literally “to the (feminine)”",
+        ),
+        ("ins", "contraction of in + das, literally “into the”"),
+    ] {
+        german
+            .add::<&str>(word(lemma, "contraction", lemma, &[gloss]), &[])
+            .unwrap();
+    }
+    let zu = german
+        .add::<&str>(word("zu", "prep", "tsuː", &["to"]), &[])
+        .unwrap();
+    let der = german
+        .add::<&str>(word("der", "article", "deːɐ̯", &["the"]), &[])
+        .unwrap();
+    german.translated("to", "prep", &[(zu, 0)]);
+    german.translated("the", "article", &[(der, 0)]);
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let read = |said: Option<&'static str>| {
+        let open = Open {
+            source: Some(&spanish),
+            target: Some(&german),
+            said,
+            ..Open::default()
+        };
+        let al = read_in_context("al", None, &lang("es"), &lang("de"), &open);
+        lexcore::annotate::lead(&al, &open)
+    };
+    assert_eq!(read(Some("Wir gehen zum Park.")).as_deref(), Some("zum"));
+    assert_eq!(read(Some("Er ging zur Kirche.")).as_deref(), Some("zur"));
+    assert_eq!(read(None).as_deref(), Some("zu der"));
+}
+
+/// A pronoun filed as a case of another is that pronoun's word in the same case, read from the
+/// notes of the forms the reader's pronoun lists, since a German pronoun table's rows are what
+/// the dump reads least; where the reader's language has no such case, the pronoun itself.
+/// And among the words for "you", the one its note says addresses whom the word does.
+#[test]
+fn a_pronoun_is_answered_in_its_case_and_whom_it_addresses() {
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    for (lemma, gloss) in [
+        ("tú", "second person pronoun in singular tense; you"),
+        ("usted", "second person formal; you (singular)"),
+        (
+            "vosotras",
+            "you; second person feminine plural personal pronoun",
+        ),
+        ("te", "dative of tú and vos: to you, for you"),
+        (
+            "os",
+            "you, to you, for you; dative and accusative of vosotros",
+        ),
+        ("ti", "prepositional of tú"),
+    ] {
+        spanish
+            .add::<&str>(word(lemma, "pron", lemma, &[gloss]), &[])
+            .unwrap();
+    }
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let unread = |spelling: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: "dative error-unrecognized-form personal pronoun".to_string(),
+    };
+    let mut sie = word("Sie", "pron", "ziː", &["you (polite, singular and plural)"]);
+    sie.forms.push(unread("Ihnen"));
+    let mut du = word("du", "pron", "duː", &["you (singular familiar), thou"]);
+    du.forms.extend([unread("dich"), unread("dir")]);
+    let mut ihr = word("ihr", "pron", "iːɐ̯", &["you, ye (plural, familiar)"]);
+    ihr.forms.push(unread("euch"));
+    let sie = german.add(sie, &["Ihnen"]).unwrap();
+    let du = german.add(du, &["dich", "dir"]).unwrap();
+    let ihr = german.add(ihr, &["euch"]).unwrap();
+    for (lemma, gloss) in [
+        ("dich", "accusative of du; you, thee (direct object)."),
+        ("dir", "dative of du; you, to you."),
+        ("euch", "accusative and dative of ihr; you, yourselves"),
+        ("Ihnen", "dative of Sie: you, to you"),
+    ] {
+        german
+            .add::<&str>(word(lemma, "pron", lemma, &[gloss]), &[])
+            .unwrap();
+    }
+    german.translated("you", "pron", &[(sie, 0), (du, 0), (ihr, 0)]);
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&spanish),
+        target: Some(&german),
+        ..Open::default()
+    };
+    let read = |spelling: &str| {
+        let answer = read_in_context(spelling, None, &lang("es"), &lang("de"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(read("tú").as_deref(), Some("du"));
+    assert_eq!(read("usted").as_deref(), Some("Sie"));
+    assert_eq!(read("vosotras").as_deref(), Some("ihr"));
+    assert_eq!(read("te").as_deref(), Some("dir"));
+    assert_eq!(read("ti").as_deref(), Some("du"));
+}
+
+/// A verb in a past tense is said in that tense where the reader's language has it, and in
+/// its one past where it has one for two: Spanish "fue", the preterite, and "era", the
+/// imperfect, are both German "war".
+#[test]
+fn a_verb_keeps_its_tense_into_german() {
+    let form = |spelling: &str, label: &str| lexpack::Form {
+        spelling: spelling.to_string(),
+        label: label.to_string(),
+    };
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    let mut ser = word("ser", "verb", "seɾ", &["to be"]);
+    ser.forms.extend([
+        form("es", "indicative present singular third-person"),
+        form("fue", "indicative preterite singular third-person"),
+        form("era", "first/third-person imperfect indicative singular"),
+    ]);
+    spanish.add(ser, &["es", "fue", "era"]).unwrap();
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut sein = word("sein", "verb", "zaɪ̯n", &["to be"]);
+    sein.forms.extend([
+        form("ist", "indicative present singular third-person"),
+        form("war", "past; first-person indicative preterite singular; indicative preterite singular third-person"),
+    ]);
+    let sein = german.add(sein, &["ist", "war"]).unwrap();
+    german.translated("be", "verb", &[(sein, 0)]);
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&spanish),
+        target: Some(&german),
+        ..Open::default()
+    };
+    let read = |spelling: &str| {
+        let answer = read_in_context(spelling, None, &lang("es"), &lang("de"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(read("es").as_deref(), Some("ist"));
+    assert_eq!(read("fue").as_deref(), Some("war"));
+    assert_eq!(read("era").as_deref(), Some("war"));
+}
+
+/// An article in the gender it has, where the reader's language has it: Spanish "lo", a
+/// "neuter definite article" by its note alone, is "das"; "una" is "eine", from whichever of
+/// the reader's entries for "ein" lists its forms.
+#[test]
+fn an_article_keeps_its_gender_into_german() {
+    let mut spanish = Builder::new("es", Kind::Lex, 0);
+    spanish
+        .add::<&str>(
+            word(
+                "lo",
+                "article",
+                "lo",
+                &["neuter definite article used only before nominalized adjectives: the, that which is"],
+            ),
+            &[],
+        )
+        .unwrap();
+    let mut uno = word("uno", "article", "ˈuno", &["an; a"]);
+    uno.forms.push(lexpack::Form {
+        spelling: "una".to_string(),
+        label: "feminine".to_string(),
+    });
+    spanish.add(uno, &["una"]).unwrap();
+    let spanish = Pack::open(spanish.finish().unwrap()).unwrap();
+    let mut german = Builder::new("de", Kind::Lex, 0);
+    let mut der = word("der", "article", "deːɐ̯", &["the"]);
+    der.forms.push(lexpack::Form {
+        spelling: "das".to_string(),
+        label: "neuter nominative singular".to_string(),
+    });
+    let der = german.add(der, &["das"]).unwrap();
+    let bare = german
+        .add::<&str>(word("ein", "article", "aɪ̯n", &["a, an"]), &[])
+        .unwrap();
+    let mut ein = word("ein", "article", "aɪ̯n", &["a, an"]);
+    ein.forms.push(lexpack::Form {
+        spelling: "eine".to_string(),
+        label: "feminine nominative singular".to_string(),
+    });
+    german.add(ein, &["eine"]).unwrap();
+    german.translated("the", "article", &[(der, 0)]);
+    german.translated("a", "article", &[(bare, 0)]);
+    german.translated("an", "article", &[(bare, 0)]);
+    let german = Pack::open(german.finish().unwrap()).unwrap();
+    let open = Open {
+        source: Some(&spanish),
+        target: Some(&german),
+        ..Open::default()
+    };
+    let read = |spelling: &str| {
+        let answer = read_in_context(spelling, None, &lang("es"), &lang("de"), &open);
+        lexcore::annotate::lead(&answer, &open)
+    };
+    assert_eq!(read("lo").as_deref(), Some("das"));
+    assert_eq!(read("una").as_deref(), Some("eine"));
 }
 
 /// Italian words of grammar read into Spanish as Spanish writes them. A contraction leads over
@@ -4142,6 +4394,7 @@ fn a_form_with_a_pronoun_joined_is_that_form_of_its_verb() {
         classifier: None,
         others: None,
         defines: None,
+        in_reader: None,
     };
     let got = look_up("bañarme", &lang("es"), &lang("en"), &open);
     let form = got.paradigm.as_ref().expect("bañarme names no form");
@@ -4152,4 +4405,186 @@ fn a_form_with_a_pronoun_joined_is_that_form_of_its_verb() {
         "{:?}",
         form.place
     );
+}
+
+fn open_with<'a>(
+    source: &'a Pack<&'a Vec<u8>>,
+    target: &'a Pack<&'a Vec<u8>>,
+    said: Option<&'a str>,
+    in_reader: Option<&'a Pack<&'a Vec<u8>>>,
+) -> Open<'a, &'a Vec<u8>> {
+    Open {
+        source: Some(source),
+        target: Some(target),
+        ipa_only: false,
+        accent: "",
+        accent_pack: None,
+        said,
+        classifier: None,
+        others: None,
+        defines: None,
+        in_reader,
+    }
+}
+
+/// Words of a line the dictionary holds as one entry are answered as that entry: "a través
+/// de" is "through", where "través" alone is a bend.
+#[test]
+fn a_phrase_the_dictionary_holds_is_found_around_its_word() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add(
+        word("través", "noun", "tɾaˈβes", &["bend, turn"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    pack.add(
+        word("a través de", "prep", "a tɾaˈβes ðe", &["through, via"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let bytes = pack.finish().unwrap();
+    let es = Pack::open(&bytes).unwrap();
+    let line = ["A", "través", "de", "una", "ventana"];
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 1), Some((0, 3)));
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 0), Some((0, 3)));
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 4), None);
+}
+
+/// A Spanish tú form is filed "informal second-person": the person, not a register, and the
+/// verb it is a form of is what it means. Read as an odd form, "puedes" was answered from its
+/// own note and said nothing.
+#[test]
+fn an_informal_person_is_a_person_not_a_register() {
+    let mut es = Builder::new("es", Kind::Lex, 0);
+    let mut poder = word("poder", "verb", "poˈdeɾ", &["to be able to, can"]);
+    poder.forms.push(lexpack::Form {
+        spelling: "puedes".into(),
+        label: "indicative informal present second-person singular".into(),
+    });
+    es.add(poder, &[] as &[&str]).unwrap();
+    let mut note = word(
+        "puedes",
+        "verb",
+        "ˈpwe.ðes",
+        &["second-person singular present indicative of poder"],
+    );
+    note.senses[0].marks = vec!["form-of".into()];
+    es.add(note, &[] as &[&str]).unwrap();
+    let es = es.finish().unwrap();
+    let mut de = Builder::new("de", Kind::Lex, 0);
+    de.add(
+        word("können", "verb", "ˈkœnən", &["to be able to, can"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let de = de.finish().unwrap();
+    let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
+    let answer = read_in_context(
+        "puedes",
+        None,
+        &lang("es"),
+        &lang("de"),
+        &open_with(&es, &de, None, None),
+    );
+    assert_eq!(answer.lemma.as_deref(), Some("poder"), "{answer:?}");
+    assert!(!answer.says.is_empty(), "{answer:?}");
+}
+
+/// What the Wiktionary written in the reader's language says a word is comes before the
+/// English glosses: "hacer", "to do", reached German "ja" through the emphatic "do".
+#[test]
+fn the_readers_own_wiktionary_comes_before_the_english_route() {
+    let mut es = Builder::new("es", Kind::Lex, 0);
+    es.add(
+        word("hacer", "verb", "aˈθeɾ", &["to do, to make"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    es.add(word("barco", "noun", "ˈbaɾ.ko", &["boat"]), &[] as &[&str])
+        .unwrap();
+    let es = es.finish().unwrap();
+    let mut de = Builder::new("de", Kind::Lex, 0);
+    de.add(word("tun", "verb", "tuːn", &["to do"]), &[] as &[&str])
+        .unwrap();
+    de.add(
+        word("ja", "particle", "jaː", &["yes; do (emphatic)"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    de.add(word("Schiff", "noun", "ʃɪf", &["ship"]), &[] as &[&str])
+        .unwrap();
+    de.add(
+        word("Wasserfahrzeug", "noun", "x", &["watercraft"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    de.add(word("das", "article", "das", &["the"]), &[] as &[&str])
+        .unwrap();
+    let de = de.finish().unwrap();
+    let mut described = Builder::new("es-in-de", Kind::Lex, 0).without_joins();
+    described
+        .add(
+            word("hacer", "verb", "", &["tun, ausführen", "machen"]),
+            &[] as &[&str],
+        )
+        .unwrap();
+    described
+        .add(
+            word(
+                "barco",
+                "noun",
+                "",
+                &["großes, bauchiges Wasserfahrzeug; Schiff"],
+            ),
+            &[] as &[&str],
+        )
+        .unwrap();
+    let described = described.finish().unwrap();
+    let (es, de, described) = (
+        Pack::open(&es).unwrap(),
+        Pack::open(&de).unwrap(),
+        Pack::open(&described).unwrap(),
+    );
+    let open = open_with(&es, &de, None, Some(&described));
+    let hacer = read_in_context("hacer", None, &lang("es"), &lang("de"), &open);
+    assert_eq!(hacer.says, vec!["tun".to_string()], "{hacer:?}");
+    // A word of its own in the list before one inside a description.
+    let barco = read_in_context("barco", None, &lang("es"), &lang("de"), &open);
+    assert_eq!(barco.says, vec!["Schiff".to_string()], "{barco:?}");
+    assert_eq!(
+        barco.described.as_deref(),
+        Some("großes, bauchiges Wasserfahrzeug; Schiff")
+    );
+}
+
+/// A word reached as a preposition is looked for in the line as itself, not as every form
+/// of an article it is also filed as: German "dem" carried "das", and "a" was "das" in any
+/// line with the article in it.
+#[test]
+fn a_word_of_another_kind_brings_no_forms_into_the_line() {
+    let mut es = Builder::new("es", Kind::Lex, 0);
+    es.add(word("a", "prep", "a", &["to"]), &[] as &[&str])
+        .unwrap();
+    let es = es.finish().unwrap();
+    let mut de = Builder::new("de", Kind::Lex, 0);
+    de.add(word("zu", "prep", "tsuː", &["to"]), &[] as &[&str])
+        .unwrap();
+    let mut der = word("der", "article", "deːɐ̯", &["the"]);
+    der.forms.push(lexpack::Form {
+        spelling: "das".into(),
+        label: "neuter nominative singular".into(),
+    });
+    der.forms.push(lexpack::Form {
+        spelling: "dem".into(),
+        label: "dative singular".into(),
+    });
+    de.add(der, &[] as &[&str]).unwrap();
+    let mut dem = word("dem", "prep", "deːm", &["to the (contraction)"]);
+    dem.senses[0].marks = Vec::new();
+    de.add(dem, &[] as &[&str]).unwrap();
+    let de = de.finish().unwrap();
+    let (es, de) = (Pack::open(&es).unwrap(), Pack::open(&de).unwrap());
+    let open = open_with(&es, &de, Some("Das Schiff ist größer als das Boot."), None);
+    let answer = read_in_context("a", None, &lang("es"), &lang("de"), &open);
+    assert_ne!(answer.says, vec!["das".to_string()], "{answer:?}");
 }

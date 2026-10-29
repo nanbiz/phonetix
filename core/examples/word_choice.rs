@@ -13,6 +13,10 @@ fn main() {
     let source = lexpack::Pack::open(std::fs::read(&args[1]).expect("reads")).expect("opens");
     let target = lexpack::Pack::open(std::fs::read(&args[2]).expect("reads")).expect("opens");
     let (from, into) = (Lang(args[3].clone()), Lang(args[4].clone()));
+    // The source's words as the target's own Wiktionary gives them (IN_READER=<pack>).
+    let in_reader = std::env::var("IN_READER")
+        .ok()
+        .map(|path| lexpack::Pack::open(std::fs::read(path).expect("reads")).expect("opens"));
     let with_line = args.get(5).is_some_and(|it| it == "line");
     for (at, line) in std::io::stdin().lock().lines().enumerate() {
         let line = line.expect("reads");
@@ -23,6 +27,7 @@ fn main() {
             source: Some(&source),
             target: Some(&target),
             said: with_line.then_some(translated),
+            in_reader: in_reader.as_ref(),
             ..Open::default()
         };
         let words: Vec<&str> = english

@@ -109,7 +109,9 @@ for lang in "${!filed[@]}"; do
 done
 
 # The editions of Wiktionary written in another language than English, as kaikki.org extracts
-# them, each defining its own language's words in it.
+# them: each defines its own language's words in it ("def-<language>"), and says what other
+# languages' words are in its language ("<language>-in-<edition>"), where it describes enough
+# of them.
 editions="$work/editions"
 mkdir -p "$editions"
 for lang in cs de el es fr id it ja ko ku ms nl pl pt ru th tr vi zh; do
@@ -118,12 +120,7 @@ for lang in cs de el es fr id it ja ko ku ms nl pl pt ru th tr vi zh; do
     curl -fsSL -C - -o "$file" "https://kaikki.org/dictionary/downloads/$lang/$lang-extract.jsonl.gz" \
       || { rm -f "$file"; echo "def-$lang: no edition" >&2; continue; }
   fi
-  if "$build" define "$lang" "$file" "$out/def-$lang.pack" > "$out/def-$lang.pack.json"; then
-    printf '%s %s\n' "def-$lang" "$(head -c 200 "$out/def-$lang.pack.json")"
-  else
-    echo "def-$lang: no pack" >&2
-    rm -f "$out/def-$lang.pack" "$out/def-$lang.pack.json"
-  fi
+  "$build" define "$lang" "$file" "$out" || echo "$lang edition: no packs" >&2
 done
 
 uv run python tools/models_manifest.py "$out/models.json"

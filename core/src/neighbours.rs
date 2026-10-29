@@ -15,7 +15,7 @@ pub struct Neighbour {
 /// card stops offering the choice.
 pub const MARGIN: u32 = 1;
 
-pub static RULES: [Neighbour; 10] = [
+pub static RULES: [Neighbour; 12] = [
     Neighbour {
         after: "det",
         prefers: "noun",
@@ -52,6 +52,14 @@ pub static RULES: [Neighbour; 10] = [
         after: "prep",
         prefers: "noun",
     }, // a preposition governs a noun phrase
+    Neighbour {
+        after: "prep",
+        prefers: "article",
+    }, // which begins with its article as often as not: con la, mit der
+    Neighbour {
+        after: "prep",
+        prefers: "det",
+    }, // the same, where the dump calls it that
     Neighbour {
         after: "conj",
         prefers: "verb",

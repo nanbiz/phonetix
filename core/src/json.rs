@@ -22,7 +22,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
-\"paradigm\":{},\"saidIn\":{},\"spellingOf\":{}}}",
+\"paradigm\":{},\"saidIn\":{},\"spellingOf\":{},\"described\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -63,6 +63,8 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         maybe(&answer.said_in),
         // The word this spelling is another way of writing, which a card names beside it.
         maybe(&answer.spelling_of),
+        // What it is in the reader's language, as their own Wiktionary describes it.
+        maybe(&answer.described),
     )
 }
 
@@ -242,13 +244,14 @@ fn readings(items: &[crate::resolve::Reading]) -> String {
         .iter()
         .map(|reading| {
             format!(
-                "{{\"pos\":{},\"ipa\":{},\"says\":{},\"glosses\":{},\"marks\":{},\"examples\":{}}}",
+                "{{\"pos\":{},\"ipa\":{},\"says\":{},\"glosses\":{},\"marks\":{},\"examples\":{},\"described\":{}}}",
                 maybe(&reading.pos),
                 strings(&reading.ipa),
                 strings(&reading.says),
                 strings(&reading.glosses),
                 marks(&reading.marks),
                 examples(&reading.examples),
+                maybe(&reading.described),
             )
         })
         .collect();
@@ -346,6 +349,7 @@ mod tests {
             said_in: None,
             spelling_of: None,
             ipa_said_in: Vec::new(),
+            described: None,
         }
     }
 
@@ -360,6 +364,7 @@ mod tests {
                 glosses: vec!["a bound volume".into()],
                 marks: Vec::new(),
                 examples: Vec::new(),
+                described: None,
             },
             crate::resolve::Reading {
                 pos: Some("verb".into()),
@@ -368,6 +373,7 @@ mod tests {
                 glosses: vec!["to reserve".into()],
                 marks: Vec::new(),
                 examples: Vec::new(),
+                described: None,
             },
         ];
         let text = of(&answer);

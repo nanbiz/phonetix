@@ -2,7 +2,7 @@
 //!
 //!   packbuild <language> <extract.jsonl> <out.lexpack>       what its words mean
 //!   packbuild ipa <language> <words.json.gz> <out.lexpack>   how its words are said
-//!   packbuild define <language> <edition.jsonl.gz> <out.lexpack>   its words in its own words
+//!   packbuild define <language> <edition.jsonl.gz> <out dir>   words in an edition's language
 //!
 //! Reads the extract a line at a time and writes the pack, then prints the manifest row: what
 //! it holds, how big it is, and its checksum. A language's extract runs to gigabytes and the
@@ -55,6 +55,7 @@ fn main() {
 [--frequencies=<list>]"
         );
         eprintln!("packbuild ipa <language> <words.json.gz> <out.lexpack>");
+        eprintln!("packbuild define <edition language> <edition.jsonl.gz> <out dir>");
         std::process::exit(2);
     }
     let (lang, from, to) = (&args[1], &args[2], &args[3]);
@@ -291,105 +292,145 @@ fn pronunciations(lang: &str, from: &str, to: &str) {
     eprintln!("{taken} of {} words, {} bytes", words.len(), bytes.len());
 }
 
-/// Build a pack of what a language's words mean in that language, from the Wiktionary written
-/// in it: "pensar" is "Ejercitar el intelecto para explicarse o imaginarse algo".
+/// Build packs of what words mean, from a Wiktionary edition: for the edition's own language
+/// "def-<language>", what its words mean in it ("pensar" is "Ejercitar el intelecto para
+/// explicarse o imaginarse algo"), for a reader who reads the language and to whom its English
+/// glosses are a translation they did not ask for; and for every other language the edition
+/// describes "<language>-in-<edition>", its words in the edition's language, written by people
+/// who speak both, where going through English glosses made Spanish "hacer", "to do", into
+/// German "ja".
 ///
-/// For a reader who reads the language, to whom its words' English glosses are a translation
-/// they did not ask for. Named "def-<language>" in its header, so it is held beside the
-/// language's own pack rather than in its place; keyed by the word alone, since what is asked
-/// of it is the lemma the language's own pack has already worked out; and with no gloss index,
-/// since nothing is joined to it.
-fn definitions(lang: &str, from: &str, to: &str) {
-    /// What a card can show of a word, and what a sentence of definition runs to at most.
-    const SENSES: usize = 8;
-    const LONGEST: usize = 320;
+/// One pass over the edition, which runs to gigabytes. A language gets a pack where the
+/// edition describes at least [FEWEST] of its words and [out] holds its own pack beside it,
+/// since what is asked of these is the lemma the language's own pack has worked out. Keyed by
+/// the word alone, with no gloss index, since nothing is joined to them.
+fn definitions(edition: &str, from: &str, out: &str) {
+    const FEWEST: usize = 300;
     let built = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    let mut pack = Builder::new(&format!("def-{lang}"), Kind::Lex, built).without_joins();
-    let mut taken = 0usize;
+    let mut found: std::collections::BTreeMap<String, Vec<lexpack::Entry>> =
+        std::collections::BTreeMap::new();
     for line in BufReader::new(extract(from)).lines() {
         let Ok(line) = line else { continue };
         let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) else {
             continue;
         };
-        // An edition holds every language its editors write about; only its own is defined in
-        // its own words for a reader of it.
-        if value.get("lang_code").and_then(|v| v.as_str()) != Some(lang) {
-            continue;
-        }
-        let (Some(word), Some(pos)) = (
-            value.get("word").and_then(|v| v.as_str()),
-            value.get("pos").and_then(|v| v.as_str()),
-        ) else {
+        let Some(lang) = value.get("lang_code").and_then(|v| v.as_str()) else {
             continue;
         };
-        // A page that only says which form of another word this is: what is asked of the pack
-        // is the lemma, and these were two words in three of it.
-        let tagged = |v: &serde_json::Value| {
-            v.get("tags")
-                .and_then(|t| t.as_array())
-                .is_some_and(|t| t.iter().any(|t| t.as_str() == Some("form-of")))
-        };
-        if tagged(&value) {
+        if lang != edition
+            && !std::path::Path::new(out)
+                .join(format!("{lang}.pack"))
+                .exists()
+        {
             continue;
         }
-        let senses: Vec<lexpack::Sense> = value
-            .get("senses")
-            .and_then(|v| v.as_array())
-            .into_iter()
-            .flatten()
-            .filter(|sense| !tagged(sense) && sense.get("form_of").is_none())
-            .filter_map(|sense| {
-                // The narrowest of a sense's nested glosses, which is the one that is its own.
-                let gloss = sense.get("glosses")?.as_array()?.last()?.as_str()?.trim();
-                // A sense that only points at a sense of another word, "Estar₉.", says nothing
-                // by itself.
-                let pointer = gloss.split_whitespace().count() == 1
-                    && gloss
-                        .chars()
-                        .any(|c| ('\u{2080}'..='\u{2089}').contains(&c));
-                (!gloss.is_empty() && !pointer).then(|| lexpack::Sense {
-                    gloss: gloss.chars().take(LONGEST).collect(),
-                    ..lexpack::Sense::default()
-                })
-            })
-            .take(SENSES)
-            .collect();
-        if word.is_empty() || senses.is_empty() {
-            continue;
-        }
-        let entry = lexpack::Entry {
-            lemma: word.to_string(),
-            pos: pos.to_string(),
-            senses,
-            ..lexpack::Entry::default()
-        };
-        if pack.add::<&str>(entry, &[]).is_ok() {
-            taken += 1;
+        if let Some(entry) = defined(&value) {
+            found.entry(lang.to_string()).or_default().push(entry);
         }
     }
-    let counts = pack.counts();
-    let bytes = match pack.finish() {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            eprintln!("cannot build the pack: {e:?}");
+    for (lang, entries) in found {
+        if entries.len() < FEWEST && lang != edition {
+            continue;
+        }
+        let id = if lang == edition {
+            format!("def-{lang}")
+        } else {
+            format!("{lang}-in-{edition}")
+        };
+        let mut pack = Builder::new(&id, Kind::Lex, built).without_joins();
+        let mut taken = 0usize;
+        for entry in entries {
+            if pack.add::<&str>(entry, &[]).is_ok() {
+                taken += 1;
+            }
+        }
+        let counts = pack.counts();
+        let bytes = match pack.finish() {
+            Ok(bytes) => bytes,
+            Err(e) => {
+                eprintln!("{id}: cannot build the pack: {e:?}");
+                continue;
+            }
+        };
+        let to = std::path::Path::new(out).join(format!("{id}.pack"));
+        if let Err(e) = File::create(&to).and_then(|mut f| f.write_all(&bytes)) {
+            eprintln!("cannot write {}: {e}", to.display());
             std::process::exit(1);
         }
-    };
-    if let Err(e) = File::create(to).and_then(|mut f| f.write_all(&bytes)) {
-        eprintln!("cannot write {to}: {e}");
-        std::process::exit(1);
-    }
-    let sum = Sha256::digest(&bytes);
-    println!(
-        "{{\"id\":\"def-{lang}\",\"lang\":\"def-{lang}\",\"built\":{built},\
+        let sum = Sha256::digest(&bytes);
+        let row = format!(
+            "{{\"id\":\"{id}\",\"lang\":\"{id}\",\"built\":{built},\
 \"entries\":{},\"keys\":{},\"glosses\":0,\"bytes\":{},\"sha256\":\"{:x}\"}}",
-        counts.entries,
-        counts.keys,
-        bytes.len(),
-        sum,
-    );
-    eprintln!("{taken} words defined, {} bytes", bytes.len());
+            counts.entries,
+            counts.keys,
+            bytes.len(),
+            sum,
+        );
+        let manifest = std::path::Path::new(out).join(format!("{id}.pack.json"));
+        if let Err(e) = std::fs::write(&manifest, format!("{row}\n")) {
+            eprintln!("cannot write {}: {e}", manifest.display());
+            std::process::exit(1);
+        }
+        println!("{row}");
+        eprintln!("{id}: {taken} words, {} bytes", bytes.len());
+    }
+}
+
+/// One entry of an edition as a pack holds it: its word, its kind, and up to eight senses,
+/// each the narrowest of its nested glosses. Nothing for a page that only says which form of
+/// another word this is, since what is asked of the pack is the lemma.
+fn defined(value: &serde_json::Value) -> Option<lexpack::Entry> {
+    /// What a card can show of a word, and what a sentence of definition runs to at most.
+    const SENSES: usize = 8;
+    const LONGEST: usize = 320;
+    let word = value.get("word").and_then(|v| v.as_str())?;
+    let pos = value.get("pos").and_then(|v| v.as_str())?;
+    let tagged = |v: &serde_json::Value| {
+        v.get("tags")
+            .and_then(|t| t.as_array())
+            .is_some_and(|t| t.iter().any(|t| t.as_str() == Some("form-of")))
+    };
+    if tagged(value) {
+        return None;
+    }
+    let senses: Vec<lexpack::Sense> = value
+        .get("senses")
+        .and_then(|v| v.as_array())
+        .into_iter()
+        .flatten()
+        .filter(|sense| !tagged(sense) && sense.get("form_of").is_none())
+        .filter_map(|sense| {
+            let gloss = sense.get("glosses")?.as_array()?.last()?.as_str()?.trim();
+            // Without the number some editions lead a sense with, "[1] dein".
+            let gloss = gloss
+                .strip_prefix('[')
+                .and_then(|rest| rest.split_once(']'))
+                .filter(|(number, _)| number.chars().all(|c| c.is_ascii_digit() || c == ','))
+                .map(|(_, rest)| rest.trim())
+                .unwrap_or(gloss);
+            // A sense that only points at a sense of another word, "Estar₉.", says nothing
+            // by itself.
+            let pointer = gloss.split_whitespace().count() == 1
+                && gloss
+                    .chars()
+                    .any(|c| ('\u{2080}'..='\u{2089}').contains(&c));
+            (!gloss.is_empty() && !pointer).then(|| lexpack::Sense {
+                gloss: gloss.chars().take(LONGEST).collect(),
+                ..lexpack::Sense::default()
+            })
+        })
+        .take(SENSES)
+        .collect();
+    if word.is_empty() || senses.is_empty() {
+        return None;
+    }
+    Some(lexpack::Entry {
+        lemma: word.to_string(),
+        pos: pos.to_string(),
+        senses,
+        ..lexpack::Entry::default()
+    })
 }

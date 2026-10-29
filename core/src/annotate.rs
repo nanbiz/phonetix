@@ -639,7 +639,9 @@ fn drawn_as<D: AsRef<[u8]>>(
         // Asked as a whole, it reached the one Spanish word glossed "in the", which nobody
         // has written for centuries. English contractions are left to the engine, whose parts
         // - "it" and "is" - are not what the reader would write for them.
-        if answer.pos.as_deref() == Some("contraction") && lang.0 != "en" {
+        // Where the line said it with a contraction of the reader's own, that one.
+        if answer.pos.as_deref() == Some("contraction") && lang.0 != "en" && answer.says.is_empty()
+        {
             if let Some(parts) = answer.glosses.first().and_then(|gloss| contracted(gloss)) {
                 let said: Option<Vec<String>> = parts
                     .iter()

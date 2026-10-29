@@ -269,6 +269,19 @@ impl Core {
             .map_or(0.0, |pack| lexcore::resolve::met(pack, word) as f64)
     }
 
+    /// Where the words around the one at [at] are one entry of [source]'s dictionary, as its
+    /// start and end in [words]; nothing where they are not.
+    #[wasm_bindgen(js_name = phraseAround)]
+    pub fn phrase_around(&self, source: &str, words: Vec<String>, at: u32) -> Vec<u32> {
+        let Some(pack) = self.packs.get(source) else {
+            return Vec::new();
+        };
+        let words: Vec<&str> = words.iter().map(String::as_str).collect();
+        lexcore::resolve::phrase_around(pack, &words, at as usize)
+            .map(|(start, end)| vec![start as u32, end as u32])
+            .unwrap_or_default()
+    }
+
     /// One word, as JSON, because an Answer is a tree and the boundary carries text.
     #[wasm_bindgen(js_name = lookUp)]
     pub fn look_up(
@@ -295,6 +308,7 @@ impl Core {
             others: None,
             // What the language's own Wiktionary says, where its pack is held beside it.
             defines: self.packs.get(&format!("def-{source}")),
+            in_reader: self.packs.get(&format!("{source}-in-{target}")),
         };
         let answer = lexcore::resolve::read_in_context(
             spelling,
@@ -364,6 +378,7 @@ impl Core {
             classifier: self.classifiers.get(source),
             others: Some(&self.packs),
             defines: None,
+            in_reader: self.packs.get(&format!("{source}-in-{target}")),
         };
         let options = AnnotateOptions {
             mode: match mode {
@@ -443,6 +458,7 @@ impl Core {
             classifier: self.classifiers.get(source),
             others: Some(&self.packs),
             defines: None,
+            in_reader: self.packs.get(&format!("{source}-in-{target}")),
         };
         complete(
             &mut tokens,

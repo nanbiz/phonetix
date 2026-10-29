@@ -124,9 +124,16 @@ fn listed(text: &str) -> Vec<&str> {
     let mut from = 0;
     for (at, c) in text.char_indices() {
         match c {
-            '(' => depth += 1,
-            ')' => depth = (depth - 1).max(0),
+            '(' | '“' => depth += 1,
+            ')' | '”' => depth = (depth - 1).max(0),
             ',' | ';' if depth == 0 => {
+                out.push(&text[from..at]);
+                from = at + 1;
+            }
+            // Two spellings of one word, as Wiktionary sets them apart: "color / colour" is
+            // either, and as one term no table has it. A slash inside a word is not that:
+            // "him/her", "km/h".
+            '/' if depth == 0 && text[..at].ends_with(' ') && text[at + 1..].starts_with(' ') => {
                 out.push(&text[from..at]);
                 from = at + 1;
             }
@@ -209,6 +216,24 @@ pub fn gloss_terms(gloss: &str) -> Vec<String> {
         let term = gloss_head(part);
         if !term.is_empty() && !out.contains(&term) {
             out.push(term);
+        }
+    }
+    // What a contraction says it means word for word, which is how two languages' contractions
+    // meet: Spanish "al" is "contraction of a + el, literally “at the, to the”" and German
+    // "zum" "contraction of zu + dem, literally “to the; for the”", and neither is named by
+    // its head.
+    for part in listed(body) {
+        let quoted = part
+            .trim()
+            .strip_prefix("literally")
+            .and_then(|rest| rest.split_once('“'))
+            .and_then(|(_, rest)| rest.split_once('”'))
+            .map(|(meant, _)| meant);
+        for each in quoted.map(listed).unwrap_or_default() {
+            let term = gloss_head(each);
+            if !term.is_empty() && !out.contains(&term) {
+                out.push(term);
+            }
         }
     }
     // The hedges and ties are left out beside a term that names something, and kept where

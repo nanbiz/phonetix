@@ -11,6 +11,8 @@
     { "after": "aux", "prefers": "verb", "why": "an auxiliary takes a participle or infinitive" },
     { "after": "adv", "prefers": "verb", "why": "an adverb before a word modifies a verb" },
     { "after": "prep", "prefers": "noun", "why": "a preposition governs a noun phrase" },
+    { "after": "prep", "prefers": "article", "why": "which begins with its article as often as not: con la, mit der" },
+    { "after": "prep", "prefers": "det", "why": "the same, where the dump calls it that" },
     { "after": "conj", "prefers": "verb", "why": "a clause after a conjunction begins again" }
   ]
 }
