@@ -2107,20 +2107,32 @@ fn in_case_of<D: AsRef<[u8]>>(
         .into_iter()
         .filter(|it| same_word(&it.lemma, theirs) && same_part(&it.pos, pos))
         .flat_map(|it| it.forms.into_iter().map(|form| form.spelling))
-        .filter_map(|form| {
-            let fit = lookup_either_case(pack, &form)
-                .iter()
-                .filter(|it| same_word(&it.lemma, &form))
-                .flat_map(|it| it.senses.iter())
-                .filter_map(|sense| case_of(&sense.gloss))
-                .filter(|(_, of)| of.iter().any(|word| same_word(word, theirs)))
-                .filter(|(named, _)| cases.iter().all(|it| named.contains(it)))
-                .map(|(named, _)| named.len())
-                .min()?;
-            Some((fit, form))
-        })
+        .filter_map(|form| Some((case_named(pack, &form, theirs, cases)?, form)))
         .min_by_key(|(fit, _)| *fit)
         .map(|(_, form)| form)
+}
+
+/// How well [form]'s own note says it is [cases] of [theirs], best first when sorted: the
+/// most of those cases one of its notes names, then the fewest others. "dir" is "dative of
+/// du"; "euch", accusative and dative, meets Spanish "les", "dative of ustedes", in one.
+fn case_named<D: AsRef<[u8]>>(
+    pack: &Pack<D>,
+    form: &str,
+    theirs: &str,
+    cases: &[String],
+) -> Option<(std::cmp::Reverse<usize>, usize)> {
+    lookup_either_case(pack, form)
+        .iter()
+        .filter(|it| same_word(&it.lemma, form))
+        .flat_map(|it| it.senses.iter())
+        .filter_map(|sense| case_of(&sense.gloss))
+        .filter(|(_, of)| of.iter().any(|word| same_word(word, theirs)))
+        .map(|(named, _)| {
+            let shared = cases.iter().filter(|it| named.contains(it)).count();
+            (std::cmp::Reverse(shared), named.len() - shared)
+        })
+        .filter(|(std::cmp::Reverse(shared), _)| *shared > 0)
+        .min()
 }
 
 /// The cases a pronoun's note says it is of other pronouns, and those: German "euch" is
@@ -4223,10 +4235,38 @@ fn resolve_one_from<D: AsRef<[u8]>>(
                 read.says.first().cloned()
             });
             // Where the reader's language has no such case, the pronoun itself: Spanish "ti",
-            // "prepositional of tú", is "du" in "para ti".
-            let in_case = theirs.as_ref().map(|theirs| {
-                in_case_of(other, theirs, &cases, &entry.pos).unwrap_or_else(|| theirs.clone())
-            });
+            // "prepositional of tú", is "du" in "para ti". A case every such language has and
+            // that was not found is left to the rest of the cascade: "mich" is "mí" there.
+            // Where the reader's pronoun lists no forms, among the reader's words for what this
+            // one means: Spanish "tú" lists none, and "te", reached as "you", is "accusative of
+            // tú and vos".
+            let meant: Vec<(String, Option<String>)> = entry
+                .senses
+                .iter()
+                .filter_map(|sense| meaning_of(&sense.gloss))
+                .take(2)
+                .map(|meant| (meant, Some(entry.pos.clone())))
+                .collect();
+            let in_case = theirs
+                .as_ref()
+                .map(|theirs| {
+                    in_case_of(other, theirs, &cases, &entry.pos)
+                        .or_else(|| {
+                            glossed_as(&meant, None, other, LOOKED_FOR_IN_LINE)
+                                .into_iter()
+                                .filter_map(|word| {
+                                    Some((case_named(other, &word, theirs, &cases)?, word))
+                                })
+                                .min_by_key(|(fit, _)| *fit)
+                                .map(|(_, word)| word)
+                        })
+                        .or_else(|| {
+                            let common = ["accusative", "dative", "genitive"];
+                            (!cases.iter().any(|it| common.contains(&it.as_str())))
+                                .then(|| theirs.clone())
+                        })
+                })
+                .flatten();
             if let Some(word) = in_case {
                 return finish(
                     AnswerState::Form,
