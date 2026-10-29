@@ -234,7 +234,26 @@
     "accent-France": "francouzský",
     "accent-Canada": "kanadský",
     "accent-Northern": "severní",
-    "accent-Central": "střední"
+    "accent-Central": "střední",
+    "mark-common": "společný rod",
+    "mark-colloquial": "hovorový",
+    "mark-informal": "neformální",
+    "mark-formal": "formální",
+    "mark-slang": "slangový",
+    "mark-vulgar": "vulgární",
+    "mark-offensive": "urážlivý",
+    "mark-derogatory": "pejorativní",
+    "mark-archaic": "archaický",
+    "mark-dated": "zastarávající",
+    "mark-obsolete": "zastaralý",
+    "mark-rare": "vzácný",
+    "mark-dialectal": "nářeční",
+    "mark-regional": "oblastní",
+    "mark-literary": "knižní",
+    "mark-poetic": "básnický",
+    "mark-humorous": "žertovný",
+    "mark-figuratively": "přeneseně",
+    "mark-euphemistic": "eufemistický"
   },
   "rows": {
     "on": {

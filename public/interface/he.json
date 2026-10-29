@@ -234,7 +234,26 @@
     "accent-France": "צרפת",
     "accent-Canada": "קנדה",
     "accent-Northern": "צפוני",
-    "accent-Central": "מרכזי"
+    "accent-Central": "מרכזי",
+    "mark-common": "מין משותף",
+    "mark-colloquial": "לשון דיבור",
+    "mark-informal": "בלתי רשמי",
+    "mark-formal": "רשמי",
+    "mark-slang": "סלנג",
+    "mark-vulgar": "וולגרי",
+    "mark-offensive": "פוגעני",
+    "mark-derogatory": "גנאי",
+    "mark-archaic": "ארכאי",
+    "mark-dated": "מיושן",
+    "mark-obsolete": "יצא משימוש",
+    "mark-rare": "נדיר",
+    "mark-dialectal": "דיאלקטלי",
+    "mark-regional": "אזורי",
+    "mark-literary": "ספרותי",
+    "mark-poetic": "פיוטי",
+    "mark-humorous": "הומוריסטי",
+    "mark-figuratively": "מושאל",
+    "mark-euphemistic": "לשון נקייה"
   },
   "rows": {
     "on": {

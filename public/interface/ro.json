@@ -234,7 +234,26 @@
     "accent-France": "Franța",
     "accent-Canada": "Canada",
     "accent-Northern": "nordic",
-    "accent-Central": "central"
+    "accent-Central": "central",
+    "mark-common": "genul comun",
+    "mark-colloquial": "colocvial",
+    "mark-informal": "informal",
+    "mark-formal": "formal",
+    "mark-slang": "argotic",
+    "mark-vulgar": "vulgar",
+    "mark-offensive": "ofensator",
+    "mark-derogatory": "peiorativ",
+    "mark-archaic": "arhaic",
+    "mark-dated": "învechit",
+    "mark-obsolete": "ieșit din uz",
+    "mark-rare": "rar",
+    "mark-dialectal": "dialectal",
+    "mark-regional": "regional",
+    "mark-literary": "literar",
+    "mark-poetic": "poetic",
+    "mark-humorous": "umoristic",
+    "mark-figuratively": "figurat",
+    "mark-euphemistic": "eufemistic"
   },
   "rows": {
     "on": {

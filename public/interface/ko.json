@@ -234,7 +234,26 @@
     "accent-France": "프랑스",
     "accent-Canada": "캐나다",
     "accent-Northern": "북부",
-    "accent-Central": "중부"
+    "accent-Central": "중부",
+    "mark-common": "통성",
+    "mark-colloquial": "구어",
+    "mark-informal": "비격식",
+    "mark-formal": "격식",
+    "mark-slang": "속어",
+    "mark-vulgar": "비속어",
+    "mark-offensive": "모욕적",
+    "mark-derogatory": "경멸적",
+    "mark-archaic": "고어",
+    "mark-dated": "예스러운",
+    "mark-obsolete": "폐어",
+    "mark-rare": "드문",
+    "mark-dialectal": "방언",
+    "mark-regional": "지역적",
+    "mark-literary": "문어",
+    "mark-poetic": "시어",
+    "mark-humorous": "익살스러운",
+    "mark-figuratively": "비유적",
+    "mark-euphemistic": "완곡"
   },
   "rows": {
     "on": {

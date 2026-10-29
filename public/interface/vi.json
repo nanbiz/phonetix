@@ -234,7 +234,26 @@
     "accent-France": "Pháp",
     "accent-Canada": "Canada",
     "accent-Northern": "Bắc",
-    "accent-Central": "Trung"
+    "accent-Central": "Trung",
+    "mark-common": "giống chung",
+    "mark-colloquial": "khẩu ngữ",
+    "mark-informal": "không trang trọng",
+    "mark-formal": "trang trọng",
+    "mark-slang": "tiếng lóng",
+    "mark-vulgar": "thô tục",
+    "mark-offensive": "xúc phạm",
+    "mark-derogatory": "miệt thị",
+    "mark-archaic": "cổ",
+    "mark-dated": "cũ",
+    "mark-obsolete": "lỗi thời",
+    "mark-rare": "hiếm",
+    "mark-dialectal": "phương ngữ",
+    "mark-regional": "địa phương",
+    "mark-literary": "văn chương",
+    "mark-poetic": "thơ ca",
+    "mark-humorous": "hài hước",
+    "mark-figuratively": "nghĩa bóng",
+    "mark-euphemistic": "nói tránh"
   },
   "rows": {
     "on": {

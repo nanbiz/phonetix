@@ -234,7 +234,26 @@
     "accent-France": "Prancis",
     "accent-Canada": "Kanada",
     "accent-Northern": "Utara",
-    "accent-Central": "Tengah"
+    "accent-Central": "Tengah",
+    "mark-common": "jenis umum",
+    "mark-colloquial": "percakapan",
+    "mark-informal": "tidak resmi",
+    "mark-formal": "resmi",
+    "mark-slang": "slang",
+    "mark-vulgar": "kasar",
+    "mark-offensive": "menyinggung",
+    "mark-derogatory": "merendahkan",
+    "mark-archaic": "arkais",
+    "mark-dated": "kuno",
+    "mark-obsolete": "usang",
+    "mark-rare": "jarang",
+    "mark-dialectal": "dialek",
+    "mark-regional": "daerah",
+    "mark-literary": "sastra",
+    "mark-poetic": "puitis",
+    "mark-humorous": "jenaka",
+    "mark-figuratively": "kiasan",
+    "mark-euphemistic": "eufemisme"
   },
   "rows": {
     "on": {

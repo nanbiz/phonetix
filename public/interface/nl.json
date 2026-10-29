@@ -234,7 +234,26 @@
     "accent-France": "Frankrijk",
     "accent-Canada": "Canada",
     "accent-Northern": "Noord",
-    "accent-Central": "Centraal"
+    "accent-Central": "Centraal",
+    "mark-common": "gemeenschappelijk geslacht",
+    "mark-colloquial": "spreektaal",
+    "mark-informal": "informeel",
+    "mark-formal": "formeel",
+    "mark-slang": "slang",
+    "mark-vulgar": "plat",
+    "mark-offensive": "beledigend",
+    "mark-derogatory": "pejoratief",
+    "mark-archaic": "archaïsch",
+    "mark-dated": "verouderd",
+    "mark-obsolete": "in onbruik",
+    "mark-rare": "zeldzaam",
+    "mark-dialectal": "dialectisch",
+    "mark-regional": "regionaal",
+    "mark-literary": "literair",
+    "mark-poetic": "dichterlijk",
+    "mark-humorous": "schertsend",
+    "mark-figuratively": "figuurlijk",
+    "mark-euphemistic": "eufemistisch"
   },
   "rows": {
     "on": {

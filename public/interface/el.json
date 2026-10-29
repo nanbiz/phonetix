@@ -234,7 +234,26 @@
     "accent-France": "γαλλική",
     "accent-Canada": "καναδική",
     "accent-Northern": "βόρεια",
-    "accent-Central": "κεντρική"
+    "accent-Central": "κεντρική",
+    "mark-common": "κοινό γένος",
+    "mark-colloquial": "οικείο",
+    "mark-informal": "άτυπο",
+    "mark-formal": "επίσημο",
+    "mark-slang": "αργκό",
+    "mark-vulgar": "χυδαίο",
+    "mark-offensive": "προσβλητικό",
+    "mark-derogatory": "υποτιμητικό",
+    "mark-archaic": "αρχαϊκό",
+    "mark-dated": "απαρχαιωμένο",
+    "mark-obsolete": "παρωχημένο",
+    "mark-rare": "σπάνιο",
+    "mark-dialectal": "ιδιωματικό",
+    "mark-regional": "τοπικό",
+    "mark-literary": "λογοτεχνικό",
+    "mark-poetic": "ποιητικό",
+    "mark-humorous": "χιουμοριστικό",
+    "mark-figuratively": "μεταφορικά",
+    "mark-euphemistic": "ευφημιστικό"
   },
   "rows": {
     "on": {

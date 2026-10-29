@@ -234,7 +234,26 @@
     "accent-France": "Ranska",
     "accent-Canada": "Kanada",
     "accent-Northern": "pohjoinen",
-    "accent-Central": "keskinen"
+    "accent-Central": "keskinen",
+    "mark-common": "yhteissuku",
+    "mark-colloquial": "puhekielinen",
+    "mark-informal": "epävirallinen",
+    "mark-formal": "virallinen",
+    "mark-slang": "slangi",
+    "mark-vulgar": "karkea",
+    "mark-offensive": "loukkaava",
+    "mark-derogatory": "halventava",
+    "mark-archaic": "arkaainen",
+    "mark-dated": "vanhahtava",
+    "mark-obsolete": "vanhentunut",
+    "mark-rare": "harvinainen",
+    "mark-dialectal": "murteellinen",
+    "mark-regional": "alueellinen",
+    "mark-literary": "kirjallinen",
+    "mark-poetic": "runollinen",
+    "mark-humorous": "leikillinen",
+    "mark-figuratively": "kuvaannollinen",
+    "mark-euphemistic": "eufemistinen"
   },
   "rows": {
     "on": {

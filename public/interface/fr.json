@@ -234,7 +234,26 @@
     "accent-France": "France",
     "accent-Canada": "Canada",
     "accent-Northern": "nord",
-    "accent-Central": "central"
+    "accent-Central": "central",
+    "mark-common": "genre commun",
+    "mark-colloquial": "familier",
+    "mark-informal": "informel",
+    "mark-formal": "soutenu",
+    "mark-slang": "argot",
+    "mark-vulgar": "vulgaire",
+    "mark-offensive": "offensant",
+    "mark-derogatory": "péjoratif",
+    "mark-archaic": "archaïque",
+    "mark-dated": "vieilli",
+    "mark-obsolete": "désuet",
+    "mark-rare": "rare",
+    "mark-dialectal": "dialectal",
+    "mark-regional": "régional",
+    "mark-literary": "littéraire",
+    "mark-poetic": "poétique",
+    "mark-humorous": "plaisant",
+    "mark-figuratively": "figuré",
+    "mark-euphemistic": "euphémique"
   },
   "rows": {
     "on": {

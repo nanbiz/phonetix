@@ -234,7 +234,26 @@
     "accent-France": "fransk",
     "accent-Canada": "canadisk",
     "accent-Northern": "nordlig",
-    "accent-Central": "central"
+    "accent-Central": "central",
+    "mark-common": "fælleskøn",
+    "mark-colloquial": "dagligdags",
+    "mark-informal": "uformelt",
+    "mark-formal": "formelt",
+    "mark-slang": "slang",
+    "mark-vulgar": "vulgært",
+    "mark-offensive": "krænkende",
+    "mark-derogatory": "nedsættende",
+    "mark-archaic": "arkaisk",
+    "mark-dated": "gammeldags",
+    "mark-obsolete": "forældet",
+    "mark-rare": "sjældent",
+    "mark-dialectal": "dialektalt",
+    "mark-regional": "regionalt",
+    "mark-literary": "litterært",
+    "mark-poetic": "poetisk",
+    "mark-humorous": "humoristisk",
+    "mark-figuratively": "overført",
+    "mark-euphemistic": "eufemistisk"
   },
   "rows": {
     "on": {

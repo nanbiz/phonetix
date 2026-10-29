@@ -234,7 +234,26 @@
     "accent-France": "Franciaország",
     "accent-Canada": "Kanada",
     "accent-Northern": "északi",
-    "accent-Central": "közép"
+    "accent-Central": "közép",
+    "mark-common": "közös nem",
+    "mark-colloquial": "köznyelvi",
+    "mark-informal": "kötetlen",
+    "mark-formal": "választékos",
+    "mark-slang": "szleng",
+    "mark-vulgar": "durva",
+    "mark-offensive": "sértő",
+    "mark-derogatory": "becsmérlő",
+    "mark-archaic": "archaikus",
+    "mark-dated": "régies",
+    "mark-obsolete": "elavult",
+    "mark-rare": "ritka",
+    "mark-dialectal": "nyelvjárási",
+    "mark-regional": "regionális",
+    "mark-literary": "irodalmi",
+    "mark-poetic": "költői",
+    "mark-humorous": "tréfás",
+    "mark-figuratively": "átvitt",
+    "mark-euphemistic": "szépítő"
   },
   "rows": {
     "on": {

@@ -234,7 +234,26 @@
     "accent-France": "フランス",
     "accent-Canada": "カナダ",
     "accent-Northern": "北部",
-    "accent-Central": "中部"
+    "accent-Central": "中部",
+    "mark-common": "通性",
+    "mark-colloquial": "口語",
+    "mark-informal": "くだけた",
+    "mark-formal": "改まった",
+    "mark-slang": "スラング",
+    "mark-vulgar": "卑語",
+    "mark-offensive": "侮辱的",
+    "mark-derogatory": "蔑称",
+    "mark-archaic": "古語",
+    "mark-dated": "古風",
+    "mark-obsolete": "廃語",
+    "mark-rare": "まれ",
+    "mark-dialectal": "方言",
+    "mark-regional": "地域的",
+    "mark-literary": "文語",
+    "mark-poetic": "詩語",
+    "mark-humorous": "冗談",
+    "mark-figuratively": "比喩的",
+    "mark-euphemistic": "婉曲"
   },
   "rows": {
     "on": {

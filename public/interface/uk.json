@@ -234,7 +234,26 @@
     "accent-France": "Франція",
     "accent-Canada": "Канада",
     "accent-Northern": "північний",
-    "accent-Central": "центральний"
+    "accent-Central": "центральний",
+    "mark-common": "спільний рід",
+    "mark-colloquial": "розмовне",
+    "mark-informal": "неформальне",
+    "mark-formal": "офіційне",
+    "mark-slang": "сленгове",
+    "mark-vulgar": "грубе",
+    "mark-offensive": "образливе",
+    "mark-derogatory": "зневажливе",
+    "mark-archaic": "архаїчне",
+    "mark-dated": "застаріле",
+    "mark-obsolete": "вийшло з вжитку",
+    "mark-rare": "рідковживане",
+    "mark-dialectal": "діалектне",
+    "mark-regional": "регіональне",
+    "mark-literary": "книжне",
+    "mark-poetic": "поетичне",
+    "mark-humorous": "жартівливе",
+    "mark-figuratively": "переносне",
+    "mark-euphemistic": "евфемістичне"
   },
   "rows": {
     "on": {

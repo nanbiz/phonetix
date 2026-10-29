@@ -101,13 +101,16 @@
     if (rows.length === 0 && !grid) {
       card.style.width = `${widest}px`;
     } else {
-      const lines = rows.map((row) => [...row.children].reduce((all, cell) => all + over(cell), 0));
+      // Not the column of names, which is as wide as it is however wide the card: a name
+      // running past it is not helped by a wider card.
+      const lines = rows.map((row) =>
+        [...row.children].slice(1).reduce((all, cell) => all + over(cell), 0)
+      );
       if (grid) {
         const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
         const cells = [...grid.children];
-        const name = Math.max(0, ...cells.filter((_, i) => i % columns === 0).map(over));
         const cell = Math.max(0, ...cells.filter((_, i) => i % columns !== 0).map(over));
-        lines.push(name + cell * (columns - 1));
+        lines.push(cell * (columns - 1));
       }
       const head = sheet.querySelector('.sheet-cat');
       if (head) lines.push(over(head));

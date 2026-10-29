@@ -136,6 +136,25 @@ object Wording {
         "looking-up" to "Looking it up",
         "main-language" to "My language",
         "make-main" to "Make it my language",
+        "mark-archaic" to "archaic",
+        "mark-colloquial" to "colloquial",
+        "mark-common" to "common gender",
+        "mark-dated" to "dated",
+        "mark-derogatory" to "derogatory",
+        "mark-dialectal" to "dialectal",
+        "mark-euphemistic" to "euphemistic",
+        "mark-figuratively" to "figurative",
+        "mark-formal" to "formal",
+        "mark-humorous" to "humorous",
+        "mark-informal" to "informal",
+        "mark-literary" to "literary",
+        "mark-obsolete" to "obsolete",
+        "mark-offensive" to "offensive",
+        "mark-poetic" to "poetic",
+        "mark-rare" to "rare",
+        "mark-regional" to "regional",
+        "mark-slang" to "slang",
+        "mark-vulgar" to "vulgar",
         "master-idle" to "Nothing is drawn over your apps",
         "master-off" to "Paused",
         "master-on" to "Reading",
@@ -275,4 +294,14 @@ object Wording {
     /** A kind of word by its whole name, where the dictionary files it by a short code: a
      *  reader is told "pronoun", not "pron". */
     fun posName(pos: String): String = says["pos-$pos"] ?: pos.replace('_', ' ')
+
+    /** What a dictionary marks a sense as, where a reader acts on it, in the interface's
+     *  language: a noun's gender by its grammatical term (another word's is its form's),
+     *  a register by its own name, and nothing for how the dump files a conjugation
+     *  ("strong", "transitive"). */
+    fun markName(mark: String, pos: String?): String? = when (mark) {
+        "masculine", "feminine", "neuter" ->
+            if (pos == "noun") says["term-$mark"] ?: mark else null
+        else -> says["mark-$mark"]
+    }
 }

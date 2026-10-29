@@ -234,7 +234,26 @@
     "accent-France": "Fransa",
     "accent-Canada": "Kanada",
     "accent-Northern": "Kuzey",
-    "accent-Central": "Orta"
+    "accent-Central": "Orta",
+    "mark-common": "ortak cins",
+    "mark-colloquial": "ağız dili",
+    "mark-informal": "gayriresmî",
+    "mark-formal": "resmî",
+    "mark-slang": "argo",
+    "mark-vulgar": "kaba",
+    "mark-offensive": "hakaret içeren",
+    "mark-derogatory": "aşağılayıcı",
+    "mark-archaic": "eskimiş",
+    "mark-dated": "eski",
+    "mark-obsolete": "kullanılmayan",
+    "mark-rare": "seyrek",
+    "mark-dialectal": "ağız",
+    "mark-regional": "bölgesel",
+    "mark-literary": "edebî",
+    "mark-poetic": "şiirsel",
+    "mark-humorous": "şaka yollu",
+    "mark-figuratively": "mecaz",
+    "mark-euphemistic": "örtmece"
   },
   "rows": {
     "on": {

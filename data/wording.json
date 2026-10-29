@@ -516,6 +516,25 @@
     "person-number-long": "%s person %s",
     "person-long": "%s person",
     "person-and-number": "person and number",
-    "form-of": "of"
+    "form-of": "of",
+    "mark-common": "common gender",
+    "mark-colloquial": "colloquial",
+    "mark-informal": "informal",
+    "mark-formal": "formal",
+    "mark-slang": "slang",
+    "mark-vulgar": "vulgar",
+    "mark-offensive": "offensive",
+    "mark-derogatory": "derogatory",
+    "mark-archaic": "archaic",
+    "mark-dated": "dated",
+    "mark-obsolete": "obsolete",
+    "mark-rare": "rare",
+    "mark-dialectal": "dialectal",
+    "mark-regional": "regional",
+    "mark-literary": "literary",
+    "mark-poetic": "poetic",
+    "mark-humorous": "humorous",
+    "mark-figuratively": "figurative",
+    "mark-euphemistic": "euphemistic"
   }
 }

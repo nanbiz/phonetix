@@ -234,7 +234,26 @@
     "accent-France": "फ़्रांस",
     "accent-Canada": "कनाडा",
     "accent-Northern": "उत्तरी",
-    "accent-Central": "मध्य"
+    "accent-Central": "मध्य",
+    "mark-common": "उभयलिंगी",
+    "mark-colloquial": "बोलचाल",
+    "mark-informal": "अनौपचारिक",
+    "mark-formal": "औपचारिक",
+    "mark-slang": "अपभाषा",
+    "mark-vulgar": "अश्लील",
+    "mark-offensive": "अपमानजनक",
+    "mark-derogatory": "तिरस्कारसूचक",
+    "mark-archaic": "प्राचीन",
+    "mark-dated": "पुराना",
+    "mark-obsolete": "अप्रचलित",
+    "mark-rare": "विरल",
+    "mark-dialectal": "बोलीगत",
+    "mark-regional": "क्षेत्रीय",
+    "mark-literary": "साहित्यिक",
+    "mark-poetic": "काव्यात्मक",
+    "mark-humorous": "विनोदपूर्ण",
+    "mark-figuratively": "लाक्षणिक",
+    "mark-euphemistic": "शिष्टोक्ति"
   },
   "rows": {
     "on": {

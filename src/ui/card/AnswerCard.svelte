@@ -13,7 +13,7 @@
   // The markup is the surface page's own and the stylesheet is generated from it.
   import { headline as headlineOf, type Answer, type IpaSymbol } from '@/core/answer';
   import { named } from '@/data/languages';
-  import { posName, say } from '@/data/wording';
+  import { posName, say, SAYS } from '@/data/wording';
   import { wiktionary } from '@/data/links';
   import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
@@ -105,17 +105,6 @@
    *  being read as, since a spelling is an entry in several. */
   const entry = (it: Answer) => wiktionary(it.lemma ?? it.spelling, named(it.source));
 
-  /**
-   * What the dictionary marks a sense as, where that is something a reader acts on: which
-   * gender a noun is, and whether a word is out of the ordinary to use. How the dump files a
-   * verb's conjugation or a noun's declension ("strong", "weak", "transitive") is grammar
-   * nobody reading a page asked for.
-   */
-  const WORTH = new Set([
-    'masculine', 'feminine', 'neuter', 'common', 'colloquial', 'informal', 'formal', 'slang',
-    'vulgar', 'offensive', 'derogatory', 'archaic', 'dated', 'obsolete', 'rare', 'dialectal',
-    'regional', 'literary', 'poetic', 'humorous', 'figuratively', 'euphemistic',
-  ]);
 
   // The meaning in a few words: a dictionary lists synonyms after the first, and three of them
   // in the type a headline is set in ran over two lines of a card read in a glance.
@@ -125,9 +114,12 @@
   // sentence: whole, brackets and all, where the lead is the sense with its brackets taken out
   // ("To apply a force to so that it comes toward..."), and set smaller than a translation.
   let defining = $derived(answer.source === answer.target && answer.state !== 'Phrase');
+  let phrase = $derived(answer.state === 'Phrase');
+  // A sentence selected is said whole: its commas are the sentence's, not a list of words
+  // meaning the same, and cut at the first one it said half of what was selected.
   let lead = $derived(
     answer.paradigm?.said ??
-      (defining ? (answer.says[0] ?? headlineOf(answer)) : short(headlineOf(answer)))
+      (defining || phrase ? (answer.says[0] ?? headlineOf(answer)) : short(headlineOf(answer)))
   );
   // The word cut where its own ending starts: the stem it shares with its lemma in ink, and
   // what makes it this form in the accent. Shown only where the card reads a word the page
@@ -148,10 +140,26 @@
     }
     return out;
   }
-  let phrase = $derived(answer.state === 'Phrase');
+  /**
+   * What the dictionary marks a sense as, where that is something a reader acts on, in the
+   * interface's language: which gender a noun is, by its grammatical term (another kind of
+   * word takes its gender from what it goes with, which its form line names: "una" is
+   * feminine, its lemma "uno" masculine, and "se" is both), and whether a word
+   * is out of the ordinary to use, by the name the wording gives it. How the dump files a
+   * verb's conjugation or a noun's declension ("strong", "weak", "transitive") has no name
+   * there, and is grammar nobody reading a page asked for.
+   */
+  const markName = (mark: string): string | undefined =>
+    ['masculine', 'feminine', 'neuter'].includes(mark)
+      ? answer.pos === 'noun'
+        ? (SAYS[`term-${mark}`] ?? mark)
+        : undefined
+      : SAYS[`mark-${mark}`];
   // Several words a reader selected: no transcription of a clause is worth showing.
   let marks = $derived(
-    phrase ? [] : [...new Set((answer.marks[0] ?? []).filter((mark) => WORTH.has(mark)))]
+    phrase
+      ? []
+      : [...new Set((answer.marks[0] ?? []).map(markName).filter((name) => name !== undefined))]
   );
   // The other words the spelling could be, where nothing decided between them: each by what it
   // means, under the answer the card leads with, with the kind of word it is in front. Whole,

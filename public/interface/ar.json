@@ -234,7 +234,26 @@
     "accent-France": "فرنسا",
     "accent-Canada": "كندا",
     "accent-Northern": "الشمالية",
-    "accent-Central": "الوسطى"
+    "accent-Central": "الوسطى",
+    "mark-common": "جنس مشترك",
+    "mark-colloquial": "عامي",
+    "mark-informal": "غير رسمي",
+    "mark-formal": "رسمي",
+    "mark-slang": "سوقي",
+    "mark-vulgar": "بذيء",
+    "mark-offensive": "مسيء",
+    "mark-derogatory": "ازدرائي",
+    "mark-archaic": "قديم",
+    "mark-dated": "عتيق",
+    "mark-obsolete": "مهجور",
+    "mark-rare": "نادر",
+    "mark-dialectal": "لهجي",
+    "mark-regional": "إقليمي",
+    "mark-literary": "أدبي",
+    "mark-poetic": "شعري",
+    "mark-humorous": "فكاهي",
+    "mark-figuratively": "مجازي",
+    "mark-euphemistic": "تلطيفي"
   },
   "rows": {
     "on": {

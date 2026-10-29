@@ -234,7 +234,26 @@
     "accent-France": "法国",
     "accent-Canada": "加拿大",
     "accent-Northern": "北部",
-    "accent-Central": "中部"
+    "accent-Central": "中部",
+    "mark-common": "通性",
+    "mark-colloquial": "口语",
+    "mark-informal": "非正式",
+    "mark-formal": "正式",
+    "mark-slang": "俚语",
+    "mark-vulgar": "粗俗",
+    "mark-offensive": "冒犯",
+    "mark-derogatory": "贬义",
+    "mark-archaic": "古",
+    "mark-dated": "旧",
+    "mark-obsolete": "废",
+    "mark-rare": "罕用",
+    "mark-dialectal": "方言",
+    "mark-regional": "地区性",
+    "mark-literary": "书面语",
+    "mark-poetic": "诗语",
+    "mark-humorous": "诙谐",
+    "mark-figuratively": "比喻",
+    "mark-euphemistic": "委婉"
   },
   "rows": {
     "on": {

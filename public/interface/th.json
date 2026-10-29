@@ -234,7 +234,26 @@
     "accent-France": "ฝรั่งเศส",
     "accent-Canada": "แคนาดา",
     "accent-Northern": "เหนือ",
-    "accent-Central": "กลาง"
+    "accent-Central": "กลาง",
+    "mark-common": "เพศร่วม",
+    "mark-colloquial": "ภาษาพูด",
+    "mark-informal": "ไม่เป็นทางการ",
+    "mark-formal": "เป็นทางการ",
+    "mark-slang": "คำสแลง",
+    "mark-vulgar": "คำหยาบ",
+    "mark-offensive": "ล่วงเกิน",
+    "mark-derogatory": "เหยียดหยาม",
+    "mark-archaic": "โบราณ",
+    "mark-dated": "ล้าสมัย",
+    "mark-obsolete": "เลิกใช้",
+    "mark-rare": "หายาก",
+    "mark-dialectal": "ภาษาถิ่น",
+    "mark-regional": "ท้องถิ่น",
+    "mark-literary": "ภาษาเขียน",
+    "mark-poetic": "ภาษากวี",
+    "mark-humorous": "ขบขัน",
+    "mark-figuratively": "เชิงเปรียบเทียบ",
+    "mark-euphemistic": "สำนวนเลี่ยง"
   },
   "rows": {
     "on": {
