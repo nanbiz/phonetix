@@ -266,6 +266,9 @@ def main():
                     "saidIn": there.get("saidIn"),
                 }
                 print(f"  {word:12} said by the voice")
+            # And which words around it a phrase took in, which the host decides from the
+            # sentence and the core is not asked.
+            here = {key: value for key, value in here.items() if key != "span"}
             if here != there:
                 failures.append(f"{word}: extension {here} vs core {there}")
             else:

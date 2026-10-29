@@ -4234,9 +4234,6 @@ fn resolve_one_from<D: AsRef<[u8]>>(
                 );
                 read.says.first().cloned()
             });
-            // Where the reader's language has no such case, the pronoun itself: Spanish "ti",
-            // "prepositional of tú", is "du" in "para ti". A case every such language has and
-            // that was not found is left to the rest of the cascade: "mich" is "mí" there.
             // Where the reader's pronoun lists no forms, among the reader's words for what this
             // one means: Spanish "tú" lists none, and "te", reached as "you", is "accusative of
             // tú and vos".
@@ -4247,26 +4244,27 @@ fn resolve_one_from<D: AsRef<[u8]>>(
                 .take(2)
                 .map(|meant| (meant, Some(entry.pos.clone())))
                 .collect();
-            let in_case = theirs
-                .as_ref()
-                .map(|theirs| {
-                    in_case_of(other, theirs, &cases, &entry.pos)
-                        .or_else(|| {
-                            glossed_as(&meant, None, other, LOOKED_FOR_IN_LINE)
-                                .into_iter()
-                                .filter_map(|word| {
-                                    Some((case_named(other, &word, theirs, &cases)?, word))
-                                })
-                                .min_by_key(|(fit, _)| *fit)
-                                .map(|(_, word)| word)
-                        })
-                        .or_else(|| {
-                            let common = ["accusative", "dative", "genitive"];
-                            (!cases.iter().any(|it| common.contains(&it.as_str())))
-                                .then(|| theirs.clone())
-                        })
-                })
-                .flatten();
+            let in_case = theirs.as_ref().and_then(|theirs| {
+                in_case_of(other, theirs, &cases, &entry.pos)
+                    .or_else(|| {
+                        glossed_as(&meant, None, other, LOOKED_FOR_IN_LINE)
+                            .into_iter()
+                            .filter_map(|word| {
+                                Some((case_named(other, &word, theirs, &cases)?, word))
+                            })
+                            .min_by_key(|(fit, _)| *fit)
+                            .map(|(_, word)| word)
+                    })
+                    // Where the reader's language has no such case, the pronoun itself:
+                    // Spanish "ti", "prepositional of tú", is "du" in "para ti". A case every
+                    // such language has and that was not found is left to the rest of the
+                    // cascade: "mich" is "mí" there.
+                    .or_else(|| {
+                        let common = ["accusative", "dative", "genitive"];
+                        (!cases.iter().any(|it| common.contains(&it.as_str())))
+                            .then(|| theirs.clone())
+                    })
+            });
             if let Some(word) = in_case {
                 return finish(
                     AnswerState::Form,
