@@ -433,9 +433,14 @@ CARD_SAYS_JS = """
 SPOT_JS = """
   ((wanted) => {
     const at = (r) => ({x: r.left + r.width / 2, y: r.top + r.height / 2, left: r.left, right: r.right});
-    for (const w of document.querySelectorAll('#prose .px-w')) {
+    const drawn = [...document.querySelectorAll('#prose .px-w')];
+    for (const [i, w] of drawn.entries()) {
       const was = ((w.querySelector('.px-was') || w).textContent || '').trim();
-      if (was === wanted) return at(w.getBoundingClientRect());
+      if (was === wanted) {
+        // And where the next word drawn starts, which bounds the gap after this one.
+        const next = drawn[i + 1]?.getBoundingClientRect();
+        return {...at(w.getBoundingClientRect()), next: next ? next.left : null};
+      }
     }
     const walk = document.createTreeWalker(document.getElementById('prose'), NodeFilter.SHOW_TEXT);
     for (let n = walk.nextNode(); n; n = walk.nextNode()) {
@@ -1141,9 +1146,12 @@ def selection_checks(hand, engine, failures):
     if not first or not last:
         failures.append(f"{engine}: no words to select: {first} {last}")
         return
-    # From inside the word before to inside the word after, the way a hand drags: a selection
-    # begun on the gap between two words drawn as boxes of their own does not start there.
-    hand.drag((first["left"] - 6, first["y"]), (last["right"] + 6, last["y"]))
+    # From inside the word before, the way a hand drags: a selection begun on the gap between
+    # two words drawn as boxes of their own does not start there. To the middle of the gap
+    # after the last word: inside it Chrome leaves the word out, and the word after is "y",
+    # drawn as "i", narrow enough that six pixels past "camino" took it in too.
+    end = (last["right"] + last["next"]) / 2 if last.get("next") else last["right"] + 6
+    hand.drag((first["left"] - 6, first["y"]), (end, last["y"]))
     state = """(() => {
         const c = document.getElementById('phonetix-card-host')?.shadowRoot?.querySelector('.card');
         const e = document.getElementById('phonetix-card-host-ember')?.shadowRoot;
