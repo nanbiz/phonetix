@@ -14,6 +14,7 @@ change moves the share, measured on the same sentences, and what the misses are.
   uv run python scripts/proofread/word_choice.py [spa|deu] [line]
   SPLIT=devtest uv run python scripts/proofread/word_choice.py spa
 
+PACKS=<dir> reads the packs from another directory than .cache/release, a build being tried.
 With "line" each sentence's translation is handed to the core as the translated line, which is
 what the card has when its host translates the line it was opened on.
 """
@@ -25,7 +26,7 @@ import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
-RELEASE = os.path.join(ROOT, ".cache", "release")
+RELEASE = os.environ.get("PACKS") or os.path.join(ROOT, ".cache", "release")
 LANGS = {"eng": "en", "spa": "es", "deu": "de", "ita": "it", "fra": "fr", "por": "pt"}
 # The language read, as FLORES names it: English unless FROM says another (FROM=ita).
 FROM = os.environ.get("FROM", "eng")

@@ -1191,6 +1191,44 @@ def selection_checks(hand, engine, failures):
         failures.append(f"{engine}: a press elsewhere left the card or its light up: {gone}")
 
 
+def hidden_word_checks(hand, engine, failures):
+    """A card whose word the page hides goes with it.
+
+    A flashcard turned over hides the last card's words rather than taking them out: their
+    text is still in the page, with no size, at the window's corner, and the card went to the
+    corner after them and stayed there over the next card. Asked of the page open in the
+    hand's tab, whose prose is the Spanish sentence."""
+    hand.click(5, 5)
+    hand.move(5, 5)
+    time.sleep(0.6)
+    word = hand.ask(SPOT_JS % json.dumps("perro"))
+    if not word:
+        failures.append(f"{engine}: no perro to point at")
+        return
+    for step in (0, 1):
+        hand.move(word["x"] + step, word["y"])
+        time.sleep(0.05)
+    seen = None
+    for _ in range(20):
+        seen = hand.ask(CARD_JS)
+        if seen and seen.get("open"):
+            break
+        time.sleep(0.25)
+    if not seen or not seen.get("open"):
+        failures.append(f"{engine}: no card on perro to hide the word under")
+        return
+    hand.ask("(() => { document.getElementById('prose').style.display = 'none'; return 1; })()")
+    time.sleep(0.6)
+    after = hand.ask(CARD_JS) or {"open": False}
+    print(f"  {engine}, the word hidden under its card: {after.get('open')} "
+          f"{(after.get('card') or {}).get('left')},{(after.get('card') or {}).get('top')}")
+    if after.get("open"):
+        failures.append(f"{engine}: a card stayed up after the page hid its word, at "
+                        f"{after['card']['left']:.0f},{after['card']['top']:.0f}")
+    hand.ask("(() => { document.getElementById('prose').style.display = ''; return 1; })()")
+    time.sleep(0.4)
+
+
 def walk(hand, start, end, step=3, pause=0.012, each=None):
     """Move the pointer along a straight line in small steps, the way a hand moves a mouse.
 
@@ -1844,6 +1882,7 @@ def main():
         cdp.send("Target.activateTarget", {"targetId": chosen_target})
         time.sleep(3)
         selection_checks(ChromeHand(cdp, chosen), "chrome", failures)
+        hidden_word_checks(ChromeHand(cdp, chosen), "chrome", failures)
         cdp.send("Target.closeTarget", {"targetId": chosen_target})
 
         # And a chat that is never still, streaming an answer.
