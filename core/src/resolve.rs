@@ -4781,7 +4781,16 @@ fn resolve_one_from<D: AsRef<[u8]>>(
             // An article in its gender and number: Italian "la" is "la", not "el", and "i"
             // "los". On a line that has that form too, whichever other form of the article the
             // line has first: "la" on a line with "los" and "la" in it was "los".
-            let found = if matches!(entry.pos.as_str(), "article" | "det" | "num") {
+            // And a pronoun that is a form of another, as Spanish "esto" is the neuter of "este":
+            // "dieses", not "dieser".
+            let found = if matches!(entry.pos.as_str(), "article" | "det" | "num")
+                || (entry.pos == "pron"
+                    && (inflected
+                        || entry
+                            .senses
+                            .first()
+                            .is_some_and(|sense| crate::annotate::about_grammar(&sense.gloss))))
+            {
                 let base = words
                     .iter()
                     .find(|word| {
