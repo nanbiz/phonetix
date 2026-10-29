@@ -195,7 +195,8 @@ class Microphone:
         self.queue = []
         self.lock = threading.Lock()
         self.running = True
-        threading.Thread(target=self._play, daemon=True).start()
+        self.player = threading.Thread(target=self._play, daemon=True)
+        self.player.start()
 
     def say(self, wav):
         """Say this recording, once."""
@@ -216,7 +217,13 @@ class Microphone:
                     speech = self.queue.pop(0) if self.queue else None
                 for at in range(0, len(speech), self.PIECE * 2) if speech else [None]:
                     piece = speech[at:at + self.PIECE * 2] if speech else silence
-                    out.write(piece)
+                    # The server gone is the end of playing, not an error: written to after it
+                    # quit, the pipe broke while the interpreter was shutting down, and the
+                    # traceback it printed then crashed it after the check had passed.
+                    try:
+                        out.write(piece)
+                    except BrokenPipeError:
+                        return
                     sent += len(piece) // 2
                     # At the pace it is played, so what is said arrives when it is said.
                     ahead = sent / self.RATE - (time.time() - start)
@@ -225,6 +232,7 @@ class Microphone:
 
     def close(self):
         self.running = False
+        self.player.join(timeout=2)
         self.server.terminate()
         shutil.rmtree(self.where, ignore_errors=True)
 
