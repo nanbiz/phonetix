@@ -389,8 +389,10 @@ export function host(): void {
           : await lineSaid(data.source, data.target, data.line, data.quick ? 0 : LINE_WAIT_MS)
         : '');
     // The words around it, where the dictionary holds them as one: "a través de" is
-    // "through", and "través" alone a bend nobody means there.
-    const words = data.line && data.at !== undefined ? wordsOf(data.line) : [];
+    // "through", and "través" alone a bend nobody means there. Not around words the reader
+    // selected, which say themselves what is meant: "perro corre por el camino" grew a "y".
+    const selected = /\s/.test(data.word.trim());
+    const words = data.line && data.at !== undefined && !selected ? wordsOf(data.line) : [];
     let span = words.length > 0 ? await phraseAround(data.source, words, data.at ?? 0) : null;
     let word = span ? words.slice(span[0], span[1]).join(' ') : data.word;
     const before = span ? (words[span[0] - 1] ?? '') : (data.before ?? '');
@@ -626,15 +628,22 @@ function beyond(text: string | null | undefined, says: string[]): string | null 
   if (!text) return null;
   const bare = (it: string) => it.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, '').trim();
   const known = new Set(says.map(bare));
-  // A sentence stays whole, cut only where it is a list of words.
-  const items = text.split(/\s*[,;]\s*/);
+  // A sentence stays whole, cut only where it is a list of words; a colon the translator
+  // kept from the label is a list's too ("auch: auch").
+  const items = text.split(/\s*[,;:]\s*/);
   if (items.some((item) => item.split(/\s+/).length > 3)) {
     return known.has(bare(text)) ? null : text;
   }
+  // A word the card says with its article in front is the same word: "die Farbe" under
+  // "Farbe".
+  const said = (it: string) => {
+    const parts = it.split(' ');
+    return known.has(it) || (parts.length === 2 && parts[0].length <= 3 && known.has(parts[1]));
+  };
   const kept: string[] = [];
   for (const item of items) {
     const it = bare(item);
-    if (!it || known.has(it)) continue;
+    if (!it || said(it)) continue;
     known.add(it);
     kept.push(item.replace(/[.]$/, ''));
   }

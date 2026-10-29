@@ -196,9 +196,11 @@
   let engine = $derived(answer.provenance?.kind === 'guess' ? answer.provenance.engine : '');
   // An English definition standing in for a word in the reader's language, where the join did
   // not reach one: unmarked, it reads as the translation rather than as the anchor it is.
+  // Not a contraction, which the core draws as its parts in the reader's language: "al" is
+  // "zu der".
   let anchored = $derived(
     !guessed && answer.says.length === 0 && answer.glosses.length > 0 && answer.target !== 'en' &&
-      !answer.described
+      !answer.described && answer.pos !== 'contraction'
   );
   // A word read into another language whose answer is the word itself: "brunch" is "brunch"
   // in Spanish too. Said, since that is worth knowing, and then what it is.
