@@ -138,7 +138,11 @@
   /** Every dictionary on its way as one: which, and how far they have got together. A language's
    *  definitions come as a pack of their own and are named as the language. */
   let coming = $derived.by(() => {
-    const langs = [...new Set(Object.keys(arriving).map((lang) => lang.replace(/^def-/, '')))];
+    const langs = [
+      ...new Set(
+        Object.keys(arriving).map((lang) => lang.replace(/^def-/, '').replace(/-in-.*$/, ''))
+      ),
+    ];
     if (langs.length === 0) return null;
     const shares = Object.values(arriving);
     return {

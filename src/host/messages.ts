@@ -37,6 +37,9 @@ export interface HostProtocol {
       describe?: boolean;
       /** Answered from what is at hand, without waiting on the translator. */
       quick?: boolean;
+      /** Which of the line's words it is, counted as wordsOf counts them, so the words around
+       *  it can be read as the phrase they make. */
+      at?: number;
     };
     reply: Answer;
   };

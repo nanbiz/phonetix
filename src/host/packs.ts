@@ -64,6 +64,17 @@ async function carriedPack(lang: string): Promise<Uint8Array | undefined> {
   return bytes === undefined ? undefined : new Uint8Array(bytes);
 }
 
+/** The pack of [source]'s words as the Wiktionary written in [target] gives them. */
+export function inReader(source: string, target: string): string {
+  return `${source}-in-${target}`;
+}
+
+/** Whether a pack is a language a reader can choose, rather than one held beside a language's
+ *  dictionary: its own definitions ("def-es"), or its words in another language ("es-in-de"). */
+export function isLanguage(pack: string): boolean {
+  return !pack.startsWith('def-') && !pack.includes('-in-');
+}
+
 /**
  * A language's pack, open in the core, from what this machine already holds - and the
  * dictionary of what its words mean fetched in the background the first time it is needed,

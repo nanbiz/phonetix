@@ -87,3 +87,11 @@ export interface AnnotateOptions {
    *  [accent]'s. */
   accents?: Record<string, string>;
 }
+
+/**
+ * The words of a line as the card counts them, so the page and the host agree on which one a
+ * reader is pointing at: runs of letters, digits, apostrophes and hyphens.
+ */
+export function wordsOf(line: string): string[] {
+  return line.split(/[^\p{L}\p{N}'’-]+/u).filter(Boolean);
+}

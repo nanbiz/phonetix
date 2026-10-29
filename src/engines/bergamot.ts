@@ -159,7 +159,7 @@ export async function translate(
   const answers = await Promise.all(
     pieces.map((text) =>
       it
-        .translate({ from, to, text, html: false } satisfies Ask)
+        .translate({ from, to, text, html: text.startsWith('<') } satisfies Ask)
         .then((res: any) => String(res?.target?.text ?? '').trim())
         .catch(() => '')
     )

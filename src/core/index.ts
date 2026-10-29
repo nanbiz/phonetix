@@ -91,6 +91,20 @@ export async function openLanguages(): Promise<string[]> {
 }
 
 /**
+ * Where the words around the one at [at] are one entry of [source]'s dictionary - "a través
+ * de", "a lo lejos" - as its start and end in [words]; null where they are not.
+ */
+export async function phraseAround(
+  source: string,
+  words: string[],
+  at: number
+): Promise<[number, number] | null> {
+  const it = await coreReady();
+  const span = it.phraseAround(source, words, at);
+  return span.length === 2 ? [span[0], span[1]] : null;
+}
+
+/**
  * What the core says about one word.
  *
  * The answer arrives as JSON because an Answer is a tree and the boundary carries text. Its

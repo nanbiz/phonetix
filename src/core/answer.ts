@@ -100,6 +100,9 @@ export interface Answer {
    *  reader chose: theirs where it has the word or a rule for it, otherwise whichever the
    *  dictionary labels the reading with. Nothing where nobody labelled it. */
   saidIn?: string | null;
+  /** Where the card answers the phrase the word is in rather than the word, which of the
+   *  line's words the phrase runs from and to (exclusive). Set by the host. */
+  span?: [number, number] | null;
   /** The word this spelling is another way of writing, where it is only that: "popup" is
    *  pop-up without its hyphen. */
   spellingOf?: string | null;

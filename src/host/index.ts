@@ -5,16 +5,19 @@
 // once and run on both platforms.
 import {
   annotate, complete, curve, detect, lookUp, meanings, openHomographs, openLanguages, phrase,
+  phraseAround,
   readRuns, readScreen, readWiktionary, symbolsOf, typedInMine, wordFor, type Said,
   heard as heardIn,
 } from '@/core';
-import type { Batch, TextRun } from '@/core/tokens';
+import { wordsOf, type Batch, type TextRun } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import { afresh, answered, noted, recent } from './health';
 import { onMessage } from './messages';
 import { spokenIn, voiceOf } from '@/data/accents';
 import { commonsAt, wiktionarySource } from '@/data/links';
-import { forget, get, held, offered, open, openReadInto, ownHostAnswered } from './packs';
+import {
+  forget, get, held, inReader, isLanguage, offered, open, openReadInto, ownHostAnswered,
+} from './packs';
 import { audio, guessed, ipa, translatable } from './voice';
 import { hear, stopHearing } from './speech';
 import { current, watch } from '@/settings';
@@ -69,6 +72,7 @@ export function host(): void {
     await Promise.all([
       open(data.source).catch(() => null),
       data.target === data.source ? null : openReadInto(data.target).catch(() => null),
+      data.target === data.source ? null : openInReader(data.source, data.target),
       data.options.accent ? open(data.options.accent).catch(() => null) : null,
       // The accent each other language on the page is read in, where it has words of its own.
       ...Object.entries(data.options.accents ?? {})
@@ -113,9 +117,9 @@ export function host(): void {
   // health check becomes the thing that breaks the health it reports on.
   onMessage('health', () => Promise.resolve({ trouble: recent() }));
 
-  // A language's own definitions are a pack held beside its dictionary, not a language: the
-  // lists a reader chooses from leave them out.
-  const languages = (all: string[]) => all.filter((lang) => !lang.startsWith('def-'));
+  // A language's own definitions, and its words in another language, are packs held beside
+  // its dictionary, not languages: the lists a reader chooses from leave them out.
+  const languages = (all: string[]) => all.filter(isLanguage);
   onMessage('packs', async () => ({
     held: languages(await held()),
     open: languages(await openLanguages()),
@@ -127,7 +131,7 @@ export function host(): void {
         // the reader who set that host is still told.
         if (ownHostAnswered()) answered('the dictionary host');
         else noted('the dictionary host', 'cannot be reached');
-        return list.filter((pack) => !pack.lang.startsWith('def-'));
+        return list.filter((pack) => isLanguage(pack.lang));
       },
       (e) => {
         console.warn('[Phonetix] No list of packs:', e);
@@ -361,6 +365,8 @@ export function host(): void {
     await Promise.all([
       open(data.source),
       data.target === data.source ? null : openReadInto(data.target),
+      // What the reader's own Wiktionary says the language's words are, where it says.
+      data.target === data.source ? null : openInReader(data.source, data.target),
       // The accent's own words, where that accent is one that has them.
       data.accent ? open(data.accent).catch(() => null) : null,
       openHomographs(data.source).catch(() => 0),
@@ -382,17 +388,44 @@ export function host(): void {
           ? data.line
           : await lineSaid(data.source, data.target, data.line, data.quick ? 0 : LINE_WAIT_MS)
         : '');
-    const looked = await lookUp(
-      data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn
-    );
-    const answer = await described(looked, data.describe ?? false, data.quick ?? false);
+    // The words around it, where the dictionary holds them as one: "a través de" is
+    // "through", and "través" alone a bend nobody means there.
+    const words = data.line && data.at !== undefined ? wordsOf(data.line) : [];
+    let span = words.length > 0 ? await phraseAround(data.source, words, data.at ?? 0) : null;
+    let word = span ? words.slice(span[0], span[1]).join(' ') : data.word;
+    const before = span ? (words[span[0] - 1] ?? '') : (data.before ?? '');
+    let looked = await lookUp(word, data.source, data.target, data.accent ?? '', before, drawn);
+    // Only where the translated line says what the phrase means: a dictionary holds "del
+    // brazo", arm in arm, "de color", coloured, and "de una", at once, and in "debajo del
+    // brazo", "un libro de color rojo" and "la foto de una ciudad" none of them is meant. With
+    // no line yet, the word alone; the card asks again once the line is translated.
+    // Nor one that says what the word alone says: "red book" is a "Buch", as "book" is.
+    const same = (a: string[], b: string[]) =>
+      (a[0] ?? '').toLowerCase() === (b[0] ?? '').toLowerCase();
+    const alone = span
+      ? await lookUp(data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn)
+      : null;
+    if (
+      span &&
+      alone &&
+      data.source !== data.target &&
+      (!(drawn && saysIn(looked.says, drawn)) || same(looked.says, alone.says))
+    ) {
+      span = null;
+      word = data.word;
+      looked = alone;
+    }
+    const answer = {
+      ...(await described(looked, data.describe ?? false, data.quick ?? false)),
+      span,
+    };
     if (answer.ipa.length > 0 || answer.state === 'Phrase') return answer;
     // No dictionary here says how this word is said: one still on its way, a form the
     // dictionary lists only under its lemma, a language nobody built one for. The voice says
     // it, as it does for the same word on the page, and the card marks it as the voice's.
     const voice = voiceOf(data.source, data.accent ?? '');
-    const spoken = await ipa(voice, [data.word])
-      .then((said) => said[data.word] ?? '')
+    const spoken = await ipa(voice, [word])
+      .then((said) => said[word] ?? '')
       .catch(() => '');
     if (!spoken) return answer;
     return {
@@ -508,69 +541,158 @@ async function translateWaiting(): Promise<void> {
  * The answer with what its word is, said in the reader's language, where the card is to say
  * it: in place of a word their language has none for ("sophomore"), under one it says the
  * same way ("brunch" is "brunch" in Spanish too), and under every word and every other
- * reading where they asked for that. The dictionary's definitions are English whatever the
- * word's language, so each is put into theirs by the translator; one it cannot translate, or
- * not in time, is left out and the card says what it did before.
+ * reading where they asked for that. What the reader's own Wiktionary says it is, the core
+ * has already put there; otherwise the dictionary's English definition is put into their
+ * language by the translator, and one it cannot translate, or not in time, is left out.
+ *
+ * Only what adds to the words the card already leads with: "drinnen" over "Drinnen." was the
+ * card saying its word twice, and "zurückkommen" over "Zurückkommen, zurückkehren" once and a
+ * half.
  */
 async function described(answer: Answer, every: boolean, quick: boolean): Promise<Answer> {
   const into = answer.target;
-  if (!into || into === 'en' || answer.source === into || answer.state === 'Phrase') return answer;
-  const first = (glosses: string[]) => sentenceOfGloss(glosses[0] ?? '');
-  const lead = answer.says[0] ?? '';
-  const wanted =
-    every || !lead || lead.toLowerCase() === answer.spelling.toLowerCase();
-  const asked: { at: number; text: string }[] = [];
-  if (wanted && first(answer.glosses)) asked.push({ at: -1, text: first(answer.glosses) });
-  answer.readings.forEach((reading, at) => {
-    if (at === 0) return;
-    if ((every || reading.says.length === 0) && first(reading.glosses)) {
-      asked.push({ at, text: first(reading.glosses) });
-    }
-  });
-  if (asked.length === 0) return answer;
-  const said = await Promise.all(asked.map(({ text }) => describedIn(into, text, quick)));
+  if (!into || answer.source === into || answer.state === 'Phrase') return answer;
+  // A word of grammar is said by its word alone: its definitions are notes on grammar, "a
+  // reflexive or reciprocal pronoun: himself, herself, itself", which translated read
+  // "sich selbst, sich selbst, sich selbst".
+  if (GRAMMAR_KINDS.has(answer.pos ?? '')) return answer;
   const readings = answer.readings.map((reading) => ({ ...reading }));
   let out: Answer = { ...answer, readings };
-  asked.forEach(({ at }, n) => {
-    const text = said[n];
-    if (!text) return;
-    if (at === -1) out = { ...out, described: text };
-    else readings[at].described = text;
+  const lead = answer.says[0] ?? '';
+  const wanted = every || !lead || lead.toLowerCase() === answer.spelling.toLowerCase();
+  const asked: { at: number; text: string; says: string[] }[] = [];
+  if (wanted && !answer.described && into !== 'en') {
+    const gloss = meaningOf(answer.glosses);
+    if (gloss) asked.push({ at: -1, text: gloss, says: answer.says });
+  }
+  answer.readings.forEach((reading, at) => {
+    if (at === 0 || reading.described || into === 'en') return;
+    const gloss = meaningOf(reading.glosses);
+    if ((every || reading.says.length === 0) && gloss) {
+      asked.push({ at, text: gloss, says: reading.says });
+    }
   });
+  const said = await Promise.all(asked.map(({ text }) => describedIn(into, text, quick)));
+  asked.forEach(({ at }, n) => {
+    if (!said[n]) return;
+    if (at === -1) out = { ...out, described: said[n] };
+    else readings[at].described = said[n];
+  });
+  out = { ...out, described: beyond(out.described, out.says) };
+  readings.forEach((reading) => (reading.described = beyond(reading.described, reading.says)));
   return out;
 }
 
+/** Whether a translated line holds the first of [says], as its words or the start of them:
+ *  "Arm" in "unter dem Arm", "Arme" for "Arm". */
+function saysIn(says: string[], line: string): boolean {
+  const first = says[0]?.toLowerCase();
+  if (!first) return false;
+  const words = line.toLowerCase().split(/[^\p{L}\p{N}]+/u);
+  const stem = first.slice(0, Math.max(4, first.length - 2));
+  return first
+    .split(/\s+/)
+    .every((part) => words.some((it) => it === part || (part.length >= 5 && it.startsWith(stem))));
+}
+
+/** When each pack of a language's words in another was last found missing. */
+const readerPackMissing = new Map<string, number>();
+
 /**
- * A definition put into [into]. A verb's is asked as what a word means, "Meaning: to eat
- * brunch.", and the label cut off what comes back: asked as it is, the translator read its "to"
- * as a purpose ("Para comer brunch.", in order to eat it), and without the "to" as an order
- * ("Come el brunch."). Labelled, every language it was tried in gave the infinitive.
+ * The pack of [source]'s words as the Wiktionary written in [target] gives them, where there is
+ * one. Most pairs have none, and asking for it on every card read storage and started a
+ * download each time: one found missing is not asked for again for a minute, by which time
+ * one being fetched has arrived.
  */
-async function describedIn(into: string, text: string, quick: boolean): Promise<string> {
-  const verb = /^to\s/i.test(text);
-  const asked = verb ? `Meaning: ${text.charAt(0).toLowerCase()}${text.slice(1)}` : text;
-  let said = await lineSaid('en', into, asked, quick ? 0 : DESCRIBE_WAIT_MS);
-  if (verb && said) {
-    const at = said.indexOf(':');
-    said = (at >= 0 ? said.slice(at + 1) : said).trim();
-    said = `${said.charAt(0).toUpperCase()}${said.slice(1)}`;
+async function openInReader(source: string, target: string): Promise<string | null> {
+  const name = inReader(source, target);
+  const missing = readerPackMissing.get(name);
+  if (missing !== undefined && Date.now() - missing < 60_000) return null;
+  const opened = await open(name).catch(() => null);
+  if (opened) readerPackMissing.delete(name);
+  else readerPackMissing.set(name, Date.now());
+  return opened;
+}
+
+/** The kinds of word a card says by their word alone. */
+const GRAMMAR_KINDS = new Set(['article', 'det', 'pron', 'prep', 'conj', 'particle', 'contraction']);
+
+/**
+ * A description less what [says] says already: each of its items the card's words do not
+ * name, or nothing where that leaves nothing. "Schiff, Schiff." is one word, and the one the
+ * card leads with.
+ */
+function beyond(text: string | null | undefined, says: string[]): string | null {
+  if (!text) return null;
+  const bare = (it: string) => it.toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, '').trim();
+  const known = new Set(says.map(bare));
+  // A sentence stays whole, cut only where it is a list of words.
+  const items = text.split(/\s*[,;]\s*/);
+  if (items.some((item) => item.split(/\s+/).length > 3)) {
+    return known.has(bare(text)) ? null : text;
   }
-  return said;
+  const kept: string[] = [];
+  for (const item of items) {
+    const it = bare(item);
+    if (!it || known.has(it)) continue;
+    known.add(it);
+    kept.push(item.replace(/[.]$/, ''));
+  }
+  return kept.length > 0 ? kept.join(', ') : null;
 }
 
 /**
- * What a definition says the thing is, as the translator is to read it: its first sentence,
- * without what qualifies it, a bracket or a clause after "often" or "especially".
+ * The first of a word's definitions that says what it means, as the translator is to read it:
+ * not a note of which form of another word it is ("second-person singular present indicative
+ * of poder"), which the card's form line says and which translated read "Second-Person-
+ * Singular-Gegensprechant auf Poder hinweisend". Without what qualifies it, a bracket or a
+ * clause after "often" or "especially".
  */
-function sentenceOfGloss(gloss: string): string {
-  let text = gloss.replace(/\s*\([^()]*\)/g, '');
+function meaningOf(glosses: string[]): string {
+  // A note that goes on to say what the word means is that meaning: "apocopic form of mucho;
+  // very" is "very".
+  const meanings = glosses.map((gloss) => gloss.match(/\bof\s+\S+\s*[;:]\s*(.+)$/)?.[1] ?? gloss);
+  const meaning = meanings.find((gloss) => !/\bof\s+\S+\s*$/i.test(gloss));
+  if (!meaning) return '';
+  let text = meaning.replace(/\s*\([^()]*\)/g, '');
   const end = text.search(/[.;](\s|$)/);
-  if (end > 0) text = text.slice(0, end);
+  // Only a sentence ends where its first sentence does; a list of words goes on past a
+  // semicolon, "to cost; to be hard".
+  if (end > 0 && /^[A-Z]/.test(text)) text = text.slice(0, end);
   const hedge = text.search(/,\s+(often|especially|usually|typically|generally|chiefly|mainly|sometimes)\b/i);
   if (hedge > 0) text = text.slice(0, hedge);
-  text = text.trim();
-  return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}.` : '';
+  return text.trim();
 }
+
+/**
+ * A definition put into [into]. Every one is asked as what a word means, "Meaning: to eat
+ * brunch", and the label cut off what comes back: asked as it is, the translator read a verb's
+ * "to" as a purpose ("Para comer brunch.", in order to eat it), and without the "to" as an
+ * order ("Come el brunch."); and a list of words it read as a sentence, put a capital at its
+ * start and a full stop at its end. A definition the dictionary writes as a sentence, with a
+ * capital, is one.
+ */
+async function describedIn(into: string, text: string, quick: boolean): Promise<string> {
+  const sentence = /^[A-Z]/.test(text);
+  const said = await lineSaid('en', into, `Meaning: ${text}`, quick ? 0 : DESCRIBE_WAIT_MS);
+  if (!said) return '';
+  const at = said.indexOf(':');
+  let out = (at >= 0 ? said.slice(at + 1) : said).trim();
+  if (!sentence) out = out.replace(/[.]$/, '');
+  // A verb as a dictionary of the reader's language names it: "to see, to spot" comes back
+  // "zu sehen, zu erkennen", and a German dictionary writes "sehen".
+  const mark = INFINITIVE_MARK[into];
+  if (!sentence && mark && /^to\s/i.test(text)) {
+    out = out
+      .split(/\s*,\s*/)
+      .map((item) => item.replace(new RegExp(`^${mark}\\s+`, 'i'), ''))
+      .join(', ');
+  }
+  return out;
+}
+
+/** The word a language sets before a verb to make it an infinitive, as English sets "to". */
+const INFINITIVE_MARK: Record<string, string> = { de: 'zu', nl: 'te', da: 'at', no: 'å', sv: 'att' };
 
 /** How long a card waits for what its word is to be translated. Asked for outright, so longer
  *  than a line, and kept for the next card where it comes later. */

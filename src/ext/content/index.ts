@@ -6,7 +6,7 @@
 // chose.
 import { partsOf } from '@/ui/card/parts';
 import { sendMessage } from '@/host/messages';
-import type { Token } from '@/core/tokens';
+import { wordsOf, type Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import {
   accentFor, allowed, current, DEFAULTS, replacedInto, set, setAccent, translates, watch,
@@ -204,31 +204,39 @@ async function readEachRun(runs: ScannedRun[]): Promise<void> {
 let learnedHere = false;
 
 /**
- * A word standing on its own, in the language the reader is learning, on a page in another.
+ * A few words standing on their own, in the language the reader is learning or in the page's.
  *
- * A page that teaches a language heads each of its entries with the word alone, and a word
- * alone says nothing a detector can read: "venir" and "costar" over a Spanish example on an
- * English page were read as English, "costar" as a film's co-star. Where some of the page is in
- * the language the reader learns, a word on its own is in whichever of the two languages holds
- * it, and held by both, the one that says it more.
+ * A page that teaches a language heads each of its entries with the word alone, and a video
+ * shows its subtitles a short line at a time, and a few words say nothing a detector can
+ * read: "venir" and "costar" over a Spanish example on an English page were read as English,
+ * "costar" as a film's co-star, and the subtitle "El libro rojo." on an English page was
+ * English, its "el" an elevated railway. Where some of the page is in the language the reader
+ * learns, a run of a few words is in whichever of the two languages says its words more.
  */
 async function headwords(runs: ScannedRun[]): Promise<void> {
   const other = settings.learn;
   const page = pageLanguage();
   if (!learnedHere || !other || other === page) return;
-  const alone = runs.filter((run) => !run.lang && /^\p{L}+$/u.test(run.text.trim()));
-  if (alone.length === 0) return;
+  const short = runs.filter((run) => {
+    const count = wordsOf(run.text).length;
+    return count >= 1 && count <= SHORT_RUN && (!run.lang || run.lang === page || run.lang === other);
+  });
+  if (short.length === 0) return;
   const read = await sendMessage('inOther', {
-    words: alone.map((run) => run.text.trim()),
+    words: short.map((run) => run.text.trim()),
     mine: page,
     other,
   }).catch(() => null);
   read?.forEach((theirs, at) => {
-    if (!theirs) return;
-    alone[at].lang = other;
-    readAs.set(alone[at].node, other);
+    const lang = theirs ? other : page;
+    if ((short[at].lang ?? page) === lang) return;
+    short[at].lang = lang;
+    readAs.set(short[at].node, lang);
   });
 }
+
+/** The most words a run is read word by word in, as the core reads one. */
+const SHORT_RUN = 6;
 
 /**
  * What the page's pass decided about every word of each text node, drawn or not.
@@ -535,27 +543,50 @@ interface Anchor {
   seen(): boolean;
   /** Where the word is in the page, so the sentence it is in can be read. */
   node(): Node | null;
+  /** Where in [node] the word starts, for a word in the page's own text. */
+  offset(): number;
+  /** The same place taken [back] words further back and [ahead] further on, where the words
+   *  are the page's own text in one piece: the phrase the word is part of. */
+  widen?(back: number, ahead: number): Anchor | null;
 }
 
 /**
- * The sentence a word is in, as the page wrote it: what the card hands the translator, whose
- * translation of the whole sentence says which of a spelling's words and senses this is.
- * Words the page has replaced are read as what they replaced.
+ * The sentence a word is in, as the page wrote it, and which of its words the word is: what
+ * the card hands the translator, whose translation of the whole sentence says which of a
+ * spelling's words and senses this is, and the words around it that may be one phrase with
+ * it. Words the page has replaced are read as what they replaced. The word itself is found by
+ * where it is, not by its spelling: a sentence says "lejos" four times.
  */
-function sentenceOf(anchor: Anchor, spelling: string): string {
+function sentenceOf(anchor: Anchor): { line: string; at: number } {
   const node = anchor.node();
   const block = (node instanceof Element ? node : node?.parentElement)?.closest(PARAGRAPH);
-  if (!block) return '';
+  if (!node || !block) return { line: '', at: 0 };
+  const path: number[] = [];
+  for (let at: Node = node; at !== block; at = at.parentNode as Node) {
+    if (!at.parentNode) return { line: '', at: 0 };
+    path.unshift([...at.parentNode.childNodes].indexOf(at as ChildNode));
+  }
   const copy = block.cloneNode(true) as Element;
+  const twin = path.reduce<Node>((at, index) => at.childNodes[index], copy);
+  if (twin instanceof Text) twin.insertData(anchor.offset(), HERE);
+  else twin.parentNode?.insertBefore(document.createTextNode(HERE), twin);
   for (const word of copy.querySelectorAll(`.${WORD}`)) {
-    word.replaceWith(word.querySelector('.px-was')?.textContent ?? '');
+    const marked = word.textContent?.includes(HERE) ? HERE : '';
+    word.replaceWith(marked + (word.querySelector('.px-was')?.textContent ?? ''));
   }
   const text = (copy.textContent ?? '').replace(/\s+/g, ' ').trim();
-  const wanted = spelling.toLowerCase();
-  const sentence = text
-    .split(/(?<=[.!?…])\s+/)
-    .find((part) => part.toLowerCase().split(/[^\p{L}\p{N}'-]+/u).includes(wanted));
-  return (sentence ?? '').slice(0, 400);
+  const sentence = text.split(/(?<=[.!?…])\s+/).find((part) => part.includes(HERE)) ?? '';
+  const at = wordsOf(sentence.slice(0, sentence.indexOf(HERE))).length;
+  return { line: sentence.replace(HERE, '').slice(0, 400), at };
+}
+
+/** Where the word is, marked in a copy of its sentence: a character no page writes. */
+const HERE = '\u{E000}';
+
+/** Whether a word has a place on the page at all: one the page hid has its text and no size,
+ *  at the window's corner. */
+function sized(box: DOMRect): boolean {
+  return box.width > 0 || box.height > 0;
 }
 
 /** Whether what is at the middle of a box is the word, or something of ours over it. */
@@ -598,6 +629,7 @@ function onElement(element: HTMLElement): Anchor {
     holds: (x, y) => near([...now().getClientRects()], x, y),
     seen: () => showsAt(now().getBoundingClientRect(), now()),
     node: () => now(),
+    offset: () => 0,
   };
 }
 
@@ -608,6 +640,21 @@ function onRange(range: Range): Anchor {
     holds: (x, y) => near([...range.getClientRects()], x, y),
     seen: () => showsAt(range.getBoundingClientRect(), range.startContainer.parentElement),
     node: () => range.startContainer,
+    offset: () => range.startOffset,
+    widen: (back, ahead) => {
+      const node = range.startContainer;
+      if (!(node instanceof Text) || range.endContainer !== node) return null;
+      const words = [...node.data.matchAll(/[\p{L}\p{N}'’-]+/gu)].map((it) => ({
+        start: it.index,
+        end: it.index + it[0].length,
+      }));
+      const at = words.findIndex((it) => it.start === range.startOffset);
+      if (at < back || at + ahead >= words.length) return null;
+      const wide = document.createRange();
+      wide.setStart(node, words[at - back].start);
+      wide.setEnd(node, words[at + ahead].end);
+      return onRange(wide);
+    },
   };
 }
 
@@ -757,6 +804,9 @@ type Near =
  * aiming at rather than only one the tip is exactly on. Nothing over anything of ours.
  */
 function wordNear(x: number, y: number): Near | null {
+  // Right on text that is no word - a transcription, a version, an address - the reader is
+  // reading that: looked for around it, the heading over a transcription opened its card.
+  if (onOtherText(x, y)) return null;
   for (const [dx, dy] of PROBES) {
     const px = x + dx;
     const py = y - LIFT + dy;
@@ -768,6 +818,28 @@ function wordNear(x: number, y: number): Near | null {
     if (page) return { page, rect: page.range.getBoundingClientRect() };
   }
   return null;
+}
+
+/** Whether a point is on a letter of the page's own text that is part of no word. */
+function onOtherText(x: number, y: number): boolean {
+  const caret = caretAt(x, y);
+  if (!caret || !(caret.node instanceof Text)) return false;
+  const text = caret.node.nodeValue ?? '';
+  // The letter the point is on, which is the one before the caret or the one after it.
+  for (const at of [caret.offset - 1, caret.offset]) {
+    if (at < 0 || at >= text.length || /\s/u.test(text[at])) continue;
+    const range = document.createRange();
+    range.setStart(caret.node, at);
+    range.setEnd(caret.node, at + 1);
+    if (!within(range, x, y)) continue;
+    const lang = languageOf(caret.node);
+    for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
+      if (at >= part.index && at < part.index + part.segment.length) {
+        return /\p{L}/u.test(part.segment) && !isWord(part, text);
+      }
+    }
+  }
+  return false;
 }
 
 /** Where in the text a point falls, by whichever of the two names the engine gives it. */
@@ -838,6 +910,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   const translating = translates(settings, source) || practising;
   const target = practising ? settings.learn : translating ? settings.target : source;
   const defining = !translating && source === DEFINED_IN;
+  const place = sentenceOf(anchor);
   const asking = {
     word: word.spelling,
     source,
@@ -850,7 +923,8 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // And the sentence it is in, which says which word and which sense it is: translated by
     // the host where the card translates ("bank" by a river is "orilla"), and as written
     // where it does not, where the word's senses are looked for in it.
-    line: sentenceOf(anchor, word.spelling),
+    line: place.line,
+    at: place.at,
     // Whether the reader wants every word described, not only one their language has no
     // word for: the host asks the translator only for what the card will say.
     describe: settings.showMeaning && settings.describeAll,
@@ -859,15 +933,23 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   // the reader's language yet are asked for after, rather than holding the card a second or
   // more on every line the reader comes to.
   const looked = await sendMessage('lookUp', { ...asking, quick: translating });
+  // A phrase the word is part of is answered whole, and lit whole.
+  if (looked.span && anchored === anchor) {
+    const wider = anchor.widen?.(place.at - looked.span[0], looked.span[1] - place.at - 1);
+    if (wider) {
+      anchored = wider;
+      anchor = wider;
+    }
+  }
   // Shown as the page writes it, whichever way it was read.
   const asShown = (found: Answer) => {
-    const written = { ...found, spelling: word.written };
+    const written = { ...found, spelling: found.span ? found.spelling : word.written };
     return translating || defining ? written : said(written);
   };
   const answer = asShown(looked);
   // The reader may have moved on while the host was answering; the card belongs to the word
   // they are on now, not the one they were on.
-  const current = () => anchor.alive() && anchored === anchor;
+  const current = () => anchor.alive() && anchored === anchor && sized(anchor.box());
   if (!current()) return;
   const key = word.spelling.toLowerCase();
   if (!asked.includes(key)) asked.push(key);
@@ -934,6 +1016,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   // after and fills the same card: a card that waited on Wiktionary waited a second or more
   // on every word.
   let shown = answer;
+  if (!sized(anchor.box())) return;
   show(shown, anchor.box(), actions);
   keepWithWord();
   // Told again as the dictionary for its language comes in, and asked again once it is here.
@@ -1010,7 +1093,21 @@ async function selected(): Promise<void> {
   const at = selection.anchorNode;
   if (at && inside(at instanceof Element ? at : (at.parentElement))) return;
   const range = selection.getRangeAt(0);
-  await askPhrase(text, at, range.getBoundingClientRect(), true, range);
+  await askPhrase(text, at, whereLetGo(range), true, range);
+}
+
+/**
+ * Where on a selection the card points: the line of it nearest the pointer, where the pointer
+ * is along it, which is where the reader let go. Pointed at the middle of the whole selection, a
+ * line-wide one had its card in the middle of the page, away from the hand.
+ */
+function whereLetGo(range: Range): DOMRect {
+  const lines = [...range.getClientRects()].filter((box) => box.width > 0 && box.height > 0);
+  if (lines.length === 0 || pointer.x < 0) return range.getBoundingClientRect();
+  const middle = (box: DOMRect) => Math.abs(box.top + box.height / 2 - pointer.y);
+  const line = lines.reduce((best, box) => (middle(box) < middle(best) ? box : best));
+  const x = Math.min(Math.max(pointer.x, line.left), line.right);
+  return new DOMRect(x - 1, line.top, 2, line.height);
 }
 
 /**
@@ -1569,6 +1666,14 @@ function keepWithWord(): void {
       return;
     }
     const box = word.box();
+    // Hidden by the page, the word is gone though its text is still there: a flashcard turned
+    // over leaves the last card's words in the page with no size, at the window's corner, and
+    // the card went to the corner after them.
+    if (!sized(box)) {
+      hide();
+      anchored = null;
+      return;
+    }
     const moved =
       !was || box.top !== was.top || box.left !== was.left || box.width !== was.width;
     // Not while the pointer is in the card, unless the reader is scrolling: a card that went
