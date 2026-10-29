@@ -253,7 +253,10 @@
     "mark-poetic": "시어",
     "mark-humorous": "익살스러운",
     "mark-figuratively": "비유적",
-    "mark-euphemistic": "완곡"
+    "mark-euphemistic": "완곡",
+    "learn-another": "다른 언어 배우기",
+    "default-learning": "페이지를 바꿔 넣는 언어",
+    "make-default-learning": "이 언어로 페이지 바꾸기"
   },
   "rows": {
     "on": {

@@ -253,7 +253,10 @@
     "mark-poetic": "شاعرانه",
     "mark-humorous": "طنزآمیز",
     "mark-figuratively": "مجازی",
-    "mark-euphemistic": "حسن تعبیر"
+    "mark-euphemistic": "حسن تعبیر",
+    "learn-another": "یادگیری زبان دیگر",
+    "default-learning": "زبانی که صفحه‌ها به آن جایگزین می‌شوند",
+    "make-default-learning": "جایگزینی صفحه‌ها با این زبان"
   },
   "rows": {
     "on": {

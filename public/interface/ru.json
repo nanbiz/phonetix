@@ -253,7 +253,10 @@
     "mark-poetic": "поэтическое",
     "mark-humorous": "шутливое",
     "mark-figuratively": "переносное",
-    "mark-euphemistic": "эвфемистическое"
+    "mark-euphemistic": "эвфемистическое",
+    "learn-another": "Изучать ещё один язык",
+    "default-learning": "Язык, на который заменяются страницы",
+    "make-default-learning": "Заменять страницы на этот язык"
   },
   "rows": {
     "on": {

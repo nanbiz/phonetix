@@ -253,7 +253,10 @@
     "mark-poetic": "básnický",
     "mark-humorous": "žertovný",
     "mark-figuratively": "přeneseně",
-    "mark-euphemistic": "eufemistický"
+    "mark-euphemistic": "eufemistický",
+    "learn-another": "Učit se další jazyk",
+    "default-learning": "Jazyk, do kterého se stránky nahrazují",
+    "make-default-learning": "Nahrazovat stránky tímto jazykem"
   },
   "rows": {
     "on": {

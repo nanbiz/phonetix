@@ -253,7 +253,10 @@
     "mark-poetic": "ποιητικό",
     "mark-humorous": "χιουμοριστικό",
     "mark-figuratively": "μεταφορικά",
-    "mark-euphemistic": "ευφημιστικό"
+    "mark-euphemistic": "ευφημιστικό",
+    "learn-another": "Μάθε μια ακόμη γλώσσα",
+    "default-learning": "Η γλώσσα στην οποία αντικαθίστανται οι σελίδες",
+    "make-default-learning": "Αντικατάσταση σελίδων με αυτή τη γλώσσα"
   },
   "rows": {
     "on": {

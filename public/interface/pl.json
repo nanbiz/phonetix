@@ -253,7 +253,10 @@
     "mark-poetic": "poetycki",
     "mark-humorous": "żartobliwy",
     "mark-figuratively": "przenośny",
-    "mark-euphemistic": "eufemistyczny"
+    "mark-euphemistic": "eufemistyczny",
+    "learn-another": "Ucz się kolejnego języka",
+    "default-learning": "Język, na który zastępowane są strony",
+    "make-default-learning": "Zastępuj strony tym językiem"
   },
   "rows": {
     "on": {

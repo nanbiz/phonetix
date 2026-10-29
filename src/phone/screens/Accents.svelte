@@ -4,7 +4,7 @@
   import { ACCENTS } from '@/data/accents';
   import { named } from '@/data/languages';
   import { SAYS } from '@/data/wording';
-  import { accentFor, setAccent, type Settings } from '@/settings/shape';
+  import { accentFor, learned, setAccent, type Settings } from '@/settings/shape';
   import Group from '../parts/Group.svelte';
   import Item from '../parts/Item.svelte';
   import ListSheet from '../parts/ListSheet.svelte';
@@ -24,7 +24,7 @@
   }
 
   let offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 1);
-  let mine = $derived([settings.target, ...settings.known, settings.learn]);
+  let mine = $derived([settings.target, ...settings.known, ...learned(settings)]);
   let others = $derived(
     offering.filter((lang) => !mine.includes(lang)).sort((a, b) => named(a).localeCompare(named(b)))
   );

@@ -253,7 +253,10 @@
     "mark-poetic": "şiirsel",
     "mark-humorous": "şaka yollu",
     "mark-figuratively": "mecaz",
-    "mark-euphemistic": "örtmece"
+    "mark-euphemistic": "örtmece",
+    "learn-another": "Başka bir dil öğren",
+    "default-learning": "Sayfaların yerine konduğu dil",
+    "make-default-learning": "Sayfaları bu dille değiştir"
   },
   "rows": {
     "on": {

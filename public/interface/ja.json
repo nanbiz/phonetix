@@ -253,7 +253,10 @@
     "mark-poetic": "詩語",
     "mark-humorous": "冗談",
     "mark-figuratively": "比喩的",
-    "mark-euphemistic": "婉曲"
+    "mark-euphemistic": "婉曲",
+    "learn-another": "別の言語を学ぶ",
+    "default-learning": "ページの置き換え先の言語",
+    "make-default-learning": "この言語にページを置き換える"
   },
   "rows": {
     "on": {

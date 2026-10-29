@@ -22,7 +22,7 @@ import { audio, guessed, ipa, translatable } from './voice';
 import { hear, stopHearing } from './speech';
 import { current, watch } from '@/settings';
 import { spokenFrom } from '@/data/interface';
-import type { Settings } from '@/settings/shape';
+import { learned, type Settings } from '@/settings/shape';
 
 /** The languages the reader reads or learns, whose dictionaries are worth fetching for a line
  *  of a page that turned out to be in one of them. */
@@ -30,7 +30,9 @@ let readersOwn = new Set<string>();
 
 function own(settings: Settings): void {
   readersOwn = new Set(
-    [settings.target, ...(settings.known ?? []), settings.learn, settings.learning].filter(Boolean)
+    [settings.target, ...(settings.known ?? []), ...learned(settings), settings.learning].filter(
+      Boolean
+    )
   );
 }
 

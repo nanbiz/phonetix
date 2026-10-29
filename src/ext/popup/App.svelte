@@ -8,6 +8,7 @@
   //
   // Drawn from the phone app's parts, so the two settings screens are one design. A setting is
   // written the moment it changes: every page watches the same keys and redraws itself.
+  import { languagesSaid } from '@/ui/settings/languages';
   import { current, darkSide, set, setSite, type Settings } from '@/settings';
   import { named } from '@/data/languages';
   import { DARK_CHOICES, LAYER_CHOICES, labelOf, ROWS, SAYS, say } from '@/data/wording';
@@ -160,16 +161,7 @@
     (value) => LAYER_CHOICES.find((it) => it.value === value) ?? { value, label: value }
   );
   let here = $derived(settings !== null && site !== '' && !settings.off.includes(site));
-  /** The languages the reader reads, their own first, and the one they learn. */
-  let languageNames = $derived.by(() => {
-    if (!settings) return '';
-    const reading = [settings.target, ...settings.known]
-      .filter((lang, at, all) => lang && lang !== settings?.learn && all.indexOf(lang) === at)
-      .map(named)
-      .join(' · ');
-    const learning = settings.learn ? SAYS['learning-it'].replace('%s', named(settings.learn)) : '';
-    return [reading, learning].filter(Boolean).join(', ');
-  });
+  let languageNames = $derived(settings ? languagesSaid(settings) : '');
   let themeName = $derived(
     settings ? (settings.theme || THEME).charAt(0).toUpperCase() + (settings.theme || THEME).slice(1) : ''
   );

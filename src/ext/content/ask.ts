@@ -93,7 +93,7 @@ export async function open(page = '', listen = false): Promise<void> {
   // Only one the panel can name and offer: a page in a language it has no name for would
   // head the panel with a bare code the reader could not pick again from its list.
   const learning =
-    [settings.learning, settings.learn, page, ...packs.held].find(
+    [settings.learning, settings.learn, ...(settings.alsoLearn ?? []), page, ...packs.held].find(
       (lang) => lang && lang !== mine && LANGUAGES[lang]
     ) ??
     '';

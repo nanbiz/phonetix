@@ -253,7 +253,10 @@
     "mark-poetic": "dichterisch",
     "mark-humorous": "scherzhaft",
     "mark-figuratively": "übertragen",
-    "mark-euphemistic": "verhüllend"
+    "mark-euphemistic": "verhüllend",
+    "learn-another": "Weitere Sprache lernen",
+    "default-learning": "Die Sprache, in die Seiten ersetzt werden",
+    "make-default-learning": "Seiten in diese Sprache ersetzen"
   },
   "rows": {
     "on": {

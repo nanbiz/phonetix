@@ -43,6 +43,9 @@ data class Settings(
      * none. Their choice in settings, which the panel's last language never changes.
      */
     val learn: String = "",
+    /** The other languages the reader is learning, after [learn], which is the one of them a
+     *  word of a language they read is put into. Kept for the settings to show. */
+    val alsoLearn: List<String> = emptyList(),
     /** The language last asked in in the panel, which is what a word they are looking for
      *  comes back in. */
     val learning: String = "",
@@ -163,6 +166,7 @@ object SettingsStore {
     private const val K_TOUCH = "touch_words"
     private const val K_TARGET = "target"
     private const val K_LEARN = "learn"
+    private const val K_ALSO_LEARN = "also_learn"
     private const val K_LEARNING = "learning"
     private const val K_INTO = "into"
     private const val K_KNOWN = "known"
@@ -204,6 +208,7 @@ object SettingsStore {
             touchWords = p.getBoolean(K_TOUCH, true),
             target = p.getString(K_TARGET, "") ?: "",
             learn = p.getString(K_LEARN, "") ?: "",
+            alsoLearn = (p.getString(K_ALSO_LEARN, "") ?: "").split(',').filter { it.isNotBlank() },
             learning = p.getString(K_LEARNING, "") ?: "",
             into = p.getString(K_INTO, "") ?: "",
             known = p.getStringSet(K_KNOWN, null)?.toSet(),
@@ -245,6 +250,7 @@ object SettingsStore {
             ?.putBoolean(K_TOUCH, next.touchWords)
             ?.putString(K_TARGET, next.target)
             ?.putString(K_LEARN, next.learn)
+            ?.putString(K_ALSO_LEARN, next.alsoLearn.joinToString(","))
             ?.putString(K_LEARNING, next.learning)
             ?.putString(K_INTO, next.into)
             ?.putStringSet(K_KNOWN, next.known)
@@ -293,6 +299,9 @@ object SettingsStore {
 
     /** The language being learnt, or nothing. */
     fun setLearn(v: String) = update { it.copy(learn = v) }
+
+    /** The other languages being learnt, in the reader's order. */
+    fun setAlsoLearn(v: List<String>) = update { it.copy(alsoLearn = v) }
 
     /** What they are learning now, and the few they have asked in before it. */
     fun setLearning(v: String) = update {

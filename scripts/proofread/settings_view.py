@@ -357,6 +357,43 @@ def main():
             failures.append(f"a replaced word in a language never translated opened no card: {replaced!r}")
         elif "Weg" in replaced:
             failures.append(f"a word in a language never translated was translated: {replaced!r}")
+        # Several languages learnt, one of them the default, which pages in theirs are replaced
+        # into: the first learnt is it, a star makes another one it, and taking the default
+        # off makes the next one it.
+        def learn(lang):
+            return ("document.querySelector('[data-does=learn-language]').click();"
+                    "await new Promise(r => setTimeout(r, 300));"
+                    f"document.querySelector('[data-sheet] [data-choice={lang}]').click();"
+                    "await new Promise(r => setTimeout(r, 300));")
+
+        def learnt():
+            return ("[...document.querySelectorAll('[data-row=language][data-learning]')]"
+                    ".map(r => r.dataset.lang + (r.querySelector('.main') ? '*' : '')).join(' ')")
+
+        steps = languages("(async () => {" + learn("it") + learn("fr") +
+                          "const two = " + learnt() + ";"
+                          "document.querySelector('[data-row=language][data-lang=fr] [data-does=make-default]').click();"
+                          "await new Promise(r => setTimeout(r, 300));"
+                          "const starred = " + learnt() + ";"
+                          "document.querySelector('[data-row=language][data-lang=fr] [data-does=remove]').click();"
+                          "await new Promise(r => setTimeout(r, 300));"
+                          "const left = " + learnt() + ";"
+                          "const adds = document.querySelector('[data-does=learn-language]').textContent.trim();"
+                          "document.querySelector('[data-row=language][data-lang=it] [data-does=remove]').click();"
+                          "await new Promise(r => setTimeout(r, 300));"
+                          "return {two, starred, left, adds, none: " + learnt() + "}; })()")
+        print(f"  learning Italian and French: {steps}")
+        expected = {"two": "it* fr", "starred": "fr* it", "left": "it*", "none": ""}
+        for step, rows in expected.items():
+            if (steps or {}).get(step) != rows:
+                failures.append(f"learning several languages, {step}: the rows read "
+                                f"{(steps or {}).get(step)!r}, not {rows!r}")
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                               "public", "interface", "de.json")) as f:
+            german_says = json.load(f)["says"]
+        if (steps or {}).get("adds") in (None, "", german_says["learn-language"]):
+            failures.append(f"with a language learnt the add row still says {(steps or {}).get('adds')!r}")
+
         gone = languages("(async () => {"
                          "document.querySelector('[data-row=language][data-lang=es] [data-does=remove]').click();"
                          "await new Promise(r => setTimeout(r, 300));"

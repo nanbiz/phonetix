@@ -9,7 +9,7 @@
   import { ACCENTS } from '@/data/accents';
   import { named } from '@/data/languages';
   import { ROWS, SAYS } from '@/data/wording';
-  import { accentFor, setAccent, type Settings } from '@/settings/shape';
+  import { accentFor, learned, setAccent, type Settings } from '@/settings/shape';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
   import Switch from '@/phone/parts/Switch.svelte';
@@ -37,7 +37,7 @@
   /** The languages with more than one accent to choose between. */
   const offering = Object.keys(ACCENTS).filter((lang) => (ACCENTS[lang] ?? []).length > 1);
   /** The reader's own languages, whose accents the Languages screen sets. */
-  let mine = $derived([settings.target, ...(settings.known ?? []), settings.learn]);
+  let mine = $derived([settings.target, ...(settings.known ?? []), ...learned(settings)]);
   let others = $derived(
     offering
       .filter((lang) => !mine.includes(lang))

@@ -253,7 +253,10 @@
     "mark-poetic": "dichterlijk",
     "mark-humorous": "schertsend",
     "mark-figuratively": "figuurlijk",
-    "mark-euphemistic": "eufemistisch"
+    "mark-euphemistic": "eufemistisch",
+    "learn-another": "Nog een taal leren",
+    "default-learning": "De taal waarin pagina's worden vervangen",
+    "make-default-learning": "Pagina's in deze taal vervangen"
   },
   "rows": {
     "on": {

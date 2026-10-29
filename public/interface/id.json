@@ -253,7 +253,10 @@
     "mark-poetic": "puitis",
     "mark-humorous": "jenaka",
     "mark-figuratively": "kiasan",
-    "mark-euphemistic": "eufemisme"
+    "mark-euphemistic": "eufemisme",
+    "learn-another": "Pelajari bahasa lain",
+    "default-learning": "Bahasa tujuan penggantian halaman",
+    "make-default-learning": "Ganti halaman ke bahasa ini"
   },
   "rows": {
     "on": {

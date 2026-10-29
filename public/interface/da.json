@@ -253,7 +253,10 @@
     "mark-poetic": "poetisk",
     "mark-humorous": "humoristisk",
     "mark-figuratively": "overført",
-    "mark-euphemistic": "eufemistisk"
+    "mark-euphemistic": "eufemistisk",
+    "learn-another": "Lær et sprog til",
+    "default-learning": "Det sprog, siderne erstattes med",
+    "make-default-learning": "Erstat sider med dette sprog"
   },
   "rows": {
     "on": {

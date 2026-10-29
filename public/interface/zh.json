@@ -253,7 +253,10 @@
     "mark-poetic": "诗语",
     "mark-humorous": "诙谐",
     "mark-figuratively": "比喻",
-    "mark-euphemistic": "委婉"
+    "mark-euphemistic": "委婉",
+    "learn-another": "再学一门语言",
+    "default-learning": "页面被替换成的语言",
+    "make-default-learning": "将页面替换为这种语言"
   },
   "rows": {
     "on": {

@@ -1,15 +1,15 @@
 <script lang="ts">
   // Every language the reader has, in one place: the ones they read, their own marked, and the
-  // one they are learning, each with the accent it is read in.
+  // ones they are learning, the default marked, each with the accent it is read in.
   //
   // Their own is what a word in any language they do not read is translated into; the others
-  // they read are left as they are and defined in their own words; the one they learn is what
-  // the pages in theirs are replaced into. One list each, added to and taken from here, so a
-  // language is never in two of them.
+  // they read are left as they are and defined in their own words; of those they learn, the
+  // default is what the pages in theirs are replaced into. One list each, added to and taken
+  // from here, so a language is never in two of them.
   import { ACCENTS } from '@/data/accents';
   import { LANGUAGES, named } from '@/data/languages';
   import { ROWS, SAYS } from '@/data/wording';
-  import { accentFor, setAccent, type Settings } from '@/settings/shape';
+  import { accentFor, learned, setAccent, type Settings } from '@/settings/shape';
   import Star from 'virtual:icons/lucide/star';
   import Remove from 'virtual:icons/lucide/x';
   import Plus from 'virtual:icons/lucide/plus';
@@ -24,10 +24,12 @@
 
   let { settings, change }: Props = $props();
 
+  /** The ones they learn, the default first. */
+  let learning = $derived(learned(settings));
   /** Their own first, then the others they read in the order they were added. */
   let mine = $derived(
     [settings.target, ...settings.known].filter(
-      (lang, at, all) => lang && lang !== settings.learn && all.indexOf(lang) === at
+      (lang, at, all) => lang && !learning.includes(lang) && all.indexOf(lang) === at
     )
   );
 
@@ -40,7 +42,7 @@
     .sort((a, b) => a.label.localeCompare(b.label));
   /** What can still be added: a language on neither list. */
   let addable = $derived(
-    everyLanguage.filter((it) => !mine.includes(it.value) && it.value !== settings.learn)
+    everyLanguage.filter((it) => !mine.includes(it.value) && !learning.includes(it.value))
   );
 
   function accentsOf(lang: string) {
@@ -68,13 +70,37 @@
     change('known', settings.known.filter((it) => it !== lang));
   }
 
+  /** Learned as well, the default where there is none yet. */
+  function learn(lang: string) {
+    if (!settings.learn) change('learn', lang);
+    else change('alsoLearn', [...learning.slice(1).filter((it) => it !== lang), lang]);
+  }
+
+  /** The one the pages are replaced into, the one it was staying among the others. */
+  function makeDefault(lang: string) {
+    change('alsoLearn', learning.filter((it) => it !== lang));
+    change('learn', lang);
+  }
+
+  /** No longer learned; the default gone, the next one is. */
+  function unlearn(lang: string) {
+    const rest = learning.filter((it) => it !== lang);
+    change('alsoLearn', rest.slice(1));
+    change('learn', rest[0] ?? '');
+  }
+
   /** Which list is open: '' none, 'add' or 'learn' a language to add, or a language's accents. */
   let choosing = $state('');
 </script>
 
-{#snippet language(lang: string, controls: 'main' | 'mine' | 'learn')}
+{#snippet language(lang: string, controls: 'main' | 'mine' | 'learn-main' | 'learn')}
   {@const accent = accentName(lang)}
-  <div class="item language" data-row="language" data-lang={lang}>
+  <div
+    class="item language"
+    data-row="language"
+    data-lang={lang}
+    data-learning={controls === 'learn' || controls === 'learn-main' ? '' : undefined}
+  >
     {#if accent}
       <button class="language-open" onclick={() => (choosing = lang)}>
         <span class="item-text">
@@ -88,17 +114,19 @@
         <span class="item-text"><span class="item-name" data-name>{named(lang)}</span></span>
       </span>
     {/if}
-    {#if controls === 'main'}
-      <span class="icon-button main" role="img" aria-label={SAYS['main-language']}><Star /></span>
-    {:else if controls === 'mine'}
-      <button
-        class="icon-button"
-        data-does="make-main"
-        aria-label={SAYS['make-main']}
-        onclick={() => makeMain(lang)}><Star /></button
+    {#if controls === 'main' || controls === 'learn-main'}
+      <span
+        class="icon-button main"
+        role="img"
+        aria-label={SAYS[controls === 'main' ? 'main-language' : 'default-learning']}><Star /></span
       >
     {:else}
-      <span class="icon-room"></span>
+      <button
+        class="icon-button"
+        data-does={controls === 'mine' ? 'make-main' : 'make-default'}
+        aria-label={SAYS[controls === 'mine' ? 'make-main' : 'make-default-learning']}
+        onclick={() => (controls === 'mine' ? makeMain(lang) : makeDefault(lang))}><Star /></button
+      >
     {/if}
     {#if controls === 'main'}
       <span class="icon-room"></span>
@@ -107,7 +135,7 @@
         class="icon-button"
         data-does="remove"
         aria-label={SAYS['remove']}
-        onclick={() => (controls === 'learn' ? change('learn', '') : remove(lang))}><Remove /></button
+        onclick={() => (controls === 'mine' ? remove(lang) : unlearn(lang))}><Remove /></button
       >
     {/if}
   </div>
@@ -123,13 +151,12 @@
 </Group>
 
 <Group name={ROWS.learn.name}>
-  {#if settings.learn}
-    {@render language(settings.learn, 'learn')}
-  {:else}
-    <button class="item adding" data-does="learn-language" onclick={() => (choosing = 'learn')}>
-      <Plus /><span class="item-name">{SAYS['learn-language']}</span>
-    </button>
-  {/if}
+  {#each learning as lang, at (lang)}
+    {@render language(lang, at === 0 ? 'learn-main' : 'learn')}
+  {/each}
+  <button class="item adding" data-does="learn-language" onclick={() => (choosing = 'learn')}>
+    <Plus /><span class="item-name">{SAYS[learning.length > 0 ? 'learn-another' : 'learn-language']}</span>
+  </button>
 </Group>
 
 {#if choosing === 'add'}
@@ -142,10 +169,10 @@
   />
 {:else if choosing === 'learn'}
   <ListSheet
-    title={SAYS['learn-language']}
+    title={SAYS[learning.length > 0 ? 'learn-another' : 'learn-language']}
     options={addable}
     chosen=""
-    change={(lang) => change('learn', lang)}
+    change={learn}
     close={() => (choosing = '')}
   />
 {:else if choosing}

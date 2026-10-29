@@ -39,6 +39,13 @@ export interface Settings {
    */
   learn: string;
   /**
+   * The other languages the reader is learning, after [learn], which is the one of them pages
+   * in their own languages are replaced into. A word in any of them is read like a word in any
+   * language they do not read, into theirs; that they learn it decides which dictionaries
+   * they keep and which accents they choose.
+   */
+  alsoLearn: string[];
+  /**
    * The language last asked in in the translator, which is what a word they are looking for
    * comes back in.
    *
@@ -138,6 +145,7 @@ export const DEFAULTS: Settings = {
   source: '',
   known: [],
   learn: '',
+  alsoLearn: [],
   learning: '',
   into: '',
   recent: [],
@@ -174,6 +182,13 @@ export function translates(settings: Settings, lang: string): boolean {
 /** Whether the reader reads this language as it is: their own, or one of the others they read. */
 export function reads(settings: Settings, lang: string): boolean {
   return Boolean(lang) && (lang === settings.target || (settings.known ?? []).includes(lang));
+}
+
+/** Every language the reader is learning, the one pages are replaced into first. */
+export function learned(settings: Settings): string[] {
+  return [settings.learn, ...(settings.alsoLearn ?? [])].filter(
+    (lang, at, all) => lang && all.indexOf(lang) === at
+  );
 }
 
 /**

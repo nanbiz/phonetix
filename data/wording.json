@@ -535,6 +535,9 @@
     "mark-poetic": "poetic",
     "mark-humorous": "humorous",
     "mark-figuratively": "figurative",
-    "mark-euphemistic": "euphemistic"
+    "mark-euphemistic": "euphemistic",
+    "learn-another": "Learn another language",
+    "default-learning": "The one pages are replaced into",
+    "make-default-learning": "Replace pages into this one"
   }
 }

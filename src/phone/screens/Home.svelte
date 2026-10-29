@@ -1,7 +1,7 @@
 <script lang="ts">
   // The first screen: whether the button is out, how its card writes a sound, the languages
   // the reader knows, where the button waits, and the way to everything set once and left.
-  import { named } from '@/data/languages';
+  import { languagesSaid } from '@/ui/settings/languages';
   import { THEME } from '@/ui/theme';
   import { DARK_CHOICES, DETAIL_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
@@ -42,15 +42,7 @@
   }: Props = $props();
 
   let ready = $derived(permissions.reading && permissions.overlay);
-  /** The languages the reader reads, their own first, and the one they learn. */
-  let languageNames = $derived.by(() => {
-    const reading = [settings.target, ...settings.known]
-      .filter((lang, at, all) => lang && lang !== settings.learn && all.indexOf(lang) === at)
-      .map(named)
-      .join(' · ');
-    const learning = settings.learn ? SAYS['learning-it'].replace('%s', named(settings.learn)) : '';
-    return [reading, learning].filter(Boolean).join(', ');
-  });
+  let languageNames = $derived(languagesSaid(settings));
 
   /** The reader's screen, so the board is drawn its shape. */
   const across = globalThis.screen?.width || 9;

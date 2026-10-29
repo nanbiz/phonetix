@@ -253,7 +253,10 @@
     "mark-poetic": "runollinen",
     "mark-humorous": "leikillinen",
     "mark-figuratively": "kuvaannollinen",
-    "mark-euphemistic": "eufemistinen"
+    "mark-euphemistic": "eufemistinen",
+    "learn-another": "Opi toista kieltä",
+    "default-learning": "Kieli, jolle sivut korvataan",
+    "make-default-learning": "Korvaa sivut tällä kielellä"
   },
   "rows": {
     "on": {

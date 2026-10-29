@@ -253,7 +253,10 @@
     "mark-poetic": "شعري",
     "mark-humorous": "فكاهي",
     "mark-figuratively": "مجازي",
-    "mark-euphemistic": "تلطيفي"
+    "mark-euphemistic": "تلطيفي",
+    "learn-another": "تعلّم لغة أخرى",
+    "default-learning": "اللغة التي تُستبدل إليها الصفحات",
+    "make-default-learning": "استبدل الصفحات إلى هذه اللغة"
   },
   "rows": {
     "on": {

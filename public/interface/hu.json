@@ -253,7 +253,10 @@
     "mark-poetic": "költői",
     "mark-humorous": "tréfás",
     "mark-figuratively": "átvitt",
-    "mark-euphemistic": "szépítő"
+    "mark-euphemistic": "szépítő",
+    "learn-another": "Újabb nyelv tanulása",
+    "default-learning": "A nyelv, amelyre az oldalakat cseréli",
+    "make-default-learning": "Oldalak cseréje erre a nyelvre"
   },
   "rows": {
     "on": {

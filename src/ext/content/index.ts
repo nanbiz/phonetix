@@ -9,7 +9,7 @@ import { sendMessage } from '@/host/messages';
 import { wordsOf, type Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import {
-  accentFor, allowed, current, DEFAULTS, replacedInto, set, setAccent, translates, watch,
+  accentFor, allowed, current, DEFAULTS, learned, replacedInto, set, setAccent, translates, watch,
   type Settings,
 } from '@/settings';
 import {
@@ -190,7 +190,7 @@ async function readEachRun(runs: ScannedRun[]): Promise<void> {
     const read = await sendMessage('readRuns', { texts }).catch(() => null);
     read?.forEach((said, at) => {
       if (!said.language) return;
-      if (said.language === settings.learn) learnedHere = true;
+      if (learned(settings).includes(said.language)) learnedHere = said.language;
       for (const run of readers[at]) {
         run.lang = said.language;
         readAs.set(run.node, said.language);
@@ -200,8 +200,9 @@ async function readEachRun(runs: ScannedRun[]): Promise<void> {
   await headwords(runs);
 }
 
-/** Whether a line of this page has turned out to be in the language the reader is learning. */
-let learnedHere = false;
+/** Which of the languages the reader is learning a line of this page has turned out to be in,
+ *  or nothing. */
+let learnedHere = '';
 
 /**
  * A few words standing on their own, in the language the reader is learning or in the page's.
@@ -214,9 +215,9 @@ let learnedHere = false;
  * learns, a run of a few words is in whichever of the two languages says its words more.
  */
 async function headwords(runs: ScannedRun[]): Promise<void> {
-  const other = settings.learn;
+  const other = learnedHere;
   const page = pageLanguage();
-  if (!learnedHere || !other || other === page) return;
+  if (!other || other === page) return;
   const short = runs.filter((run) => {
     const count = wordsOf(run.text).length;
     return count >= 1 && count <= SHORT_RUN && (!run.lang || run.lang === page || run.lang === other);
@@ -1822,6 +1823,7 @@ export async function session(): Promise<void> {
       was.density !== fresh.density ||
       was.target !== fresh.target ||
       was.learn !== fresh.learn ||
+      (was.alsoLearn ?? []).join() !== (fresh.alsoLearn ?? []).join() ||
       was.known.join() !== fresh.known.join() ||
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||

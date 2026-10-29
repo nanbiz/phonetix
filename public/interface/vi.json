@@ -253,7 +253,10 @@
     "mark-poetic": "thơ ca",
     "mark-humorous": "hài hước",
     "mark-figuratively": "nghĩa bóng",
-    "mark-euphemistic": "nói tránh"
+    "mark-euphemistic": "nói tránh",
+    "learn-another": "Học thêm một ngôn ngữ",
+    "default-learning": "Ngôn ngữ mà trang được thay thế sang",
+    "make-default-learning": "Thay trang bằng ngôn ngữ này"
   },
   "rows": {
     "on": {

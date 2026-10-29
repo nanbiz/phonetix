@@ -253,7 +253,10 @@
     "mark-poetic": "ภาษากวี",
     "mark-humorous": "ขบขัน",
     "mark-figuratively": "เชิงเปรียบเทียบ",
-    "mark-euphemistic": "สำนวนเลี่ยง"
+    "mark-euphemistic": "สำนวนเลี่ยง",
+    "learn-another": "เรียนอีกภาษา",
+    "default-learning": "ภาษาที่ใช้แทนที่หน้าเว็บ",
+    "make-default-learning": "แทนที่หน้าเว็บด้วยภาษานี้"
   },
   "rows": {
     "on": {

@@ -253,7 +253,10 @@
     "mark-poetic": "פיוטי",
     "mark-humorous": "הומוריסטי",
     "mark-figuratively": "מושאל",
-    "mark-euphemistic": "לשון נקייה"
+    "mark-euphemistic": "לשון נקייה",
+    "learn-another": "ללמוד שפה נוספת",
+    "default-learning": "השפה שאליה מוחלפים הדפים",
+    "make-default-learning": "להחליף דפים לשפה הזו"
   },
   "rows": {
     "on": {

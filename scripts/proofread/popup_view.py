@@ -263,8 +263,15 @@ def real_popup(cdp, extid):
             f"the toolbar popup runs {size['tall'] - size['height']}px past its window")
     # And every screen behind it, each as it opens in the same window: one that wraps or runs
     # past the window is as broken as the first.
+    # The languages with two learnt, the second not the default, which is the most the screen
+    # draws in its learning group.
+    # The popup reads them as it opens, so it is opened again after.
+    evaluate(cdp, session, "chrome.storage.local.set({learn: 'es', alsoLearn: ['it']})")
+    time.sleep(0.5)
+    evaluate(cdp, session, "location.reload()")
+    time.sleep(2.5)
     for row, name in (("pronunciation", "pronunciation"), ("theme", "appearance"),
-                      ("cards] [data-does=open", "look up")):
+                      ("cards] [data-does=open", "look up"), ("languages", "languages")):
         evaluate(cdp, session, f"document.querySelector('[data-row={row}]').click()")
         time.sleep(1)
         failures += wrapped(cdp, session, f"the {name} screen")

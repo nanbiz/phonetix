@@ -253,7 +253,10 @@
     "mark-poetic": "काव्यात्मक",
     "mark-humorous": "विनोदपूर्ण",
     "mark-figuratively": "लाक्षणिक",
-    "mark-euphemistic": "शिष्टोक्ति"
+    "mark-euphemistic": "शिष्टोक्ति",
+    "learn-another": "एक और भाषा सीखें",
+    "default-learning": "वह भाषा जिसमें पेज बदले जाते हैं",
+    "make-default-learning": "पेज इसी भाषा में बदलें"
   },
   "rows": {
     "on": {
