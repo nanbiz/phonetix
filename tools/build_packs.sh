@@ -123,5 +123,9 @@ for lang in cs de el es fr id it ja ko ku ms nl pl pt ru th tr vi zh; do
   "$build" define "$lang" "$file" "$out" || echo "$lang edition: no packs" >&2
 done
 
+# uv's own Python carries no certificates; the system's bundle, where there is one.
+if [[ -z "${SSL_CERT_FILE:-}" && -s /etc/ssl/certs/ca-certificates.crt ]]; then
+  export SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+fi
 uv run python tools/models_manifest.py "$out/models.json"
 cp tools/ATTRIBUTION.md "$out/ATTRIBUTION.md"
