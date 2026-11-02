@@ -15,14 +15,21 @@ import urllib.request
 
 from android_harness import SERIAL, adb, shell
 
-PORT = 9333
+
+
+def free_port():
+    """A port nothing on this machine listens on. A fixed one was already taken by another
+    project's browser, and the checks then read that browser's blank page as the app's."""
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
 
 
 class View:
     """One open page inside the app, asked and answered over DevTools."""
 
-    def __init__(self, port=PORT):
-        self.port = port
+    def __init__(self, port=None):
+        self.port = port or free_port()
         self.ws = None
         self.next = 1
 
