@@ -14,7 +14,7 @@
 # environment or in ~/.config/phonetix/amo.env; without them the xpi is left unsigned and the release says which artifacts it
 # has. Everything else needs nothing but this machine.
 #
-# The release notes are yours: this creates the release with GitHub's own generated notes and
+# This creates the release with GitHub's own generated notes and
 # prints the URL to edit them.
 set -euo pipefail
 

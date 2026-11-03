@@ -5,7 +5,8 @@ Fields in the order the developer dashboard asks for them. The package is the re
 
 ## Store listing
 
-- Name and summary come from the manifest.
+- Name and summary come from the manifest: the name from wxt.config.ts, the summary (at most 132
+  characters) from package.json's description.
 - Category: Education
 - Language: English
 - Store icon: public/icon/128.png

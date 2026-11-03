@@ -1,6 +1,6 @@
 {
   "name": "phonetix",
-  "description": "Browser extension that shows IPA pronunciations on web pages",
+  "description": "Hear how the words on any page are said, see what they mean in your language, and learn a language as you read.",
   "private": true,
   "version": "0.55.1",
   "type": "module",
