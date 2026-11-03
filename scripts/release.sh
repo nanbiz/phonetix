@@ -133,5 +133,5 @@ git -c credential.helper='!f(){ echo username=nanbiz; echo password=$GH_TOKEN; }
 
 gh release create "$tag" --title "$tag" --generate-notes "${artifacts[@]}"
 echo
-echo "the release is up; its notes are yours to write:"
+echo "the release is up; its notes are edited at:"
 gh release view "$tag" --json url --jq .url
