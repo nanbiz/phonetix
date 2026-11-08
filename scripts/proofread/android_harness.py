@@ -506,7 +506,9 @@ def card_while_held(dev, word, dwell=6.0, newest=False):
             # Each text as "[text@bounds]", ended by its bounds rather than by the first
             # bracket: a narrow transcription is itself written between brackets.
             found = [t.replace("·", " ") for t in re.findall(r"\[(.*?)@[^@\[\]]*\]", card)]
-            if word in found:
+            # The card names the word it is about, or the expression it is part of: over
+            # "gusta" after "Me" the card is about "Me gusta".
+            if word in found or any(word in text.split() for text in found[:1]):
                 return found
         return []
 

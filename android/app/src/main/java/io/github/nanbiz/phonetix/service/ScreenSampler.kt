@@ -187,6 +187,41 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
      * on any line is the surface rather than the letters, since letters are the minority of
      * the pixels they sit in.
      */
+    /**
+     * The lines of text the screen shows inside [rect], in the coordinates [rect] is in, or
+     * nothing with no frame recent enough to say: text that changes several times a second,
+     * a caption, is not where an older frame drew it.
+     *
+     * @param gap the widest space inside one line, in the same coordinates.
+     */
+    fun inkLines(rect: RectF, gap: Float, maxAgeMs: Long): List<RectF>? {
+        val bmp = frame ?: return null
+        if (SystemClock.uptimeMillis() - takenAt > maxAgeMs) return null
+        val inFrame = toFrame(bmp, rect)
+        val left = inFrame.left.toInt().coerceIn(0, bmp.width - 1)
+        val top = inFrame.top.toInt().coerceIn(0, bmp.height - 1)
+        val right = inFrame.right.toInt().coerceIn(left + 1, bmp.width)
+        val bottom = inFrame.bottom.toInt().coerceIn(top + 1, bmp.height)
+        val w = right - left
+        val h = bottom - top
+        if (w < 8 || h < 6) return null
+        val pixels = IntArray(w * h)
+        bmp.getPixels(pixels, 0, w, left, top, w, h)
+        val lum = IntArray(w * h) {
+            val c = pixels[it]
+            (Color.red(c) * 299 + Color.green(c) * 587 + Color.blue(c) * 114) / 1000
+        }
+        val scale = if (inFrame.width() > 0f) rect.width() / inFrame.width() else 1f
+        return io.github.nanbiz.phonetix.core.InkRows
+            .bands(lum, w, h, (gap / scale).toInt().coerceAtLeast(4))
+            .map {
+                RectF(
+                    (left + it.left) * scale, (top + it.top) * scale,
+                    (left + it.right + 1) * scale, (top + it.bottom + 1) * scale,
+                )
+            }
+    }
+
     fun surfaceUnder(rect: RectF): WordColors? {
         val bmp = frame ?: return null
         if (SystemClock.uptimeMillis() - takenAt > MAX_AGE_MS) return null

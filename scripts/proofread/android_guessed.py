@@ -22,6 +22,10 @@ would be handed back instead of guessed.
 Measured on the build this was written for: 149 of 160 words within half a word of where they
 really are, median 34px sideways and 5px down. Before it, with each block's own box deciding
 how tall its rows were, 87 of 160 and 281px sideways - whole paragraphs on their first row.
+With the rows read off the screen's pixels where a frame of it is fresh (core/InkRows.kt):
+155 of 160, median 6px sideways. The page ends in a caption as a video player draws one, two
+short rows centred on dark strips over a light picture, which the box alone put on one row
+from the left edge.
 """
 import os
 import statistics

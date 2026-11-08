@@ -326,7 +326,7 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_lookUp<'a>(
         defines: core.packs.get(&format!("def-{source}")),
         in_reader: core.packs.get(&format!("{source}-in-{target}")),
     };
-    let answer = lexcore::resolve::read_in_context(
+    let answer = lexcore::resolve::card_in_context(
         &spelling,
         if before.is_empty() {
             None

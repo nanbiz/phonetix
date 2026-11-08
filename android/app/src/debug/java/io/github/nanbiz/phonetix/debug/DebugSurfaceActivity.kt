@@ -961,6 +961,25 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 val paragraph = "$n " + TestWords.DISTINCT.drop(from).take(8).joinToString(" ")
                 addView(line(paragraph, Color.WHITE, BACKGROUND))
             }
+            // And a caption as a video player draws one: a box the width of the screen with two
+            // short rows centred in it, each on a dark strip, over a light picture. Its box says
+            // nothing about where its words are, which is where a guess from the box alone put
+            // them on one long row from the left edge.
+            val words = TestWords.DISTINCT.drop(32 % TestWords.DISTINCT.size).take(8).joinToString(" ")
+            addView(line(words, Color.WHITE, Color.rgb(0xC8, 0xD4, 0xE6)).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setPadding(pad() * 3, pad(), pad() * 3, pad())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+                text = android.text.SpannableString(words).apply {
+                    setSpan(android.text.style.BackgroundColorSpan(Color.rgb(0x10, 0x10, 0x10)), 0, words.length, 0)
+                }
+                // Narrow enough that the caption wraps onto a second row.
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                )
+                maxWidth = Int.MAX_VALUE
+            })
         } else if (mode == "essay") {
             // Paragraphs that wrap, of words that appear nowhere else on the page.
             //
@@ -995,6 +1014,25 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             })
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "expression") {
+            // A pronoun and a verb that takes it as its subject, which a card reads as one.
+            for (text in listOf(
+                "Me gusta mucho soñar despierto",
+                "Nos encantan los perros del parque",
+                "El perro corre por el camino",
+                "El banco del parque esta libre",
+                "La casa es grande y bonita",
+            )) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "quoted") {
+            // English lines with a Spanish question quoted in one: a language on none of the
+            // reader's lists, met.
+            for (text in listOf(
+                "A question you will hear every day is",
+                "¿Cómo salió todo? which asks how it went",
+                "The answer depends on the day and the person",
+                "Most people answer it with a short story",
+                "and the story is usually about the weather",
+            )) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "spanish") {
             // A page in a language the reader is reading out of, for the thing the whole
             // merge was for: what its words mean, in the language they are reading into.

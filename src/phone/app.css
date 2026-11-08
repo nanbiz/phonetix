@@ -619,9 +619,15 @@ button.language-open:active {
   align-items: center;
 }
 
-.met-answers .btn svg {
-  width: 1em;
-  height: 1em;
+.met-answers {
+  display: flex;
+  gap: 6px;
+}
+
+.met-answers .button {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
 }
 
 .met-answers .icon-button {

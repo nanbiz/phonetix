@@ -217,6 +217,68 @@ object Placement {
     }
 
     /**
+     * Where the characters of a block probably are, given the lines the screen shows it in.
+     *
+     * The lines come from the pixels ([InkRows]), so where each starts and ends and how many
+     * there are is known; what is not is which word each line breaks after. The text is
+     * shared out in the proportion of the lines' widths, broken at the space nearest to where
+     * each line's share runs out, and each line's characters are spread across it by their
+     * widths. A line breaking one word away from where the app broke it moves that word to
+     * the next line and nothing else.
+     */
+    fun inLines(text: CharSequence, lines: List<RectF>): Array<RectF?> {
+        val n = text.length
+        val out = arrayOfNulls<RectF>(n)
+        if (n == 0 || lines.isEmpty()) return out
+        val widths = FloatArray(n) { advance(text[it]) }
+        val total = widths.sum()
+        val room = lines.sumOf { it.width().toDouble() }.toFloat()
+        if (total <= 0f || room <= 0f) return out
+        // Where each line's share of the text ends, in units of the widths above.
+        var start = 0
+        var spent = 0f
+        var allowed = 0f
+        for ((at, line) in lines.withIndex()) {
+            allowed += total * line.width() / room
+            var end = n
+            if (at < lines.size - 1) {
+                // The space whose position is nearest to where this line's share runs out.
+                var x = spent
+                var best = -1
+                var bestOff = Float.MAX_VALUE
+                for (i in start until n) {
+                    if (text[i].isWhitespace() && i > start) {
+                        val off = kotlin.math.abs(x - allowed)
+                        if (off < bestOff) { bestOff = off; best = i }
+                        if (x > allowed) break
+                    }
+                    x += widths[i]
+                }
+                end = if (best > 0) best else n
+            }
+            // The line's own characters, without the spaces it breaks at, fill it.
+            var from = start
+            while (from < end && text[from].isWhitespace()) from++
+            var to = end
+            while (to > from && text[to - 1].isWhitespace()) to--
+            var wide = 0f
+            for (i in from until to) wide += widths[i]
+            if (wide > 0f) {
+                val unit = line.width() / wide
+                var x = line.left
+                for (i in from until to) {
+                    out[i] = RectF(x, line.top, x + widths[i] * unit, line.bottom)
+                    x += widths[i] * unit
+                }
+            }
+            for (i in start until end) spent += widths[i]
+            start = end
+            if (start >= n) break
+        }
+        return out
+    }
+
+    /**
      * Places already-chosen words, given the per-character screen rectangles the
      * accessibility API returned. A word's box is the union of its characters, so it
      * lands exactly on the word however the app laid the line out; characters scrolled

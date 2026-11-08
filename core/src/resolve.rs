@@ -2260,6 +2260,25 @@ pub fn phrase_around<D: AsRef<[u8]>>(
 /// The most words a phrase the dictionary holds is looked for as.
 const PHRASE_WORDS: usize = 5;
 
+/// What a card says about a word, knowing the word before it: the word read in context, or
+/// where the word before it is a pronoun that makes one expression with it ("Me" before
+/// "gusta"), that expression. The card's alone: the page draws over the word itself, and an
+/// expression's sound and meaning drawn over one of its words would be the other word's too.
+pub fn card_in_context<D: AsRef<[u8]>>(
+    spelling: &str,
+    before: Option<&str>,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Answer {
+    if let Some(before) = before.filter(|it| !it.is_empty() && !spelling.contains(' ')) {
+        if let Some(answer) = crate::expression::read(&format!("{before} {spelling}"), source, target, open) {
+            return answer;
+        }
+    }
+    read_in_context(spelling, before, source, target, open)
+}
+
 /// Look one word up, knowing the word before it.
 ///
 /// A spelling that is several words is decided by what surrounds it. The neighbour is the

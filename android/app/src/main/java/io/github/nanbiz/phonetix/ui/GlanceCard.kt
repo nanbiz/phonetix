@@ -170,6 +170,27 @@ fun GlanceCard(
                         modifier = Modifier.reported(defined, report),
                     )
                 }
+                // An expression read as one: each of its words with what it is on its own,
+                // which is how the pattern is learnt.
+                if (answer.parts.size > 1) {
+                    val line = answer.parts.joinToString(" · ") { (word, means) -> "$word $means" }
+                    Text(
+                        text = androidx.compose.ui.text.buildAnnotatedString {
+                            answer.parts.forEachIndexed { at, (word, means) ->
+                                if (at > 0) append(" · ")
+                                pushStyle(androidx.compose.ui.text.SpanStyle(color = Color(palette.ink), fontWeight = FontWeight.Medium))
+                                append(word)
+                                pop()
+                                append(" $means")
+                            }
+                        },
+                        color = Color(palette.inkMuted),
+                        fontSize = Tokens.Scale.fontSizeSmall.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.reported(line, report),
+                    )
+                }
                 // Which form of which word it is, where it is a form - "preterite · indicative ·
                 // 3rd singular of andar" - and otherwise the kind of word and what else it can be.
                 val form = paradigm?.named()?.takeIf { it.isNotEmpty() && grammar }

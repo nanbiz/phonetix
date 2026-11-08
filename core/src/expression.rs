@@ -90,7 +90,8 @@ pub fn read<D: AsRef<[u8]>>(spelling: &str, source: &Lang, target: &Lang, open: 
     let (person, number, to_whom) = clitic(&source.0, first)?;
     let lemma = lemma_of(pack, second)?;
     let (english, literal) = verb(&source.0, &lemma)?;
-    let verb_answer = crate::resolve::read_in_context(second, Some(first), source, target, open);
+    // The verb on its own: asked with the pronoun before it, it would be this expression again.
+    let verb_answer = crate::resolve::read_in_context(second, None, source, target, open);
     let form = verb_answer.paradigm.clone()?;
     // Who does it is the pronoun; when, and how, is the verb's.
     let mut place: crate::paradigm::Place = form

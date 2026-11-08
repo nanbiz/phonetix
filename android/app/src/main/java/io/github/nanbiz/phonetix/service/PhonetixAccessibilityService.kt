@@ -2212,15 +2212,25 @@ class PhonetixAccessibilityService : AccessibilityService() {
             guessedRowTall = longest?.let { (line, rect) ->
                 Placement.rowTall(line.length, RectF(rect))
             } ?: 0f
+            // Where the screen shows these blocks' text is read off a frame of it, kept fresh
+            // while there are blocks to guess at; a block it shows no lines in is laid out
+            // from its box alone.
+            if (::sampler.isInitialized) sampler.refreshIfStale()
             for ((line, rect) in toGuess) {
-                val guessed = Placement.evenly(
-                    line.text.substring(
-                        line.from,
-                        (line.from + line.length).coerceAtMost(line.text.length),
-                    ),
-                    RectF(rect),
-                    guessedRowTall,
+                val text = line.text.substring(
+                    line.from,
+                    (line.from + line.length).coerceAtMost(line.text.length),
                 )
+                val shown = if (::sampler.isInitialized) {
+                    sampler.inkLines(RectF(rect), guessedRowTall.coerceAtLeast(12f), INK_FRAME_MS)
+                } else {
+                    null
+                }
+                val guessed = if (!shown.isNullOrEmpty()) {
+                    Placement.inLines(text, shown)
+                } else {
+                    Placement.evenly(text, RectF(rect), guessedRowTall)
+                }
                 if (guessed.isEmpty()) continue
                 val from = boxes.size
                 Placement.boxes(line.picks, guessed, line.from, boxes, readingSource, line.text)
@@ -2920,6 +2930,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         // own events will ask for, because scheduling a read on every window change starves
         // the one that matters.
         val front = runCatching { rootInActiveWindow?.packageName?.toString() }.getOrNull()
+        // The app in front is where a language the reader keeps meeting is counted as met.
+        if (front != null && front != packageName && ::tooltip.isInitialized) tooltip.screen = front
         // Our own screen counts as another app here, though it is never read.
         //
         // Everywhere else this service asks whether an app is one to transcribe, and ours is
@@ -4175,6 +4187,10 @@ class PhonetixAccessibilityService : AccessibilityService() {
         @Volatile
         @JvmStatic
         var PROBE_TREE = false
+
+        /** How old a frame of the screen can be and still say where a guessed block's lines
+         *  are: a caption is replaced every second or two. */
+        const val INK_FRAME_MS = 1200L
 
         /** The two names this one request goes by. The platform defines the first; Chromium,
          *  and so every page in every browser, answers only to the second. */

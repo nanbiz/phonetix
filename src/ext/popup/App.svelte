@@ -241,7 +241,7 @@
 
     <!-- A language the reader keeps meeting and has on none of their lists, offered above the
          lists it would go on. Nothing at all until there is one. -->
-    <MetOffers {settings} {change} />
+    <MetOffers {settings} {change} most={1} />
 
     <!-- The languages the reader has: what the card and the replaced words both follow, so
          above both. What they kept to learn is under them, once there is something kept. -->

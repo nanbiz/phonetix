@@ -64,6 +64,9 @@ data class Answer(
     /** Exactly what the core wrote, for a surface that reads this shape itself: the settings
      *  screen is a web view drawing the same card the extension draws, off the same JSON. */
     val json: String = "",
+    /** The words of an expression read as one, each with what it is on its own: "me gusta" is
+     *  "me", to me, and "gusta", it pleases. Empty for a single word. */
+    val parts: List<kotlin.Pair<String, String>> = emptyList(),
 ) {
     /**
      * Which form of its lemma a word is: the grammatical values of its place in the lemma's
@@ -267,6 +270,12 @@ data class Answer(
                 source = o.optString("source"),
                 target = o.optString("target"),
                 json = json,
+                parts = (o.optJSONArray("parts") ?: JSONArray()).let { array ->
+                    (0 until array.length()).mapNotNull { at ->
+                        val part = array.optJSONObject(at) ?: return@mapNotNull null
+                        part.optString("word") to part.optString("means")
+                    }
+                },
             )
         }
     }

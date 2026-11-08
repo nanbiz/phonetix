@@ -102,7 +102,25 @@ data class Settings(
     /** A description in the reader's language under every word, not only under those their
      *  language has no word for or says the same way. */
     val describeAll: Boolean = false,
+    /** Languages on none of the reader's lists that they keep meeting, each with the screens
+     *  they met it on (newest last): the browser's "met", one rule for both. */
+    val met: Map<String, List<String>> = emptyMap(),
+    /** Languages the reader said not now to, never offered again. */
+    val passed: List<String> = emptyList(),
+    /** What the reader kept to learn, as the JSON list both surfaces read and write: text,
+     *  lang, says, ipa, line, where, at. */
+    val kept: String = "[]",
 ) {
+    /** The languages to offer now, the one met most first: met on [MET_ENOUGH] screens, on
+     *  none of the reader's lists, not passed over. As the browser's offered(). */
+    fun offered(): List<Pair<String, Int>> = met
+        .filter { (lang, screens) ->
+            screens.size >= MET_ENOUGH && lang !in passed && !reads(lang) &&
+                lang != learn && lang !in alsoLearn
+        }
+        .map { (lang, screens) -> lang to screens.size }
+        .sortedByDescending { it.second }
+
     /** Which accent this language is read in: the reader's choice, or the language's default,
      *  since a reading in no accent in particular is a mix of them. */
     fun accentFor(lang: String): String =
@@ -154,6 +172,9 @@ data class Settings(
  * process, so a single in-memory flow keeps them in step; SharedPreferences is only the
  * durable copy, reloaded when the service starts cold without the activity.
  */
+/** On how many screens a language has to be met before it is offered, as the browser's MET_ENOUGH. */
+const val MET_ENOUGH = 3
+
 object SettingsStore {
     private const val FILE = "phonetix.settings"
 
@@ -185,6 +206,9 @@ object SettingsStore {
     private const val K_GRAMMAR = "show_grammar"
     private const val K_OTHERS = "show_others"
     private const val K_DESCRIBE = "describe_all"
+    private const val K_MET = "met"
+    private const val K_PASSED = "passed"
+    private const val K_KEPT = "kept"
 
     private var prefs: android.content.SharedPreferences? = null
     private val _state = MutableStateFlow(Settings())
@@ -234,6 +258,15 @@ object SettingsStore {
             showGrammar = p.getBoolean(K_GRAMMAR, true),
             showOthers = p.getBoolean(K_OTHERS, true),
             describeAll = p.getBoolean(K_DESCRIBE, false),
+            met = runCatching {
+                val said = org.json.JSONObject(p.getString(K_MET, "{}") ?: "{}")
+                said.keys().asSequence().associateWith { lang ->
+                    val screens = said.getJSONArray(lang)
+                    (0 until screens.length()).map { screens.getString(it) }
+                }
+            }.getOrDefault(emptyMap()),
+            passed = (p.getString(K_PASSED, "") ?: "").split(',').filter { it.isNotBlank() },
+            kept = p.getString(K_KEPT, "[]") ?: "[]",
         )
         Interface.follow(context.applicationContext, _state.value.target)
     }
@@ -269,6 +302,9 @@ object SettingsStore {
             ?.putBoolean(K_GRAMMAR, next.showGrammar)
             ?.putBoolean(K_OTHERS, next.showOthers)
             ?.putBoolean(K_DESCRIBE, next.describeAll)
+            ?.putString(K_MET, org.json.JSONObject(next.met.mapValues { org.json.JSONArray(it.value) } as Map<*, *>).toString())
+            ?.putString(K_PASSED, next.passed.joinToString(","))
+            ?.putString(K_KEPT, next.kept)
             ?.apply()
     }
 
@@ -281,6 +317,15 @@ object SettingsStore {
     fun setShowGrammar(v: Boolean) = update { it.copy(showGrammar = v) }
     fun setShowOthers(v: Boolean) = update { it.copy(showOthers = v) }
     fun setDescribeAll(v: Boolean) = update { it.copy(describeAll = v) }
+    fun setMet(v: Map<String, List<String>>) = update { it.copy(met = v) }
+    fun setPassed(v: List<String>) = update { it.copy(passed = v) }
+    fun setKept(v: String) = update { it.copy(kept = v) }
+
+    /** Count a screen as one [lang] was met on, a few dozen kept at most. */
+    fun meet(lang: String, screen: String) = update {
+        val screens = it.met[lang].orEmpty()
+        if (screen in screens) it else it.copy(met = it.met + (lang to (screens + screen).takeLast(40)))
+    }
 
     /** The reader's own language, which everything foreign is translated into. */
     fun setTarget(v: String) = update { it.copy(target = v) }

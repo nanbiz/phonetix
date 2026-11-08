@@ -24,6 +24,8 @@ import io.github.nanbiz.phonetix.core.Answer
 import io.github.nanbiz.phonetix.ui.wiktionary
 import io.github.nanbiz.phonetix.core.Language
 import io.github.nanbiz.phonetix.core.Packs
+import io.github.nanbiz.phonetix.core.Eld
+import io.github.nanbiz.phonetix.core.Languages
 import io.github.nanbiz.phonetix.core.Reading
 import io.github.nanbiz.phonetix.core.Fetch
 import io.github.nanbiz.phonetix.core.Speech
@@ -709,7 +711,20 @@ class TooltipController(
             settings.accentFor(source), box.before, said ?: box.decided,
         )
             ?.takeIf { it.found }
-            ?: elsewhere(box.word, source, settings)
+            ?: elsewhere(box.word, source, settings)?.also { found ->
+                // Answered by a dictionary this phone holds for a language on none of the
+                // reader's lists: met all the same.
+                val lang = found.source
+                if (lang.isNotEmpty() && !settings.reads(lang) && lang != settings.learn &&
+                    lang !in settings.alsoLearn
+                ) SettingsStore.meet(lang, screen)
+            }
+            ?: unlisted(box, source, settings)?.let { lang ->
+                // A language on none of the reader's lists, which they are met in: said in it,
+                // and offered to them in the settings once they keep meeting it.
+                SettingsStore.meet(lang, screen)
+                return Answer.ofTranscription(box.word, voiced(box.word, lang), lang)
+            }
             ?: return Answer.ofTranscription(box.word, voiced(box.word, source), source)
         // A form the dictionary lists only under its lemma has no transcription of its own:
         // the voice says it, rather than the card going without or borrowing the lemma's.
@@ -770,6 +785,35 @@ class TooltipController(
                     it.found && it.state != Answer.State.None && it.state != Answer.State.NoPack
                 }
             }
+
+    /** Where the reader is, as a language they are met in counts it: the app in front. */
+    @Volatile
+    var screen: String = ""
+
+    /**
+     * The language a word no dictionary here has is most likely in, judged on its clause,
+     * where that is a language this product knows and on none of the reader's lists; or none.
+     * A Spanish question quoted in an English caption is Spanish however little of it there is.
+     */
+    private fun unlisted(box: WordBox, source: String, settings: Settings): String? {
+        val clause = clauseOf(box.sentence.ifBlank { box.word }, box.word)
+        val lang = Eld.detect(clause).language ?: return null
+        if (lang == source || lang !in Languages.all()) return null
+        if (settings.reads(lang) || lang == settings.learn || lang in settings.alsoLearn) return null
+        return lang
+    }
+
+    /** The stretch of a line a word is in, between the marks that end or open a clause. */
+    private fun clauseOf(line: String, word: String): String {
+        val at = line.indexOf(word)
+        if (at < 0) return word
+        val stops = ".!?¿¡;:\"“”«»()[]"
+        var from = at
+        while (from > 0 && line[from - 1] !in stops) from--
+        var to = at + word.length
+        while (to < line.length && line[to] !in stops) to++
+        return line.substring(from, to).trim()
+    }
 
     /** How the voice for [lang] says [word], where no dictionary does. */
     private fun voiced(word: String, lang: String): String =

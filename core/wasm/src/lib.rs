@@ -310,7 +310,7 @@ impl Core {
             defines: self.packs.get(&format!("def-{source}")),
             in_reader: self.packs.get(&format!("{source}-in-{target}")),
         };
-        let answer = lexcore::resolve::read_in_context(
+        let answer = lexcore::resolve::card_in_context(
             spelling,
             if before.is_empty() {
                 None

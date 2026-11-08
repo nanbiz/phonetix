@@ -5,7 +5,6 @@
   import { offered, type Settings } from '@/settings/shape';
   import { named } from '@/data/languages';
   import { ROWS, say } from '@/data/wording';
-  import LEARN from 'virtual:icons/lucide/plus';
   import PASS from 'virtual:icons/lucide/x';
   import Group from './Group.svelte';
   import Item from './Item.svelte';
@@ -13,10 +12,12 @@
   interface Props {
     settings: Settings;
     change: <K extends keyof Settings>(name: K, value: Settings[K]) => void;
+    /** At most this many, the ones met most: a toolbar view has room for one. */
+    most?: number;
   }
 
-  let { settings, change }: Props = $props();
-  let offers = $derived(offered(settings));
+  let { settings, change, most = Infinity }: Props = $props();
+  let offers = $derived(offered(settings).slice(0, most));
   const add = (list: string[] | undefined, lang: string) => [...new Set([...(list ?? []), lang])];
 </script>
 
@@ -26,9 +27,9 @@
       <Item name={named(offer.lang)} row="met-{offer.lang}" value={say('met-on-pages', String(offer.pages))}>
         {#snippet control()}
           <span class="btn-row met-answers">
-            <button class="btn" data-does="learn" onclick={() => change('alsoLearn', add(settings.alsoLearn, offer.lang))}
-              ><LEARN />{say('learn-it')}</button>
-            <button class="btn secondary" data-does="read" onclick={() => change('known', add(settings.known, offer.lang))}
+            <button class="button" data-does="learn" onclick={() => change('alsoLearn', add(settings.alsoLearn, offer.lang))}
+              >{say('learn-it')}</button>
+            <button class="button quiet" data-does="read" onclick={() => change('known', add(settings.known, offer.lang))}
               >{say('read-it')}</button>
             <button class="icon-button" data-does="pass" aria-label={say('not-now')} title={say('not-now')}
               onclick={() => change('passed', add(settings.passed, offer.lang))}><PASS /></button>

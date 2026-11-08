@@ -219,6 +219,8 @@ private class Bridge(
     private val onOpenOverlay: () -> Unit,
     private val onView: (String) -> Unit,
 ) {
+    /** What says a kept word, made the first time one is asked for. */
+    private val speaker by lazy { io.github.nanbiz.phonetix.service.Speaker(context) }
 
     @JavascriptInterface
     fun ask(id: Int, kind: String, payload: String) {
@@ -250,6 +252,12 @@ private class Bridge(
                         })
                     })
                     "toggleApp" -> { SettingsStore.toggleApp(asked.optString("pkg")); JSONObject() }
+                    // A kept word said, in the accent the reader reads its language in.
+                    "speak" -> {
+                        val lang = asked.optString("lang")
+                        speaker.say(asked.optString("text"), io.github.nanbiz.phonetix.core.Accents.voiceOf(lang, SettingsStore.current.accentFor(lang)))
+                        JSONObject()
+                    }
                     // Which screen the reader is on. The phone's back gesture belongs to the
                     // app, and without this it left the app from a screen the reader had only
                     // opened a moment ago.
@@ -381,6 +389,9 @@ private class Bridge(
         .put("touchWords", settings.touchWords)
         .put("apps", JSONArray(settings.apps.toList()))
         .put("allApps", settings.allApps)
+        .put("met", JSONObject(settings.met.mapValues { JSONArray(it.value) } as Map<*, *>))
+        .put("passed", JSONArray(settings.passed))
+        .put("kept", runCatching { JSONArray(settings.kept) }.getOrDefault(JSONArray()))
 
     /** One setting changed, by the name the view calls it. */
     private fun set(name: String, value: Any?) {
@@ -412,6 +423,18 @@ private class Bridge(
             "restY" -> SettingsStore.setRestY((value as? Number)?.toFloat() ?: return)
             "touchWords" -> SettingsStore.setTouchWords(value == true)
             "allApps" -> SettingsStore.setAllApps(value == true)
+            "met" -> {
+                val said = value as? JSONObject ?: return
+                SettingsStore.setMet(said.keys().asSequence().associateWith { lang ->
+                    val screens = said.getJSONArray(lang)
+                    (0 until screens.length()).map { screens.getString(it) }
+                })
+            }
+            "passed" -> {
+                val said = value as? JSONArray ?: return
+                SettingsStore.setPassed((0 until said.length()).map { said.optString(it) })
+            }
+            "kept" -> SettingsStore.setKept((value as? JSONArray ?: return).toString())
             "accents" -> {
                 val said = value as? JSONObject ?: return
                 for (lang in said.keys()) SettingsStore.setAccent(lang, said.optString(lang))
