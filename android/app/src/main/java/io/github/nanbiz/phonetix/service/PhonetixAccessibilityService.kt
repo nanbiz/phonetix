@@ -164,6 +164,9 @@ class PhonetixAccessibilityService : AccessibilityService() {
      * it.
      */
     @Volatile private var sameAgain = 0
+
+    /** Reads in a row that had no frame of the screen to lay unplaced text out from. */
+    @Volatile private var framelessLooks = 0
     /** When the app in front last changed, so the words can come off the screen first. */
     @Volatile private var switchedAt = 0L
     /** The direction the reader asked for and this phone has no model for, or nothing. */
@@ -2215,6 +2218,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // while there are blocks to guess at; a block it shows no lines in is laid out
             // from its box alone.
             if (::sampler.isInitialized) sampler.refreshIfStale()
+            var noFrame = false
             for ((line, rect) in toGuess) {
                 val text = line.text.substring(
                     line.from,
@@ -2225,6 +2229,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 } else {
                     null
                 }
+                if (shown == null) noFrame = true
                 val guessed = if (!shown.isNullOrEmpty()) {
                     Placement.inLines(text, shown)
                 } else {
@@ -2238,6 +2243,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // from the line.
                 line.boxes = boxes.subList(from, boxes.size).toList()
                 line.measuredAt = rect
+            }
+            // The frame just asked for lands a moment after this read, and nothing else reads
+            // a still screen again before it has gone stale: read once it is here, a bounded
+            // number of times for an app whose screen cannot be captured.
+            if (!noFrame) {
+                framelessLooks = 0
+            } else if (framelessLooks < LOOK_AGAIN_TIMES) {
+                framelessLooks++
+                main.postDelayed({ scrollOnly = false; schedule(0L) }, FRAME_LANDS_MS)
             }
         }
         // How fast the page went during this read, measured by the read itself: the first
@@ -4199,6 +4213,8 @@ class PhonetixAccessibilityService : AccessibilityService() {
         /** How old a frame of the screen can be and still say where a guessed block's lines
          *  are: a caption is replaced every second or two. */
         const val INK_FRAME_MS = 1200L
+        /** How long a frame takes to arrive after it is asked for. */
+        const val FRAME_LANDS_MS = 350L
 
         /** The two names this one request goes by. The platform defines the first; Chromium,
          *  and so every page in every browser, answers only to the second. */
