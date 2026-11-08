@@ -2272,7 +2272,9 @@ pub fn card_in_context<D: AsRef<[u8]>>(
     open: &Open<D>,
 ) -> Answer {
     if let Some(before) = before.filter(|it| !it.is_empty() && !spelling.contains(' ')) {
-        if let Some(answer) = crate::expression::read(&format!("{before} {spelling}"), source, target, open) {
+        if let Some(answer) =
+            crate::expression::read(&format!("{before} {spelling}"), source, target, open)
+        {
             return answer;
         }
     }
@@ -2992,7 +2994,10 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
         if let Some(meaning) = meanings()
             .find(|sense| {
                 reflexive
-                    && sense.marks.iter().any(|mark| mark == "reflexive" || mark == "pronominal")
+                    && sense
+                        .marks
+                        .iter()
+                        .any(|mark| mark == "reflexive" || mark == "pronominal")
             })
             .or_else(|| meanings().next())
             .map(|sense| sense.gloss.as_str())

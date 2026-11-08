@@ -66,16 +66,17 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         // What it is in the reader's language, as their own Wiktionary describes it.
         maybe(&answer.described),
         // The words of an expression read as one, each with what it is on its own.
-        format!(
-            "[{}]",
-            answer
-                .parts
-                .iter()
-                .map(|(word, means)| format!("{{\"word\":{},\"means\":{}}}", quoted(word), quoted(means)))
-                .collect::<Vec<_>>()
-                .join(",")
-        ),
+        parts_of(&answer.parts),
     )
+}
+
+/// An expression's words, each with what it is on its own.
+fn parts_of(parts: &[(String, String)]) -> String {
+    let each: Vec<String> = parts
+        .iter()
+        .map(|(word, means)| format!("{{\"word\":{},\"means\":{}}}", quoted(word), quoted(means)))
+        .collect();
+    format!("[{}]", each.join(","))
 }
 
 /// A form as a card reads it: its place, where its ending starts, its meaning said in it, and

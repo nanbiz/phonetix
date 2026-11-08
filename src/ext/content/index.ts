@@ -931,7 +931,7 @@ async function languageWithEntry(spelling: string, source: string, line: string,
 function clauseOf(line: string, spelling: string): string {
   const at = line.indexOf(spelling);
   if (at < 0) return spelling;
-  const stop = /[.!?¿¡;:"“”«»()\[\]]/u;
+  const stop = /[.!?¿¡;:"“”«»()[\]]/u;
   let from = at;
   while (from > 0 && !stop.test(line[from - 1])) from--;
   let to = at + spelling.length;
@@ -1157,8 +1157,11 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   // after and fills the same card: a card that waited on Wiktionary waited a second or more
   // on every word.
   let shown = answer;
-  // The star, drawn again filled or empty as soon as it is pressed.
+  // The star, drawn again filled or empty as soon as it is pressed. Not on a card read while a
+  // finger holds the side button: that card is gone when the finger lifts, and nothing on it
+  // can be pressed.
   const starred = (): void => {
+    if (held) return;
     actions.keep = keeping(shown, source, place.line, () => {
       starred();
       if (current()) show(shown, anchor.box(), actions);

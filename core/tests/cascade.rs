@@ -4417,10 +4417,17 @@ fn a_form_with_its_own_pronoun_means_what_the_reflexive_does() {
     fijar.senses[1].marks = vec!["reflexive".to_string()];
     pack.add(fijar, &[] as &[&str]).unwrap();
     for (spelling, note) in [
-        ("fíjate", "second-person singular imperative of fijar combined with te"),
-        ("fíjame", "second-person singular imperative of fijar combined with me"),
+        (
+            "fíjate",
+            "second-person singular imperative of fijar combined with te",
+        ),
+        (
+            "fíjame",
+            "second-person singular imperative of fijar combined with me",
+        ),
     ] {
-        pack.add(word(spelling, "verb", "ˈfixa", &[note]), &[] as &[&str]).unwrap();
+        pack.add(word(spelling, "verb", "ˈfixa", &[note]), &[] as &[&str])
+            .unwrap();
     }
     let es = pack.finish().unwrap();
     let es = Pack::open(&es).unwrap();
@@ -4442,8 +4449,16 @@ fn a_form_with_its_own_pronoun_means_what_the_reflexive_does() {
             .and_then(|form| form.said)
             .unwrap_or_default()
     };
-    assert!(said("fíjate").contains("notice"), "fíjate said {:?}", said("fíjate"));
-    assert!(said("fíjame").contains("fix"), "fíjame said {:?}", said("fíjame"));
+    assert!(
+        said("fíjate").contains("notice"),
+        "fíjate said {:?}",
+        said("fíjate")
+    );
+    assert!(
+        said("fíjame").contains("fix"),
+        "fíjame said {:?}",
+        said("fíjame")
+    );
 }
 
 /// "Me gusta" is "I like", literally "it pleases me": a pronoun before a verb of that kind is
@@ -4452,14 +4467,25 @@ fn a_form_with_its_own_pronoun_means_what_the_reflexive_does() {
 #[test]
 fn a_pronoun_and_a_verb_that_takes_it_as_its_subject_are_one_expression() {
     let mut pack = Builder::new("es", Kind::Lex, 0);
-    pack.add(word("gustar", "verb", "ɡusˈtaɾ", &["to like"]), &[] as &[&str]).unwrap();
     pack.add(
-        word("gusta", "verb", "ˈɡusta", &["third-person singular present indicative of gustar"]),
+        word("gustar", "verb", "ɡusˈtaɾ", &["to like"]),
         &[] as &[&str],
     )
     .unwrap();
-    pack.add(word("me", "pron", "me", &["me"]), &[] as &[&str]).unwrap();
-    pack.add(word("mucho", "adv", "ˈmutʃo", &["a lot"]), &[] as &[&str]).unwrap();
+    pack.add(
+        word(
+            "gusta",
+            "verb",
+            "ˈɡusta",
+            &["third-person singular present indicative of gustar"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    pack.add(word("me", "pron", "me", &["me"]), &[] as &[&str])
+        .unwrap();
+    pack.add(word("mucho", "adv", "ˈmutʃo", &["a lot"]), &[] as &[&str])
+        .unwrap();
     let es = pack.finish().unwrap();
     let es = Pack::open(&es).unwrap();
     let open = Open {
@@ -4481,10 +4507,12 @@ fn a_pronoun_and_a_verb_that_takes_it_as_its_subject_are_one_expression() {
     assert_eq!(got.parts[0].1, "to me");
     assert!(got.parts[1].1.contains("pleases"), "{:?}", got.parts);
     // Asked as the verb with the pronoun before it, as a word on a line is.
-    let alone = lexcore::resolve::card_in_context("gusta", Some("Me"), &lang("es"), &lang("en"), &open);
+    let alone =
+        lexcore::resolve::card_in_context("gusta", Some("Me"), &lang("es"), &lang("en"), &open);
     assert_eq!(alone.says, vec!["I like".to_string()], "{alone:?}");
     // The page, which draws over the word itself, keeps the word's own reading.
-    let drawn = lexcore::resolve::read_in_context("gusta", Some("Me"), &lang("es"), &lang("en"), &open);
+    let drawn =
+        lexcore::resolve::read_in_context("gusta", Some("Me"), &lang("es"), &lang("en"), &open);
     assert_ne!(drawn.ipa.first().map(String::as_str), Some("me ˈɡusta"));
     let line = ["Me", "gusta", "mucho"];
     assert_eq!(lexcore::resolve::phrase_around(&es, &line, 1), Some((0, 2)));

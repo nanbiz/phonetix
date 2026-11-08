@@ -41,19 +41,25 @@ fn clitic(lang: &str, word: &str) -> Option<(&'static str, &'static str, &'stati
         "2" => "second-person",
         _ => "third-person",
     };
-    let number = if row[3].ends_with("pl") { "plural" } else { "singular" };
+    let number = if row[3].ends_with("pl") {
+        "plural"
+    } else {
+        "singular"
+    };
     Some((person, number, row[4]))
 }
 
 /// The lemma a spelling is a form of, where the dictionary files it as one: "gusta" is
 /// "third-person singular present indicative of gustar".
 fn lemma_of<D: AsRef<[u8]>>(pack: &Pack<D>, spelling: &str) -> Option<String> {
-    pack.lookup(&spelling.to_lowercase()).into_iter().find_map(|entry| {
-        entry
-            .senses
-            .iter()
-            .find_map(|sense| crate::resolve::form_of_word(&sense.gloss))
-    })
+    pack.lookup(&spelling.to_lowercase())
+        .into_iter()
+        .find_map(|entry| {
+            entry
+                .senses
+                .iter()
+                .find_map(|sense| crate::resolve::form_of_word(&sense.gloss))
+        })
 }
 
 /// Where an expression of this kind is around the word at [at], as the start and end
@@ -77,7 +83,12 @@ pub fn around<D: AsRef<[u8]>>(pack: &Pack<D>, words: &[&str], at: usize) -> Opti
 /// English, which is the language its meaning is said in: "me gusta" is "I like", in the
 /// pronoun's person and the verb's tense, how it is said is the two words', and each word's own
 /// meaning goes with it.
-pub fn read<D: AsRef<[u8]>>(spelling: &str, source: &Lang, target: &Lang, open: &Open<D>) -> Option<Answer> {
+pub fn read<D: AsRef<[u8]>>(
+    spelling: &str,
+    source: &Lang,
+    target: &Lang,
+    open: &Open<D>,
+) -> Option<Answer> {
     if target.0 != "en" {
         return None;
     }
