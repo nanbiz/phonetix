@@ -3000,7 +3000,7 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
                         .any(|mark| mark == "reflexive" || mark == "pronominal")
             })
             .or_else(|| meanings().next())
-            .map(|sense| sense.gloss.as_str())
+            .map(|sense| without_scope(&sense.gloss))
         {
             form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
             form.bare = crate::inflect::english_bare(meaning, &entry.pos, &form.place);
@@ -3015,6 +3015,17 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
     answer.lemma = Some(entry.lemma.clone());
     answer.paradigm = Some(form);
     answer
+}
+
+/// A sense without the words that say how broad it is: Wiktionary files gustar's first sense
+/// as "to like in a general sense", which said in a form came out "he likes in a general
+/// sense"; the meaning is "to like".
+pub(crate) fn without_scope(gloss: &str) -> &str {
+    const SCOPES: [&str; 3] = [" in a general sense", " in general", " generally"];
+    SCOPES
+        .iter()
+        .find_map(|scope| gloss.strip_suffix(scope))
+        .unwrap_or(gloss)
 }
 
 /// Whether a pronoun written onto a verb is the verb's own person, which makes the verb
@@ -5209,6 +5220,7 @@ fn finish<D: AsRef<[u8]>>(
             if let Some(meaning) = glosses
                 .iter()
                 .find(|gloss| !crate::annotate::about_grammar(gloss))
+                .map(|gloss| without_scope(gloss))
             {
                 form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
                 form.bare = crate::inflect::english_bare(meaning, &entry.pos, &form.place);

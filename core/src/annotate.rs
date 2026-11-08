@@ -740,7 +740,8 @@ fn plain(sense: &str) -> Option<String> {
         .iter()
         .find(|part| !part.is_empty() && !about_grammar(part))
     {
-        return Some(tidy(part));
+        // Without the words that say how broad the sense is: "to like in a general sense".
+        return Some(tidy(crate::resolve::without_scope(part)));
     }
     // Every part a note about grammar. Such a note usually ends with the meaning, after a
     // colon - "dative singular of der: the" - or a comma - "definite article, the".

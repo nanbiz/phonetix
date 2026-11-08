@@ -4520,6 +4520,50 @@ fn a_pronoun_and_a_verb_that_takes_it_as_its_subject_are_one_expression() {
     assert_eq!(lexcore::resolve::phrase_around(&es, &line, 2), None);
 }
 
+/// A sense filed with how broad it is, "to like in a general sense", means "to like": said in a
+/// form it is "he likes", not "he likes in a general sense".
+#[test]
+fn a_sense_is_said_without_the_words_for_how_broad_it_is() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add(
+        word(
+            "gustar",
+            "verb",
+            "ɡusˈtaɾ",
+            &["to like in a general sense", "to like romantically"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    pack.add(
+        word(
+            "gusta",
+            "verb",
+            "ˈɡusta",
+            &["third-person singular present indicative of gustar"],
+        ),
+        &[] as &[&str],
+    )
+    .unwrap();
+    let es = pack.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+        accent: "",
+        accent_pack: None,
+        said: None,
+        classifier: None,
+        others: None,
+        defines: None,
+        in_reader: None,
+    };
+    let got = look_up("gusta", &lang("es"), &lang("en"), &open);
+    let said = got.paradigm.and_then(|form| form.said).unwrap_or_default();
+    assert_eq!(said, "he likes");
+}
+
 fn open_with<'a>(
     source: &'a Pack<&'a Vec<u8>>,
     target: &'a Pack<&'a Vec<u8>>,
