@@ -1756,7 +1756,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 // most of a drag's words are new, that is two swipes in eight showing under a
                 // tenth of their lines while the service reported thirty words drawn.
                 if (own == null && p.boxes.first().background == 0 && !decision.givenUp &&
-                    !onTheMove()
+                    !drawsWithoutColours()
                 ) {
                     continue
                 }
@@ -2387,7 +2387,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             // But a screen read in the middle of a movement has no colours to be had - reading
             // them means photographing a still screen - so withholding there meant the read
             // that happens during a drag could paint nothing at all.
-            if (c != null || decision.givenUp || onTheMove()) painted.addAll(p.boxes)
+            if (c != null || decision.givenUp || drawsWithoutColours()) painted.addAll(p.boxes)
             if (BuildConfig.DEBUG && c == null && decision.givenUp) {
                 android.util.Log.d("Phonetix", "DECIDE none givenUp for '${p.text.take(20)}'")
             }
@@ -2872,6 +2872,15 @@ class PhonetixAccessibilityService : AccessibilityService() {
         into.addAll(now.boxes)
     }
 
+
+    /**
+     * Whether a line goes on without waiting for its colours.
+     *
+     * With nothing painted over the page the words are only what the mark can be held on, and
+     * a line whose text keeps changing, a video's caption, is a new line every time it changes:
+     * waiting for a photograph of each one meant the mark found nothing on any of them.
+     */
+    private fun drawsWithoutColours(): Boolean = SettingsStore.current.quiet || onTheMove()
 
     /** A node's box and where it sits in draw order, for working out what covers what. */
     /**
