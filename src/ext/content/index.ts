@@ -675,6 +675,8 @@ interface Asked {
   written: string;
   lang: string;
   before: string;
+  /** Set where the language was chosen from the dictionaries, which is not asked again. */
+  settled?: boolean;
 }
 
 /**
@@ -898,6 +900,25 @@ function said(answer: Answer): Answer {
   };
 }
 
+/** What an answer says when the language asked has no entry for the word. */
+const MISSED = new Set(['Guess', 'IpaOnly', 'None', 'UnknownLang']);
+/** What it says when it has one. */
+const FOUND = new Set(['Entry', 'Form', 'Homograph', 'Mono', 'Phrase']);
+
+/** The first of the reader's languages, other than [source], whose dictionary has [spelling]:
+ *  the ones they learn first, then the ones they read, then their own. */
+async function languageWithEntry(spelling: string, source: string, line: string, at: number): Promise<string> {
+  const theirs = [...learned(settings), ...(settings.known ?? []), settings.target];
+  for (const lang of theirs.filter((l, i) => l && l !== source && theirs.indexOf(l) === i)) {
+    const found = await sendMessage('lookUp', {
+      word: spelling, source: lang, target: settings.target, accent: accentFor(settings, lang),
+      before: '', drawn: '', line, at, describe: false, quick: true,
+    });
+    if (FOUND.has(found.state)) return lang;
+  }
+  return '';
+}
+
 /** Open the card for a word the reader stopped at, or tapped, which is asking for it outright. */
 async function open(anchor: Anchor, word: Asked, tapped = false, held = false): Promise<void> {
   const source = word.lang || pageLanguage();
@@ -934,6 +955,15 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   // the reader's language yet are asked for after, rather than holding the card a second or
   // more on every line the reader comes to.
   const looked = await sendMessage('lookUp', { ...asking, quick: translating });
+  // A word the page's language has no entry for is often one of the reader's other languages
+  // quoted in it ("¿Cómo salió todo?" on an English page): read in the page's language it
+  // comes out as a made-up reading. The first of their languages that has it is the word's.
+  if (!word.settled && MISSED.has(looked.state)) {
+    const elsewhere = await languageWithEntry(word.spelling, source, asking.line, asking.at);
+    if (elsewhere && anchored === anchor) {
+      return open(anchor, { ...word, lang: elsewhere, settled: true }, tapped, held);
+    }
+  }
   // A phrase the word is part of is answered whole, and lit whole.
   if (looked.span && anchored === anchor) {
     const wider = anchor.widen?.(place.at - looked.span[0], looked.span[1] - place.at - 1);

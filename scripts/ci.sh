@@ -99,6 +99,8 @@ if [[ "$what" == all || "$what" == browser ]]; then
   # Firefox from the store, as the checks run it: the desktop's own browser is another one.
   step "the other engine annotates a page" \
     nix shell nixpkgs#firefox -c uv run python scripts/proofread/on_firefox.py
+  step "a word of another of the reader's languages quoted in a page is read in it" \
+    nix shell nixpkgs#firefox -c uv run python scripts/proofread/quoted_word.py
 fi
 
 if [[ "$what" == all || "$what" == android ]]; then
