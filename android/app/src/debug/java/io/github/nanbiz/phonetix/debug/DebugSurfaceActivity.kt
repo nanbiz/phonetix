@@ -1014,6 +1014,32 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
             })
         } else if (mode == "unique") {
             for (text in TestWords.DISTINCT) addView(line(text, Color.WHITE, BACKGROUND))
+        } else if (mode == "rolling") {
+            // A caption as a video player writes one while it plays: the box at the bottom of
+            // the screen takes a word on every half second and drops the oldest past ten, so
+            // the words under a finger that stays still keep sliding along. "still" holds the
+            // caption once it is full, for a check that the same words read without moving.
+            val spoken = "quizás me gustaría hacer otro trabajo diferente y no siempre hacer lo mismo " +
+                "porque me gusta mucho soñar despierto aquí al lado del mar"
+            val all = spoken.split(" ")
+            val caption = line("", Color.WHITE, Color.rgb(0x9A, 0xB4, 0xD6)).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            }
+            addView(View(this@DebugSurfaceActivity), android.widget.LinearLayout.LayoutParams(1, pad() * 40))
+            addView(caption)
+            var at = 0
+            val still = intent.getIntExtra("still", 0) == 1
+            fun roll() {
+                val shown = all.subList(maxOf(0, at - 9), minOf(at + 1, all.size)).joinToString(" ")
+                caption.text = android.text.SpannableString(shown).apply {
+                    setSpan(android.text.style.BackgroundColorSpan(Color.rgb(0x10, 0x10, 0x10)), 0, shown.length, 0)
+                }
+                if (still && at >= 9) return
+                at = (at + 1) % all.size
+                caption.postDelayed({ roll() }, 500)
+            }
+            roll()
         } else if (mode == "expression") {
             // A pronoun and a verb that takes it as its subject, which a card reads as one.
             for (text in listOf(
