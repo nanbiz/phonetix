@@ -72,7 +72,7 @@ export interface AnnotateOptions {
   density: number;
   /** Narrow transcriptions rather than broad ones. */
   narrow?: boolean;
-  /** Leave the stress marks off the line over a word. The card always shows them. */
+  /** Leave the stress marks off the line over a word and off the card. */
   hideStress?: boolean;
   /** The accent the reader wants, where its difference from the standard is a rule. */
   accent?: string;
