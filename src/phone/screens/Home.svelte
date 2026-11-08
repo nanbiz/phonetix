@@ -104,15 +104,6 @@
         change={(value) => change('narrow', value === 'narrow')}
       />
     </div>
-    <Item name={ROWS.stress.name} row="stress">
-      {#snippet control()}
-        <Switch
-          on={!settings.hideStress}
-          label={ROWS.stress.name}
-          change={(on) => change('hideStress', !on)}
-        />
-      {/snippet}
-    </Item>
   </Group>
 
   <!-- The languages the reader has, which the card follows: a screen of their own. Which

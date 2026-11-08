@@ -42,7 +42,6 @@ fn main() {
             .and_then(|it| it.parse().ok())
             .unwrap_or(1),
         narrow: false,
-        hide_stress: false,
         accent: None,
         seen: Vec::new(),
         counts: Default::default(),

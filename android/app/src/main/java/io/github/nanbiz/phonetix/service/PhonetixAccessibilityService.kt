@@ -881,7 +881,6 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 .put("touchWords", settings.touchWords)
                 .put("fetching", org.json.JSONArray(Fetch.inFlight()))
                 .put("narrow", settings.narrow)
-                .put("hideStress", settings.hideStress)
                 .put("theme", settings.theme)
                 .put("dark", settings.dark)
                 .put("host", settings.packHost)
@@ -3433,7 +3432,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
                 val said = Speech.phonemes(Accents.voiceOf(to, ""), words)
                 // Written the way every other transcription here is, stress marks and all.
                 words.mapNotNull { said[it] }
-                    .map { runCatching { Lex.display(it, false, false) }.getOrDefault(it) }
+                    .map { runCatching { Lex.display(it, false) }.getOrDefault(it) }
                     .joinToString(" ")
                     .takeIf { it.isNotEmpty() }
             }

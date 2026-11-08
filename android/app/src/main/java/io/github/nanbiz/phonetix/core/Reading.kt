@@ -45,7 +45,6 @@ object Reading {
         mode: String,
         density: Int,
         narrow: Boolean = false,
-        hideStress: Boolean = true,
         accent: String = "",
     ): List<Annotated> {
         if (core == 0L || texts.isEmpty()) {
@@ -55,8 +54,7 @@ object Reading {
             return emptyList()
         }
         val written = Lex.annotate(
-            core, texts.toTypedArray(), source, target, mode, density, narrow, hideStress,
-            accent,
+            core, texts.toTypedArray(), source, target, mode, density, narrow, accent,
         )
         var batch = JSONObject(written)
         // What the core could not answer, carried across both engines.

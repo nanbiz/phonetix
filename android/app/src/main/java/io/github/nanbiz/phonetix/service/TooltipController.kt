@@ -758,7 +758,6 @@ class TooltipController(
                 meaning = meaning,
                 report = if (BuildConfig.DEBUG) laidOut else null,
                 narrow = settings.narrow,
-                hideStress = settings.hideStress,
                 sound = settings.showSound,
                 grammar = settings.showMeaning && settings.showGrammar,
                 others = settings.showMeaning && settings.showOthers,

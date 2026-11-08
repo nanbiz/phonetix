@@ -309,10 +309,6 @@ pub fn narrows(broad: &str, narrow: &str) -> bool {
     broad.1 > 0 && broad == narrow
 }
 
-fn stress(c: char) -> bool {
-    c == 'ˈ' || c == 'ˌ'
-}
-
 /// How a transcription is shown, given what the reader asked for.
 ///
 /// The card always shows the full form; this is for the line over a word, where a syllable
@@ -340,7 +336,65 @@ pub fn same_sound(one: &str, other: &str) -> bool {
     !one.is_empty() && one == other
 }
 
-pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
+/// How loud a consonant is, for telling where the syllable after it begins; none for anything
+/// that is not a consonant.
+fn sonority(c: char) -> Option<u8> {
+    match c {
+        'p' | 'b' | 't' | 'd' | 'k' | 'ɡ' | 'g' | 'c' | 'ɟ' | 'q' | 'ʔ' | 'ʈ' | 'ɖ' => Some(1),
+        'f' | 'v' | 's' | 'z' | 'ʃ' | 'ʒ' | 'θ' | 'ð' | 'x' | 'ɣ' | 'h' | 'ç' | 'β' | 'χ' | 'ʁ'
+        | 'ɸ' | 'ħ' | 'ʕ' | 'ʂ' | 'ʐ' | 'ɕ' | 'ʑ' => Some(2),
+        'm' | 'n' | 'ŋ' | 'ɲ' | 'ɱ' | 'ɴ' | 'ɳ' => Some(3),
+        'l' | 'r' | 'ɾ' | 'ɹ' | 'ʎ' | 'ɫ' | 'ʀ' | 'ʟ' | 'ɻ' | 'ɽ' | 'ɭ' => Some(4),
+        'j' | 'w' | 'ɥ' | 'ʋ' | 'ɰ' => Some(5),
+        _ => None,
+    }
+}
+
+/// A transcription a voice produced, with its stress marks where a transcription has them.
+///
+/// The synthesiser puts the mark straight before the stressed vowel, "saljˈo" and "kˈore", and a
+/// dictionary and a reader of IPA have it where the syllable starts, "saˈljo" and "ˈkore". All
+/// the consonants at the start of a word begin its first syllable; inside a word a syllable
+/// takes those that get louder towards its vowel.
+pub fn stress_at_syllable(ipa: &str) -> String {
+    let mut out = String::with_capacity(ipa.len());
+    for (at, word) in ipa.split(' ').enumerate() {
+        if at > 0 {
+            out.push(' ');
+        }
+        let mut tokens = tokenize(word);
+        for mark in 0..tokens.len() {
+            let is_mark = matches!(tokens[mark].as_str(), "ˈ" | "ˌ");
+            let before_vowel = tokens
+                .get(mark + 1)
+                .is_some_and(|next| next.chars().next().is_some_and(|c| sonority(c).is_none()));
+            if !is_mark || !before_vowel {
+                continue;
+            }
+            let loudness = |token: &String| token.chars().next().and_then(sonority);
+            let mut first = mark;
+            while first > 0 && loudness(&tokens[first - 1]).is_some() {
+                first -= 1;
+            }
+            if first > 0 {
+                let run = &tokens[first..mark];
+                let mut from = run.len();
+                while from > 0
+                    && (from == run.len() || loudness(&run[from - 1]) < loudness(&run[from]))
+                {
+                    from -= 1;
+                }
+                first += from;
+            }
+            let stress = tokens.remove(mark);
+            tokens.insert(first, stress);
+        }
+        out.push_str(&tokens.concat());
+    }
+    out
+}
+
+pub fn display(ipa: &str, narrow: bool) -> String {
     let mut out = String::with_capacity(ipa.len());
     let chars: Vec<char> = ipa.chars().collect();
     let mut at = 0;
@@ -361,9 +415,6 @@ pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
             continue;
         }
         if !narrow && narrow_detail(c) {
-            continue;
-        }
-        if hide_stress && stress(c) {
             continue;
         }
         out.push(c);
@@ -470,6 +521,23 @@ mod tests {
     }
 
     #[test]
+    fn a_voices_stress_mark_goes_where_the_syllable_starts() {
+        for (voice, written) in [
+            ("saljˈo", "saˈljo"),
+            ("kˈore", "ˈkore"),
+            ("deskˈansa", "desˈkansa"),
+            ("stɹˈiːt", "ˈstɹiːt"),
+            ("hɛlˈoʊ", "hɛˈloʊ"),
+            ("ˈabɾe", "ˈabɾe"),
+            ("aˈeɾo", "aˈeɾo"),
+            ("ˈpe.ɾo", "ˈpe.ɾo"),
+            ("ˈel pˈoɾ", "ˈel ˈpoɾ"),
+        ] {
+            assert_eq!(stress_at_syllable(voice), written);
+        }
+    }
+
+    #[test]
     fn stress_and_length_stand_alone() {
         assert_eq!(tokenize("ˈhɛloʊ"), ["ˈ", "h", "ɛ", "l", "o", "ʊ"]);
         assert_eq!(tokenize("aː"), ["a", "ː"]);
@@ -508,14 +576,13 @@ mod tests {
 
     #[test]
     fn the_broad_form_drops_what_only_colours_a_sound() {
-        assert_eq!(display("kʰoːz̥", false, false), "koːz");
-        assert_eq!(display("kʰoːz̥", true, false), "kʰoːz̥");
+        assert_eq!(display("kʰoːz̥", false), "koːz");
+        assert_eq!(display("kʰoːz̥", true), "kʰoːz̥");
     }
 
     #[test]
     fn running_text_loses_the_notation_that_is_not_a_sound() {
-        assert_eq!(display("ˈtuː(ː)l.tɪp", false, false), "ˈtuːːltɪp");
-        assert_eq!(display("ˈhɛ.loʊ", false, true), "hɛloʊ");
+        assert_eq!(display("ˈtuː(ː)l.tɪp", false), "ˈtuːːltɪp");
     }
 
     #[test]

@@ -306,10 +306,6 @@
       "name": "Transcriptions",
       "about": ""
     },
-    "stress": {
-      "name": "Marques d'accent tonique",
-      "about": ""
-    },
     "delay": {
       "name": "Attente avant l'ouverture d'une carte",
       "about": ""

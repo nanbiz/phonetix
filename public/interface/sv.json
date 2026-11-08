@@ -306,10 +306,6 @@
       "name": "Transkriptioner",
       "about": ""
     },
-    "stress": {
-      "name": "Betoningstecken",
-      "about": ""
-    },
     "delay": {
       "name": "Paus innan ett kort öppnas",
       "about": ""

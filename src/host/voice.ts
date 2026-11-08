@@ -10,6 +10,7 @@
 // Firefox's and Safari's, has a document, so the same engine is simply called. Neither
 // difference reaches anything above this file.
 
+import { fromVoice } from '@/core';
 import { host } from './packs';
 import type { Hosts } from '@/engines/whisper';
 
@@ -110,9 +111,9 @@ export async function ipa(lang: string, words: string[]): Promise<Record<string,
   if (words.length === 0) return {};
   if (IN_A_PAGE) {
     const { phonemizeBatch } = await import('@/engines/espeak');
-    return phonemizeBatch(words, lang);
+    return fromVoice(await phonemizeBatch(words, lang));
   }
-  return ask<Record<string, string>>('ipa', lang, words);
+  return fromVoice(await ask<Record<string, string>>('ipa', lang, words));
 }
 
 /**

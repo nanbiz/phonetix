@@ -139,7 +139,7 @@ pub fn annotate<D: AsRef<[u8]>>(
             // again here would shift a word its accent's own pack had already spelled out.
             let ipa = answer
                 .shown_ipa(options.narrow)
-                .map(|ipa| crate::symbols::display(ipa, options.narrow, options.hide_stress));
+                .map(|ipa| crate::symbols::display(ipa, options.narrow));
             // And how the translation is said, where that is what the reader asked for: the
             // word they are being handed is the one they will try to say. Out of the pack for
             // the language they read into, which is open because the join between the two is
@@ -148,7 +148,7 @@ pub fn annotate<D: AsRef<[u8]>>(
                 gloss
                     .as_deref()
                     .and_then(|said| said_in(said, target, open))
-                    .map(|ipa| crate::symbols::display(&ipa, options.narrow, options.hide_stress))
+                    .map(|ipa| crate::symbols::display(&ipa, options.narrow))
             } else {
                 None
             };
@@ -357,9 +357,8 @@ pub fn complete<D: AsRef<[u8]>>(
                 if answer.state == token.state {
                     if let Some(gloss) = drawn.map(|text| cut(&text, GLOSS_LIMIT)) {
                         if token.gloss_ipa.is_some() && token.gloss.as_deref() != Some(&gloss) {
-                            token.gloss_ipa = said_in(&gloss, target, &with_sentence).map(|ipa| {
-                                crate::symbols::display(&ipa, options.narrow, options.hide_stress)
-                            });
+                            token.gloss_ipa = said_in(&gloss, target, &with_sentence)
+                                .map(|ipa| crate::symbols::display(&ipa, options.narrow));
                         }
                         token.gloss = Some(gloss);
                     }
@@ -392,18 +391,13 @@ pub fn complete<D: AsRef<[u8]>>(
                         .map(|text| cut(&text, GLOSS_LIMIT))
                     {
                         if token.gloss_ipa.is_some() {
-                            token.gloss_ipa = said_in(&gloss, target, &with_sentence).map(|ipa| {
-                                crate::symbols::display(&ipa, options.narrow, options.hide_stress)
-                            });
+                            token.gloss_ipa = said_in(&gloss, target, &with_sentence)
+                                .map(|ipa| crate::symbols::display(&ipa, options.narrow));
                         }
                         token.gloss = Some(gloss);
                     }
                     if let Some(ipa) = answer.shown_ipa(options.narrow) {
-                        token.ipa = Some(crate::symbols::display(
-                            ipa,
-                            options.narrow,
-                            options.hide_stress,
-                        ));
+                        token.ipa = Some(crate::symbols::display(ipa, options.narrow));
                     }
                 }
             }
@@ -421,11 +415,7 @@ pub fn complete<D: AsRef<[u8]>>(
             // answer for a word read that way is how its translation is said: the host asked
             // for the translation the dictionary had no transcription of.
             if options.mode == InlineMode::Both && token.gloss.is_some() {
-                token.gloss_ipa = Some(crate::symbols::display(
-                    ipa,
-                    options.narrow,
-                    options.hide_stress,
-                ));
+                token.gloss_ipa = Some(crate::symbols::display(ipa, options.narrow));
                 continue;
             }
             // Shown the way a pack's own transcription would be: in the reader's accent, at
@@ -433,11 +423,7 @@ pub fn complete<D: AsRef<[u8]>>(
             // different notation from the word beside it.
             let accent = options.accent.as_deref().unwrap_or("");
             let said = crate::accent::apply(ipa, accent, &token.spelling);
-            token.ipa = Some(crate::symbols::display(
-                &said,
-                options.narrow,
-                options.hide_stress,
-            ));
+            token.ipa = Some(crate::symbols::display(&said, options.narrow));
             // A transcription a machine spoke is still a machine's, but it says nothing about
             // what the word means, so it does not turn a dictionary answer into a guess.
             if token.gloss.is_none() {
@@ -972,7 +958,6 @@ mod tests {
             mode,
             density,
             narrow: false,
-            hide_stress: false,
             accent: None,
             seen: Vec::new(),
             counts: HashMap::new(),

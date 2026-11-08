@@ -77,13 +77,20 @@ fn a_transcription_is_shown_the_way_it_was_shown() {
     let mut wrong = Vec::new();
     for case in data["display"].as_array().expect("no display cases") {
         let ipa = case["ipa"].as_str().unwrap();
-        for (field, narrow, hide) in [
-            ("broad", false, true),
-            ("narrow", true, true),
-            ("withStress", false, false),
+        // The cases hold each form without its stress marks as well, which is how they were
+        // once shown; the marks are the one thing that differs between the two.
+        for (field, narrow, marks) in [
+            ("broad", false, false),
+            ("narrow", true, false),
+            ("withStress", false, true),
         ] {
             let want = case[field].as_str().unwrap();
-            let got = display(ipa, narrow, hide);
+            let got = display(ipa, narrow);
+            let got = if marks {
+                got
+            } else {
+                got.replace(['ˈ', 'ˌ'], "")
+            };
             if got != want {
                 wrong.push(format!("{ipa} {field}: {got:?} not {want:?}"));
             }

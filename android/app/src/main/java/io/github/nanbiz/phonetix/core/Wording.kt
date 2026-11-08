@@ -87,7 +87,6 @@ object Wording {
         "site" to Words("On this site", ""),
         "source" to Words("This page is in", ""),
         "start" to Words("Before it can answer a word", ""),
-        "stress" to Words("Stress marks", ""),
         "target" to Words("Language", ""),
         "theme" to Words("Theme", ""),
         "touch" to Words("Touching a word", ""),

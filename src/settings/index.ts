@@ -25,7 +25,6 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   recent: 'local:recentLanguages',
   accents: 'local:accents',
   narrow: 'local:narrow',
-  hideStress: 'local:hideStress',
   delay: 'local:hoverDelay',
   cards: 'local:cardsOnPoint',
   showSound: 'local:showSound',

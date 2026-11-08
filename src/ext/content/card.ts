@@ -295,8 +295,6 @@ export interface CardActions {
   eased?: boolean;
   /** Whether the reader asked for narrow transcriptions. */
   narrow?: boolean;
-  /** Whether the reader turned stress marks off. */
-  hideStress?: boolean;
   /** Whether the card also says what the word is in its own language: a word of a language
    *  the reader reads, translated for practice, whose English definition they can read. */
   defined?: boolean;
@@ -334,7 +332,7 @@ let alongside: (() => void) | null = null;
 
 /** Show one answer, anchored to the word it is about. */
 export function show(given: Answer, at: DOMRect, actions: CardActions = {}): void {
-  const answer = atDetail(given, actions.narrow ?? false, actions.hideStress ?? false);
+  const answer = atDetail(given, actions.narrow ?? false);
   anchor = at;
   const { frame: box } = build();
   const key = JSON.stringify([

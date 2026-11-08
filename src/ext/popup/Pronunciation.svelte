@@ -12,7 +12,6 @@
   import { accentFor, learned, setAccent, type Settings } from '@/settings/shape';
   import Group from '@/phone/parts/Group.svelte';
   import Item from '@/phone/parts/Item.svelte';
-  import Switch from '@/phone/parts/Switch.svelte';
   import Segments from '@/phone/parts/Segments.svelte';
   import ListSheet from '@/phone/parts/ListSheet.svelte';
 
@@ -62,18 +61,6 @@
       change={(value) => change('narrow', value === 'narrow')}
     />
   </div>
-</Group>
-
-<Group>
-  <Item name={ROWS.stress.name} row="stress">
-    {#snippet control()}
-      <Switch
-        on={!settings.hideStress}
-        label={ROWS.stress.name}
-        change={(on) => change('hideStress', !on)}
-      />
-    {/snippet}
-  </Item>
 </Group>
 
 {#if others.length > 0}

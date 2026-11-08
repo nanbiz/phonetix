@@ -306,10 +306,6 @@
       "name": "Lautschrift",
       "about": ""
     },
-    "stress": {
-      "name": "Betonungszeichen",
-      "about": ""
-    },
     "delay": {
       "name": "Wartezeit bis zur Karte",
       "about": ""

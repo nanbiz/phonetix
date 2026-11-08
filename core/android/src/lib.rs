@@ -449,14 +449,13 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_display<'a>(
     _class: JClass<'a>,
     ipa: JString<'a>,
     narrow: jni::sys::jboolean,
-    hide_stress: jni::sys::jboolean,
 ) -> jni::objects::JString<'a> {
     let empty = env.new_string("").expect("a string the vm can hold");
     let Ok(text) = env.get_string(&ipa) else {
         return empty;
     };
     let text: String = text.into();
-    let shown = lexcore::symbols::display(&text, narrow != 0, hide_stress != 0);
+    let shown = lexcore::symbols::display(&text, narrow != 0);
     env.new_string(shown).unwrap_or(empty)
 }
 
@@ -518,7 +517,6 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
     mode: JString<'a>,
     density: jint,
     narrow: jni::sys::jboolean,
-    hide_stress: jni::sys::jboolean,
     accent: JString<'a>,
 ) -> jni::objects::JString<'a> {
     let empty = env
@@ -599,7 +597,6 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_annotate<'a>(
         },
         density: density.max(1) as u32,
         narrow: narrow != 0,
-        hide_stress: hide_stress != 0,
         accent: accent_pack.clone(),
         seen: Vec::new(),
         counts: Default::default(),
@@ -940,7 +937,10 @@ pub extern "system" fn Java_io_github_nanbiz_phonetix_core_Lex_speechPhonemes<'a
             .unwrap_or_default();
         asked.push(text);
     }
-    let said = speech::phonemes(&voice, &asked);
+    let said: Vec<String> = speech::phonemes(&voice, &asked)
+        .iter()
+        .map(|ipa| lexcore::symbols::stress_at_syllable(ipa))
+        .collect();
     let Ok(out) = env.new_object_array(
         said.len() as jint,
         "java/lang/String",

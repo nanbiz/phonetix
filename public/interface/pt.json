@@ -306,10 +306,6 @@
       "name": "Transcrições",
       "about": ""
     },
-    "stress": {
-      "name": "Marcas de tonicidade",
-      "about": ""
-    },
     "delay": {
       "name": "Espera até abrir um cartão",
       "about": ""

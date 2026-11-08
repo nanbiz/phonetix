@@ -294,7 +294,7 @@ def main():
               f"[{drawn.get('state')}]")
         if not drawn.get("count"):
             failures.append(f"nothing was annotated on Gecko: {drawn}")
-        elif "pero" not in (drawn.get("said") or []):
+        elif "ˈpero" not in (drawn.get("said") or []):
             failures.append(f"the words are said {drawn.get('said')}, not the Spanish way")
 
         # The card is entered through its arrow and nowhere else, the same four ways the Chrome
@@ -346,12 +346,16 @@ def main():
             hand.move(2, 2)
             time.sleep(0.5)
             hand.move(word["x"], word["y"])
-            seen = None
-            for _ in range(20):
+            # Until the card has stopped growing: it comes up with how the word is said and gets
+            # taller when what the word means arrives, and what is aimed at has to be where it
+            # will be.
+            seen = last = None
+            for _ in range(30):
                 time.sleep(0.3)
                 seen = hand.ask(CARD_JS)
-                if seen and seen.get("open") and seen.get("arrow"):
+                if seen and seen.get("open") and seen.get("arrow") and last == seen["card"]:
                     break
+                last = seen.get("card") if seen else None
             link = hand.ask("""(() => {
                 const host = document.getElementById('phonetix-card-host');
                 const el = host && host.shadowRoot.querySelector('[data-does=Wiktionary]');

@@ -306,10 +306,6 @@
       "name": "Transkripsjoner",
       "about": ""
     },
-    "stress": {
-      "name": "Trykktegn",
-      "about": ""
-    },
     "delay": {
       "name": "Ventetid før et kort åpnes",
       "about": ""

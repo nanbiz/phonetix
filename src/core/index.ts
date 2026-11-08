@@ -12,6 +12,7 @@ import init, {
   display as shown,
   phrase as asPhrase,
   readWiktionary as readPage,
+  stressAtSyllable,
   symbols as sounds,
 } from './wasm/lexcore.js';
 import type { Answer, IpaSymbol } from './answer';
@@ -157,7 +158,6 @@ export async function annotate(
       options.mode,
       options.density,
       options.narrow ?? false,
-      options.hideStress ? 1 : 0,
       options.accent ?? '',
       options.seen ?? [],
       Object.keys(options.counts ?? {}),
@@ -346,14 +346,21 @@ export async function symbolsOf(ipa: string): Promise<IpaSymbol[]> {
   return JSON.parse(sounds(ipa)) as IpaSymbol[];
 }
 
+/** What a voice said of each word, with the stress marks where a transcription has them. */
+export async function fromVoice(said: Record<string, string>): Promise<Record<string, string>> {
+  await coreReady();
+  return Object.fromEntries(
+    Object.entries(said).map(([word, ipa]) => [word, stressAtSyllable(ipa)])
+  );
+}
+
 /** A transcription as it is shown over a word. */
 export async function displayOf(
   ipa: string,
-  narrow: boolean,
-  hideStress: boolean
+  narrow: boolean
 ): Promise<string> {
   await coreReady();
-  return shown(ipa, narrow, hideStress);
+  return shown(ipa, narrow);
 }
 
 /** Give up a batch the host has finished drawing. */

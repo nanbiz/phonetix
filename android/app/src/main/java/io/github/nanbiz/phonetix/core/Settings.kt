@@ -90,7 +90,6 @@ data class Settings(
      */
     val narrow: Boolean = false,
     /** Leave the stress marks off the line over a word. The card always shows them. */
-    val hideStress: Boolean = true,
     /**
      * What a card says, part by part, the extension's same switches: how the word is said, what
      * it means, and with the meaning, which form it is and the other words its spelling can be.
@@ -198,7 +197,6 @@ object SettingsStore {
     private const val K_REST_Y = "rest_y"
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
-    private const val K_STRESS = "hide_stress"
     private const val K_THEME = "theme"
     private const val K_DARK = "dark"
     private const val K_SOUND = "show_sound"
@@ -252,7 +250,6 @@ object SettingsStore {
                 }
                 .toMap(),
             narrow = p.getBoolean(K_NARROW, false),
-            hideStress = p.getBoolean(K_STRESS, true),
             showSound = p.getBoolean(K_SOUND, true),
             showMeaning = p.getBoolean(K_MEANING, true),
             showGrammar = p.getBoolean(K_GRAMMAR, true),
@@ -294,7 +291,6 @@ object SettingsStore {
             ?.putFloat(K_REST_Y, next.restY)
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
-            ?.putBoolean(K_STRESS, next.hideStress)
             ?.putString(K_THEME, next.theme)
             ?.putString(K_DARK, next.dark)
             ?.putBoolean(K_SOUND, next.showSound)
@@ -379,7 +375,6 @@ object SettingsStore {
         it.copy(accents = next)
     }
     fun setNarrow(v: Boolean) = update { it.copy(narrow = v) }
-    fun setHideStress(v: Boolean) = update { it.copy(hideStress = v) }
     fun toggleApp(pkg: String) = update {
         it.copy(apps = if (pkg in it.apps) it.apps - pkg else it.apps + pkg)
     }

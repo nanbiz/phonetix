@@ -9,6 +9,6 @@ package io.github.nanbiz.phonetix.core
  */
 object DisplayIpa {
 
-    fun display(ipa: String, narrow: Boolean = false, hideStress: Boolean = true): String =
-        IpaSymbols.display(ipa, narrow, hideStress)
+    fun display(ipa: String, narrow: Boolean = false): String =
+        IpaSymbols.display(ipa, narrow)
 }

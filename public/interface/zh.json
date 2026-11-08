@@ -306,10 +306,6 @@
       "name": "标音",
       "about": ""
     },
-    "stress": {
-      "name": "重音符号",
-      "about": ""
-    },
     "delay": {
       "name": "卡片弹出前的停留",
       "about": ""

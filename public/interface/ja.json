@@ -306,10 +306,6 @@
       "name": "発音表記",
       "about": ""
     },
-    "stress": {
-      "name": "強勢記号",
-      "about": ""
-    },
     "delay": {
       "name": "カードが開くまでの待ち時間",
       "about": ""

@@ -306,10 +306,6 @@
       "name": "발음 표기",
       "about": ""
     },
-    "stress": {
-      "name": "강세 표시",
-      "about": ""
-    },
     "delay": {
       "name": "카드가 열리기 전 대기",
       "about": ""

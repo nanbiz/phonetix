@@ -60,6 +60,6 @@ object IpaSymbols {
     fun describe(token: String): SymbolInfo? = explain(token).firstOrNull()
 
     /** How a transcription is shown over a word, given what the reader asked for. */
-    fun display(ipa: String, narrow: Boolean, hideStress: Boolean): String =
-        Lex.display(ipa, narrow, hideStress)
+    fun display(ipa: String, narrow: Boolean): String =
+        Lex.display(ipa, narrow)
 }

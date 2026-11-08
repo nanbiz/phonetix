@@ -306,10 +306,6 @@
       "name": "Transkrypcje",
       "about": ""
     },
-    "stress": {
-      "name": "Znaki akcentu",
-      "about": ""
-    },
     "delay": {
       "name": "Przerwa przed otwarciem karty",
       "about": ""

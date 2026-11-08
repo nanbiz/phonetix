@@ -306,10 +306,6 @@
       "name": "Transkripsi",
       "about": ""
     },
-    "stress": {
-      "name": "Tanda tekanan",
-      "about": ""
-    },
     "delay": {
       "name": "Jeda sebelum kartu terbuka",
       "about": ""

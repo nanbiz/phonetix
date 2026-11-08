@@ -306,10 +306,6 @@
       "name": "Transkripsiyon",
       "about": ""
     },
-    "stress": {
-      "name": "Vurgu işaretleri",
-      "about": ""
-    },
     "delay": {
       "name": "Kart açılmadan önce bekleme",
       "about": ""

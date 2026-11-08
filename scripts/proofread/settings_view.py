@@ -500,8 +500,8 @@ def main():
             if not spain:
                 failures.append("choosing Spain on the card left the card or the page in the Latin American accent")
 
-        # How the page writes what it says: narrow rather than broad, and with or without the
-        # stress marks. Each is judged by the words on the page changing, not by the setting.
+        # How the page writes what it says: narrow rather than broad, judged by the words on the
+        # page changing, not by the setting.
         def written():
             return evaluate(cdp, page, "[...document.querySelectorAll('.px-ph')]"
                                        ".map(p => p.textContent).join(' ')") or ""
@@ -550,20 +550,6 @@ def main():
         control(cdp, view, "document.querySelector('[data-row=narrow] [data-choice=broad]').click()",
                 settle=3)
 
-        # The stress marks, which the switch puts on the page and takes off again.
-        def marks():
-            return (written() + (carpet() or "")).count("\u02c8")
-
-        shown = evaluate(cdp, view, "document.querySelector('[data-row=stress] input').checked")
-        first = marks()
-        control(cdp, view, "document.querySelector('[data-row=stress] input').click()", settle=3)
-        second = marks()
-        control(cdp, view, "document.querySelector('[data-row=stress] input').click()", settle=3)
-        print(f"  stress marks with the switch {'on' if shown else 'off'}: {first}, "
-              f"turned {'off' if shown else 'on'}: {second}")
-        on, off = (first, second) if shown else (second, first)
-        if not on or off:
-            failures.append(f"the stress switch left {on} marks on and {off} off")
         evaluate(cdp, view, "chrome.storage.local.remove('density').then(() => 1)")
         control(cdp, view, "document.querySelector('[data-does=back]').click()", settle=1)
 

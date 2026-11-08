@@ -97,7 +97,7 @@ object Lex {
 
     /** A transcription as it is shown over a word, given the reader's own settings. The card
      *  always carries the full form. */
-    external fun display(ipa: String, narrow: Boolean, hideStress: Boolean): String
+    external fun display(ipa: String, narrow: Boolean): String
 
     /** Whether this occurrence of a word is one the inline layer draws. */
     external fun picks(word: String, occurrence: Int, density: Int): Boolean
@@ -123,7 +123,6 @@ object Lex {
         mode: String,
         density: Int,
         narrow: Boolean,
-        hideStress: Boolean,
         accent: String,
     ): String
 

@@ -306,10 +306,6 @@
       "name": "Phiên âm",
       "about": ""
     },
-    "stress": {
-      "name": "Dấu trọng âm",
-      "about": ""
-    },
     "delay": {
       "name": "Chờ trước khi thẻ mở",
       "about": ""

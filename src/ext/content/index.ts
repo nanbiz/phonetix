@@ -403,7 +403,6 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
         mode: inline(),
         density: settings.density,
         narrow: settings.narrow,
-        hideStress: settings.hideStress,
         accent: accentFor(settings, source),
         // And what they kept to learn, single words of it, which a page puts in first.
         seen: [...asked, ...(settings.kept ?? [])
@@ -1100,7 +1099,6 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     accent: accentFor(settings, source),
     eased: settings.animations,
     narrow: settings.narrow,
-    hideStress: settings.hideStress,
     defined: practising && source === DEFINED_IN,
     parts: partsOf(settings),
     entered: tapped,
@@ -1336,7 +1334,6 @@ async function askPhrase(
     entered,
     accent: accentFor(settings, source),
     narrow: settings.narrow,
-    hideStress: settings.hideStress,
     parts: partsOf(settings),
     onPlay: () => speak(text, source, warmAudio()),
     gone: () => {
@@ -1979,7 +1976,6 @@ export async function session(): Promise<void> {
       was.source !== fresh.source ||
       was.narrow !== fresh.narrow ||
       JSON.stringify(was.accents) !== JSON.stringify(fresh.accents) ||
-      was.hideStress !== fresh.hideStress ||
       was.theme !== fresh.theme ||
       was.dark !== fresh.dark ||
       was.off.join() !== fresh.off.join()

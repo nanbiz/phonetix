@@ -369,7 +369,6 @@ private class Bridge(
         .put("known", JSONArray(settings.untranslated.toList()))
         .put("source", "")
         .put("narrow", settings.narrow)
-        .put("hideStress", settings.hideStress)
         .put("accents", JSONObject(settings.accents as Map<*, *>))
         .put("delay", 200)
         .put("animations", true)
@@ -409,7 +408,6 @@ private class Bridge(
                 SettingsStore.setKnown((0 until said.length()).map { said.optString(it) }.toSet())
             }
             "narrow" -> SettingsStore.setNarrow(value == true)
-            "hideStress" -> SettingsStore.setHideStress(value == true)
             "showSound" -> SettingsStore.setShowSound(value == true)
             "showMeaning" -> SettingsStore.setShowMeaning(value == true)
             "showGrammar" -> SettingsStore.setShowGrammar(value == true)

@@ -39,10 +39,16 @@ pub fn symbols(ipa: &str) -> String {
     lexcore::json::symbols_of(&lexcore::symbols::explain(ipa))
 }
 
+/// A transcription a voice produced, with its stress marks where a transcription has them.
+#[wasm_bindgen(js_name = stressAtSyllable)]
+pub fn stress_at_syllable(ipa: &str) -> String {
+    lexcore::symbols::stress_at_syllable(ipa)
+}
+
 /// A transcription as it is shown over a word, given what the reader asked for.
 #[wasm_bindgen]
-pub fn display(ipa: &str, narrow: bool, hide_stress: bool) -> String {
-    lexcore::symbols::display(ipa, narrow, hide_stress)
+pub fn display(ipa: &str, narrow: bool) -> String {
+    lexcore::symbols::display(ipa, narrow)
 }
 
 /// What a Wiktionary page says about a word in one language, as JSON.
@@ -346,7 +352,6 @@ impl Core {
         mode: &str,
         density: u32,
         narrow: bool,
-        hide_stress: u8,
         accent: String,
         seen: Vec<String>,
         counted: Vec<String>,
@@ -389,7 +394,6 @@ impl Core {
             },
             density,
             narrow,
-            hide_stress: hide_stress != 0,
             accent: if accent.is_empty() {
                 None
             } else {

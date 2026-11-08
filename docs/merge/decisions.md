@@ -502,7 +502,6 @@ Scopes, and where each setting lives:
 | Inline annotations (frequency) | global | first | one slider, the curve in the core; retired and dimmed while Inline shows is Replace (DR-7) |
 | Inline shows: gloss, gloss and IPA, IPA, replace | global | first | the settled inline IPA switch is the IPA choices here |
 | Packs | global | first, status only | opens the pack manager |
-| Stress marks | global | Advanced, Full IPA | `hideStress` inverted: on means ˈ and ˌ are shown; default off, as shipped |
 | Narrow detail | global | Advanced, Full IPA | `narrow`: on means [ ] with diacritics; default on, as shipped; the two combine freely |
 | Accent | per language | Advanced | one row per language the reader has a pack for |
 | Card delay, with Instant | global, browser only | Advanced, Browser | Android taps and the lens dwells; no delay applies |

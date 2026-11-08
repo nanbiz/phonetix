@@ -20,7 +20,6 @@ fn main() {
         mode: InlineMode::Sound,
         density: 9,
         narrow: false,
-        hide_stress: true,
         accent: None,
         seen: Vec::new(),
         counts: Default::default(),

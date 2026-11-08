@@ -196,10 +196,6 @@
       "name": "Transcriptions",
       "about": ""
     },
-    "stress": {
-      "name": "Stress marks",
-      "about": ""
-    },
     "delay": {
       "name": "Rest before a card opens",
       "about": ""

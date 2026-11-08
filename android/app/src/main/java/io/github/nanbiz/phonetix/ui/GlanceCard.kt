@@ -41,7 +41,6 @@ fun GlanceCard(
     modifier: Modifier = Modifier,
     report: Reporter? = null,
     narrow: Boolean = false,
-    hideStress: Boolean = false,
     /** Whether the word is read in the language its dictionary defines it in, so that what the
      *  dictionary says is a definition rather than a translation, and goes under how it is said. */
     defining: Boolean = false,
@@ -53,10 +52,8 @@ fun GlanceCard(
 ) {
     // At the detail the reader asked for: the dictionary's narrow transcription, between
     // brackets, where they asked for narrow ones and it gives one; the broad one otherwise.
-    // Without stress marks where they turned them off, as over the page.
     val detailed = narrow && !answer.narrow.isNullOrBlank()
     val ipa = (if (detailed) answer.narrow else answer.ipa.firstOrNull())
-        ?.let { if (hideStress) it.replace(STRESS, "") else it }
         ?.takeIf { it.isNotBlank() && sound }
     val written = ipa?.let { if (detailed) "[$it]" else "/$it/" }
     // What the word is led by: the word the core picks, which is the reader's word for it or,
@@ -320,4 +317,3 @@ fun plainly(sense: String): String {
 private const val ALSO = 2
 
 /** The primary and secondary stress marks. */
-private val STRESS = Regex("[ˈˌ]")

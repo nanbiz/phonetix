@@ -306,10 +306,6 @@
       "name": "Trascrizioni",
       "about": ""
     },
-    "stress": {
-      "name": "Segni dell'accento tonico",
-      "about": ""
-    },
     "delay": {
       "name": "Pausa prima che si apra una scheda",
       "about": ""

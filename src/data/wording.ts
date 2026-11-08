@@ -109,7 +109,6 @@ export const ROWS: Record<string, Words> = {
   "site": { name: "On this site", about: "" },
   "source": { name: "This page is in", about: "" },
   "start": { name: "Before it can answer a word", about: "" },
-  "stress": { name: "Stress marks", about: "" },
   "target": { name: "Language", about: "" },
   "theme": { name: "Theme", about: "" },
   "touch": { name: "Touching a word", about: "" },

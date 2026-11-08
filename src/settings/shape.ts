@@ -71,7 +71,6 @@ export interface Settings {
   /** Narrow transcriptions rather than broad ones. The card always shows the full form. */
   narrow: boolean;
   /** Leave the stress marks off the line over a word. */
-  hideStress: boolean;
   /**
    * Which accent to read each language in, as language tag to accent tag: en → en-gb,
    * es → es-419. A language left out is read in its default accent (data/accents.json).
@@ -193,7 +192,6 @@ export const DEFAULTS: Settings = {
   into: '',
   recent: [],
   narrow: false,
-  hideStress: true,
   accents: {},
   delay: 200,
   cards: true,

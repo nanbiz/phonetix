@@ -580,9 +580,9 @@ def ember_checks(hand, engine, failures, store, put_back):
             if still:
                 failures.append(f"{engine}: the card stayed after the pointer left its word")
     if where["long"]:
-        # A word in a language the reader reads: how it is said and nothing under it, and with
-        # stress marks off, none in it.
-        store({"knownLanguages": ["es"], "hideStress": True})
+        # A word in a language the reader reads: how it is said, with its stress, and nothing
+        # under it.
+        store({"knownLanguages": ["es"]})
         hand.move(where["empty"]["x"], where["empty"]["y"])
         time.sleep(0.3)
         long = where["long"]
@@ -600,8 +600,8 @@ def ember_checks(hand, engine, failures, store, put_back):
         else:
             if quiet["head"]:
                 failures.append(f"{engine}: a card with nothing to say under its strip has a body: {quiet}")
-            if any(mark in quiet["ipa"] for mark in "ˈˌ"):
-                failures.append(f"{engine}: the card shows stress marks with them off: {quiet}")
+            if not any(mark in quiet["ipa"] for mark in "ˈˌ"):
+                failures.append(f"{engine}: the card shows no stress marks: {quiet}")
         # The same reader learning German: a word of a language they read is practice, and its
         # card says what it is in German. Learning nothing again, it is only said.
         store({"knownLanguages": ["es"], "learn": "de"})
@@ -641,7 +641,7 @@ def ember_checks(hand, engine, failures, store, put_back):
             if ("Hund" in drawn) != wanted or (not wanted and drawn):
                 failures.append(f"{engine}: learning {learning or 'nothing'}, the page of a language "
                                 f"the reader reads was replaced with {drawn}")
-        store({"knownLanguages": None, "hideStress": None, "learn": None, **put_back})
+        store({"knownLanguages": None, "learn": None, **put_back})
     # Into a frame of the page, whose moves the page never hears: no fire left at its edge,
     # and none put back where the pointer last was when the page scrolls afterwards.
     framed = hand.ask("""
@@ -1559,14 +1559,14 @@ def main():
         # What replaces a word has to be that word, said: "perro" is [pero], whatever language
         # the reader reads into, because what it means is the card's.
         pairs = dict(zip(painted["spellings"], painted["glosses"]))
-        said = {"perro": "pero", "camino": "kamino"}
+        said = {"perro": "ˈpero", "camino": "kaˈmino"}
         for word, answer in said.items():
             if pairs.get(word) != answer:
                 failures.append(f"{word} carries {pairs.get(word)!r}, not {answer!r}")
         # The heading. A page capitalises its headings whatever the language does, and while
         # the cascade compared spellings byte for byte every one of them went unanswered - on
         # a real page that is most of what a reader looks at first.
-        for word, answer in (("Perro", "pero"), ("Camino", "kamino")):
+        for word, answer in (("Perro", "ˈpero"), ("Camino", "kaˈmino")):
             if pairs.get(word) != answer:
                 failures.append(f"the heading's {word} carries {pairs.get(word)!r}, not {answer!r}")
         if painted["inCode"]:
