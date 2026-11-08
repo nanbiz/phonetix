@@ -256,7 +256,18 @@
     "mark-euphemistic": "förskönande",
     "learn-another": "Lär dig ett språk till",
     "default-learning": "Språket som sidor ersätts med",
-    "make-default-learning": "Ersätt sidor med det här språket"
+    "make-default-learning": "Ersätt sidor med det här språket",
+    "met-language": "%s på %s sidor du läser",
+    "learn-it": "Lär dig",
+    "read-it": "Jag läser den",
+    "not-now": "Inte nu",
+    "keep-meeting": "Du stöter hela tiden på %s",
+    "met-on-pages": "på %s sidor",
+    "keep-it": "Spara för att lära dig",
+    "kept-it": "Sparat",
+    "kept-list": "Sparat för att lära dig",
+    "forget-it": "Glöm",
+    "pos-expression": "uttryck"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Mina",
+      "about": ""
+    },
+    "kept": {
+      "name": "Sparat för att lära dig",
+      "about": ""
+    },
+    "met": {
+      "name": "Språk du stöter på hela tiden",
       "about": ""
     }
   },

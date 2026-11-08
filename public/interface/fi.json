@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemistinen",
     "learn-another": "Opi toista kieltä",
     "default-learning": "Kieli, jolle sivut korvataan",
-    "make-default-learning": "Korvaa sivut tällä kielellä"
+    "make-default-learning": "Korvaa sivut tällä kielellä",
+    "met-language": "%s %s sivulla, joita luet",
+    "learn-it": "Opi tämä",
+    "read-it": "Luen sitä",
+    "not-now": "Ei nyt",
+    "keep-meeting": "Kohtaat yhä %s",
+    "met-on-pages": "%s sivulla",
+    "keep-it": "Talleta opittavaksi",
+    "kept-it": "Talletettu",
+    "kept-list": "Talletettu opittavaksi",
+    "forget-it": "Unohda",
+    "pos-expression": "ilmaus"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Omat",
+      "about": ""
+    },
+    "kept": {
+      "name": "Talletettu opittavaksi",
+      "about": ""
+    },
+    "met": {
+      "name": "Kielet, joihin törmäät yhä",
       "about": ""
     }
   },

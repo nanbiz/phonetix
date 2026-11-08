@@ -1,4 +1,6 @@
 <script lang="ts">
+  import MetOffers from '../parts/MetOffers.svelte';
+  import KeptIcon from 'virtual:icons/lucide/star';
   // The first screen: whether the button is out, how its card writes a sound, the languages
   // the reader knows, where the button waits, and the way to everything set once and left.
   import { languagesSaid } from '@/ui/settings/languages';
@@ -86,6 +88,10 @@
 
 <div class:resting={ready && !settings.on}>
 
+  <!-- A language the reader keeps meeting and has on none of their lists, offered first.
+       Nothing at all until there is one. -->
+  <MetOffers {settings} {change} />
+
   <!-- The card always says both how a word sounds and what it means, so what is set here is
        how the one is written and what the other is translated into. -->
   <Group name={ROWS.ipa.name}>
@@ -121,6 +127,12 @@
     >
       {#snippet glyph()}<LanguagesIcon class="row-icon" />{/snippet}
     </Item>
+    {#if (settings.kept ?? []).length > 0}
+      <!-- What the reader kept to learn, once there is something kept. -->
+      <Item name={ROWS.kept.name} row="kept" value={String(settings.kept.length)} open={() => open('kept')}>
+        {#snippet glyph()}<KeptIcon class="row-icon" />{/snippet}
+      </Item>
+    {/if}
     <!-- What the card a word opens says, part by part. -->
     <Item
       name={ROWS.cards.name}

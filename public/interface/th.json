@@ -256,7 +256,18 @@
     "mark-euphemistic": "สำนวนเลี่ยง",
     "learn-another": "เรียนอีกภาษา",
     "default-learning": "ภาษาที่ใช้แทนที่หน้าเว็บ",
-    "make-default-learning": "แทนที่หน้าเว็บด้วยภาษานี้"
+    "make-default-learning": "แทนที่หน้าเว็บด้วยภาษานี้",
+    "met-language": "%s ใน %s หน้าที่คุณอ่าน",
+    "learn-it": "เรียนภาษานี้",
+    "read-it": "อ่านอยู่แล้ว",
+    "not-now": "ไว้ก่อน",
+    "keep-meeting": "คุณเจอ %s บ่อยๆ",
+    "met-on-pages": "ใน %s หน้า",
+    "keep-it": "บันทึกไว้เรียน",
+    "kept-it": "บันทึกแล้ว",
+    "kept-list": "บันทึกไว้เรียน",
+    "forget-it": "ลบ",
+    "pos-expression": "สำนวน"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "ของฉัน",
+      "about": ""
+    },
+    "kept": {
+      "name": "บันทึกไว้เรียน",
+      "about": ""
+    },
+    "met": {
+      "name": "ภาษาที่คุณเจอบ่อย",
       "about": ""
     }
   },

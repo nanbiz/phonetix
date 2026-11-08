@@ -256,7 +256,18 @@
     "mark-euphemistic": "委婉",
     "learn-another": "再学一门语言",
     "default-learning": "页面被替换成的语言",
-    "make-default-learning": "将页面替换为这种语言"
+    "make-default-learning": "将页面替换为这种语言",
+    "met-language": "%s，出现在你读的 %s 个页面上",
+    "learn-it": "学习",
+    "read-it": "我读得懂",
+    "not-now": "暂不",
+    "keep-meeting": "你总是遇到 %s",
+    "met-on-pages": "%s 个页面上",
+    "keep-it": "收藏以便学习",
+    "kept-it": "已收藏",
+    "kept-list": "收藏的待学词",
+    "forget-it": "移除",
+    "pos-expression": "表达"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "我的",
+      "about": ""
+    },
+    "kept": {
+      "name": "收藏的待学词",
+      "about": ""
+    },
+    "met": {
+      "name": "你经常遇到的语言",
       "about": ""
     }
   },

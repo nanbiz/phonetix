@@ -1,0 +1,16 @@
+# Verbs whose English subject is the Spanish object: "me gusta" is "I like", literally "it
+# pleases me". A clitic before one of these and the verb are read as one expression, its subject
+# the clitic's person. Columns: language, kind, word, English, literal English.
+# kind "verb": the verb's lemma, the English verb it is said with, and what it literally does.
+# kind "clitic": the pronoun, its person and number (1sg ... 3pl), and what it literally is.
+es	verb	gustar	to like	to please
+es	verb	encantar	to love	to delight
+es	verb	fascinar	to love	to fascinate
+es	verb	apetecer	to feel like	to appeal to
+es	verb	interesar	to be interested in	to interest
+es	clitic	me	1sg	to me
+es	clitic	te	2sg	to you
+es	clitic	le	3sg	to him, to her
+es	clitic	nos	1pl	to us
+es	clitic	os	2pl	to you all
+es	clitic	les	3pl	to them

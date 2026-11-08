@@ -610,3 +610,74 @@ button.language-open:active {
   vertical-align: -0.25em;
   color: var(--color-accent);
 }
+
+/* A language the reader keeps meeting: the answers in one row at the end of its row, wrapping
+   under the name on a narrow screen rather than pushing it out. */
+.met-answers {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.met-answers .btn svg {
+  width: 1em;
+  height: 1em;
+}
+
+.met-answers .icon-button {
+  width: 36px;
+  height: 36px;
+  color: var(--color-ink-faint);
+}
+
+/* What the reader kept: its sound, what it is and where it was met, and a way to let it go. */
+.kept {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 8px 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kept:last-child {
+  border-bottom: none;
+}
+
+.kept .icon-button {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  color: var(--color-ink-faint);
+}
+
+.kept [data-does="play"] {
+  color: var(--color-accent);
+}
+
+.kept-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kept-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.kept-ipa,
+.kept-line {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-small);
+}
+
+.kept-line {
+  font-family: var(--font-serif, Georgia, serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

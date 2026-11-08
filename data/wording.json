@@ -371,6 +371,14 @@
     "mine-group": {
       "name": "Mine",
       "about": ""
+    },
+    "kept": {
+      "name": "Kept to learn",
+      "about": ""
+    },
+    "met": {
+      "name": "Languages you keep meeting",
+      "about": ""
     }
   },
   "ends": {
@@ -538,6 +546,17 @@
     "mark-euphemistic": "euphemistic",
     "learn-another": "Learn another language",
     "default-learning": "The one pages are replaced into",
-    "make-default-learning": "Replace pages into this one"
+    "make-default-learning": "Replace pages into this one",
+    "met-language": "%s on %s pages you read",
+    "learn-it": "Learn it",
+    "read-it": "I read it",
+    "not-now": "Not now",
+    "keep-meeting": "You keep meeting %s",
+    "met-on-pages": "on %s pages",
+    "keep-it": "Keep to learn",
+    "kept-it": "Kept",
+    "kept-list": "Kept to learn",
+    "forget-it": "Forget",
+    "pos-expression": "expression"
   }
 }

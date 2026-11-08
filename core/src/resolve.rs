@@ -75,6 +75,9 @@ pub struct Answer {
     /// The labels the dictionary gives each transcription, in the order of [ipa]: an accent
     /// with how good a name for it the label was (`en-gb:0`), or `?` for one not offered.
     pub ipa_said_in: Vec<Vec<String>>,
+    /// The words of an expression read as one, each with what it is on its own: "me gusta" is
+    /// "me", to me, and "gusta", it pleases. Empty for a single word.
+    pub parts: Vec<(String, String)>,
     /// What the word is, in the reader's language, as their own Wiktionary describes it, where
     /// that says more than the word it answers with: "barco" is "Schiff", a "großes, bauchiges
     /// Wasserfahrzeug".
@@ -122,6 +125,7 @@ impl Answer {
             said_in: None,
             spelling_of: None,
             ipa_said_in: Vec::new(),
+            parts: Vec::new(),
             described: None,
         }
     }
@@ -2249,7 +2253,8 @@ pub fn phrase_around<D: AsRef<[u8]>>(
             }
         }
     }
-    None
+    // Or a pronoun and the verb it goes with, which the dictionary does not hold as one.
+    crate::expression::around(pack, words, at)
 }
 
 /// The most words a phrase the dictionary holds is looked for as.
@@ -2269,6 +2274,12 @@ pub fn read_in_context<D: AsRef<[u8]>>(
     target: &Lang,
     open: &Open<D>,
 ) -> Answer {
+    // A pronoun and a verb read as one, which the dictionary holds as two words.
+    if spelling.contains(' ') {
+        if let Some(answer) = crate::expression::read(spelling, source, target, open) {
+            return answer;
+        }
+    }
     let answer = read_found(spelling, before, source, target, open);
     in_its_own_words(answer, source, target, open)
 }
@@ -5223,6 +5234,7 @@ fn finish<D: AsRef<[u8]>>(
         paradigm,
         said_in: None,
         ipa_said_in,
+        parts: Vec::new(),
         described: None,
     }
 }

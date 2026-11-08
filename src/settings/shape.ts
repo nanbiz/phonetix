@@ -135,6 +135,49 @@ export interface Settings {
   apps: string[];
   /** Every app rather than the chosen ones. The phone's. */
   allApps: boolean;
+  /**
+   * Languages on none of the reader's lists that they keep meeting, each with the pages they
+   * met it on (newest last, a few dozen at most): a word of it no dictionary of theirs had,
+   * on a page in another language. Met on enough pages, it is offered to them to learn or to
+   * read.
+   */
+  met: Record<string, string[]>;
+  /** Languages the reader said not now to, which are never offered again. */
+  passed: string[];
+  /** What the reader kept to learn, newest first. */
+  kept: Kept[];
+}
+
+/** A word or an expression the reader kept to learn, with where they met it. */
+export interface Kept {
+  /** As it is written. */
+  text: string;
+  /** Its language. */
+  lang: string;
+  /** What it means in the reader's language, as the card said it. */
+  says: string;
+  /** How it is said, as the card showed it. */
+  ipa: string;
+  /** The sentence they met it in. */
+  line: string;
+  /** Where: a site's name or an app's. */
+  where: string;
+  /** When, in milliseconds since 1970. */
+  at: number;
+}
+
+/** On how many pages a language has to be met before it is offered. */
+export const MET_ENOUGH = 3;
+
+/** The languages to offer the reader now: met on enough pages, on none of their lists, and not
+ *  passed over. The one met on most pages first. */
+export function offered(settings: Settings): { lang: string; pages: number }[] {
+  return Object.entries(settings.met ?? {})
+    .filter(([lang, pages]) =>
+      pages.length >= MET_ENOUGH && !(settings.passed ?? []).includes(lang) &&
+      !reads(settings, lang) && !learned(settings).includes(lang))
+    .map(([lang, pages]) => ({ lang, pages: pages.length }))
+    .sort((a, b) => b.pages - a.pages);
 }
 
 export const DEFAULTS: Settings = {
@@ -170,6 +213,9 @@ export const DEFAULTS: Settings = {
   touchWords: true,
   apps: [],
   allApps: true,
+  met: {},
+  passed: [],
+  kept: [],
 };
 
 

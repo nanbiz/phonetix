@@ -321,6 +321,10 @@ export interface CardActions {
   /** Whether the card takes the pointer from the start rather than from its arrow: one opened
    *  by a tap or for a selection was asked for outright, and there is no hover to come in by. */
   entered?: boolean;
+  /** A language the reader keeps meeting, offered on the card. */
+  offer?: { lang: string; pages: number; onLearn: () => void; onRead: () => void; onPass: () => void } | null;
+  /** Keeping the word or expression to learn. */
+  keep?: { kept: boolean; onKeep: () => void } | null;
 }
 
 /** Where the card is anchored, so it can be put back in place when it changes height. */
@@ -338,7 +342,8 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     actions.accent ?? '', actions.eased ?? false,
     actions.arriving == null ? null : Math.round(actions.arriving * 100),
     answer.described ?? null, answer.readings.map((reading) => reading.described ?? null),
-    actions.parts ?? null,
+    actions.parts ?? null, actions.offer ? [actions.offer.lang, actions.offer.pages] : null,
+    actions.keep ? actions.keep.kept : null,
   ]);
   if (drawn && about === key) {
     place(at);
@@ -360,6 +365,8 @@ export function show(given: Answer, at: DOMRect, actions: CardActions = {}): voi
     lookUp: actions.lookUp,
     defined: actions.defined ?? false,
     parts: actions.parts ?? EVERY_PART,
+    offer: actions.offer ?? null,
+    keep: actions.keep ?? null,
   };
   if (filling && props) {
     // Filled in where it is, keeping what the reader has open on it, on the side of its word

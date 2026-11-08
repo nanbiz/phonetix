@@ -256,7 +256,18 @@
     "mark-euphemistic": "nói tránh",
     "learn-another": "Học thêm một ngôn ngữ",
     "default-learning": "Ngôn ngữ mà trang được thay thế sang",
-    "make-default-learning": "Thay trang bằng ngôn ngữ này"
+    "make-default-learning": "Thay trang bằng ngôn ngữ này",
+    "met-language": "%s trên %s trang bạn đọc",
+    "learn-it": "Học ngôn ngữ này",
+    "read-it": "Tôi đọc được",
+    "not-now": "Để sau",
+    "keep-meeting": "Bạn liên tục gặp %s",
+    "met-on-pages": "trên %s trang",
+    "keep-it": "Lưu để học",
+    "kept-it": "Đã lưu",
+    "kept-list": "Đã lưu để học",
+    "forget-it": "Xóa",
+    "pos-expression": "cụm từ"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Của tôi",
+      "about": ""
+    },
+    "kept": {
+      "name": "Đã lưu để học",
+      "about": ""
+    },
+    "met": {
+      "name": "Ngôn ngữ bạn liên tục gặp",
       "about": ""
     }
   },

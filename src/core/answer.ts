@@ -110,6 +110,9 @@ export interface Answer {
    *  the translator, where their language has no word for it or says the same word, or where
    *  they asked for a description under every word. Added by the host, never by the core. */
   described?: string | null;
+  /** The words of an expression read as one, each with what it is on its own: "me gusta" is
+   *  "me", to me, and "gusta", it pleases. Empty for a single word. */
+  parts?: { word: string; means: string }[];
 }
 
 /** One grammatical value of a place in a table: "preterite" of the category "tense". */

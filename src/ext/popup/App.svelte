@@ -31,6 +31,9 @@
   import Density from './Density.svelte';
   import Languages from '@/phone/screens/Languages.svelte';
   import LookUpParts from '@/phone/screens/LookUp.svelte';
+  import MetOffers from '@/phone/parts/MetOffers.svelte';
+  import Kept from '@/phone/screens/Kept.svelte';
+  import KeptIcon from 'virtual:icons/lucide/star';
 
   let settings = $state<Settings | null>(null);
   /** What each position of the density bar means, from the core. */
@@ -50,7 +53,7 @@
   /** And the keys that open the translator hearing what to translate. */
   let speaking = $state('');
   /** Which screen is showing. */
-  type View = 'main' | 'accents' | 'appearance' | 'languages' | 'lookup';
+  type View = 'main' | 'accents' | 'appearance' | 'languages' | 'lookup' | 'kept';
   // Kept for the life of this popup: drawn again in another language when the reader makes it
   // their own, on the Languages screen, the view opens where they were rather than at the top.
   let view = $state<View>((sessionStorage.getItem('phonetix-view') as View | null) ?? 'main');
@@ -101,6 +104,19 @@
       if (area === 'local' && 'arriving' in changes) {
         arriving = (changes.arriving.newValue as Record<string, number> | undefined) ?? {};
       }
+    });
+  }
+
+  /** Say a kept word or expression, the way the card says one. */
+  function sayKept(text: string, lang: string) {
+    void sendMessage('speak', { word: text, lang, accent: settings?.accents?.[lang] }).then((bytes) => {
+      const context = new AudioContext();
+      void context.decodeAudioData(new Uint8Array(bytes).buffer).then((buffer) => {
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        source.start();
+      });
     });
   }
 
@@ -223,8 +239,12 @@
       </div>
     {/if}
 
+    <!-- A language the reader keeps meeting and has on none of their lists, offered above the
+         lists it would go on. Nothing at all until there is one. -->
+    <MetOffers {settings} {change} />
+
     <!-- The languages the reader has: what the card and the replaced words both follow, so
-         above both. -->
+         above both. What they kept to learn is under them, once there is something kept. -->
     <Group>
       <Item
         name={ROWS['group-languages'].name}
@@ -234,6 +254,16 @@
       >
         {#snippet glyph()}<LanguagesIcon class="row-icon" />{/snippet}
       </Item>
+      {#if (settings.kept ?? []).length > 0}
+        <Item
+          name={ROWS.kept.name}
+          row="kept"
+          value={String(settings.kept.length)}
+          open={() => (view = 'kept')}
+        >
+          {#snippet glyph()}<KeptIcon class="row-icon" />{/snippet}
+        </Item>
+      {/if}
     </Group>
 
     <div class:resting={!settings.on || !here && site !== ''}>
@@ -352,7 +382,9 @@
             ? ROWS['group-languages'].name
             : view === 'lookup'
               ? ROWS.cards.name
-              : ROWS.appearance.name}</h1
+              : view === 'kept'
+                ? ROWS.kept.name
+                : ROWS.appearance.name}</h1
       >
     </header>
     <div data-view={view}>
@@ -362,6 +394,8 @@
         <LookUpParts {settings} {change} />
       {:else if view === 'accents'}
         <Pronunciation {settings} {change} />
+      {:else if view === 'kept'}
+        <Kept {settings} {change} speak={sayKept} />
       {:else}
         <Appearance {settings} {device} {change} />
       {/if}

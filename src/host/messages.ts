@@ -37,6 +37,9 @@ export interface HostProtocol {
       describe?: boolean;
       /** Answered from what is at hand, without waiting on the translator. */
       quick?: boolean;
+      /** Answered from the dictionaries already here, fetching none: a word of a language on
+       *  none of the reader's lists is not worth a dictionary they never asked for. */
+      held?: boolean;
       /** Which of the line's words it is, counted as wordsOf counts them, so the words around
        *  it can be read as the phrase they make. */
       at?: number;

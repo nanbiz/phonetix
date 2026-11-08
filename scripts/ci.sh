@@ -101,6 +101,8 @@ if [[ "$what" == all || "$what" == browser ]]; then
     nix shell nixpkgs#firefox -c uv run python scripts/proofread/on_firefox.py
   step "a word of another of the reader's languages quoted in a page is read in it" \
     nix shell nixpkgs#firefox -c uv run python scripts/proofread/quoted_word.py
+  step "a language met on three pages is offered, and the star keeps a word" \
+    nix shell nixpkgs#firefox -c uv run python scripts/proofread/met_and_kept.py
 fi
 
 if [[ "$what" == all || "$what" == android ]]; then

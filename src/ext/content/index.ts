@@ -9,9 +9,10 @@ import { sendMessage } from '@/host/messages';
 import { wordsOf, type Token } from '@/core/tokens';
 import type { Answer } from '@/core/answer';
 import {
-  accentFor, allowed, current, DEFAULTS, learned, replacedInto, set, setAccent, translates, watch,
-  type Settings,
+  accentFor, allowed, current, DEFAULTS, learned, offered as offeredLanguages, reads, replacedInto, set, setAccent,
+  translates, watch, type Kept, type Settings,
 } from '@/settings';
+import { LANGUAGES } from '@/data/languages';
 import {
   handAt, hide, inside, moveTo, onTheWayIn, paintedIn as cardPaintedIn, passedOver, show,
   showing, type CardActions,
@@ -404,7 +405,10 @@ async function drawRuns(runs: ScannedRun[], settle?: () => void): Promise<void> 
         narrow: settings.narrow,
         hideStress: settings.hideStress,
         accent: accentFor(settings, source),
-        seen: asked,
+        // And what they kept to learn, single words of it, which a page puts in first.
+        seen: [...asked, ...(settings.kept ?? [])
+          .filter((one) => !/\s/.test(one.text.trim()))
+          .map((one) => one.text.toLowerCase())],
         counts,
         seed: pageSeed(),
         // A line in another language is read in the accent the reader reads that one in.
@@ -677,6 +681,9 @@ interface Asked {
   before: string;
   /** Set where the language was chosen from the dictionaries, which is not asked again. */
   settled?: boolean;
+  /** Set where that language is on none of the reader's lists: it is read from the
+   *  dictionaries already here, and offered to them. */
+  unlisted?: boolean;
 }
 
 /**
@@ -912,11 +919,105 @@ async function languageWithEntry(spelling: string, source: string, line: string,
   for (const lang of theirs.filter((l, i) => l && l !== source && theirs.indexOf(l) === i)) {
     const found = await sendMessage('lookUp', {
       word: spelling, source: lang, target: settings.target, accent: accentFor(settings, lang),
-      before: '', drawn: '', line, at, describe: false, quick: true,
+      before: '', drawn: '', line, at, describe: false, quick: true, held: true,
     });
     if (FOUND.has(found.state)) return lang;
   }
   return '';
+}
+
+/** The stretch of a line a word is in, between the marks that end or open a clause: the
+ *  quoted question "¿Cómo salió todo?" rather than the English sentence around it. */
+function clauseOf(line: string, spelling: string): string {
+  const at = line.indexOf(spelling);
+  if (at < 0) return spelling;
+  const stop = /[.!?¿¡;:"“”«»()\[\]]/u;
+  let from = at;
+  while (from > 0 && !stop.test(line[from - 1])) from--;
+  let to = at + spelling.length;
+  while (to < line.length && !stop.test(line[to])) to++;
+  return line.slice(from, to).trim();
+}
+
+/** The language a word no dictionary of the reader's has is most likely in, judged on its
+ *  clause, where that is a language Phonetix knows and on none of their lists; or ''. */
+async function unlistedLanguage(line: string, spelling: string, source: string): Promise<string> {
+  const guess = await sendMessage('detect', { text: clauseOf(line || spelling, spelling) })
+    .catch(() => null);
+  const lang = guess?.language ?? '';
+  if (!lang || lang === source || !(lang in LANGUAGES)) return '';
+  return reads(settings, lang) || learned(settings).includes(lang) ? '' : lang;
+}
+
+/** Where a page is counted as met: the site and the path, without what follows them. */
+function pageMet(): string {
+  return location.host + location.pathname;
+}
+
+/** Count this page as one the language was met on. */
+async function met(lang: string): Promise<void> {
+  const pages = settings.met?.[lang] ?? [];
+  const here = pageMet();
+  if (pages.includes(here)) return;
+  const next = { ...(settings.met ?? {}), [lang]: [...pages, here].slice(-40) };
+  settings = { ...settings, met: next };
+  await set('met', next);
+}
+
+/** The offer of a language, where it has been met on enough pages and not passed over. */
+function offerOf(lang: string): CardActions['offer'] {
+  const it = offeredLanguages(settings).find((one) => one.lang === lang);
+  if (!it) return null;
+  const done = () => {
+    hide();
+    anchored = null;
+  };
+  return {
+    lang,
+    pages: it.pages,
+    onLearn: () => {
+      void set('alsoLearn', [...new Set([...(settings.alsoLearn ?? []), lang])]).then(done);
+    },
+    onRead: () => {
+      void set('known', [...new Set([...(settings.known ?? []), lang])]).then(done);
+    },
+    onPass: () => {
+      void set('passed', [...new Set([...(settings.passed ?? []), lang])]).then(done);
+    },
+  };
+}
+
+/** Whether a word or expression is kept, by its text and language. */
+function keptAt(text: string, lang: string): number {
+  return (settings.kept ?? []).findIndex(
+    (one) => one.lang === lang && one.text.toLowerCase() === text.toLowerCase()
+  );
+}
+
+/** The card's star: keeping what it is about, or letting it go. */
+function keeping(answer: Answer, lang: string, line: string, then: () => void): CardActions['keep'] {
+  if (!answer.spelling || answer.state === 'NoPack' || answer.state === 'Loading') return null;
+  const at = keptAt(answer.spelling, lang);
+  return {
+    kept: at >= 0,
+    onKeep: () => {
+      const now = settings.kept ?? [];
+      const next: Kept[] = at >= 0
+        ? now.filter((_, i) => i !== at)
+        : [{
+            text: answer.spelling,
+            lang,
+            says: answer.paradigm?.said ?? answer.says[0] ?? answer.glosses[0] ?? '',
+            ipa: answer.ipa[0] ?? '',
+            line,
+            where: location.host,
+            at: Date.now(),
+          }, ...now].slice(0, 500);
+      settings = { ...settings, kept: next };
+      void set('kept', next);
+      then();
+    },
+  };
 }
 
 /** Open the card for a word the reader stopped at, or tapped, which is asking for it outright. */
@@ -950,6 +1051,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     // Whether the reader wants every word described, not only one their language has no
     // word for: the host asks the translator only for what the card will say.
     describe: settings.showMeaning && settings.describeAll,
+    held: word.unlisted ?? false,
   };
   // Up with what is at hand: the sentence and the definitions the translator has not put into
   // the reader's language yet are asked for after, rather than holding the card a second or
@@ -962,6 +1064,13 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     const elsewhere = await languageWithEntry(word.spelling, source, asking.line, asking.at);
     if (elsewhere && anchored === anchor) {
       return open(anchor, { ...word, lang: elsewhere, settled: true }, tapped, held);
+    }
+    // None of them has it: the language its sentence most likely is, where that is on none of
+    // the reader's lists, which they are met in and offered.
+    const unlisted = elsewhere ? '' : await unlistedLanguage(asking.line, word.spelling, source);
+    if (unlisted && anchored === anchor) {
+      await met(unlisted);
+      return open(anchor, { ...word, lang: unlisted, settled: true, unlisted: true }, tapped, held);
     }
   }
   // A phrase the word is part of is answered whole, and lit whole.
@@ -995,6 +1104,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
     defined: practising && source === DEFINED_IN,
     parts: partsOf(settings),
     entered: tapped,
+    offer: word.unlisted ? offerOf(source) : null,
     onPlay: () => {
       const context = warmAudio();
       return recording
@@ -1047,6 +1157,14 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   // after and fills the same card: a card that waited on Wiktionary waited a second or more
   // on every word.
   let shown = answer;
+  // The star, drawn again filled or empty as soon as it is pressed.
+  const starred = (): void => {
+    actions.keep = keeping(shown, source, place.line, () => {
+      starred();
+      if (current()) show(shown, anchor.box(), actions);
+    });
+  };
+  starred();
   if (!sized(anchor.box())) return;
   show(shown, anchor.box(), actions);
   keepWithWord();
@@ -1091,7 +1209,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
   }
   // A word no dictionary means anything by, in another language than the reader's: what the
   // engine makes of it follows, marked as its guess.
-  if (answer.says.length > 0 || answer.glosses.length > 0 || !translating) return;
+  if (answer.says.length > 0 || answer.glosses.length > 0 || !translating || word.unlisted) return;
   const guess = await sendMessage('guess', { word: word.spelling, source, target })
     .catch(() => '');
   await enriched;

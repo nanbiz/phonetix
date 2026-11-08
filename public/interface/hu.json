@@ -256,7 +256,18 @@
     "mark-euphemistic": "szépítő",
     "learn-another": "Újabb nyelv tanulása",
     "default-learning": "A nyelv, amelyre az oldalakat cseréli",
-    "make-default-learning": "Oldalak cseréje erre a nyelvre"
+    "make-default-learning": "Oldalak cseréje erre a nyelvre",
+    "met-language": "%s, %s elolvasott oldalon",
+    "learn-it": "Tanulom",
+    "read-it": "Olvasom",
+    "not-now": "Most nem",
+    "keep-meeting": "Folyton előfordul: %s",
+    "met-on-pages": "%s oldalon",
+    "keep-it": "Mentés tanuláshoz",
+    "kept-it": "Elmentve",
+    "kept-list": "Mentve tanulásra",
+    "forget-it": "Elfelejtés",
+    "pos-expression": "kifejezés"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Sajátom",
+      "about": ""
+    },
+    "kept": {
+      "name": "Mentve tanulásra",
+      "about": ""
+    },
+    "met": {
+      "name": "Nyelvek, amelyek folyton előfordulnak",
       "about": ""
     }
   },

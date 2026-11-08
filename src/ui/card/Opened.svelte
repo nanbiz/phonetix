@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   // What a reader has open about one word: the answer, the sound they asked about, and what
   // they moved on to from the word: another form of it, or its lemma's whole entry. Either way
   // the page's word stays the way back, and the page itself is left as it is.
@@ -39,6 +40,10 @@
     /** Whether the card also says what the word is in its own language. */
     defined?: boolean;
     parts?: CardParts;
+    /** A language the reader keeps meeting, offered to them (see AnswerCard). */
+    offer?: ComponentProps<typeof AnswerCard>['offer'];
+    /** Keeping the word to learn (see AnswerCard). */
+    keep?: ComponentProps<typeof AnswerCard>['keep'];
   }
 
   let {
@@ -58,6 +63,8 @@
     onGrow,
     defined = false,
     parts = EVERY_PART,
+    offer = null,
+    keep = null,
   }: Props = $props();
 
   /** The form the card reads as instead of the page's word, where the reader picked one. */
@@ -204,4 +211,6 @@
   onForm={pick}
   defined={defined && shown === answer}
   {parts}
+  offer={shown === answer ? offer : null}
+  keep={shown === answer ? keep : null}
 />

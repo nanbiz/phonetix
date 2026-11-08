@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Kept from './screens/Kept.svelte';
   // The phone app's own screen: the settings, drawn from what the app says and changed through
   // it. One screen at a time, with the phone's way back leading out of each.
   import { darkSide, DEFAULTS, type Settings } from '@/settings/shape';
@@ -42,6 +43,7 @@
     lookup: 'cards',
     accents: 'accents',
     appearance: 'appearance',
+    kept: 'kept',
   };
 
   /** The interface's words in each language, bundled beside this page and read when needed. */
@@ -191,6 +193,8 @@
         <Accents {settings} {change} />
       {:else if view === 'appearance'}
         <Appearance {settings} {device} {change} />
+      {:else if view === 'kept'}
+        <Kept {settings} {change} speak={(text, lang) => void ask('speak', { text, lang })} />
       {/if}
     {/if}
   {/if}

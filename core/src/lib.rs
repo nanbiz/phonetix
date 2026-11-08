@@ -11,6 +11,7 @@ pub mod accent_table;
 pub mod annotate;
 pub mod answer;
 pub mod detect;
+pub mod expression;
 pub mod gloss;
 pub mod grammar_tags;
 pub mod homographs;

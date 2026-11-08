@@ -256,7 +256,18 @@
     "mark-euphemistic": "לשון נקייה",
     "learn-another": "ללמוד שפה נוספת",
     "default-learning": "השפה שאליה מוחלפים הדפים",
-    "make-default-learning": "להחליף דפים לשפה הזו"
+    "make-default-learning": "להחליף דפים לשפה הזו",
+    "met-language": "%s ב-%s דפים שאתה קורא",
+    "learn-it": "ללמוד",
+    "read-it": "אני קורא אותה",
+    "not-now": "לא עכשיו",
+    "keep-meeting": "אתה נתקל ב-%s שוב ושוב",
+    "met-on-pages": "ב-%s דפים",
+    "keep-it": "שמור ללימוד",
+    "kept-it": "נשמר",
+    "kept-list": "שמור ללימוד",
+    "forget-it": "שכח",
+    "pos-expression": "ביטוי"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "שלי",
+      "about": ""
+    },
+    "kept": {
+      "name": "שמור ללימוד",
+      "about": ""
+    },
+    "met": {
+      "name": "שפות שאתה נתקל בהן שוב ושוב",
       "about": ""
     }
   },

@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemisme",
     "learn-another": "Pelajari bahasa lain",
     "default-learning": "Bahasa tujuan penggantian halaman",
-    "make-default-learning": "Ganti halaman ke bahasa ini"
+    "make-default-learning": "Ganti halaman ke bahasa ini",
+    "met-language": "%s di %s halaman yang Anda baca",
+    "learn-it": "Pelajari",
+    "read-it": "Saya sudah baca",
+    "not-now": "Nanti saja",
+    "keep-meeting": "Anda terus menemui %s",
+    "met-on-pages": "di %s halaman",
+    "keep-it": "Simpan untuk dipelajari",
+    "kept-it": "Tersimpan",
+    "kept-list": "Tersimpan untuk dipelajari",
+    "forget-it": "Lupakan",
+    "pos-expression": "ungkapan"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Milik saya",
+      "about": ""
+    },
+    "kept": {
+      "name": "Tersimpan untuk dipelajari",
+      "about": ""
+    },
+    "met": {
+      "name": "Bahasa yang terus Anda temui",
       "about": ""
     }
   },

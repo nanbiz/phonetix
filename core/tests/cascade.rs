@@ -4446,6 +4446,46 @@ fn a_form_with_its_own_pronoun_means_what_the_reflexive_does() {
     assert!(said("fíjame").contains("fix"), "fíjame said {:?}", said("fíjame"));
 }
 
+/// "Me gusta" is "I like", literally "it pleases me": a pronoun before a verb of that kind is
+/// read with it as one expression, in the pronoun's person and the verb's tense, with what each
+/// word is on its own; and a line lights the two together.
+#[test]
+fn a_pronoun_and_a_verb_that_takes_it_as_its_subject_are_one_expression() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    pack.add(word("gustar", "verb", "ɡusˈtaɾ", &["to like"]), &[] as &[&str]).unwrap();
+    pack.add(
+        word("gusta", "verb", "ˈɡusta", &["third-person singular present indicative of gustar"]),
+        &[] as &[&str],
+    )
+    .unwrap();
+    pack.add(word("me", "pron", "me", &["me"]), &[] as &[&str]).unwrap();
+    pack.add(word("mucho", "adv", "ˈmutʃo", &["a lot"]), &[] as &[&str]).unwrap();
+    let es = pack.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+        accent: "",
+        accent_pack: None,
+        said: None,
+        classifier: None,
+        others: None,
+        defines: None,
+        in_reader: None,
+    };
+    let got = lexcore::resolve::read_in_context("me gusta", None, &lang("es"), &lang("en"), &open);
+    assert_eq!(got.says, vec!["I like".to_string()], "{got:?}");
+    assert_eq!(got.ipa.first().map(String::as_str), Some("me ˈɡusta"));
+    assert_eq!(got.parts.len(), 2, "{:?}", got.parts);
+    assert_eq!(got.parts[0].1, "to me");
+    assert!(got.parts[1].1.contains("pleases"), "{:?}", got.parts);
+    let line = ["Me", "gusta", "mucho"];
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 1), Some((0, 2)));
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 0), Some((0, 2)));
+    assert_eq!(lexcore::resolve::phrase_around(&es, &line, 2), None);
+}
+
 fn open_with<'a>(
     source: &'a Pack<&'a Vec<u8>>,
     target: &'a Pack<&'a Vec<u8>>,

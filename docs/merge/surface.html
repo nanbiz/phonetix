@@ -695,6 +695,16 @@ body { font-family: var(--font-ui); font-size: var(--font-size-body); line-heigh
 .others li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); }
 .others .more { align-self: flex-start; margin-left: calc(-1 * var(--space-2)); }
 .note { font-size: var(--font-size-sense); color: var(--color-ink-muted); margin: 0; }
+/* A language the reader keeps meeting and has on none of their lists, offered at the foot of the card: what it is and how often, then the three answers, the first of them the one most readers give. */
+.offer { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); border-top: var(--border-width) solid var(--color-border); font-size: var(--font-size-small); color: var(--color-ink-muted); }
+.offer-what { display: inline-flex; align-items: center; gap: var(--space-2); }
+.offer-what svg { width: var(--source-mark-size); height: var(--source-mark-size); flex: 0 0 auto; }
+.offer .btn svg { width: 1em; height: 1em; }
+/* Kept to learn: the star filled in the accent, so a kept word reads as kept at a glance. */
+.icon-btn.keep.on { color: var(--color-accent); }
+.icon-btn.keep.on svg { fill: currentColor; }
+/* An expression's words, each with what it is on its own: the word in ink, its meaning quiet. */
+.gram.parts .part-word { color: var(--color-ink); font-weight: var(--weight-medium); }
 .note.strong { color: var(--color-ink); }
 .card-foot { border-top: var(--border-width) solid var(--color-border); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--font-size-label); color: var(--color-ink-faint); flex-wrap: wrap; }
 .card-foot .actions { display: flex; gap: var(--space-1); }

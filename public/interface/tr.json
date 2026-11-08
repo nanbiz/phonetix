@@ -256,7 +256,18 @@
     "mark-euphemistic": "örtmece",
     "learn-another": "Başka bir dil öğren",
     "default-learning": "Sayfaların yerine konduğu dil",
-    "make-default-learning": "Sayfaları bu dille değiştir"
+    "make-default-learning": "Sayfaları bu dille değiştir",
+    "met-language": "%s, okuduğunuz %s sayfada",
+    "learn-it": "Öğren",
+    "read-it": "Zaten okuyorum",
+    "not-now": "Şimdi değil",
+    "keep-meeting": "Sürekli %s ile karşılaşıyorsunuz",
+    "met-on-pages": "%s sayfada",
+    "keep-it": "Öğrenmek için sakla",
+    "kept-it": "Saklandı",
+    "kept-list": "Öğrenmek için saklananlar",
+    "forget-it": "Unut",
+    "pos-expression": "ifade"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Benim",
+      "about": ""
+    },
+    "kept": {
+      "name": "Öğrenmek için saklananlar",
+      "about": ""
+    },
+    "met": {
+      "name": "Sürekli karşılaştığınız diller",
       "about": ""
     }
   },

@@ -256,7 +256,18 @@
     "mark-euphemistic": "शिष्टोक्ति",
     "learn-another": "एक और भाषा सीखें",
     "default-learning": "वह भाषा जिसमें पेज बदले जाते हैं",
-    "make-default-learning": "पेज इसी भाषा में बदलें"
+    "make-default-learning": "पेज इसी भाषा में बदलें",
+    "met-language": "%s, आपके पढ़े गए %s पन्नों पर",
+    "learn-it": "सीखें",
+    "read-it": "इसे पढ़ लेता हूँ",
+    "not-now": "अभी नहीं",
+    "keep-meeting": "आप बार-बार %s से मिलते हैं",
+    "met-on-pages": "%s पन्नों पर",
+    "keep-it": "सीखने के लिए रखें",
+    "kept-it": "रखा गया",
+    "kept-list": "सीखने के लिए रखे गए",
+    "forget-it": "भूलें",
+    "pos-expression": "वाक्यांश"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "मेरा",
+      "about": ""
+    },
+    "kept": {
+      "name": "सीखने के लिए रखे गए",
+      "about": ""
+    },
+    "met": {
+      "name": "वे भाषाएँ जिनसे बार-बार सामना होता है",
       "about": ""
     }
   },

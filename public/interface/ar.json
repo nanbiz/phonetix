@@ -256,7 +256,18 @@
     "mark-euphemistic": "تلطيفي",
     "learn-another": "تعلّم لغة أخرى",
     "default-learning": "اللغة التي تُستبدل إليها الصفحات",
-    "make-default-learning": "استبدل الصفحات إلى هذه اللغة"
+    "make-default-learning": "استبدل الصفحات إلى هذه اللغة",
+    "met-language": "%s في %s صفحة تقرؤها",
+    "learn-it": "تعلّمها",
+    "read-it": "أقرؤها",
+    "not-now": "ليس الآن",
+    "keep-meeting": "تصادف %s باستمرار",
+    "met-on-pages": "في %s صفحة",
+    "keep-it": "احفظ للتعلّم",
+    "kept-it": "محفوظة",
+    "kept-list": "محفوظ للتعلّم",
+    "forget-it": "نسيان",
+    "pos-expression": "تعبير"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "خاصتي",
+      "about": ""
+    },
+    "kept": {
+      "name": "محفوظ للتعلّم",
+      "about": ""
+    },
+    "met": {
+      "name": "لغات تصادفها باستمرار",
       "about": ""
     }
   },

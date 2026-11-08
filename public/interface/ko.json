@@ -256,7 +256,18 @@
     "mark-euphemistic": "완곡",
     "learn-another": "다른 언어 배우기",
     "default-learning": "페이지를 바꿔 넣는 언어",
-    "make-default-learning": "이 언어로 페이지 바꾸기"
+    "make-default-learning": "이 언어로 페이지 바꾸기",
+    "met-language": "%s, 읽은 페이지 %s개",
+    "learn-it": "배우기",
+    "read-it": "이미 읽음",
+    "not-now": "나중에",
+    "keep-meeting": "자주 만나는 언어: %s",
+    "met-on-pages": "%s쪽에서",
+    "keep-it": "학습용으로 저장",
+    "kept-it": "저장됨",
+    "kept-list": "학습용으로 저장한 단어",
+    "forget-it": "삭제",
+    "pos-expression": "표현"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "내 설정",
+      "about": ""
+    },
+    "kept": {
+      "name": "학습용으로 저장한 단어",
+      "about": ""
+    },
+    "met": {
+      "name": "자주 만나는 언어",
       "about": ""
     }
   },

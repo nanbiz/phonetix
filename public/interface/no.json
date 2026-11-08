@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemistisk",
     "learn-another": "Lær et språk til",
     "default-learning": "Språket sidene erstattes med",
-    "make-default-learning": "Erstatt sider med dette språket"
+    "make-default-learning": "Erstatt sider med dette språket",
+    "met-language": "%s på %s sider du leser",
+    "learn-it": "Lær den",
+    "read-it": "Jeg leser den",
+    "not-now": "Ikke nå",
+    "keep-meeting": "Du møter stadig %s",
+    "met-on-pages": "på %s sider",
+    "keep-it": "Lagre for å lære",
+    "kept-it": "Lagret",
+    "kept-list": "Lagret for å lære",
+    "forget-it": "Glem",
+    "pos-expression": "uttrykk"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Mine",
+      "about": ""
+    },
+    "kept": {
+      "name": "Lagret for å lære",
+      "about": ""
+    },
+    "met": {
+      "name": "Språk du stadig møter",
       "about": ""
     }
   },

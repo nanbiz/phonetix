@@ -256,7 +256,18 @@
     "mark-euphemistic": "婉曲",
     "learn-another": "別の言語を学ぶ",
     "default-learning": "ページの置き換え先の言語",
-    "make-default-learning": "この言語にページを置き換える"
+    "make-default-learning": "この言語にページを置き換える",
+    "met-language": "%s、読んだ%sページ",
+    "learn-it": "学ぶ",
+    "read-it": "読める",
+    "not-now": "今はしない",
+    "keep-meeting": "%s によく出会っています",
+    "met-on-pages": "%sページ",
+    "keep-it": "学習用に保存",
+    "kept-it": "保存済み",
+    "kept-list": "学習用に保存した単語",
+    "forget-it": "削除",
+    "pos-expression": "表現"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "自分用",
+      "about": ""
+    },
+    "kept": {
+      "name": "学習用に保存した単語",
+      "about": ""
+    },
+    "met": {
+      "name": "よく出会う言語",
       "about": ""
     }
   },

@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemistisch",
     "learn-another": "Nog een taal leren",
     "default-learning": "De taal waarin pagina's worden vervangen",
-    "make-default-learning": "Pagina's in deze taal vervangen"
+    "make-default-learning": "Pagina's in deze taal vervangen",
+    "met-language": "%s op %s pagina's die je leest",
+    "learn-it": "Leren",
+    "read-it": "Ik lees het al",
+    "not-now": "Niet nu",
+    "keep-meeting": "Je blijft %s tegenkomen",
+    "met-on-pages": "op %s pagina's",
+    "keep-it": "Bewaren om te leren",
+    "kept-it": "Bewaard",
+    "kept-list": "Bewaard om te leren",
+    "forget-it": "Vergeten",
+    "pos-expression": "uitdrukking"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Van mij",
+      "about": ""
+    },
+    "kept": {
+      "name": "Bewaard om te leren",
+      "about": ""
+    },
+    "met": {
+      "name": "Talen die je blijft tegenkomen",
       "about": ""
     }
   },

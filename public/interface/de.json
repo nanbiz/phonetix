@@ -256,7 +256,18 @@
     "mark-euphemistic": "verhüllend",
     "learn-another": "Weitere Sprache lernen",
     "default-learning": "Die Sprache, in die Seiten ersetzt werden",
-    "make-default-learning": "Seiten in diese Sprache ersetzen"
+    "make-default-learning": "Seiten in diese Sprache ersetzen",
+    "met-language": "%s auf %s Seiten, die du liest",
+    "learn-it": "Lernen",
+    "read-it": "Ich lese sie",
+    "not-now": "Nicht jetzt",
+    "keep-meeting": "Du begegnest %s immer wieder",
+    "met-on-pages": "auf %s Seiten",
+    "keep-it": "Zum Lernen merken",
+    "kept-it": "Gemerkt",
+    "kept-list": "Zum Lernen gemerkt",
+    "forget-it": "Vergessen",
+    "pos-expression": "Ausdruck"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Meins",
+      "about": ""
+    },
+    "kept": {
+      "name": "Zum Lernen gemerkt",
+      "about": ""
+    },
+    "met": {
+      "name": "Sprachen, denen du immer wieder begegnest",
       "about": ""
     }
   },

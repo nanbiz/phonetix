@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemistyczny",
     "learn-another": "Ucz się kolejnego języka",
     "default-learning": "Język, na który zastępowane są strony",
-    "make-default-learning": "Zastępuj strony tym językiem"
+    "make-default-learning": "Zastępuj strony tym językiem",
+    "met-language": "%s na %s stronach, które czytasz",
+    "learn-it": "Ucz się",
+    "read-it": "Czytam ją",
+    "not-now": "Nie teraz",
+    "keep-meeting": "Ciągle trafiasz na: %s",
+    "met-on-pages": "na %s stronach",
+    "keep-it": "Zapisz do nauki",
+    "kept-it": "Zapisane",
+    "kept-list": "Zapisane do nauki",
+    "forget-it": "Zapomnij",
+    "pos-expression": "wyrażenie"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Mój",
+      "about": ""
+    },
+    "kept": {
+      "name": "Zapisane do nauki",
+      "about": ""
+    },
+    "met": {
+      "name": "Języki, na które ciągle trafiasz",
       "about": ""
     }
   },

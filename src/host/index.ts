@@ -365,7 +365,7 @@ export function host(): void {
     // A missing pack is an answer the cascade gives; anything else is a fault, and it
     // travels back as one rather than as a card claiming the word does not exist.
     await Promise.all([
-      open(data.source),
+      open(data.source, !data.held),
       data.target === data.source ? null : openReadInto(data.target),
       // What the reader's own Wiktionary says the language's words are, where it says.
       data.target === data.source ? null : openInReader(data.source, data.target),
@@ -409,9 +409,12 @@ export function host(): void {
     const alone = span
       ? await lookUp(data.word, data.source, data.target, data.accent ?? '', data.before ?? '', drawn)
       : null;
+    // A pronoun and its verb read as one ("me gusta") are one whatever the line says: the rule
+    // that joins them is the grammar's, not a dictionary entry that may not be meant.
     if (
       span &&
       alone &&
+      looked.pos !== 'expression' &&
       data.source !== data.target &&
       (!(drawn && saysIn(looked.says, drawn)) || same(looked.says, alone.says))
     ) {

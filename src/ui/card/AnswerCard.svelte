@@ -18,6 +18,9 @@
   import { accentsOf, defaultAccentOf, wholeAccentsOf } from '@/data/accents';
   import CHOOSE from 'virtual:icons/lucide/chevron-down';
   import CHOSEN from 'virtual:icons/lucide/check';
+  import KEEP from 'virtual:icons/lucide/star';
+  import MET from 'virtual:icons/lucide/languages';
+  import LEARN from 'virtual:icons/lucide/plus';
   import IconLink from '@/ui/controls/IconLink.svelte';
   import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
   import PlayButton from './PlayButton.svelte';
@@ -68,6 +71,20 @@
     defined?: boolean;
     /** Which parts the reader asked the card to say. */
     parts?: CardParts;
+    /** A language on none of the reader's lists that they keep meeting, offered to them: to
+     *  learn, to read as it is, or not now. */
+    offer?: Offer | null;
+    /** Keeping the word or expression to learn, where the card can: whether it is kept, and
+     *  what keeping it or letting it go does. */
+    keep?: { kept: boolean; onKeep: () => void } | null;
+  }
+
+  interface Offer {
+    lang: string;
+    pages: number;
+    onLearn: () => void;
+    onRead: () => void;
+    onPass: () => void;
   }
 
   let {
@@ -91,6 +108,8 @@
     onForm,
     defined = false,
     parts: show = EVERY_PART,
+    offer = null,
+    keep = null,
   }: Props = $props();
 
   /** Which rule a symbol takes: the four kinds the table names are drawn apart. */
@@ -275,7 +294,8 @@
       !!form ||
       arriving !== null ||
       others.length > 0 ||
-      (!!opened && answer.ipa.length > 0)
+      (!!opened && answer.ipa.length > 0) ||
+      !!offer
   );
   let missing = $derived(
     answer.state === 'NoPack'
@@ -388,6 +408,15 @@
         <span class="spelled" data-spelled>{answer.spellingOf}</span>
       {/if}
       <span class="spacer"></span>
+      {#if keep && !back}
+        <button
+          class="icon-btn keep{keep.kept ? ' on' : ''}"
+          data-does="keep"
+          aria-pressed={keep.kept}
+          title={say(keep.kept ? 'kept-it' : 'keep-it')}
+          aria-label={say(keep.kept ? 'kept-it' : 'keep-it')}
+          onclick={() => keep?.onKeep()}><KEEP /></button>
+      {/if}
       {#if !back && !phrase}
         <IconLink
           icon={WIKTIONARY}
@@ -446,6 +475,15 @@
           <div class="gram"><span class="g-sub">{answer.spelling}</span></div>
         {/if}
 
+        {#if (answer.parts ?? []).length > 1}
+          <!-- An expression read as one: each of its words, with what it is on its own, which is
+               how the pattern is learnt. -->
+          <div class="gram parts" data-parts>
+            {#each answer.parts ?? [] as part, at (at)}{#if at > 0}<span class="form-dot" aria-hidden="true"> · </span>{/if}<span
+                class="part"><span class="part-word">{part.word}</span> {part.means}</span>{/each}
+          </div>
+        {/if}
+
         {#if paradigmed && answer.paradigm}
           <FormLine
             paradigm={answer.paradigm}
@@ -472,6 +510,19 @@
             {#if other.pos}<span class="chip">{posName(other.pos)}</span>{/if}<span class="lemma">{other.said}</span>
           </div>
         {/each}
+      {/if}
+
+      {#if offer}
+        <!-- A language the reader keeps meeting and has on none of their lists: what it is and
+             how often, and the three things they can make of it. -->
+        <div class="offer" data-offer={offer.lang}>
+          <span class="offer-what"><MET />{say('met-language', named(offer.lang), String(offer.pages))}</span>
+          <span class="btn-row">
+            <button class="btn" data-does="learn" onclick={() => offer?.onLearn()}><LEARN />{say('learn-it')}</button>
+            <button class="btn secondary" data-does="read" onclick={() => offer?.onRead()}>{say('read-it')}</button>
+            <button class="btn secondary" data-does="pass" onclick={() => offer?.onPass()}>{say('not-now')}</button>
+          </span>
+        </div>
       {/if}
 
       {#if opened && answer.ipa.length > 0 && !phrase}

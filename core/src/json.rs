@@ -22,7 +22,7 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         "{{\"state\":\"{:?}\",\"lead\":{},\"spelling\":{},\"lemma\":{},\"pos\":{},\
 \"form\":{},\"ipa\":{},\"symbols\":{},\"narrow\":{},\"narrowSymbols\":{},\"says\":{},\"glosses\":{},\"example\":{},\
 \"examples\":{},\"marks\":{},\"readings\":{},\"provenance\":{},\"source\":{},\"target\":{},\
-\"paradigm\":{},\"saidIn\":{},\"spellingOf\":{},\"described\":{}}}",
+\"paradigm\":{},\"saidIn\":{},\"spellingOf\":{},\"described\":{},\"parts\":{}}}",
         answer.state,
         lead.map(quoted).unwrap_or_else(|| "null".to_string()),
         quoted(&answer.spelling),
@@ -65,6 +65,16 @@ pub fn card(answer: &Answer, lead: Option<&str>) -> String {
         maybe(&answer.spelling_of),
         // What it is in the reader's language, as their own Wiktionary describes it.
         maybe(&answer.described),
+        // The words of an expression read as one, each with what it is on its own.
+        format!(
+            "[{}]",
+            answer
+                .parts
+                .iter()
+                .map(|(word, means)| format!("{{\"word\":{},\"means\":{}}}", quoted(word), quoted(means)))
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
     )
 }
 
@@ -349,6 +359,7 @@ mod tests {
             said_in: None,
             spelling_of: None,
             ipa_said_in: Vec::new(),
+            parts: Vec::new(),
             described: None,
         }
     }

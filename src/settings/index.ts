@@ -6,8 +6,8 @@ import { DEFAULTS, type Settings } from './shape';
 import { LANGUAGES } from '@/data/languages';
 
 export {
-  DEFAULTS, accentFor, allowed, darkSide, learned, reads, replacedInto, setAccent, translates,
-  type Settings,
+  DEFAULTS, MET_ENOUGH, accentFor, allowed, darkSide, learned, offered, reads, replacedInto,
+  setAccent, translates, type Kept, type Settings,
 } from './shape';
 
 /** Where each setting lives, as the storage key it is watched under. */
@@ -44,6 +44,9 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   touchWords: 'local:touchWords',
   apps: 'local:apps',
   allApps: 'local:allApps',
+  met: 'local:metLanguages',
+  passed: 'local:passedLanguages',
+  kept: 'local:kept',
 };
 
 /** Everything the reader has chosen, with the defaults filled in. */

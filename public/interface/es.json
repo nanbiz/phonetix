@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemístico",
     "learn-another": "Aprender otro idioma",
     "default-learning": "El idioma al que se reemplazan las páginas",
-    "make-default-learning": "Reemplazar páginas a este idioma"
+    "make-default-learning": "Reemplazar páginas a este idioma",
+    "met-language": "%s en %s páginas que lees",
+    "learn-it": "Aprender",
+    "read-it": "Ya lo leo",
+    "not-now": "Ahora no",
+    "keep-meeting": "Sigues encontrando %s",
+    "met-on-pages": "en %s páginas",
+    "keep-it": "Guardar para aprender",
+    "kept-it": "Guardada",
+    "kept-list": "Guardadas para aprender",
+    "forget-it": "Olvidar",
+    "pos-expression": "expresión"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Míos",
+      "about": ""
+    },
+    "kept": {
+      "name": "Guardadas para aprender",
+      "about": ""
+    },
+    "met": {
+      "name": "Idiomas que sigues encontrando",
       "about": ""
     }
   },

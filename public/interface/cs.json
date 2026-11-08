@@ -256,7 +256,18 @@
     "mark-euphemistic": "eufemistický",
     "learn-another": "Učit se další jazyk",
     "default-learning": "Jazyk, do kterého se stránky nahrazují",
-    "make-default-learning": "Nahrazovat stránky tímto jazykem"
+    "make-default-learning": "Nahrazovat stránky tímto jazykem",
+    "met-language": "%s na %s stránkách, které čtete",
+    "learn-it": "Učit se ji",
+    "read-it": "Čtu ji",
+    "not-now": "Teď ne",
+    "keep-meeting": "Pořád narážíte na %s",
+    "met-on-pages": "na %s stránkách",
+    "keep-it": "Uložit k učení",
+    "kept-it": "Uloženo",
+    "kept-list": "Uloženo k učení",
+    "forget-it": "Zapomenout",
+    "pos-expression": "výraz"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "Můj",
+      "about": ""
+    },
+    "kept": {
+      "name": "Uloženo k učení",
+      "about": ""
+    },
+    "met": {
+      "name": "Jazyky, na které narážíte",
       "about": ""
     }
   },

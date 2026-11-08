@@ -256,7 +256,18 @@
     "mark-euphemistic": "حسن تعبیر",
     "learn-another": "یادگیری زبان دیگر",
     "default-learning": "زبانی که صفحه‌ها به آن جایگزین می‌شوند",
-    "make-default-learning": "جایگزینی صفحه‌ها با این زبان"
+    "make-default-learning": "جایگزینی صفحه‌ها با این زبان",
+    "met-language": "%s در %s صفحه‌ای که می‌خوانید",
+    "learn-it": "یادگیری",
+    "read-it": "می‌خوانم",
+    "not-now": "فعلاً نه",
+    "keep-meeting": "مدام با %s روبه‌رو می‌شوید",
+    "met-on-pages": "در %s صفحه",
+    "keep-it": "ذخیره برای یادگیری",
+    "kept-it": "ذخیره شد",
+    "kept-list": "ذخیره‌شده برای یادگیری",
+    "forget-it": "حذف",
+    "pos-expression": "عبارت"
   },
   "rows": {
     "on": {
@@ -469,6 +480,14 @@
     },
     "mine-group": {
       "name": "مال من",
+      "about": ""
+    },
+    "kept": {
+      "name": "ذخیره‌شده برای یادگیری",
+      "about": ""
+    },
+    "met": {
+      "name": "زبان‌هایی که مدام با آن‌ها روبه‌رو می‌شوید",
       "about": ""
     }
   },
