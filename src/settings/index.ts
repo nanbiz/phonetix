@@ -39,6 +39,7 @@ const KEYS: Record<keyof Settings, `local:${string}`> = {
   off: 'local:sitesOff',
   side: 'local:markSide',
   pin: 'local:markPinned',
+  holdMs: 'local:holdMs',
   restY: 'local:markRestY',
   touchWords: 'local:touchWords',
   apps: 'local:apps',

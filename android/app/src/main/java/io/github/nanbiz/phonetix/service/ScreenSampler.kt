@@ -194,7 +194,7 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
      *
      * @param gap the widest space inside one line, in the same coordinates.
      */
-    fun inkLines(rect: RectF, gap: Float, maxAgeMs: Long): List<RectF>? {
+    fun inkLines(rect: RectF, gap: Float, maxAgeMs: Long): List<io.github.nanbiz.phonetix.core.Placement.Inked>? {
         val bmp = frame ?: return null
         if (SystemClock.uptimeMillis() - takenAt > maxAgeMs) return null
         val inFrame = toFrame(bmp, rect)
@@ -214,10 +214,14 @@ class ScreenSampler(private val service: AccessibilityService, private val execu
         val scale = if (inFrame.width() > 0f) rect.width() / inFrame.width() else 1f
         return io.github.nanbiz.phonetix.core.InkRows
             .bands(lum, w, h, (gap / scale).toInt().coerceAtLeast(4))
-            .map {
-                RectF(
-                    (left + it.left) * scale, (top + it.top) * scale,
-                    (left + it.right + 1) * scale, (top + it.bottom + 1) * scale,
+            .map { band ->
+                fun across(from: Int, to: Int) = RectF(
+                    (left + from) * scale, (top + band.top) * scale,
+                    (left + to + 1) * scale, (top + band.bottom + 1) * scale,
+                )
+                io.github.nanbiz.phonetix.core.Placement.Inked(
+                    across(band.left, band.right),
+                    band.words.map { (from, to) -> across(from, to) },
                 )
             }
     }

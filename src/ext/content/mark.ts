@@ -69,6 +69,8 @@ export interface MarkPlace {
   pin: boolean;
   /** How far down its side it waits when pinned, as a share of the window. */
   restY: number;
+  /** How long the circle stays on a word before its actions open round the finger. */
+  holdMs: number;
 }
 
 /** The button's width. */
@@ -108,11 +110,14 @@ const HOLD_MS = 500;
 /** How long a swept run has to stop growing before it is asked about. */
 const RUN_SETTLES_MS = 250;
 /** How long the circle stays on one word before the actions open round the finger. */
-const DWELL_MS = 1000;
+/** How long the circle is on a word before the ring starts to show the stay. */
+const STAY_SHOWS = 250;
 /** How far from the finger the actions open, how big each is, and how near the finger has to
  *  come to one to have chosen it. */
 const MENU_REACH = 76;
 const MENU_SIZE = 52;
+/** How far the finger goes from where the actions opened before it has left them. */
+const MENU_LEFT_BEHIND = MENU_REACH + MENU_SIZE * 1.5;
 const MENU_TAKES = 40;
 /** How long the button takes to travel back to its side, and the thread to draw back in. */
 const PARK_MS = 260;
@@ -196,7 +201,7 @@ let menu: HTMLElement | null = null;
 let theme = THEME;
 let still = false;
 let hands: MarkHands | null = null;
-let where: MarkPlace = { side: 'right', pin: false, restY: HOME_DOWN };
+let where: MarkPlace = { side: 'right', pin: false, restY: HOME_DOWN, holdMs: 2000 };
 
 /** Where the button sits, as its top left, and where it returns to; -1 before it is placed. */
 let markX = -1;
@@ -345,6 +350,8 @@ const hold = {
   dwelling: '',
   /** The actions round the finger, once they are open, and which is under it. */
   menuAt: null as { x: number; y: number }[] | null,
+  /** Where the finger was when the actions opened, which is what they are round. */
+  menuFrom: null as { x: number; y: number } | null,
   menuWord: null as MarkWord | null,
   chosen: -1,
   asked: false,
@@ -456,7 +463,7 @@ function step(dt: number, now: number): void {
   hold.asked = !hold.asked;
   if (hold.asked && !drop.holding && !hold.menuAt) hoverAt(hold.ballX, hold.ballY, now);
   if (!hold.menuAt && !hold.sweeping && hold.hovered && hold.dragging &&
-      now - hold.since >= DWELL_MS) {
+      now - hold.since >= where.holdMs) {
     openMenu();
   }
   settleRing(dt);
@@ -726,6 +733,22 @@ function drawThread(g: CanvasRenderingContext2D): void {
   g.strokeStyle = rgba(RING, a);
   g.lineWidth = 3;
   g.stroke();
+  // How far along the stay on a word is. Not for the first moment on it, or every word the
+  // circle passes over would flash the start of it.
+  if (!hold.menuAt && !hold.sweeping && hold.hovered && hold.dragging) {
+    const charge = (performance.now() - hold.since - STAY_SHOWS) / (where.holdMs - STAY_SHOWS);
+    if (charge > 0) {
+      g.strokeStyle = light ? SPARK_DARK : PIP_LIGHT;
+      g.globalAlpha = a;
+      g.lineWidth = 5;
+      g.lineCap = 'round';
+      g.beginPath();
+      g.arc(ringX, ringY, Math.max(0, rr - 3), -Math.PI / 2, -Math.PI / 2 + Math.min(charge, 1) * TAU);
+      g.stroke();
+      g.lineCap = 'butt';
+      g.globalAlpha = 1;
+    }
+  }
   g.fillStyle = light ? SPARK_DARK : PIP_LIGHT;
   g.globalAlpha = a;
   g.beginPath();
@@ -793,6 +816,7 @@ function openMenu(): void {
   const ball = { x: hold.ballX, y: hold.ballY };
   const fan = around(finger, ball, MENU_REACH, MENU_SIZE / 2, EDGE, screen(), cardBox());
   hold.menuAt = fan;
+  hold.menuFrom = { x: hold.fingerX, y: hold.fingerY };
   menu.dataset.leash = String(Math.round(leash(finger, ball)));
   hold.menuWord = hold.hovered;
   hold.chosen = -1;
@@ -889,6 +913,15 @@ function follow(x: number, y: number): void {
   putButton(x - MARK / 2, y - MARK / 2);
   hold.fingerX = x;
   hold.fingerY = y;
+  // Taken well past the actions: the reader is pointing at something else. Back to moving, with
+  // the stay counted afresh on whatever the circle comes to.
+  if (hold.menuAt && hold.menuFrom &&
+      Math.hypot(x - hold.menuFrom.x, y - hold.menuFrom.y) > MENU_LEFT_BEHIND) {
+    closeMenu();
+    hold.hovered = null;
+    hold.dwelling = '';
+    hold.since = performance.now();
+  }
   if (hold.menuAt) {
     chooseUnder(x, y);
     hands?.onHand({ x, y });

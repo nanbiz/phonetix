@@ -31,6 +31,13 @@ object Wording {
         Choice("narrow", "[ ]", "every detail of how it is said, like aspiration and devoicing"),
     )
 
+    /** Hold for actions, as an overlay can draw them. */
+    val hold = listOf(
+        Choice("1000", "1 s", ""),
+        Choice("2000", "2 s", ""),
+        Choice("3000", "3 s", ""),
+    )
+
     /** Which side, as an overlay can draw them. */
     val side = listOf(
         Choice("left", "Left", "for a phone held in the left hand"),
@@ -54,6 +61,7 @@ object Wording {
         "dictionaries" to Words("Dictionaries", ""),
         "group-button" to Words("Side button", ""),
         "group-languages" to Words("Languages", ""),
+        "hold-for" to Words("Hold for actions", ""),
         "inline" to Words("Replace words", ""),
         "into" to Words("Translate into", ""),
         "ipa" to Words("Pronunciation", ""),

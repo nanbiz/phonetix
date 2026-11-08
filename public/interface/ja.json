@@ -485,6 +485,10 @@
     "met": {
       "name": "よく出会う言語",
       "about": ""
+    },
+    "hold-for": {
+      "name": "長押しで操作",
+      "about": ""
     }
   },
   "ends": {
@@ -584,6 +588,26 @@
         "label": "右",
         "about": {
           "phone": "右手で持つとき"
+        }
+      }
+    },
+    "hold": {
+      "1000": {
+        "label": "1 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "2000": {
+        "label": "2 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "3000": {
+        "label": "3 s",
+        "about": {
+          "phone": ""
         }
       }
     }

@@ -103,6 +103,13 @@ class MistView(context: Context) : View(context) {
     private var ringY = 0f
     private var ringRadius = 0f
 
+    /** How far along the stay on a word is, drawn round the ring. */
+    private var charge = 0f
+    private val filling = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+    }
+
     /** 0 while parked, 1 while a ring is fully formed; the animators run it between. */
     private var presence = 0f
 
@@ -176,9 +183,17 @@ class MistView(context: Context) : View(context) {
 
     /** Every frame of the drag: where the hand is, and where the ring is and how wide. The
      *  thread runs between the two. */
-    fun follow(fingerX: Float, fingerY: Float, ringX: Float, ringY: Float, radius: Float) {
+    fun follow(
+        fingerX: Float,
+        fingerY: Float,
+        ringX: Float,
+        ringY: Float,
+        radius: Float,
+        charge: Float = 0f,
+    ) {
         this.fingerX = fingerX; this.fingerY = fingerY
         this.ringX = ringX; this.ringY = ringY; this.ringRadius = radius
+        this.charge = charge
     }
 
     /**
@@ -422,6 +437,12 @@ class MistView(context: Context) : View(context) {
         canvas.drawCircle(ringX, ringY, rr - rim.strokeWidth, glass)
         rim.color = withAlpha(RING, a)
         canvas.drawCircle(ringX, ringY, rr - rim.strokeWidth, rim)
+        if (charge > 0f) {
+            filling.color = withAlpha(if (onLight) SPARK_DARK else PIP_LIGHT, a)
+            filling.strokeWidth = rim.strokeWidth * 1.6f
+            val r = rr - rim.strokeWidth
+            canvas.drawArc(ringX - r, ringY - r, ringX + r, ringY + r, -90f, charge * 360f, false, filling)
+        }
         pip.color = withAlpha(if (onLight) SPARK_DARK else PIP_LIGHT, a)
         canvas.drawCircle(ringX, ringY, 3 * density, pip)
     }

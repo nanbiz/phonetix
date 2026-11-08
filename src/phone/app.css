@@ -201,6 +201,11 @@ label.item:active,
   cursor: default;
 }
 
+.item.wide.named .item-name {
+  display: block;
+  margin-bottom: 8px;
+}
+
 .item-text {
   display: flex;
   flex-direction: column;

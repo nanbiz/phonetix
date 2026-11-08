@@ -698,13 +698,19 @@ class HoverController(
             // Stayed on one word long enough, in a drag rather than a sweep: what the card
             // would do with it, round the finger.
             val on = hovered
-            if (!offering && dragging && !sweeping && on != null && drop?.holding != true &&
-                android.os.SystemClock.uptimeMillis() - hoveredSince >= DWELL_MS
-            ) {
-                offer(on)
-            }
+            val stayed = android.os.SystemClock.uptimeMillis() - hoveredSince
+            val staying = !offering && dragging && !sweeping && on != null && drop?.holding != true
+            val stay = SettingsStore.current.holdMs
+            if (staying && on != null && stayed >= stay) offer(on)
             settleRing(dt, radius)
-            mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius)
+            // How far along the stay is, drawn on the ring. Not for the first moment on a word,
+            // or every word the circle passes over would flash the start of it.
+            val charge = if (staying) {
+                ((stayed - STAY_SHOWS_MS).toFloat() / (stay - STAY_SHOWS_MS)).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+            mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius, charge)
             if (asked && io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
                 // Where the hand is and where it holds the circle, apart from where the circle
                 // has swung to: the carry is decided by the first two, and a check reading the
@@ -1021,9 +1027,15 @@ class HoverController(
         private var offeredFor: WordBox? = null
         private var chosen = -1
 
+        /** Where the finger was when the actions opened, which is what they are round. */
+        private var offeredAtX = 0f
+        private var offeredAtY = 0f
+
         /** Open the actions round the finger, where [ActionsFan] puts them. */
         private fun offer(word: WordBox) {
             val shown = actions ?: return
+            offeredAtX = fingerX
+            offeredAtY = fingerY
             val edges = screen()
             val finger = ActionsFan.Spot(fingerX, fingerY)
             val ball = ActionsFan.Spot(ballX, ballY)
@@ -1056,7 +1068,23 @@ class HoverController(
             // The actions are open: what is worked out is which of them the finger is on. The
             // leash still follows the hand, and the ring stays on the word they are about,
             // since nothing asks what is under the circle while they are up.
-            val offering = actions?.open == true
+            var offering = actions?.open == true
+            // Taken well past them: the reader is pointing at something else. Back to moving,
+            // with the stay counted afresh on whatever the circle comes to.
+            if (offering && hypot(event.rawX - offeredAtX, event.rawY - offeredAtY) >
+                dp(ActionsView.LEFT_BEHIND_DP)
+            ) {
+                actions?.close()
+                offeredFor = null
+                chosen = -1
+                offering = false
+                if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
+                    android.util.Log.d("Phonetix", "LENSLEFT")
+                }
+                hovered = null
+                dwellingOn = null
+                hoveredSince = android.os.SystemClock.uptimeMillis()
+            }
             if (offering) {
                 val now = actions?.choose(event.rawX, event.rawY) ?: -1
                 if (now != chosen && now >= 0) view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -1223,9 +1251,8 @@ class HoverController(
         const val TAKE_DP = 64f
         const val LEAVE_DP = 88f
 
-        /** How long the circle stays on one word before what the card would do with it is
-         *  offered round the finger. */
-        const val DWELL_MS = 1000L
+        /** How long the circle is on a word before the ring starts to show the stay. */
+        const val STAY_SHOWS_MS = 250L
 
         /** How long a swept run has to stop growing before it is asked about. */
         const val RUN_SETTLES_MS = 250L

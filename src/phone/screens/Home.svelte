@@ -5,7 +5,7 @@
   // the reader knows, where the button waits, and the way to everything set once and left.
   import { languagesSaid } from '@/ui/settings/languages';
   import { THEME } from '@/ui/theme';
-  import { DARK_CHOICES, DETAIL_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
+  import { DARK_CHOICES, DETAIL_CHOICES, HOLD_CHOICES, labelOf, ROWS, SAYS, SIDE_CHOICES } from '@/data/wording';
   import type { Settings } from '@/settings/shape';
   import Check from 'virtual:icons/lucide/check';
   import LanguagesIcon from 'virtual:icons/lucide/languages';
@@ -135,6 +135,15 @@
   </Group>
 
   <Group name={ROWS['group-button'].name}>
+    <div class="item wide named" data-row="hold-for">
+      <span class="item-name">{ROWS['hold-for'].name}</span>
+      <Segments
+        choices={HOLD_CHOICES}
+        chosen={String(settings.holdMs)}
+        label={ROWS['hold-for'].name}
+        change={(value) => change('holdMs', Number(value))}
+      />
+    </div>
     <div class="item wide" data-row="side">
       <Segments
         choices={SIDE_CHOICES}

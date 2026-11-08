@@ -485,6 +485,10 @@
     "met": {
       "name": "Lingue che incontri di continuo",
       "about": ""
+    },
+    "hold-for": {
+      "name": "Tieni premuto per le azioni",
+      "about": ""
     }
   },
   "ends": {
@@ -584,6 +588,26 @@
         "label": "Destra",
         "about": {
           "phone": "per un telefono tenuto nella mano destra"
+        }
+      }
+    },
+    "hold": {
+      "1000": {
+        "label": "1 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "2000": {
+        "label": "2 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "3000": {
+        "label": "3 s",
+        "about": {
+          "phone": ""
         }
       }
     }

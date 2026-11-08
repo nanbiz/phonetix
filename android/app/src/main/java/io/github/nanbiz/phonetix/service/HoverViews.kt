@@ -571,6 +571,9 @@ class ActionsView(context: Context) : View(context) {
          *  near the finger has to come to one to have chosen it, in dp. */
         const val REACH_DP = 76f
         const val SIZE_DP = 52f
+
+        /** How far the finger goes from where the actions opened before it has left them. */
+        const val LEFT_BEHIND_DP = REACH_DP + SIZE_DP * 1.5f
         const val ICON_DP = 24f
         const val TAKES_DP = 40f
 

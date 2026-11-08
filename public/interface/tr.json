@@ -485,6 +485,10 @@
     "met": {
       "name": "Sürekli karşılaştığınız diller",
       "about": ""
+    },
+    "hold-for": {
+      "name": "Eylemler için basılı tut",
+      "about": ""
     }
   },
   "ends": {
@@ -584,6 +588,26 @@
         "label": "Sağ",
         "about": {
           "phone": "telefon sağ elde tutulduğunda"
+        }
+      }
+    },
+    "hold": {
+      "1000": {
+        "label": "1 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "2000": {
+        "label": "2 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "3000": {
+        "label": "3 s",
+        "about": {
+          "phone": ""
         }
       }
     }

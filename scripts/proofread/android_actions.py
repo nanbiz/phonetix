@@ -93,12 +93,27 @@ def main():
     if acted:
         failures.append(f"lifting beside the actions did {acted}")
 
+    # Taken far past the actions and held there: they close and the button is moving again.
+    if first:
+        boxes, parked = ready()
+        dev.clear_log()
+        away = (dev.width // 5 if onto[0] > dev.width // 2 else dev.width * 4 // 5, onto[1])
+        drag_and_dwell(parked, onto, dwell=2.4, then=[away])
+        time.sleep(2)
+        left = dev.lines("LENSLEFT")
+        acted = re.findall(r"ACTED (\S+)", dev.lines("ACTED"))
+        print(f"  taken far past the actions: {'closed' if left else 'still open'}, done {acted}")
+        if not left:
+            failures.append("taking the finger far past the actions left them open")
+        if acted:
+            failures.append(f"leaving the actions did {acted}")
+
     for action in ("article", "play"):
         if not first:
             break
         boxes, parked = ready()
         dev.clear_log()
-        drag_and_dwell(parked, onto, dwell=1.8, then=[first[action]])
+        drag_and_dwell(parked, onto, dwell=2.4, then=[first[action]])
         time.sleep(3)
         acted = re.findall(r"ACTED (\S+) (\S+)", dev.lines("ACTED"))
         top_app = front()

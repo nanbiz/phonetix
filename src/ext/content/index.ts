@@ -1592,7 +1592,7 @@ function markWhereTouched(): void {
         window.open(actions.page(), '_blank', 'noopener');
       }
     },
-  }, { side: settings.side, pin: settings.pin, restY: settings.restY });
+  }, { side: settings.side, pin: settings.pin, restY: settings.restY, holdMs: settings.holdMs });
 }
 
 function gestures(): void {

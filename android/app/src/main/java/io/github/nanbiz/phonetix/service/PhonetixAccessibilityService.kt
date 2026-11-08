@@ -2230,8 +2230,18 @@ class PhonetixAccessibilityService : AccessibilityService() {
                     null
                 }
                 if (shown == null) noFrame = true
+                if (BuildConfig.DEBUG && !shown.isNullOrEmpty()) {
+                    android.util.Log.d(
+                        "Phonetix",
+                        "INKED '${text.take(40)}' (${text.length}) in $rect: " + shown.joinToString(" | ") { l ->
+                            "${l.rect.top.toInt()}-${l.rect.bottom.toInt()}: " +
+                                l.words.joinToString(",") { "${it.left.toInt()}-${it.right.toInt()}" }
+                        },
+                    )
+                }
                 val guessed = if (!shown.isNullOrEmpty()) {
-                    Placement.inLines(text, shown)
+                    Placement.inWords(text, shown)
+                        ?: Placement.inLines(text, shown.map { it.rect })
                 } else {
                     Placement.evenly(text, RectF(rect), guessedRowTall)
                 }

@@ -124,6 +124,8 @@ export interface Settings {
   /** Whether the button waits at the height the reader chose rather than down by the hand.
    *  Off is the ordinary thing: it sits low on its side, where a thumb is. The phone's. */
   pin: boolean;
+  /** How long the circle stays on a word before its actions open round the finger. */
+  holdMs: number;
   /** How far down its side the button waits when it is pinned, as a share of the screen, so
    *  it means the same place on a phone of any size. The phone's. */
   restY: number;
@@ -207,6 +209,7 @@ export const DEFAULTS: Settings = {
   off: [],
   side: 'right',
   pin: false,
+  holdMs: 2000,
   restY: 0.8,
   touchWords: true,
   apps: [],

@@ -485,6 +485,10 @@
     "met": {
       "name": "Bahasa yang terus Anda temui",
       "about": ""
+    },
+    "hold-for": {
+      "name": "Tahan untuk tindakan",
+      "about": ""
     }
   },
   "ends": {
@@ -584,6 +588,26 @@
         "label": "Kanan",
         "about": {
           "phone": "untuk ponsel yang dipegang di tangan kanan"
+        }
+      }
+    },
+    "hold": {
+      "1000": {
+        "label": "1 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "2000": {
+        "label": "2 s",
+        "about": {
+          "phone": ""
+        }
+      },
+      "3000": {
+        "label": "3 s",
+        "about": {
+          "phone": ""
         }
       }
     }

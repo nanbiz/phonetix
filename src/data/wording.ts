@@ -37,6 +37,13 @@ export const DETAIL_CHOICES: Choice[] = [
   { value: "narrow", label: "[ ]", about: "every detail of how it is said, like aspiration and devoicing" },
 ];
 
+/** Hold for actions, as a browser can draw them. */
+export const HOLD_CHOICES: Choice[] = [
+  { value: "1000", label: "1 s", about: "" },
+  { value: "2000", label: "2 s", about: "" },
+  { value: "3000", label: "3 s", about: "" },
+];
+
 /** Overlay, as a browser can draw them. */
 export const LAYER_CHOICES: Choice[] = [
   { value: "off", label: "Off", about: "nothing is replaced; ask about a word yourself" },
@@ -56,6 +63,7 @@ export const SIDE_CHOICES: Choice[] = [
 export const CHOICES: Record<string, Choice[]> = {
   "dark": DARK_CHOICES,
   "detail": DETAIL_CHOICES,
+  "hold": HOLD_CHOICES,
   "layer": LAYER_CHOICES,
   "side": SIDE_CHOICES,
 };
@@ -76,6 +84,7 @@ export const ROWS: Record<string, Words> = {
   "dictionaries": { name: "Dictionaries", about: "" },
   "group-button": { name: "Side button", about: "" },
   "group-languages": { name: "Languages", about: "" },
+  "hold-for": { name: "Hold for actions", about: "" },
   "inline": { name: "Replace words", about: "" },
   "into": { name: "Translate into", about: "" },
   "ipa": { name: "Pronunciation", about: "" },

@@ -81,6 +81,8 @@ data class Settings(
     /** How far down its side the button waits when it is pinned, as a share of the screen,
      *  so it means the same place however big the screen is. */
     val restY: Float = 0.8f,
+    /** How long the circle stays on a word before its actions open round the finger. */
+    val holdMs: Int = 2000,
     /**
      * Narrow transcriptions rather than broad ones.
      *
@@ -195,6 +197,7 @@ object SettingsStore {
     private const val K_SIDE = "side"
     private const val K_PIN = "pinned"
     private const val K_REST_Y = "rest_y"
+    private const val K_HOLD_MS = "hold_ms"
     private const val K_ACCENTS = "accents"
     private const val K_NARROW = "narrow"
     private const val K_THEME = "theme"
@@ -241,6 +244,7 @@ object SettingsStore {
             side = p.getString(K_SIDE, "right") ?: "right",
             pin = p.getBoolean(K_PIN, false),
             restY = p.getFloat(K_REST_Y, 0.8f),
+            holdMs = p.getInt(K_HOLD_MS, 2000),
             // Stored as one entry per language, because a set of strings is what preferences
             // can hold and a map is what the rest of this asks for.
             accents = (p.getStringSet(K_ACCENTS, emptySet()) ?: emptySet())
@@ -289,6 +293,7 @@ object SettingsStore {
             ?.putString(K_SIDE, next.side)
             ?.putBoolean(K_PIN, next.pin)
             ?.putFloat(K_REST_Y, next.restY)
+            ?.putInt(K_HOLD_MS, next.holdMs)
             ?.putStringSet(K_ACCENTS, next.accents.map { (lang, id) -> "$lang=$id" }.toSet())
             ?.putBoolean(K_NARROW, next.narrow)
             ?.putString(K_THEME, next.theme)
@@ -363,6 +368,7 @@ object SettingsStore {
 
     /** How far down its side the button waits: on the screen whatever is asked for. */
     fun setRestY(y: Float) = update { it.copy(restY = y.coerceIn(0f, 1f)) }
+    fun setHoldMs(ms: Int) = update { it.copy(holdMs = ms) }
 
     fun setSide(v: String) = update {
         it.copy(side = if (v == "left" || v == "free") v else "right")

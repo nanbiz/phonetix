@@ -1,6 +1,8 @@
 package io.github.nanbiz.phonetix.core
 
 import android.graphics.RectF
+import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.math.sqrt
 
 /**
@@ -277,6 +279,132 @@ object Placement {
         }
         return out
     }
+
+    /** A line of text found on the screen, and each word's place on it. */
+    data class Inked(val rect: RectF, val words: List<RectF>)
+
+    /** One way of having read a text's words onto the words seen on the screen, best so far. */
+    private class Read(val cost: Float, val placed: Int, val from: Read?, val token: Int, val col: Int, val cols: Int, val tokens: Int)
+
+    /**
+     * A text laid over the words the screen shows, word for word, or null where they cannot be
+     * made to agree.
+     *
+     * What an app says a block holds and what it draws are not the same: a title is drawn up to
+     * where it fades out and its text runs on, and the box it says it fills holds the line
+     * under it as well. Sharing the text out over the lines' widths then stretches or squeezes
+     * every word by however much those differ, and the words are in other words' places. Words
+     * are read onto the runs of ink in order instead, each at the width its letters should
+     * have at the size the whole line agrees on; a text running out of screen or a screen
+     * running out of text leaves the rest alone.
+     */
+    fun inWords(text: CharSequence, lines: List<Inked>): Array<RectF?>? {
+        val n = text.length
+        val tokens = ArrayList<Pair<Int, Int>>()
+        var i = 0
+        while (i < n) {
+            if (text[i].isWhitespace()) { i++; continue }
+            val start = i
+            while (i < n && !text[i].isWhitespace()) i++
+            tokens.add(start to i)
+        }
+        val cols = lines.flatMapIndexed { at, line -> line.words.map { at to it } }
+        if (tokens.size < MIN_READ_WORDS || cols.size < MIN_READ_WORDS) return null
+        val wide = FloatArray(tokens.size) { t ->
+            var sum = 0f
+            for (c in tokens[t].first until tokens[t].second) sum += advance(text[c])
+            sum
+        }
+        val tall = lines.map { it.rect.height() }.sorted().let { it[it.size / 2] }
+        var best: Read? = null
+        var bestScore = Float.MAX_VALUE
+        var scale = tall * SMALLEST_LETTER
+        while (scale <= tall * LARGEST_LETTER) {
+            val read = readOn(tokens.size, cols, wide, scale)
+            if (read != null && read.placed >= MIN_READ_WORDS) {
+                val score = read.cost / read.placed
+                if (score < bestScore) { bestScore = score; best = read }
+            }
+            scale *= SCALE_STEP
+        }
+        val found = best ?: return null
+        if (bestScore > WORST_READ) return null
+        val out = arrayOfNulls<RectF>(n)
+        var at: Read? = found
+        while (at != null && at.from != null) {
+            if (at.token >= 0) {
+                val first = cols[at.col].second
+                val last = cols[at.col + at.cols - 1].second
+                val row = lines[cols[at.col].first].rect
+                val from = tokens[at.token].first
+                val to = tokens[at.token + at.tokens - 1].second
+                var units = 0f
+                for (c in from until to) units += advance(text[c])
+                val unit = (last.right - first.left) / units
+                var x = first.left
+                for (c in from until to) {
+                    val w = advance(text[c]) * unit
+                    if (!text[c].isWhitespace()) out[c] = RectF(x, row.top, x + w, row.bottom)
+                    x += w
+                }
+            }
+            at = at.from
+        }
+        return out
+    }
+
+    /** The cheapest way of reading [count] words onto [cols] at [scale] pixels a unit of width. */
+    private fun readOn(
+        count: Int,
+        cols: List<Pair<Int, RectF>>,
+        wide: FloatArray,
+        scale: Float,
+    ): Read? {
+        val m = cols.size
+        val table = Array(count + 1) { arrayOfNulls<Read>(m + 1) }
+        table[0][0] = Read(0f, 0, null, -1, -1, 0, 0)
+        fun put(i: Int, j: Int, read: Read) {
+            val was = table[i][j]
+            if (was == null || read.cost < was.cost) table[i][j] = read
+        }
+        fun off(span: Float, units: Float): Float = abs(ln(span / (units * scale)))
+        for (i in 0..count) {
+            for (j in 0..m) {
+                val here = table[i][j] ?: continue
+                if (j < m) put(i, j + 1, Read(here.cost + SKIP_COLUMN, here.placed, here, -1, j, 1, 0))
+                if (i < count) put(i + 1, j, Read(here.cost + SKIP_WORD, here.placed, here, -1, j, 0, 0))
+                if (i == count || j == m) continue
+                // A word on a run of ink, or on runs a wide gap between letters broke up.
+                for (k in 1..MAX_RUNS_A_WORD) {
+                    if (j + k > m || cols[j + k - 1].first != cols[j].first) break
+                    val span = cols[j + k - 1].second.right - cols[j].second.left
+                    val cost = off(span, wide[i]) + BROKEN_WORD * (k - 1)
+                    put(i + 1, j + k, Read(here.cost + cost, here.placed + 1, here, i, j, k, 1))
+                }
+                // Two words a narrow space left as one run.
+                if (i + 1 < count) {
+                    val units = wide[i] + wide[i + 1] + advance(' ')
+                    val cost = off(cols[j].second.width(), units) + JOINED_WORDS
+                    put(i + 2, j + 1, Read(here.cost + cost, here.placed + 2, here, i, j, 1, 2))
+                }
+            }
+        }
+        var best: Read? = null
+        for (i in 0..count) table[i][m]?.let { if (best == null || it.cost < best!!.cost) best = it }
+        for (j in 0..m) table[count][j]?.let { if (best == null || it.cost < best!!.cost) best = it }
+        return best
+    }
+
+    private const val MIN_READ_WORDS = 2
+    private const val MAX_RUNS_A_WORD = 3
+    private const val SMALLEST_LETTER = 0.2f
+    private const val LARGEST_LETTER = 0.8f
+    private const val SCALE_STEP = 1.06f
+    private const val SKIP_COLUMN = 0.7f
+    private const val SKIP_WORD = 0.9f
+    private const val BROKEN_WORD = 0.25f
+    private const val JOINED_WORDS = 0.4f
+    private const val WORST_READ = 0.45f
 
     /**
      * Places already-chosen words, given the per-character screen rectangles the
