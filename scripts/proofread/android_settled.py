@@ -31,9 +31,9 @@ PACKS = os.environ.get("PHONETIX_PACKS", os.path.join(ROOT, ".cache/release"))
 # French pages the words are undecided between readings; on the Spanish one "banco" is decided
 # - the noun - and the line picks which of the noun's senses, a bank or a bench, it is.
 PAGES = {
-    "french": ("fr", {"est": "to be", "court": "to run"}),
-    "frenchShort": ("fr", {"est": "to be", "court": "short"}),
-    "bench": ("es", {"banco": "bench", "siento": "to sit down"}),
+    "french": ("fr", {"est": "he is", "court": "he runs"}),
+    "frenchShort": ("fr", {"est": "he is", "court": "short"}),
+    "bench": ("es", {"banco": "bench", "siento": "I sit down"}),
 }
 
 # How long the model may take to arrive the first time, from Mozilla's own servers.

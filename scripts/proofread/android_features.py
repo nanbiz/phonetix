@@ -388,13 +388,13 @@ def check_settings_screen(r, dev):
     # The rows the first screen carries, under the names data/wording.json gives them: the
     # languages the reader knows and how the card writes a sound, and nothing that chooses
     # what the card shows, since it always shows both.
-    for row in ("on", "narrow", "mine", "known", "side", "apps", "accent", "theme"):
+    for row in ("on", "narrow", "languages", "side", "apps", "accent", "theme"):
         r.check(row in screen["rows"], f"settings: the screen has the {row} row",
                 str(screen["rows"]))
     for row in ("learning", "ipa", "translate", "layer", "density", "stress"):
         r.check(row not in screen["rows"], f"settings: the screen has no {row} row",
                 str(screen["rows"]))
-    for row in ("mine", "known", "narrow"):
+    for row in ("narrow",):
         r.check(words["rows"][row]["name"] in screen["names"],
                 f"settings: the {row} row is called {words['rows'][row]['name']}",
                 str(screen["names"][:12]))
