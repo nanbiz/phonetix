@@ -879,7 +879,7 @@ function languageOf(node: Text): string {
 
 /** What the card last opened does, for the actions the side button offers round the finger:
  *  say the word, and where its page is. */
-let offered: { say: (context: AudioContext) => Promise<void>; page: () => string } | null = null;
+let offered: { say: (context: AudioContext) => Promise<void>; page: () => string; keep: () => CardActions['keep'] } | null = null;
 
 /** How far each dictionary on its way has got, as the host last said. */
 let coming: Record<string, number> = {};
@@ -1150,6 +1150,7 @@ async function open(anchor: Anchor, word: Asked, tapped = false, held = false): 
       ? recorded(commons(recording), context)
       : speak(word.spelling, source, context),
     page: () => wiktionary(shown.lemma ?? shown.spelling, named(shown.source)),
+    keep: () => keeping(shown, source, place.line, () => undefined),
   };
   // Up with what the dictionary said, at once. What the network and the engine add arrives
   // after and fills the same card: a card that waited on Wiktionary waited a second or more
@@ -1581,10 +1582,13 @@ function markWhereTouched(): void {
     tapped: () => askedForAWord(false),
     held: () => void sendMessage('openSettings', {}).catch(() => undefined),
     putAway: () => void set('on', false),
+    kept: () => offered?.keep()?.kept ?? false,
     chose: (action) => {
       const actions = offered;
       if (!actions) return;
-      if (action === 'play') {
+      if (action === 'keep') {
+        actions.keep()?.onKeep();
+      } else if (action === 'play') {
         // Started here, inside the finger lifting, which is the gesture a touch browser lets
         // a sound start in.
         void actions.say(warmAudio());

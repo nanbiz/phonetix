@@ -877,7 +877,7 @@ def mark_checks(hand, engine, failures, turn_on=None):
     menu = settled(MENU_JS, wait_for(MENU_JS, lambda m: m, tries=12))
     print(f"  {engine}, kept on camino: actions {menu}")
     article = next((a for a in menu or [] if a["does"] == "article"), None)
-    if not menu or {a["does"] for a in menu} != {"play", "article"}:
+    if not menu or {a["does"] for a in menu} != {"play", "article", "keep"}:
         failures.append(f"{engine}: keeping the button on a word opened no play and article: {menu}")
     else:
         for a in menu:

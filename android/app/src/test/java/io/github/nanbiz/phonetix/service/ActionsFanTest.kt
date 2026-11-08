@@ -36,8 +36,8 @@ class ActionsFanTest {
             val ball = ActionsFan.Spot(
                 (x + cos(radians) * 150).toFloat(), (y + sin(radians) * 150).toFloat(),
             )
-            val (play, article) = ActionsFan.around(finger, ball, reach, half, margin, screen, null)
-            for (spot in listOf(play, article)) {
+            val (play, article, keep) = ActionsFan.around(finger, ball, reach, half, margin, screen, null)
+            for (spot in listOf(play, article, keep)) {
                 assertTrue("off the screen at $spot for $finger", spot.x - half >= margin - 0.5f)
                 assertTrue("off the screen at $spot for $finger", spot.x + half <= 1080f - margin + 0.5f)
                 assertTrue("off the screen at $spot for $finger", spot.y - half >= margin - 0.5f)

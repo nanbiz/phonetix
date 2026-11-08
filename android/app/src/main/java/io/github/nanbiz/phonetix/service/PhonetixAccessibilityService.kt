@@ -372,6 +372,7 @@ class PhonetixAccessibilityService : AccessibilityService() {
             onPutAway = { SettingsStore.setEnabled(false) },
             // Kept on a word and lifted on one of the actions round the finger.
             onAction = { action, box -> main.post { tooltip.act(action, box) } },
+            isKept = { tooltip.isKept(it) },
             cardRect = { tooltip.cardRect() },
             // Held without moving: the app's own settings.
             onHold = {

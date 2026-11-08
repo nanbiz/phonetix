@@ -2,15 +2,16 @@ package io.github.nanbiz.phonetix.service
 
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 
 /**
- * Where the two actions offered round the finger go, as geometry alone so it can be checked
- * at every place a finger can be.
+ * Where the actions offered round the finger go, as geometry alone so it can be checked at
+ * every place a finger can be.
  *
- * They sit across the leash, one either side of the finger and square to the line the circle
- * is carried along, so neither covers the line the eye follows to the word nor the way the
- * hand came. Where a wall or the card is in the way they first bend back from the circle
+ * Play and the article sit across the leash, one either side of the finger and square to the
+ * line the circle is carried along, so neither covers the line the eye follows to the word nor
+ * the way the hand came; keeping the word sits next to one of them, further round. Where a wall or the card is in the way they first bend back from the circle
  * together, then the pair turns away from what is in the way, and only where nothing fits at
  * all are they pulled in from the walls: an action off the screen cannot be reached.
  */
@@ -28,13 +29,16 @@ object ActionsFan {
      *  closer together where a corner leaves less room. */
     private val SPREADS = listOf(90f, 115f, 140f, 60f, 45f, 35f)
 
+    /** How much further round the third action sits than the one it is next to. */
+    private const val BESIDE = 50f
+
     /** The way the circle leans from the finger, in degrees, up where it has not swung away. */
     fun leash(finger: Spot, ball: Spot): Double =
         if (ball == finger) -90.0
         else Math.toDegrees(atan2((ball.y - finger.y).toDouble(), (ball.x - finger.x).toDouble()))
 
     /**
-     * The two spots, play first, round a finger at [finger] whose circle is at [ball], each
+     * The three spots, play, article and keep, round a finger at [finger] whose circle is at [ball], each
      * [reach] from the finger and [half] wide either side, inside [screen] by [margin] and
      * clear of [card] where it can be.
      */
@@ -60,7 +64,18 @@ object ActionsFan {
             val h = minOf(p.y + half, c.bottom) - maxOf(p.y - half, c.top)
             return if (w > 0f && h > 0f) w * h else 0f
         }
-        val pairs = TURNS.flatMap { turn -> SPREADS.map { spread -> listOf(at(turn - spread), at(turn + spread)) } }
+        fun apart(set: List<Spot>) = set.indices.all { one ->
+            (one + 1 until set.size).all { other ->
+                hypot(set[one].x - set[other].x, set[one].y - set[other].y) >= half * 2f
+            }
+        }
+        val pairs = TURNS.flatMap { turn ->
+            SPREADS.flatMap { spread ->
+                listOf(1f, -1f).map { side ->
+                    listOf(at(turn - spread), at(turn + spread), at(turn + side * (spread + BESIDE)))
+                }
+            }
+        }.filter(::apart)
         // On the screen first and clear of the card next: one the card covers can still be seen
         // round its edge, one past a wall cannot.
         val clear = pairs.firstOrNull { pair -> pair.all { fits(it) && under(it) == 0f } }
@@ -72,11 +87,16 @@ object ActionsFan {
             maxOf(0f, p.x + half - (screen.right - margin)) +
             maxOf(0f, screen.top + margin + half - p.y) +
             maxOf(0f, p.y + half - (screen.bottom - margin))
-        return pairs.minBy { pair -> pair.sumOf { past(it).toDouble() } }.map { p ->
-            Spot(
-                p.x.coerceIn(screen.left + margin + half, screen.right - margin - half),
-                p.y.coerceIn(screen.top + margin + half, screen.bottom - margin - half),
-            )
-        }
+        fun pulledIn(p: Spot) = Spot(
+            p.x.coerceIn(screen.left + margin + half, screen.right - margin - half),
+            p.y.coerceIn(screen.top + margin + half, screen.bottom - margin - half),
+        )
+        // Play and the article decide, as where they fit is what the finger can reach. The third
+        // takes what is left: apart from them where it can be, and on top of one in the very
+        // corner of the screen, where there is room for two.
+        val pulled = pairs.map { pair -> pair to pair.map(::pulledIn) }
+        return pulled.minBy { (pair, spots) ->
+            (past(pair[0]) + past(pair[1])) * 1000f + past(pair[2]) + (if (apart(spots)) 0f else 500f)
+        }.second
     }
 }

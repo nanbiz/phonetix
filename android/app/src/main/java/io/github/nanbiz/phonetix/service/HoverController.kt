@@ -86,9 +86,11 @@ class HoverController(
     private val onPutAway: () -> Unit = {},
     /**
      * One of the actions offered round the finger once the circle has stayed on a word, chosen
-     * by lifting on it: "play" or "article", for that word.
+     * by lifting on it: "play", "article" or "keep", for that word.
      */
     private val onAction: (String, WordBox) -> Unit = { _, _ -> },
+    /** Whether this word is already kept, which the action for keeping it shows. */
+    private val isKept: (WordBox) -> Boolean = { false },
     /** Where the card is on the screen, which the actions keep clear of; nothing with none. */
     private val cardRect: () -> Rect? = { null },
 ) {
@@ -842,6 +844,7 @@ class HoverController(
                         if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
                             android.util.Log.d("Phonetix", "LENSACTION $action ${word.word}")
                         }
+                        if (action == "keep") view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                         onAction(action, word)
                     }
                     // A drag that passed over nothing is the fault a reader reports as "it
@@ -1056,7 +1059,7 @@ class HoverController(
             ).map { android.graphics.PointF(it.x, it.y) }
             offeredFor = word
             chosen = -1
-            shown.offer(fan)
+            shown.offer(fan, isKept(word))
             view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
             if (io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
                 android.util.Log.d(

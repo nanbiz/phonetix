@@ -20,12 +20,13 @@ from android_lens import repark
 
 def offered(dev):
     """The word the actions were offered for and where each is, newest, or nothing."""
-    found = re.findall(r"LENSACTIONS (\S+) (\d+),(\d+) (\d+),(\d+) finger (\d+),(\d+) leash (-?\d+)",
+    found = re.findall(r"LENSACTIONS (\S+) (\d+),(\d+) (\d+),(\d+) (\d+),(\d+) finger (\d+),(\d+) leash (-?\d+)",
                        dev.lines("LENSACTIONS"))
     if not found:
         return None
-    word, px, py, ax, ay, fx, fy, leash = found[-1]
+    word, px, py, ax, ay, kx, ky, fx, fy, leash = found[-1]
     return {"word": word, "play": (int(px), int(py)), "article": (int(ax), int(ay)),
+            "keep": (int(kx), int(ky)),
             "finger": (int(fx), int(fy)), "leash": int(leash)}
 
 

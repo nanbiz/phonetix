@@ -487,7 +487,11 @@ class ActionsView(context: Context) : View(context) {
     private val icons = listOf(
         ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.drawable.ic_play),
         ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.drawable.ic_wiktionary),
+        ContextCompat.getDrawable(context, io.github.nanbiz.phonetix.R.drawable.ic_star),
     )
+
+    /** Whether the word they are for is already kept, which the star shows. */
+    private var kept = false
 
     /** Where each action is, in the order of [ACTIONS], or nothing while none is offered. */
     private var spots: List<android.graphics.PointF> = emptyList()
@@ -499,8 +503,9 @@ class ActionsView(context: Context) : View(context) {
     val open: Boolean get() = spots.isNotEmpty()
 
     /** Put the actions up at these places, one for each of [ACTIONS]. */
-    fun offer(at: List<android.graphics.PointF>) {
+    fun offer(at: List<android.graphics.PointF>, alreadyKept: Boolean) {
         spots = at
+        kept = alreadyKept
         chosen = -1
         rising?.cancel()
         rising = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -550,7 +555,8 @@ class ActionsView(context: Context) : View(context) {
             canvas.drawCircle(spot.x, spot.y + dp(2f), r, shadow)
             disc.color = (if (on) palette.accent else palette.surface).toInt()
             canvas.drawCircle(spot.x, spot.y, r, disc)
-            rim.color = (if (on) palette.accent else palette.border).toInt()
+            val lit = i == KEEP && kept
+            rim.color = (if (on || lit) palette.accent else palette.border).toInt()
             canvas.drawCircle(spot.x, spot.y, r, rim)
             val icon = icons.getOrNull(i) ?: continue
             val half = (dp(ICON_DP) / 2f * presence.coerceAtMost(1f)).toInt()
@@ -558,14 +564,15 @@ class ActionsView(context: Context) : View(context) {
                 (spot.x - half).toInt(), (spot.y - half).toInt(),
                 (spot.x + half).toInt(), (spot.y + half).toInt(),
             )
-            icon.setTint((if (on) palette.accentInk else palette.ink).toInt())
+            icon.setTint((if (on) palette.accentInk else if (lit) palette.accent else palette.ink).toInt())
             icon.draw(canvas)
         }
     }
 
     companion object {
         /** What is offered, in the order it is drawn. */
-        val ACTIONS = listOf("play", "article")
+        val ACTIONS = listOf("play", "article", "keep")
+        private const val KEEP = 2
 
         /** How far from the finger the actions open, how big each is and its icon, and how
          *  near the finger has to come to one to have chosen it, in dp. */

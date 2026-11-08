@@ -471,7 +471,47 @@ class TooltipController(
                 Accents.voiceOf(source, SettingsStore.current.accentFor(source)),
             )
             "article" -> open(wiktionary(answer ?: Answer.ofTranscription(box.word, "", source)))
+            "keep" -> if (answer != null) keep(answer, source, box)
         }
+    }
+
+    /** Which entry of the list of kept words this is, or -1. */
+    private fun keptAt(list: org.json.JSONArray, text: String, lang: String): Int =
+        (0 until list.length()).firstOrNull {
+            val kept = list.optJSONObject(it)
+            kept?.optString("text") == text && kept.optString("lang") == lang
+        } ?: -1
+
+    private fun keptList(): org.json.JSONArray =
+        runCatching { org.json.JSONArray(SettingsStore.current.kept) }.getOrDefault(org.json.JSONArray())
+
+    /** Whether the word the card is about for [box] is on the list of kept words. */
+    fun isKept(box: WordBox): Boolean {
+        val answer = answered?.takeIf { it.first.word == box.word }?.second ?: return false
+        return keptAt(keptList(), answer.spelling, answer.source.ifEmpty { box.language }) >= 0
+    }
+
+    /** Put the word on the list of kept words, with the line it was met in, or take it off. */
+    private fun keep(answer: Answer, source: String, box: WordBox) {
+        val now = keptList()
+        val at = keptAt(now, answer.spelling, source)
+        val next = org.json.JSONArray()
+        if (at < 0) {
+            next.put(
+                org.json.JSONObject()
+                    .put("text", answer.spelling)
+                    .put("lang", source)
+                    .put("says", answer.paradigm?.said ?: answer.says.firstOrNull() ?: answer.glosses.firstOrNull() ?: "")
+                    .put("ipa", answer.ipa.firstOrNull() ?: "")
+                    .put("line", box.sentence)
+                    .put("where", screen)
+                    .put("at", System.currentTimeMillis()),
+            )
+        }
+        for (i in 0 until now.length()) {
+            if (i != at && next.length() < MOST_KEPT) next.put(now.get(i))
+        }
+        SettingsStore.setKept(next.toString())
     }
 
     private fun render(box: WordBox, answer: Answer) {
@@ -889,3 +929,6 @@ private class BoundedScrollView(context: Context, private val maxHeight: Int) : 
         )
     }
 }
+
+/** How many words the list of kept words holds. */
+private const val MOST_KEPT = 500

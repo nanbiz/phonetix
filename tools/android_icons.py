@@ -24,6 +24,7 @@ INTO = os.path.join(ROOT, "android", "app", "src", "main", "res", "drawable")
 # The drawable, and the set and icon it is.
 ICONS = {
     "ic_play": ("lucide", "play"),
+    "ic_star": ("lucide", "star"),
     "ic_wiktionary": ("ooui", "logo-wiktionary"),
 }
 

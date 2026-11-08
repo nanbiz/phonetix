@@ -26,6 +26,9 @@ const TURNS = [0, 20, -20, 40, -40, 60, -60, 90, -90, 120, -120, 150, -150, 180]
  *  together where a corner leaves less room. */
 const SPREADS = [90, 115, 140, 60, 45, 35];
 
+/** How much further round the third action sits than the one it is next to. */
+const BESIDE = 50;
+
 /** The way the circle leans from the finger, in degrees, up where it has not swung away. */
 export function leash(finger: Spot, ball: Spot): number {
   return ball.x === finger.x && ball.y === finger.y
@@ -34,7 +37,7 @@ export function leash(finger: Spot, ball: Spot): number {
 }
 
 /**
- * The two spots, play first, round a finger whose circle is at [ball], each [reach] from the
+ * The three spots, play, article and keep, round a finger whose circle is at [ball], each [reach] from the
  * finger and [half] wide either side, inside [screen] by [margin] and clear of [card] where it
  * can be.
  */
@@ -58,7 +61,10 @@ export function around(
   const under = (p: Spot) => !card ? 0
     : Math.max(0, Math.min(p.x + half, card.right) - Math.max(p.x - half, card.left)) *
       Math.max(0, Math.min(p.y + half, card.bottom) - Math.max(p.y - half, card.top));
-  const pairs = TURNS.flatMap((turn) => SPREADS.map((spread) => [at(turn - spread), at(turn + spread)]));
+  const apart = (set: Spot[]) => set.every((one, i) =>
+    set.slice(i + 1).every((other) => Math.hypot(one.x - other.x, one.y - other.y) >= half * 2));
+  const pairs = TURNS.flatMap((turn) => SPREADS.flatMap((spread) => [1, -1].map((side) =>
+    [at(turn - spread), at(turn + spread), at(turn + side * (spread + BESIDE))]))).filter(apart);
   // On the screen first and clear of the card next: one the card covers can still be seen round
   // its edge, one past a wall cannot.
   const clear = pairs.find((pair) => pair.every((p) => fits(p) && under(p) === 0));
@@ -73,11 +79,15 @@ export function around(
     Math.max(0, p.x + half - (screen.right - margin)) +
     Math.max(0, screen.top + margin + half - p.y) +
     Math.max(0, p.y + half - (screen.bottom - margin));
-  const outside = (pair: Spot[]) => pair.reduce((sum, p) => sum + past(p), 0);
-  const nearest = pairs.reduce((best, pair) => (outside(pair) < outside(best) ? pair : best));
   const clamp = (v: number, low: number, high: number) => Math.min(Math.max(v, low), high);
-  return nearest.map((p) => ({
+  const pulledIn = (pair: Spot[]) => pair.map((p) => ({
     x: clamp(p.x, screen.left + margin + half, screen.right - margin - half),
     y: clamp(p.y, screen.top + margin + half, screen.bottom - margin - half),
   }));
+  // Play and the article decide, as where they fit is what the finger can reach. The third takes
+  // what is left: apart from them where it can be, and on top of one in the very corner of the
+  // screen, where there is room for two.
+  const score = (pair: Spot[]) => (past(pair[0]) + past(pair[1])) * 1000 + past(pair[2]) +
+    (apart(pulledIn(pair)) ? 0 : 500);
+  return pulledIn(pairs.reduce((best, pair) => (score(pair) < score(best) ? pair : best)));
 }

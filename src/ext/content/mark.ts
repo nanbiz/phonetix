@@ -23,6 +23,7 @@ import tokenCss from '@/ui/tokens.css?inline';
 import markPng from '../../../android/app/src/main/res/mipmap-xxxhdpi/ic_mark.png?inline';
 import logoPng from '../../../android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png?inline';
 import PLAY from 'virtual:icons/lucide/play';
+import KEEP from 'virtual:icons/lucide/star';
 import WIKTIONARY from 'virtual:icons/ooui/logo-wiktionary';
 import { darkHere } from './inline';
 import { THEME, themeOf } from '@/ui/theme';
@@ -37,7 +38,7 @@ export interface MarkWord {
 }
 
 /** What one of the actions offered around the finger does. */
-export type MarkAction = 'play' | 'article';
+export type MarkAction = 'play' | 'article' | 'keep';
 
 /** What the reader's code is told, and asked. */
 export interface MarkHands {
@@ -59,6 +60,8 @@ export interface MarkHands {
   /** One of the actions offered around the finger, chosen for [word]. Called inside the
    *  finger's own lifting, which is what lets a sound play and a page open. */
   chose(action: MarkAction, word: MarkWord): void;
+  /** Whether the word the card is about is already kept, which the action for keeping shows. */
+  kept(): boolean;
 }
 
 /** Where the reader keeps the button, as the settings say. */
@@ -188,6 +191,8 @@ const CSS = `
       background 100ms, color 100ms;
   }
   .mark-act svg { width: 24px; height: 24px; }
+  .mark-act.kept { color: var(--color-accent); border-color: var(--color-accent); }
+  .mark-act.kept svg { fill: currentColor; }
   .mark-menu.open .mark-act { transform: translate(var(--x), var(--y)) scale(1); opacity: 1; }
   .mark-menu.open .mark-act.chosen {
     transform: translate(var(--x), var(--y)) scale(1.18);
@@ -806,7 +811,7 @@ function drawDrop(g: CanvasRenderingContext2D): void {
 
 // ── the actions round the finger ───────────────────────────────────────────────────────
 
-const ACTIONS: MarkAction[] = ['play', 'article'];
+const ACTIONS: MarkAction[] = ['play', 'article', 'keep'];
 const icons: ReturnType<typeof mount>[] = [];
 
 /** Open the actions round the finger, where ./fan puts them. */
@@ -825,6 +830,7 @@ function openMenu(): void {
     (act as HTMLElement).style.setProperty('--x', `${Math.round(spot.x)}px`);
     (act as HTMLElement).style.setProperty('--y', `${Math.round(spot.y)}px`);
     act.classList.remove('chosen');
+    act.classList.toggle('kept', ACTIONS[i] === 'keep' && (hands?.kept() ?? false));
   }
   menu.classList.add('open');
   tick();
@@ -1074,8 +1080,8 @@ function build(): void {
     const act = document.createElement('div');
     act.className = 'mark-act';
     act.dataset.does = action;
-    act.setAttribute('aria-label', action === 'play' ? 'Play' : 'Wiktionary');
-    icons.push(mount(action === 'play' ? PLAY : WIKTIONARY, { target: act }));
+    act.setAttribute('aria-label', action === 'play' ? 'Play' : action === 'keep' ? 'Keep' : 'Wiktionary');
+    icons.push(mount(action === 'play' ? PLAY : action === 'keep' ? KEEP : WIKTIONARY, { target: act }));
     menu.appendChild(act);
   }
   button = document.createElement('div');
