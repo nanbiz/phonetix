@@ -4407,6 +4407,45 @@ fn a_form_with_a_pronoun_joined_is_that_form_of_its_verb() {
     );
 }
 
+/// A verb with its own person's pronoun on its end is the verb used reflexively, and says what
+/// the dictionary files under that: "fíjate" is "notice!", where "fíjame", fix me, is still
+/// the verb's first meaning.
+#[test]
+fn a_form_with_its_own_pronoun_means_what_the_reflexive_does() {
+    let mut pack = Builder::new("es", Kind::Lex, 0);
+    let mut fijar = word("fijar", "verb", "fiˈxaɾ", &["to fix, fasten", "to notice"]);
+    fijar.senses[1].marks = vec!["reflexive".to_string()];
+    pack.add(fijar, &[] as &[&str]).unwrap();
+    for (spelling, note) in [
+        ("fíjate", "second-person singular imperative of fijar combined with te"),
+        ("fíjame", "second-person singular imperative of fijar combined with me"),
+    ] {
+        pack.add(word(spelling, "verb", "ˈfixa", &[note]), &[] as &[&str]).unwrap();
+    }
+    let es = pack.finish().unwrap();
+    let es = Pack::open(&es).unwrap();
+    let open = Open {
+        source: Some(&es),
+        target: None,
+        ipa_only: false,
+        accent: "",
+        accent_pack: None,
+        said: None,
+        classifier: None,
+        others: None,
+        defines: None,
+        in_reader: None,
+    };
+    let said = |spelling: &str| {
+        look_up(spelling, &lang("es"), &lang("en"), &open)
+            .paradigm
+            .and_then(|form| form.said)
+            .unwrap_or_default()
+    };
+    assert!(said("fíjate").contains("notice"), "fíjate said {:?}", said("fíjate"));
+    assert!(said("fíjame").contains("fix"), "fíjame said {:?}", said("fíjame"));
+}
+
 fn open_with<'a>(
     source: &'a Pack<&'a Vec<u8>>,
     target: &'a Pack<&'a Vec<u8>>,

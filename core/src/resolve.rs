@@ -2950,11 +2950,22 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
     // Only a translation is said in the form: an English word's meaning is a definition, and
     // "To provide a list of references for" said as a participle is no meaning at all.
     if answer.target.0 == "en" && answer.source != answer.target {
-        if let Some(meaning) = entry
-            .senses
-            .iter()
+        // A verb with its own person's pronoun on its end is the verb used reflexively, and
+        // means what the dictionary files under that: "fíjate" is "notice!", not "fix!".
+        let meanings = || {
+            entry
+                .senses
+                .iter()
+                .filter(|sense| !crate::annotate::about_grammar(&sense.gloss))
+        };
+        let reflexive = with.is_some_and(|with| reflexive_pronoun(with, &form.place));
+        if let Some(meaning) = meanings()
+            .find(|sense| {
+                reflexive
+                    && sense.marks.iter().any(|mark| mark == "reflexive" || mark == "pronominal")
+            })
+            .or_else(|| meanings().next())
             .map(|sense| sense.gloss.as_str())
-            .find(|gloss| !crate::annotate::about_grammar(gloss))
         {
             form.said = crate::inflect::english(meaning, &entry.pos, &form.place);
             form.bare = crate::inflect::english_bare(meaning, &entry.pos, &form.place);
@@ -2969,6 +2980,21 @@ fn with_noted_form<D: AsRef<[u8]>>(mut answer: Answer, pack: &Pack<D>, open: &Op
     answer.lemma = Some(entry.lemma.clone());
     answer.paradigm = Some(form);
     answer
+}
+
+/// Whether a pronoun written onto a verb is the verb's own person, which makes the verb
+/// reflexive: "se" always, and "te", "me", "nos", "os" on a form of their own person -
+/// "fíjate" is you noticing, where "dime" is telling me.
+fn reflexive_pronoun(with: &str, place: &crate::paradigm::Place) -> bool {
+    let has = |tag: &str| place.iter().any(|(value, _)| value == tag);
+    match with {
+        "se" => true,
+        "te" => has("second-person") && has("singular"),
+        "me" => has("first-person") && has("singular"),
+        "nos" => has("first-person") && has("plural"),
+        "os" => has("second-person") && has("plural"),
+        _ => false,
+    }
 }
 
 /// What form of its entry a spelling is, as the dump labels it.
