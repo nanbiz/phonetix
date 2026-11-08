@@ -642,6 +642,9 @@ class HoverController(
         private var homeY = 0f
 
         private var lastSwing = 0L
+
+        /** How far the ring has closed in on the word it is on, from 0 to 1. */
+        private var closing = 0f
         private var asked = false
 
         private val swing = object : Choreographer.FrameCallback {
@@ -703,14 +706,16 @@ class HoverController(
             val stay = SettingsStore.current.holdMs
             if (staying && on != null && stayed >= stay) offer(on)
             settleRing(dt, radius)
-            // How far along the stay is, drawn on the ring. Not for the first moment on a word,
-            // or every word the circle passes over would flash the start of it.
-            val charge = if (staying) {
-                ((stayed - STAY_SHOWS_MS).toFloat() / (stay - STAY_SHOWS_MS)).coerceIn(0f, 1f)
-            } else {
-                0f
+            // The ring closes in on the word as the stay goes on, and opens out again the moment
+            // the circle moves off it. Not for the first moment on a word, or every word the
+            // circle passes over would twitch.
+            val wanted = when {
+                actions?.open == true -> 1f
+                staying -> ((stayed - STAY_SHOWS_MS).toFloat() / (stay - STAY_SHOWS_MS)).coerceIn(0f, 1f)
+                else -> 0f
             }
-            mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius, charge)
+            closing = if (wanted >= closing) wanted else maxOf(wanted, closing - dt / RING_OPENS_S)
+            mist?.follow(fingerX, fingerY, ringX, ringY, ringRadius, closing)
             if (asked && io.github.nanbiz.phonetix.BuildConfig.DEBUG) {
                 // Where the hand is and where it holds the circle, apart from where the circle
                 // has swung to: the carry is decided by the first two, and a check reading the
@@ -722,7 +727,7 @@ class HoverController(
                     "LENSCARRY finger=${fingerX.roundToInt()},${fingerY.roundToInt()} " +
                         "want=${wantX.roundToInt()},${wantY.roundToInt()} " +
                         "ring=${ringX.roundToInt()},${ringY.roundToInt()}," +
-                        "${ringRadius.roundToInt()} on=$on",
+                        "${ringRadius.roundToInt()} on=$on closing=${"%.2f".format(closing)}",
                 )
             }
         }
@@ -1253,6 +1258,9 @@ class HoverController(
 
         /** How long the circle is on a word before the ring starts to show the stay. */
         const val STAY_SHOWS_MS = 250L
+
+        /** How long the ring takes to open out from fully closed, in seconds. */
+        const val RING_OPENS_S = 0.2f
 
         /** How long a swept run has to stop growing before it is asked about. */
         const val RUN_SETTLES_MS = 250L

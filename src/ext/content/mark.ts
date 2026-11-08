@@ -112,6 +112,10 @@ const RUN_SETTLES_MS = 250;
 /** How long the circle stays on one word before the actions open round the finger. */
 /** How long the circle is on a word before the ring starts to show the stay. */
 const STAY_SHOWS = 250;
+/** How long the ring takes to open out from fully closed, and how much of its width it gives
+ *  up closing in on a word. */
+const RING_OPENS = 0.2;
+const CLOSED_IN = 0.28;
 /** How far from the finger the actions open, how big each is, and how near the finger has to
  *  come to one to have chosen it. */
 const MENU_REACH = 76;
@@ -349,6 +353,8 @@ const hold = {
   since: 0,
   dwelling: '',
   /** The actions round the finger, once they are open, and which is under it. */
+  /** How far the ring has closed in on the word it is on, from 0 to 1. */
+  closing: 0,
   menuAt: null as { x: number; y: number }[] | null,
   /** Where the finger was when the actions opened, which is what they are round. */
   menuFrom: null as { x: number; y: number } | null,
@@ -467,6 +473,16 @@ function step(dt: number, now: number): void {
     openMenu();
   }
   settleRing(dt);
+  // The ring closes in on the word as the stay goes on, and opens out again the moment the
+  // circle moves off it. Not for the first moment on a word, or every word it passes would
+  // twitch.
+  const staying = hold.hovered && hold.dragging && !hold.sweeping && !drop.holding;
+  const wanted = hold.menuAt
+    ? 1
+    : staying
+      ? Math.min(1, Math.max(0, (now - hold.since - STAY_SHOWS) / (where.holdMs - STAY_SHOWS)))
+      : 0;
+  hold.closing = wanted >= hold.closing ? wanted : Math.max(wanted, hold.closing - dt / RING_OPENS);
 }
 
 /** What the circle is over now, told once per word rather than once per frame. */
@@ -717,7 +733,7 @@ function drawThread(g: CanvasRenderingContext2D): void {
     }
   }
   // The ring.
-  const rr = ringRadius * (0.55 + thread.presence * 0.45);
+  const rr = ringRadius * (0.55 + thread.presence * 0.45) * (1 - CLOSED_IN * hold.closing);
   const a = thread.presence;
   g.strokeStyle = rgba(RING, a / 6);
   g.lineWidth = 11;
@@ -733,22 +749,6 @@ function drawThread(g: CanvasRenderingContext2D): void {
   g.strokeStyle = rgba(RING, a);
   g.lineWidth = 3;
   g.stroke();
-  // How far along the stay on a word is. Not for the first moment on it, or every word the
-  // circle passes over would flash the start of it.
-  if (!hold.menuAt && !hold.sweeping && hold.hovered && hold.dragging) {
-    const charge = (performance.now() - hold.since - STAY_SHOWS) / (where.holdMs - STAY_SHOWS);
-    if (charge > 0) {
-      g.strokeStyle = light ? SPARK_DARK : PIP_LIGHT;
-      g.globalAlpha = a;
-      g.lineWidth = 5;
-      g.lineCap = 'round';
-      g.beginPath();
-      g.arc(ringX, ringY, Math.max(0, rr - 3), -Math.PI / 2, -Math.PI / 2 + Math.min(charge, 1) * TAU);
-      g.stroke();
-      g.lineCap = 'butt';
-      g.globalAlpha = 1;
-    }
-  }
   g.fillStyle = light ? SPARK_DARK : PIP_LIGHT;
   g.globalAlpha = a;
   g.beginPath();

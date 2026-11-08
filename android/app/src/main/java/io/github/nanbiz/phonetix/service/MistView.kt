@@ -103,12 +103,8 @@ class MistView(context: Context) : View(context) {
     private var ringY = 0f
     private var ringRadius = 0f
 
-    /** How far along the stay on a word is, drawn round the ring. */
-    private var charge = 0f
-    private val filling = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-    }
+    /** How far the ring has closed in on the word it is on, from 0 to 1. */
+    private var closing = 0f
 
     /** 0 while parked, 1 while a ring is fully formed; the animators run it between. */
     private var presence = 0f
@@ -189,11 +185,11 @@ class MistView(context: Context) : View(context) {
         ringX: Float,
         ringY: Float,
         radius: Float,
-        charge: Float = 0f,
+        closing: Float = 0f,
     ) {
         this.fingerX = fingerX; this.fingerY = fingerY
         this.ringX = ringX; this.ringY = ringY; this.ringRadius = radius
-        this.charge = charge
+        this.closing = closing
     }
 
     /**
@@ -426,7 +422,7 @@ class MistView(context: Context) : View(context) {
     }
 
     private fun drawRing(canvas: Canvas) {
-        val rr = ringRadius * (0.55f + presence * 0.45f)
+        val rr = ringRadius * (0.55f + presence * 0.45f) * (1f - CLOSED_IN * closing)
         val a = (presence * 255).toInt()
         halo.color = withAlpha(RING, a / 6)
         halo.strokeWidth = 11 * density
@@ -437,12 +433,6 @@ class MistView(context: Context) : View(context) {
         canvas.drawCircle(ringX, ringY, rr - rim.strokeWidth, glass)
         rim.color = withAlpha(RING, a)
         canvas.drawCircle(ringX, ringY, rr - rim.strokeWidth, rim)
-        if (charge > 0f) {
-            filling.color = withAlpha(if (onLight) SPARK_DARK else PIP_LIGHT, a)
-            filling.strokeWidth = rim.strokeWidth * 1.6f
-            val r = rr - rim.strokeWidth
-            canvas.drawArc(ringX - r, ringY - r, ringX + r, ringY + r, -90f, charge * 360f, false, filling)
-        }
         pip.color = withAlpha(if (onLight) SPARK_DARK else PIP_LIGHT, a)
         canvas.drawCircle(ringX, ringY, 3 * density, pip)
     }
@@ -509,6 +499,9 @@ class MistView(context: Context) : View(context) {
     private fun now() = System.currentTimeMillis()
 
     private companion object {
+        /** How much of its width the ring gives up closing in on a word. */
+        const val CLOSED_IN = 0.28f
+
         const val TAU = 6.2831855f
         const val HALF_PI = 1.5707964f
         const val RING = 0xFF4C9AFF.toInt()
