@@ -27,6 +27,11 @@ import tempfile
 import time
 import urllib.parse
 
+# Every check that starts a Firefox imports this first. Newer Firefox reads system access for
+# Marionette from the environment, where the -remote-allow-system-access flag no longer does it,
+# and without it WebDriver:Navigate refuses an add-on's own pages.
+os.environ["MOZ_REMOTE_ALLOW_SYSTEM_ACCESS"] = "1"
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import QuietAudio  # noqa: E402
 from on_a_page import CARD_JS, PORT, STORE_JS, arrow_checks, build_packs, chat_follows, ember_checks, hidden_word_checks, mark_checks, player_holds, selection_checks, serve, stream_draws, walk
