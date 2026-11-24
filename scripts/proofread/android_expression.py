@@ -3,7 +3,8 @@
 
 "Me gusta" is "I like": held over "gusta" on a Spanish screen, the card says so and names each
 word of it. And on an English screen quoting "¿Cómo salió todo?", a reader with no Spanish on
-their lists gets "salió" said the Spanish way, and the screen is counted as one Spanish was met
+their lists gets "salió" said the Spanish way, and "Cuya" in a search result too where the
+Spanish dictionary has no word for it in the reader's German, and the screen is counted as one Spanish was met
 on, which the settings offer once it is three.
 
 The dictionaries are the published ones (PHONETIX_ES_PACK, PHONETIX_EN_PACK, default
@@ -60,6 +61,16 @@ def main():
     print(f"  met: {met}")
     if not met or "es" not in met[0]:
         failures.append(f"the screen was not counted as one Spanish was met on: {met}")
+
+    # A reader who reads into German, on a search result naming "Cuya": the Spanish dictionary
+    # holds it but has no German for it, and it is still the Spanish dictionary's word, said
+    # the Spanish way and not as the English /ˈkuːjə/ a voice makes of it.
+    dev.surface(mode="quoted", target="de", known="none", learn="none", enable=1, density=1)
+    time.sleep(6)
+    german, _ = card_while_held(dev, "Cuya")
+    print(f"  Cuya, into German: {' | '.join(german)}")
+    if not any("ʝ" in text or "kuja" in text for text in german) or any("ː" in text for text in german):
+        failures.append(f"'Cuya' is not read from the Spanish dictionary: {german}")
 
     if failures:
         print("\nFAIL")

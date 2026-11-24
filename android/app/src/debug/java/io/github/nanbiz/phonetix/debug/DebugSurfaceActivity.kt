@@ -1050,13 +1050,13 @@ class DebugSurfaceActivity : androidx.activity.ComponentActivity() {
                 "La casa es grande y bonita",
             )) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "quoted") {
-            // English lines with a Spanish question quoted in one: a language on none of the
-            // reader's lists, met.
+            // English lines with a Spanish question quoted in one, and a search result naming
+            // the Spanish word it translates: a language on none of the reader's lists, met.
             for (text in listOf(
                 "A question you will hear every day is",
                 "¿Cómo salió todo? which asks how it went",
                 "The answer depends on the day and the person",
-                "Most people answer it with a short story",
+                "Cuya | Spanish to English Translation",
                 "and the story is usually about the weather",
             )) addView(line(text, Color.WHITE, BACKGROUND))
         } else if (mode == "spanish") {

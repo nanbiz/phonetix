@@ -14,6 +14,7 @@ export type AnswerState =
   | 'Mono'
   | 'Guess'
   | 'Phrase'
+  | 'ViaEn'
   | 'IpaOnly'
   | 'None'
   | 'NoPack'

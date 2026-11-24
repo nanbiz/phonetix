@@ -125,7 +125,7 @@ data class Answer(
 
     /** How far the word got through the cascade, which is what the card draws from. */
     enum class State {
-        Entry, Form, Homograph, Mono, Guess, Phrase, IpaOnly, None, NoPack, UnknownLang, Loading,
+        Entry, Form, Homograph, Mono, Guess, Phrase, ViaEn, IpaOnly, None, NoPack, UnknownLang, Loading,
         ;
 
         companion object {

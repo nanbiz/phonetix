@@ -2,10 +2,11 @@
 """A word of another of the reader's languages quoted in a page: its card is in its language.
 
 An English page that teaches Spanish writes "¿Cómo salió todo?" in the middle of English
-prose. The page is English, so every word on it was once looked up as English, and "salió"
+prose, and a search result names the word it translates ("Cuya | Spanish to English"). The page is English, so every word on it was once looked up as English, and "salió"
 came out as a made-up English reading (/sælioʊ/). The card has to find the word in the
-dictionaries of the reader's own languages and read it as the Spanish it is, and an English
-word on the same page still has to read as English.
+dictionaries of the reader's own languages and read it as the Spanish it is, also where the
+Spanish dictionary has no gloss into the reader's own German for it, and an English word on
+the same page still has to read as English.
 
 Runs .output/chrome-mv3 in a headless Chrome and the Firefox zip in a headless Firefox, with\nthe published dictionaries.
 
@@ -28,7 +29,9 @@ PORT = int(os.environ.get("PHONETIX_QUOTED_PORT", "8941"))
 PAGE = (
     "<!doctype html><html lang='en'><meta charset='utf-8'><body style='font:20px serif;margin:40px'>"
     "<p>A question you will hear every day is ¿Cómo salió todo? which literally asks how "
-    "everything came out.</p></body></html>"
+    "everything came out.</p>"
+    "<h3><a href='#'>Cuya | Spanish to English Translation - SpanishDictionary.com</a></h3>"
+    "</body></html>"
 ).encode()
 
 WORD_JS = """
@@ -74,7 +77,9 @@ def serve():
 
 def probe(hand, failures, engine):
     """Rest on the quoted Spanish word and on an English one, and read each card."""
-    for word, lang_word, want in (("salió", "Spanish", lambda c: "æ" not in c["ipa"] and c["ipa"].endswith("ES")),
+    spanish = lambda c: "æ" not in c["ipa"] and "ː" not in c["ipa"] and c["ipa"].endswith("ES")
+    for word, lang_word, want in (("salió", "Spanish", spanish),
+                                  ("Cuya", "Spanish", spanish),
                                   ("question", "English", lambda c: c["ipa"].endswith(("US", "UK", "GB")))):
         at = hand.ask(WORD_JS % (word, len(word)))
         hand.move(2, 2)
@@ -125,7 +130,7 @@ def on_firefox(failures, values):
         driver.script(
             "const done = arguments[0];"
             f"browser.storage.local.set({json.dumps(values)})"
-            "  .then(() => Promise.all(['en', 'es'].map(lang =>"
+            "  .then(() => Promise.all(['en', 'es', 'de'].map(lang =>"
             "     browser.runtime.sendMessage({phonetix: 'openPack', data: {lang}}))))"
             "  .then(() => done('ok'), e => done('failed: ' + e));",
             timeout=300000)
@@ -154,12 +159,12 @@ def main():
 
         book = attach(f"chrome-extension://{ext}/viewbook.html")
         time.sleep(2)
-        values = {"on": True, "targetLanguage": "en", "knownLanguages": ["en"], "learn": "es",
+        values = {"on": True, "targetLanguage": "de", "knownLanguages": ["de", "en"], "learn": "es",
                   "layer": "off"}
         if os.environ.get("PHONETIX_PACKS"):
             values["packBaseUrl"] = os.environ["PHONETIX_PACKS"]
         evaluate(cdp, book, f"chrome.storage.local.set({json.dumps(values)})")
-        for lang in ("en", "es"):
+        for lang in ("en", "es", "de"):
             evaluate(cdp, book, f"chrome.runtime.sendMessage({{phonetix:'getPack',data:{{lang:'{lang}'}}}})")
         page = attach(f"http://127.0.0.1:{PORT}/")
         time.sleep(6)
@@ -175,7 +180,7 @@ def main():
     if failures:
         print("FAIL - " + "; ".join(failures))
         sys.exit(1)
-    print("PASS - a Spanish word quoted in an English page is read as Spanish, the English round it as English")
+    print("PASS - a Spanish word quoted or named in an English page is read as Spanish, the English round it as English")
 
 
 if __name__ == "__main__":

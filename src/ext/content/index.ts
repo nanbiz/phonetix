@@ -908,8 +908,9 @@ function said(answer: Answer): Answer {
 
 /** What an answer says when the language asked has no entry for the word. */
 const MISSED = new Set(['Guess', 'IpaOnly', 'None', 'UnknownLang']);
-/** What it says when it has one. */
-const FOUND = new Set(['Entry', 'Form', 'Homograph', 'Mono', 'Phrase']);
+/** What it says when it has one. ViaEn is a word the pack holds whose gloss into the reader's
+ *  language is missing: "cuya" in Spanish for a German reader is still a Spanish word. */
+const FOUND = new Set(['Entry', 'Form', 'Homograph', 'Mono', 'Phrase', 'ViaEn']);
 
 /** The first of the reader's languages, other than [source], whose dictionary has [spelling]:
  *  the ones they learn first, then the ones they read, then their own. */
