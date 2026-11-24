@@ -18,7 +18,7 @@ runs:
     # at instantiation rather than at build time.
     - uses: taiki-e/install-action@v2
       with:
-        tool: wasm-bindgen-cli@0.2.121
+        tool: wasm-bindgen-cli@0.2.130
     - name: Build the core
       shell: bash
       run: pnpm build:core
